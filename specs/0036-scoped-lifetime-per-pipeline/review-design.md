@@ -2,1164 +2,1399 @@
 
 **Date**: 2026-08-03
 **Threshold**: 60
-**Scope**: all five ADRs in `.adr-list` (0070–0074) plus set-level cross-reference
+**Round**: 2 — round 1's ledger closed at `1a519d5f5`; this run is against `78634598b`.
+Round 1's findings are preserved verbatim in `review-design-round1.md`; its numbering is what
+PROMPT.md §10.4 refers to. **This file uses its own numbering.**
 **Verdict**: NEEDS WORK
 
-33 findings at or above threshold 60. Address these before approving.
+35 findings at or above threshold 60. Address these before approving.
 
-## How this review was run
+## How this round was run
 
-Six independent reviewers: one per ADR, plus one whose remit was only the set-level properties
-(requirements coverage, contradictions between ADRs, the sibling maps, the unifying sentence,
-heading-skeleton drift). Every `file:line` citation in every ADR was verified against the
-codebase. Every mermaid block was extracted and rendered with
-`@mermaid-js/mermaid-cli@11`; the most complex in each file was rendered to PNG and looked at.
+Six parallel reviewers at threshold 60 — one per ADR (0070–0075) plus one whose only remit was the
+set-level properties (requirements coverage, cross-ADR contradictions, the sibling maps, the
+unifying sentence, heading drift, and whether the decomposition itself still holds). Reviewers were
+**blind to round 1's ledger**, so nothing here is anchored on the previous round's conclusions.
 
-**All 12 mermaid blocks render** (0070: 2, 0071: 3, 0072: 2, 0073: 3, 0074: 2). No parse
-failures. `grep -c '&lt;\|&gt;\|&amp;'` is 0 on all five files. Two diagrams parse cleanly but
-mislead — findings 16, 39 and 53.
+74 raw findings were returned. Three pairs were the same defect seen by two reviewers and have been
+merged (noted inline), leaving **71 distinct**.
 
-**Two set-level properties are clean and worth recording**, because both are the kind that
-usually rot: every one of the five `### Where this ADR sits` tables lists all five ADRs with its
-own row bolded and marked *(this one)* — no stale map anywhere. And a grep of all five for
-authoring-conversation phrasing ("at the user's direction", "we agreed", "per the user's
-feedback") and ephemeral state (`PROMPT.md`, spec phase, review rounds) returns **zero hits**.
-Frontmatter is uniform, all five are registered in `docs/adr/index.md:107-111`, and 0071–0074
-match the canonical heading skeleton exactly.
+**Proved clean this round — verified, not assumed:**
 
-## Findings by ADR
+- **All 13 mermaid diagrams render.** Every block in all six files extracted and run through
+  `@mermaid-js/mermaid-cli@11`: 0070×2, 0071×3, 0072×1, 0073×3, 0074×2, 0075×2 — all exit 0, all
+  `.svg` produced. The most complex in each file also rendered to PNG at 1600px and looked at.
+- **Escaped markdown is 0** in all six.
+- **`docs/adr/index.md` is byte-identical to a fresh regeneration** and reads `_97 ADRs indexed._`.
+  No frontmatter drift.
+- **Heading skeleton matches in all six** — wording, order and nesting, against
+  `.agent_instructions/documentation.md` § *ADR structure*. No drift anywhere.
+- **All six `### Where this ADR sits` maps are byte-identical**, six rows, own row bolded and marked
+  *(this one)*, each positional sentence agreeing with its table. One cell is stale in content
+  (finding 29), not in structure.
+- **The unifying sentence is verbatim in all six** — *the per-pipeline object carries the DI scope*
+  — at `0070:49`, `0071:47`/`:112`/`:260`, `0072:50`, `0073:53`, `0074:71`, `0075:51`. Zero variant
+  spellings. (Round 1's finding 55 is fully closed.)
+- **Frontmatter uniform**; `status: Proposed`; author `"Ian Cooper"` in all six.
+- **Tone clean** — no authoring-conversation phrasing, no `PROMPT.md`, no spec phase, no review
+  rounds, no commit hashes, in any of the six.
+- **"chain" survives only as the rejected name `IAmAChainScope`** (`0070:431`, under D4).
+- **No supersession** — no `supersedes:`/`superseded by:` frontmatter, no body claim, anywhere.
+- **The FR-25 clause→ADR map in 0074 is complete and orphan-free** — 11 clauses, 11 rows, every
+  named target exists.
+- **Several seams read consistently**: 0070↔0072 on artefact identity; 0070↔0071 on the deliberate
+  `Transient` null-rule difference; 0072↔0073 on `AddSingleton`/last-wins; 0072↔0074 on FR-24.3's
+  model/site split; 0072↔0075 on the one-line suppression coupling.
 
-| ADR | Critical | High | Medium | Low | Total | ≥60 |
-| --- | --- | --- | --- | --- | --- | --- |
-| 0070 | 1 | 3 | 6 | 1 | 11 | 7 |
-| 0071 | 0 | 3 | 6 | 3 | 12 | 6 |
-| 0072 | 1 | 3 | 7 | 2 | 13 | 6 |
-| 0073 | 1 | 3 | 4 | 1 | 9 | 5 |
-| 0074 | 0 | 2 | 6 | 1 | 9 | 4 |
-| set-level | 0 | 3 | 4 | 2 | 9 | 5 |
-| **Total** | **3** | **17** | **33** | **10** | **63** | **33** |
-
-Four findings were merged across reviewers where two of them found the same defect from different
-angles; each is filed once, under the ADR it must be fixed in. Findings 51 and 55 are filed as
-set-level because the same edit lands in more than one file.
+---
 
 ## Findings
 
-### 1. [0073] The double-call mitigation rests on a diagnostic FR-24.3 explicitly excludes (Score: 92)
+### 1. 0075 — The Decision and the forces both assert a false consequence, contradicted twice later in the same ADR (Score: 75)
 
-The ADR's entire answer to "what happens when `AddBrighterRequestScope` is called twice with
-different affinities" is that the resulting inconsistency is *diagnosable* via FR-24.3's
-duplicate-provider warning. It is not. Two calls register the **same** implementation type
-(`HttpContextScopeProvider`) twice, and FR-24.3 says in terms that this is not a finding. The
-claim is load-bearing in three places — the contract row, the `#### The ASP.NET package and its
-extension` rationale, and a *Negative* consequence. Remove it and the double-call case is
-silently wrong with no signal at all.
+Two places state that placing the *suppression* bracket around the whole build loop "would give
+every subscriber one shared scope". That is not true, and the ADR itself says so twice further down.
+Suppression is a `bool` on an `AsyncLocal`; it has no bearing on how many pipeline scopes get
+created. Per-subscriber scopes come from `GetSyncInstanceScope()` / `GetAsyncInstanceScope()`,
+called unconditionally once per loop iteration. This also breaks the ADR's own framing: line 114
+says "Three invariants are readable off the diagram", and the sequence diagram shows nothing about
+scope sharing.
 
-**Evidence**: ADR:329 — *"the same two calls also add **two** `IAmAScopeProvider` descriptors of
-the same implementation type, which is precisely FR-24.3's duplicate-provider condition"*.
-Against `requirements.md:244` (FR-24.3) — *"When the service collection holds descriptors for
-`IAmAScopeProvider` with **more than one distinct implementation type** … **Registering the
-*same* implementation type more than once is idempotent in effect and is not a finding.**"* ADR
-0074 restates the exclusion correctly: *"the *same* implementation type registered twice is not a
-finding (AC-32's second branch)."*
+**Evidence**: `0075:77` — "a bracket around the loop would give every subscriber one shared scope,
+which is ADR 0039 undone." `0075:118` — "**Neither is ever placed around the whole loop**, which
+would give every subscriber one shared scope and undo ADR 0039". Contradicted at `0075:218` —
+"Around the loop, every subscriber would resolve under one suppression bracket — **which is
+correct**"; and `0075:285` — "Around the build loop it is *behaviourally* adequate". Source:
+`PipelineBuilder.cs:187-198` — `var instanceScope = GetSyncInstanceScope();` is inside the
+per-subscriber lambda and is conditioned on nothing.
 
-**Recommendation**: Either drop the diagnosability claim and record the double-call asymmetry as
-genuinely silent — which strengthens the case for making `ScopeAffinityOverride` a plain
-`AddSingleton` (last wins, matching the provider) so both halves agree and the asymmetry
-disappears — or state that this ADR adds a *new* rule for a duplicate `ScopeAffinityOverride` and
-hand it to 0074 explicitly.
-
----
-
-### 2. [0072] Provider-throw "propagates unwrapped" is impossible on the specified path, and contradicts ADR 0070 (Score: 92)
-
-Three places say a throw from `GetAmbient` reaches the caller of `Send`/`Publish`/`Post`
-**unwrapped**. But the ADR puts the ask inside `CreatePipelineScope()`, and every call site of
-that member sits inside a builder `try` that wraps every non-`ConfigurationException` into a
-`ConfigurationException`. AC-30 fails as the design stands.
-
-**Evidence**: ADR:95 (ladder row 3), :225 (contract table), :388 (pseudo-code) all say
-"unwrapped". Against `PipelineBuilder.cs:202-204` — `catch (Exception e) when (e is not
-ConfigurationException) { throw new ConfigurationException(...) }`, async twin at `:248-250`; the
-handler-pipeline ask reaches `CreatePipelineScope()` via `GetSyncInstanceScope()`
-(`PipelineBuilder.cs:190`, `:235`), inside that `try`. Same for transform pipelines at
-`TransformPipelineBuilder.cs:116-124`, `:157-165`. And ADR 0070:220 states the opposite for the
-same member: *"the builder's existing `catch` turns that into `ConfigurationException`"*.
-`requirements.md` AC-30: *"**Then** the caller observes that `InvalidOperationException`
-unwrapped"*.
-
-**Recommendation**: Decide the mechanism and record it in `Where each type is touched`, which
-today lists no exception-handling change to either builder. Either narrow the two catch filters
-to let a designated ambient-source fault through (sentinel exception type, or an exception
-filter), or move the ask outside the builder `try`. Then reconcile 0070's contract row — the two
-ADRs currently specify contradictory behaviour for one member.
+**Recommendation**: Rewrite `:77` and `:118` to say what `:218` and `:285` say — a loop-level
+suppression bracket is behaviourally adequate and is rejected on *extent* and on the adjacency
+hazard, not because it causes scope sharing. Then either drop invariant 2 from the "readable off the
+diagram" list or put something in the diagram that carries it.
 
 ---
 
-### 3. [0070] "Already log at `Error`" is false — every release site logs `Warning`, and AC-6 requires `Error` (Score: 90)
+### 2. 0072 — The no-provider case has no ladder row, the pseudo-code warns on it, and the requirements require no warning there (Score: 74)
 
-The `IAmAScope` *Error conditions* bullet asserts a code fact that is not true, then uses it to
-conclude a requirement is discharged. The same false premise underwrites the AC-6 claim in
-`Implementation Approach` step 4. As written the ADR says nothing needs to change and AC-6 would
-fail.
+The ADR's prose enumerates **six** failures converging on create-and-own, the first being "no
+provider". The nine-row ladder has a row for five of them and none for "no provider registered". The
+pseudo-code silently folds that case into row 6 and emits a `Warning` that FR-11(a) and FR-19 do not
+ask for; and the `WarnOnce` key type as declared cannot represent the "no provider" latch key.
 
-**Evidence**: ADR:187 — *"the existing release call sites … **already log at `Error`** and
-swallow"*. Verified: `OutboxProducerMediator.cs:1448` is `[LoggerMessage(LogLevel.Warning, ...)]`;
-`Reactor.cs:637` and `Proactor.cs:651` likewise. All four release sites log `Warning`. Compounding
-it, ADR:302 says release failures are handled by the existing guard — but
-`TransformPipelineBuilder.cs:408` declares `FailedToCleanUpAfterFailedBuild` at
-`LogLevel.Warning`, while AC-6 (`requirements.md:442-446`) and FR-13 require `LogLevel.Error`.
+**Evidence**: `0072:84` — "six distinct failures — **no provider**, nothing offered, a stale
+ambient, …". Ladder row 6 reads "the ask carried `JoinAmbient`, **and nothing came back**" — with no
+provider registered no ask is carried at all, so no row matches. Step 2's pseudo-code has
+`4. ambient = _scopeProvider?.GetAmbient(affinity)` then `if ambient is null ->
+diagnostics.WarnOnce(NoAmbientOffered, providerType)` with no `_scopeProvider is null` guard. The
+`WarnOnce` contract (`0072:297`) states its input as "the implementation type of the provider that
+was asked **(or the fact that none is registered)**" while giving the mechanism as
+`ConcurrentDictionary<(Condition, Type), byte>.TryAdd` — a `(Condition, Type)` key has no spelling
+for "none is registered". `requirements.md:220` FR-11(a) — "With no `IAmAScopeProvider` registered,
+no pipeline consults or joins any ambient; **the affinity option is irrelevant. Adoption behaviour
+is exactly as before this change.**" `requirements.md:287` FR-19 — "**Where an ambient source is
+registered** there are exactly two". Reachable: `ScopeAffinityPolicy` reads only `IBrighterOptions`,
+so `{affinity = JoinAmbient, all three Scoped, no provider}` yields `JoinAmbient` and walks into the
+warning.
 
-**Recommendation**: Correct the claim, and add the level change to `Implementation Approach` and
-`Where each type is touched` — `FailedToCleanUpAfterFailedBuild`
-(`TransformPipelineBuilder.cs:408`, `TransformPipelineBuilderAsync.cs:317`) and
-`FailedToReleasePipeline` (`OutboxProducerMediator.cs:1448`, `Reactor.cs:637`, `Proactor.cs:651`)
-move to `LogLevel.Error` — or state explicitly that AC-6/FR-13 are 0072's to satisfy and that
-0070 leaves them failing.
-
----
-
-### 4. [0074] The captive-dependency exclusion set has no owner, no capture point, and no disposal story (Score: 82)
-
-The constructor sketch passes `exclusions` in and never says who builds it, when, from what
-collaborators, or who disposes what building it creates. It is the one input that cannot be read
-from a `ServiceDescriptor` snapshot, and the only one left unsited.
-
-**Evidence**: three gaps. (a) No collaborator — building the set needs a
-`PipelineBuilder<IRequest>` *and* a `MessageMapperRegistry`
-(`TransformPipelineBuilder.DescribeTransforms` takes one as its first parameter,
-`TransformPipelineBuilder.cs:270`); neither appears in the sketch, the roles table, or
-`Where each type is touched`. (b) No implementation step — steps 1–7 never mention it, although
-*Negative* prices it ("One `Describe()` pass for the exclusion set"). (c) A disposal
-contradiction with the ADR's own centrepiece — `PipelineValidator` holds the registry as
-`Lazy<MessageMapperRegistry>` (`Validation/PipelineValidator.cs:69-71`) and disposes it only
-`if (_mapperRegistry is { IsValueCreated: true })` (`:92-93`). Since *Technology Choices* says
-"Nothing is read lazily during `Validate()`", the decorator must compute exclusions inside the
-factory delegate and therefore build a **second** `MessageMapperRegistry` with its own
-`ServiceProviderMapperFactory` and `ServiceProviderLifetimeScope` — after two paragraphs and a
-Risks row about the inner validator's registry leaking to process exit.
-
-**Recommendation**: Give the exclusion set a named role and type (e.g.
-`BrighterArtefactExclusions`, built by an `ArtefactExclusionSetBuilder` in the DI package), add it
-to the roles table, `Where each type is touched` and `Implementation Approach`, and say which
-`MessageMapperRegistry` instance it uses and who disposes it. If the answer is "share the inner
-validator's `Lazy`", that is a change to `PipelineValidator` the ADR currently claims is untouched.
+**Recommendation**: Add a ladder row above row 4 — "no `IAmAScopeProvider` is registered → OWNED, no
+ask, **no diagnostic** (FR-11(a))" — mirror it as an explicit guard in the pseudo-code before step 4,
+and delete "(or the fact that none is registered)" so the key stays `(Condition, Type)`. If a
+warning here is genuinely wanted it needs a requirements amendment and a fourth condition with a
+defined key, not a parenthetical.
 
 ---
 
-### 5. [0070] `ServiceProviderPipelineScope.DisposeAsync()` has nothing async to call (Score: 82)
+### 3. 0070 — Implementation step 3 states the opposite of what `### The mechanism, end to end` states about D12, and both cite the same line (Score: 72)
 
-The prescribed container-package implementation cannot do what the ADR says, and the type that
-would have to change is in neither the changed nor the deliberately-unchanged list.
+The Decision section says the scope reaches a transform's `Create` **only where there is a transform
+to create**. Step 3 says the transformer factory **is handed the scope even when the mapper declares
+no transform**. Both cite `TransformPipelineBuilder.cs:193`, which is inside the `foreach` over
+transform attributes — so when the mapper declares none, the loop body never executes,
+`TransformerFactory<TRequest>` is never constructed, and `factory.Create` is never called. Step 3 is
+the implementor's section.
 
-**Evidence**: ADR:308 — *"disposes it exactly once under either `Dispose()` or `DisposeAsync()` …
-preferring the scope's `IAsyncDisposable` where offered"*. But
-`ServiceProviderLifetimeScope.cs:42` is `internal sealed partial class ServiceProviderLifetimeScope
-: IDisposable` — no `IAsyncDisposable`. Its only whole-object disposal is `public void Dispose()`
-(`:462`), draining through the synchronous `DisposeScope` (`:484`, `:497`). `ReleaseAsync`
-(`:361`) is per-release-token only and returns `default` on the `Scoped` path where the token is
-always `null` (`:136`). So `DisposeAsync()` would block on a synchronous dispose — exactly the
-Proactor stall that Alternative 8's rejection is built on.
+**Evidence**: `0070:132` — "the scope reaches a transform's `Create` only where there is a transform
+to create (`TransformPipelineBuilder.cs:193`, inside the loop over the mapper's transform
+attributes)." `0070:325` — "This is D12: the transformer factory is handed the scope even when the
+mapper declares no transform". Source `TransformPipelineBuilder.cs:193` is
+`var transformerLease = new TransformerFactory<TRequest>(attribute, _messageTransformerFactory).CreateMessageTransformer();`,
+inside `foreach (var attribute in transformAttributes)`.
 
-**Recommendation**: Add `ServiceProviderLifetimeScope` to the touched table with the change it
-needs (async whole-scope disposal routing the root and outstanding scopes through the existing
-`DisposeScopeAsync` at `:449`), or state that `DisposeAsync()` deliberately blocks and reconcile
-that with Alternative 8.
-
----
-
-### 6. [0071] Async handler pipelines have no async disposal path, yet the ADR claims full convergence (Score: 80)
-
-`IAmAScope` is `IDisposable, IAsyncDisposable`, and 0070's Alternative 8 rejects an
-`IDisposable`-only handle *specifically* because a blocking release stalls the Proactor. ADR 0071
-routes the handler handle through `IAmALifetime : IDisposable` → `HandlerLifetimeScope.Dispose()`
-→ `PipelineBuilder.Dispose()`, none of which has an async path, and never mentions the word.
-
-**Evidence**: `grep -i "IAsyncDisposable\|DisposeAsync"` over the ADR → **0 hits**.
-`IAmALifetime.cs:34` is `IDisposable`; `IAmAnAsyncPipelineBuilder.cs:37` likewise; both **async**
-paths use `using var builder` not `await using` (`CommandProcessor.cs:394`, `:575`). Meanwhile
-*Consequences* claims *"**One mechanism.** … One story to teach, one ordering rule, one handle
-type."* The transform family gets `TransformPipelineDrain.DrainAsync`; the handler family gets no
-twin. Since NFR-1's signature freeze was withdrawn, "we can't" is no longer the answer.
-
-**Recommendation**: State the decision. Either the handler handle is disposed synchronously and
-the ADR says why the Proactor argument does not bite here (e.g.
-`ServiceProviderLifetimeScope`'s synchronization-context suppression at `:422-436`), recorded as a
-documented asymmetry in *Negative* with the "one mechanism" claim softened — or `IAmALifetime` and
-`PipelineBuilder` gain `IAsyncDisposable` and `CommandProcessor` moves to `await using`, which
-contradicts the current "unchanged" entries and must be priced.
+**Recommendation**: Rewrite step 3's last sentence to match `:132`'s already-correct framing — D12 is
+discharged by *asking* the transformer factory for a scope (`CreatePipelineScope()`) regardless of
+whether a transform is declared; participation is about which lifetimes are consulted, not which
+factory resolved something. Delete "the transformer factory is handed the scope even when the mapper
+declares no transform".
 
 ---
 
-### 7. [0073] The thread-safety claim contradicts the ADR's own §289 (Score: 78)
+### 4. 0071 — "Changes nothing an application can observe" is contradicted by Implementation step 2 (Score: 72)
 
-`### Technology Choices` closes with an unqualified claim that no reader can observe a
-half-configured options object. Twelve paragraphs earlier the ADR states the opposite for the
-consumer `Action` path and argues at length why it is tolerable.
+The Scope paragraph and the Negative section both assert the ADR is observationally inert.
+Implementation step 2 changes both the exception an application sees and the release side-effects it
+gets, on a path reachable from ordinary user code. (This is a consequence of round 1's fix to its
+finding 22 — the fault-tolerant release loop — introducing an inconsistency elsewhere.)
 
-**Evidence**: ADR:382 — *"**No reader can observe the object in a half-configured state
-(NFR-4).**"* Against ADR:289 — *"on the `Action` path both service types name the *same*
-`ConsumersOptions` instance … **between a first resolution of `IAmConsumerOptions` and a first
-resolution of `IBrighterOptions`, that object's `DefaultScopeAffinity` still holds whatever the
-application set.**"* Verified: `ServiceActivator.Extensions.DependencyInjection/ServiceCollectionExtensions.cs:38-39`
-registers the same instance for both service types.
+**Evidence**: `0071:30` — "It is **behaviour-preserving**: it discharges no new requirement and
+changes nothing an application can observe." `0071:326` — "**This ADR delivers no behaviour.**
+Nothing an application can observe changes." Against step 2 (`:272-277`): "catching per item and
+holding the failure rather than letting it abort the loop"; "clear both tracking lists
+unconditionally"; "if anything was held, throw them composed as an `AggregateException`". The ADR's
+own Negative bullet at `:334` concedes the baseline differs. Verified: `HandlerLifetimeScope.cs:74-93`
+has no `try`/`catch`, and `Extensions/Each.cs:39` is a plain `foreach`, so today the original
+exception propagates unwrapped out of `Send`. Trigger is reachable —
+`src/Paramore.Brighter/SimpleHandlerFactory.cs:27-33` calls `disposable?.Dispose()` on a user
+handler.
 
-**Recommendation**: Narrow the Technology Choices claim to what MS DI actually guarantees — no
-reader holding the reference *the `IBrighterOptions` factory returns* — and cross-reference §289
-for readers that reach the same object another way.
-
----
-
-### 8. [0071] `SimpleHandlerFactory` is missing from the touched-types table, and all three implementation counts are wrong (Score: 78)
-
-The ADR says `IAmAHandlerFactory` has "19 implementations here: 4 in `src/`, 15 test doubles". The
-real numbers are 5 and 16, and the missing `src/` class is **public**.
-
-**Evidence**: a multi-line sweep (single-line greps miss it — its base list is on the next line)
-finds `SimpleHandlerFactory` at `src/Paramore.Brighter/SimpleHandlerFactory.cs:11` —
-`public class SimpleHandlerFactory(...) : IAmAHandlerFactorySync, IAmAHandlerFactoryAsync` — a
-public core type that will not compile once `CreatePipelineScope()` is added, and which is in
-neither the touched table nor the "unchanged, named so the omission is not read as an oversight"
-list. Test doubles are 16; the 16th is `DummyHandlerFactory` at
-`tests/Paramore.Brighter.Core.Tests/CommandProcessors/Pipeline/When_There_Is_No_Sync_Or_Async_Handler_Factories.cs:56`
-— `sealed class DummyHandlerFactory : IAmAHandlerFactory;`, a body-less implementation of the bare
-marker, which is a distinct break class the ADR does not call out. (`IAmALifetime`'s count of 7 is
-exactly right.)
-
-**Recommendation**: Add a `SimpleHandlerFactory` row (`CreatePipelineScope()` returns `null`),
-correct the counts to 21 / 5 / 16 in both *The forces* and *Negative*, and note that
-implementations of the bare `IAmAHandlerFactory` marker must gain a body.
+**Recommendation**: Qualify the two blanket statements — the *scoping* behaviour is preserved (one
+DI scope per pipeline, same resolution points, same release point), and one observable does change:
+an application whose handler factory's `Release` throws today sees that exception and loses the
+remaining releases, and afterwards sees a composed `AggregateException` with every release
+attempted. Say whether that needs a release note alongside the interface break. **See decision 3
+below — this may instead be grounds for moving the fault-tolerance out of 0071.**
 
 ---
 
-### 9. [0070] The scope is acquired outside the `try`, contradicting the contract table (Score: 78)
+### 5. SET — The release-note entry is enumerated as four breaks and it is five; ADR 0071's two interface breaks are in nobody's list (Score: 72)
 
-Two developers would implement the failure-to-create-a-scope case differently, because the ADR
-states it twice, incompatibly.
+*(Merges the 0070 reviewer's finding, which reported the same defect from inside 0070 at 62.)*
 
-**Evidence**: contract table, ADR:220 — *"may throw …; **the builder's existing `catch` turns that
-into `ConfigurationException`**"*. But step 3's snippet places `var scope = CreatePipelineScope();`
-*before* the `try`. Verified against `TransformPipelineBuilder.cs:93-125`: the `catch (Exception e)`
-at `:116` covers only the block opened at `:98`, and `:124` is the only site producing the
-`ConfigurationException`. A throw as written escapes raw — AC-5 requires
-`ConfigurationException` with the original as inner.
+The set treats the upgrade breaks as a single `release_notes.md` entry owned by 0070 step 7a. That
+entry enumerates four items. 0071 introduces a fifth — `IAmAHandlerFactory` and `IAmALifetime` —
+declares it "**Needs a release note**", and never joins the entry; and the two sentences in 0073
+that would have caught the omission mis-attribute 0070's six interfaces to 0070 *and* 0071, erasing
+0071's rather than adding them.
 
-**Recommendation**: Move the acquisition inside the `try` in the snippet (declaring
-`IAmAScope? scope = null` alongside the existing declarations at `:95-97`), or change the contract
-table to say the throw propagates unwrapped and reconcile that with AC-5.
+**Evidence**: `0070:361` — "ADR 0073 adds the `IBrighterOptions` member and ADR 0074 C-18's
+compatibility note; **all four** belong in the same release-note section". `0071:325` — "**Two more
+public interfaces break at compile time.** `IAmAHandlerFactory` (21 implementations here…) and
+`IAmALifetime` (7…). … **Needs a release note**" — and 0071 never cites step 7a anywhere
+(`grep 'step 7a' 007*.md` returns 0070, 0073, 0074 only). `0073:222` and `:430` — "the six
+factory-interface signatures ADRs 0070 **and 0071** change" — wrong on count (it is eight), on
+attribution, and on the word *factory* (four of the eight are registries or `IAmALifetime`).
+`0073:411` — "the **other three breaks** ADR 0070 step 7a lists". An implementor writing
+`release_notes.md` from step 7a ships a note omitting a source-and-binary break on two public core
+interfaces with 28 implementations between them.
 
----
-
-### 10. [0072] This is two decisions, and the ADR says so itself (Score: 74)
-
-The contract: *"State the unifying rule once, in one sentence … If it will not fit in one
-sentence, it is not yet one decision."* Both siblings' `Where this ADR sits` tables assert "Five
-ADRs deliver the parent requirement, **one decision each**." This Decision is a ~90-word compound
-sentence joined by a semicolon.
-
-**Evidence**: ADR:83 — *"Two behaviours are decided here, and **they are independent of one
-another**."* The `Scope` paragraph adds a third ("which object computes a pipeline's
-`ScopeAffinity`"). `The mechanism, end to end` carries two `####` sub-sections with no shared
-invariant, and `Alternatives Considered` splits cleanly into adoption alternatives (1, 2, 3, 4, 7,
-9, 10) and suppression alternatives (5, 6, 8) with no overlap. At 73KB it is the largest file in
-the set.
-
-**Recommendation**: Split `Publish` suppression into its own ADR — it has its own forces
-(`AsyncLocal` vs a parameter, the public-for-write cost, `Parallel.ForEach`'s `ExecutionContext`
-restore), its own requirements (FR-8, FR-9, NFR-4), its own alternatives and its own consequence.
-What stays in 0072 is the seam: the ladder, the role interface, the policy, the cache, the
-latches. If the split is refused, compress the Decision to one sentence and say in `Scope` *why*
-two independent behaviours are one record.
+**Recommendation**: Amend step 7a to enumerate five, naming 0071's break explicitly. Change 0071's
+Negative bullet from a free-floating "Needs a release note" to a pointer at step 7a's single entry,
+as 0073 and 0074 both do. Fix 0073's two sentences to "the eight factory, registry and handler
+interface signatures ADRs 0070 and 0071 change". Re-check every "four"/"three" count in the set
+afterwards. **See also finding 48 — `PipelineBuilder`'s public constructors may be a sixth.**
 
 ---
 
-### 11. [SET] FR-25's guidance page is an 11-clause deliverable with no owning ADR (Score: 72)
+### 6. 0070 — The failed-build cleanup order, as specified, leaks the pipeline scope when the mapper release throws (Score: 70)
 
-FR-25 requires `docs/guides/lifetimes-and-scoping.md` and enumerates eleven mandatory contents.
-NFR-10 makes it the *acceptance bar* for the whole opt-in, and every FR-22/FR-24.3 message 0074
-specifies is required to name it. No ADR owns it. What exists is five obligations discharged as
-side-notes: 0073 step 6 (FR-25.11), 0074 step 7 (FR-25.10), and passing citations of .6, .8, .9.
-Clauses **.1** (the get/release cycle for all three lifetimes), **.2**, **.3** (NFR-9's truth
-table), **.4** (the `IAmAScope`/`IAmALifetime` distinction — NFR-8), **.5** (`Publish` subscribers
-cannot join a caller's transaction — C-4) and **.7** (the joint-lifetime rule) have no owner at
-all. Clause .9's decision guide — the largest piece of writing FR-25 mandates — is named by 0074
-only as something an error message must *reach*.
+Step 4 specifies the scope release as happening "after releasing whatever leases were taken", with
+no `finally` and no guard. In the existing method the transform releases *are* individually guarded
+(`:219-223`, with a source comment explaining exactly this hazard) but
+`_mapperRegistry.Release(messageMapperLease)` at `:244` is **not**. An implementor who appends the
+scope release after `:244` — the literal reading — produces a path where a throwing mapper `Release`
+skips the scope release entirely, leaking the resource FR-5 and NFR-5 bound. Two developers would
+implement this differently: one appends a statement, one wraps in `try/finally`.
 
-**Evidence**: `grep -c 'FR-25'` → 0070:1, 0071:1, 0072:3, 0073:9, 0074:10; every 0073/0074 hit is
-a sub-clause reference. 0074:331 is the closest any ADR comes to owning the page and scopes itself
-to one clause.
+**Evidence**: `0070:327` — "when it was not, the cleanup releases the scope directly, after
+releasing whatever leases were taken." Source `TransformPipelineBuilder.cs:243-244`:
+`if (transformLeases is not null) ReleaseTransforms(transformLeases);` /
+`if (messageMapperLease is not null) _mapperRegistry.Release(messageMapperLease);`.
+`ReleaseTransforms` guards each release (`:221-222`); `:244` does not. The source's own comment at
+`:215-218`: "release every transform even when one Release throws … skipping the rest would leak
+their DI scopes permanently."
 
-**Recommendation**: Either add a paragraph to 0074's `Scope` — it is the ADR whose errors are
-unactionable without the page — stating that FR-25's page is an implementation-plan deliverable,
-not an ADR-level decision, and listing which ADR supplies each clause's substance; or accept that
-FR-25.9's decision guide is genuinely architectural and give it a home in 0074 beside the FR-22.2
-rule it exists to make actionable. Do not leave it distributed across two `Implementation
-Approach` steps.
-
----
-
-### 12. [0074] AC-45 is cited as the acceptance evidence for a decision it does not assert (Score: 72)
-
-The central "read the resolved `IBrighterOptions`, never `IOptions<BrighterOptions>.Value`"
-decision is justified by AC-45 in three places. AC-45 asserts nothing about validation.
-
-**Evidence**: `requirements.md:725-732` — AC-45's subject is the affinity option on the resolved
-`IBrighterOptions` and adoption behaviour across four registration paths; it is ADR 0073's
-acceptance criterion, and 0073 cites it for exactly that at its :378. No AC in requirements.md
-asserts what the *validator* reads — AC-27/28/40/41 all use a single registration path.
-
-**Recommendation**: Either state plainly that no AC pins this ADR's input-source choice, and flag
-it as a gap needing a spec amendment, or reword to "AC-45 pins the affinity on the resolved
-options object; this ADR reads that same object" — true, and weaker than the claim made.
+**Recommendation**: State the ordering as a `finally`, not a sequence — the owned scope release must
+run whether or not the lease releases threw, naming the existing per-transform guard at `:219-223`
+as the precedent and `:244` as the gap.
 
 ---
 
-### 13. [0073] The `IOptions` path mutates a framework-owned shared object, and that is nowhere named (Score: 72)
+### 7. 0072 — "The four builder `catch` blocks" — the ADR then enumerates six (Score: 70)
 
-On `AddBrighter(Action<BrighterOptions>)` the object `RegisterBrighterOptions` mutates is
-`IOptions<BrighterOptions>.Value` — a singleton the options machinery owns and hands to *anyone*
-resolving `IOptions`/`IOptionsSnapshot`/`IOptionsMonitor`, not only to Brighter. The *Negative*
-bullet on this hazard enumerates three of the four paths and omits the one where the shared object
-is not Brighter's.
+The count is stated twice and the enumeration beside it names six distinct code sites. An
+implementor who patches four leaves two wrapping catches unable to let `AmbientScopeSourceException`
+through, silently reinstating the `ConfigurationException` degradation FR-24.1 forbids on those
+paths.
 
-**Evidence**: ADR:417 — *"On the two `Func` paths and the consumer `Action` path the application
-constructs the options object itself."* Verified at
-`Extensions.DependencyInjection/ServiceCollectionExtensions.cs:69-75` —
-`AddOptions<BrighterOptions>()`, `Configure(configure)`, then
-`TryAddSingleton<IBrighterOptions>(sp => sp.GetRequiredService<IOptions<BrighterOptions>>().Value)`.
-The ADR's rewrite wraps exactly that delegate.
+**Evidence**: `0072:322` — "teach **the four** builder `catch` blocks to recognise it". `0072:336` —
+"**1a. The four builder `catch` blocks learn one clause.** Ahead of each existing wrapping `catch` —
+`PipelineBuilder.cs:202` and `:248`, `TransformPipelineBuilder.cs:116` and `:157`, **and the same
+two lines in `TransformPipelineBuilderAsync`**" — which is six. The `Where each type is touched`
+table agrees with six. Verified: `grep -n catch` gives `PipelineBuilder.cs:202`, `:248`,
+`TransformPipelineBuilder.cs:116`, `:157`, `TransformPipelineBuilderAsync.cs:116`, `:157`.
 
-**Recommendation**: Extend the bullet to all four paths and say that on the `IOptions` path a
-`PostConfigure`-style reader or a diagnostic dump can observe either value depending on resolution
-order. This also matters to 0074, which reads `IBrighterOptions` post-write.
+**Recommendation**: Say "six" in both places, or "the wrapping `catch` in each of the three
+builders' two build paths".
 
 ---
 
-### 14. [0071] A non-null `PipelineScope` the factory does not recognise leaves the pipeline holding one scope and resolving from another (Score: 72)
+### 8. 0071 — `SimpleHandlerFactory` is public, in core, and missing from `Where each type is touched` (Score: 68)
 
-Step 4 disposes of the case in a subordinate clause, with no error condition and no consequence.
+The forces bullet counts **5** `IAmAHandlerFactory` implementations in `src/`. The implementor's
+table lists **4**. The missing one is a public type in `Paramore.Brighter` that will not compile
+after the change.
 
-**Evidence**: *"…resolve through `lifetime.PipelineScope` when it is a
-`ServiceProviderPipelineScope`, falling back to `GetOrCreateLifetimeScope` when it is not."* When
-`PipelineScope` is non-null but foreign (a third-party `IAmAScope` per NFR-7/OOS-3, a hand-rolled
-`IAmALifetime`, or an ambient shape this factory does not accept after 0072), the factory silently
-creates a **second** `ServiceProviderLifetimeScope` in `_lifetimeScopes`
-(`ServiceProviderHandlerFactory.cs:127-131`) while `HandlerLifetimeScope.Dispose()` also disposes
-the handle. Two DI scopes for one pipeline, against NFR-5 and NFR-6 (`requirements.md:351-352`),
-silently — the failure mode 0070's Alternative 1 was rejected for. The second scope is disposed
-only on the *first* `Release`, reproducing the latent leak this ADR claims to close.
+**Evidence**: `0071:106` — "implemented by 21 classes in this repository (5 in `src/`, 16 test
+doubles)". The table (`:246-252`) lists `IAmAHandlerFactory`, `IAmALifetime`, `HandlerLifetimeScope`,
+`PipelineBuilder<TRequest>`, `SimpleHandlerFactorySync`/`SimpleHandlerFactoryAsync`,
+`ControlBusHandlerFactorySync`, `ServiceProviderHandlerFactory`.
+`src/Paramore.Brighter/SimpleHandlerFactory.cs:11` —
+`public class SimpleHandlerFactory(Func<Type, IHandleRequests> factory, Func<Type, IHandleRequestsAsync> asyncFactory) : IAmAHandlerFactorySync, IAmAHandlerFactoryAsync`.
+`grep -n "SimpleHandlerFactory"` on the ADR returns only `:250` (the *Sync*/*Async* pair) and `:334`
+— the type itself is named nowhere, and is not in the "Unchanged" sentence at `:254`.
 
-**Recommendation**: Give `CreatePipelineScope()`/`PipelineScope` a contract table with an explicit
-row for "handle present but unrecognised", stating the outcome, whether a second scope is created,
-who disposes it, and whether a diagnostic fires. 0070's ignore-path row is the precedent to mirror
-— but 0070's ignore costs nothing, whereas here it costs a DI scope.
-
----
-
-### 15. [0070] "Call sites are unaffected" is true of source only — the change is binary-breaking, per NFR-1(c) (Score: 72)
-
-The ADR prescribes the release-note wording, so the inaccuracy propagates into user-facing
-guidance. It is also internally inconsistent: the next Negative bullet gets the distinction right.
-
-**Evidence**: ADR:358 — *"**Call sites are unaffected, because the parameter is defaulted.**"* A
-defaulted parameter is compiled into the call site — which the ADR itself states at :224 — so an
-already-compiled caller binds to a method that no longer exists. `requirements.md` NFR-1(c): *"The
-break is a **source and binary breaking change** for any application that implements one of the
-six by hand"*. Contrast ADR:370 on the pipeline constructors, which frames it correctly.
-
-**Recommendation**: Restate as "source-compatible for call sites; binary-breaking for any caller
-or implementer not recompiled", citing NFR-1(c) and AC-24.
+**Recommendation**: Add a row: `Paramore.Brighter` | `SimpleHandlerFactory` (`:11`) |
+`CreatePipelineScope()` returns `null`. As it implements both twins it is also the second in-repo
+case (with `ServiceProviderHandlerFactory`) that alternative 6's "one declaration, not two" argument
+is about — worth the cross-reference.
 
 ---
 
-### 16. [SET] `CreatePipelineScope()`'s documented ownership contract is falsified by 0072, and no ADR amends it (Score: 70)
+### 9. 0072 — Row 1's outcome and the "exactly one ask" derivation are stated over both pipeline families but hold only for the transform family (Score: 68)
 
-0070 and 0071 both ship an XML doc comment saying **"The caller owns the returned scope and must
-release it"**, and 0070's contract table gives the output as *"a new, **owned** `IAmAScope`"*.
-0072's whole point is that the member sometimes returns a scope the caller does **not** own
-(ladder row 9: *"**BORROWED** — resolve from it, own nothing, dispose nothing"*). 0072's
-*Unchanged* list says *"no member is added to any of them here"* — literally true, and silently
-redefines the member's semantics. The hazard is concrete: a developer implementing "the caller
-owns and must release it" over a borrowed `HttpContext.RequestServices` disposes the caller's
-request scope, violating FR-12.
+Row 1 explicitly covers the handler factory, and its Outcome cell promises 0070's routing will ask
+"the next participant". For a handler pipeline there is no next participant and 0070's routing does
+not apply — the handler participating set is `{HandlerLifetime}` alone. The same over-generalisation
+is repeated as the *derivation* of D16, the one property that most needs deriving rather than
+asserting: for handler pipelines it is asserted.
 
-**Evidence**: `grep -n 'owns the returned scope'` → `0070:199` and `0071:189`, identical wording,
-against 0072's ladder row 9 and its flowchart node *"borrowed: resolves from Services and disposes
-NOTHING"*.
+**Evidence**: Ladder row 1 Situation — "**the factory being asked** has no scope to offer — … **or,
+for the handler factory, is `Singleton`**"; Outcome — "`null`: this factory offers nothing, and **ADR
+0070's routing asks the next participant**". `0072:106` — "what makes them hold is **ADR 0070's
+first-non-null routing**". Step 2 — "D16's *exactly one ask per pipeline* is delivered by **ADR
+0070's first-non-null routing**: the mapper registry is asked first and the transformer factory only
+if the registry offered nothing". But that routing is a private helper of the *transform* builder
+(`0070:323`). The handler side has one factory and no routing (`0071:179`, `:227`). 0072's own
+participating-set table (`:386`) confirms the handler set is `{ HandlerLifetime }` "alone".
 
-**Recommendation**: Restate the contract once, in whichever ADR is canonical, in terms that
-survive 0072: *"returns a handle the caller must always release; releasing may or may not dispose
-an underlying scope, and the handle alone knows which."* Amend both doc comments and 0070's
-contract table, and add a line to 0072's *Unchanged* paragraph saying the signature is unchanged
-but the ownership contract is widened here.
-
----
-
-### 17. [SET] FR-20 and NFR-1(c) — the breaking-change record has no owner, and 0070 cites FR-20 without deciding anything about it (Score: 70)
-
-0070 makes the break: six public interfaces, plus `MapperLifetime.Scoped` changing from
-process-lifetime caching to per-pipeline. FR-20 requires the behavioural break in
-`release_notes.md`; NFR-1(c) requires the six-interface source-and-binary break recorded there,
-naming each interface and its migration (AC-24). 0070 lists FR-20 in References but its Decision,
-Implementation Approach and Consequences say nothing about release notes, and it never cites NFR-1
-at all — the requirement that authorises and constrains its central breaking change.
-
-**Evidence**: `grep -n 'release_notes' docs/adr/007*.md` → hits in 0073 and 0074 only, each
-recording its own smaller break. `grep -c 'NFR-1\b'` → 0070:0, 0071:0. This is the set's only
-clear claimed-but-not-delivered instance.
-
-**Recommendation**: Add a numbered step to 0070's `Implementation Approach` recording both breaks
-(FR-20 behavioural; NFR-1(c)/AC-24 six-interface), add NFR-1 to its References, and cross-reference
-from 0073:396 and 0074:331 so the breaks read as one release-note entry.
+**Recommendation**: Split row 1's Outcome by family — transform: "0070's routing asks the next
+participant"; handler: "the pipeline takes no pipeline scope and makes no ask". State D16's delivery
+in two clauses: 0070's first-non-null routing for transforms, one-factory-called-once (0071) for
+handlers.
 
 ---
 
-### 18. [0073] The new package's targeting and packaging are asserted without grounding, and there is no precedent in the repo (Score: 70)
+### 10. 0073 — The `InternalsVisibleTo` rejection is credited to ADR 0072, but that argument lives in ADR 0075 (Score: 68)
 
-Step 4 specifies *"A `netstandard2.0`-and-up class library referencing
-`Paramore.Brighter.Extensions.DependencyInjection` and `Microsoft.AspNetCore.Http`"*. That is not
-implementable as written.
+`0073:253` justifies making `ScopeAffinityOverride` public by pointing at a passage that does not
+exist in the ADR it names — fallout from the 0072 → 0072 + 0075 split. 0072 no longer contains any
+suppression rationale and says so in terms, so a reader following the citation lands on a
+disclaimer.
 
-**Evidence**: `src/Directory.Build.props:43` —
-`<BrighterTargetFrameworks>netstandard2.0;net8.0;net9.0;net10.0</BrighterTargetFrameworks>`.
-`grep -rn "AspNetCore" --include="*.csproj" src` → **no matches**; `grep -rn "FrameworkReference"`
-→ **no matches**. `Directory.Packages.props` has no `Microsoft.AspNetCore.Http` entry, and central
-package management requires one. On `netstandard2.0` the only shippable `Microsoft.AspNetCore.Http`
-is the end-of-life 2.2.x line; on `net8.0`+ the types come from the shared framework via
-`<FrameworkReference Include="Microsoft.AspNetCore.App"/>` — different mechanisms per TFM, so this
-is a conditional-ItemGroup decision, not a one-line reference. Minor: `IHttpContextAccessor` is
-declared in `Microsoft.AspNetCore.Http.Abstractions`.
+**Evidence**: `0073:253` — "`InternalsVisibleTo` was rejected for the reason ADR 0072 gives about
+suppression". `grep -rn "InternalsVisibleTo" docs/adr/007*.md` returns **only** `0075:214` and
+`:281`. `0072:33` explicitly disclaims the topic: "It does not decide **how a `Publish` subscriber
+suppresses adoption** … that is ADR 0075, which owns the flag."
 
-**Recommendation**: State which TFMs the package targets and, per TFM, whether it uses a
-`PackageReference` or a `FrameworkReference`, plus the `Directory.Packages.props` entry. If
-`netstandard2.0` is not worth the 2.2.x dependency, say the package is `net8.0+` only and record
-that as a deliberate departure from `BrighterTargetFrameworks`.
+**Recommendation**: Change to "for the reason ADR 0075 gives about the suppression holder (`0075`
+*Technology Choices*, 'Why the holder is public for read *and* write')", and add 0075 to
+`Related ADRs` (finding 31).
 
 ---
 
-### 19. [0072] `ScopedArtefactCache` becomes shared state across concurrent pipelines, with no contract and no thread-safety statement (Score: 70)
+### 11. SET — ADR 0073 still carries three decisions (Score: 68)
 
-The central structural move — taking `_scopedInstances` off the per-pipeline handle and making it
-a request-`Scoped` service — converts a cache confined to one pipeline into one contended by every
-concurrent pipeline in an HTTP request. That is squarely inside NFR-4, and the type gets no
-contract table, no members, no concurrency semantics. Same omission for `AmbientScopeDiagnostics`
-(three shared, concurrently-written latches) and `ScopeAffinityPolicy`.
+The set claims one decision per ADR, and 0072 was split on exactly this ground. 0073 has not been.
+Its own text separates the three parts by kind, its bolded Decision sentence unifies only the third,
+its title is three clauses joined by commas, it is the only row in the shared sibling map that lists
+three things, and its Alternatives partition into three non-overlapping groups — the same signature
+that justified splitting 0072.
 
-**Evidence**: the documentation contract requires *"each significant type with a contract table
-(Member / Input / Output / Error conditions)"* under `### Key Components`. `IAmAScopeProvider`,
-`IAmAServiceProviderScope` and `AmbientScopeSuppression` have one; the other three do not. Today's
-implementation gets its safety from a per-pipeline `ConcurrentDictionary<Type, Lazy<object?>>`
-(`ServiceProviderLifetimeScope.cs:49`) plus the `Lazy` publish protocol at `:163-178`; nothing
-says whether `ScopedArtefactCache` preserves that, nor what "one instance per type" means when two
-pipelines race the first resolution. AC-11 asserts *exact* warning counts, and `WarnOnce` is
-unspecified as to atomicity.
+**Evidence**: `0073:32` — "This ADR decides **three things** that are one gesture — the opt-in
+property on `IBrighterOptions`, the ASP.NET package and its single registration extension, and the
+mechanism by which that extension's affinity argument reaches the object `IBrighterOptions` resolves
+to". `0073:27` — "Two of its three parts are naming; the third is not." `0073:89`, the one bold
+Decision sentence — "The opt-in gesture does not write the affinity onto the options object; it
+deposits the value in the service collection, and the one place that does have the options object …
+picks the value up." Neither the property's existence and `AlwaysNew` default, nor the new package,
+its name, its target frameworks or its SDK choice, follows from that sentence. The sibling-map row,
+identical in all six — "the **opt-in** property, the ASP.NET package, and how that setting reaches
+all four registration paths" — where every other row states one thing. Alternatives partition: **2**
+and **6** belong to the property; **9** and **10** to the package; **3, 4, 5, 7** to the
+write-through. Independence is stated at `:425`: "an `AsyncLocal`-backed provider package for
+console hosts registers its provider and its override in exactly the same two lines".
+`#### The three C-11 working names` (`:338-365`) and `:391-395` are self-contained decisions.
 
-**Recommendation**: Add contract tables for all three. For `ScopedArtefactCache`, state the member
-set, the concurrency guarantee, and what `Dispose` does under a concurrent `GetOrAdd`. For
-`AmbientScopeDiagnostics`, state that `WarnOnce` is atomic per (condition, provider type) so
-AC-11's counts hold under a concurrent `Publish`.
-
----
-
-### 20. [0072] The `Where the pieces live` diagram attributes the type test to the wrong object (Score: 70)
-
-The prose says the *factories* type-test for `IAmAServiceProviderScope`; the diagram says
-`ServiceProviderPipelineScope` does.
-
-**Evidence**: ADR:260 — *"**The four container-backed transform factories and the handler factory
-type-test for the interface**"*; pseudo-code at :397 and the roles table at :192 agree. But the
-diagram's last edge, :176, is `pipescope -. "type-tests for" .-> role`, and the rendered PNG
-confirms the arrow leaves the `ServiceProviderPipelineScope` node.
-
-**Recommendation**: Change :176 to `facs -. "type-tests for" .-> role`.
+**Recommendation**: Split 0073 into two — the option and the order-independent write-through in one;
+the ASP.NET package, its names, its extension signature and its target frameworks in the other. Both
+sibling maps then become seven rows with one thing each. If the set is to stay at six, 0073 must
+state a single unifying sentence covering all three parts, and its map row must reduce to it.
+**Owner decision 1 below.**
 
 ---
 
-### 21. [0070] NFR-1 — the requirement that authorises the entire breaking change — is never cited (Score: 68)
+### 12. 0072 — "The same two lines" in the other four factories resolves for only two of the five (Score: 66)
 
-**Evidence**: the forces bullet at :76 paraphrases NFR-1 almost verbatim but cites only ADR 0014
-and NFR-7; the bullet at :77 ("The interfaces are alterable, and the cost is understood") cites
-**no requirement at all** — it is NFR-1's withdrawal clause. The References line lists neither
-NFR-1 nor AC-24. NFR-3 is likewise the source of the *"`ServiceActivator` keeps its single project
-reference"* Positive bullet and is uncited.
+The premise `ScopeAffinityPolicy` rests on — that all five container-backed factories read
+`IBrighterOptions` — is true and was verified for all five. The citation given for it is not: three
+of the five are at different lines. This is the family-without-re-reading-every-member failure mode.
 
-**Recommendation**: Cite NFR-1 on both bullets, name obligations (a)/(b)/(c) where discharged,
-cite AC-24 on the release-note consequence, and add NFR-1, NFR-3 and AC-24 to References.
+**Evidence**: `0072:231` — "all five container-backed factories already read `IBrighterOptions` in
+their constructors (`ServiceProviderMapperFactory.cs:44`, and **the same two lines** in
+`ServiceProviderMapperFactoryAsync`, `ServiceProviderTransformerFactory`,
+`ServiceProviderTransformerFactoryAsync` and `ServiceProviderHandlerFactory`)". Actual:
+`ServiceProviderMapperFactory.cs:44-45` ✓; `ServiceProviderTransformerFactory.cs:44-45` ✓;
+`ServiceProviderMapperFactoryAsync.cs:`**`45-46`**; `ServiceProviderTransformerFactoryAsync.cs:`**`45-46`**;
+`ServiceProviderHandlerFactory.cs:`**`49-50`**.
 
----
-
-### 22. [0071] "Today it releases handlers and cannot fail meaningfully" is factually wrong, and under-scopes the work (Score: 68)
-
-The *Negative* bullet mis-states the baseline, making the new error handling look additive when it
-is a repair of an existing defect.
-
-**Evidence**: `HandlerLifetimeScope.cs:74-93` — `Dispose()` is two bare `.Each(...)` loops calling
-`_handlerFactorySync?.Release(trackedItem, this)` with **no try/catch anywhere**, then
-`_trackedObjects.Clear()`. A user factory's `Release` can throw —
-`SimpleHandlerFactorySync.Release` (`:40-44`) calls `disposable?.Dispose()` — and a throw from the
-first tracked handler aborts the loop, skips every remaining `Release`, and skips both `Clear()`
-calls. The transform family already has this fixed and regression-guarded
-(`tests/Paramore.Brighter.Core.Tests/MessageSerialisation/When_a_transform_release_throws_the_scope_still_releases_the_rest.cs`).
-Step 2 asks only that a throwing release not prevent scope disposal — not handler-to-handler.
-
-**Recommendation**: Correct the bullet, extend step 2 so the per-handler loop is fault-tolerant
-(release every handler, compose failures, then dispose the handle), and add the ADR-0068-shaped
-regression test to step 6 mirroring the transform test above.
+**Recommendation**: Replace with the five explicit citations, or drop "the same two lines" and cite
+only the exemplar plus the class names.
 
 ---
 
-### 23. [0072] Ladder row 1 is ambiguous between a per-factory and a per-pipeline test, and one reading contradicts the ADR's own rule (Score: 68)
+### 13. 0070 — `Reactor.cs:636` does not resolve; it is a blank line (Score: 65)
 
-**Evidence**: :93 reads as a pipeline-level test — *"mapper **or** transformer not `Scoped`"* —
-restated in the pseudo-code at :377-378. Against :421 — *"A `{Scoped mapper, Singleton
-transformer}` transform pipeline **adopts**"*. They reconcile only if row 1 means "this one
-factory's own lifetime", which further requires 0070's first-non-null routing (`0070:298`) to
-guarantee exactly one ask per pipeline (D16, AC-13). That routing appears nowhere in 0072's body,
-only obliquely in a References bullet at :529.
+Cited three times as the site of `FailedToReleasePipeline`. Line 636 is empty; the `[LoggerMessage]`
+attribute is at `:637`. The ADR's two parallel citations use the *attribute* line consistently, so
+this is a one-line slip in a set of three that are otherwise uniform — and one of the sites step 4a
+tells an implementor to edit.
 
-**Recommendation**: Reword row 1 and the pseudo-code to "**the factory being asked** is not
-`Scoped` (mapper factory: `MapperLifetime`; transformer factory: `TransformerLifetime`; handler
-factory: `Singleton`)", and add a sentence in step 2 stating that the single ask is guaranteed by
-0070's first-non-null routing, walking `{Transient mapper, Scoped transformer}` explicitly.
+**Evidence**: `0070:196`, `:257`, `:329` all cite `Reactor.cs:636`. Source: `R636` blank, `R637`
+`[LoggerMessage(LogLevel.Warning, "MessagePump: Failed to release the transform pipeline …")]`,
+`R638` the method. Comparators: `Proactor.cs:651` = attribute ✓; `OutboxProducerMediator.cs:1448` =
+attribute ✓.
 
----
-
-### 24. [SET] 0070 and 0071 both route FR-22 to the wrong ADR (Score: 68)
-
-**Evidence**: 0070 `Scope` — *"or the `ValidatePipelines()` rules of FR-22. Those are deferred to
-ADRs 0072 and 0073."* 0071 — *"or the `ValidatePipelines()` rules of FR-22 — 0072 and 0073."*
-Against 0073 `Scope` — *"It does **not** decide where FR-22's validation rules are evaluated —
-that is ADR 0074"* — and 0072 says the same. A reader chasing FR-22 from either of the first two
-lands on two ADRs that both explicitly disclaim it.
-
-**Recommendation**: In both files, name 0074 for the FR-22 clause. Same edit both files.
+**Recommendation**: Change all three to `Reactor.cs:637`.
 
 ---
 
-### 25. [0070] The invariant read off the sequence diagram contradicts the diagram (Score: 66)
+### 14. 0073 — `RegisterBrighterOptions` has no contract table, and a pre-existing `IBrighterOptions` registration silently defeats the whole opt-in (Score: 65)
 
-**Evidence**: diagram message — `Builder->>Transforms: CreatePipelineScope(), only if the registry
-offered nothing`. Two paragraphs later, :127 — *"The transformer factory **is asked and passed the
-scope** whether or not the mapper declares a transform (D12)."* When `MapperLifetime = Scoped` the
-registry offers and the transformer factory is never asked. And with no transform attributes
-nothing is passed either: `TransformPipelineBuilder.cs:174-196` only reaches
-`new TransformerFactory<TRequest>(…)` (`:193`) inside the loop over `transformAttributes`. The
-overstatement recurs at :300. D12 (`requirements.md:779`) is about the *participating set*, which
-the mechanism does deliver.
+`#### RegisterBrighterOptions — where the override is applied` (`:257-297`) is where the whole design
+lives, and it is the only significant new member without a **Contract.** table. Three error
+conditions are unspecified. The third is the serious one: `TryAddSingleton` no-ops when
+`IBrighterOptions` is already registered, so an application or test harness that registers it before
+`AddBrighter` gets no override **on any path in any order** — the silent-total-failure mode FR-17
+and AC-45 exist to prevent. The ADR reasons about `TryAdd` first-wins only *between the four Brighter
+sites* (`:296`), and the Risks table only anticipates "a fifth registration path" (`:444`).
 
-**Recommendation**: Restate as the participation rule the mechanism actually gives — *"the
-transformer factory counts as a participant whether or not the mapper declares a transform, so
-`TransformerLifetime = Scoped` alone makes the pipeline take a scope"*.
+**Evidence**: `.agent_instructions/documentation.md` § *ADR structure* requires "each significant
+type with a contract table (Member / Input / Output / Error conditions)". Unstated: null `services`
+or `optionsFunc` (every neighbouring entry point guards explicitly —
+`ServiceCollectionExtensions.cs:65-66`, `:92-95`; ServiceActivator `:33-34`, `:82-85`); a null
+`optionsFunc` result, given the body does `options.DefaultScopeAffinity = over.Affinity` unguarded;
+and the pre-existing-registration case. That pattern is live in this repo —
+`tests/Paramore.Brighter.Core.Tests/CommandProcessors/Pipeline/When_A_Handler_Is_Part_Of_An_Async_Pipeline.cs:23`
+and ~10 siblings do `container.AddSingleton<IBrighterOptions>(new BrighterOptions {…})`.
 
----
-
-### 26. [0071] Neither new member has a contract table, which the skeleton and all four siblings require (Score: 66)
-
-**Evidence**: `grep -n "| Member |" docs/adr/007*.md` → 0070:218, 0072:223/251/287,
-0073:207/243/321, 0074:203. ADR 0071: **no match**. Consequence: error conditions for
-`CreatePipelineScope()` are one prose sentence (that claim does hold —
-`PipelineBuilder.cs:179-205` verified), and error conditions for `PipelineScope` are stated
-nowhere — is a `null` handle under a non-`Singleton` lifetime an error? May the property change
-between reads? Is it read once per `Create` or once per pipeline?
-
-**Recommendation**: Add Member/Input/Output/Error-conditions tables for both, covering: throw from
-`CreatePipelineScope()`, unrecognised handle (finding 14), `null` under a non-`Singleton`
-lifetime, and double-disposal.
+**Recommendation**: Add the contract table covering the two null arguments, a null `optionsFunc`
+result, and — explicitly — that a pre-existing `IBrighterOptions` registration wins the `TryAdd` and
+the override is then never applied, stating whether that is accepted or diagnosed. **The
+accepted-or-diagnosed half is owner decision 4 below.**
 
 ---
 
-### 27. [0074] Alternative 2's rejection rests on an incomplete enumeration of container-free shapes (Score: 65)
+### 15. 0073 — The mixed-host risk row cites AC-43; the AC that carries that configuration is AC-20 (Score: 65)
 
-**Evidence**: *"The only container-free shape left is opaque: an
-`IEnumerable<Func<IEnumerable<ValidationError>>>` of pre-bound rules"*. The counter-example is the
-precedent this ADR leans on four times — ADR 0064's `IAmATransformerResolvabilityProbe`, a named,
-core-defined, container-free question interface implemented in the DI package
-(`src/Paramore.Brighter/Validation/IAmATransformerResolvabilityProbe.cs`, implementation
-`ServiceCollectionTransformerResolvabilityProbe`). A lifetime-probe analogue would be neither
-opaque nor a delegate bag. It probably *does* fail — FR-22.1/22.2 require messages listing all
-three lifetimes and their values, which a bool-returning probe cannot supply without mirroring
-`ServiceLifetime` into core (Alternative 3) — but the ADR never joins those arguments.
+AC-43 is about validation messages naming the guidance page and says nothing about mixed hosts,
+ordering or overloads.
 
-**Recommendation**: Add the named-probe variant explicitly and reject it by pointing at
-Alternative 3.
+**Evidence**: `0073:446` — "**AC-43's mixed-host configuration** states which entry point registers
+first and which `AddConsumers` overload is used, per C-12". `requirements.md:692-696` AC-43 —
+"Every validation message points at the guidance. **Given** five hosts, each configured to trigger
+exactly one finding…" — no mixed host, no ordering, no overload. `requirements.md:638-639` AC-20 —
+"**Given** a mixed host that calls `AddBrighter(...)` before **`AddConsumers(Action<ConsumersOptions>)`**
+— the `Action` overload specifically, because per C-12 the `Func<IServiceProvider, ConsumersOptions>`
+overload throws `InvalidCastException` in this ordering…" — the cited content, verbatim. AC-20 is
+also absent from 0073's References, which does carry AC-43.
 
----
-
-### 28. [SET] 0071 claims its `CreatePipelineScope()` mirrors 0070's contract "exactly" — the null semantics differ on `Transient` (Score: 65)
-
-**Evidence**: 0070's doc comment — `null` when *"it is not container-backed, **or its configured
-lifetime is not `Scoped`**"*. 0071's role table — *"`null` for `Singleton`; **a handle for
-`Transient` and `Scoped` alike**"*. Both are right in isolation (the handler family needs a handle
-for `Transient` because ADR 0067's per-resolution scope rides on `ServiceProviderLifetimeScope`),
-and 0072's ladder row 1 confirms the asymmetry. What is wrong is 0071's claim of identity — *"This
-mirrors ADR 0070's `CreatePipelineScope()` exactly, **including its contract**"* — which is the
-sentence an implementor acts on. Applying 0070's rule to the handler factory returns `null` for
-`Transient` and regresses ADR 0067, which C-6 forbids.
-
-**Recommendation**: Replace "including its contract" with the difference stated plainly: the
-member's shape and throw behaviour are 0070's; its null rule is not.
+**Recommendation**: Replace AC-43 with AC-20 in that row and add AC-20 to References. The same
+substitution likely applies at `:292`.
 
 ---
 
-### 29. [0070] "Only when its configured lifetime is `Scoped`" is contradicted by 0072, and FR-27 is never cited (Score: 64)
+### 16. 0074 — `ArtefactExclusionSet.Build(registry)` cannot produce the handler half of the exclusion set from the inputs it is given (Score: 65)
 
-**Evidence**: ADR:309 and :333 fix the offer rule per-factory. But `0072:296` states: *"ADR 0070's
-protocol calls `CreatePipelineScope()` on one factory and D16 requires exactly one ask per
-pipeline. The factory that creates the pipeline scope must therefore know every participant's
-configured lifetime."* With `{Transient mapper, Scoped transformer}`, 0072's `ScopeAffinityPolicy`
-must have the mapper registry answer for a set containing `Scoped`. 0070's rule is superseded, not
-extended. FR-27 appears nowhere in 0070, although it cites D12 twice and D12's stated landing
-(`requirements.md:779`) is *"Terms; **FR-27.2**; AC-13, AC-46"*.
+The exclusion is a conjunction over **two** attribute families, and the handler half is read from
+`PipelineBuilder<IRequest>.Describe()` — which needs the pipeline builder, the publications, the
+subscriptions and the registered handlers. The one factory signature written down takes only the
+mapper registry. AC-42's `[UsePolicyAsync]` clause is pinned on that handler half.
 
-**Recommendation**: Reword to "when `Scoped` participates in this pipeline", note that 0072 fixes
-how a single factory computes over the whole set, and add FR-27 to Scope and References.
+**Evidence**: `0074:222` — `ArtefactExclusionSet.Build(registry.Value),   // Brighter's own
+attribute-returned artefacts`. Step 5a (`:367`) ranges wider than its arguments allow: "makes that
+pass once, over every request type reachable from the publications, the subscriptions and the
+registered handlers." `:280` confirms both halves are needed. Verified: `PipelineBuilder.cs:151` is
+`public IEnumerable<HandlerPipelineDescription> Describe()` — an instance method on the
+`PipelineBuilder<IRequest>` the delegate constructs at `BrighterPipelineValidationExtensions.cs:75`,
+and nothing in `Build(registry)` reaches it.
 
----
-
-### 30. [0071] The frontmatter summary contradicts the body on whether the dictionary survives (Score: 62)
-
-**Evidence**: frontmatter `summary` (:8) — *"`ServiceProviderHandlerFactory` stops keying a DI
-scope on `IAmALifetime` in a dictionary, and `Release` stops being the thing that disposes it."*
-Body, *Technology Choices* — *"**The dictionary survives as the no-handle path.**"* Body,
-*Negative* — *"`_lifetimeScopes`, `GetOrCreateLifetimeScope` and `ReleaseLifetimeScope` remain."*
-The summary is what `adr:read_adr_metadata` and the ADR index surface.
-
-**Recommendation**: Qualify — "stops keying a DI scope on `IAmALifetime` **on the path Brighter
-itself takes**; the dictionary survives as a fallback for callers that supply no handle."
+**Recommendation**: Give `ArtefactExclusionSet.Build` its real parameter list — the
+`PipelineBuilder<IRequest>`, the `MessageMapperRegistry`, and the publications/subscriptions the
+request-type enumeration walks — in both the sketch and step 5a, with one sentence on which input
+serves which half.
 
 ---
 
-### 31. [0072] Five `file:line` citations inside one forces bullet (Score: 62)
+### 17. 0074 — The `The mechanism, end to end` sequence diagram evaluates only four of the five rules; FR-17 is missing (Score: 65)
 
-**Evidence**: the contract caps this at one per forces or Consequences bullet. ADR:72 carries five
-(`CommandProcessor.cs:591-599`, `:601`, `:481`, `PipelineBuilder.cs:187-198`, `:232-244`). All five
-verified correct — a placement defect, not an accuracy one.
+FR-17's repeated-opt-in rule is the fifth rule added by requirements revision 15, and the ADR's
+tables carry it consistently everywhere else. The orienting artefact for the section the house style
+says must lead with behaviour under-counts the decision the ADR exists to make, and the two diagrams
+disagree with each other.
 
-**Recommendation**: Keep the behavioural claim plus one anchor; move the rest to `Implementation
-Approach` step 5, which already restates them.
+**Evidence**: `0074:138` — `Dec->>Dec: evaluate FR-22.1, FR-22.2, FR-22.3 and FR-24.3` (confirmed in
+the rendered PNG). Against `0074:164` —
+`rules["ScopeConfigurationRules — NEW, internal<br/>FR-22.1, FR-22.2, FR-22.3, FR-24.3, FR-17"]` —
+and the five-row rule table at `:81-85`.
 
----
-
-### 32. [0074] The body cites ADRs by bare number, which the ADR itself says is ambiguous in this repo (Score: 62)
-
-**Evidence**: References opens with *"Related ADRs (cited by slug — ADR numbers are not unique in
-this repo, C-16)"*. The body then uses `ADR 0064` ×8, `ADR 0053` ×2, `ADR 0054` ×1. `docs/adr` has
-two `0064-*`, three `0053-*` and two `0054-*` files. Worse, `requirements.md:383` (C-16) assigns
-the bare number to the *other* document — *"ADR 0064 = `0064-pipeline-cache-type-key`" — so a
-reader applying the spec's own convention resolves all eight to the wrong ADR.
-
-**Recommendation**: Use slugs on first use per section, or gloss the number immediately after its
-first occurrence.
+**Recommendation**: `Dec->>Dec: evaluate FR-22.1, FR-22.2, FR-22.3, FR-24.3 and FR-17`.
 
 ---
 
-### 33. [0073] "A third break" is at least a fourth (Score: 62)
+### 18. 0075 — The `References` requirement list does not match the body in either direction (Score: 65)
 
-**Evidence**: :217, :396 and :415 all say "a third break", counting FR-20's behavioural break and
-FR-22.2's compatibility break. AC-24's final clause requires a fourth: release notes for the six
-factory interfaces whose signatures change, which 0070 and 0071 deliver (`0070:192`, touched table
-`:237-238`).
+Two ids listed and never used; one FR used and not listed; and six AC ids cited in the body while
+the References line carries no AC ids at all — 0075 is the only ADR of the six whose References line
+omits them.
 
-**Recommendation**: Say "a fourth break", or drop the ordinal.
+**Evidence**: `0075:289` lists "… C-5, C-13, D0b, D0c, D6, D10, D16, OOS-14". **`D16`** — `grep`
+returns line 289 only; nothing in 0075 turns on it. **`C-13`** — same; it *is* relevant
+(`requirements.md:382`) but the body never invokes it. **`FR-5` used and unlisted** — `:212`
+"FR-5's failed-build release has nowhere to live". Six ACs used, none listed: AC-10 (`:255`), AC-11
+(`:116`, `:270`), AC-12 (`:116`, `:239`, `:269`, `:285`), AC-22.3 (`:222`, `:254`), AC-39 (`:237`,
+`:239`, `:269`), AC-47 (`:74`, `:233`, `:271`, `:279`). Every sibling lists ACs (`0070:437`,
+`0072:461`, `0074:438`).
 
----
-
-### 34. [0073] The extension's namespace is unprecedented here and undercuts the ADR's own IntelliSense argument (Score: 58)
-
-**Evidence**: the extension class is placed in `namespace Microsoft.Extensions.DependencyInjection`.
-`grep -rln "^namespace Microsoft.Extensions.DependencyInjection" src` → **no matches**; every
-Brighter `IServiceCollection` extension uses its own namespace
-(`Extensions.DependencyInjection/ServiceCollectionExtensions.cs:43`, consumer equivalent at `:12`).
-The stated rationale — *"`AddBrighterRequestScope` sorts next to `AddBrighter` in IntelliSense"* —
-is only true in a file that has imported both namespaces.
-
-**Recommendation**: Either use `Paramore.Brighter.Extensions.AspNetCore`, or keep the Microsoft
-namespace and justify it on the better ground: ASP.NET's implicit usings guarantee it is in scope
-in `Program.cs` without a second `using`.
+**Recommendation**: Drop `D16`; either cite `C-13` in the body or drop it; add `FR-5`; add
+"; AC-10, AC-11, AC-12, AC-22.3, AC-39, AC-47" in the siblings' format.
 
 ---
 
-### 35. [0070] The extra `### Forward compatibility` section is non-canonical and now stale (Score: 58)
+### 19. 0075 — The risk table misdescribes what AC-47's two branches exercise (Score: 65)
 
-**Evidence**: the canonical skeleton (`documentation.md:71-85`) goes `### Implementation Approach`
-→ `## Consequences`. 0070 interposes `### Forward compatibility with ADRs 0071, 0072 and 0073` at
-:327 — the only heading in the set with no counterpart in the other four (0071 :248→:283, 0072
-:368→:454, 0073 :384→:400, 0074 :323→:333). 0072 carries the same material as a numbered item
-*inside* Implementation Approach, which is the shape the set settled on. Three things have gone
-stale: the heading omits 0074; the final bullet is titled *"`Publish` and the opt-in (0073)"* when
-`Publish` suppression landed in 0072; and its content now duplicates in prose what four siblings
-decide in full.
+The mitigation for "the two brackets drift apart" rests on AC-47 covering both bracket placements.
+It does not. AC-47's first branch is a **`Send`**, not a subscriber, and both branches run
+`{HandlerLifetime = Transient, …}` — so neither has a subscriber that takes a pipeline scope, and
+neither exercises the resolution-time bracket. Removing bracket 1 would not fail AC-47.
 
-**Recommendation**: Delete the section now that all four siblings exist. If anything must survive,
-the one non-obvious claim — why `ServiceProviderPipelineScope` owns a `ServiceProviderLifetimeScope`
-rather than an `IServiceScope` — belongs in `Technology Choices`. (Note `documentation.md:87` names
-0070 as the worked example of the skeleton, so exemplar and contract currently disagree — one
-should move.)
+**Evidence**: `0075:271` — "**AC-47's two branches exercise a subscriber that takes a pipeline scope
+and one that does not**, so a bracket removed from either path fails a test rather than degrading
+quietly." Against `requirements.md:764-768`: branch 1 is a `Send` — "the parent handler pipeline is
+`Transient`, so it takes no pipeline scope (FR-27.1) and, **not being a subscriber**, suppresses
+nothing"; branch 2 — "**Suppression here must come from FR-9's execution-time bracket**". The ADR
+reads AC-47 correctly elsewhere (`:208`, `:233`, `:279`), so `:271` is the outlier.
 
----
-
-### 36. [0071] `TransformPipelineDrain` does not today enforce the ordering rule the ADR twice says it enforces (Score: 58)
-
-**Evidence**: two present-tense claims — *"the same rule `TransformPipelineDrain` enforces for
-transform pipelines"*. Actual code, `TransformPipelineDrain.cs:40-77`: `Drain(Action disposeScope,
-Action releaseMapper)` disposes the **transform lifetime scope** (an artefact tracker) then
-releases the mapper lease. No DI scope participates. `0070:305` is explicit that the DI-scope step
-is new — the drain *"gains a third step"*.
-
-**Recommendation**: Change both to "the same rule ADR 0070 adds to `TransformPipelineDrain` as its
-third drain step", and move the citation into `Implementation Approach`.
+**Recommendation**: Restate against the criteria that actually cover the two brackets — AC-11's
+closing note ("this AC fails unless FR-9's **resolution-time** bracket (a) is implemented; an
+execution-time bracket alone cannot make it pass", `requirements.md:483`) and AC-12/AC-39 for
+bracket 2, with AC-47 branch 2 for the takes-no-scope case.
 
 ---
 
-### 37. [SET] 0072 uses `AddBrighterAspNetCoreScopes`, a spelling 0073 explicitly rejects (Score: 58)
+### 20. SET — ADR 0073 renames the registration extension, and the approved requirements — including three ACs — still name the method it replaced (Score: 65)
 
-**Evidence**: 0073 devotes a section to rejecting the name and replacing it with
-`AddBrighterRequestScope(ScopeAffinity affinity = ScopeAffinity.JoinAmbient)`. `grep -c` →
-`AddBrighterAspNetCoreScopes`: 0072:1, 0073:2 (both in the rejection);
-`AddBrighterRequestScope`: 0073:17, 0072:0. 0072 does disclaim it ("written against the working
-spellings"), which is why this is not scored higher — but the set otherwise back-propagates
-newest-ADR facts meticulously.
+C-11 authorises the ADR to change the spelling, and 0073 does so with a full rationale. Nothing in
+the set records the propagation obligation, and revision 15 still spells the old name in seven
+places, three of them ACs that tests will be written from. The requirements are now internally
+inconsistent too: the revision-15 history entry uses the new name while the body uses the old.
 
-**Recommendation**: One-word edit in 0072, and trim its Scope disclaimer now that 0073 has settled
-all three names. `requirements.md` FR-17 also still shows the rejected spelling in its two worked
-examples.
+**Evidence**: `0073:344` — "**`AddBrighterAspNetCoreScopes(...)` — rejected, and replaced by
+`AddBrighterRequestScope(ScopeAffinity affinity = ScopeAffinity.JoinAmbient)`.**"
+`grep -n 'AddBrighterAspNetCoreScopes' requirements.md` returns seven hits: `:235` (FR-24.2), `:274`
+(FR-17, twice), `:343` (FR-25.11), `:372` (C-11's working-name list), and **`:583` AC-26**, **`:639`
+AC-43**, **`:738` AC-48** — each naming the call the test host must make. Against `:824`, the
+revision-15 history entry, which already uses the new spelling. 0073 has updated its own half
+(`:411`), so the inconsistency is invisible from inside any single ADR.
 
----
-
-### 38. [0074] FR-22.3's snapshot staleness is priced only for FR-24.3 (Score: 58)
-
-**Evidence**: *Negative* records call-time staleness for the duplicate-provider rule alone. But by
-the ADR's own design both the artefact candidate set and every parameter's `ServiceLifetime` come
-from the same call-time `ContainerRegistrationSnapshot` — so a mapper registered after
-`ValidatePipelines()` is not a candidate, and a later `AddScoped<IOrderDbContext>()` makes a real
-captive dependency invisible. The failure-mode table claims *"none is a case where it reports
-wrongly"*, but the last-descriptor-wins rule can report wrongly if a later registration changes the
-effective lifetime after the snapshot.
-
-**Recommendation**: Add a failure-mode row and generalise the Negative bullet from the provider
-case to the whole snapshot.
+**Recommendation**: Either amend the requirements to the new spelling in all seven places, or have
+0073 state the obligation explicitly under *Implementation Approach*. Do not leave three ACs naming
+a method no ADR will produce. **Owner decision 2 below** — round 1 deliberately left this alone on
+the grounds that C-11 reserved the spelling to the ADR as a working name, and that calculus has
+changed now the naming decision is made.
 
 ---
 
-### 39. [0070] The `Where the pieces live` flowchart points the dependency the wrong way and omits the six changed interfaces (Score: 56)
+### 21. SET — FR-13 is claimed as discharged by 0072, but the half of it that specifies behaviour is decided only in 0070, which does not claim it (Score: 64)
 
-**Evidence**: the contract (`documentation.md:120-124`) reserves this form for *"assemblies and
-packages, and **which way dependencies point**"*. The diagram draws
-`builder -- "CreatePipelineScope(), then Create with the scope" --> facs`, from the
-`Paramore.Brighter` subgraph into the DI-package subgraph — the reverse of the real reference
-direction and of the ADR's own load-bearing claim. The six interfaces the ADR changes do not
-appear in the core subgraph at all, although they are its subject.
+FR-13 has two clauses. 0072's Scope claims the whole requirement; its body only ever cites FR-13 for
+the *ownership* clause and says nothing about the disposal-failure clause, its log level, its
+swallow-and-do-not-latch rule, or AC-33. 0070 decides all of that, in step 4a, while its Scope claims
+only FR-1…FR-7 and C-19. An auditor tracing FR-13 lands on 0072 and finds no message specification.
 
-**Recommendation**: Add a node for the six changed interfaces, point `facs` at it with
-`implements`, and either drop the core→package arrow or label it explicitly as a call, not a
-reference. (Same class of defect as findings 20 and 53 — worth one convention for the set: a
-legend line distinguishing call edges from reference edges.)
+**Evidence**: `requirements.md` FR-13 second clause — "Where releasing an **owned** pipeline scope
+throws… the failure must be logged at `Error` and swallowed, and the caller's result returned
+unchanged. … Discharged by AC-33." `0072:31` claims FR-13; all six of its FR-13 citations (`:68`,
+`:96`, `:225`, `:413`, `:461`) are about ownership, and its References omit **AC-33** entirely.
+`0070:334` — "`FailedToDisposePipelineScope` — `LogLevel.Error`, emitted where an owned scope's
+release throws … nothing is latched (**FR-13, AC-33**)" — yet `0070:30` claims only FR-1…FR-7 and
+C-19.
 
----
-
-### 40. [0072] The stated diagnostic evaluation order contradicts the ladder and pseudo-code (Score: 55)
-
-**Evidence**: :337 — *"Evaluation order … is **FR-24.4, then FR-23, then FR-24.2**"*. But the
-ladder evaluates FR-24.2 (row 6) before FR-23 (row 8), and the pseudo-code at :390-401 does the
-same. The outcome is identical because the conditions are mutually exclusive, which
-`requirements.md` itself notes.
-
-**Recommendation**: Say what is true — FR-24.4 first because it short-circuits the probe; FR-23 and
-FR-24.2 are mutually exclusive so their order is immaterial.
+**Recommendation**: Split the claim the way 0072 and 0074 already split FR-24.3 and FR-17 — 0070's
+Scope discharges FR-13's disposal-failure clause (AC-33), 0072's the ownership clause only. One
+sentence in each Scope.
 
 ---
 
-### 41. [0072] Out-of-order disposal of nested suppression brackets is unspecified (Score: 55)
+### 22. 0070 — The `References` requirement list omits eleven ids the body uses (Score: 62)
 
-**Evidence**: :290 — *"a bracket that **restores the previous value** when disposed, so brackets
-nest"*. That is correct only under LIFO: take A, take B, dispose A, dispose B → B restores `true`
-and the flow stays suppressed for life. The ADR argues at :471 that *"the failure direction is
-toward isolation"*, covering the consequence but never the case — and *Technology Choices* (:360)
-makes non-lexical use an intended scenario by justifying a public mutator.
+**Evidence**: Present in the body, absent from the References line: `AC-8` (`:196`, `:338`, `:410`),
+`AC-30` (`:230`, `:293`, `:308`), `C-2` (`:264`, `:363`, `:429`), `C-18` (`:361`), `D7` (`:279`),
+`FR-16` (`:279`), `FR-22` (`:34`, `:357`), `FR-24` (`:230`, `:293`), `FR-25` (`:414`), `OOS-7`
+(`:349`, `:384`), `OOS-8` (`:88`, `:394`). (`FR-2`…`FR-6` are covered by the "FR-1 … FR-7" range and
+`FR-27.1/.2` by "FR-27"; these eleven are not.)
 
-**Recommendation**: State the disposal discipline as part of the contract, or specify a
-generation-counter implementation that makes out-of-order disposal correct.
-
----
-
-### 42. [0071] NFR-4, NFR-5, C-1 and D0 are cited in References but never addressed; concurrency and nesting are undiscussed (Score: 55)
-
-**Evidence**: each of `NFR-4`, `NFR-5`, `NFR-6`, `NFR-7`, `C-1`, `D0` occurs **exactly once** in
-the ADR — on the References line (versus `NFR-8` ×8, `FR-7` ×6). NFR-4 (`requirements.md:350`)
-requires safety under concurrent pipelines and under `Publish`'s `Parallel.ForEach`
-(`CommandProcessor.cs:481`, verified). This ADR moves scope creation off a
-`ConcurrentDictionary.GetOrAdd` and disposal off a `TryRemove`
-(`ServiceProviderHandlerFactory.cs:129`, `:135`) onto a `HandlerLifetimeScope` with plain
-`List<T>` state and no disposal guard — today `TryRemove` is what makes a concurrent double-`Release`
-dispose exactly once. The *Positive* bullet celebrates the removal without pricing it. Re-entrancy
-and nested pipelines are unaddressed although FR-8/D6 makes nesting first-class.
-
-**Recommendation**: Add a forces bullet or Risks row stating the concurrency story plainly — each
-`HandlerLifetimeScope` is confined to one `PipelineBuilder`, `Dispose()` runs on one thread,
-`CreatePipelineScope()` shares nothing, a nested pipeline builds its own handle — or drop the four
-IDs from References.
+**Recommendation**: Add all eleven. `D7`, `FR-16`, `AC-8` and `AC-30` are load-bearing — they are
+what a reader checking the 0070/0072 boundary searches for.
 
 ---
 
-### 43. [0073] The out-of-range-enum contract rests on an implementation detail no ADR fixes (Score: 55)
+### 23. 0070 — "The three lifetimes all five container-backed factories already read from `IBrighterOptions`" is false, and mis-states what 0072 decided (Score: 62)
 
-**Evidence**: :209 — *"any value that is not `JoinAmbient` behaves as `AlwaysNew`, because
-`ScopeAffinityPolicy` tests for `JoinAmbient` positively."* `0072:294-309` gives that type's
-constructor and two member signatures and nothing about how it tests. (It does fix `AlwaysNew = 0`,
-which supports the spirit but not the claim.)
+This is the hand-off sentence telling the reader FR-27.2's affinity computation costs nothing to add
+later. It is wrong twice. No factory reads *the three lifetimes*: each reads exactly one, and the
+four mapper/transformer factories retain neither the options object nor the `IServiceProvider`
+afterwards — their only field is `_lifetimeScope`. And the ADR says the computation "belongs to the
+factory that answers `CreatePipelineScope()`"; 0072 decides the opposite siting explicitly.
 
-**Recommendation**: Restate as an obligation this ADR places on 0072 — every reader tests for
-`JoinAmbient` positively so an unrecognised value degrades to `AlwaysNew` — and add the same
-sentence to 0072.
+**Evidence**: `0070:345` — "That computation belongs to the factory that answers
+`CreatePipelineScope()`, and **ADR 0072 supplies it**, over the three lifetimes all five
+container-backed factories already read from `IBrighterOptions`. Nothing here changes when it
+arrives". Source: `ServiceProviderMapperFactory.cs:44-46` reads only `options?.MapperLifetime`;
+`ServiceProviderTransformerFactory.cs:44-46` only `options?.TransformerLifetime`; the sole field in
+each of the four is `private readonly ServiceProviderLifetimeScope _lifetimeScope;`. Sibling —
+`0072:80` "The affinity is computed by a **policy object rather than by each factory**"; `:231`
+"**Today each factory keeps only its own**; from here each keeps the policy instead."
 
----
-
-### 44. [0074] The new-type count is wrong and the structure diagram omits two of them (Score: 55)
-
-**Evidence**: *Negative* says *"Seven new types in the DI package plus one in core."* The
-`Where each type is touched` table lists eight: `ScopeConfigurationValidator`, `ScopeConfiguration`,
-`ScopeProviderRegistration`, `ArtefactRegistration`, `ArtefactKind`, `ContainerRegistrationSnapshot`,
-`ArtefactConstructorSelector`, `ScopeConfigurationRules`. The `Where the pieces live` flowchart's
-`ents` node names only four — `ScopeProviderRegistration` and `ArtefactKind` are absent — and the
-roles table has a row for neither.
-
-**Recommendation**: Say "eight", and either add the two to the flowchart and roles table or fold
-them into their owners (`ArtefactKind` into `ArtefactRegistration`, `ScopeProviderRegistration`
-into `ScopeConfiguration`) and drop them from the touched table.
+**Recommendation**: Replace with the accurate version — each container-backed factory reads
+`IBrighterOptions` in its constructor and keeps only its own lifetime; `IBrighterOptions` carries all
+three, so the information is reachable, and 0072 decides both what computes the affinity and what
+each factory retains instead. Drop "belongs to the factory" and "Nothing here changes when it
+arrives".
 
 ---
 
-### 45. [0074] Context opens by naming five types before it states the problem (Score: 55)
+### 24. 0071 — The `CreatePipelineScope()` throw contract claims identity with ADR 0070's, but states only one of its two failure modes (Score: 62)
 
-**Evidence**: the contract is explicit — *"**Do not open by naming four interfaces** — a reader
-cannot hold type names before they know the problem."* The first two sentences name
-`IAmAScopeProvider`, `services.AddSingleton<IAmAScopeProvider, T>()`, `TryAddSingleton`,
-`ScopeAffinity DefaultScopeAffinity { get; set; } = ScopeAffinity.AlwaysNew;`, `IBrighterOptions`
-and `BrighterOptions` — a registration-model recap of two sibling ADRs. The problem arrives in
-sentence three.
+The paragraph exists to say "everything about this member is 0070's *except* the null rule". That is
+not true of the throw behaviour: 0070 documents two failure modes discriminated by exception type,
+precisely because folding both into `ConfigurationException` breaks FR-24.1 — and AC-30 is written
+over `Send`, the handler pipeline this ADR is about.
 
-**Recommendation**: Lead with *"Four configurations are now expressible that an application almost
-certainly did not intend … what no prior record decides is which component evaluates those rules"*,
-and move the recap into `Where this ADR sits`.
+**Evidence**: `0071:204` — "The member's **shape** is ADR 0070's, and so is its throw behaviour — a
+throw is turned into `ConfigurationException` by the caller's existing guard." Contract table
+(`:227`) gives one error condition. `0070:230` — "**Two failures, discriminated by exception type…**
+A throw from the **ambient source** ADR 0072 adds inside this member is wrapped in that ADR's
+`AmbientScopeSourceException`, which the builders' `catch` blocks let past cleanup and rethrow
+unwrapped (FR-24.1, AC-30)." `requirements.md:509` AC-30 is a **`Send`** scenario. `0072:307`
+correspondingly amends `PipelineBuilder.cs:202-204` and `:248-250`.
 
----
-
-### 46. [0070] "Defect 1b is closed" omits FR-3's `both Scoped` qualifier, and the lifetime table has one column for two options (Score: 52)
-
-**Evidence**: :345 claims closure citing FR-3, which reads *"With `MapperLifetime` **and**
-`TransformerLifetime` **both** `Scoped`…"*. Under `{Scoped, Transient}` the transforms resolve
-from ADR 0067 per-resolution scopes and it is not one instance — which `0072:425` states plainly
-and 0070 never does. The *Behaviour by configured lifetime* table (:315) has a single "Configured
-lifetime" column although `MapperLifetime` (`BrighterOptions.cs:52`) and `TransformerLifetime`
-(`:69`) are independent.
-
-**Recommendation**: Add the qualifier, and add a row or sentence for the mixed case.
+**Recommendation**: Say the shape and the *create-failure* behaviour are 0070's, and that 0070's
+second failure mode is not yet in play because this ADR makes no ambient ask — with a forward
+pointer to 0072, which widens the contract and amends both `PipelineBuilder` `catch` filters.
 
 ---
 
-### 47. [0071] AC-9 is never named, although it is FR-7's acceptance criterion and owns the tests the ADR rewrites (Score: 52)
+### 25. 0073 — The namespace departure's second justification is a non-sequitur (Score: 62)
 
-**Evidence**: `AC-9` and `AC-10` appear zero times. `requirements.md:505` designates
-`FactoryLifetimeTests.Factory_WithScopedLifetime_ReturnsSameInstanceWithinScope` (`:36-55`) and its
-async twin (`:154`) as *"regression guards for AC-9"* that *"must keep passing unchanged"* — which
-is precisely the paragraph step 6 argues against (*"they no longer guard the path Brighter itself
-takes … **Both must be duplicated onto the handle path**"*). Both line citations verified. The
-argument is the ADR's strongest honest catch, made without naming the AC it amends.
+The departure to `namespace Microsoft.Extensions.DependencyInjection` rests on two grounds. The
+first (ASP.NET implicit usings) is true and verified. The second — that a Brighter namespace would
+need a `using` the application may not have — only holds if the new package must declare a *new*
+namespace, which nothing forces. The ADR never considers declaring the extension in
+`Paramore.Brighter.Extensions.DependencyInjection`: the namespace `AddBrighter` already lives in,
+already in scope in every `Program.cs` that calls it. That third option would meet the zero-import
+goal *without* the departure, so the departure is argued against a field of two when there are
+three.
 
-**Recommendation**: Name AC-9 in step 6 and in *Negative*, and state that the "regression guards
-for AC-9" designation now attaches to the duplicated handle-path pair.
+**Evidence**: `0073:363` — "…while the Brighter namespace would need one that the application may
+otherwise not have, **because it is a *new* package's namespace and not the one `AddBrighter` lives
+in**." C# namespaces are independent of assemblies — the sentence treats a repository convention
+(verified: every Brighter package declares a namespace matching its assembly) as a constraint, in
+the paragraph whose purpose is to depart from convention.
+`grep -rn "namespace Microsoft.Extensions.DependencyInjection" src/` returns nothing, confirming the
+convention claim itself.
 
----
-
-### 48. [0072] NFR-6 is cited for a cost it does not govern (Score: 52)
-
-**Evidence**: :229 — *"one virtual call per pipeline … which is **within NFR-6**"*. NFR-6
-(`requirements.md:352`) is a budget on **DI scopes**: *"at most one DI scope begin/release per
-pipeline; it must not add a DI scope per resolved instance"*. The unconditional ask allocates no
-scope, so NFR-6 is silent on it and cannot bless it.
-
-**Recommendation**: Drop the citation and justify the ask on D16's observability grounds (AC-13,
-AC-46).
-
----
-
-### 49. [0072] AC-8 is cited for the borrowed case, but AC-8 is about Brighter-created scopes (Score: 52)
-
-**Evidence**: :429 calls the borrowed handle's `Dispose()`/`DisposeAsync()` *"idempotent no-ops
-(AC-8)"*. AC-8 (`requirements.md:452-455`) is written over two live pipelines *"each holding a
-**Brighter-created** `IAmAScope`"*. The borrowed non-disposal claims are AC-16 and AC-38, which the
-ADR cites correctly elsewhere.
-
-**Recommendation**: Replace `(AC-8)` with `(AC-16, AC-38)`, or say AC-8's rule is being *extended*
-by design rather than asserted.
+**Recommendation**: Either add `Paramore.Brighter.Extensions.DependencyInjection` as a rejected third
+option with its real cost (a package declaring another assembly's namespace, itself a convention
+break that can confuse tooling), or drop the second ground and rest on implicit usings alone.
 
 ---
 
-### 50. [0074] `The forces` breaches the one-citation-per-bullet rule three times (Score: 52)
+### 26. 0073 / SET — "It adds no validation rule" is contradicted three times in the same document, the FR-17 discharge claim conflicts with 0074, and the two ADRs specify different messages (Score: 62)
 
-**Evidence**: *"The inputs must be read as the factories read them"* carries **five**
-(`ServiceProviderMapperFactory.cs:44`, `ServiceCollectionExtensions.cs:69`, `:97`,
-`ServiceActivator…/ServiceCollectionExtensions.cs:38`, `:88`); *"`ValidatePipelines()` is opt-in"*
-carries **three**; *"Both host shapes must fire"* carries **four**. All verified correct — a
-placement defect. The Consequences bullets are clean.
+*(Merges the 0073 reviewer's finding and the set-level reviewer's — the same boundary breach, seen
+from both sides.)*
 
-**Recommendation**: One anchor per bullet; move the enumerations to `Implementation Approach` and
-the "How the inputs reach the rules" table, which already carries most of them.
+`Scope` makes two unqualified claims — that 0073 discharges FR-17, and that it adds no validation
+rule. The body then specifies the FR-17 repeat rule's condition, severity and message content; 0074
+claims the FR-17 evaluation site for itself; and the message content 0073 states is a proper subset
+of 0074's. An implementor working from 0073 writes a message missing a clause; one working from 0074
+writes a message with a clause AC-49 does not ask for.
 
----
+**Evidence**: `0073:32` — "It discharges FR-14, FR-15 and FR-17." `0073:36` — "**it adds no
+validation rule**." `0073:336` — "validation reports a `Warning` naming every affinity registered,
+identifying the last as effective, and naming the guidance page (AC-49)" — a rule's message
+contract. `0073:434` — "costs a fifth validation rule in ADR 0074". `0074:32` — "It discharges FR-22
+and **the evaluation-site half of FR-24.3 and of FR-17**." Message divergence: `0074:264` requires
+**four** elements — "every `ScopeAffinity` value registered; which is effective (the **last**…);
+**that the extension is called once and its argument is how an affinity is selected**; the guidance
+page" — against 0073's three and AC-49's three ("naming both `AlwaysNew` and `JoinAmbient`,
+identifying `JoinAmbient` as the effective value, and containing the literal string
+`docs/guides/lifetimes-and-scoping.md`"). 0073 demonstrates it knows the distinction — `:34`
+separates *served* from *discharged* for FR-19 and FR-21, and `:413` hands the site to 0074.
 
-### 51. [SET] Three ADRs' Decision sections break the one-bold-sentence, no-signatures rule (Score: 52)
-
-**Evidence**: the contract for `## Decision`: *"the decision in **one bold sentence**, then one
-short paragraph on the shape it takes. **No signatures, no file paths.**"* 0070, 0071 and (for
-sentence count) 0074's bold block aside, the breaches are: **0073** — three bold sentences (:86)
-and no follow-on paragraph at all, going straight to `### The mechanism` at :88, naming
-`ScopeAffinity DefaultScopeAffinity`, `AddBrighterRequestScope(ScopeAffinity affinity =
-ScopeAffinity.JoinAmbient)` and `ScopeAffinityOverride`; **0072** (:79) — names
-`IAmAServiceProviderScope : IAmAScope` including its base-interface declaration; **0074** — a
-four-sentence ~110-word bold block naming eight types and members.
-
-**Recommendation**: Demote signatures to `Key Components`, where all three already restate them.
-Each has a recoverable one-sentence rule: 0073's is already written at its :90 (*"The extension
-deposits a value into the collection; the one place that does have the object — the factory that
-produces it — picks the value up"*); 0074's is *the four container rules are evaluated by a
-validator in the DI package that decorates the core one, so the existing hosts fire it unchanged*.
-Add 0073's missing shape paragraph.
+**Recommendation**: In 0073's `Scope`, "discharges FR-14, FR-15, and the registration half of FR-17
+(its evaluation site is ADR 0074's)"; replace "it adds no validation rule" with "it decides no
+evaluation site and adds no rule against FR-17's *other* configuration error". Cut `0073:336` back
+to the registration mechanism and end with a pointer. Keep the message specification in exactly one
+place — 0074 — and reconcile its fourth element against AC-49.
 
 ---
 
-### 52. [0073] FR-19 and FR-21 are listed as *discharged* but no mechanism here delivers them (Score: 50)
+### 27. 0074 — `Both host shapes, enumerated` says the two mixed rows fire, without the hosting-package precondition that row 3 makes decisive (Score: 62)
 
-**Evidence**: `Scope` claims *"It discharges FR-14, FR-15, FR-17, FR-19 and FR-21."* FR-19 (the
-flag is inert on the consumer side) is delivered by the pump publishing no ambient (D0b/C-2, ADR
-0072); FR-21 (affinity applies to `Scoped` only) is delivered by `ScopeAffinityPolicy` and the five
-factories (0072). `0072:32` claims neither, so a reader auditing coverage finds them attributed to
-the one ADR that does not implement them.
+Rows 4 and 5 both have `ConsumerOwnsValidation = true`, exactly the condition under which
+`BrighterValidationHostedService` defers and `ServiceActivatorHostedService` — which nothing in
+`src` registers — must be added by the application. Row 2 states that precondition; rows 4 and 5
+silently assume it and answer "Yes". A mixed host that does not add the hosting package validates
+nothing, and the table billed as walking "all five combinations" says otherwise. This is the D14 gap
+the ADR is otherwise careful about.
 
-**Recommendation**: Move both to the *serves* list naming which ADR's mechanism discharges each —
-or say what in this ADR makes them true (the default value, FR-25.11's documentation obligation).
+**Evidence**: `0074:326-329`. Row 2: "Consumer — `AddConsumers`, hosting package registered | true
+(`:60` or `:127`)". Row 4: "Mixed — `AddBrighter` then `AddConsumers(Action)` | true |
+`ServiceActivatorHostedService`; … | Yes". Verified:
+`ServiceActivator.Extensions.DependencyInjection/ServiceCollectionExtensions.cs:60` and `:127` set
+`ConsumerOwnsValidation = true`; `BrighterValidationHostedService.cs:73` returns
+`Task.CompletedTask` on that flag; no `AddHostedService<ServiceActivatorHostedService>` exists
+anywhere in `src`.
 
----
-
-### 53. [0072] Cross-assembly edges in the `Where the pieces live` flowchart render into subgraph borders, not their target nodes (Score: 50)
-
-**Evidence**: rendered to PNG at 1600px and inspected. All four cross-subgraph edges —
-`facs --> provider`, `facs --> suppress`, `asp -.-> provider`, `role -.-> handle` — terminate at
-the `core` subgraph boundary rather than at `IAmAScopeProvider`, `AmbientScopeSuppression` and
-`IAmAScope`, which render with **no incoming arrowheads at all**. Cause: the `direction TB`
-declarations inside each subgraph (:144, :154), which mermaid degrades once a subgraph has
-cross-boundary edges. The diagram parses cleanly and loses exactly the information this form
-exists to convey.
-
-**Recommendation**: Remove the three `direction TB` lines and re-render; verify by reading the PNG,
-not the exit code.
+**Recommendation**: Add "hosting package registered" to rows 4 and 5, or add a sixth row for the
+mixed-without-hosting-package case answering **No** (D14), and adjust the sentence beneath.
 
 ---
 
-### 54. [0072] "A defaulted constructor argument" — `PipelineBuilder` has three constructors (Score: 48)
+### 28. 0074 — The first Positive consequence, "Core gains nothing. Not a type", is contradicted by the ADR's own change table and Negative bullet (Score: 62)
 
-**Evidence**: :433 says `PipelineBuilder<TRequest>` takes `bool isolateSubscribers = false`.
-`PipelineBuilder.cs` declares three public constructors: `:59` (sync handler factory), `:76`
-(async), and `:92` — `PipelineBuilder(IAmASubscriberRegistryInspector, InboxConfiguration? = null)`,
-the describe-only constructor used by the two validation sites the ADR names
-(`BrighterPipelineValidationExtensions.cs:75`, `:116`, both verified), which resolves nothing and
-for which the flag is meaningless.
+The ADR adds `SpecificationEvaluator` to `Paramore.Brighter`. The intended claim is "no *container*
+type", but as written the bullet is false, and a reviewer skimming Consequences reaches the opposite
+conclusion from `Where each type is touched` four sections earlier. Relatedly,
+`SpecificationEvaluator` must be **public** for the DI-package decorator to call it — new public core
+API surface whose accessibility the ADR never states.
 
-**Recommendation**: Name the two dispatch constructors (`:59`, `:76`) and note that the
-describe-only constructor does not need it.
+**Evidence**: `0074:379` — "**Core gains nothing.** Not a type, not a parameter, not a reference."
+`0074:337` — "| `Paramore.Brighter` | `SpecificationEvaluator` | **new** …". `0074:396` — "**Nine new
+types in the DI package plus one in core.**" `0074:365` — the decorator "evaluates both entity
+families through `SpecificationEvaluator`". Source: `PipelineValidator.cs:152` is
+`private static void EvaluateSpecs<T>(...)`; the AC-22.3 guard returns **0 matches today**, so the
+zero-before/zero-after claim holds — only the "not a type" clause is wrong.
 
----
-
-### 55. [SET] The unifying sentence has two spellings, and is absent from three of the five (Score: 48)
-
-**Evidence**: `grep -i 'per-pipeline object carries'` → 5 hits, all in 0070 and 0071, in two
-spellings: *"the per-pipeline object carries **the DI scope**"* (0070:46, 0071:46) and *"…carries
-**the scope**"* (0070's Forward compatibility, 0071:109, 0071:240). Zero hits in 0072, 0073, 0074 —
-although 0070:46 instructs that it is *"the sentence to carry into the rest"*. The concept survives
-intact, so this is not a paraphrase-into-three-versions problem; the contract nonetheless says
-*"repeat that **exact** sentence"*.
-
-**Recommendation**: Use "the per-pipeline object carries the DI scope" (unambiguous against
-`IAmALifetime` per NFR-8) at all five existing sites, and either add it to 0072/0073/0074's
-`Where this ADR sits` — 0072 genuinely applies it — or soften 0070's claim to "the sentence that
-unifies the first two".
+**Recommendation**: "Core gains no *container* concept — not a type, not a parameter, not a
+reference; the one core addition, `SpecificationEvaluator`, names none," and state its accessibility
+in `Where each type is touched`.
 
 ---
 
-### 56. [0071] A Risks and Mitigations cell carries four `file:line` citations (Score: 48)
+### 29. SET — The sibling map's one-line description of 0074 names two of the five rules it owns, and FR-17's rule appears in no row of any of the six maps (Score: 62)
 
-**Evidence**: *"Decorators resolve through the same `IAmALifetime` instance they do today (`:272`,
-`:316`, `:430`, `:499`)"*. All four verified correct — density, not accuracy. The
-`### How a handler pipeline reaches its DI scope today` Context subsection carries ~15 more, all
-correct but outside the two sections the contract designates.
+All six maps are byte-identical, six rows, correctly bolded — that part is clean. But 0074's row
+describes it as "the lifetime and captive-dependency rules", covering FR-22.1/22.2/22.3 and neither
+FR-24.3 nor FR-17. 0074's own title carries the same stale scope, and 0074 elsewhere argues
+explicitly that the rule set is wider. A reader consulting the six maps for where FR-17's
+repeated-opt-in warning is evaluated finds it nowhere.
 
-**Recommendation**: One citation per Risks cell; let `Implementation Approach` carry the rest — the
-four decorator sites are already listed verbatim in `Technology Choices` and Alternative 2.
+**Evidence**: The row, identical in all six (`0070:46`, `0071:44`, `0072:47`, `0073:50`, `0074:68`,
+`0075:48`): "| 0074 | **where** the lifetime and captive-dependency rules are evaluated |". Against
+`0074:32` — "the evaluation site for FR-22's three rules, FR-24.3's duplicate-provider rule and
+FR-17's repeated-opt-in rule" — and `:84-85`, which list both as rules four and five. `0074:357`
+acknowledges it: "It is chosen over `LifetimeValidator` because **the rule set is wider than
+lifetimes** (FR-24.3 is about a registration)" — while the map row and the file title still say
+"lifetime and captive-dependency".
 
----
-
-### 57. [0074] Six requirement IDs are listed in References and used nowhere; two used IDs are unlisted (Score: 48)
-
-**Evidence**: everything before `## References` contains **zero** occurrences of FR-14, FR-17,
-FR-21, C-17, D19 and FR-25.6, each enumerated in References. Conversely `D11` and `C-11` are used
-in the body and absent from the enumeration.
-
-**Recommendation**: Prune the six and add D11 and C-11. A References list that does not match the
-body's citations is what a later reviewer uses to check coverage.
-
----
-
-### 58. [0070] Off-by-one and imprecise line citations (Score: 45)
-
-**Evidence**: four verified misses — `BuildTransformPipeline<TRequest>` is at
-`TransformPipelineBuilder.cs:174`, not `:173` (blank); `ResolveMapperInfo` is called at `:172`, not
-`:171` (a comment), and the async twin `ResolveAsyncMapperInfo` (`TransformPipelineBuilderAsync.cs:172`)
-is unnamed; the `SynchronizationContext` suppression code is `ServiceProviderLifetimeScope.cs:422-436`,
-not `:384-388` (XML `<remarks>`); the builder throws are at `:124`/`:165`, not `:122`/`:163`, and
-are identical in both builders, so the "async builder's" framing implies a difference that does not
-exist. Everything else in the ADR's citation set is accurate, including the counts *"12 classes in
-`src/`"*, *"61 factory doubles across 34 test files"* and *"six registry doubles in three more"* —
-all exactly right.
-
-**Recommendation**: Correct the four.
+**Recommendation**: Change the row in all six to "**where** the five scope-configuration rules are
+evaluated", and retitle 0074 to match. Regenerate `docs/adr/index.md` afterwards — never hand-edit
+it. **Whether the slug changes too is owner decision 5 below.**
 
 ---
 
-### 59. [0073] No stated behaviour for "extension called, Brighter never registered" (Score: 45)
+### 30. 0072 — "The requirements say the same" about the FR-23 / FR-24.2 ordering — they say the opposite (Score: 60)
 
-**Evidence**: the contract row covers `ArgumentNullException` on a null collection and the
-double-call case only; step 3 covers partial adoption *across* the four sites, not the absence of
-all four. An application that calls `AddBrighterRequestScope()` without `AddBrighter`/`AddConsumers`
-leaves `RegisterBrighterOptions` never running, the override never read, and a provider registered
-with nothing to consult it. Benign, but unstated.
+The behaviour the ADR specifies is right; the justification misreports the document it is
+discharging, so a later reader reconciling the two concludes one of them is wrong.
 
-**Recommendation**: One sentence in the contract row: calling the extension without any Brighter
-registration is inert and is not an error.
+**Evidence**: `0072:299` — "FR-23 and FR-24.2 are **mutually exclusive** … so their relative order
+is immaterial … **The requirements say the same.**" `requirements.md:244` — "**The overlap is real**
+and survives FR-24.2's retitling … FR-23 instructs that a failed usability probe be **treated
+exactly as 'no ambient'**, which is FR-24.2's condition verbatim. … **The evaluation order this
+fixes is FR-24.4, then FR-23, then FR-24.2**".
 
----
-
-### 60. [0072] References cite four IDs the body never uses, and omit the decision the suppression half rests on (Score: 40)
-
-**Evidence**: `C-13`, `C-14`, `D2` and `D6` appear **only** on the References line (:521) — the
-apparent hits elsewhere are substring matches inside `AC-13`, `AC-14`, `AC-17`. `D6`
-(`requirements.md:196`) is the decision mandating the execution-time bracket this ADR designs, and
-`C-13` assigns suppression's expression to it. Conversely the body cites `D4`, `D8`, `D0c`, `C-2`,
-`C-4`, `C-5`, `C-6`, `C-9`, `C-12a`, `OOS-4`, `OOS-7`, `OOS-14`, `FR-22`, `FR-25`, `FR-17`, none of
-which appear in References.
-
-**Recommendation**: Cite `D6` and `C-13` at the two suppression brackets, drop `C-14` and `D2`
-(0073's), and bring the list into line with the body.
+**Recommendation**: Say what is true — the requirements fix FR-24.4 → FR-23 → FR-24.2; the ladder's
+separation of "nothing came back" (row 6) from "came back and unusable" (rows 7–8) is a *stronger*
+condition than FR-23's "treat as no ambient", which is what makes the two orders equivalent here.
+Drop "The requirements say the same."
 
 ---
 
-### 61. [0071] "All six methods that resolve an artefact" — two of the six do not resolve (Score: 38)
+### 31. 0073 — `Related ADRs` omits 0074 and 0075, both of which the body relies on (Score: 60)
 
-**Evidence**: `BuildPipeline` (`PipelineBuilder.cs:272`) and `BuildAsyncPipeline` (`:316`) *thread*
-`instanceScope` but resolve nothing. The resolution sites are `:191`, `:236` (direct `Create`),
-`:439`/`:461` in `AppendToPipeline`, `:509`/`:535` in `PushOntoPipeline`, plus
-`HandlerFactory.CreateRequestHandler` (`HandlerFactory.cs:44`) and
-`AsyncHandlerFactory.CreateAsyncRequestHandler` (`AsyncHandlerFactory.cs:42`). The *claim the
-argument rests on* — that an `IAmALifetime` is in scope at every handler resolution site — **is
-true and was verified exhaustively**: both `Create` signatures take a non-nullable `IAmALifetime`
-(`IAmAHandlerFactorySync.cs:44`, `IAmAHandlerFactoryAsync.cs:44`), so no resolution site can exist
-without one. Only the count and the verb are wrong.
+**Evidence**: The Related ADRs list yields `0072`, `0071`, `0070`, `0014`, `0067`, `0053`, `0064`,
+`0033` — no `0074`, no `0075`. Body mentions of 0074: `:36`, `:72`, `:84`, `:177`, `:336`, `:387`,
+`:413`, `:463`. 0075's substance appears at `:214` and, misattributed, at `:253`. `0074:443` carries
+a `0073` entry, so the omission is one-sided. Same asymmetry in the id list: **D3** (`:224`), **D11**
+(`:344`), **D14** (`:434`) and **FR-25.10** (`:434`) are used and absent.
 
-**Recommendation**: "It reaches every site that resolves an artefact — the two direct `Create` calls
-and the four decorator resolutions — because both `Create` signatures require one."
+**Recommendation**: Add both ADRs to Related ADRs with one-line reasons; add D3, D11, D14 and
+FR-25.10 to the requirement id list.
 
 ---
 
-### 62. [SET] NFR-3 and NFR-9 are cited by no ADR in the set (Score: 38)
+### 32. 0074 — The `Failure modes` lead sentence is contradicted by the first row of the table it introduces (Score: 60)
 
-**Evidence**: `grep -c` for each across all five returns 0 in all ten cells. Both are substantively
-satisfied — NFR-3 by 0070's and 0071's *"It gains no container dependency — `IAmAScope` is a core
-type"* against `ControlBusMessageMapperFactory` and `ControlBusHandlerFactorySync`; NFR-9 by
-FR-25.3's truth table, inside the unowned FR-25 page (finding 11). But the contract's *"name what
-is unchanged, so a reviewer does not read an omission as an oversight"* is exactly what these miss.
+**Evidence**: `0074:295` — "All but the last are cases where the rule reports nothing; the last is
+the one case where it can report wrongly". `0074:299`, row 1 — "A registration made **after**
+`ValidatePipelines()` was called | invisible, and on one branch **wrong**: … so a warning can be
+raised about a dependency that is no longer `Scoped`, or withheld about one that now is".
 
-**Recommendation**: One clause each — NFR-3 into 0070's and 0071's *Unchanged* paragraphs beside
-the ControlBus sentence; NFR-9 folded into whatever resolves finding 11.
-
----
-
-### 63. [0071] The `Where the pieces live` flowchart's cross-assembly edge reads backwards and lands next to the wrong node (Score: 35)
-
-**Evidence**: rendered and inspected at 1600px. `builder -- "CreatePipelineScope()" --> sphf`
-crosses from `core` into `di`; in the rendered layout the label and boundary crossing sit directly
-beneath the `IAmALifetime` node, so the edge reads as though `IAmALifetime` calls
-`ServiceProviderHandlerFactory`. The arrow also points opposite to the actual assembly reference.
-Same convention question as findings 39 and 53.
-
-**Recommendation**: Re-label as a call (`builder -. "calls CreatePipelineScope()" .-> sphf`), or
-move `builder` adjacency so the crossing does not pass `lifetime`. A legend line distinguishing
-call edges from reference edges would settle it for the whole set.
+**Recommendation**: "Two rows can report wrongly — the snapshot-staleness row and the Brighter-mapper
+row — and both are marked; the rest are silent misses," which is what the table and the matching
+Negative bullet (`:392`) already say.
 
 ---
 
-## Requirements coverage map
+### 33. 0074 — The FR-17 rule's inputs have no named entity type, and the roles-table sentence describing them is circular (Score: 60)
 
-`D` = an ADR's Decision decides it · `S` = supports/constrains · `—` = not addressed
+`ScopeConfiguration` is said to carry two families of registrations; only the first is given a type,
+so an implementor has nothing to build the FR-17 rule's collection from, while the type inventory is
+presented as complete. The parenthetical is also self-referential: it pairs a thing that may itself
+be a position "with that position".
 
-| Req | One-line | 0070 | 0071 | 0072 | 0073 | 0074 | Verdict |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| FR-1 | `Scoped` mapper is per transform pipeline | **D** | | | | | covered |
-| FR-2 | `Scoped` transform is per transform pipeline | **D** | | | | | covered |
-| FR-3 | mapper + transforms share scoped dependencies | **D** | | | | | covered (see finding 46) |
-| FR-4 | producer pipelines scope per `Post`/`DepositPost` | **D** | | | | | covered |
-| FR-5 | failed build releases the owned scope | **D** | | | | | covered |
-| FR-6 | released exactly once on every exit path | **D** | | | | | covered |
-| FR-7 | handler pipeline scoping preserved | **D** | **D** | | | | covered |
-| FR-8 | `Publish` subscriber never adopts, suppresses beneath | S | S | **D** | | | covered |
-| FR-9 | two brackets — resolution and execution | | | **D** | | | covered |
-| FR-10 | container-agnostic seam types in core | S | | **D** | | | covered |
-| FR-11 | no provider ⇒ no adoption, still a real scope | | | **D** | | | covered |
-| FR-12 | never dispose a borrowed scope | S | | **D** | S | | covered (see finding 16) |
-| FR-13 | dispose every scope Brighter created | | | **D** | | | covered (see finding 3) |
-| FR-14 | one flag for both pipeline kinds | | | | **D** | S | covered |
-| FR-15 | default `AlwaysNew`, identical to today | | | | **D** | | covered |
-| FR-16/16a/16b | pipelines in one request share the request scope | S | | **D** | S | | covered |
-| FR-17 | ASP.NET package, registration is the only wiring | | | S | **D** | S | covered |
-| FR-18 | no `HttpContext` ⇒ new owned scope | | | **D** | **D** | | covered |
-| FR-19 | flag inert on the consumer side | | | S | claimed | | **mis-attributed — finding 52** |
-| **FR-20** | **clean break recorded in `release_notes.md`** | cited only | | | S | S | **GAP — finding 17** |
-| FR-21 | affinity applies to `Scoped` only | | | S | claimed | S | **mis-attributed — finding 52** |
-| FR-22 | inert opt-in / mixed lifetimes / captive dep reported | S | S | S | S | **D** | covered (see finding 24) |
-| FR-23 | present-but-unusable ambient falls back and says so | | | **D** | S | | covered |
-| FR-24 | scope-provider failure modes | | | **D** (.1/.2/.4) | S | **D** (.3) | covered (see findings 1, 2) |
-| **FR-25** | **`docs/guides/lifetimes-and-scoping.md`, 11 clauses** | | | | .11 | .6/.8/.9/.10 | **PARTIAL — finding 11** |
-| FR-26 | Brighter state keyed to a borrowed scope must not outlive it | | | **D** | | | covered |
-| FR-27 | pipeline whose factories have different lifetimes | | | **D** | S | | covered (see finding 29) |
-| **NFR-1** | core stays container-agnostic (+ obligations a/b/c) | unattributed | | S | S | S | **(c) uncovered — findings 17, 21** |
-| NFR-2 | no ASP.NET dependency in the DI package | | | S | **D** | | covered |
-| **NFR-3** | `ServiceActivator` keeps its dependency set | implied | implied | | | | **cited nowhere — finding 62** |
-| NFR-4 | thread safety | S | cited only | S | S | | **thin — findings 19, 42** |
-| NFR-5 | bounded resource growth | S | cited only | | | | thin |
-| NFR-6 | cost per pipeline, not per resolution | S | cited only | mis-cited | | | see finding 48 |
-| NFR-7 | extensibility without ASP.NET | S | S | **D** | S | S | covered |
-| NFR-8 | docs disambiguate `IAmAScope` / `IAmALifetime` | S | S | S | S | | covered |
-| **NFR-9** | diagnosability truth table in the guidance page | | | | | | **cited nowhere — finding 62** |
-| NFR-10 | the lifetime documentation is self-sufficient | | | | | S | thin — rides on FR-25 |
+**Evidence**: `0074:192` — "the ambient-source and affinity-override registrations in registration
+order — **each of the former** a `ScopeProviderRegistration`, which pairs an implementation type (or,
+where none is statically known, a position) with that position". The flowchart entity node (`:165`)
+lists only `ScopeProviderRegistration`; `Where each type is touched` (`:340`) lists the same eight
+internal types. The rule needs those values — `:268` "The values are read from the descriptors'
+`ImplementationInstance`", consistent with `0073:317`'s
+`services.AddSingleton(new ScopeAffinityOverride(affinity));`.
+
+**Recommendation**: Name the affinity-override element type (or state that the two families share
+`ScopeProviderRegistration`), and rewrite the parenthetical as two clauses: "pairs an implementation
+type with its registration position; where no implementation type is statically known, the position
+stands in for it."
+
+---
+
+### 34. 0074 — Both `DescribeTransforms` citations point at the overload that takes `includeAsync`, and neither states the value (Score: 60)
+
+`:270` is the three-argument overload; the two-argument one at `:255` defaults to
+`includeAsync: false`. Under `false`, transforms declared only on an async-resolved mapper never
+enter the exclusion set, so a Brighter-shipped transform reached only that way is warned against as
+the user's — the precise failure the conjunction exists to prevent, and one AC-42's
+`ClaimCheckTransformer` case (sync **and** async) cannot detect.
+
+**Evidence**: `0074:280` and step 5a (`:367`) both cite `:270`. Source
+`TransformPipelineBuilder.cs:255-257`:
+`public static TransformPipelineDescription? DescribeTransforms(MessageMapperRegistry mapperRegistry, Type requestType) => DescribeTransforms(mapperRegistry, requestType, includeAsync: false);`
+and `:270-272` the three-arg overload, whose doc comment says the async mapper's transforms are
+unioned in "so a request type served only by an async mapper is still described".
+`TransformPipelineBuilderAsync` has no describe path of its own, so this flag is the only route to
+the async side.
+
+**Recommendation**: Say `DescribeTransforms(registry, requestType, includeAsync: true)` in both
+places, with one sentence giving the reason.
+
+---
+
+### 35. 0075 — The sequence diagram's bracket-2 ordering is only correct for the synchronous path (Score: 60)
+
+The diagram covers both publish paths ("Handle or HandleAsync") but draws the restore *after* the
+nested pipeline is created. On the async path the ADR's own Implementation Approach requires the
+opposite order. The diagram also omits `Task.WhenAll` entirely, so nothing signals that the async
+loop only *starts* subscribers. This is the one subtlety the ADR treats as load-bearing, and the
+orienting artefact hides it — the exact misreading Alternative 5 exists to foreclose.
+
+**Evidence**: `0075:104-111` draws `CP->>CP: Suppress()` / `CP->>Sub: Handle or HandleAsync` /
+`Sub->>Nested: …` / `CP->>CP: restore, explicitly`. Against `:231` — "around the **invocation** of
+`handleRequests.HandleAsync(@event, cancellationToken)` inside the start loop (`:596`), never around
+`Task.WhenAll` (`:601`) … **disposing the bracket immediately afterwards**". Source:
+`CommandProcessor.cs:591-599` is a start loop adding to `tasks`; `:601` is
+`await Task.WhenAll(tasks)`. The sole participant is also named `CommandProcessor.Publish`, not both
+methods.
+
+**Recommendation**: Either split into two `alt` branches (sync: restore after `Handle` returns;
+async: restore immediately after the invocation, nested dispatch on the branched flow after the
+restore), or narrow the diagram to the sync path and let step 4's prose carry the async ordering.
+
+---
+
+### 36. 0070 — The test-double blast-radius counts are understated (Score: 58)
+
+The ADR gives 67 test doubles (61 factory doubles across 34 files, 6 registry doubles across 3) and
+79 total. The registry figure is right; the factory figure is not. Actual: **64 factory doubles
+across 37 files**, giving **70 test doubles** and **82 implementations**. The numbers are repeated
+four times and are the implementor's completion check for a change the ADR says "must land as one
+commit or the build is broken in between".
+
+**Evidence**: A multi-line-tolerant scan of `tests/**/*.cs` for classes whose base list names any of
+the four factory interfaces yields 64 across 37 files (registry doubles 6 across 3 ✓). The
+one-line regex yields 60/33; the misses are declarations with the base list on a following line or a
+primary constructor — e.g.
+`tests/Paramore.Brighter.Core.Tests/MessageDispatch/Reactor/When_a_mapper_release_throws_the_mapped_message_is_still_dispatched.cs:83`
+and `.../When_disposing_a_running_dispatcher_it_drains_before_disposing_factories.cs:94`. The `src/`
+count of 12 is correct and every one was verified.
+
+**Recommendation**: Update to 64 / 37 / 70 / 82 at `0070:80`, `:291`, `:390`, `:412`. Use a
+multi-line scan for the recount.
+
+---
+
+### 37. 0071 — Citation density in `The forces` and `Consequences` breaks the house rule by 4× and 5× (Score: 58)
+
+**Evidence**: `.agent_instructions/documentation.md` § *ADR readability*: "**At most one per forces
+or Consequences bullet.**" Forces bullet on NFR-4 (`0071:103`) carries four —
+`ServiceProviderHandlerFactory.cs:129`, `:135`, `PipelineBuilder.Dispose()` (`:269-270`),
+`CommandProcessor.cs:481`. Negative bullet (`0071:328`) carries five — `IAmALifetime.cs:34`,
+`IAmAPipelineBuilder.cs:36`, `IAmAnAsyncPipelineBuilder.cs:37`, `CommandProcessor.cs:394`, `:575` —
+with `:422-436` in the continuation. All six resolve correctly; the defect is placement.
+
+**Recommendation**: Keep one anchoring citation per bullet and move the rest into `Implementation
+Approach` or the `Where each type is touched` table.
+
+---
+
+### 38. 0073 — Context's second sentence names four types before the problem is stated (Score: 58)
+
+The house style forbids this by name, and it is the one structural rule 0073 breaks — its heading
+order, nesting and wording otherwise match the five siblings exactly.
+
+**Evidence**: `0073:26` — "ADR 0072 built the seam. A pipeline that takes a pipeline scope asks an
+**`IAmAScopeProvider`** exactly once, carrying a **`ScopeAffinity`** that **`ScopeAffinityPolicy`**
+computes from **`IBrighterOptions`**…". `.agent_instructions/documentation.md` § *ADR structure*,
+`## Context`: "**Do not open by naming four interfaces**". Compare `0072:23` and `0075:24`, which
+open on behaviour.
+
+**Recommendation**: Lead with the problem in plain language and defer the type names to the second
+paragraph, which already carries the architectural problem well.
+
+---
+
+### 39. SET — AC-7 and FR-6's handler-pipeline clause are claimed by no ADR in the set (Score: 58)
+
+FR-6 is cited only by 0070, and only for transform pipelines; AC-7, its handler-family criterion, is
+cited by none of the six. 0071 is the ADR that changes *who* disposes a handler pipeline's DI scope
+and makes that disposal unconditional and idempotent — precisely FR-6's guarantee for handlers — but
+declares it discharges nothing and cites FR-7/AC-9 only.
+
+**Evidence**: Coverage map across the six: `FR-6: 0070(2)`, both transform-side (`0070:338`,
+`:437`). `AC-7` returns zero hits across all six. `requirements.md:449` — "**AC-7 (FR-6) — A throwing
+handler still releases the pipeline scope, exactly once.**" `0071:30` — "It **discharges no new
+requirement**" — while `:143` states the property AC-7 asserts: "the handle is disposed
+**unconditionally**, which closes a latent leak", and `:344` — "`IAmAScope`'s disposal is
+idempotent."
+
+**Recommendation**: Have 0071 add FR-6 and AC-7 to its References and one sentence to its Scope — it
+preserves FR-6 for the handler family and AC-7 is its regression guard on the handle path, alongside
+the AC-9 duplication step 6 already requires. Or say in 0070 that FR-6's handler clause is preserved
+by 0071 and guarded by AC-7.
+
+---
+
+### 40. 0071 — The "foreign handle" analysis misses the case where the foreign handle *is* recognised (Score: 55)
+
+**Evidence**: `0071:230` states the rule as a type test — "Where `PipelineScope` is non-null but is
+**not** a `ServiceProviderPipelineScope`, `ServiceProviderHandlerFactory` resolves through
+`GetOrCreateLifetimeScope` exactly as it does today." `:232` enumerates the arrivals: "a caller
+invoking the public `Create(Type, IAmALifetime)` with an `IAmALifetime` of its own, **or a lifetime
+scope built by one factory and passed to another**." The second case, where both factories are
+`ServiceProviderHandlerFactory`, produces a handle that **passes** the type test; under step 4 the
+factory would resolve handlers from the *other* container's provider, and nothing says what should
+happen.
+
+**Recommendation**: Either narrow the enumeration (drop the second arrival, since the first covers
+the reachable case), or make the rule discriminate — an identity check against the creating factory,
+or an explicit statement that resolving from another factory's handle is accepted and is the
+caller's error. The contract table's error column is where it belongs.
+
+---
+
+### 41. 0071 — The `References` requirement list does not match the body (Score: 55)
+
+**Evidence**: References (`:364`) lists FR-7, NFR-1, NFR-3…NFR-8, C-1, C-2, C-6, D0, D2, D10; AC-9.
+Body also uses **FR-22** (`:32`), **FR-25** (`:346`), **FR-8** (`:350`). Sibling 0072 lists both
+FR-22 and FR-25 in its own References (`0072:461`), so the omission is 0071's, not a set convention.
+
+**Recommendation**: Add FR-8, FR-22 and FR-25, marking the first two as *deferred to* rather than
+*discharged* if the list distinguishes them.
+
+---
+
+### 42. 0072 — The `References` requirement list does not match the body in either direction (Score: 55)
+
+**Evidence**: `D1` appears twice in the body (`:73`, `:453`) and is not in the `:461` list. `D10`
+appears twice (`:316`, `:417`) and is not in the list. `D2` is in the list and appears nowhere in the
+body. (Every FR/NFR/AC/C/OOS id matches, so these three are the whole delta.)
+
+**Recommendation**: Add `D1` and `D10`; drop `D2` or cite it — 0073 owns the one-flag decision, so
+dropping is probably right.
+
+---
+
+### 43. 0073 — `AddHttpContextAccessor` does not live in `Microsoft.AspNetCore.Http.Abstractions` (Score: 55)
+
+Nothing breaks under the `FrameworkReference` — both are in the shared framework — but the error
+propagates into the `netstandard2.0` argument, which is the paragraph's load-bearing claim.
+
+**Evidence**: `0073:395` — "**`IHttpContextAccessor` and `AddHttpContextAccessor` live in
+`Microsoft.AspNetCore.Http.Abstractions`**". Against
+`/usr/local/share/dotnet/packs/Microsoft.AspNetCore.App.Ref/9.0.0/ref/net9.0/`:
+`strings Microsoft.AspNetCore.Http.Abstractions.dll | grep -c AddHttpContextAccessor` → **0**;
+`strings Microsoft.AspNetCore.Http.dll | grep -c AddHttpContextAccessor` → **1**. Consequently
+`:393` and `:438` understate the dependency a `netstandard2.0` target would need. The conclusion
+(drop `netstandard2.0`) is unaffected and if anything strengthened.
+
+**Recommendation**: "`IHttpContextAccessor` lives in `Microsoft.AspNetCore.Http.Abstractions` and
+`AddHttpContextAccessor` in `Microsoft.AspNetCore.Http`; the framework reference brings in both."
+Adjust `:393` and `:438` to name both 2.2.x packages.
+
+---
+
+### 44. 0075 — The roles table lists `AmbientScopeSuppression` as a role, then the next paragraph says it is not one (Score: 55)
+
+**Evidence**: `0075:161` — "| Suppression state | `AmbientScopeSuppression` (core) | **knowing**,
+with a bracketing verb | …". `0075:166` — "`AmbientScopeSuppression` is deliberately **not** a role".
+The stereotype is also a hybrid where the house style specifies one of knowing / doing / deciding.
+
+**Recommendation**: Change `:166` to "is deliberately not an *injected* role" and settle the
+stereotype on **knowing**, moving "with a bracketing verb" into the Responsibility cell.
+
+---
+
+### 45. 0075 — `Where the pieces live` renders with the two non-core subgraphs visually nested inside the core subgraph (Score: 55)
+
+The diagram's whole point is the assembly boundary. Rendered, the
+`Paramore.Brighter.Extensions.DependencyInjection` and "any other container package" boxes sit
+**inside** the `Paramore.Brighter — core` box, reading as core containing the container packages —
+the inverse of the claim. 0072's equivalent flowchart, rendered the same way, separates its three
+subgraphs cleanly, so this is 0075's edge topology, not a mermaid limitation.
+
+**Evidence**: `0075:130-151`; rendered at `-w 1600 -b white`, the core subgraph rect spans the full
+width and encloses the other two. `:153` then reads the opposite off it: "The flag is the only thing
+that crosses the assembly boundary, in one direction".
+
+**Recommendation**: Declare `flowchart LR` (or place the two reader subgraphs above core), or
+reverse the edge direction and label it `suppress -- "read by" --> facs`, then re-render and look at
+it.
+
+---
+
+### 46. 0075 — The split left 0075 using `AlwaysNew` and "affinity" as bare terms it never introduces (Score: 55)
+
+0075 is meant to stand alone, but the single line where its mechanism meets adoption is written in
+vocabulary the reader can only have got from 0072.
+
+**Evidence**: `0075:124` — "`affinity = AmbientScopeSuppression.IsSuppressed ? AlwaysNew : the policy
+over the whole participating set`" — first occurrence of `AlwaysNew`, with no statement that it is a
+`ScopeAffinity` value, where that type lives, or that it means "do not adopt". `:279` is the first
+and only occurrence of `ScopeAffinity`, 155 lines later. "Affinity" is used bare from `:34`. By
+contrast `0072:160` defines the enum before its ladder uses it. Similarly "the five container-backed
+factories" appears at `:143`, `:164` and `:206` without 0075 ever naming them.
+
+**Recommendation**: One clause on first use — "`AlwaysNew`, the `ScopeAffinity` value ADR 0072
+defines meaning *do not adopt an ambient*" — and one parenthetical naming the five factories, or a
+pointer to 0072's row that does.
+
+---
+
+### 47. 0075 — `Suppress()`'s contract omits cross-flow disposal, the most likely misuse of a public `AsyncLocal` bracket (Score: 55)
+
+The contract enumerates double disposal, out-of-order disposal and non-disposal, but not disposal on
+a *different* logical flow from the one that created the bracket — which with `AsyncLocal<bool>`
+writes the restored value into the disposing flow and leaves the originating flow suppressed
+forever. Since the entire justification for a **public mutator** is that third-party packages and
+hosts will call it (NFR-7), and the worked example offered is "a background job started from a
+request whose `HttpContext` still flows" — precisely a flow-crossing scenario — this is the error
+condition the contract most needs to name.
+
+**Evidence**: `0075:193` (the contract row) and `0075:214` (the use case).
+
+**Recommendation**: Add an error-condition clause: the bracket must be disposed on the flow that
+created it; disposal on another flow restores the captured value into *that* flow and leaves the
+originating flow suppressed. State whether the implementation detects it.
+
+---
+
+### 48. 0075 — The `PipelineBuilder` constructor change is a change to a **public** type's **public** constructors, and Consequences does not say so (Score: 55)
+
+Adding an optional parameter is source-compatible but binary-breaking for anything already compiled
+against the three-argument signature. The Technology Choices rationale carefully establishes that
+`IAmAPipelineBuilder<TRequest>` and `IAmAnAsyncPipelineBuilder<TRequest>` are `internal` so a `Build`
+parameter would widen public surface — but does not notice that the class it chooses instead is
+itself public. The Negative bullet reduces the change to two internal call sites.
+
+**Evidence**: `PipelineBuilder.cs:37` —
+`public partial class PipelineBuilder<TRequest> : IAmAPipelineBuilder<TRequest>, IAmAnAsyncPipelineBuilder<TRequest>`;
+`:59` and `:76` are `public PipelineBuilder(...)`. The interfaces are internal as claimed
+(`IAmAPipelineBuilder.cs:36`, `IAmAnAsyncPipelineBuilder.cs:37`). `0075:216` and `0075:261`.
+
+**Recommendation**: Add to Technology Choices that `PipelineBuilder<TRequest>` is public and the
+defaulted parameter is a binary-breaking (source-compatible) change to two public constructors, why
+an added overload was not preferred, and the same to Negative. **Reconcile with finding 5 — this may
+be a sixth release-note break.**
+
+---
+
+### 49. SET — C-14, the assumption that makes FR-19's inertness bound true, is cited by none of the six (Score: 54)
+
+**Evidence**: Coverage map: `C-14` has zero citations across 0070–0075 (every other constraint C-1
+to C-20 is cited by at least one). `requirements.md:383` — "**C-14 — A consumer pump thread is
+assumed to carry no usable ambient `HttpContext`.** This is an **assumption, not a verified
+invariant**: `IHttpContextAccessor` is `AsyncLocal`-backed and a `Dispatcher` started from within a
+request could inherit one." The two ADRs describing exactly this case do so without the citation —
+`0073:220` and `0072:287`.
+
+**Recommendation**: Add C-14 to 0073's forces beside its FR-19 paragraph, in one sentence, and to
+0073's References.
+
+---
+
+### 50. 0072 — `ScopeAffinityPolicy`'s null-options behaviour is specified against `BrighterOptions`' defaults, which are not the defaults the factories apply (Score: 52)
+
+The outcome coincides today (both routes reach `AlwaysNew`), but the ADR states a premise about
+existing code that is not true of it, and an implementor following it writes a policy that disagrees
+with row 1's test.
+
+**Evidence**: `0072:249` — "A `null` options object means the three lifetimes and the affinity option
+take **their documented defaults**, so the policy answers `AlwaysNew`". `BrighterOptions.cs:20`,
+`:52`, `:69` document all three as `Transient`. But `ServiceProviderMapperFactory.cs:45` and
+`ServiceProviderMapperFactoryAsync.cs:46` are `options?.MapperLifetime ?? ServiceLifetime.`**`Singleton`**;
+`ServiceProviderTransformerFactory.cs:45` and its async twin `:46` likewise; only
+`ServiceProviderHandlerFactory.cs:50` is `?? ServiceLifetime.Transient`.
+
+**Recommendation**: State the rule as "the policy answers `AlwaysNew` unconditionally when options
+are `null`", and note the factories' existing null fallbacks are unchanged and are not the documented
+property defaults.
+
+---
+
+### 51. 0074 — `ScopeConfigurationValidator` is public but is constructed with two internal types; its constructor's accessibility is never stated (Score: 52)
+
+As written the sketch does not compile: C# rejects a public constructor whose parameter types are
+less accessible (CS0051). The fix is an `internal` constructor, which works because the only call
+site is in the same assembly — but the ADR is explicit about the public/internal split everywhere
+else, so leaving this implicit invites the implementor to widen the entity types instead.
+
+**Evidence**: `0074:201`, `:340` (both entity types "**new**, internal"), and the construction at
+`:218-223`.
+
+**Recommendation**: State that the constructor is `internal` while the type is public.
+
+---
+
+### 52. 0070 — Step 4a leaves it unspecified whether a scope-disposal failure on the failed-build path is logged once or twice (Score: 50)
+
+Step 4 says release failures "are caught by the existing guard", which logs
+`FailedToCleanUpAfterFailedBuild` at `Warning`. Step 4a says the new `Error` message is "emitted by
+`CleanUpAfterFailedBuild`". Whether that catches-logs-and-swallows (one record) or
+catches-logs-and-rethrows (two records) is not stated, and AC-6 only pins that the `Error` record
+exists. Two implementors would produce different observable log streams from the same AC.
+
+**Evidence**: `0070:327` and `0070:333`.
+
+**Recommendation**: One sentence saying which. Swallow-after-logging is the natural choice given the
+scope release is the last step and the outer guard exists to stop cleanup masking the build error.
+
+---
+
+### 53. 0071 — Nothing in 0071 says the `Transient` handle is not FR-27's pipeline scope (Score: 50)
+
+0071 correctly justifies giving handlers a handle for `Transient`. What it never says is the
+consequence at the seam — that this handle makes no ambient ask and is not what FR-27.1 calls a
+pipeline scope. The member it hangs the rule on is named `CreatePipelineScope()`.
+
+**Evidence**: `0071:99` — "a handler pipeline takes a handle whenever its lifetime is **not**
+`Singleton`". FR-27.1 — "A pipeline none of whose participating factories is `Scoped` takes no
+pipeline scope and asks nothing." AC-46's first branch requires "**zero** adoption decisions and **no
+pipeline scope taken**". FR-27 is cited nowhere in 0071. The reconciliation exists only in the
+sibling — `0072:398`: "That handle-for-`Transient` … is **not** FR-27's pipeline scope". 0071's
+Positive section (`:317`) compounds it: "A borrowed ambient becomes what `CreatePipelineScope()`
+returns, **for handler pipelines and transform pipelines alike**", with no lifetime qualifier.
+
+**Recommendation**: Add one clause to `:99` or to the behaviour-by-lifetime table's `Transient` row,
+cross-referencing 0072; add FR-27 to the deferral sentence and to References.
+
+---
+
+### 54. 0073 — The `IOptions` blast-radius bullet overstates what shares the mutated instance (Score: 50)
+
+**Evidence**: `0073:432` — the object "hands to **anyone** resolving `IOptions`, `IOptionsSnapshot`
+or `IOptionsMonitor`". `AddOptions()` registers `IOptions<>` → `UnnamedOptionsManager<>` (singleton,
+own `_value`), `IOptionsSnapshot<>` → `OptionsManager<>` (**scoped**, own `OptionsCache<T>` per
+scope), `IOptionsMonitor<>` → `OptionsMonitor<>` (backed by the separate `IOptionsMonitorCache<>`).
+Only the `IOptions<T>` path shares the instance the delegate mutates.
+
+**Recommendation**: Narrow to `IOptions<BrighterOptions>`, and note that `IOptionsSnapshot` /
+`IOptionsMonitor` readers get their own instances and therefore see the application's value — an
+arguably worse inconsistency worth stating in its own right.
+
+---
+
+### 55. 0074 — The `Dispose()` contract row omits the `MessageMapperRegistry` the code sketch says the decorator owns (Score: 50)
+
+The contract table is what an implementor reads for the disposal obligation the ADR itself calls
+"easy to miss and expensive to get wrong". It names only the inner validator; the registry — the
+thing holding the mapper factory's DI scope — appears only in the sketch's trailing comment and in
+step 5a.
+
+**Evidence**: `0074:238`, against `:223` ("registry);  // owned: disposed with the decorator") and
+`:369`. The double-disposal safety claim checks out: `MessageMapperRegistry.cs:360-362` is
+`if (Interlocked.Exchange(ref _disposed, 1) != 0) return;` with a remark naming exactly this case.
+
+**Recommendation**: "Disposes the inner `PipelineValidator` and the `MessageMapperRegistry` this
+validator owns. Idempotent; safe against the inner validator disposing the same registry
+(`MessageMapperRegistry.cs:360-362`)."
+
+---
+
+### 56. SET — 0070 and 0072 cite different line ranges for the same two `catch` blocks in `TransformPipelineBuilder` (Score: 50)
+
+**Evidence**: Source (both builders line-identical here): wrap `catch` at `:116`, closing brace
+`:125`, `throw` `:124`; unwrap `catch` `:157`, brace `:166`, `throw` `:165`. `0070:327` — "`:116-125`
+for wrap and `:157-166` for unwrap … thrown at `:124` and `:165`" — correct. `0072:308` —
+"**`:116-124` and `:157-165`**" — one line short at both ends. 0072 applies the same
+catch-through-throw convention at `:307` for `PipelineBuilder`, so it is a convention divergence
+rather than a typo — but the two ADRs still hand an implementor two different ranges.
+
+**Recommendation**: Pick one convention — catch line through closing brace reads more naturally with
+"the guarded region" — and apply it in 0072's touched table and step 1a.
+
+---
+
+### 57. 0072 — The concurrency citation for `WarnOnce` names the sync `Publish`, while the AC whose counts it protects uses `PublishAsync` (Score: 48)
+
+The atomicity argument is correct and the conclusion survives; the twin cited is not the twin AC-11
+exercises.
+
+**Evidence**: `0072:297` cites `Parallel.ForEach` (`CommandProcessor.cs:481`) — the **synchronous**
+`Publish`. AC-11 (`requirements.md:471-473`) is written on `PublishAsync`, whose concurrency is
+`await Task.WhenAll(tasks)` at `CommandProcessor.cs:601`.
+
+**Recommendation**: Cite both.
+
+---
+
+### 58. 0074 — D19 is listed in `References` but never used in the body (Score: 48)
+
+**Evidence**: `0074:438` lists "D5, D8, D9, D11, D14, D15, D18, D19". Extracting every `D<n>` from
+`:16-435` yields `D5 D8 D9 D11 D14 D15 D18` — no D19. The `Scope` section explicitly disclaims D19's
+subject as 0072's.
+
+**Recommendation**: Drop D19.
+
+---
+
+### 59. 0070 / SET — Step 7a numbers two of the breaks in the same paragraph that says no ADR numbers them (Score: 45)
+
+*(Merges the 0070 reviewer's finding and the set-level reviewer's.)*
+
+**Evidence**: `0070:361` — "**First**, the behavioural break… **Second**, the source and binary
+break… **No ADR numbers them — the order they are written in is not a fact about the release.**"
+
+**Recommendation**: Replace "First"/"Second" with a bulleted list or with the substance ("The
+behavioural break: …"). Fold into finding 5's rewrite of step 7a.
+
+---
+
+### 60. 0074 — `Where the pieces live` has a subgraph that is not an assembly, and puts a DI-package type outside the DI package (Score: 45)
+
+**Evidence**: The house style specifies "one `subgraph` per assembly". `0074:170-173` —
+`subgraph hosts["the two validation hosts — unchanged"]`. But `BrighterValidationHostedService` lives
+in `Paramore.Brighter.Extensions.DependencyInjection` and `ServiceActivatorHostedService` in
+`Paramore.Brighter.ServiceActivator.Extensions.Hosting`.
+
+**Recommendation**: Put `h1` inside the `di` subgraph and give `h2` its own subgraph named for its
+assembly, keeping "unchanged" in the edge labels or the prose.
+
+---
+
+### 61. 0075 — Alternative 5's first half is rejected on taste, without citing the requirement that forecloses it (Score: 45)
+
+**Evidence**: `0075:285` rests the rejection on "it is the placement that invites" a different
+mistake and on "extent". `requirements.md:200` FR-9(a) — "The pipeline scope, **and the ambient
+suppression FR-8 requires**, must be established around **each subscriber's own iteration** of the
+build" — which settles it outright and is not cited.
+
+**Recommendation**: Lead with FR-9(a) — per-iteration is required, not preferred — and keep the
+extent argument as the *why* behind the requirement.
+
+---
+
+### 62. 0075 — Nine bare "ADR 0039" citations, including the opening sentence, where four ADRs carry that number (Score: 45)
+
+**Evidence**: `ls docs/adr | grep ^0039` returns four files.
+`grep -c "ADR 0039" 0075…md` = 9 (0071 = 2; the rest 0). `0075:26` — "ADR 0039 gives every `Publish`
+subscriber its own DI scope". The disambiguating slug appears only at `:294`, 268 lines later.
+C-16 (`requirements.md:385`) spells out the collision.
+
+**Recommendation**: Give the first mention its slug once — "ADR 0039
+(`0039-scoping-dependencies-inline-with-lifetime-scope`)" — as FR-8 does at `requirements.md:466`.
+
+---
+
+### 63. 0070 — `MessageMapperRegistry` is a core type but is specified under Implementation step "6. The container package" (Score: 42)
+
+**Evidence**: The touched table correctly assigns it to `Paramore.Brighter` (`0070:249`), but step
+6's heading is "**6. The container package.**" (`:340`) and its third bullet (`:346`) specifies the
+registry's two new members. Source: `src/Paramore.Brighter/MessageMapperRegistry.cs:41`. Since
+`Implementation Approach` is ordered in commit terms, this puts a core edit in the container-package
+step.
+
+**Recommendation**: Move the bullet into step 2, or retitle step 6 to cover both.
+
+---
+
+### 64. 0072 — Implementation step 1a bundles a structural tidy into a behavioural step (Score: 42)
+
+**Evidence**: House style requires the numbered list "in commit order, structural changes separated
+from behavioural ones per Tidy First". `0072:336` adds a new catch clause (behavioural) and
+normalises two existing filter spellings (structural) in one step — `:248`'s
+`when(!(e is ConfigurationException))` against `:202`'s `when (e is not ConfigurationException)`,
+both verified verbatim.
+
+**Recommendation**: Split the filter-spelling normalisation into its own numbered step ahead of 1a,
+marked structural.
+
+---
+
+### 65. 0073 — The `AddBrighterRequestScope` code block omits the null guard its own contract promises (Score: 42)
+
+**Evidence**: `0073:328` — "Throws `ArgumentNullException` on a null collection, matching
+`AddBrighter` (`:65-66`)" — the cited lines are correct. But `:311-319`'s body opens straight on
+`services.AddHttpContextAccessor();` with no guard.
+
+**Recommendation**: Add the two-line guard to the code block, or drop "matching `AddBrighter`".
+
+---
+
+### 66. SET — "This ADR supersedes no prior ADR" is in Context in four files, buried in Implementation Approach in 0070, and absent from 0071 (Score: 42)
+
+The set-level claim is clean — no supersession anywhere. The *placement* is inconsistent.
+
+**Evidence**: `grep -n 'supersede' 007[0-5]-*.md` — `0072:35`, `0073:38`, `0074:56`, `0075:36` all in
+`## Context`; `0070:369` inside `### Implementation Approach` at the tail of step 10; `0071` no hit.
+
+**Recommendation**: Move 0070's sentence into `## Context`, and add one to 0071.
+
+---
+
+### 67. 0071 — "The four decorator resolutions" names threading methods, not resolution sites, and the two actual sites are never mentioned (Score: 40)
+
+The error is conservative — a parameter would travel through *more* places than six, so Alternative
+2's rejection stands — but it tells an implementor there are six touchpoints when there are eight,
+and omits two internal types from the unchanged list.
+
+**Evidence**: `0071:100` — "the two direct `Create` calls and the four decorator resolutions";
+`:260` repeats it as "all six". Source has exactly four `Create(handlerType, lifetime)` call sites:
+`PipelineBuilder.cs:191`, `:236`, `HandlerFactory.cs:47`, `AsyncHandlerFactory.cs:47`.
+`PushOntoPipeline` (`:499`) and `AppendToPipeline` (`:430`) each handle sync *and* async decorators
+in one method and neither resolves anything itself. `HandlerFactory<TRequest>` and
+`AsyncHandlerFactory` appear nowhere in the ADR.
+
+**Recommendation**: Reword to name the four `Create` call sites reached through four methods that
+thread `IAmALifetime`, and add both types to the unchanged list.
+
+---
+
+### 68. 0071 — "Keep passing unchanged" is true of the assertions but not of the file (Score: 35)
+
+**Evidence**: `0071:308` — the two `FactoryLifetimeTests` "exercise the **no-handle** path and keep
+passing unchanged." `TestLifetimeScope`
+(`tests/Paramore.Brighter.Extensions.Tests/FactoryLifetimeTests.cs:311`) implements `IAmALifetime`
+with three members and no `PipelineScope`. It is one of the six test doubles the ADR's own Negative
+bullet counts as breaking, so the file must be edited before it compiles.
+
+**Recommendation**: "their assertions and setup keep passing unchanged; the double gains the one new
+member, like the other five."
+
+---
+
+### 69. 0074 — In the FR-25 clause map, one "step" reference is unqualified where every other is (Score: 35)
+
+**Evidence**: Rows 1, 6 and 11 name the ADR ("ADR 0070 step 7", "ADR 0070 step 7a", "ADR 0073 step
+6"). `0074:48`, row 7, says only "step 7" — this ADR's own. All other targets resolve; the map has
+eleven rows and no orphans.
+
+**Recommendation**: "…and C-18's compatibility note in **this ADR's** step 7."
+
+---
+
+### 70. 0073 — "the user" appears once, where the rest of the ADR says "an application" (Score: 32)
+
+Not an authoring-conversation reference — it means the API consumer — but it is the only occurrence
+in a document otherwise disciplined about it, and the house style calls the word out specifically.
+
+**Evidence**: `0073:457` — "reads as the yes/no question **the user** is actually answering".
+
+**Recommendation**: "the question an application author is actually answering".
+
+---
+
+### 71. 0072 — The `Where the pieces live` diagram drops the nullability the ladder turns on (Score: 30)
+
+**Evidence**: The node reads `IAmAScope GetAmbient(ScopeAffinity)`; the declaration at `0072:172` is
+`IAmAScope? GetAmbient(ScopeAffinity affinity);` and the contract's Output column is "an ambient the
+pipeline may adopt, **or `null`**". D17 fixes the contract with the `?`. `?` is safe in a mermaid
+label, so there is no rendering reason for the omission.
+
+**Recommendation**: `IAmAScope? GetAmbient(ScopeAffinity)` in the label.
+
+---
 
 ## Summary
 
 | Score Range | Count |
 |-------------|-------|
-| 90-100 (Critical) | 3 |
-| 70-89 (High) | 17 |
-| 50-69 (Medium) | 33 |
-| 0-49 (Low) | 10 |
+| 90-100 (Critical) | 0 |
+| 70-89 (High) | 7 |
+| 50-69 (Medium) | 49 |
+| 0-49 (Low) | 15 |
 
-**Total findings**: 63
-**Findings at or above threshold (60)**: 33
+**Total findings**: 71
+**Findings at or above threshold (60)**: 35
 
-## Suggested order of work
+### By ADR
 
-1. **The three Criticals (1–3)** are each a factual error that would produce wrong code or a
-   failing AC. Fix these first; #2 requires a decision reconciled across 0070 and 0072.
-2. **The two structural gaps (11, 17)** — FR-25's page and the release-note record — are the
-   coverage holes an implementor cannot discover from the ADRs.
-3. **The contract-and-count corrections (4, 5, 6, 8, 14, 16, 19, 26)** — every one is a missing or
-   falsified contract that two developers would resolve differently.
-4. **The 0072 split (10)** is the largest single edit and worth deciding before the smaller
-   0072 findings are applied, since several move with it.
-5. The remaining Mediums are mostly citation, wording and diagram fixes that can be batched.
+| ADR | Findings | At or above 60 |
+| --- | --- | --- |
+| 0070 | 9 | 5 |
+| 0071 | 9 | 3 |
+| 0072 | 10 | 5 |
+| 0073 | 10 | 5 |
+| 0074 | 12 | 7 |
+| 0075 | 11 | 4 |
+| Set-level | 10 | 6 |
+| **Total** | **71** | **35** |
+
+*(0070's row excludes the two of its findings merged into findings 5 and 59; 0073's excludes the one
+merged into finding 26.)*
+
+---
+
+## Decisions — all five taken, 2026-08-03. Do not relitigate.
+
+Everything not listed here is mechanical — "no design decision needed, just fix". These five could
+not be fixed without a choice; each was put with context, options and a recommendation, and chosen
+explicitly.
+
+| # | Question | Chosen | Consequences |
+| --- | --- | --- | --- |
+| 1 | **Split ADR 0073?** (finding 11) | **SPLIT into two.** One takes the `DefaultScopeAffinity` option and the order-independent write-through (`ScopeAffinityOverride`, `RegisterBrighterOptions`, all four registration sites); the other takes the ASP.NET package, its name, the extension's name and signature, and its target frameworks and SDK | Set goes to **seven** ADRs; **all seven** `### Where this ADR sits` maps become seven rows; index **97 → 98**; `.adr-list` gains an entry; the C-11 naming block splits across both. Same evidence shape that justified round 1's 0072 split — three parts separated by kind in the ADR's own text (`:32`, `:27`), a Decision sentence (`:89`) covering one of them, alternatives partitioning with zero overlap |
+| 2 | **Amend the requirements for the `AddBrighterAspNetCoreScopes` → `AddBrighterRequestScope` rename?** (finding 20) | **AMEND — six of the seven sites.** `C-11:372` **keeps** the old spelling: it is the rejected-candidates list and recording what was rejected is its job | Rewrites `:235` (FR-24.2), `:274` (FR-17, twice), `:343` (FR-25.11), and **AC-26 `:583`, AC-43 `:639`, AC-48 `:738`**. Round 1's deliberate "leave it" is superseded: C-11 reserved the spelling to the ADR *as a working name*, and `0073:344` has since made the call, so those three ACs name a method no ADR will produce |
+| 3 | **Is ADR 0071 still behaviour-preserving?** (finding 4) | **KEEP THE FIX, DROP THE CLAIM.** 0071 keeps round 1's fault-tolerant release loop and stops claiming inertness | The `AggregateException` break joins ADR 0070 step 7a's single release-note entry — which finding 5 is rewriting anyway. Rejected moving the fault-tolerance out: 0071 introduces a handle disposed *after* the handlers are released, so without the fix it would ship a scope leak on the very path it adds — which is why round 1 put the fix here |
+| 4 | **A pre-existing `IBrighterOptions` registration silently defeats the opt-in** (finding 14) | **DIAGNOSE — a sixth validation rule in 0074.** An affinity override is registered but the resolved `IBrighterOptions` did not come from Brighter's own factory, so the override was never applied: `Error`, naming the guidance page | Sixth rule in 0074, a **requirements amendment** and a **new AC**. Follows round 1 decision 1's precedent — diagnosable over silently documented. Note the failure defeats the opt-in on **all four** registration paths in **any** order, including AC-48's before-ordering, and the pattern is live in ~10 test files today |
+| 5 | **Retitle ADR 0074?** (finding 29) | **RETITLE, KEEP THE SLUG.** Frontmatter `title:`, the `# 74.` body heading, and the 0074 row in all seven sibling maps name the scope-configuration rules; filename unchanged | No cross-reference breaks. Regenerate the index in the **same commit** — expect a clean 1 insertion / 1 deletion. **With decision 4 the row must say SIX rules, not five.** Rejected the slug rename: a slug is an identifier, and churning it costs cross-reference integrity for a readability gain the title already delivers |
+
+### What decisions 2 and 4 together mean for the requirements
+
+Revision 16 carries **both** the rename (alignment) **and** a new rule plus a new AC (new scope). By
+the owner's standing rule — *revision 15 was alignment, not scope, so it needed no independent
+review round; an amendment that is more than alignment gets one* — **revision 16 needs its own
+`/spec:review requirements` round** before re-approval. The rename alone would not have.
+
+Re-run §7's count script afterwards. Expect **27 FRs · 10 NFRs · 50 ACs** and the bullet count up by
+one from 121; update the script's expectations in PROMPT.md §7 to match, and re-stamp
+`.requirements-approved` with the new revision so the marker does not go stale again.
+
+### Sequencing — decisions 1 and 5 move content, so they go first
+
+1. **Decision 1**, the 0073 split, and **decision 5**, 0074's retitle — both rewrite the sibling maps
+   in every file. Do them together, in one commit, and regenerate the index.
+2. **Decision 2 and decision 4's requirements amendment** — revision 16, then its review round.
+3. **Decision 3** and the remaining 66 mechanical findings — every `file:line` in this review predates
+   steps 1 and 2, so **verify each against the current file before acting on it**.
