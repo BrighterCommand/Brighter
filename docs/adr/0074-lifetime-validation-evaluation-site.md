@@ -23,9 +23,9 @@ Proposed
 
 ## Context
 
-ADR 0072 fixed the seam by which a pipeline adopts an ambient DI scope, and with it the registration model for `IAmAScopeProvider`: a plain `services.AddSingleton<IAmAScopeProvider, T>()` on every path, never `TryAddSingleton`, so that every duplicate descriptor stays in the collection while Microsoft's container resolves the last. ADR 0073 fixed the opt-in as `ScopeAffinity DefaultScopeAffinity { get; set; } = ScopeAffinity.AlwaysNew;` on `IBrighterOptions`/`BrighterOptions`.
+Five configurations are now expressible that an application almost certainly did not intend: an opt-in that can never take effect; a set of lifetimes that shares dependencies across half a pipeline and not the other half; a process-lifetime artefact that requires a per-request one; two different ambient sources registered, of which only one is used; and two opt-in calls disagreeing about what was opted into. Each is silent at run time — the software works, adopts nothing, and says nothing — and FR-22, FR-24.3 and FR-17 require each to be reported at startup instead.
 
-Five configurations are now expressible that an application almost certainly did not intend, and FR-22, FR-24.3 and FR-17 require each to be reported at startup. What no prior record decides is **which component evaluates those rules, and how it reaches its inputs** — because every one of those inputs is a container concept, and the component that runs Brighter's startup validation today lives in core.
+What no prior record decides is **which component evaluates those rules, and how it reaches its inputs.** That is a real question rather than a placement detail, because every one of those inputs is a container concept — two of the rules read service registrations, three read lifetime settings that only exist once the container is built — while the component that runs Brighter's startup validation today lives in core, where no container concept may go.
 
 **Parent Requirement**: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md)
 
@@ -33,7 +33,27 @@ Five configurations are now expressible that an application almost certainly did
 
 It does **not** decide the rules or their severities. Those are fixed by the requirements and by D5, D8, D9 and D15, and are restated below as inputs rather than re-argued. It does not decide the registration model for `IAmAScopeProvider` — ADR 0072's — nor the three runtime `Warning` latches in `AmbientScopeDiagnostics`. **The boundary with ADR 0072 is exact: 0072 owns the run-time diagnostics a pipeline emits while asking for an ambient; this ADR owns the start-time findings `ValidatePipelines()` produces about the configuration.** They share no code and no state, and the message sets do not overlap.
 
-This ADR **supersedes no prior ADR.** It extends the `ValidatePipelines()` machinery of ADR 0053 and ADR 0064.
+**`docs/guides/lifetimes-and-scoping.md` is an implementation-plan deliverable, and this is where that is recorded.** FR-25 requires a new page at `docs/guides/lifetimes-and-scoping.md` and enumerates eleven things it must contain; NFR-10 makes that page — not the messages — the acceptance bar for the whole opt-in, and every message these five rules produce is required to name it (AC-43). The page is therefore stated here rather than nowhere, because this is the ADR whose errors are unactionable without it.
+
+**It is not an ADR-level decision.** Writing a guidance page decides nothing that six ADRs have not already decided; what it needs is an owner in the implementation plan and a map saying where each clause's substance comes from, so that the page can be written without re-deciding anything and reviewed against the record. That map is complete — every clause has a source — and it is this:
+
+| FR-25 clause | Where its substance is decided |
+| --- | --- |
+| 1 — the get/release cycle for `Transient`, `Scoped`, `Singleton` | ADR 0070 step 7 (transform pipelines) and ADR 0071 step 5 (handler pipelines), each a per-lifetime table; `0067-per-resolution-di-scope-for-transient-factory-instances` for `Transient`'s per-resolution scope |
+| 2 — affinity applies to `Scoped` only (FR-21), and an inert opt-in is reported | ADR 0072's `ScopeAffinityPolicy` and adoption ladder for the first half; **this ADR's FR-22.1 rule** for the second |
+| 3 — NFR-9's truth table | ADR 0072's adoption ladder supplies the *source* column for every outcome, and its *Artefact identity, restated for both affinities* supplies the identity rule; ADR 0075 supplies the `Publish`-subscriber and nested-pipeline rows. The table is the cross product of those rows with the three lifetimes and the two affinities — **NFR-9 is discharged by writing it, and this is the only place NFR-9 lands** |
+| 4 — `IAmAScope` versus `IAmALifetime` (NFR-8) | ADR 0070's `IAmAScope` component entry, and ADR 0071's paragraph on `IAmALifetime` carrying two responsibilities |
+| 5 — `Publish` subscribers, and pipelines nested inside them, cannot join the caller's transaction (C-4) | **ADR 0075**, which owns suppression and its two brackets |
+| 6 — the `MapperLifetime.Scoped` break and its migration (FR-20) | ADR 0070 step 7a, which also fixes that this is one `release_notes.md` entry rather than four |
+| 7 — no mixing `Transient` with `Scoped`, `Singleton` excluded, enforced only under `ValidatePipelines()` | **this ADR's FR-22.2 rule**, and C-18's compatibility note in step 7 |
+| 8 — the captive-dependency hazard, and `ValidateScopes` as the complete check | **this ADR's** *Captive-dependency detection: what it reads, and what it cannot see* |
+| 9 — the decision guide | **this ADR's FR-22.2 rule**, from which the passing set is derived — see below — with ADR 0072 for what adopting buys and ADR 0070 for what a per-pipeline scope is |
+| 10 — validation only reaches you if you call it *and* a host runs, plus troubleshooting for the five messages | **this ADR's** *Both host shapes, enumerated* (D14's gap), and its five rule rows |
+| 11 — the extension's affinity argument is the value (D18) | ADR 0073 step 6 |
+
+**Clause 9's table of passing configurations is derived, not authored.** FR-22.2's rule is *discard any of the three lifetimes that is `Singleton`; the remainder must be uniform* — so the configurations that pass are exactly `{Transient, Transient, Transient}`, `{Scoped, Scoped, Scoped}`, and either with any subset of members replaced by `Singleton`, less those FR-22.1 then rejects under `JoinAmbient` because nothing remains `Scoped`. The guide states that set with the cost of each; it does not restate the rule, and if the rule ever changes the table follows from it rather than drifting against it.
+
+This ADR **supersedes no prior ADR.** It extends the `ValidatePipelines()` machinery of `0053-pipeline-validation-at-startup` and `0064-validate-pipeline-assembly-and-provider-registration`. Both are cited by slug throughout, and the bare numbers are avoided deliberately: `docs/adr` holds three files numbered 0053, two numbered 0054 and two numbered 0064, and C-16 assigns the bare "ADR 0064" to the *other* one — `0064-pipeline-cache-type-key`. Where the shortened forms **0053** and **0064** appear below they always mean the two slugs named here.
 
 ### Where this ADR sits
 
@@ -48,7 +68,9 @@ Six ADRs deliver the parent requirement, one decision each. This is the fifth, a
 | **0074** *(this one)* | **where** the lifetime and captive-dependency rules are evaluated |
 | 0075 | how a `Publish` subscriber **suppresses** adoption, for itself and everything nested beneath it |
 
-Validation is written last of the five that shape a configuration, because it cannot be written earlier: three of its five rules read values that only exist once 0073 has put them on `IBrighterOptions`, and the other two read a registration model 0072 and 0073 fixed. Nothing here changes a lifetime, a scope or a pipeline — it only reports on a configuration that the four preceding decisions made expressible.
+The rule the first two state is **the per-pipeline object carries the DI scope**. This ADR neither creates nor holds one: it reports, before any pipeline is built, on whether the configuration those objects will read is coherent.
+
+What the two ADRs immediately before it settled is what this one reads. ADR 0072 fixed the registration model for `IAmAScopeProvider` — a plain `AddSingleton` on every path, never `TryAddSingleton`, so every duplicate descriptor stays in the collection while Microsoft's container resolves the last. ADR 0073 fixed the opt-in as an affinity property on `IBrighterOptions`, defaulting to today's behaviour, together with the override that carries the registration extension's argument onto whichever options object the four registration paths produce. Validation is therefore written last of the five that shape a configuration, because it cannot be written earlier: three of its five rules read values that only exist once 0073 has put them there, and the other two read the registration model 0072 and 0073 fixed. Nothing here changes a lifetime, a scope or a pipeline.
 
 ADR 0067's `Terms` block defines the two axes this ADR turns on — Brighter's **configured lifetime**, which governs the artefact, and the container's **registration lifetime**, which governs that artefact's dependencies — and keeps `IServiceScope`, `ServiceProviderLifetimeScope` and `IAmALifetime` distinct. This ADR does not restate it. The rules below read *both* axes and never conflate them: FR-22.1 and FR-22.2 read only configured lifetimes; FR-22.3 reads a configured lifetime on one side and a registration lifetime on the other.
 
@@ -77,15 +99,17 @@ The three lifetimes are a **joint** choice. `{Scoped, Scoped, Transient}` is not
 - **The rules are all container concepts.** Three of the five read `ServiceLifetime` directly; the other two read `ServiceDescriptor`s. There is no framing in which they belong in core.
 - **The evaluator today is in core.** `PipelineValidator` is `src/Paramore.Brighter/Validation/PipelineValidator.cs:54`, and `IAmAPipelineValidator` is a core interface with a single `PipelineValidationResult Validate()`.
 - **`PipelineValidator` has no access to `IBrighterOptions`.** `BrighterPipelineValidationExtensions.cs:91-93` constructs it with a pipeline builder, publications, subscriptions, consumer specs, inbox, outbox, provider registrations, a mapper-registry factory and a transformer probe — and nothing that carries a lifetime. Supplying the missing inputs is new work, and is why this is an ADR.
-- **The inputs must be read as the factories read them.** The five container-backed factories read the object `IBrighterOptions` resolves to (`ServiceProviderMapperFactory.cs:44`), **not** `IOptions<BrighterOptions>.Value`. Only `AddBrighter(Action<BrighterOptions>)` runs an `IOptions` pipeline (`ServiceCollectionExtensions.cs:69`); the other three bind `IBrighterOptions` directly — `AddBrighter(Func<…>)` (`:97`), `AddConsumers(Action<…>)` (`ServiceActivator.Extensions.DependencyInjection/ServiceCollectionExtensions.cs:38`) and `AddConsumers(Func<…>)` (`:88`). Validation must not pass a configuration the factories will ignore, nor fail one they would have honoured.
+- **The inputs must be read as the factories read them.** The five container-backed factories read the object `IBrighterOptions` resolves to (`ServiceProviderMapperFactory.cs:44`), **not** `IOptions<BrighterOptions>.Value` — which is a different object on three of the four registration paths, because only one of them runs an `IOptions` pipeline at all (C-12a; the four sites are enumerated under *How the inputs reach the rules*). Validation must not pass a configuration the factories will ignore, nor fail one they would have honoured.
 - **The only precedent for reading the container without resolving it does no constructor inspection at all.** `ServiceCollectionTransformerResolvabilityProbe` (`:40-56`) is a `HashSet<Type>` and a `Contains`. It is a precedent for *snapshot-and-query-without-resolving* and for nothing else; the constructor and lifetime walk FR-22.3 needs is new.
-- **`ValidatePipelines()` is opt-in and snapshots at call time** (`BrighterPipelineValidationExtensions.cs:58` is the entry point; the captures are at `:64-66` and `:68-69`). C-15 makes the residual gaps explicit and accepted.
-- **Both host shapes must fire.** `AddConsumers` sets `ConsumerOwnsValidation = true` (`ServiceActivator.Extensions.DependencyInjection/ServiceCollectionExtensions.cs:60`, `:127`), and `BrighterValidationHostedService.StartAsync` returns immediately when it is set (`BrighterValidationHostedService.cs:73`). The consumer path therefore runs through `ServiceActivatorHostedService` (`src/Paramore.Brighter.ServiceActivator.Extensions.Hosting/ServiceActivatorHostedService.cs:13`), which is registered **nowhere** in `src` (D14).
+- **`ValidatePipelines()` is opt-in and snapshots at call time** (`BrighterPipelineValidationExtensions.cs:58`; step 2 gives the existing capture points it joins). C-15 makes the residual gaps explicit and accepted.
+- **Both host shapes must fire, and the consumer one is not Brighter's to register.** `AddConsumers` sets `ConsumerOwnsValidation`, which makes `BrighterValidationHostedService.StartAsync` return immediately (`BrighterValidationHostedService.cs:73`), so the consumer path runs through `ServiceActivatorHostedService` — which nothing in `src` registers (D14). Any change to that host would be exercised only where a test registers the hosting package itself. *Both host shapes, enumerated* below walks all five combinations with their citations.
 - **Errors and warnings must stay distinguishable.** Three of the five messages are warnings, and a warning must never block startup whatever `ThrowOnError` says.
 
 ## Decision
 
-**The five rules are evaluated in `Paramore.Brighter.Extensions.DependencyInjection`, by a `ScopeConfigurationValidator` that implements the core `IAmAPipelineValidator`, decorates the core `PipelineValidator`, and returns `PipelineValidationResult.Combine(inner, own)`. It is what the existing `TryAddSingleton<IAmAPipelineValidator>` registration in `ValidatePipelines()` returns, so both validation hosts fire it without either being changed. Its lifetime and affinity inputs are read from the object `IBrighterOptions` resolves to, at host start; its `ServiceDescriptor` inputs are snapshotted from `builder.Services` at `ValidatePipelines()` call time. No type in `Paramore.Brighter` gains a container concept, and no core rule family is extended.**
+**The five rules are evaluated by a validator in the container package that decorates the core one, so the existing validation hosts fire it unchanged and neither of them knows.**
+
+The shape that takes is a decorator rather than a second registration, because both hosts consume exactly one validator: the decorating validator implements the core validation interface, is what the existing registration inside `ValidatePipelines()` hands back, runs the core validator first and returns the two results combined. Its lifetime and affinity inputs are read from the object `IBrighterOptions` resolves to, at host start; its registration inputs are snapshotted from the service collection at `ValidatePipelines()` call time. No type in `Paramore.Brighter` gains a container concept, and no core rule family is extended. The types and signatures are under *Key Components*.
 
 ### The mechanism, end to end
 
@@ -127,7 +151,6 @@ The last note on the diagram is easy to miss and expensive to get wrong: the con
 ```mermaid
 flowchart TB
     subgraph core["Paramore.Brighter — core: no container types, and none added"]
-        direction TB
         iface["IAmAPipelineValidator — PipelineValidationResult Validate()"]
         pv["PipelineValidator — handler, producer and consumer rule families"]
         result["PipelineValidationResult — Errors, Warnings, IsValid, ThrowIfInvalid()<br/>Combine, which exists today and is unused in src"]
@@ -137,10 +160,9 @@ flowchart TB
     end
 
     subgraph di["Paramore.Brighter.Extensions.DependencyInjection"]
-        direction TB
         dec["ScopeConfigurationValidator — NEW, public<br/>IAmAPipelineValidator and IDisposable"]
-        rules["ScopeConfigurationRules — NEW, internal<br/>FR-22.1, FR-22.2, FR-22.3, FR-24.3"]
-        ents["ScopeConfiguration, one per host<br/>ArtefactRegistration, one per candidate artefact<br/>ContainerRegistrationSnapshot, descriptors taken at call time<br/>ArtefactConstructorSelector, D15's rule in one place"]
+        rules["ScopeConfigurationRules — NEW, internal<br/>FR-22.1, FR-22.2, FR-22.3, FR-24.3, FR-17"]
+        ents["the entities, all NEW and internal<br/>ScopeConfiguration, one per host<br/>ScopeProviderRegistration, one per registered provider<br/>ArtefactRegistration, one per candidate artefact<br/>ArtefactKind, which lifetime governs an artefact<br/>ContainerRegistrationSnapshot, descriptors taken at call time<br/>ArtefactConstructorSelector, D15's rule in one place<br/>ArtefactExclusionSet, the attribute half of FR-22.3's conjunction"]
         dec --> rules
         rules --> ents
     end
@@ -150,13 +172,15 @@ flowchart TB
         h2["ServiceActivatorHostedService, consumer"]
     end
 
-    dec -. "implements" .-> iface
+    dec -- "implements" --> iface
     dec -- "wraps, and disposes" --> pv
-    dec -- "Combine(inner, own)" --> result
-    rules -. "instantiated over DI-package entities" .-> specs
-    h1 -- "resolves the one IAmAPipelineValidator" --> dec
-    h2 -- "resolves the one IAmAPipelineValidator" --> dec
+    dec -. "Combine(inner, own)" .-> result
+    rules -- "instantiated over DI-package entities" --> specs
+    h1 -. "resolves the one IAmAPipelineValidator" .-> dec
+    h2 -. "resolves the one IAmAPipelineValidator" .-> dec
 ```
+
+**Reading the edges**, on the convention ADRs 0070 and 0071 use: a solid arrow is a compile-time reference or an ownership, a dotted arrow is a runtime call or resolution. Every solid arrow crossing into core runs from the DI package inward, which is the real reference direction — core names nothing here. The two host edges are dotted because the hosts do not reference the decorator at all: they resolve `IAmAPipelineValidator` and get it, which is the whole reason neither of them changes.
 
 ### Key Components
 
@@ -165,8 +189,8 @@ flowchart TB
 | Role | Type | Stereotype | Responsibility |
 | --- | --- | --- | --- |
 | Validation coordinator | `ScopeConfigurationValidator` (DI package) | **doing** | Runs the inner validator, evaluates the container rule set, combines the two results, and owns the inner validator's disposal |
-| Host configuration | `ScopeConfiguration` (DI package) | **knowing** (information holder) | The affinity and the three configured lifetimes as the factories see them, plus the `IAmAScopeProvider` registrations in registration order |
-| Artefact under test | `ArtefactRegistration` (DI package) | **knowing** | One candidate artefact: its type, its kind, and the configured lifetime that governs that kind |
+| Host configuration | `ScopeConfiguration` (DI package) | **knowing** (information holder) | The affinity and the three configured lifetimes as the factories see them, plus the ambient-source and affinity-override registrations in registration order — each of the former a `ScopeProviderRegistration`, which pairs an implementation type (or, where none is statically known, a position) with that position |
+| Artefact under test | `ArtefactRegistration` (DI package) | **knowing** | One candidate artefact: its type, its `ArtefactKind` — handler, mapper or transform, which is what selects the governing configured lifetime — and that lifetime's value |
 | Registration snapshot | `ContainerRegistrationSnapshot` (DI package) | **knowing** | The descriptors as they stood when `ValidatePipelines()` was called; answers "what lifetime is this service type registered with" and "what artefacts are registered" without resolving anything |
 | Constructor choice | `ArtefactConstructorSelector` (DI package) | **deciding** | D15's rule, and only D15's rule: the public constructor with the most parameters; on a tie, none |
 | Brighter's own artefacts | `ArtefactExclusionSet` (DI package) | **knowing** (information holder) | The set of artefact types returned by a `RequestHandlerAttribute` or `TransformAttribute` `GetHandlerType()`. It answers one question — is this type one Brighter put in the pipeline itself — and holds the attribute half of FR-22.3's conjunction |
@@ -210,7 +234,7 @@ Three consequences of that shape, each of which is why it was chosen:
 
 | Member | Input | Output | Error conditions |
 | --- | --- | --- | --- |
-| `ScopeConfigurationValidator.Validate()` | none (all inputs held from construction) | a `PipelineValidationResult` combining the inner validator's findings with this ADR's five rules | Propagates whatever the inner validator propagates. A rule-body exception is converted by `Specification<T>` into a `ValidationSeverity.Error` finding, as it is for every existing rule (ADR 0064) — the rules add no bespoke `try`/`catch` |
+| `ScopeConfigurationValidator.Validate()` | none (all inputs held from construction) | a `PipelineValidationResult` combining the inner validator's findings with this ADR's five rules | Propagates whatever the inner validator propagates. A rule-body exception is converted by `Specification<T>` into a `ValidationSeverity.Error` finding, as it is for every existing rule (ADR 0064 (`0064-validate-pipeline-assembly-and-provider-registration`)) — the rules add no bespoke `try`/`catch` |
 | `ScopeConfigurationValidator.Dispose()` | none | — | Disposes the inner `PipelineValidator`. Idempotent |
 
 That last row is not incidental. `PipelineValidator` implements `IDisposable` and its `Dispose` (`:85`) drains the `MessageMapperRegistry` it may have built lazily, on the stated understanding that the container disposes the validator at shutdown. The container tracks only the instance a factory **returns**, so an inner validator created inside the delegate and not returned would never be disposed and the registry — with the mapper factory and any DI scope it holds — would live to process exit. The decorator must cascade, and that obligation is stated here rather than left to be discovered.
@@ -228,7 +252,7 @@ That last row is not incidental. `PipelineValidator` implements `IDisposable` an
 
 #### The five rules
 
-Each is an `ISpecification<T>` built with the existing `Specification<T>` constructors, evaluated with `ValidationResultCollector<T>` — the same machinery ADR 0053 established and ADR 0064 extended, instantiated in the DI package over DI-package entity types. There are two entity families.
+Each is an `ISpecification<T>` built with the existing `Specification<T>` constructors, evaluated with `ValidationResultCollector<T>` — the same machinery ADR 0053 (`0053-pipeline-validation-at-startup`) established and ADR 0064 extended, instantiated in the DI package over DI-package entity types. There are two entity families.
 
 **Family 1 — `ScopeConfiguration`, exactly one per host.** Carries the affinity, the three configured lifetimes, the `IAmAScopeProvider` registrations and the affinity-override registrations. Four rules evaluate it:
 
@@ -268,10 +292,11 @@ This is deliberately **not** Microsoft's selection, which additionally requires 
 
 **Each parameter's lifetime** is the `ServiceLifetime` of its descriptor in the snapshot. Where the parameter type is a constructed generic with no descriptor of its own, the descriptor for its generic type definition is used — that is the descriptor Microsoft's container would resolve through, so it is a faithful reading of "the parameter's own descriptor" rather than a widening of the rule. Where more than one descriptor exists for a service type, the **last** is read, matching Microsoft's resolution and FR-24.3's last-wins.
 
-**Failure modes, enumerated and accepted.** Each is a case where the rule reports nothing; none is a case where it reports wrongly.
+**Failure modes, enumerated and accepted.** All but the last are cases where the rule reports nothing; the last is the one case where it can report wrongly, and it is called out as such.
 
 | Case | Outcome | Standing |
 | --- | --- | --- |
+| A registration made **after** `ValidatePipelines()` was called | invisible, and on one branch **wrong**: a mapper registered later is not a candidate at all, and a later `AddScoped<IOrderDbContext>()` makes a real captive dependency invisible — while a later registration that *changes* a service type's effective lifetime makes the snapshot's last-descriptor reading disagree with what the container will resolve, so a warning can be raised about a dependency that is no longer `Scoped`, or withheld about one that now is | C-15, and the reason the guidance is "call `ValidatePipelines()` last" |
 | Open generic artefact type | not inspected — a parameter typed by a type parameter has no descriptor to read | Necessary; no meaningful reading exists |
 | Artefact registered by factory delegate or instance | not a candidate — no statically known implementation type | C-20(ii), explicitly |
 | Parameter with no descriptor, including `IServiceProvider`, `IServiceScopeFactory` and `IEnumerable<T>` | not a finding, per FR-22.3's "what is read for each parameter" | C-20(i)'s divergence from Microsoft's always-resolvable services |
@@ -364,7 +389,7 @@ Unchanged, and named so the omission is not read as an oversight: `IAmAPipelineV
 - **FR-22.2 is a compatibility break, and validating applications pay it.** An application that today sets, say, `HandlerLifetime = Scoped` with `MapperLifetime = Transient` works — the two simply do not share pipeline-scoped dependencies — and if it calls `ValidatePipelines()` it will now fail to start. The cost falls entirely on applications that opted into validation, which is a smaller set than "all applications" but is exactly the set that did the right thing. The remedy is to pick a conformant triple, and per C-18 many of these applications have never had to reason about lifetime at all — which is why NFR-10 makes the guidance page, not the message, the acceptance bar. It belongs in `release_notes.md` beside FR-20's break (AC-24).
 - **An application that never calls `ValidatePipelines()` gets nothing.** It can opt into adoption, leave all three lifetimes `Transient`, adopt nothing at all (ADR 0072's `TransformerLifetime` veto) and receive no signal of any kind. C-15 records this and it is accepted; the mitigation is documentation ("call `ValidatePipelines()` last"), which is weaker than a mechanism.
 - **A consumer host that never registers `ServiceActivatorHostedService` has no validation host at all.** `AddConsumers` sets `ConsumerOwnsValidation` and does not register the hosted service (D14), so however wrong the configuration, no FR-22 message is surfaced. Unchanged by this work and deliberately not fixed here.
-- **FR-24.3 sees only providers registered before the call.** A provider registered after `ValidatePipelines()` is invisible to the duplicate check, and is the one Microsoft's container will actually resolve. The guidance stays "call it last".
+- **Every rule that reads the collection sees only what was registered before the call, and this is the one place the rules can be wrong rather than merely silent.** The duplicate-provider and repeated-opt-in rules miss a registration made after `ValidatePipelines()` — and a provider registered after it is the one Microsoft's container will actually resolve. The captive-dependency rule reads the same snapshot for *both* of its inputs, so a mapper registered later is not a candidate at all, and a later `AddScoped<IOrderDbContext>()` makes a real captive dependency invisible. Worse, because the rule reads the **last** descriptor for a service type to match Microsoft's resolution, a later registration that changes a type's effective lifetime can make the snapshot disagree with the built container in either direction: a warning raised about a dependency that is no longer `Scoped`, or withheld about one that now is. This is C-15's snapshot semantics, inherited rather than introduced, and the only mitigation is the same one: call `ValidatePipelines()` last.
 - **The captive-dependency rule is bounded in four ways, all deliberate and all reportable as misses.** It uses Brighter's constructor selection rather than Microsoft's; it reads direct parameters only, so transitive captivity is not reported; the `Paramore.Brighter.` assembly **prefix** over-excludes, so an application type in an assembly the application named `Paramore.Brighter.Something` is excluded too; and no mapper can be excluded by the mechanism at all, because the mechanism keys off attributes and no mapper is returned by one. Each is asserted as intended by AC-42, so none can be quietly "improved". The container's own `ValidateScopes` remains the complete check, and FR-25.8 requires the guidance page to say so.
 - **`IAmAPipelineValidator` no longer resolves to `PipelineValidator`.** A test or application that resolves it and casts to the concrete type breaks. Nothing in `src` does, but it is a behavioural change in what the container returns.
 - **A reflection failure in a warning rule can block startup.** `Specification<T>` converts an uncaught rule-body exception into a `ValidationSeverity.Error`, so a `TypeLoadException` while reading a constructor's parameter types would fail a host under `throwOnError: true` on account of a rule whose own severity is Warning. This is the behaviour of every existing rule (ADR 0064) and the rules deliberately add no bespoke guard; the exposure is bounded by the artefact types already being materialised in a `ServiceDescriptor`, and therefore already loaded.
@@ -390,7 +415,11 @@ Unchanged, and named so the omission is not read as an oversight: `IAmAPipelineV
 
 **1. A second `IAmAPipelineValidator` contributed by the DI package.** Register the container rules as their own validator with a plain `AddSingleton`, alongside the core one. **Rejected on mechanism first and meaning second.** `IAmAPipelineValidator` is registered `TryAddSingleton` (`BrighterPipelineValidationExtensions.cs:71`) and both hosts consume exactly one — `BrighterValidationHostedService` by constructor parameter (`:60`), `ServiceActivatorHostedService` by `GetService` (`:50`) — so two registrations do not compose; Microsoft's container resolves the last and the core validator's findings vanish. Making it compose means changing both hosted services to `GetServices<IAmAPipelineValidator>()` and `PipelineValidationResult.Combine`, in two packages, one of which (`ServiceActivatorHostedService`) is registered nowhere in `src`, so the consumer half of the change would be exercised only where a test registers the hosting package. It also changes what the `TryAddSingleton` escape hatch means: an application that supplies its own validator today replaces Brighter's validation entirely, and under `GetServices` it would additively receive Brighter's as well. The decorator gets the same composition with one registration and no host changes.
 
-**2. A validation spec the core validator consumes.** Widen `PipelineValidator`'s constructor with a new family, as ADR 0064 did for the producer rules. **Rejected.** The entity type carries `ServiceLifetime`, so it lives either in core — which AC-22.3 forbids — or in the DI package, which would put a DI-package type on a core constructor and require core to reference the package. The only container-free shape left is opaque: an `IEnumerable<Func<IEnumerable<ValidationError>>>` of pre-bound rules the validator merely invokes. That is genuinely tempting and it is the decorator with the collaboration hidden inside a closure: the same objects, the same order, one fewer type — but `PipelineValidator` stops being able to say what it evaluates, and its rules stop being ones core can name and test. The DI rules would then be constructed as delegates closing over `IBrighterOptions` and a snapshot inside the factory delegate at `:71`, which is where the decorator is constructed anyway, minus the ability to unit-test the rule set without building a `PipelineBuilder`. The decorator keeps each validator honest about what it evaluates.
+**2. A validation spec the core validator consumes.** Widen `PipelineValidator`'s constructor with a new family, as ADR 0064 did for the producer rules. **Rejected.** The entity type carries `ServiceLifetime`, so it lives either in core — which AC-22.3 forbids — or in the DI package, which would put a DI-package type on a core constructor and require core to reference the package.
+
+Two container-free shapes remain, and the first is the precedent this ADR leans on elsewhere, so it has to be met rather than skipped. **A named question interface, core-defined and implemented in the DI package** — the shape of ADR 0064's `IAmATransformerResolvabilityProbe` (`src/Paramore.Brighter/Validation/IAmATransformerResolvabilityProbe.cs`, implemented by `ServiceCollectionTransformerResolvabilityProbe`). A lifetime analogue would be neither opaque nor a delegate bag, and core could name and test its rules. It fails on what the messages have to say, not on shape: FR-22.1 and FR-22.2 require messages listing **all three lifetimes with their values**, so a `bool`-answering probe cannot supply the finding's own content, and an interface that returns the three values has to name a type for them — which is `ServiceLifetime`, or a core mirror of it, which is alternative 3 and is rejected there and for stronger reasons. The probe precedent holds exactly where ADR 0064 used it, for a yes/no question whose message needs nothing back.
+
+The second is opaque: an `IEnumerable<Func<IEnumerable<ValidationError>>>` of pre-bound rules the validator merely invokes. That is genuinely tempting and it is the decorator with the collaboration hidden inside a closure: the same objects, the same order, one fewer type — but `PipelineValidator` stops being able to say what it evaluates, and its rules stop being ones core can name and test. The DI rules would then be constructed as delegates closing over `IBrighterOptions` and a snapshot inside the factory delegate at `:71`, which is where the decorator is constructed anyway, minus the ability to unit-test the rule set without building a `PipelineBuilder`. The decorator keeps each validator honest about what it evaluates.
 
 **3. Put the rules in core and pass the lifetimes as core-typed values.** An `int` or a core enum mirroring `ServiceLifetime`, and the descriptors reduced to core-typed pairs. **Rejected by ADR 0014 and AC-22.3** — and rejected *more* firmly than a direct violation would be, which is the point worth recording. A mirror enum would pass the source scan, because the scan names four identifiers and not a concept. Core would then have to define what `Scoped` means with no container to define it against, and the seam would stop being implementable over Autofac or SimpleInjector on their own terms: NFR-7 asks that another container package express its own lifetimes, not that it translate them into Brighter's. Passing the scan is not the requirement; ADR 0014 is.
 
@@ -406,7 +435,7 @@ Unchanged, and named so the omission is not read as an oversight: `IAmAPipelineV
 
 ## References
 
-- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-14, FR-17, FR-21, FR-22, FR-24.3, FR-25.6, FR-25.8, FR-25.9, FR-25.10, NFR-1, NFR-10, C-12, C-12a, C-15, C-17, C-18, C-20, D5, D8, D9, D14, D15, D18, D19; AC-22, AC-24, AC-27, AC-28, AC-32, AC-40, AC-41, AC-42, AC-43, AC-44, AC-45, AC-49
+- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-17, FR-20, FR-21, FR-22, FR-24.3, FR-25 (all eleven clauses; the clause-to-ADR map is in `Scope`); NFR-1, NFR-7, NFR-8, NFR-9, NFR-10; C-4, C-11, C-12, C-12a, C-15, C-16, C-18, C-20; D5, D8, D9, D11, D14, D15, D18, D19; AC-22, AC-24, AC-27, AC-28, AC-32, AC-40, AC-41, AC-42, AC-43, AC-44, AC-45, AC-49
 - Related ADRs (cited by slug — ADR numbers are not unique in this repo, C-16):
   - `0053-pipeline-validation-at-startup` [Accepted] — the `ISpecification<T>` rule families, `ValidationResultCollector<T>`, `ValidationError`, and the `throwOnError` semantics this ADR reuses without change
   - `0064-validate-pipeline-assembly-and-provider-registration` [Accepted] — the precedent for a `Warning` rule family, for reading the `IServiceCollection` without resolving it (`IAmATransformerResolvabilityProbe`), for threading new inputs through `ValidatePipelines()`, and for rules that do not catch their own exceptions
