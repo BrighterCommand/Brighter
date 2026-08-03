@@ -37,17 +37,18 @@ This ADR **supersedes no prior ADR.** It extends the `ValidatePipelines()` machi
 
 ### Where this ADR sits
 
-Five ADRs deliver the parent requirement, one decision each. This is the last, and it exists because the four preceding it made five wrong configurations expressible.
+Six ADRs deliver the parent requirement, one decision each. This is the fifth, and it exists because the decisions around it made five wrong configurations expressible.
 
 | ADR | Decides |
 | --- | --- |
 | 0070 | a transform pipeline takes one DI scope, carried **as a parameter** |
 | 0071 | handler pipelines converge onto the **same handle**, carried on the object they already pass |
-| 0072 | how a pipeline discovers an **ambient** DI scope the host owns, and where `Publish` suppression hangs |
+| 0072 | how a pipeline discovers an **ambient** DI scope the host owns |
 | 0073 | the **opt-in** property, the ASP.NET package, and how that setting reaches all four registration paths |
 | **0074** *(this one)* | **where** the lifetime and captive-dependency rules are evaluated |
+| 0075 | how a `Publish` subscriber **suppresses** adoption, for itself and everything nested beneath it |
 
-Validation comes last because it cannot be written earlier: three of its five rules read values that only exist once 0073 has put them on `IBrighterOptions`, and the other two read a registration model 0072 and 0073 fixed. Nothing here changes a lifetime, a scope or a pipeline — it only reports on a configuration that the four preceding decisions made expressible.
+Validation is written last of the five that shape a configuration, because it cannot be written earlier: three of its five rules read values that only exist once 0073 has put them on `IBrighterOptions`, and the other two read a registration model 0072 and 0073 fixed. Nothing here changes a lifetime, a scope or a pipeline — it only reports on a configuration that the four preceding decisions made expressible.
 
 ADR 0067's `Terms` block defines the two axes this ADR turns on — Brighter's **configured lifetime**, which governs the artefact, and the container's **registration lifetime**, which governs that artefact's dependencies — and keeps `IServiceScope`, `ServiceProviderLifetimeScope` and `IAmALifetime` distinct. This ADR does not restate it. The rules below read *both* axes and never conflate them: FR-22.1 and FR-22.2 read only configured lifetimes; FR-22.3 reads a configured lifetime on one side and a registration lifetime on the other.
 
