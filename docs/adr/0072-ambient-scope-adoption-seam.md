@@ -92,7 +92,7 @@ The protocol is a ladder. Each row is tested in order and the first that matches
 | --- | --- | --- | --- |
 | 1 | this factory's configured lifetime offers no scope at all — mapper or transformer not `Scoped`, handler `Singleton` | `null`: this pipeline has no pipeline scope | none |
 | 2 | `Scoped` does not participate in this pipeline — handler family, `HandlerLifetime` is `Transient` | **OWNED**, and **no ask is made at all** (FR-27.1) | none |
-| 3 | the ambient source throws | propagate **unwrapped** — a misconfigured container is a startup-class fault, never degraded to "no ambient" (FR-24.1) | none |
+| 3 | the ambient source throws | the fault is wrapped in `AmbientScopeSourceException`, which each builder's `catch` recognises: cleanup runs, then the **original** is rethrown **unwrapped** — a misconfigured container is a startup-class fault, never degraded to "no ambient" and never folded into `ConfigurationException` (FR-24.1, AC-30) | none |
 | 4 | the ask carried `AlwaysNew`, and something came back | **OWNED**; the ambient is ignored *before* it is probed, and never disposed (FR-24.4) | *ignored for an `AlwaysNew` ask* |
 | 5 | the ask carried `AlwaysNew`, and nothing came back | **OWNED** | none |
 | 6 | the ask carried `JoinAmbient`, and nothing came back | **OWNED** (FR-24.2, which includes FR-18's ordinary "no current `HttpContext`" case) | *no ambient offered* |
@@ -173,7 +173,7 @@ flowchart TB
     asp -. "implements" .-> provider
     asp -. "its ambient implements" .-> role
     role -. "extends" .-> handle
-    pipescope -. "type-tests for" .-> role
+    facs -. "type-tests for" .-> role
 ```
 
 ### Key Components
@@ -222,7 +222,7 @@ Both names are settled by D4 and are not working names. The *member* spelling `G
 
 | Member | Input | Output | Error conditions |
 | --- | --- | --- | --- |
-| `GetAmbient(ScopeAffinity)` | the affinity of the pipeline that is asking, computed by the caller over the whole participating set | an ambient the pipeline may adopt, or `null` | A throw propagates to the caller of `Send`/`Publish`/`Post` **unwrapped** — a misconfigured container is a startup-class fault and must not be degraded to "no ambient" (FR-24.1, AC-30). Returning `null` is not an error; it is the ordinary answer where there is no ambient (FR-24.2). Returning an ambient for an `AlwaysNew` ask **violates this contract**; Brighter ignores it rather than trusting the provider (FR-24.4) |
+| `GetAmbient(ScopeAffinity)` | the affinity of the pipeline that is asking, computed by the caller over the whole participating set | an ambient the pipeline may adopt, or `null` | A throw reaches the caller of `Send`/`Publish`/`Post` **unwrapped**, by the mechanism below — a misconfigured container is a startup-class fault and must not be degraded to "no ambient", nor folded into the `ConfigurationException` every other build failure becomes (FR-24.1, AC-30). Returning `null` is not an error; it is the ordinary answer where there is no ambient (FR-24.2). Returning an ambient for an `AlwaysNew` ask **violates this contract**; Brighter ignores it rather than trusting the provider (FR-24.4) |
 
 The obligation and the guard are both required, and both are stated here. The provider is told it must neither consult nor adopt on an `AlwaysNew` ask; Brighter's side ignores anything returned for one anyway, because `IAmAScopeProvider` is a public extension point and FR-8's per-subscriber isolation must not be defeasible by a third-party implementation.
 
@@ -342,7 +342,9 @@ Evaluation order is fixed by FR-24's exclusivity rule and is **FR-24.4, then FR-
 | --- | --- | --- |
 | `Paramore.Brighter` | `IAmAScopeProvider`, `ScopeAffinity` | **new** |
 | `Paramore.Brighter` | `AmbientScopeSuppression` | **new** |
-| `Paramore.Brighter` | `PipelineBuilder<TRequest>` | a defaulted constructor argument `bool isolateSubscribers = false`; the resolution-time bracket inside both build loop bodies (`:187-198`, `:232-244`) |
+| `Paramore.Brighter` | `AmbientScopeSourceException` | **new** — carries a provider fault past the pipeline builders' wrapping `catch` |
+| `Paramore.Brighter` | `PipelineBuilder<TRequest>` | a defaulted constructor argument `bool isolateSubscribers = false` on the two dispatch constructors (`:59`, `:76`); the resolution-time bracket inside both build loop bodies (`:187-198`, `:232-244`); an `AmbientScopeSourceException` clause ahead of the wrapping `catch` in both (`:202-204`, `:248-250`) |
+| `Paramore.Brighter` | `TransformPipelineBuilder`, `TransformPipelineBuilderAsync` | an `AmbientScopeSourceException` clause ahead of each wrapping `catch` — `:116-124` and `:157-165`, at identical lines in both files — so cleanup runs and then the original is rethrown |
 | `Paramore.Brighter` | `CommandProcessor` | `Publish` (`:472`) and `PublishAsync` (`:575`) construct the builder with `isolateSubscribers: true`; the execution-time bracket around `Handle` inside the `Parallel.ForEach` body (`:481`) and around the `HandleAsync` invocation inside the start loop (`:591-599`) |
 | `…DependencyInjection` | `IAmAServiceProviderScope`, `ScopeAffinityPolicy`, `ScopedArtefactCache`, `AmbientScopeDiagnostics` | **new** |
 | `…DependencyInjection` | `ServiceProviderPipelineScope` | an **internal** borrowed construction path with non-owning disposal |
@@ -351,13 +353,19 @@ Evaluation order is fixed by FR-24's exclusivity rule and is **FR-24.4, then FR-
 | `…DependencyInjection` | `ServiceCollectionExtensions.BrighterHandlerBuilder` (`:142`, reached from `:119`) | registers `ScopedArtefactCache` (`TryAddScoped`) and `AmbientScopeDiagnostics` (`TryAddSingleton`) |
 | `Paramore.Brighter.Extensions.AspNetCore` (working name) | the provider | **new package**, ADR 0073 names it; its ambient implements `IAmAServiceProviderScope` over `HttpContext.RequestServices` |
 
-Unchanged, and named so the omission is not read as an oversight: `IAmAScope`, and every interface ADRs 0070 and 0071 changed — no member is added to any of them here; `MessageMapperRegistry`, whose two forwarding members behave exactly as 0070 specifies; `IAmALifetime` and `HandlerLifetimeScope`; `PipelineBuilder.Dispose()` (`:269-270`), so D10's release timing is preserved by construction; `Reactor`, `Proactor`, `Dispatcher`, `DispatchBuilder` and `ConsumerFactory` (C-2); the pump's per-message behaviour (D0b); `BrighterOptions`' three lifetime properties and `IsolateTransientHandlerScope` (`:37`); and `RequestContext`.
+Unchanged, and named so the omission is not read as an oversight: `IAmAScope`, and every interface ADRs 0070 and 0071 changed — no member is added to any of them here, though `CreatePipelineScope()`'s **contract** is widened: the handle it returns may now name a borrowed ambient, so the member promises that the caller must always *release* rather than that it *owns*, and only the handle knows whether releasing disposes anything (FR-12); `MessageMapperRegistry`, whose two forwarding members behave exactly as 0070 specifies; `IAmALifetime` and `HandlerLifetimeScope`; `PipelineBuilder.Dispose()` (`:269-270`), so D10's release timing is preserved by construction; `Reactor`, `Proactor`, `Dispatcher`, `DispatchBuilder` and `ConsumerFactory` (C-2); the pump's per-message behaviour (D0b); `BrighterOptions`' three lifetime properties and `IsolateTransientHandlerScope` (`:37`); and `RequestContext`.
 
 ### Technology Choices
 
 **Why suppression is ambient state, when ADR 0070 removed all of it.** ADR 0070 rejected an `AsyncLocal` carrying a *scope*, and rightly: a scope is a resource with an owner and an end, invisible coupling around it means FR-5's failed-build release has nowhere to live, and it is not implementable over a non-Microsoft container. Suppression is a different kind of thing. It carries one bit, owns no resource, needs no end beyond its own lexical bracket, and can be honoured by any container package because it names nothing container-specific. And it has no alternative: the pipeline it must reach is one core did not build and holds no reference to — a nested `Send` or `Post` issued from user code inside a subscriber's handler, through the singleton `CommandProcessor`. Threading a decision argument to it would mean a new parameter on every public `IAmACommandProcessor` method, permanently, to serve a case that arises only inside `Publish`. Suppression is now the only ambient mechanism in the design, and it is the only one that has no parameter path available to it.
 
 **Why the suppression holder is public for read *and* write.** It must be public rather than `internal` plus `InternalsVisibleTo` because a container package Brighter does not ship must be able to honour FR-8 too (NFR-7) — an `internal` flag would make per-subscriber isolation a privilege of Microsoft's container. Once it is public to read, making `Suppress()` public as well costs little and buys something real: a host, or a third-party integration, can suppress adoption around its own work — a background job started from a request whose `HttpContext` still flows, for instance — without waiting for a Brighter release. The honest cost is stated in *Consequences*: FR-8 becomes an invariant core **asserts** rather than one no caller can defeat.
+
+**Why a provider fault needs a type of its own to escape.** FR-24.1 asks for something the surrounding code actively prevents. The ask is made inside `CreatePipelineScope()`, and every call site of that member sits inside a pipeline builder's guarded region — `PipelineBuilder.cs:190` and `:235` are inside the `try` whose `catch` at `:202` and `:248` turns everything that is not already a `ConfigurationException` into one, and `TransformPipelineBuilder.cs:116` and `:157` do the same without even a filter. A provider's `InvalidOperationException` would therefore reach the caller as a `ConfigurationException`, which is precisely the degradation FR-24.1 forbids and AC-30 falsifies.
+
+Three ways out were available, and the difference between them is where the fault is allowed to escape. Moving the ask outside the guarded region is the obvious one and is the worst: on the handler path the ask is *per subscriber*, inside a loop inside the `try`, so hoisting it means restructuring the loop and forfeiting the cleanup that runs when a later subscriber fails — and AC-30's second clause, "no pipeline scope is leaked", depends on exactly that cleanup. Letting the fault reach the caller as a typed Brighter exception is defensible but changes what AC-30 asserts. What this ADR does instead is give the ask its own exception type, `AmbientScopeSourceException`, and teach the four builder `catch` blocks to recognise it: **cleanup still runs, and then the original exception is rethrown with `ExceptionDispatchInfo.Capture(...).Throw()`**, stack intact. The caller sees what the provider threw, nothing is leaked, and no dispatch method changes.
+
+The type is a courier, not a contract: it exists only between the ask and the builder that catches it, is never observed by an application, and is the reason `CreatePipelineScope()` can carry two error behaviours at once — the ambient ask propagates, while a failure to *create* a container scope stays an ordinary build failure and becomes the `ConfigurationException` AC-5 requires. Because the discrimination is by type rather than by position, the scope acquisition can sit inside the builder's `try` where AC-5 needs it, which is what ADR 0070's implementation sketch does.
 
 **Why the affinity is computed on Brighter's side rather than asked of the provider.** The provider does not know the configured lifetimes and must not have to. It answers one question — is there an ambient here — and the pipeline tells it the affinity it is asking with. That keeps `IAmAScopeProvider` implementable in an assembly that references no container package at all, which is precisely what AC-13's fake is.
 
@@ -367,7 +375,9 @@ Unchanged, and named so the omission is not read as an oversight: `IAmAScope`, a
 
 ### Implementation Approach
 
-**1. The core types.** Add `IAmAScopeProvider` and `ScopeAffinity` to `src/Paramore.Brighter/`, and `AmbientScopeSuppression` beside them. None names a container type; the source-level guard AC-22.3 runs returns nothing new.
+**1. The core types.** Add `IAmAScopeProvider` and `ScopeAffinity` to `src/Paramore.Brighter/`, and `AmbientScopeSuppression` and `AmbientScopeSourceException` beside them. None names a container type; the source-level guard AC-22.3 runs returns nothing new.
+
+**1a. The four builder `catch` blocks learn one clause.** Ahead of each existing wrapping `catch` — `PipelineBuilder.cs:202` and `:248`, `TransformPipelineBuilder.cs:116` and `:157`, and the same two lines in `TransformPipelineBuilderAsync` — add a clause for `AmbientScopeSourceException` that runs the same cleanup the general clause runs, then rethrows the inner exception through `ExceptionDispatchInfo.Capture(...).Throw()`. Nothing else in the builders changes, and the general clause's behaviour for every other failure is untouched (AC-5). The two `PipelineBuilder` filters are also brought into one spelling: `:248` is `when(!(e is ConfigurationException))` against `:202`'s `when (e is not ConfigurationException)`, and both now exclude the new type.
 
 **2. The `CreatePipelineScope()` protocol.** This is the decision ladder under *The mechanism, end to end*, written out as the code runs it. One protocol, run inside every container-backed factory's `CreatePipelineScope()`. Adoption is **one** change, not two: after ADR 0071 both families reach their scope through this member, so a borrowed ambient is simply what it returns. There is no second path for handlers.
 
@@ -385,7 +395,8 @@ CreatePipelineScope():
                   : policy.ForHandlerPipeline() / ForTransformPipeline()   [FR-27.2]
 
   4. ambient = _scopeProvider?.GetAmbient(affinity)   // exactly once  [D16, D17]
-                                                      // a throw propagates unwrapped [FR-24.1]
+                 // a throw is wrapped in AmbientScopeSourceException here, and
+                 // rethrown unwrapped by the builder's catch  [FR-24.1, AC-30]
 
   5. if affinity == AlwaysNew:
         if ambient is not null -> diagnostics.WarnOnce(IgnoredForAlwaysNewAsk, providerType)

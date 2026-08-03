@@ -100,7 +100,7 @@ Two mechanisms for one idea is the immediate cost. The larger one is ahead: **D2
 - **`IAmALifetime` and `IAmAScope` must stay distinct** (NFR-8). One tracks handler instances so they can be released; the other is a DI scope handle. Neither becomes the other.
 - **C-2 — the message pump is untouched.** `Reactor`, `Proactor`, `Dispatcher`, `DispatchBuilder` and `ConsumerFactory` require no change.
 - **Core must stay container-agnostic** (ADR 0014). `IAmAScope` names no container type, which is what lets it appear on a core interface at all.
-- **Two more public interfaces break.** `netstandard2.0` has no default interface members. `IAmAHandlerFactory` is implemented by 19 classes in this repository (4 in `src/`, 15 test doubles); `IAmALifetime` by 7 (one in `src/`, internal, plus 6 test doubles).
+- **Two more public interfaces break.** `netstandard2.0` has no default interface members. `IAmAHandlerFactory` is implemented by 21 classes in this repository (5 in `src/`, 16 test doubles); `IAmALifetime` by 7 (one in `src/`, internal, plus 6 test doubles). One of the 21 implements the **bare marker** and has no body at all — `sealed class DummyHandlerFactory : IAmAHandlerFactory;` — so it gains one.
 
 ## Decision
 
@@ -186,7 +186,8 @@ namespace Paramore.Brighter
     public interface IAmAHandlerFactory
     {
         /// <summary>Creates a DI scope for one handler pipeline to resolve from, or null when this
-        /// factory has none to offer. The caller owns the returned scope and must release it.</summary>
+        /// factory has none to offer. The caller must always release the returned handle; releasing it
+        /// may or may not dispose an underlying scope, and the handle alone knows which.</summary>
         IAmAScope? CreatePipelineScope();
     }
 }
@@ -194,7 +195,7 @@ namespace Paramore.Brighter
 
 `IAmAHandlerFactory` (`IAmAHandlerFactory.cs:7`) is today a marker interface with no members, and both `IAmAHandlerFactorySync` (`:36`) and `IAmAHandlerFactoryAsync` (`:36`) derive from it. Putting the member there rather than on both twins means one declaration, one implementation in `ServiceProviderHandlerFactory` (which implements both), and no possibility of a factory answering the two twins differently. The cost is that `IAmAHandlerFactory` stops being a marker and becomes a contract — a fair description of what it now is.
 
-This mirrors ADR 0070's `CreatePipelineScope()` exactly, including its contract: `null` means "no pipeline scope"; a throw is turned into `ConfigurationException` by the caller's existing guard.
+The member's **shape** is ADR 0070's, and so is its throw behaviour — a throw is turned into `ConfigurationException` by the caller's existing guard. Its **null rule is not**, and the difference matters to an implementor. A transform factory offers nothing unless its configured lifetime is `Scoped`; a handler factory offers a handle for `Transient` too, because ADR 0067's per-resolution scope rides on the same `ServiceProviderLifetimeScope` object and would regress without one (C-6). Applying 0070's rule here — `null` for anything that is not `Scoped` — is the mistake this paragraph exists to prevent.
 
 #### `IAmALifetime` gains the handle (core, public)
 
@@ -212,6 +213,17 @@ public interface IAmALifetime : IDisposable
 ```
 
 The scope rides on the object that already reaches every resolution site, so **no `Create` or `Release` signature changes** — the handler factory reads `lifetime.PipelineScope`.
+
+**Contract.**
+
+| Member | Input | Output | Error conditions |
+| --- | --- | --- | --- |
+| `IAmAHandlerFactory.CreatePipelineScope()` | none | an `IAmAScope` the caller must release for `Transient` and `Scoped` alike; `null` for `Singleton`, and `null` from any factory that is not container-backed | May throw if the container cannot create a scope; the caller's existing guard turns that into `ConfigurationException` (`PipelineBuilder.cs:179-205`). It is called **once per pipeline**, by `PipelineBuilder` when it constructs the `HandlerLifetimeScope` |
+| `IAmALifetime.PipelineScope` | none | the handle this lifetime scope was constructed with, or `null` | Never throws. It is a **stable** property: the value is fixed at construction and does not change between reads, so a factory may read it on every `Create` without coordinating. `null` under a non-`Singleton` lifetime is not an error — it is the no-handle path below. Reading it after the lifetime scope has been disposed is the caller's error, not this property's |
+
+**A handle this factory does not recognise is ignored, not rejected** — the same rule ADR 0070 states for `Create(Type, IAmAScope?)`, and it is one rule for one design rather than two. Where `PipelineScope` is non-null but is not a `ServiceProviderPipelineScope`, `ServiceProviderHandlerFactory` resolves through `GetOrCreateLifetimeScope` exactly as it does today. The consequence is stated rather than buried: **two DI scopes then exist for that pipeline** — the unrecognised handle, disposed by `HandlerLifetimeScope` as it disposes any handle it holds, and Brighter's own, reclaimed by `ReleaseLifetimeScope` on the first `Release` (`ServiceProviderHandlerFactory.cs:133-137`) exactly as before this ADR. On that path the leak this ADR closes is **not** closed: a `Create` whose handler is never tracked leaves the dictionary entry keyed on a dead `IAmALifetime`.
+
+None of Brighter's own paths can reach it. `PipelineBuilder` constructs the `HandlerLifetimeScope` with a handle from the same factory it then calls, and ADR 0072's ladder declines an unusable ambient before any handle is produced, so a foreign handle arrives only from outside the dispatch path — a caller invoking the public `Create(Type, IAmALifetime)` with an `IAmALifetime` of its own, or a lifetime scope built by one factory and passed to another. That is why NFR-5's and NFR-6's per-pipeline budgets are not breached by this rule: they bound what Brighter does, and Brighter does not do this.
 
 The two responsibilities stay legible, and NFR-8's distinction survives: `IAmALifetime` *tracks handlers*; `IAmAScope` *is a DI scope*. The lifetime scope holds one, it does not become one. The XML documentation on both says so.
 
@@ -268,7 +280,7 @@ private IAmALifetime GetSyncInstanceScope()
 
 Nothing else in `PipelineBuilder` changes. The scope is added to `_instanceScopes` inside the `HandlerLifetimeScope` it belongs to, so `Dispose()` (`:269-270`) already reaches it, and D10's release timing — every subscriber's scope drained together at end of publish, not tightened — is preserved by construction rather than by care.
 
-**4. `ServiceProviderHandlerFactory`.** `CreatePipelineScope()` returns a new `ServiceProviderPipelineScope` when `_handlerLifetime` is not `Singleton`, and `null` when it is. Both `Create` overloads keep their `Singleton` branch on `_singletonScope` and, for the other two lifetimes, resolve through `lifetime.PipelineScope` when it is a `ServiceProviderPipelineScope`, falling back to `GetOrCreateLifetimeScope` when it is not.
+**4. `ServiceProviderHandlerFactory`.** `CreatePipelineScope()` returns a new `ServiceProviderPipelineScope` when `_handlerLifetime` is not `Singleton`, and `null` when it is. Both `Create` overloads keep their `Singleton` branch on `_singletonScope` and, for the other two lifetimes, resolve through `lifetime.PipelineScope` when it is a `ServiceProviderPipelineScope`. Where it is `null`, or is a handle this factory does not recognise, they fall back to `GetOrCreateLifetimeScope` — today's behaviour exactly, on today's terms, with the consequences the contract above sets out.
 
 **5. Behaviour by configured lifetime.** Nothing in this column changes; only where the scope comes from does.
 
@@ -284,7 +296,7 @@ Nothing else in `PipelineBuilder` changes. The scope is added to `_instanceScope
 
 ### Positive
 
-- **One mechanism.** Both families now say the same thing: a factory offers a scope, the per-pipeline object holds it, and disposes it after its artefacts have gone back. One story to teach, one ordering rule, one handle type.
+- **One mechanism, with one stated exception.** Both families now say the same thing: a factory offers a scope, the per-pipeline object holds it, and disposes it after its artefacts have gone back. One story to teach, one ordering rule, one handle type. They differ in *how* the disposal is issued — see the asymmetry recorded under *Negative* — but not in what is disposed, when, or in what order.
 - **ADR 0072 builds adoption once.** A borrowed ambient becomes what `CreatePipelineScope()` returns, for handler pipelines and transform pipelines alike. Under the dictionary model the handler side would have needed its own "sometimes do not create, sometimes do not own, sometimes do not dispose" variant.
 - **`Release` stops having a hidden second job.** Today the first `Release` on a pipeline disposes the DI scope and the rest silently find nothing — behaviour that is invisible at the call site and depends on iteration order inside `HandlerLifetimeScope.Dispose()`. Now disposal happens once, in one place, explicitly.
 - **A dictionary lookup leaves the resolution path.** Every handler and every decorator resolution currently pays a `ConcurrentDictionary` `GetOrAdd` keyed on an object with reference identity; now the handle is a field read.
@@ -293,9 +305,13 @@ Nothing else in `PipelineBuilder` changes. The scope is added to `_instanceScope
 
 ### Negative
 
-- **Two more public interfaces break at compile time.** `IAmAHandlerFactory` (19 implementations here: 4 in `src/`, 15 test doubles) and `IAmALifetime` (7: one internal `src/` class, 6 test doubles). On `netstandard2.0` there is no default interface member to absorb either. **Needs a release note** with the migration: `CreatePipelineScope()` returns `null`, `PipelineScope` returns `null`, unless you want pipeline scoping.
+- **Two more public interfaces break at compile time.** `IAmAHandlerFactory` (21 implementations here: 5 in `src/`, 16 test doubles) and `IAmALifetime` (7: one internal `src/` class, 6 test doubles). On `netstandard2.0` there is no default interface member to absorb either. **Needs a release note** with the migration: `CreatePipelineScope()` returns `null`, `PipelineScope` returns `null`, unless you want pipeline scoping.
 - **This ADR delivers no behaviour.** Nothing an application can observe changes. It is a structural change taken for the sake of the two ADRs after it, and it costs a breaking change to do it — a legitimate thing to argue about, and the reason *Alternatives* below states the do-nothing option first.
 - **`IAmALifetime` now holds something that is not a handler.** The name was already close enough to `IAmAScope` to need NFR-8; putting an `IAmAScope` *on* it narrows the gap further. Mitigated only by documentation, which is a weaker mitigation than a better name would have been.
+- **The handler pipeline releases its scope synchronously, and the transform pipeline does not.** `IAmALifetime` is `IDisposable` (`IAmALifetime.cs:34`), both builder interfaces are `IDisposable` (`IAmAPipelineBuilder.cs:36`, `IAmAnAsyncPipelineBuilder.cs:37`), and both **async** dispatch paths take the builder with `using`, not `await using` (`CommandProcessor.cs:394`, `:575`). So an async handler pipeline's `IAmAScope` can only be released through `Dispose()`, while ADR 0070's transform pipeline releases through `DrainAsync` and a genuinely asynchronous scope disposal. This is deliberate and it is not free.
+
+  It is **safe** rather than merely tolerated: the synchronous drain in `ServiceProviderLifetimeScope.DisposeScope` suppresses the current `SynchronizationContext` for the duration (`:422-436`, marked a load-bearing invariant in the source and documented as existing precisely to stop an `IAsyncDisposable` artefact deadlocking the Proactor pump's single-threaded context). What it costs is occupancy: the disposal runs to completion on the calling thread, which on the Proactor is the pump thread. The alternative was to put `IAsyncDisposable` on `IAmALifetime` — a second break on a public interface with seven implementations — plus both internal builder interfaces and two `CommandProcessor` call sites, to remove a block the container already makes safe. That trade was declined here and can be revisited without disturbing anything this ADR decides, because the handle type already carries both members.
+
 - **The no-handle path survives in `ServiceProviderHandlerFactory`.** `_lifetimeScopes`, `GetOrCreateLifetimeScope` and `ReleaseLifetimeScope` remain for callers that supply no handle, so the factory carries two resolution paths and two disposal paths where the goal was one. Brighter's own code never takes the second, which is exactly what makes it easy to leave rotting.
 - **The FR-7 regression guards move to the path that no longer matters.** `FactoryLifetimeTests`' two tests keep passing precisely because they use the fallback; new tests on the handle path are required work, not a nicety.
 - **`HandlerLifetimeScope.Dispose()` gains error-composition logic** it did not have — today it releases handlers and cannot fail meaningfully; now a handler release and a scope disposal can both throw and neither may mask the other.
