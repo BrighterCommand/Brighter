@@ -184,7 +184,7 @@ namespace Paramore.Brighter
 
 - **Home** — the `Paramore.Brighter` namespace and assembly, alongside `IAmALifetime`. This confirms C-8's assumption. It names no container type.
 - **Both `IDisposable` and `IAsyncDisposable`** (C-8, settled). The precedent is exact: `src/Paramore.Brighter/IAmATransformLifetimeAsync.cs` is `internal interface IAmATransformLifetimeAsync : IDisposable, IAsyncDisposable`. This costs no new dependency — `src/Paramore.Brighter/Paramore.Brighter.csproj:24` already carries a `netstandard2.0`-conditional `PackageReference Include="Microsoft.Bcl.AsyncInterfaces"`, whose comment states it is there precisely because `ReleaseAsync`/`IAsyncDisposable` are on the public async surface. Both members are needed because the sync pipeline releases through `Dispose()` and the async pipeline through `DisposeAsync()`, and the async path must not block the Proactor's single-threaded synchronization context.
-- **Error conditions** — `Dispose()` and `DisposeAsync()` are **idempotent**; a second call of either, in either order, is a no-op and must not throw (AC-8). A disposal that fails throws to its caller; the existing release call sites (`OutboxProducerMediator.ReleasePipeline` `:1269-1279` and `ReleasePipelineAsync` `:1281-1291`) already log at `Error` and swallow, so a successful `Post` is not failed by a teardown fault.
+- **Error conditions** — `Dispose()` and `DisposeAsync()` are **idempotent**; a second call of either, in either order, is a no-op and must not throw (AC-8). A disposal that fails throws to its caller, and the caller swallows it: a successful `Post` is not failed by a teardown fault. It does **not** log at today's level. Every existing release site logs at `Warning` — `OutboxProducerMediator.FailedToReleasePipeline` (`:1448`), and the two pumps (`Reactor.cs:636`, `Proactor.cs:651`) — and those messages report a *mapper or transform release* failure, which is not what FR-13 and AC-6 are about. Both require the failure to **dispose an owned pipeline scope** at `LogLevel.Error`, so this ADR adds two new messages at that level rather than raising the five that exist; step 4a says where.
 - **No members beyond disposal.** It is a handle: core's only responsibility toward it is *holding* it and *ending* it. Adding a "which scope is this?" accessor would put container knowledge in core, and keeping it empty is what lets ADR 0072 implement it over a borrowed request scope whose disposal is a no-op.
 
 #### The changed signatures
@@ -196,7 +196,8 @@ public interface IAmAMessageMapperFactory
 {
     /// <summary>Creates a DI scope for one pipeline to resolve from, or null when this factory has
     /// none to offer — it is not container-backed, or its configured lifetime is not Scoped. The
-    /// caller owns the returned scope and must release it.</summary>
+    /// caller must always release the returned handle; releasing it may or may not dispose an
+    /// underlying scope, and the handle alone knows which.</summary>
     IAmAScope? CreatePipelineScope();
 
     Lease<IAmAMessageMapper>? Create(Type messageMapperType, IAmAScope? scope = null);
@@ -217,7 +218,7 @@ public interface IAmAMessageMapperRegistry
 
 | Member | Input | Output | Error conditions |
 | --- | --- | --- | --- |
-| `CreatePipelineScope()` | none | a new, owned `IAmAScope`, or `null` when this participant has none to offer | may throw if the container cannot create a scope; the builder's existing `catch` turns that into `ConfigurationException` on the failed-build path |
+| `CreatePipelineScope()` | none | an `IAmAScope` the caller must release, or `null` when this participant has none to offer. It is an **owned** scope as this ADR stands; ADR 0072 widens the contract so the same handle may name a **borrowed** ambient whose release disposes nothing, which is why the member promises release rather than ownership | Two failures, discriminated by exception type, because they are owed opposite behaviours. A failure to **create the container scope** may throw and is an ordinary build failure: the builder's existing `catch` turns it into `ConfigurationException` carrying it as the inner exception (AC-5). A throw from the **ambient source** ADR 0072 adds inside this member is wrapped in that ADR's `AmbientScopeSourceException`, which the builders' `catch` blocks let past cleanup and rethrow unwrapped, so the caller sees the provider's own exception (FR-24.1, AC-30) |
 | `Create(Type, IAmAScope?)` | a scope from *any* participant, or `null` | as before | a scope this implementation does not recognise is **ignored**, not rejected: the implementation falls back to exactly its current behaviour. It must not throw |
 | `Get<T>(IAmAScope?)` | as above | as before | forwards the scope to the factory it owns; otherwise unchanged |
 
@@ -243,12 +244,15 @@ public interface IAmAMessageMapperRegistry
 | `Paramore.Brighter` | `TransformPipeline<TRequest>`, `TransformPipelineAsync<TRequest>` | hold the pipeline scope; release it in the drain |
 | `Paramore.Brighter` | `WrapPipeline<TRequest>`, `UnwrapPipeline<TRequest>`, `WrapPipelineAsync<TRequest>`, `UnwrapPipelineAsync<TRequest>` | optional trailing constructor parameter, forwarded to the base |
 | `Paramore.Brighter` | `TransformPipelineDrain` (`internal static`, `:38`) | a third drain step after today's `disposeScope`/`releaseMapper` (`Drain` `:46`, `DrainAsync` `:85`), same hold-and-compose error handling |
+| `Paramore.Brighter` | `TransformPipelineBuilder.Log`, `TransformPipelineBuilderAsync.Log` (`:409`, `:318`) | gain `FailedToDisposePipelineScopeAfterFailedBuild` at `LogLevel.Error` (AC-6). The two existing `Warning` members are unchanged in level and meaning |
+| `Paramore.Brighter` / `…ServiceActivator` | the three release sites that swallow — `OutboxProducerMediator` (`:1448`), `Reactor` (`:636`), `Proactor` (`:651`) | gain `FailedToDisposePipelineScope` at `LogLevel.Error` for a scope-disposal failure on a completed pipeline (FR-13, AC-33). Their existing `FailedToReleasePipeline` stays at `Warning` |
 | `Paramore.Brighter` | `SimpleMessageMapperFactory[Async]`, `SimpleMessageTransformerFactory[Async]`, `EmptyMessageTransformerFactory[Async]` | `CreatePipelineScope()` returns `null`; `Create` ignores the scope |
 | `Paramore.Brighter.ServiceActivator` | `ControlBusMessageMapperFactory` (`:31`) | the same two no-op changes. It gains no container dependency — `IAmAScope` is a core type |
 | `…DependencyInjection` | `ServiceProviderPipelineScope` | **new** |
+| `…DependencyInjection` | `ServiceProviderLifetimeScope` (`:42`) | gains `IAsyncDisposable` and a whole-scope `DisposeAsync()` routed through its existing `DisposeScopeAsync` (`:449`), so the handle's async release has something async to call. `Dispose()` (`:462`), `DisposeScope` (`:406`) and its context suppression (`:422-436`) are unchanged |
 | `…DependencyInjection` | `ServiceProviderMapperFactory`, `ServiceProviderMapperFactoryAsync`, `ServiceProviderTransformerFactory`, `ServiceProviderTransformerFactoryAsync` | implement both new members |
 
-Unchanged, and named so the omission is not read as an oversight: `IAmAHandlerFactorySync` and `IAmAHandlerFactoryAsync`; `ServiceProviderHandlerFactory`; `IAmALifetime` and `HandlerLifetimeScope`; `PipelineBuilder<TRequest>` and `Pipelines<TRequest>`; `CommandProcessor`; `Reactor`, `Proactor`, `Dispatcher`, `DispatchBuilder`, `ConsumerFactory` (C-2); `BrighterOptions`; `IAmATransformLifetime[Async]` and `TransformLifetimeScope[Async]`; and `ResolveMapperInfo`, which resolves a mapper *type* without creating an instance (`TransformPipelineBuilder.cs:171`) and so needs no scope.
+Unchanged, and named so the omission is not read as an oversight: `IAmAHandlerFactorySync` and `IAmAHandlerFactoryAsync`; `ServiceProviderHandlerFactory`; `IAmALifetime` and `HandlerLifetimeScope`; `PipelineBuilder<TRequest>` and `Pipelines<TRequest>`; `CommandProcessor`; `Dispatcher`, `DispatchBuilder`, `ConsumerFactory` (C-2) — and `Reactor` and `Proactor` apart from the one `Error`-level message step 4a adds, their per-message behaviour and their existing `Warning` being untouched; `BrighterOptions`; `IAmATransformLifetime[Async]` and `TransformLifetimeScope[Async]`; and `ResolveMapperInfo`, which resolves a mapper *type* without creating an instance (`TransformPipelineBuilder.cs:171`) and so needs no scope.
 
 ### Technology Choices
 
@@ -273,12 +277,13 @@ Sharing one artefact cache between the mapper and the transforms is harmless —
 
 **2. The interfaces.** Add `CreatePipelineScope()` and the scope parameter as above, then move every implementation in the repository in the same change: 12 classes in `src/` (four container-backed factories, six core factories, `ControlBusMessageMapperFactory`, `MessageMapperRegistry`) and 67 test doubles — 61 factory doubles across 34 test files, plus six registry doubles in three more. Every non-container implementation gets the same two-line treatment: return `null`, ignore the parameter.
 
-**3. The builders.** In `TransformPipelineBuilder` and `TransformPipelineBuilderAsync`, both `BuildWrapPipeline<TRequest>()` and `BuildUnwrapPipeline<TRequest>()` — four methods, wrap and unwrap symmetric — acquire the scope first and thread it:
+**3. The builders.** In `TransformPipelineBuilder` and `TransformPipelineBuilderAsync`, both `BuildWrapPipeline<TRequest>()` and `BuildUnwrapPipeline<TRequest>()` — four methods, wrap and unwrap symmetric — acquire the scope first, **inside the guarded region**, and thread it. The acquisition sits inside the `try` and not above it because a container that cannot create a scope is an ordinary build failure and AC-5 requires it to reach the caller as a `ConfigurationException`; the declaration joins the three that are already there (`:95-97`) so the `catch` can see it. The one failure that must *not* be wrapped — a throwing ambient source — is discriminated by exception type rather than by position, which is what ADR 0072's `AmbientScopeSourceException` is for:
 
 ```csharp
-var scope = CreatePipelineScope();
+IAmAScope? scope = null;
 try
 {
+    scope = CreatePipelineScope();
     messageMapperLease = FindMessageMapper<TRequest>(scope);
     transformLeases = BuildTransformPipeline<TRequest>(FindWrapTransforms(messageMapperLease.Instance), scope);
     pipeline = new WrapPipeline<TRequest>(
@@ -287,25 +292,42 @@ try
     ...
     return pipeline;
 }
+catch (AmbientScopeSourceException e)                       // ADR 0072, FR-24.1, AC-30
+{
+    CleanUpQuietly(pipeline, transformLeases, messageMapperLease, scope);
+    ExceptionDispatchInfo.Capture(e.InnerException!).Throw();
+    throw;                                                  // unreachable; satisfies the compiler
+}
 catch (Exception e)
 {
-    try { CleanUpAfterFailedBuild(pipeline, transformLeases, messageMapperLease, scope); }
-    catch (Exception cleanupException) { Log.FailedToCleanUpAfterFailedBuild(s_logger, cleanupException); }
+    CleanUpQuietly(pipeline, transformLeases, messageMapperLease, scope);
     throw new ConfigurationException("Error building wrap pipeline for outgoing message, see inner exception for details", e);
 }
 ```
+
+`CleanUpQuietly` is today's inline guard lifted to a private method so both clauses share it unchanged: it calls `CleanUpAfterFailedBuild` and logs a cleanup failure rather than letting it mask the error the caller needs (`:122-123`, `:163-164`).
 
 The private `CreatePipelineScope()` helper asks the mapper registry first — `_mapperRegistry` in the sync builder (`:51`), `_mapperRegistryAsync` in the async one (`:50`) — then the transformer factory, and returns the **first non-null** handle, or `null`. Order is fixed and documented: the mapper is the mandatory half of a transform pipeline. The transformer factory is allowed to be null (the v9 compatibility path, `TransformPipelineBuilder.cs:180`), so the second ask is null-conditional.
 
 `BuildTransformPipeline<TRequest>` passes the scope into `new TransformerFactory<TRequest>(attribute, _messageTransformerFactory)` (`:193`) and thence to `factory.Create(transformerType, scope)`. This is D12: the transformer factory is handed the scope even when the mapper declares no transform, so `TransformerLifetime = Scoped` behaves identically whether or not a `[WrapWith]` is present.
 
-**4. Failed build — FR-5.** `CleanUpAfterFailedBuild<TRequest>` (`:231` on both builders; the async builder's throwing paths are `:122` and `:163`) gains the scope. When a pipeline object was constructed it already owns the scope and `pipeline.Dispose()` releases it; when it was not, the cleanup releases the scope directly, after releasing whatever leases were taken. Release failures are caught and logged by the existing guard (`TransformPipelineBuilder.cs:116-125` for wrap, `:157-166` for unwrap), so the `ConfigurationException` carrying the original build error is still what the caller sees (AC-5, AC-6).
+**4. Failed build — FR-5.** `CleanUpAfterFailedBuild<TRequest>` (`:231` on both builders; the async builder's throwing paths are `:122` and `:163`) gains the scope. When a pipeline object was constructed it already owns the scope and `pipeline.Dispose()` releases it; when it was not, the cleanup releases the scope directly, after releasing whatever leases were taken. Release failures are caught by the existing guard (`TransformPipelineBuilder.cs:116-125` for wrap, `:157-166` for unwrap), so the `ConfigurationException` carrying the original build error is still what the caller sees (AC-5). What that guard logs is **not** sufficient for AC-6 — see step 4a.
+
+**4a. Two new log messages, at `Error` — FR-13, AC-6.** AC-6 requires that when a *failing* build's pipeline-scope disposal itself throws, a capturing `ILoggerProvider` records **that disposal failure** at `LogLevel.Error`; FR-13's disposal clause requires the same for a pipeline that completed normally. Neither is satisfied today: the five messages that exist all log at `Warning`, and all five are about releasing a **mapper or a transform**, not about disposing a DI scope — `FailedToCleanUpAfterFailedBuild` (`TransformPipelineBuilder.cs:409`, `TransformPipelineBuilderAsync.cs:318`) and `FailedToReleasePipeline` (`OutboxProducerMediator.cs:1448`, `Reactor.cs:636`, `Proactor.cs:651`).
+
+Raising those five was rejected. They report a pre-existing failure this specification does not touch, so raising them changes the observed level for applications that never opt in — and it would leave a capturing provider unable to tell a throwing mapper `Release` from a throwing scope disposal, which is exactly the discrimination AC-6 asks for. Two new messages are added instead, and the five keep their level and their meaning:
+
+- `FailedToDisposePipelineScopeAfterFailedBuild` — `LogLevel.Error`, emitted by `CleanUpAfterFailedBuild` when releasing the owned scope throws on the failed-build path. The build's `ConfigurationException` still propagates unchanged (AC-5, AC-6).
+- `FailedToDisposePipelineScope` — `LogLevel.Error`, emitted where an owned scope's release throws on a pipeline whose work completed. The failure is swallowed, the caller's result is returned unchanged, and nothing is latched — a subsequent pipeline behaves normally (FR-13, AC-33).
+
+Both name the request type. Both live beside the existing `Log` members in the two transform builders and, for the completed-pipeline case, at the three release sites that swallow today.
 
 **5. Pipeline release — FR-6.** `TransformPipeline<TRequest>` and `TransformPipelineAsync<TRequest>` store the scope alongside the existing `protected TransformLifetimeScope? InstanceScope` (`TransformPipeline.cs:16`), taken as an optional trailing constructor parameter — the shape `IAmAMessageMapperRegistry? mapperRegistry = null` already uses (`:24`) — and threaded through `WrapPipeline<TRequest>`, `UnwrapPipeline<TRequest>`, `WrapPipelineAsync<TRequest>` and `UnwrapPipelineAsync<TRequest>`. `TransformPipelineDrain.Drain`/`DrainAsync` — today `Drain(Action disposeScope, Action releaseMapper)` (`:46`) and `DrainAsync(Func<ValueTask>, Func<ValueTask>)` (`:85`) — gain a third step, ordered **after** the transform scope disposal and the mapper release: leases go back to their factories first, then the DI scope is released, so a factory that still needs its `Release` to run (a `Transient` transformer under a mixed configuration) is not resolving against a dead scope. The existing hold-and-compose error handling extends to the third step, so no failure masks another and both surface as an `AggregateException` — conforming to ADR 0068, whose rule is that an explicit `Dispose` surfaces failures and the finalizer only retries best-effort and swallows. The pipeline's existing release-once guard (`Interlocked.Exchange(ref _released, 1)`, `TransformPipeline.cs:65`) already makes the whole drain, and therefore the scope release, happen exactly once (FR-6); `IAmAScope`'s own idempotence is belt and braces for AC-8.
 
 **6. The container package.**
 
-- `ServiceProviderPipelineScope` wraps one `ServiceProviderLifetimeScope` and disposes it exactly once under either `Dispose()` or `DisposeAsync()`, claimed with a single atomic exchange, preferring the scope's `IAsyncDisposable` where offered — the same shape `ServiceProviderLifetimeScope.DisposeScope` (`:406`) and `DisposeScopeAsync` (`:449`) already use, including the `SynchronizationContext` suppression (`:384-388`) that keeps a blocking release off the Proactor pump.
+- `ServiceProviderPipelineScope` wraps one `ServiceProviderLifetimeScope` and disposes it exactly once under either `Dispose()` or `DisposeAsync()`, claimed with a single atomic exchange.
+- **`ServiceProviderLifetimeScope` gains whole-scope asynchronous disposal**, and it has to: today it is `IDisposable` alone (`:42`), its only whole-object teardown is the synchronous `Dispose()` (`:462`), and the async drain it already owns — `DisposeScopeAsync` (`:449`) — is reachable only from `ReleaseAsync` (`:367`), which is per-release-token and returns `default` on the `Scoped` path. Without this, `DisposeAsync()` on the handle above could only block on a synchronous dispose, which is the stall Alternative 8 rejects. It gains `IAsyncDisposable` and routes the root and outstanding scopes through the existing `DisposeScopeAsync`, mirroring what `Dispose()` does through `DisposeScope` (`:406`). The synchronous path keeps its `SynchronizationContext` suppression (`:422-436`, marked a load-bearing invariant in the source), which is what makes a blocking release safe where one is still taken — ADR 0071's handler pipelines, which release synchronously.
 - Each of the four container-backed factories returns a new `ServiceProviderPipelineScope` from `CreatePipelineScope()` **only when its configured lifetime is `Scoped`**, and `null` otherwise. `Create(Type, IAmAScope?)` resolves through the handle when it is a `ServiceProviderPipelineScope` and the lifetime is `Scoped`; otherwise it takes exactly today's path.
 - `MessageMapperRegistry` forwards both members to the (up to two) factories it was built with: `CreatePipelineScope()` returns the first non-null answer from the sync then the async factory; `Get<T>`/`GetAsync<T>` pass the scope straight through. This is consistent with ADR 0069 — the registry owns those factories, so it is the right object to speak for them — and because `MessageMapperRegistry` implements both `IAmAMessageMapperRegistry` and `IAmAMessageMapperRegistryAsync` (`:41`), one implementation serves both builders.
 - **No change to the four construction sites** (`ServiceCollectionExtensions.cs:807`, `:808`, `:945`, `:957`). The shared scope reaches both families through the argument the builder passes, not through construction — which is why factories built at different sites need no new wiring.
@@ -319,6 +341,8 @@ The private `CreatePipelineScope()` helper asks the mapper registry first — `_
 | `Singleton` | `null` | ignored | the root provider, one artefact per process | **No** |
 
 All three of `HandlerLifetime`, `MapperLifetime` and `TransformerLifetime` still default to `Transient` (`BrighterOptions.cs:20`, `:52`, `:69`), so an application that changes nothing sees no behavioural change from this ADR.
+
+**7a. What `release_notes.md` records.** Two breaks land in one entry, and this ADR is where both originate, so both are named here rather than left to be noticed. First, the **behavioural** break: `MapperLifetime.Scoped` stops meaning "one instance for the process" and starts meaning "one instance per pipeline" — an application relying, knowingly or not, on the cached instance changes behaviour with no compile error to warn it (FR-20). Second, the **source and binary** break on the six factory and registry interfaces, naming each and stating the migration in step 2's terms (NFR-1(c), AC-24). ADR 0073 adds the `IBrighterOptions` member and ADR 0074 C-18's compatibility note; all four belong in the same release-note section, so a reader upgrading sees one list rather than four unrelated ones. No ADR numbers them — the order they are written in is not a fact about the release.
 
 **8. Both sides, both builders.** FR-4 requires the producer side to behave as the consumer does. The producer's wrap pipeline is built and released per `Post`/`DepositPost` in `OutboxProducerMediator` — sync at `:1248` with `ReleasePipeline` at `:1258`, async at `:1312` with `ReleasePipelineAsync` at `:1321` — and the consumer's unwrap pipeline is built and released per message in `Reactor.TranslateMessage` (build `:531`) and `Proactor.TranslateMessage` (build `:538`), each releasing in its `finally`. `OutboxProducerMediator` also builds unwrap pipelines at `:569` and `:587`. Because the scope is created inside the builder and released by the pipeline's disposal, **every one of these six call sites is correct without being touched**, which is also what keeps C-2 intact.
 
@@ -355,7 +379,7 @@ This ADR **supersedes no prior ADR.** It extends the 0066–0069 sequence.
 
 ### Negative
 
-- **Six public interfaces break at compile time.** `netstandard2.0` has no default interface members, so every implementation of `IAmAMessageMapperFactory`, `IAmAMessageMapperFactoryAsync`, `IAmAMessageTransformerFactory`, `IAmAMessageTransformerFactoryAsync`, `IAmAMessageMapperRegistry` and `IAmAMessageMapperRegistryAsync` must be edited to compile. This is the price of the design and it is not recoverable later. **It needs a release note** naming each interface and the migration: implement `CreatePipelineScope()` as `return null;` and add an ignored `IAmAScope? scope = null` parameter, unless the implementation is container-backed and wants pipeline scoping. Call sites are unaffected, because the parameter is defaulted.
+- **Six public interfaces break at compile time.** `netstandard2.0` has no default interface members, so every implementation of `IAmAMessageMapperFactory`, `IAmAMessageMapperFactoryAsync`, `IAmAMessageTransformerFactory`, `IAmAMessageTransformerFactoryAsync`, `IAmAMessageMapperRegistry` and `IAmAMessageMapperRegistryAsync` must be edited to compile. This is the price of the design and it is not recoverable later. **It needs a release note** naming each interface and the migration: implement `CreatePipelineScope()` as `return null;` and add an ignored `IAmAScope? scope = null` parameter, unless the implementation is container-backed and wants pipeline scoping. The break is **source-compatible for call sites** — `factory.Create(type)` still binds, because the parameter is defaulted — and **binary-breaking for anyone not recompiled**, caller and implementer alike: a default parameter value is compiled into the call site, so an already-built assembly binds to a method that no longer exists. That is NFR-1(c)'s framing and AC-24's obligation, and step 7 records where it is written down.
 - **A large mechanical edit.** 12 classes in `src/` and 67 test doubles change in one commit. Mechanical, but it is a wide diff in which a genuine change is easy to lose, and it must land as one commit or the build is broken in between.
 - **Core gains one public type**, `IAmAScope`, close enough in name to the existing `IAmALifetime` to need documentation to keep them apart (NFR-8). Public surface in core is permanent.
 - **The scope parameter is on interfaces most implementations will ignore.** A hand-rolled `SimpleMessageMapperFactory`-style factory now declares a parameter it never reads and a method that always returns `null` — noise on the interface, paid by every implementer to serve the container-backed ones.
@@ -403,7 +427,7 @@ This ADR **supersedes no prior ADR.** It extends the 0066–0069 sequence.
 
 ## References
 
-- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-1 … FR-7, FR-20, NFR-4, NFR-5, NFR-6, NFR-7, NFR-8, C-1, C-3, C-6, C-8, C-17, C-19, D0, D3, D4, D10, D12
+- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-1 … FR-7, FR-13, FR-20, FR-27, NFR-1, NFR-3, NFR-4, NFR-5, NFR-6, NFR-7, NFR-8, C-1, C-3, C-6, C-8, C-17, C-19, D0, D3, D4, D10, D12; AC-5, AC-6, AC-24, AC-33
 - Related ADRs (cited by slug — ADR numbers are not unique in this repo, C-16):
   - `0066-release-factory-instances-on-an-opaque-lease` [Accepted] — why `Create` returns a `Lease<T>` carrying an opaque token, and therefore why it carries no pipeline identity of its own
   - `0067-per-resolution-di-scope-for-transient-factory-instances` [Accepted] — `Transient`'s per-resolution DI scope, unchanged here; its `Terms` block defines the configured-lifetime and registration-lifetime axes this ADR uses
