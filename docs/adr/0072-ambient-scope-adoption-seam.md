@@ -30,7 +30,7 @@ That is the whole mechanism needed to adopt a DI scope the host already owns —
 
 **Scope**: This ADR decides **the non-core hand-off by which an ambient exposes a resolution source to the container package** and, because that is unimplementable without it, **which object computes a pipeline's `ScopeAffinity` when its participating factories have different configured lifetimes**. It discharges FR-10, FR-11, FR-12, FR-13, FR-24 and FR-27, and serves FR-16/FR-16a, FR-18, FR-23 and FR-26.
 
-It does **not** decide four naming questions and one siting question. Three names are ADR 0073's (C-11) and this ADR is written against the working spellings, saying so at each use: the ambient-query member `GetAmbient(ScopeAffinity)`, the package `Paramore.Brighter.Extensions.AspNetCore`, and the registration extension `AddBrighterAspNetCoreScopes(...)`. The fourth is the shape and spelling of the opt-in property on `IBrighterOptions` (C-9), also 0073's; this ADR calls it *the affinity option*. It does not decide **how a `Publish` subscriber suppresses adoption** for itself and for the pipelines beneath it — that is ADR 0075, which owns the flag, both brackets and the reasoning about `ExecutionContext`. Suppression enters the protocol below at exactly one line, the affinity computation, and adds no outcome to it. And it does not decide **where FR-22's validation rules are evaluated** — that is ADR 0074. Where FR-24.3's duplicate-provider warning is concerned, this ADR decides only the **registration model that makes a duplicate detectable and resolution predictable**; the site at which the rule is evaluated and the message produced is 0074's.
+It does **not** decide four naming questions and one siting question. All four are ADR 0073's — the ambient-query member `GetAmbient(ScopeAffinity)`, the package `Paramore.Brighter.Extensions.AspNetCore`, the registration extension `AddBrighterRequestScope(ScopeAffinity)` and the shape and spelling of the opt-in property on `IBrighterOptions` (C-9, C-11). This ADR uses 0073's settled spellings where it names them at all, and calls the option *the affinity option*, because nothing here depends on any of them. It does not decide **how a `Publish` subscriber suppresses adoption** for itself and for the pipelines beneath it — that is ADR 0075, which owns the flag, both brackets and the reasoning about `ExecutionContext`. Suppression enters the protocol below at exactly one line, the affinity computation, and adds no outcome to it. And it does not decide **where FR-22's validation rules are evaluated** — that is ADR 0074. Where FR-24.3's duplicate-provider warning is concerned, this ADR decides only the **registration model that makes a duplicate detectable and resolution predictable**; the site at which the rule is evaluated and the message produced is 0074's.
 
 This ADR **supersedes no prior ADR.** It extends the 0066–0069 sequence and completes the seam ADRs 0070 and 0071 opened.
 
@@ -87,7 +87,7 @@ The protocol is a ladder. Each row is tested in order and the first that matches
 
 | | Situation | Outcome | Diagnostic |
 | --- | --- | --- | --- |
-| 1 | this factory's configured lifetime offers no scope at all — mapper or transformer not `Scoped`, handler `Singleton` | `null`: this pipeline has no pipeline scope | none |
+| 1 | **the factory being asked** has no scope to offer — its own configured lifetime is not `Scoped` (mapper factory: `MapperLifetime`; transformer factory: `TransformerLifetime`), or, for the handler factory, is `Singleton` | `null`: this factory offers nothing, and ADR 0070's routing asks the next participant | none |
 | 2 | `Scoped` does not participate in this pipeline — handler family, `HandlerLifetime` is `Transient` | **OWNED**, and **no ask is made at all** (FR-27.1) | none |
 | 3 | the ambient source throws | the fault is wrapped in `AmbientScopeSourceException`, which each builder's `catch` recognises: cleanup runs, then the **original** is rethrown **unwrapped** — a misconfigured container is a startup-class fault, never degraded to "no ambient" and never folded into `ConfigurationException` (FR-24.1, AC-30) | none |
 | 4 | the ask carried `AlwaysNew`, and something came back | **OWNED**; the ambient is ignored *before* it is probed, and never disposed (FR-24.4) | *ignored for an `AlwaysNew` ask* |
@@ -103,7 +103,9 @@ Rows 3 onwards are reached only after the affinity has been computed, and that c
 
 Suppression is ADR 0075's decision and adds no row to the ladder — a suppressed pipeline takes rows 4 or 5, which is where a host that registered no ambient source lands anyway.
 
-Three things the ladder is making a point of. The ask happens **even when the affinity is `AlwaysNew`** — rows 4 and 5 (D16) — which is what makes a pipeline's adoption decision observable at all. A declined ambient is **never disposed**, at rows 4, 7 and 8 alike, because Brighter does not own what it declined (C-7). And the three diagnostics are distinct, independently latched conditions, not three spellings of one.
+**Row 1 is a test on one factory, and the ladder runs once per pipeline.** Those two facts have to hold together or D16's *exactly one ask* is not delivered, and what makes them hold is ADR 0070's first-non-null routing: the participants are asked in a fixed order and the first that offers a handle wins, so at most one of them ever gets past row 1. Walk `{Transient mapper, Scoped transformer}`: the mapper registry is asked first, its `MapperLifetime` is not `Scoped`, so row 1 returns `null` and it makes no ask; the transformer factory is asked next, its `TransformerLifetime` *is* `Scoped`, so it falls through row 1 and runs the rest of the ladder — computing the affinity over **both** lifetimes, which is why the policy is not a per-factory test. The pipeline gets one scope and one ask, from the participant that had something to offer.
+
+Three further things the ladder is making a point of. The ask happens **even when the affinity is `AlwaysNew`** — rows 4 and 5 (D16) — which is what makes a pipeline's adoption decision observable at all. A declined ambient is **never disposed**, at rows 4, 7 and 8 alike, because Brighter does not own what it declined (C-7). And the three diagnostics are distinct, independently latched conditions, not three spellings of one.
 
 ### Where the pieces live
 
@@ -178,7 +180,7 @@ namespace Paramore.Brighter
 }
 ```
 
-Both names are settled by D4 and are not working names. The *member* spelling `GetAmbient` is a working name (C-11) whose contract — one argument, the asking pipeline's affinity; one return, an ambient or nothing — is fixed by D17 and is not open. `AlwaysNew` is `0` so that `default(ScopeAffinity)` is the safe value.
+Both type names are settled by D4. The *member* spelling `GetAmbient` was a working name under C-11; ADR 0073 keeps it, and its contract — one argument, the asking pipeline's affinity; one return, an ambient or nothing — was fixed by D17 and never open. `AlwaysNew` is `0` so that `default(ScopeAffinity)` is the safe value.
 
 **Contract.**
 
@@ -188,7 +190,7 @@ Both names are settled by D4 and are not working names. The *member* spelling `G
 
 The obligation and the guard are both required, and both are stated here. The provider is told it must neither consult nor adopt on an `AlwaysNew` ask; Brighter's side ignores anything returned for one anyway, because `IAmAScopeProvider` is a public extension point and FR-8's per-subscriber isolation must not be defeasible by a third-party implementation.
 
-**The ask is made even when the affinity is `AlwaysNew`** (D16). It is what makes a pipeline's adoption decision observable at all: without it, FR-27.2's decline-to-adopt rule has no observable and AC-13 and AC-46 are unimplementable. The cost is one virtual call per pipeline that takes a pipeline scope, which is within NFR-6.
+**The ask is made even when the affinity is `AlwaysNew`** (D16). It is what makes a pipeline's adoption decision observable at all: without it, FR-27.2's decline-to-adopt rule has no observable, and AC-13 and AC-46 — which assert *exact* counts of adoption decisions and the affinity each carried — are unimplementable. The cost is one virtual call per pipeline that takes a pipeline scope. NFR-6 does not bless it and is not cited for it: NFR-6 budgets **DI scopes**, and an `AlwaysNew` ask allocates none. The ask is justified on observability alone.
 
 #### `IAmAServiceProviderScope` — the hand-off (new, DI package, public)
 
@@ -240,6 +242,18 @@ internal sealed class ScopeAffinityPolicy
 
 One object holds FR-27.2's rule so that five factories do not each re-derive it, and two members rather than a general one because D12 fixes exactly two participating sets and there are only two.
 
+**Contract.**
+
+| Member | Input | Output | Error conditions |
+| --- | --- | --- | --- |
+| ctor | the resolved `IBrighterOptions`, or `null` where none is registered | — | Never throws. A `null` options object means the three lifetimes and the affinity option take their documented defaults, so the policy answers `AlwaysNew` and every pipeline creates its own scope — the same degradation every other failure path takes |
+| `ForHandlerPipeline()` | none; reads `{ HandlerLifetime }` and the affinity option | `JoinAmbient` when the affinity option is `JoinAmbient` and `HandlerLifetime` is `Scoped`; `AlwaysNew` otherwise | Never throws. **Tests for `JoinAmbient` positively**, so any value outside the enum degrades to `AlwaysNew` |
+| `ForTransformPipeline()` | none; reads `{ MapperLifetime, TransformerLifetime }` and the affinity option | `JoinAmbient` when the affinity option is `JoinAmbient`, at least one of the two is `Scoped`, and neither is `Transient`; `AlwaysNew` otherwise. `Singleton` participants are ignored (FR-27.2) | as above |
+
+Both members are pure functions of state fixed at container build, so they are **safe to call concurrently and hold nothing**; a factory may keep one policy instance for its life and call it once per pipeline from any thread.
+
+**Positive testing for `JoinAmbient` is a contract, not an implementation detail.** ADR 0073 relies on it: `ScopeAffinity` is a plain non-nullable enum on a public options interface, so an application can assign a cast integer that is neither member, and the safe degradation is *do not adopt*. Every reader of a `ScopeAffinity` in this design — the policy here, and the affinity guard on the provider's answer — tests for `JoinAmbient` positively rather than testing for `AlwaysNew` and treating everything else as adoption. `AlwaysNew = 0` makes `default(ScopeAffinity)` safe for the same reason.
+
 #### `ScopedArtefactCache` — artefact identity under a borrowed scope (new, DI package, public)
 
 Under `JoinAmbient` the borrowed DI scope owns the **artefact**, not merely its dependencies (D7, FR-16a): two `Post`s in one request share one mapper. ADR 0070 gives artefact identity **per pipeline**, by way of `ServiceProviderLifetimeScope`'s per-type `_scopedInstances` cache (`:163-178`) riding on the handle, and says in terms that this is sufficient for the owned case and insufficient for adoption. Supplying what adoption needs is this ADR's.
@@ -255,6 +269,15 @@ One mechanism, both cases. It is FR-26's recommended mechanism, and it is what m
 
 Where a borrowed provider cannot supply a `ScopedArtefactCache` — an ambient from a container Brighter did not register into — the handle falls back to a private cache. Dependency sharing, which is the headline of adoption, is unaffected; artefact identity reverts to per pipeline. This is recorded as a degradation, not hidden.
 
+**Contract.** The move from a per-pipeline field to a request-`Scoped` service turns a cache one pipeline owned into one every concurrent pipeline in a request contends for, which is squarely inside NFR-4. It is answered by **inheriting today's protocol verbatim** rather than inventing one:
+
+| Member | Input | Output | Error conditions |
+| --- | --- | --- | --- |
+| `GetOrAdd(Type, Func<object?>)` | the artefact type, and a factory that resolves one | the single instance of that type held by this cache | Concurrency is `ConcurrentDictionary<Type, Lazy<object?>>` with the `Lazy` publish protocol `ServiceProviderLifetimeScope.cs:163-178` already uses: concurrent first-resolvers of one type produce **one** instance and the losers see the winner's, and a resolution that throws propagates to every waiter. The owned and borrowed paths are identical here — one protocol, not two |
+| `Dispose()` | — | — | Drops its references and nothing else. It disposes no artefact it holds: MS DI already tracks disposable transient resolutions against the scope that created them, which is what AC-17 asserts. A `Dispose` racing a `GetOrAdd` is the container disposing a scope while a pipeline resolves from it, which is the caller's error and the same error it is today |
+
+**The cost of inheriting the protocol, stated.** `Lazy`'s default `LazyThreadSafetyMode.ExecutionAndPublication` **caches the fault**: a `GetService` that throws is remembered, and every later request for that type rethrows it. Today that is confined to one pipeline. Under `JoinAmbient` it is confined to one request, so one transient resolution failure poisons that artefact type for every remaining pipeline in the request. That is issue **#4260**, whose fix is the fix here too; it is not re-litigated in this ADR, and evicting on fault *only* on the borrowed path was rejected because it splits one protocol across two paths for half of #4260's fix.
+
 #### `AmbientScopeDiagnostics` — the three latches (new, DI package, container-scoped singleton)
 
 Three rules require a latched `Warning` naming a provider implementation type, and they are three distinct diagnostics, latched independently:
@@ -267,7 +290,13 @@ Three rules require a latched `Warning` naming a provider implementation type, a
 
 Each is latched once per **(condition, provider implementation type)** and the latch belongs to an instance registered `TryAddSingleton` on the Brighter container — the host's root provider — **not** to a `static` (D19). A process-static latch makes AC-31's `AlwaysNew` branch vacuous and AC-11's third branch unsatisfiable by a correct implementation, both of which reuse one provider implementation type across branches in separate hosts. Each message names its condition in terms a capturing `ILoggerProvider` can discriminate on; naming only the provider type is insufficient, because all three do that.
 
-Evaluation order is fixed by FR-24's exclusivity rule and is **FR-24.4, then FR-23, then FR-24.2**: an ambient returned for an `AlwaysNew` ask is ignored *before* it is probed, so a stale ambient returned for one is reported under FR-24.4 only.
+**Contract.**
+
+| Member | Input | Output | Error conditions |
+| --- | --- | --- | --- |
+| `WarnOnce(condition, providerType)` | one of the three conditions above, and the **implementation** type of the provider that was asked (or the fact that none is registered) | the message is logged at `Warning` on the first call for that pair and on no later one | **Atomic per (condition, provider implementation type)** — a single `ConcurrentDictionary<(Condition, Type), byte>.TryAdd`, whose return value decides whether to log. It has to be atomic rather than check-then-set: AC-11 asserts *exact* warning counts, and a `Publish` runs its subscribers concurrently through `Parallel.ForEach` (`CommandProcessor.cs:481`), so three subscribers hitting the same condition on a check-then-set latch could log two or three times. Never throws; a logging failure is the logger's |
+
+Only one ordering constraint is real, and it is FR-24's exclusivity rule: **FR-24.4 is evaluated first**, because an ambient returned for an `AlwaysNew` ask is ignored *before* it is probed — so a stale ambient returned for one is reported under FR-24.4 and never under FR-23. FR-23 and FR-24.2 are **mutually exclusive** — one is "an ambient came back and cannot be used", the other is "nothing came back" — so their relative order is immaterial, and the ladder and the pseudo-code test *nothing came back* first purely because it is the cheaper test. The requirements say the same.
 
 #### Where each type is touched
 
@@ -282,7 +311,7 @@ Evaluation order is fixed by FR-24's exclusivity rule and is **FR-24.4, then FR-
 | `…DependencyInjection` | `ServiceProviderLifetimeScope` | an internal borrowed mode (resolve from a given provider; create and dispose nothing); the `Scoped` path resolves its artefact cache from the scope in play |
 | `…DependencyInjection` | `ServiceProviderMapperFactory`, `ServiceProviderMapperFactoryAsync`, `ServiceProviderTransformerFactory`, `ServiceProviderTransformerFactoryAsync`, `ServiceProviderHandlerFactory` | keep a `ScopeAffinityPolicy`, the resolved `IAmAScopeProvider` and the diagnostics singleton; `CreatePipelineScope()` runs the protocol below |
 | `…DependencyInjection` | `ServiceCollectionExtensions.BrighterHandlerBuilder` (`:142`, reached from `:119`) | registers `ScopedArtefactCache` (`TryAddScoped`) and `AmbientScopeDiagnostics` (`TryAddSingleton`) |
-| `Paramore.Brighter.Extensions.AspNetCore` (working name) | the provider | **new package**, ADR 0073 names it; its ambient implements `IAmAServiceProviderScope` over `HttpContext.RequestServices` |
+| `Paramore.Brighter.Extensions.AspNetCore` | the provider | **new package**, kept under that name by ADR 0073; its ambient implements `IAmAServiceProviderScope` over `HttpContext.RequestServices` |
 
 Unchanged, and named so the omission is not read as an oversight: `CommandProcessor`, whose dispatch methods gain nothing here; `IAmAScope`, and every interface ADRs 0070 and 0071 changed — no member is added to any of them here, though `CreatePipelineScope()`'s **contract** is widened: the handle it returns may now name a borrowed ambient, so the member promises that the caller must always *release* rather than that it *owns*, and only the handle knows whether releasing disposes anything (FR-12); `MessageMapperRegistry`, whose two forwarding members behave exactly as 0070 specifies; `IAmALifetime` and `HandlerLifetimeScope`; `PipelineBuilder.Dispose()` (`:269-270`), so D10's release timing is preserved by construction; `Reactor`, `Proactor`, `Dispatcher`, `DispatchBuilder` and `ConsumerFactory` (C-2); the pump's per-message behaviour (D0b); `BrighterOptions`' three lifetime properties and `IsolateTransientHandlerScope` (`:37`); and `RequestContext`.
 
@@ -308,11 +337,15 @@ The type is a courier, not a contract: it exists only between the ask and the bu
 
 **2. The `CreatePipelineScope()` protocol.** This is the decision ladder under *The mechanism, end to end*, written out as the code runs it. One protocol, run inside every container-backed factory's `CreatePipelineScope()`. Adoption is **one** change, not two: after ADR 0071 both families reach their scope through this member, so a borrowed ambient is simply what it returns. There is no second path for handlers.
 
+Step 1 is a test on the **asked** factory alone, and D16's *exactly one ask per pipeline* is delivered by ADR 0070's first-non-null routing rather than by anything here: the mapper registry is asked first and the transformer factory only if the registry offered nothing, so at most one participant reaches step 3. Under `{Transient mapper, Scoped transformer}` the registry returns `null` at step 1 without asking, and the transformer factory runs steps 3 onward — computing the affinity over the **whole** set, `{MapperLifetime = Transient, TransformerLifetime = Scoped}`. That set contains a `Transient`, so FR-27.2 yields `AlwaysNew` and the pipeline creates and owns its scope, even though the factory that was asked is itself `Scoped`. That is the case the policy exists for, and the reason step 3 cannot be a per-factory test.
+
 ```
 CreatePipelineScope():
 
-  1. if this factory's configured lifetime offers no scope           -> return null
-        (mapper/transformer: not Scoped.  handler: Singleton.)
+  1. if THIS factory's own configured lifetime has no scope to offer -> return null
+        (mapper factory: MapperLifetime not Scoped.                     ADR 0070's routing
+         transformer factory: TransformerLifetime not Scoped.           then asks the next
+         handler factory: HandlerLifetime is Singleton.)                participant
 
   2. if Scoped does not participate in this pipeline                 -> return an OWNED handle,
         (handler family only: HandlerLifetime == Transient)             make NO ask     [FR-27.1]
@@ -364,11 +397,11 @@ Two consequences must be said plainly.
 
 **The `Transient`/`Scoped` asymmetry between the two families is about the *handle*, not about the *ask*.** ADR 0071 gives a handler pipeline a handle for `Transient` as well as `Scoped`, because the handler factory's per-pipeline scope also carries `IsolateTransientHandlerScope` (ADR 0067, C-6); a transform pipeline takes one only under `Scoped`. That handle-for-`Transient` is ADR 0067's per-resolution machinery riding on a handle — it is **not** FR-27's pipeline scope, and step 2 above makes no ask for it. The ask is tied to `Scoped` participation, never to whether a handle exists. AC-46's first branch, `{Transient, Transient, Transient}`, records **zero** decisions across a `Send`, a three-subscriber `Publish` and a `Post`, even though every one of those handler pipelines holds a handle.
 
-**4. Borrowing, and what it does and does not own.** `ServiceProviderPipelineScope` gains an internal borrowed construction path over an `IServiceProvider`. Borrowed implies `Scoped` by construction — a pipeline only reaches step 5 with `Scoped` participating and no `Transient` participant — so the borrowed mode has no `Transient` per-resolution path of its own, and a `Singleton` participant sharing the pipeline resolves from the root provider without consulting the handle at all. It holds nothing but the borrowed provider and the `ScopedArtefactCache` it resolved from it. `Dispose()` and `DisposeAsync()` are idempotent no-ops (AC-8). Brighter disposes neither the provider, nor the ambient `IAmAScope`, nor any instance resolved from it (FR-12, AC-16); the instances are disposable transients that MS DI has already tracked against the request scope, and the caller disposes them when the request ends. On the failed-build path there is no owned scope, so `CleanUpAfterFailedBuild` releases nothing the caller owns and AC-38 holds by construction.
+**4. Borrowing, and what it does and does not own.** `ServiceProviderPipelineScope` gains an internal borrowed construction path over an `IServiceProvider`. Borrowed implies `Scoped` by construction — a pipeline only reaches step 5 with `Scoped` participating and no `Transient` participant — so the borrowed mode has no `Transient` per-resolution path of its own, and a `Singleton` participant sharing the pipeline resolves from the root provider without consulting the handle at all. It holds nothing but the borrowed provider and the `ScopedArtefactCache` it resolved from it. `Dispose()` and `DisposeAsync()` are idempotent no-ops (AC-16, AC-38 — AC-8's idempotence rule is written over two live pipelines each holding a **Brighter-created** handle, so it does not reach this case and is not cited for it). Brighter disposes neither the provider, nor the ambient `IAmAScope`, nor any instance resolved from it (FR-12, AC-16); the instances are disposable transients that MS DI has already tracked against the request scope, and the caller disposes them when the request ends. On the failed-build path there is no owned scope, so `CleanUpAfterFailedBuild` releases nothing the caller owns and AC-38 holds by construction.
 
 **5. Registration.** All four registration entry points route through `ServiceCollectionExtensions.BrighterHandlerBuilder` (`:142`; the `BrighterOptions` overload at `:119` forwards to it), so that is the single place `ScopedArtefactCache` (`TryAddScoped`) and `AmbientScopeDiagnostics` (`TryAddSingleton`) are registered — and it is the only registration point this ADR adds. Nothing here depends on the `IOptions` pipeline, so C-12a's split across the four paths does not bite; the affinity option's journey to `IBrighterOptions` is FR-17's problem and 0073's decision, and this ADR reads whatever object `IBrighterOptions` resolves to, exactly as the factories already do.
 
-**6. What is left to the siblings.** ADR 0073 fixes the spelling of `GetAmbient`, the ASP.NET package name, the registration extension name and the opt-in property; nothing above changes shape when it does. ADR 0074 decides where FR-22's rules and FR-24.3's duplicate-provider rule are **evaluated**; this ADR has fixed the registration model those rules read and the three runtime latches they do not. ADR 0075 decides how a `Publish` subscriber suppresses adoption; it enters the protocol above at step 3 and nowhere else.
+**6. What is left to the siblings.** ADR 0073 settles the spelling of `GetAmbient`, the ASP.NET package name, the registration extension name and the opt-in property; nothing above changes shape for any of them. ADR 0074 decides where FR-22's rules and FR-24.3's duplicate-provider rule are **evaluated**; this ADR has fixed the registration model those rules read and the three runtime latches they do not. ADR 0075 decides how a `Publish` subscriber suppresses adoption; it enters the protocol above at step 3 and nowhere else.
 
 ## Consequences
 
@@ -425,7 +458,7 @@ Two consequences must be said plainly.
 
 ## References
 
-- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-10, FR-11, FR-12, FR-13, FR-16/FR-16a, FR-18, FR-23, FR-24, FR-26, FR-27, NFR-2, NFR-4, NFR-6, NFR-7, NFR-8, C-1, C-7, C-13, C-14, C-15, C-17, D0b, D2, D7, D11, D12, D16, D17, D19
+- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-1, FR-2, FR-8, FR-10, FR-11, FR-12, FR-13, FR-16/FR-16a, FR-17, FR-18, FR-22, FR-23, FR-24, FR-25, FR-26, FR-27; NFR-2, NFR-4, NFR-6, NFR-7, NFR-8; C-1, C-2, C-4, C-6, C-7, C-9, C-11, C-12a, C-15; D0b, D0c, D2, D4, D7, D8, D11, D12, D16, D17, D19; AC-1, AC-5, AC-8, AC-10, AC-11, AC-13, AC-16, AC-17, AC-22, AC-29, AC-30, AC-31, AC-32, AC-35, AC-37, AC-38, AC-46; OOS-4, OOS-7
 - Related ADRs (cited by slug — ADR numbers are not unique in this repo, C-16):
   - `0070-per-pipeline-di-scope-for-mapper-and-transform-factories` [Proposed] — the transform pipeline takes one DI scope, carried as a parameter; introduces `IAmAScope` and `ServiceProviderPipelineScope`. This ADR keeps its forward-compatibility promises and discharges the one thing it names as outstanding for adoption: artefact identity under a **borrowed** scope, which does not follow from a per-pipeline handle
   - `0071-pipeline-scope-handle-for-handler-pipelines` [Proposed] — handler pipelines converge onto the same handle via `IAmAHandlerFactory.CreatePipelineScope()` and `IAmALifetime.PipelineScope`, which is what lets adoption be one change rather than two
