@@ -371,7 +371,7 @@ Unchanged, and named so the omission is not read as an oversight: `IAmAPipelineV
 
    The alternative — building the exclusion set from a registry of the decorator's own — was rejected for the reason this ADR already gives against letting the inner validator go undisposed: a second `MessageMapperRegistry` brings its own mapper factories and its own DI scope, and nothing in the container tracks it.
 6. **The wiring.** One change in `ValidatePipelines()`: return the decorator from the existing `TryAddSingleton` factory. Nothing else in the extension method moves.
-7. **The documentation this ADR owes.** `docs/guides/lifetimes-and-scoping.md` gains a troubleshooting entry for each of the five messages (FR-25.10), and `release_notes.md` gains C-18's compatibility note beside FR-20's break (AC-24).
+7. **The documentation this ADR owes.** `docs/guides/lifetimes-and-scoping.md` gains a troubleshooting entry for each of the five messages (FR-25.10), and `release_notes.md` gains C-18's compatibility note as one item in the single entry ADR 0070 step 7a enumerates, beside FR-20's break (AC-24).
 
 ## Consequences
 
