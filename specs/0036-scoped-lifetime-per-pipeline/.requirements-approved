@@ -1,11 +1,26 @@
-Approved: revision 15, 2026-08-03 (27 FRs / 10 NFRs / 49 ACs / 121 normative bullets).
+Approved: revision 17, 2026-08-03, at 9bc2c1964 (27 FRs / 10 NFRs / 50 ACs / 122 normative bullets).
 
-Revision 15 was an alignment change made during the design phase, not new scope: FR-17 gained the
-clause it was missing about a repeated registration-extension call, and AC-49 plus the message
-counts in AC-43, AC-44 and FR-25.10 followed from it. Re-approved without an independent
-requirements review round, at the requirement owner's direction — the change exists to keep the
-requirements consistent with ADRs 0072-0074 and decides nothing those ADRs do not. An amendment
-that is more than alignment gets its own review round.
+Revisions 16 and 17 were made during the design phase, in response to round 2 of the design review.
+Revision 16 carried design decision 2 (the AddBrighterAspNetCoreScopes -> AddBrighterRequestScope
+rename, alignment) and design decision 4 (FR-22.4, an Error for an opt-in defeated by an
+application's own IBrighterOptions registration — new scope, and therefore a new AC, AC-50).
 
-This supersedes the earlier approval, which this file recorded as an empty marker and which
-therefore could not say which revision it covered.
+Because revision 16 was more than alignment, it had its own review round, per the requirement
+owner's standing rule. That round returned 11 findings, 9 at or above threshold 60, none Critical
+(review-requirements.md). It confirmed that every codebase claim in the new material holds against
+source, and that the rename was complete and correct. Revision 17 closes all nine, plus two
+below-threshold items rule 4 itself caused.
+
+One owner decision was taken in that round: FR-22.4 covers BOTH registration orderings. An
+application IBrighterOptions registered before Brighter wins the TryAddSingleton; one registered
+after wins resolution as the last descriptor. Either way the object the factories read is not
+Brighter's and the affinity override is never applied. Consequence, carried into FR-22.4: detecting
+the defeat at the point Brighter's own TryAddSingleton finds the service already present sees only
+the before ordering and is not on its own sufficient — this widens what the design's sixth
+scope-configuration rule must evaluate.
+
+Approved without a further review round: the nine findings closed cleanly, none was Critical, and
+the substantive rewrites (AC-50, FR-22.4) were verified against source and against the document's
+own conventions for error-rule Acceptance Criteria.
+
+This supersedes the revision-15 approval, which this file recorded.
