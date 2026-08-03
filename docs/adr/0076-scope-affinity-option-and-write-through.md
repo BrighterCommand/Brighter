@@ -1,11 +1,11 @@
 ---
-id: 0073-scope-affinity-opt-in-and-registration
-title: "The scope-affinity opt-in — the option, the ASP.NET registration extension, and the override that carries the affinity onto all four registration paths"
+id: 0076-scope-affinity-option-and-write-through
+title: "The affinity option, and how one setting reaches all four registration paths in any order"
 status: Proposed
 author:
   - "Ian Cooper"
-created: 2026-08-02
-summary: "Adds ScopeAffinity DefaultScopeAffinity to IBrighterOptions/BrighterOptions defaulting to AlwaysNew, ships the ASP.NET ambient in a new Paramore.Brighter.Extensions.AspNetCore package behind a single IServiceCollection extension AddBrighterRequestScope(ScopeAffinity affinity = ScopeAffinity.JoinAmbient), and makes that argument reach the resolved IBrighterOptions on all four registration paths in any registration order by registering a ScopeAffinityOverride singleton that Brighter's own IBrighterOptions factory delegate reads and applies."
+created: 2026-08-03
+summary: "Adds ScopeAffinity DefaultScopeAffinity to IBrighterOptions and BrighterOptions defaulting to AlwaysNew, and makes an opt-in extension's affinity argument reach the resolved IBrighterOptions on all four registration paths in any registration order — not by writing to the options object, which does not exist yet on two of them, but by registering an immutable ScopeAffinityOverride that Brighter's own IBrighterOptions factory delegate reads and applies from inside, through a single RegisterBrighterOptions definition every one of the four registration sites calls."
 tags:
   - "di"
   - "lifetime"
@@ -13,9 +13,9 @@ tags:
   - "api-design"
 ---
 
-# 73. The scope-affinity opt-in — the option, the ASP.NET registration extension, and the override that carries the affinity onto all four registration paths
+# 76. The affinity option, and how one setting reaches all four registration paths in any order
 
-Date: 2026-08-02
+Date: 2026-08-03
 
 ## Status
 
@@ -23,34 +23,35 @@ Proposed
 
 ## Context
 
-ADR 0072 built the seam. A pipeline that takes a pipeline scope asks an `IAmAScopeProvider` exactly once, carrying a `ScopeAffinity` that `ScopeAffinityPolicy` computes from `IBrighterOptions`, and either borrows the ambient the provider offers or creates and owns a scope as it does today. Everything in that mechanism is settled except its input: **nothing yet puts a `ScopeAffinity` on `IBrighterOptions`, and nothing yet registers an ambient source.**
+ADR 0072 built the seam. A pipeline that takes a pipeline scope asks an `IAmAScopeProvider` exactly once, carrying a `ScopeAffinity` that `ScopeAffinityPolicy` computes from `IBrighterOptions`, and either borrows the ambient the provider offers or creates and owns a scope as it does today. Everything in that mechanism is settled except its input: **nothing yet puts a `ScopeAffinity` on `IBrighterOptions`.**
 
-That is this ADR. Two of its three parts are naming; the third is not. Brighter's five container-backed factories read `IBrighterOptions` (`ServiceProviderMapperFactory.cs:44`, and the same two lines in the other four), and `IBrighterOptions` is registered on **four** separate registration paths, only one of which runs an `IOptions` pipeline. An opt-in gesture in a package that knows about none of them has to reach the object all four produce, in any registration order. Getting that wrong makes the opt-in fail silently and totally on three of the four.
+That is this ADR, and the hard half of it is not the property. Brighter's five container-backed factories read `IBrighterOptions` (`ServiceProviderMapperFactory.cs:44`, and the same two lines in the other four), and `IBrighterOptions` is registered on **four** separate registration paths, only one of which runs an `IOptions` pipeline. An opt-in gesture in a package that knows about none of them — ADR 0073's ASP.NET extension is the first, and NFR-7 anticipates others — has to reach the object all four produce, in any registration order. Getting that wrong makes the opt-in fail silently and totally on three of the four.
 
 **Parent Requirement**: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md)
 
-**Scope**: This ADR decides three things that are one gesture — **the opt-in property on `IBrighterOptions`, the ASP.NET package and its single registration extension, and the mechanism by which that extension's affinity argument reaches the object `IBrighterOptions` resolves to on every registration path in every order.** It discharges FR-14, FR-15 and FR-17, and serves FR-16, FR-18, FR-19, FR-20, FR-21, FR-22, FR-23, FR-25.11, NFR-1, NFR-2 and NFR-7.
+**Scope**: This ADR decides **the opt-in property on `IBrighterOptions`, and the mechanism by which an opt-in gesture's affinity argument reaches the object `IBrighterOptions` resolves to on every registration path in every order.** It discharges FR-14 and FR-17, and serves FR-16, FR-18, FR-19, FR-20, FR-21, FR-22, FR-23, FR-25.11, NFR-1, NFR-4 and NFR-7.
 
 **FR-19 and FR-21 are served here, not discharged here**, and the distinction is worth making because a reader auditing coverage should land on the mechanism rather than on the option. FR-21 — affinity applies to `Scoped` only — is delivered by ADR 0072's `ScopeAffinityPolicy` and the five container-backed factories; what this ADR contributes is the property they read and its `AlwaysNew` default. FR-19 — the flag is inert on the consumer side — is delivered by the pump publishing no per-message ambient (D0b, C-2, ADR 0072); what this ADR contributes is that the property is inherited by `ConsumersOptions` and settable there, so the inertness is a property of a *set* flag rather than of an unreachable one, plus the documentation obligation FR-25.11 places on the guidance page.
 
-It does **not** decide where FR-22's validation rules are evaluated — that is ADR 0074. It does not reopen ADR 0072's seam, ADR 0070's transform-pipeline scope or ADR 0071's handler convergence. It changes no lifetime, and it adds no validation rule.
+It does **not** decide the ASP.NET package, the registration extension that is the opt-in gesture, or that extension's name and signature — that is ADR 0073, which is this mechanism's first caller. It does not decide where FR-22's validation rules are evaluated — that is ADR 0074. It does not reopen ADR 0072's seam, ADR 0070's transform-pipeline scope or ADR 0071's handler convergence. It changes no lifetime, and it adds no validation rule.
 
-This ADR **supersedes no prior ADR.** It completes the 0070–0072 sequence on the application-facing side.
+This ADR **supersedes no prior ADR.** It completes the 0070–0072 sequence on the configuration side.
 
 ### Where this ADR sits
 
-Six ADRs deliver the parent requirement, one decision each. This is the fourth, and the only one an application author has to touch anything to use.
+Seven ADRs deliver the parent requirement, one decision each. This is the seventh, and the only one whose whole subject is a single value arriving intact.
 
 | ADR | Decides |
 | --- | --- |
 | 0070 | a transform pipeline takes one DI scope, carried **as a parameter** |
 | 0071 | handler pipelines converge onto the **same handle**, carried on the object they already pass |
 | 0072 | how a pipeline discovers an **ambient** DI scope the host owns |
-| **0073** *(this one)* | the **opt-in** property, the ASP.NET package, and how that setting reaches all four registration paths |
-| 0074 | **where** the lifetime and captive-dependency rules are evaluated |
+| 0073 | the **ASP.NET Core package**, and the one line an application writes to opt in |
+| 0074 | **where** the six scope-configuration rules are evaluated |
 | 0075 | how a `Publish` subscriber **suppresses** adoption, for itself and everything nested beneath it |
+| **0076** *(this one)* | the **affinity option**, and how one setting reaches all four registration paths in any order |
 
-The rule the first two state is **the per-pipeline object carries the DI scope**. This ADR does not touch that object at all: it decides only what a pipeline's affinity *is* before ADR 0072's seam consults it. The whole of the opt-in, from an application's side, is one line in `Program.cs`, and the work is making that line land on four registration paths that behave differently and can be called in any order.
+The rule the first two state is **the per-pipeline object carries the DI scope**. This ADR does not touch that object at all: it decides only what a pipeline's affinity *is* before ADR 0072's seam consults it. The whole of the opt-in, from an application's side, is one line in `Program.cs` (ADR 0073), and the work here is making that line land on four registration paths that behave differently and can be called in any order.
 
 ADR 0067's `Terms` block defines the two axes used throughout — Brighter's *configured lifetime*, which governs the artefact, and the container's *registration lifetime*, which governs the dependencies. This ADR does not restate it. Per NFR-8, "lifetime scope" is not used for anything introduced here.
 
@@ -74,21 +75,18 @@ Four sites, in two assemblies, and every one of them uses `TryAddSingleton`, so 
 ### The forces
 
 - **AC-45 asserts the value on the *resolved* `IBrighterOptions`, on all four paths.** Not on `IOptions<BrighterOptions>.Value`, which C-12a shows is a different object on three of them. Its second clause starts each host from a **non-default** affinity and then passes the opposite value to the extension, so an implementation that silently drops the argument fails.
-- **AC-48 forbids an ordering rule in as many words**: *"the same holds with the extension call placed before `AddBrighter` as well as after it — the rule is not an ordering rule (C-10)."* Any mechanism that needs the extension to run after the Brighter registration is disqualified by that clause alone.
-- **D13 fixes the argument, D18 fixes precedence.** The extension takes the affinity as an explicit argument defaulting to `JoinAmbient`; the argument **is** the value and wins unconditionally. Opting out means passing `AlwaysNew`, or not calling the extension.
+- **AC-48 forbids an ordering rule in as many words**: *"the same holds with the extension call placed before `AddBrighter` as well as after it — the rule is not an ordering rule (C-10)."* Any mechanism that needs the opt-in gesture to run after the Brighter registration is disqualified by that clause alone.
+- **D13 fixes the argument, D18 fixes precedence.** The opt-in extension takes the affinity as an explicit argument defaulting to `JoinAmbient` (ADR 0073); the argument **is** the value and wins unconditionally. Opting out means passing `AlwaysNew`, or not calling the extension.
 - **No sentinel, and none may be introduced** (FR-17). The option stays a plain non-nullable value (FR-14). The direct consequence is that "the application assigned `AlwaysNew`" and "the application left the default" are indistinguishable, which is why assigning the option alongside the extension is a **documented** configuration error (FR-25.11) rather than a validated one.
-- **D1 / NFR-2 — no ASP.NET dependency in the DI package.** The ASP.NET package depends on the DI package, never the reverse. Registering the provider **is** the opt-in: no middleware, no per-request call site.
-- **FR-15 / AC-14 — a package reference alone changes nothing.** With the extension not called, an `IHttpContextAccessor` spy records **zero** accesses.
-- **FR-18 — no `HttpContext` is the ordinary case**, not an error. A hosted service, a consumer pump, a background thread, startup. The provider returns nothing and the pipeline creates its own scope.
 - **D2 — one flag governs both pipeline kinds.** There is no way to opt handler pipelines in and transform pipelines out.
 - **D5 / FR-21 — affinity applies to `Scoped` only.** `Transient` and `Singleton` are unaffected under either setting. An inert opt-in is validated, never inferred and never silently corrected — but *where* is ADR 0074's.
-- **From ADR 0072, fixed**: `IAmAScopeProvider` is registered with plain `AddSingleton`, never `TryAddSingleton`, so every duplicate descriptor stays visible to validation (FR-24.3) while MS DI resolves the last; and the ambient must implement `IAmAServiceProviderScope` for a Microsoft-container-backed factory to resolve from it.
+- **NFR-7 — the mechanism must be usable by a package Brighter does not ship.** ADR 0073's ASP.NET extension is the first caller; an `AsyncLocal`-backed provider for console hosts must be able to be the second, with no privileged access.
 
 ## Decision
 
 **The opt-in gesture does not write the affinity onto the options object; it deposits the value in the service collection, and the one place that does have the options object — the factory that produces it — picks the value up.**
 
-The shape that takes is three parts. The options interface gains an affinity property whose default is exactly today's behaviour, so every existing host is unaffected. A new ASP.NET package supplies the ambient source and one `IServiceCollection` extension, and calling that extension is the whole of the opt-in — it registers the source and deposits the affinity it was passed. And the four registration sites that produce the options object are brought onto one shared definition of that production, so the value is picked up on every path. Because the pick-up happens inside the producer, it necessarily runs after every application-supplied options delegate, which is what makes the rule hold in any registration order without an ordering rule. The names and signatures are under *Key Components*.
+The shape that takes is two parts. The options interface gains an affinity property whose default is exactly today's behaviour, so every existing host is unaffected. And the four registration sites that produce the options object are brought onto one shared definition of that production, so the deposited value is picked up on every path. Because the pick-up happens inside the producer, it necessarily runs after every application-supplied options delegate, which is what makes the rule hold in any registration order without an ordering rule. The names and signatures are under *Key Components*.
 
 ### The mechanism, end to end
 
@@ -102,7 +100,7 @@ sequenceDiagram
     participant Readers as the five factories, ScopeAffinityPolicy, validation
 
     Note over App,SC: REGISTRATION time — these two may be called in either order
-    App->>SC: AddBrighterRequestScope(affinity)
+    App->>SC: the opt-in extension, carrying an affinity — ADR 0073
     Note right of SC: deposits a ScopeAffinityOverride<br/>and an IAmAScopeProvider
     App->>SC: AddBrighter or AddConsumers
     Note right of SC: RegisterBrighterOptions deposits the<br/>IBrighterOptions factory delegate
@@ -124,7 +122,7 @@ flowchart LR
     a2["AddBrighter(Func)"] --> RBO
     a3["AddConsumers(Action)"] --> RBO
     a4["AddConsumers(Func)"] --> RBO
-    ext["AddBrighterRequestScope(affinity)"] -- "AddSingleton" --> ovr["ScopeAffinityOverride<br/>one immutable value<br/>last registered wins"]
+    ext["the opt-in extension — ADR 0073"] -- "AddSingleton" --> ovr["ScopeAffinityOverride<br/>one immutable value<br/>last registered wins"]
     RBO["RegisterBrighterOptions<br/>TryAddSingleton for IBrighterOptions, with a delegate that<br/>builds this path's options object, then applies the override"]
     ovr -. "read by that delegate,<br/>at first resolution" .-> RBO
     RBO --> opts["the one IBrighterOptions<br/>every reader reads"]
@@ -136,11 +134,9 @@ flowchart LR
 flowchart TB
     subgraph core["Paramore.Brighter — core, unchanged by this ADR"]
         affinity["ScopeAffinity: AlwaysNew = 0, JoinAmbient — ADR 0072"]
-        provider["IAmAScopeProvider — ADR 0072"]
     end
 
     subgraph di["Paramore.Brighter.Extensions.DependencyInjection"]
-        direction TB
         opt["IBrighterOptions.DefaultScopeAffinity — NEW<br/>BrighterOptions.DefaultScopeAffinity = AlwaysNew — NEW"]
         ovr["ScopeAffinityOverride — NEW<br/>immutable, carries one ScopeAffinity"]
         reg["RegisterBrighterOptions — NEW, public static, not an extension method<br/>the single definition of the write-through, called from all four sites"]
@@ -148,22 +144,16 @@ flowchart TB
         reg --> ovr
     end
 
-    subgraph aspnet["Paramore.Brighter.Extensions.AspNetCore — NEW package"]
-        direction TB
-        extn["AddBrighterRequestScope(IServiceCollection, ScopeAffinity = JoinAmbient)<br/>AddHttpContextAccessor, AddSingleton the provider, AddSingleton the override"]
-        hcsp["HttpContextScopeProvider : IAmAScopeProvider"]
-        hrs["HttpRequestScope : IAmAServiceProviderScope, over RequestServices"]
-        extn --> hcsp
-        hcsp --> hrs
+    subgraph optin["an opt-in package — ADR 0073 ships the first"]
+        extn["registers an IAmAScopeProvider,<br/>and a ScopeAffinityOverride carrying its argument"]
     end
 
     opt -. "names" .-> affinity
     ovr -. "names" .-> affinity
-    hcsp -. "implements" .-> provider
     extn -- "registers" --> ovr
 ```
 
-The dependency direction is fixed and is the whole of NFR-2: the ASP.NET package depends on the DI package, the DI package depends on core, and neither of the lower two ever depends upward.
+The dependency direction is fixed and is the whole of NFR-2: an opt-in package depends on the DI package, the DI package depends on core, and neither of the lower two ever depends upward.
 
 ### Key Components
 
@@ -171,11 +161,8 @@ The dependency direction is fixed and is the whole of NFR-2: the ASP.NET package
 
 | Role | Type | Stereotype | Responsibility |
 | --- | --- | --- | --- |
-| The ambient source | `HttpContextScopeProvider` (ASP.NET package) | **deciding** | Answers, for one pipeline carrying one affinity, whether there is a request scope it may adopt. Creates nothing, owns nothing, disposes nothing |
-| The ambient scope | `HttpRequestScope : IAmAServiceProviderScope` (ASP.NET package) | **knowing** (information holder) | Names `HttpContext.RequestServices` as the provider a pipeline adopting this ambient resolves from. Disposal is a no-op: ASP.NET owns the request scope |
 | The affinity override | `ScopeAffinityOverride` (DI package) | **knowing** (information holder) | Carries one value — the affinity the opt-in gesture selected. It decides nothing and does nothing; it exists so the value has a type and a place to sit in the collection |
 | The options object | `BrighterOptions` / `ConsumersOptions` behind `IBrighterOptions` | **knowing** | The single object every reader takes configuration from: the five factories, `ScopeAffinityPolicy` (ADR 0072), and validation (ADR 0074) |
-| The registration extension | `AddBrighterRequestScope` | **doing** (structurer) | Puts the ambient source and the override into the service collection. It is the whole of the opt-in |
 | The options registration | `RegisterBrighterOptions` (DI package) | **doing** | Produces the options object each path supplies and applies the override to it before anyone can read it |
 
 The division that matters is between the **override** and the **options object**. The override knows what the application asked for; the options object is what every reader reads. Keeping them as two roles rather than one is what makes the mechanism order-independent: the override can be registered before the options object exists, because it is not the options object.
@@ -250,7 +237,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 | `Affinity` | none | the affinity the opt-in gesture selected | Cannot throw. Immutable after construction, so a reader cannot observe it changing between the moment `IBrighterOptions` is built and the moment a pipeline reads it |
 | *(the type as a service)* | resolved with `GetService`, never `GetRequiredService` | `null` where no extension was called — the ordinary case for every host that does not opt in | Absence is not an error; it is the default configuration (FR-15) |
 
-It lives in the DI package, not core: core may name no container type and this type exists only to be a service in a Microsoft service collection, but it names only `ScopeAffinity`, a core type, so it adds nothing to core's compile closure and the AC-22.3 source-level guard is untouched. It is public because the ASP.NET package is a separate assembly; `InternalsVisibleTo` was rejected for the reason ADR 0072 gives about suppression — the mechanism must be available to a package Brighter does not ship, since NFR-7 anticipates other ambient sources.
+It lives in the DI package, not core: core may name no container type and this type exists only to be a service in a Microsoft service collection, but it names only `ScopeAffinity`, a core type, so it adds nothing to core's compile closure and the AC-22.3 source-level guard is untouched. It is public because an opt-in package is a separate assembly; `InternalsVisibleTo` was rejected for the reason ADR 0075 gives about suppression — the mechanism must be available to a package Brighter does not ship, since NFR-7 anticipates other ambient sources.
 
 It is a type rather than a bare `ScopeAffinity` registered as a service because registering an enum as a service type is the primitive-obsession failure: `GetService(typeof(ScopeAffinity))` names nothing, collides with any other use of the enum as a service, and cannot be told apart from a default value. The wrapper names the role.
 
@@ -295,89 +282,6 @@ Three details of that table are behavioural and must be stated, not glossed.
 
 **In a mixed host the winner of the `TryAdd` applies the override, and both sides now do.** `IBrighterOptions` is `TryAddSingleton` in both assemblies, so first registration wins, whichever it is. Because all four sites route through `RegisterBrighterOptions`, whichever descriptor survives applies the override. A host where `AddConsumers(Action)` registers first gets the affinity on its `ConsumersOptions`; a host where `AddBrighter` registers first gets it on its `BrighterOptions`; in both, that is the object the factories read. The losing side's options object never receives the override and is never read for affinity. Applying it at only one of the two assemblies' sites would have made the opt-in depend on registration order in exactly the way AC-48 forbids.
 
-#### The ASP.NET package and its extension (new package)
-
-```csharp
-namespace Microsoft.Extensions.DependencyInjection      // deliberate, and a departure — see below
-{
-    public static class BrighterAspNetCoreExtensions
-    {
-        /// <summary>
-        /// Registers ASP.NET Core's per-request DI scope as Brighter's ambient scope, and selects the
-        /// scope affinity Brighter's Scoped pipelines use. Call it once, in any order relative to
-        /// AddBrighter or AddConsumers. Pass ScopeAffinity.AlwaysNew to register the ambient source
-        /// without opting in. Not calling it at all leaves Brighter exactly as it is today.
-        /// </summary>
-        public static IServiceCollection AddBrighterRequestScope(
-            this IServiceCollection services,
-            ScopeAffinity affinity = ScopeAffinity.JoinAmbient)
-        {
-            services.AddHttpContextAccessor();
-            services.AddSingleton<IAmAScopeProvider, HttpContextScopeProvider>();   // plain AddSingleton — ADR 0072, FR-24.3
-            services.AddSingleton(new ScopeAffinityOverride(affinity));             // plain AddSingleton — FR-17, same reason
-            return services;
-        }
-    }
-}
-```
-
-**Contract.**
-
-| Member | Input | Output | Error conditions |
-| --- | --- | --- | --- |
-| `AddBrighterRequestScope(IServiceCollection, ScopeAffinity)` | the affinity, defaulting to `JoinAmbient` (D13) | the same collection, for chaining | Throws `ArgumentNullException` on a null collection, matching `AddBrighter` (`:65-66`). It never throws on ordering, never inspects an existing descriptor, and never alters a lifetime (FR-17, FR-21). Calling it twice is a configuration error it does not throw on: the last call's affinity is effective, and a repeat carrying a different affinity is reported by validation (FR-17, AC-49) — see below. Calling it **without any Brighter registration at all** — no `AddBrighter`, no `AddConsumers` — is **inert and is not an error**: `RegisterBrighterOptions` never runs, so the override is never read; no `IBrighterOptions` is registered, so nothing reads the affinity; and the provider sits in the collection with nothing to consult it. There is no Brighter host to misconfigure, and the extension is not the place to diagnose the absence of one |
-| `HttpContextScopeProvider.GetAmbient(ScopeAffinity)` | the asking pipeline's affinity | an `HttpRequestScope` over `HttpContext.RequestServices` when the affinity is `JoinAmbient` and an `HttpContext` is current; otherwise `null` | Must not throw where there is no current `HttpContext` — a hosted service, a consumer pump, a background thread, startup (FR-18). It neither consults `IHttpContextAccessor` nor returns anything on an `AlwaysNew` ask (D16, FR-24.4). It does not probe the ambient for staleness; that is the DI package's question and ADR 0072 answers it |
-| `HttpRequestScope.Services` | none | `HttpContext.RequestServices` | Never null. May name a scope ASP.NET has already disposed — FR-23's case, which ADR 0072's probe catches before anything is resolved. `Dispose()` and `DisposeAsync()` are no-ops: ASP.NET owns the request scope (FR-12, C-7) |
-
-`AddHttpContextAccessor()` is Microsoft's own idempotent `TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>()`, so it is safe alongside an application that already called it. `IAmAScopeProvider` is registered with **plain `AddSingleton`, never `TryAddSingleton`**, exactly as ADR 0072 requires, so a duplicate descriptor stays visible to FR-24.3's validation while MS DI resolves the last.
-
-**Two calls to the extension resolve to the last one, and a conflicting repeat is reported.** `ScopeAffinityOverride` is registered with plain `AddSingleton` for the same two reasons `IAmAScopeProvider` is: MS DI resolves the service type to the **last** descriptor, so the last call's affinity is the effective one — and every call's descriptor stays in the collection, so validation can see that there was more than one. A `TryAddSingleton` here would satisfy neither. It would make the *first* call win while the provider's plain `AddSingleton` made the *last* call win, giving a host that carried one call's affinity and another call's provider; and it would leave the second descriptor out of the collection entirely, so nothing could be reported. FR-17 requires both halves, and this is the mechanism that supplies them.
-
-That leaves the repeat determined but still wrong, so FR-17 makes it visible: where the collection holds affinity-carrying descriptors with **more than one distinct affinity value**, validation reports a `Warning` naming every affinity registered, identifying the last as effective, and naming the guidance page (AC-49). A repeat carrying the **same** affinity is idempotent in effect and is not a finding — the exclusion FR-24.3 makes for a repeated identical provider registration, and the reason the duplicate-*provider* rule cannot serve here: both calls register the same `HttpContextScopeProvider` type, which FR-24.3 excludes in terms. The two rules are complementary rather than overlapping — FR-24.3 catches *two different providers*, FR-17 catches *two different affinities* — and ADR 0074 evaluates both. There is still no correct answer to "which of two contradictory opt-ins did you mean"; what this buys is that the answer Brighter picks is the one the reader would predict, and that they are told they asked twice.
-
-#### The three C-11 working names
-
-**`Paramore.Brighter.Extensions.AspNetCore` — kept.** The `Paramore.Brighter.Extensions.*` family names the Microsoft extension surface being integrated: `DependencyInjection`, `Diagnostics`, `OpenTelemetry`, and on the consumer side `ServiceActivator.Extensions.Hosting`. `AspNetCore` is that pattern applied to ASP.NET Core, and it makes the dependency direction legible from the package name alone.
-
-**`IAmAScope? GetAmbient(ScopeAffinity affinity)` — kept.** The contract is fixed by D17 and is not open. The spelling says what the member does — it *gets an ambient*, it does not create, begin or open one — and the noun is the one FR-17 and FR-24 use throughout. `TryGetAmbient` was considered and rejected: the `Try*` convention implies an `out` parameter and a `bool` return, and a nullable return already says the same thing more directly. `GetAmbientScope` is redundant beside a return type of `IAmAScope`.
-
-**`AddBrighterAspNetCoreScopes(...)` — rejected, and replaced by `AddBrighterRequestScope(ScopeAffinity affinity = ScopeAffinity.JoinAmbient)`.** The old spelling is wrong in three ways. Its plural implies more than one thing is registered, when it is one ambient source. Its noun implies the extension creates scopes, when the whole of D11 is that it creates none: ASP.NET creates the request scope and Brighter borrows it. And it is long enough to read as a framework incantation rather than a configuration line.
-
-The constraints on the replacement are all real and all narrow the field:
-
-- **It must extend `IServiceCollection`, not `IBrighterBuilder`.** An `IBrighterBuilder` extension is only reachable from the value `AddBrighter`/`AddConsumers` returns, which would make "call the extension before `AddBrighter`" unexpressible — and AC-48 requires exactly that ordering to work.
-- **`Use*` is wrong.** In .NET generally `Use*` belongs to `IApplicationBuilder`; in Brighter specifically `Use*` already means "an `IBrighterBuilder` extension" — `UseScheduler`, `UseOutboxSweeper`, `UseOutboxArchiver`, `UseFluentValidation`, `UseAsyncApi`, `UseExternalLuggageStore`, `UseBoxProvisioning`, `UsePublicationFinder`. Every `Use*` in the repository extends `IBrighterBuilder`. A `Use*` here would be wrong twice over.
-- **`Add*` is right and the prefix should be `AddBrighter`.** The `IServiceCollection` extensions the application sees are `AddBrighter` and `AddConsumers`; `AddProducers` and `AddControl` extend `IBrighterBuilder`. `AddBrighterRequestScope` reads as one of that family, and sorts beside `AddBrighter` for any reader who has both namespaces in scope.
-- **Singular, and naming what is registered.** One ambient source, and the thing it makes ambient is ASP.NET's request scope.
-
-Rejected candidates, with what each had going for it:
-
-| Candidate | Real advantage | Why rejected |
-| --- | --- | --- |
-| `AddBrighterAspNetCoreScopes(...)` | says which framework | plural; implies Brighter creates scopes; longest of the candidates |
-| `AddBrighterHttpRequestScope(...)` | removes any confusion with Brighter's own `IRequest` | one character shorter than the name being replaced, so it does not fix the complaint that prompted the rename |
-| `AddBrighterAmbientScope(...)` | uses the normative term for the concept — *ambient scope* is a DI scope the host owns | claims the general name for the ASP.NET case. NFR-7 anticipates an `AsyncLocal`-backed provider for non-ASP.NET hosts; that package would have the better claim on the generic spelling |
-| `UseBrighterRequestScope(...)` | reads naturally in `Program.cs` | `Use*` means `IBrighterBuilder` in this codebase and `IApplicationBuilder` in .NET; this is neither |
-| `AddBrighterScopeAffinity(affinity)` | names the argument | names the *setting* rather than what is registered, and would suggest it works without an ambient source, which it does not |
-
-**The extension class sits in `namespace Microsoft.Extensions.DependencyInjection`, and that is a departure from this repository's own convention.** Every other Brighter `IServiceCollection` extension declares its own namespace — `AddBrighter` in `Paramore.Brighter.Extensions.DependencyInjection`, `AddConsumers` in the ServiceActivator equivalent — and a repository-wide search for `namespace Microsoft.Extensions.DependencyInjection` in `src/` finds nothing. The departure is taken on one ground, and it is not that it sorts beside `AddBrighter`: it would only do that in a file that had already imported both namespaces, which is precisely the file this is meant to help. It is that **ASP.NET Core's implicit usings put `Microsoft.Extensions.DependencyInjection` in scope in every `Program.cs` already**, so the one line an application has to write to opt in needs no `using` at all — while the Brighter namespace would need one that the application may otherwise not have, because it is a *new* package's namespace and not the one `AddBrighter` lives in. For a package whose entire audience is an ASP.NET `Program.cs`, discoverability with zero imports is worth the inconsistency, and the inconsistency is recorded here so it is a decision rather than an accident.
-
-The residual cost of `AddBrighterRequestScope` is stated rather than hidden: Brighter's own vocabulary uses "request" for a command, event or query (`IRequest`, `RequestContext`, `RequestHandlerAttribute`), so "request scope" could be misread as "the scope of a Brighter request". Two things make that tolerable — the method lives in a package whose name says ASP.NET Core, and Brighter has no existing "request scope" concept for it to collide with, since the normative terms are *pipeline scope* and *ambient scope*. The XML doc comment says "ASP.NET Core's per-request DI scope" in its first line for that reason.
-
-#### Where each type is touched
-
-| Assembly | Type | Change |
-| --- | --- | --- |
-| `…Extensions.DependencyInjection` | `IBrighterOptions` (`BrighterOptions.cs:72`) | gains `ScopeAffinity DefaultScopeAffinity { get; set; }` — a source and binary break for a hand-rolled implementation |
-| `…Extensions.DependencyInjection` | `BrighterOptions` (`:9`) | gains the property, defaulting to `AlwaysNew` |
-| `…Extensions.DependencyInjection` | `ScopeAffinityOverride` | **new** |
-| `…Extensions.DependencyInjection` | `ServiceCollectionExtensions` | **new** `RegisterBrighterOptions`; `:74` and `:97` call it |
-| `…ServiceActivator.Extensions.DependencyInjection` | `ServiceCollectionExtensions` | `:38` and `:88` call `RegisterBrighterOptions`; `:38` stops registering an instance for `IBrighterOptions`. `:39`, `:89-90` unchanged |
-| `…ServiceActivator.Extensions.DependencyInjection` | `ConsumersOptions` (`:10`) | **no change** — it inherits the property from `BrighterOptions` |
-| `Paramore.Brighter.Extensions.AspNetCore` | `BrighterAspNetCoreExtensions`, `HttpContextScopeProvider`, `HttpRequestScope` | **new package** on `$(BrighterCoreTargetFrameworks)`, with a project reference to `Paramore.Brighter.Extensions.DependencyInjection` and a `FrameworkReference` to `Microsoft.AspNetCore.App` |
-
-Unchanged, and named so the omissions are not read as oversights: `Paramore.Brighter` gains nothing at all, so AC-22.3's source-level guard is untouched and NFR-1 holds trivially; `Paramore.Brighter.Extensions.DependencyInjection` gains no ASP.NET reference (NFR-2); `IsolateTransientHandlerScope` (`BrighterOptions.cs:37`) and the three lifetime properties (`:20`, `:52`, `:69`); `BrighterHandlerBuilder` (`:119`, `:142`), including the `ScopedArtefactCache` and `AmbientScopeDiagnostics` registrations ADR 0072 adds there; `ConsumerOwnsValidation = true` (`:60`, `:127`); every `TryAdd` in `BrighterHandlerBuilder`, so registration precedence is exactly as it is today; and every rule in ADR 0072's `CreatePipelineScope()` protocol.
-
 ### Technology Choices
 
 **Why the override is read inside Brighter's own `IBrighterOptions` factory, rather than written from the extension.** The extension runs at registration time, on a collection, and cannot see the object it needs to write to — on two of the four paths that object does not exist yet and will not until first resolution; on a third it exists only as a descriptor's `ImplementationInstance`; on the fourth it is produced by the `IOptions` pipeline. Inverting the direction removes the problem entirely: the extension deposits a value, and the one place that *does* have the object — the factory that produces it — picks the value up. Neither half needs to know when the other ran.
@@ -387,12 +291,6 @@ Unchanged, and named so the omissions are not read as oversights: `Paramore.Brig
 **Why the value is applied to the options object rather than read at each use site.** AC-45's first Then asserts the affinity *on the resolved `IBrighterOptions`*, so a design in which the factories consult `ScopeAffinityOverride` directly and never write through fails it outright. There is a deeper reason to prefer write-through: ADR 0074's validation must read the configuration **as the factories see it**, and ADR 0072's `ScopeAffinityPolicy` reads `IBrighterOptions`. One source of truth for four readers is the point of having an options object at all.
 
 **Why `GetService` and not `GetRequiredService`.** No override registered is the ordinary configuration — every host that has not opted in, which is every host that exists today. Absence must be silent (FR-15), so the read must tolerate it. This matches how the factories already read `IBrighterOptions` itself: `ServiceProviderMapperFactory.cs:44` uses `GetService` and falls back to a default.
-
-**What the new package targets, and how it reaches ASP.NET's types.** `Paramore.Brighter.Extensions.AspNetCore` targets **`$(BrighterCoreTargetFrameworks)` — `net8.0;net9.0;net10.0`** — and takes ASP.NET Core from the shared framework with `<FrameworkReference Include="Microsoft.AspNetCore.App"/>`. There is **no `Directory.Packages.props` entry**, because a framework reference is not a package reference and central package management has nothing to manage.
-
-Three things make this the only implementable choice rather than a preference. `netstandard2.0` is dropped: on that target the only shippable `Microsoft.AspNetCore.Http.Abstractions` is the end-of-life 2.2.x line, and taking a dependency on it to serve a target no ASP.NET Core application uses is a cost with no beneficiary. That is a **deliberate departure from `BrighterTargetFrameworks`** (`src/Directory.Build.props:43`, `netstandard2.0;net8.0;net9.0;net10.0`), and a well-worn one — 24 projects in `src/` already target `$(BrighterCoreTargetFrameworks)` (`:45`). On `net8.0`+ the ASP.NET types come from the shared framework, so a `PackageReference` would be the wrong mechanism even if one existed; a single unconditional `FrameworkReference` serves all three targets with no conditional `ItemGroup`. And the precedent for shipping ASP.NET from `src/` already exists: `src/Paramore.Brighter.ServiceActivator.Control.Api` is a packable ASP.NET Core library on exactly these targets — it uses `Sdk="Microsoft.NET.Sdk.Web"` with `OutputType=Library`, which supplies the framework reference implicitly, which is why a grep for `FrameworkReference` or `AspNetCore` across `src/*.csproj` finds nothing and proves nothing.
-
-`Microsoft.NET.Sdk` plus an explicit `FrameworkReference` is preferred to the Web SDK here: this package is a class library with three types and no static assets, no launch profile and no `wwwroot`, and the explicit reference says in the project file what the Web SDK would say implicitly. **`IHttpContextAccessor` and `AddHttpContextAccessor` live in `Microsoft.AspNetCore.Http.Abstractions`**, which the framework reference brings in.
 
 **Thread safety.** MS DI creates a singleton once, under its own lock, so the write to `DefaultScopeAffinity` happens exactly once and completes before any caller holds the reference **the `IBrighterOptions` factory returns** (NFR-4). That is the guarantee, and it is narrower than "nobody can see it half-configured": on the consumer `Action` path a reader that reaches the *same object* by another route can. `IAmConsumerOptions` and `IBrighterOptions` name one `ConsumersOptions` instance, and only the `IBrighterOptions` factory applies the override, so between a first resolution of the one and a first resolution of the other that object still holds whatever the application set — the residue described above. No pipeline reads affinity by that route; a diagnostic dump could.
 
@@ -404,25 +302,19 @@ Three things make this the only implementable choice rather than a preference. `
 
 **3. Move all four registration sites onto it, in one commit.** `:74`, `:97`, and the ServiceActivator package's `:38` and `:88`. Partial adoption gives a host whose opt-in works on some entry points and not others, which is the failure mode FR-17 exists to prevent. The ServiceActivator package's `:39` and `:89-90` are explicitly *not* touched.
 
-**4. Build the ASP.NET package.** A `Microsoft.NET.Sdk` class library targeting `$(BrighterCoreTargetFrameworks)`, with a `ProjectReference` to `Paramore.Brighter.Extensions.DependencyInjection` and one `<FrameworkReference Include="Microsoft.AspNetCore.App"/>` for `IHttpContextAccessor` and `AddHttpContextAccessor` — no `Directory.Packages.props` entry, and no `netstandard2.0`; *Technology Choices* gives the reasoning. Three types: the extension class, `HttpContextScopeProvider`, `HttpRequestScope`. The provider's whole body is a null check on `_accessor.HttpContext`, an affinity check, and a wrap; the scope's is a property and two no-op disposals. FR-15 and AC-14 hold by construction: nothing in the package runs unless the extension is called, so the `IHttpContextAccessor` spy records zero accesses in a host that only takes the package reference.
+**4. Documentation.** FR-25.11 requires the guidance page to state that assigning `DefaultScopeAffinity` while calling the opt-in extension is a configuration error whose outcome is the extension's value, in any order and on any path, and that it is **not** reported by validation. The three gestures themselves are ADR 0073's. `release_notes.md` gains the `IBrighterOptions` member, in the same entry as the other breaks ADR 0070 step 7a lists (C-18, AC-24).
 
-**5. `AlwaysNew` short-circuits in the provider as well as in Brighter.** D16 requires the ask to be made even under `AlwaysNew`, so the decision is observable; FR-10 requires the provider neither to consult nor to adopt on such an ask. `HttpContextScopeProvider` therefore returns `null` before touching `IHttpContextAccessor`. Brighter ignores an ambient returned for an `AlwaysNew` ask anyway (FR-24.4, ADR 0072), so this is the provider honouring its half of a contract Brighter also guards.
-
-**6. Documentation.** FR-25.11 requires the guidance page to state the three gestures explicitly: opt in with `AddBrighterRequestScope()`; register the ambient source without opting in with `AddBrighterRequestScope(ScopeAffinity.AlwaysNew)`; opt out entirely by not calling the extension. It must also state that assigning `DefaultScopeAffinity` while calling the extension is a configuration error whose outcome is the extension's value, in any order and on any path, and that it is **not** reported by validation. `release_notes.md` gains the `IBrighterOptions` member, in the same entry as the other three breaks ADR 0070 step 7a lists (C-18, AC-24).
-
-**7. What this leaves to ADR 0074.** Where FR-22's rules, FR-24.3's duplicate-provider rule and FR-17's repeated-opt-in rule are evaluated. This ADR fixes what they read — `DefaultScopeAffinity` on the object `IBrighterOptions` resolves to, with the override already applied, and the `ScopeAffinityOverride` descriptors as they stand in the collection — and decides no evaluation site. It adds no rule against the *other* FR-17 configuration error, deliberately: an application that assigns `DefaultScopeAffinity` while also calling the extension is indistinguishable from the ordinary opt-in without the sentinel FR-17 bans, and a rule comparing values would fire on every default host that called `AddBrighterRequestScope()`. The repeated call is detectable precisely because it needs no sentinel — two differing affinity *values* are visible in the collection whether or not either was explicitly assigned.
+**5. What this leaves to ADR 0074.** Where FR-22's rules, FR-24.3's duplicate-provider rule and FR-17's repeated-opt-in rule are evaluated. This ADR fixes what they read — `DefaultScopeAffinity` on the object `IBrighterOptions` resolves to, with the override already applied, and the `ScopeAffinityOverride` descriptors as they stand in the collection — and decides no evaluation site. It adds no rule against the *other* FR-17 configuration error, deliberately: an application that assigns `DefaultScopeAffinity` while also calling the extension is indistinguishable from the ordinary opt-in without the sentinel FR-17 bans, and a rule comparing values would fire on every default host that called the extension. The repeated call is detectable precisely because it needs no sentinel — two differing affinity *values* are visible in the collection whether or not either was explicitly assigned.
 
 ## Consequences
 
 ### Positive
 
-- **The opt-in is one line, and it is the same line on all four entry points.** `services.AddBrighterRequestScope();` in `Program.cs`, in any position relative to `AddBrighter` or `AddConsumers`. No middleware, no per-request call site, no ordering rule to get wrong (D1, C-10).
 - **Order-independence is structural, not tested-in.** The mechanism has no ordering to get wrong: the extension writes to the collection, the options factory reads from the container. AC-48's before-ordering clause and AC-45's four-path clause pass for the same reason.
 - **One definition of the write-through, four call sites.** `RegisterBrighterOptions` holds the knowledge once. A fifth registration path added later gets the behaviour by calling it, and a reviewer can see at a glance whether it did.
 - **The default is exactly today's behaviour.** `AlwaysNew` is the property's default and `ScopeAffinity.AlwaysNew` is `0`, so a `BrighterOptions` that nobody configured, and any options object produced by any path, adopts nothing (FR-15).
-- **Adding the package reference without calling the extension changes nothing**, and the `IHttpContextAccessor` spy records zero accesses (AC-14). The package has no module initializer, no assembly scanning hook and no auto-registration.
-- **Core gains nothing.** Every type here is in the DI package or the new ASP.NET package. NFR-1's source-level clause is untouched and NFR-2 holds by the dependency direction of the new package.
-- **The seam stays implementable off ASP.NET.** `ScopeAffinityOverride` names only `ScopeAffinity`, so an `AsyncLocal`-backed provider package for console hosts registers its provider and its override in exactly the same two lines (NFR-7).
+- **Core gains nothing.** Every type here is in the DI package. NFR-1's source-level clause is untouched.
+- **The mechanism is implementable off ASP.NET.** `ScopeAffinityOverride` names only `ScopeAffinity`, so an `AsyncLocal`-backed provider package for console hosts registers its provider and its override in exactly the same two lines (NFR-7).
 - **`Transient` and `Singleton` are untouched** under either setting (FR-21). An application that opts in and leaves the lifetimes at their `Transient` defaults gets identical behaviour to today — reported by validation, never silently corrected (D5).
 
 ### Negative
@@ -431,11 +323,9 @@ Three things make this the only implementable choice rather than a preference. `
 - **Four registration sites change, and one of them changes shape.** The ServiceActivator `Action` overload's `IBrighterOptions` registration stops being an instance and becomes a delegate. It is inert today because neither options type is `IDisposable`, but it moves the object from "the container will never dispose this" to "the container will dispose this if it ever becomes disposable". That is a latent behaviour change parked in the code for someone to trip over later.
 - **The write mutates an object the application may still hold — and on one path an object the framework owns.** On the two `Func` paths and the consumer `Action` path the application constructs the options object itself; after the host is built, its own reference reads back the extension's affinity, not the one it set. On the fourth path — `AddBrighter(Action<BrighterOptions>)` — the object written is `IOptions<BrighterOptions>.Value` (`ServiceCollectionExtensions.cs:69-75`), a singleton the options machinery owns and hands to **anyone** resolving `IOptions`, `IOptionsSnapshot` or `IOptionsMonitor`, not only to Brighter. A `PostConfigure`-style reader or a diagnostic dump there observes the application's value or the extension's depending on whether `IBrighterOptions` has been resolved yet. That is D18 working as specified on all four, and it will still surprise someone.
 - **The consumer `Action` path keeps two registrations of one object, and only one of them applies the override.** Routing `IAmConsumerOptions` through `IBrighterOptions` would unify them, and would import the `Func` overload's `InvalidCastException` onto the one consumer path that does not have it — so the asymmetry is kept deliberately. It is unobservable rather than harmless: `IAmConsumerOptions` has no affinity member, so nothing that holds only that interface can see the difference. What is genuinely paid is legibility. A reader of `:38-39` now sees two adjacent registrations of the same instance that behave differently, and the reason is in this ADR rather than at the call site; a comment at `:39` is the mitigation, and a comment is a weak one.
-- **A repeated opt-in is still a configuration error, and validation is the only thing that says so.** Both halves now resolve to the last call, so the host is at least coherent — but an application that calls the extension twice with different affinities gets one of them silently unless it calls `ValidatePipelines()` **and** runs a validation host (C-15, D14). The warning FR-17 requires costs a fifth validation rule in ADR 0074 and a fifth troubleshooting entry on the guidance page (FR-25.10).
-- **The configuration error FR-17 names is genuinely unreportable.** An application that assigns `DefaultScopeAffinity = AlwaysNew` and calls `AddBrighterRequestScope()` silently gets `JoinAmbient`. With no sentinel it is indistinguishable from the ordinary opt-in on a default host, so no validation rule can catch it without firing on every correct opt-in. The only mitigation is documentation (FR-25.11), and documentation is a weaker mitigation than a rule.
+- **A repeated opt-in is still a configuration error, and validation is the only thing that says so.** Both halves resolve to the last call, so the host is at least coherent — but an application that calls the extension twice with different affinities gets one of them silently unless it calls `ValidatePipelines()` **and** runs a validation host (C-15, D14). The warning FR-17 requires costs a rule in ADR 0074 and a troubleshooting entry on the guidance page (FR-25.10).
+- **The configuration error FR-17 names is genuinely unreportable.** An application that assigns `DefaultScopeAffinity = AlwaysNew` and calls the opt-in extension silently gets `JoinAmbient`. With no sentinel it is indistinguishable from the ordinary opt-in on a default host, so no validation rule can catch it without firing on every correct opt-in. The only mitigation is documentation (FR-25.11), and documentation is a weaker mitigation than a rule.
 - **C-15's residual gap is untouched and this ADR widens what falls into it.** An application that opts in, leaves every lifetime `Transient` and never calls `ValidatePipelines()` gets no signal at all: nothing adopts, nothing warns, and the one-line opt-in it added does nothing. Accepted, and it is the strongest argument for FR-25's decision guide.
-- **A new package is a new package.** A NuGet artefact, a build target, a release cadence and a version matrix, for three small types. That is the price of NFR-2, and NFR-2 is worth it: an ASP.NET reference in the DI package would land on every consumer host and every console producer in the ecosystem.
-- **The new package does not ship for `netstandard2.0`, and that is the first opt-in gesture Brighter has that some of its own targets cannot reach.** An application still on `netstandard2.0`, or on a target the shared framework does not serve, gets the seam (ADR 0072) but not the in-repository ambient source, and must write its own `IAmAScopeProvider` to opt in. The alternative was a dependency on the end-of-life `Microsoft.AspNetCore.Http.Abstractions` 2.2.x line, which is worse.
 
 ### Risks and Mitigations
 
@@ -445,14 +335,11 @@ Three things make this the only implementable choice rather than a preference. `
 | The extension is called before `AddBrighter` and the affinity is lost | The mechanism has no ordering: the override is a service, not a mutation of a descriptor. AC-48's second clause and AC-45's four-path clause both assert the before-ordering, and both start from a non-default affinity so a dropped argument fails them |
 | A mixed host applies the override to the losing options object | All four sites apply it, so whichever `TryAdd` wins carries it. AC-43's mixed-host configuration states which entry point registers first and which `AddConsumers` overload is used, per C-12 |
 | An application sets the affinity itself and gets the extension's value without knowing | Documented in `docs/guides/lifetimes-and-scoping.md` (FR-25.11) with the correct gesture for each of the three intents, and pinned in both directions by AC-48 so the rule cannot drift to "the more permissive value wins" |
-| The ASP.NET provider throws in a host with no `HttpContext` — a hosted service, a pump thread, startup | The provider null-checks `IHttpContextAccessor.HttpContext` and returns `null`; the pipeline then creates and owns a scope exactly as if not opted in (FR-18). AC-19 asserts zero entries at `Error` or above and exactly one latched `Warning` across two such calls |
-| A stale `HttpContext.RequestServices` reaches Brighter's resolution and throws `ObjectDisposedException` | The provider does not probe; ADR 0072's usability probe runs on the DI package's side before anything is resolved from the ambient, and a failed probe declines and creates (FR-23, AC-29). Splitting it that way keeps the provider implementable by anyone |
 | Adding a member to `IBrighterOptions` breaks a downstream implementation nobody knew about | The break is stated in `release_notes.md` with the migration — add the property, default it to `AlwaysNew` — which is a one-line change (AC-24) |
-| `AddBrighterRequestScope` is read as "Brighter request" rather than "HTTP request" | The package name says ASP.NET Core, the XML doc's first line says "ASP.NET Core's per-request DI scope", and Brighter has no competing "request scope" concept — its normative terms are *pipeline scope* and *ambient scope* (NFR-8) |
 
 ## Alternatives Considered
 
-**1. Do nothing — no opt-in property and no ASP.NET package.** ADRs 0070 and 0071 close the actual defects; ADR 0072's seam would then exist with no in-repository ambient source, usable only by an application that writes its own `IAmAScopeProvider`. **Rejected**, but it is the honest alternative and it is worth naming what it costs: FR-16's case — a Brighter handler and the controller that called it resolving the same `DbContext`, and a Darker query handler in the same action resolving it too — is the reason the specification was raised, and it is unreachable without an opt-in and an ASP.NET provider.
+**1. Do nothing — no opt-in property and no write-through.** ADRs 0070 and 0071 close the actual defects; ADR 0072's seam would then exist with no configured affinity to consult, so every pipeline would compute `AlwaysNew` and no ambient could ever be adopted. **Rejected**, but it is the honest alternative and it is worth naming what it costs: FR-16's case — a Brighter handler and the controller that called it resolving the same `DbContext`, and a Darker query handler in the same action resolving it too — is the reason the specification was raised, and it is unreachable without a way to say yes.
 
 **2. A `bool AdoptAmbientScope` instead of a `ScopeAffinity` property.** **Rejected.** Its advantage is real and is the reason C-9 left it open: at the setting site `AdoptAmbientScope = true` reads as the yes/no question the user is actually answering, where `DefaultScopeAffinity = ScopeAffinity.JoinAmbient` reads as jargon. But D13 fixes the extension's argument as a `ScopeAffinity` and D4 fixes the enum, so a `bool` gives one concept two spellings a line apart, forces the guidance page to teach the mapping, and makes the FR-22.1 error message name a setting whose spelling differs from the gesture that produced it. It also forecloses a third affinity without a breaking change.
 
@@ -466,25 +353,21 @@ Three things make this the only implementable choice rather than a preference. `
 
 **7. An ordering rule — "call the extension last".** Drop the override; require the extension to be called after the Brighter registration and have it mutate the options object directly. **Rejected by C-10, and it could not have been made to work.** Concretely, on each of the four paths: on `AddBrighter(Action<BrighterOptions>)` a `PostConfigure` genuinely does land after the application's delegate, so this path alone is satisfiable; on both `Func` paths no options object exists at registration time — it is produced at first resolution — so there is nothing to mutate when the extension runs; on `AddConsumers(Action<ConsumersOptions>)` the object exists but only as a descriptor's `ImplementationInstance`, reachable solely by descriptor archaeology, which is alternative 3. One path out of four. Beyond that, an ordering rule is a rule an application gets wrong silently — the opt-in simply does nothing — and it makes registration order semantically significant in a codebase where `TryAdd` already makes it significant in a different and unrelated way (C-12).
 
-**8. Middleware — `app.UseBrighterScope()` publishing the request scope.** **Rejected by D1 and OOS-4**, and ADR 0072 rejects the same shape on the seam's side. It adds a required call site in a place where ordering matters and is easy to get wrong; it does nothing for hosts that are not ASP.NET pipelines; and it does not remove the need for the provider, since Brighter still has to *ask* at the point a pipeline is built. It also would not touch the problem this ADR actually solves: the affinity would still have to reach `IBrighterOptions` on four registration paths, and middleware runs long after the container is built.
-
-**9. Ship the ASP.NET provider inside `Paramore.Brighter.Extensions.DependencyInjection`.** One fewer package, one fewer version to align. **Rejected by NFR-2 and D1.** It would put `Microsoft.AspNetCore.Http` on the compile closure of every host that uses Brighter's Microsoft DI integration — every consumer host, every console producer, every worker service — for a type they will never resolve. The dependency direction is fixed: the ASP.NET package depends on the DI package, never the reverse.
-
-**10. Make the registration extension an `IBrighterBuilder` extension.** It would chain naturally — `services.AddBrighter(...).AddBrighterRequestScope()` — and would match `AddProducers` and `AddControl`, which both extend `IBrighterBuilder`. **Rejected.** An `IBrighterBuilder` extension is only reachable from the value `AddBrighter` or `AddConsumers` returned, so "call the extension before the Brighter registration" becomes unexpressible — and AC-48 requires that ordering to work. It would also make the opt-in unavailable to an application that discards the builder, which is the common shape in `Program.cs`.
-
 ## References
 
-- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-8, FR-10, FR-12, FR-14, FR-15, FR-16, FR-17, FR-18, FR-19, FR-20, FR-21, FR-22, FR-23, FR-24, FR-25.11, FR-27; NFR-1, NFR-2, NFR-4, NFR-7, NFR-8; C-2, C-7, C-9, C-10, C-11, C-12, C-12a, C-15, C-18; D0b, D1, D2, D4, D5, D13, D16, D17, D18; AC-14, AC-19, AC-22, AC-24, AC-29, AC-43, AC-45, AC-48, AC-49; OOS-4
+- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-8, FR-14, FR-15, FR-16, FR-17, FR-18, FR-19, FR-20, FR-21, FR-22, FR-23, FR-25.10, FR-25.11, FR-27; NFR-1, NFR-2, NFR-4, NFR-7, NFR-8; C-2, C-9, C-10, C-12, C-12a, C-15, C-18; D0b, D1, D2, D3, D4, D5, D13, D14, D18; AC-14, AC-22, AC-24, AC-43, AC-45, AC-48, AC-49
 - Related ADRs (cited by slug — ADR numbers are not unique in this repo, C-16):
-  - `0072-ambient-scope-adoption-seam` [Proposed] — the seam this opt-in feeds: `IAmAScopeProvider`, `ScopeAffinity`, `IAmAServiceProviderScope`, `ScopeAffinityPolicy`, and the plain-`AddSingleton` provider registration model this extension must use
+  - `0073-aspnet-core-request-scope-package` [Proposed] — the first caller of this mechanism: the ASP.NET package, and the `AddBrighterRequestScope` extension whose argument this ADR carries to the options object
+  - `0072-ambient-scope-adoption-seam` [Proposed] — the seam this option feeds: `IAmAScopeProvider`, `ScopeAffinity`, `ScopeAffinityPolicy`, and the positive `JoinAmbient` test that makes an out-of-range value fail safe
+  - `0074-lifetime-validation-evaluation-site` [Proposed] — where the rules that read this option and these descriptors are evaluated
   - `0071-pipeline-scope-handle-for-handler-pipelines` [Proposed] — handler pipelines reach their DI scope through the same handle, which is why one option governs both pipeline kinds (D2)
-  - `0070-per-pipeline-di-scope-for-mapper-and-transform-factories` [Proposed] — the transform pipeline's single DI scope and `IAmAScope`
-  - `0014-di-friendly-framework` [Accepted] — per-family factory interfaces rather than an IoC container abstraction; why the ASP.NET provider is a package and not a core concept
+  - `0070-per-pipeline-di-scope-for-mapper-and-transform-factories` [Proposed] — the transform pipeline's single DI scope, and the release-note entry this ADR's interface break joins
+  - `0075-publish-subscriber-scope-suppression` [Proposed] — why a mechanism another package must be able to use is public rather than `InternalsVisibleTo`
+  - `0014-di-friendly-framework` [Accepted] — per-family factory interfaces rather than an IoC container abstraction
   - `0067-per-resolution-di-scope-for-transient-factory-instances` [Accepted] — `IsolateTransientHandlerScope` and the `Transient` per-resolution scope this option does not interact with; its `Terms` block defines the two lifetime axes used here
   - `0053-pipeline-validation-at-startup` [Accepted] and `0064-validate-pipeline-assembly-and-provider-registration` [Accepted] — the `ValidatePipelines()` machinery that ADR 0074 will read this option from
   - `0033-lifetime-of-command-processor-and-mediator` [Proposed] — the `CommandProcessor` is a singleton; not reopened
 - External references:
   - [Options pattern in .NET](https://learn.microsoft.com/en-us/dotnet/core/extensions/options) — `Configure`, `PostConfigure` and the closed-generic keying that rules out alternative 4
   - [Dependency injection in .NET — service disposal](https://learn.microsoft.com/en-us/dotnet/core/extensions/dependency-injection#disposal-of-services) — why an instance registration and a factory registration differ on disposal
-  - [`IHttpContextAccessor` and `AddHttpContextAccessor`](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/http-context) — the ASP.NET ambient source and its `AsyncLocal` backing
-  - Wirfs-Brock & McKean, *Object Design: Roles, Responsibilities, and Collaborations* — the role/stereotype vocabulary separating the affinity override (knowing) from the ambient source (deciding) and the options registration (doing)
+  - Wirfs-Brock & McKean, *Object Design: Roles, Responsibilities, and Collaborations* — the role/stereotype vocabulary separating the affinity override (knowing) from the options registration (doing)

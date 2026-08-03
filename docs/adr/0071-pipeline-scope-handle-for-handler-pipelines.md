@@ -27,22 +27,23 @@ ADR 0070 gave a transform pipeline one DI scope, carried as an `IAmAScope` handl
 
 **Parent Requirement**: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md)
 
-**Scope**: This ADR decides one thing — **a handler pipeline obtains and releases its DI scope through the same `IAmAScope` handle as a transform pipeline**. It is **behaviour-preserving**: it discharges no new requirement and changes nothing an application can observe. It exists to protect FR-7 while removing the divergence, and to give ADRs 0072 and 0073 one seam to build on instead of two.
+**Scope**: This ADR decides one thing — **a handler pipeline obtains and releases its DI scope through the same `IAmAScope` handle as a transform pipeline**. It is **behaviour-preserving**: it discharges no new requirement and changes nothing an application can observe. It exists to protect FR-7 while removing the divergence, and to give ADR 0072 and the ADRs after it one seam to build on instead of two.
 
-It does **not** decide the *ambient* concept, `IAmAScopeProvider`, `ScopeAffinity`, adoption or borrowing, ASP.NET, the opt-in option on `IBrighterOptions`, `Publish`-subscriber ambient suppression, or the `ValidatePipelines()` rules of FR-22. Each is deferred, and to a different sibling: adoption is ADR 0072's, the opt-in is 0073's, FR-22's rules are 0074's, and suppression is 0075's. It does not change **when** a handler pipeline has a DI scope, **which** lifetimes get one, or **when** it is released. `PipelineBuilder<TRequest>`'s eager per-subscriber resolution and its end-of-publish release stay exactly as they are (D10), and ADR 0039's DI scope per registered subscriber is preserved unchanged.
+It does **not** decide the *ambient* concept, `IAmAScopeProvider`, `ScopeAffinity`, adoption or borrowing, ASP.NET, the opt-in option on `IBrighterOptions`, `Publish`-subscriber ambient suppression, or the `ValidatePipelines()` rules of FR-22. Each is deferred, and to a different sibling: adoption is ADR 0072's, ASP.NET is 0073's, FR-22's rules are 0074's, suppression is 0075's, and the opt-in option is 0076's. It does not change **when** a handler pipeline has a DI scope, **which** lifetimes get one, or **when** it is released. `PipelineBuilder<TRequest>`'s eager per-subscriber resolution and its end-of-publish release stay exactly as they are (D10), and ADR 0039's DI scope per registered subscriber is preserved unchanged.
 
 ### Where this ADR sits
 
-Six ADRs deliver the parent requirement, one decision each. This is the second, and the only one that delivers no behaviour.
+Seven ADRs deliver the parent requirement, one decision each. This is the second, and the only one that delivers no behaviour.
 
 | ADR | Decides |
 | --- | --- |
 | 0070 | a transform pipeline takes one DI scope, carried **as a parameter** |
 | **0071** *(this one)* | handler pipelines converge onto the **same handle**, carried on the object they already pass |
 | 0072 | how a pipeline discovers an **ambient** DI scope the host owns |
-| 0073 | the **opt-in** property, the ASP.NET package, and how that setting reaches all four registration paths |
-| 0074 | **where** the lifetime and captive-dependency rules are evaluated |
+| 0073 | the **ASP.NET Core package**, and the one line an application writes to opt in |
+| 0074 | **where** the six scope-configuration rules are evaluated |
 | 0075 | how a `Publish` subscriber **suppresses** adoption, for itself and everything nested beneath it |
+| 0076 | the **affinity option**, and how one setting reaches all four registration paths in any order |
 
 ADR 0070's rule is the one this ADR applies: **the per-pipeline object carries the DI scope.** The two families differ only in *which* object plays that part. A transform `Create(Type)` has no per-pipeline object, so 0070 had to add a parameter; a handler `Create(Type, IAmALifetime)` already receives one, so here the scope rides on it and no signature changes at all.
 

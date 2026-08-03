@@ -31,20 +31,21 @@ A transform pipeline is a message mapper plus the `[WrapWith]`/`[UnwrapWith]` tr
 
 It introduces `IAmAScope` as the core scope handle, settling the disposal half of C-8 and confirming the seam types' home. It also serves **FR-27.1** — the scope-creation protocol below is what makes "a pipeline takes a pipeline scope when at least one participating factory is `Scoped`" true of a transform pipeline.
 
-It does **not** decide `IAmAScopeProvider`, the *ambient* concept, `ScopeAffinity`, adoption or borrowing, ASP.NET (`IHttpContextAccessor`), the opt-in option on `IBrighterOptions`, `Publish`-subscriber ambient suppression, FR-27.2's affinity computation, or the `ValidatePipelines()` rules of FR-22. Each is deferred, and to a different sibling: the ambient concept, adoption and FR-27.2 are ADR 0072's, the opt-in is 0073's, FR-22's rules are 0074's, and `Publish`-subscriber suppression is 0075's. Nor does it converge handler pipelines onto this mechanism — that is ADR 0071. This ADR is written so as not to foreclose any of them.
+It does **not** decide `IAmAScopeProvider`, the *ambient* concept, `ScopeAffinity`, adoption or borrowing, ASP.NET (`IHttpContextAccessor`), the opt-in option on `IBrighterOptions`, `Publish`-subscriber ambient suppression, FR-27.2's affinity computation, or the `ValidatePipelines()` rules of FR-22. Each is deferred, and to a different sibling: the ambient concept, adoption and FR-27.2 are ADR 0072's, ASP.NET is 0073's, FR-22's rules are 0074's, `Publish`-subscriber suppression is 0075's, and the opt-in option is 0076's. Nor does it converge handler pipelines onto this mechanism — that is ADR 0071. This ADR is written so as not to foreclose any of them.
 
 ### Where this ADR sits
 
-Six ADRs deliver the parent requirement, one decision each. They are meant to be read in order; this is the first.
+Seven ADRs deliver the parent requirement, one decision each. They are meant to be read in order; this is the first.
 
 | ADR | Decides |
 | --- | --- |
 | **0070** *(this one)* | a transform pipeline takes one DI scope, carried **as a parameter** |
 | 0071 | handler pipelines converge onto the **same handle**, carried on the object they already pass |
 | 0072 | how a pipeline discovers an **ambient** DI scope the host owns |
-| 0073 | the **opt-in** property, the ASP.NET package, and how that setting reaches all four registration paths |
-| 0074 | **where** the lifetime and captive-dependency rules are evaluated |
+| 0073 | the **ASP.NET Core package**, and the one line an application writes to opt in |
+| 0074 | **where** the six scope-configuration rules are evaluated |
 | 0075 | how a `Publish` subscriber **suppresses** adoption, for itself and everything nested beneath it |
+| 0076 | the **affinity option**, and how one setting reaches all four registration paths in any order |
 
 One rule unifies the first two, and it is the sentence to carry into the rest: **the per-pipeline object carries the DI scope.** For a transform pipeline that object is the `TransformPipeline<TRequest>`, and the scope arrives as a parameter, because `Create(Type)` has no per-pipeline object to hang it on. For a handler pipeline (ADR 0071) it is the `IAmALifetime`, which every resolution site already receives, so the scope rides on it.
 
@@ -358,7 +359,7 @@ Both name the request type. Both live beside the existing `Log` members in the t
 
 All three of `HandlerLifetime`, `MapperLifetime` and `TransformerLifetime` still default to `Transient` (`BrighterOptions.cs:20`, `:52`, `:69`), so an application that changes nothing sees no behavioural change from this ADR.
 
-**7a. What `release_notes.md` records.** Two breaks land in one entry, and this ADR is where both originate, so both are named here rather than left to be noticed. First, the **behavioural** break: `MapperLifetime.Scoped` stops meaning "one instance for the process" and starts meaning "one instance per pipeline" — an application relying, knowingly or not, on the cached instance changes behaviour with no compile error to warn it (FR-20). Second, the **source and binary** break on the six factory and registry interfaces, naming each and stating the migration in step 2's terms (NFR-1(c), AC-24). ADR 0073 adds the `IBrighterOptions` member and ADR 0074 C-18's compatibility note; all four belong in the same release-note section, so a reader upgrading sees one list rather than four unrelated ones. No ADR numbers them — the order they are written in is not a fact about the release.
+**7a. What `release_notes.md` records.** Two breaks land in one entry, and this ADR is where both originate, so both are named here rather than left to be noticed. First, the **behavioural** break: `MapperLifetime.Scoped` stops meaning "one instance for the process" and starts meaning "one instance per pipeline" — an application relying, knowingly or not, on the cached instance changes behaviour with no compile error to warn it (FR-20). Second, the **source and binary** break on the six factory and registry interfaces, naming each and stating the migration in step 2's terms (NFR-1(c), AC-24). ADR 0076 adds the `IBrighterOptions` member and ADR 0074 C-18's compatibility note; all four belong in the same release-note section, so a reader upgrading sees one list rather than four unrelated ones. No ADR numbers them — the order they are written in is not a fact about the release.
 
 **8. Both sides, both builders.** FR-4 requires the producer side to behave as the consumer does. The producer's wrap pipeline is built and released per `Post`/`DepositPost` in `OutboxProducerMediator` — sync at `:1248` with `ReleasePipeline` at `:1258`, async at `:1312` with `ReleasePipelineAsync` at `:1321` — and the consumer's unwrap pipeline is built and released per message in `Reactor.TranslateMessage` (build `:531`) and `Proactor.TranslateMessage` (build `:538`), each releasing in its `finally`. `OutboxProducerMediator` also builds unwrap pipelines at `:569` and `:587`. Because the scope is created inside the builder and released by the pipeline's disposal, **every one of these six call sites is correct without being touched**, which is also what keeps C-2 intact.
 
