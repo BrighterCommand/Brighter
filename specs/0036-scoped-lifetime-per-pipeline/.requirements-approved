@@ -1,26 +1,37 @@
-Approved: revision 17, 2026-08-03, at 9bc2c1964 (27 FRs / 10 NFRs / 50 ACs / 122 normative bullets).
+Approved: revision 18, 2026-08-04 (27 FRs / 10 NFRs / 50 ACs / 122 normative bullets).
 
-Revisions 16 and 17 were made during the design phase, in response to round 2 of the design review.
-Revision 16 carried design decision 2 (the AddBrighterAspNetCoreScopes -> AddBrighterRequestScope
-rename, alignment) and design decision 4 (FR-22.4, an Error for an opt-in defeated by an
-application's own IBrighterOptions registration — new scope, and therefore a new AC, AC-50).
+Revision 18 was made during the design phase, in response to round 4 of the design review, and
+carries design decision 3 of that round. It is ALIGNMENT, not new scope, and was approved without
+an independent requirements review round under the requirement owner's standing rule.
 
-Because revision 16 was more than alignment, it had its own review round, per the requirement
-owner's standing rule. That round returned 11 findings, 9 at or above threshold 60, none Critical
-(review-requirements.md). It confirmed that every codebase claim in the new material holds against
-source, and that the rename was complete and correct. Revision 17 closes all nine, plus two
-below-threshold items rule 4 itself caused.
+What it changed: FR-23 asserted, as the cause of the condition it exists to handle, that because
+IHttpContextAccessor is AsyncLocal-backed an HttpContext flows into work that outlives the response
+and leaves HttpContext.RequestServices non-null over a disposed scope. A round-4 reviewer compiled
+and ran an ASP.NET probe and disproved it: the built-in HttpContextAccessor holds its AsyncLocal
+over a SHARED HOLDER OBJECT and clears that holder at end of request, so an already-captured flow
+sees a null HttpContext. The deferred-work case is therefore FR-24.2 (no ambient offered), which
+AC-29 expressly forbids - so AC-29 was unsatisfiable by a correct implementation, and it is the AC
+the design's usability probe is justified by.
 
-One owner decision was taken in that round: FR-22.4 covers BOTH registration orderings. An
-application IBrighterOptions registered before Brighter wins the TryAddSingleton; one registered
-after wins resolution as the last descriptor. Either way the object the factories read is not
-Brighter's and the affinity override is never applied. Consequence, carried into FR-22.4: detecting
-the defeat at the point Brighter's own TryAddSingleton finds the service already present sees only
-the before ordering and is not on its own sufficient — this widens what the design's sixth
-scope-configuration rule must evaluate.
+FR-23's rule, its Warning, its once-per-Brighter-container-per-provider-implementation-type latch
+(D19), and its evaluation order relative to FR-24.4 and FR-24.2 are ALL UNCHANGED. Only the
+population it applies to is stated correctly: a provider that CAPTURES a resolution source rather
+than reading it afresh on every ask - an AsyncLocal-backed provider for non-ASP.NET hosts (NFR-7,
+AC-35), one that stores HttpContext.RequestServices at construction, or a custom accessor that does
+not clear itself. FR-23 now names that population and states in a parenthesis that the built-in
+accessor is NOT in it. FR-23's example and AC-29's Given are re-sited onto that shape; AC-29's
+Then, its count, its latch clause and its second-Send branch are untouched.
 
-Approved without a further review round: the nine findings closed cleanly, none was Critical, and
-the substantive rewrites (AC-50, FR-22.4) were verified against source and against the document's
-own conventions for error-rule Acceptance Criteria.
+Why no review round: the standing rule is that alignment needs none and an amendment that is more
+than alignment gets one. This adds no rule, no AC and no scope; it removes a false codebase claim
+and repoints one example and one Given at a scenario that can actually arise. Counts unchanged at
+27/10/50. The empirical basis is recorded in review-design.md (reviewer 0072, finding 1, score 85)
+and in PROMPT.md section 17.6.
 
-This supersedes the revision-15 approval, which this file recorded.
+This supersedes the revision-17 approval, which this file recorded. Revisions 16 and 17 were made
+in response to round 2 of the design review: revision 16 carried the AddBrighterAspNetCoreScopes ->
+AddBrighterRequestScope rename (alignment) and FR-22.4 with its new AC-50 (new scope, and so it had
+its own review round - 11 findings, 9 at or above threshold, none Critical); revision 17 closed
+those nine plus two below-threshold items. That round's owner decision - FR-22.4 covers BOTH
+registration orderings, so a TryAddSingleton-time-only detector is not sufficient - still stands and
+is carried in FR-22.4 and in the design's sixth scope-configuration rule.
