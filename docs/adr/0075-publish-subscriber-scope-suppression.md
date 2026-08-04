@@ -23,7 +23,7 @@ Proposed
 
 ## Context
 
-ADR 0039 gives every `Publish` subscriber its own DI scope, so one subscriber's dependencies are never another's. ADR 0072 lets a pipeline adopt a DI scope the host already owns, which — left unqualified — would put every subscriber of a publish back into the caller's single scope and undo that isolation entirely.
+ADR 0039 (`0039-scoping-dependencies-inline-with-lifetime-scope` — four ADRs carry that number, C-16) gives every `Publish` subscriber its own DI scope, so one subscriber's dependencies are never another's. ADR 0072 lets a pipeline adopt a DI scope the host already owns, which — left unqualified — would put every subscriber of a publish back into the caller's single scope and undo that isolation entirely.
 
 FR-8 requires subscribers to stay isolated whatever the affinity says. What neither sibling decided is **how a subscriber turns adoption off** — not only for its own pipeline, but for the pipelines its handler creates at dispatch time, which Brighter never sees.
 
@@ -75,7 +75,7 @@ Two consequences fall straight out of the table, and together they fix the whole
 - **FR-27.3 forecloses the obvious home.** A subscriber whose pipeline has no `Scoped` participant takes no pipeline scope at all and therefore never asks the ambient source — yet it must still suppress, because a pipeline nested inside it may be `Scoped` (AC-47). Suppression cannot be an argument to, or a return value of, the ambient query.
 - **The pipeline that must be suppressed is one core did not build and holds no reference to.** A nested `Send`, `Post` or `Publish` issued from inside a subscriber's `Handle`/`HandleAsync` goes through the singleton `IAmACommandProcessor` (ADR 0033) from user code. There is no argument path from the subscriber's bracket to that pipeline's scope acquisition.
 - **`Publish` runs its subscribers concurrently, and the two paths differ.** `PublishAsync` starts every subscriber on the caller's flow and awaits them together; the synchronous `Publish` dispatches through `Parallel.ForEach` (`CommandProcessor.cs:481`), which captures and restores `ExecutionContext` per **worker task** rather than per body invocation — so one worker running a range of subscribers carries an `AsyncLocal` write from one body into the next. The mechanism has to be correct under both.
-- **Both builds are eager and per subscriber, on the caller's own thread.** `PipelineBuilder` resolves each subscriber's handler and every decorator inside a per-subscriber lambda (`PipelineBuilder.cs:187-198`), so there is a place inside the loop where a bracket can sit — and a bracket around the loop would give every subscriber one shared scope, which is ADR 0039 undone.
+- **Both builds are eager and per subscriber, on the caller's own thread.** `PipelineBuilder` resolves each subscriber's handler and every decorator inside a per-subscriber lambda (`PipelineBuilder.cs:187-198`), so there is a place inside the loop where a bracket can sit — and FR-9(a) requires it to sit there, around **each subscriber's own iteration**, rather than around the loop as a whole.
 - **A container package Brighter does not ship must be able to honour FR-8** (NFR-7). Per-subscriber isolation cannot be a privilege of Microsoft's container: whatever carries suppression has to be readable from an assembly Brighter has never heard of.
 - **NFR-4 — nothing may be left on the caller's flow.** Once either publish returns, a `Send` or a `Post` the caller issues next must adopt exactly as it would have before the publish.
 - **ADR 0039 is the decision being protected, not reopened** (D0c). Suppression exists so that adoption cannot quietly repeal a scoping decision taken three ADRs earlier.
@@ -90,7 +90,7 @@ The flag carries one bit along a logical flow, and it is read at exactly one pla
 
 ```mermaid
 sequenceDiagram
-    participant CP as CommandProcessor.Publish
+    participant CP as CommandProcessor.Publish / PublishAsync
     participant PB as PipelineBuilder
     participant Sub as one subscriber's handler
     participant Nested as a pipeline the handler creates
@@ -102,21 +102,31 @@ sequenceDiagram
         PB->>PB: restore, explicitly
     end
 
-    Note over CP,Nested: bracket 2 — EXECUTION time,<br/>per subscriber, around its own invocation
-    loop for each subscriber
+    Note over CP,Nested: bracket 2 — EXECUTION time,<br/>per subscriber, around its own invocation.<br/>The two twins restore at different moments
+    alt synchronous Publish, inside Parallel.ForEach
         CP->>CP: Suppress()
-        CP->>Sub: Handle or HandleAsync
+        CP->>Sub: Handle
         Sub->>Nested: Send, Post or Publish on the singleton CommandProcessor
         Nested->>Nested: reads IsSuppressed, so creates and owns its own scope
+        Sub-->>CP: returns
         CP->>CP: restore, explicitly
+    else asynchronous PublishAsync, inside the start loop
+        CP->>CP: Suppress()
+        CP->>Sub: HandleAsync — the invocation only
+        Sub-->>CP: a running Task, added to tasks
+        CP->>CP: restore, explicitly — the caller's flow, not the task's
+        Note over CP,Nested: the task carries the captured ExecutionContext,<br/>so everything nested beneath it stays suppressed
+        Sub->>Nested: Send, Post or Publish, on the branched flow
+        Nested->>Nested: reads IsSuppressed, so creates and owns its own scope
     end
+    CP->>CP: await Task.WhenAll(tasks) — never bracketed
 ```
 
-Three invariants are readable off the diagram, and each is load-bearing.
+Two invariants are readable off the diagram, and a third is a rule about placement that the diagram shows the *consequence* of rather than the rule itself. Each is load-bearing.
 
 **Neither bracket substitutes for the other.** Bracket 1 alone leaves a nested pipeline free to adopt. Bracket 2 alone is too late — every subscriber's handler has already been resolved from the caller's unsuppressed ambient before any of them runs, which is what AC-11 and AC-12 fail on.
 
-**Neither is ever placed around the whole loop**, which would give every subscriber one shared scope and undo ADR 0039 — the decision this ADR exists to protect.
+**Neither is ever placed around the whole loop.** Not because a loop-level bracket would share a scope — it would not; `GetSyncInstanceScope()` runs once per iteration and suppression is one bit that has no bearing on how many scopes are created — but because a bracket whose extent is the whole loop no longer has the extent of the unit FR-9(a) is written over, and because it is the placement that *invites* a later reader to give the loop one scope, which would undo ADR 0039. *Technology Choices* and Alternative 5 make the same argument at length.
 
 **The restores are explicit**, on both brackets and on both publish paths, rather than inherited from `ExecutionContext`. *Implementation Approach* step 5 says why that is a statement about the code rather than a hope about `Parallel.ForEach`.
 
@@ -124,12 +134,14 @@ Where this meets adoption is one line. ADR 0072's protocol computes a pipeline's
 
 > `affinity = AmbientScopeSuppression.IsSuppressed ? AlwaysNew : the policy over the whole participating set`
 
+`AlwaysNew` is the `ScopeAffinity` value ADR 0072 defines, meaning *do not adopt an ambient; create and own a scope*; the policy that computes the other case is 0072's too, and the five container-backed factories that read it are the mapper, transformer and handler factories in `Paramore.Brighter.Extensions.DependencyInjection` (0072 names them individually).
+
 A suppressed pipeline therefore takes the path it would have taken with no provider registered at all: it creates and owns its own DI scope, exactly as today. Suppression adds no outcome to the ladder — it selects one that already exists.
 
 ### Where the pieces live
 
 ```mermaid
-flowchart TB
+flowchart LR
     subgraph core["Paramore.Brighter — core, names no container type"]
         suppress["AmbientScopeSuppression — NEW, public static<br/>IsSuppressed and Suppress()"]
         pb["PipelineBuilder — NEW ctor arg isolateSubscribers<br/>bracket 1, inside the per-subscriber lambda"]
@@ -159,12 +171,12 @@ The flag is the only thing that crosses the assembly boundary, in one direction,
 
 | Role | Type | Stereotype | Responsibility |
 | --- | --- | --- | --- |
-| Suppression state | `AmbientScopeSuppression` (core) | **knowing**, with a bracketing verb | Carries one bit along a logical flow: *no pipeline created on this flow may adopt an ambient scope* |
+| Suppression state | `AmbientScopeSuppression` (core) | **knowing** | Carries one bit along a logical flow — *no pipeline created on this flow may adopt an ambient scope* — and hands out the bracket that sets and restores it |
 | Resolution-time bracket | `PipelineBuilder<TRequest>` (core) | **doing** | Establishes and restores suppression around each subscriber's own artefact resolution, inside the build loop |
 | Execution-time bracket | `CommandProcessor.Publish` / `PublishAsync` (core) | **doing** | Establishes and restores suppression around each subscriber's own `Handle`/`HandleAsync`, so pipelines that subscriber creates at dispatch are covered |
 | Suppression reader | the five container-backed factories (DI package) | **deciding** | Read the flag at the one point a pipeline's affinity is computed, and take the created-and-owned path when it is set |
 
-`AmbientScopeSuppression` is deliberately **not** a role — it is a static holder, not an interface anyone is handed. That is a decision rather than an omission: an injected role would have to reach the same two dispatch methods and the same builder, none of which is resolved from a container, and it would not be readable by the third-party container package NFR-7 requires. The cost of the shape is under *Technology Choices* and again under *Consequences*.
+`AmbientScopeSuppression` is deliberately **not an injected** role — it is a static holder, not an interface anyone is handed. That is a decision rather than an omission: an injected role would have to reach the same two dispatch methods and the same builder, none of which is resolved from a container, and it would not be readable by the third-party container package NFR-7 requires. The cost of the shape is under *Technology Choices* and again under *Consequences*.
 
 #### `AmbientScopeSuppression` — where suppression hangs (new, core, public, static)
 
@@ -191,6 +203,7 @@ namespace Paramore.Brighter
 | Member | Input | Output | Error conditions |
 | --- | --- | --- | --- |
 | `IsSuppressed` | none | `true` when a suppression bracket is in force on this flow | Cannot throw. A reader outside any bracket sees `false` |
+| the bracket's `Dispose()`, **on the flow that took it** | none | the value captured when the bracket was taken is restored on **this** flow | The bracket must be disposed on the logical flow that created it. Disposing it on another — the likeliest misuse of a public mutator, and exactly the shape of the "background job started from a request whose `HttpContext` still flows" case *Technology Choices* offers — writes the captured value into the *disposing* flow and leaves the originating flow suppressed for its remaining lifetime. **The implementation does not detect it**: an `AsyncLocal<bool>` cannot tell the two flows apart, and a detector would cost every bracket a flow identity to serve a caller error Brighter's own brackets, being lexical, cannot make |
 | `Suppress()` | none | a bracket that restores the value it captured when disposed, so lexically nested brackets nest correctly | Cannot throw. Disposing a bracket twice is a no-op. Disposing brackets **out of order** restores the outer bracket's captured value while an inner one is still live, which can clear suppression early; Brighter's own brackets are lexical and always disposed innermost-first, so this is reachable only from a caller of the public mutator. Failing to dispose leaves the flow suppressed for the rest of its life |
 
 Backed by `AsyncLocal<bool>`. Core writes it; the container package reads it. It is **public for both read and write**, deliberately, and the cost is recorded in *Consequences*.
@@ -272,7 +285,7 @@ The conclusion is that the restore must be explicit rather than inherited from `
 | --- | --- |
 | Suppression leaks past `Publish` and a later `Send` or `Post` in the same request silently fails to adopt | Both brackets restore explicitly on every exit path — normal return, exception, cancellation — rather than relying on `ExecutionContext`. AC-12 and AC-39 each assert a `Send` **and** a `Post` from the controller after the publish resolving from the request scope; those are the clauses that can actually fail |
 | A subscriber's handler is resolved before suppression is established, so it adopts the caller's ambient | The resolution-time bracket is inside the per-subscriber lambda in both build loops, around the `Create` and the decorator resolution — not around the loop, and not at dispatch. AC-11 and AC-12 fail on an execution-time bracket alone, by construction |
-| The two brackets drift apart as the publish paths change | They are specified against the same unit — one subscriber — and both are asserted by the same criteria. AC-47's two branches exercise a subscriber that takes a pipeline scope and one that does not, so a bracket removed from either path fails a test rather than degrading quietly |
+| The two brackets drift apart as the publish paths change | They are specified against the same unit — one subscriber — and both are asserted by the same criteria. The two are covered by different criteria and both are pinned: bracket 1 by **AC-11**, whose closing note says in terms that it fails unless FR-9's resolution-time bracket is implemented and that an execution-time bracket alone cannot make it pass; bracket 2 by **AC-12** and **AC-39**, and by **AC-47's second branch**, where the subscriber takes no pipeline scope at all so suppression can only come from the execution-time bracket. A bracket removed from either path fails a test rather than degrading quietly |
 | A third-party container package ignores the flag and adopts anyway | Nothing prevents it, and the ADR says so. The flag is a contract a package honours, not a gate Brighter enforces — the same trade NFR-7 makes everywhere else in this design |
 | An application takes a bracket of its own and never disposes it | Adoption stops for that flow and the application silently gets today's behaviour. Documented under FR-25, and the direction is toward isolation rather than sharing |
 
@@ -286,11 +299,11 @@ The conclusion is that the restore must be explicit rather than inherited from `
 
 **4. Reuse `RequestContext` to carry suppression.** `RequestContext.Bag` (`RequestContext.cs:61`) already carries application state across the pipeline, so a subscriber could set a key in its own copy. **Rejected — it cannot reach.** The pipelines suppression must reach are those a subscriber's handler creates by calling `Send`, `Post` or `Publish` on the singleton `CommandProcessor`, and those calls take an *optional* `RequestContext` that user code is under no obligation to pass — where it is omitted, `InitRequestContext` makes a fresh one. Suppression would then hold only for handlers that happened to forward the context, making FR-8 a documentation request rather than an invariant. `PipelineBuilder` also copies the context per subscriber, so the resolution-time bracket would be reasoning about which copy it is writing to. `RequestContext` carries application state along a request; suppression is a property of the flow, and the flow is what `AsyncLocal` names.
 
-**5. One bracket around the whole build loop, and one around the whole dispatch.** Two brackets instead of two per subscriber, and much less code. **Rejected on both halves.** Around the build loop it is *behaviourally* adequate — every subscriber resolves suppressed either way — but it is the placement that invites giving the whole loop one pipeline scope, which is ADR 0039 undone, and it no longer has the extent of the unit FR-8 is written over. Around the dispatch it is wrong outright on the async path: a bracket around `Task.WhenAll` (`CommandProcessor.cs:601`) is established *after* every handler's synchronous prefix has already run, and leaves the caller's own flow suppressed for the duration of the publish, which is what AC-12's final clause detects.
+**5. One bracket around the whole build loop, and one around the whole dispatch.** Two brackets instead of two per subscriber, and much less code. **Rejected on both halves.** Around the build loop it is *behaviourally* adequate — every subscriber resolves suppressed either way — and it is **rejected outright by FR-9(a)**, which requires suppression to be established around *each subscriber's own iteration* of the build. That settles it; the reasons behind the requirement are what is worth keeping in mind — the bracket's extent stops matching the unit FR-8 is written over, and it is the placement that invites giving the whole loop one pipeline scope, which is ADR 0039 undone. Around the dispatch it is wrong outright on the async path: a bracket around `Task.WhenAll` (`CommandProcessor.cs:601`) is established *after* every handler's synchronous prefix has already run, and leaves the caller's own flow suppressed for the duration of the publish, which is what AC-12's final clause detects.
 
 ## References
 
-- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-8, FR-9, FR-25.5, FR-27.1, FR-27.3, NFR-4, NFR-7, NFR-8, C-2, C-4, C-5, C-13, D0b, D0c, D6, D10, D16, OOS-14
+- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-5, FR-8, FR-9, FR-25 (clause .5), FR-27.1, FR-27.3, NFR-4, NFR-7, NFR-8, C-2, C-4, C-5, C-16, D0b, D0c, D6, D10, OOS-14; AC-10, AC-11, AC-12, AC-22.3, AC-24, AC-39, AC-47
 - Related ADRs (cited by slug — ADR numbers are not unique in this repo, C-16):
   - `0072-ambient-scope-adoption-seam` [Proposed] — how a pipeline discovers and adopts an ambient DI scope. Its affinity computation is the one line this ADR's flag is read at, and its ladder is unchanged by suppression
   - `0070-per-pipeline-di-scope-for-mapper-and-transform-factories` [Proposed] — the transform pipeline takes one DI scope, carried as a parameter; it removed all per-flow state from the design, and *Technology Choices* says why this ADR puts one bit back
