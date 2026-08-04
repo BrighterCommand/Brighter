@@ -305,7 +305,7 @@ The conclusion is that the restore must be explicit rather than inherited from `
 
 ## References
 
-- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-5, FR-8, FR-9, FR-24.4, FR-25 (clause .5), FR-27.1, FR-27.2, FR-27.3, NFR-4, NFR-7, NFR-8, C-2, C-4, C-5, C-16, D0b, D0c, D6, D10, D16, OOS-14; AC-10, AC-11, AC-12, AC-13, AC-22.3, AC-24, AC-39, AC-46, AC-47
+- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-5, FR-8, FR-9, FR-24.4, FR-25 (clause .5), FR-27.1, FR-27.2, FR-27.3, NFR-4, NFR-7, NFR-8, C-2, C-4, C-5, C-16, D0b, D0c, D6, D10, D16, OOS-14; AC-10, AC-11, AC-12, AC-13, AC-22.3, AC-24, AC-36, AC-39, AC-46, AC-47
 - Related ADRs (cited by slug — ADR numbers are not unique in this repo, C-16):
   - `0072-ambient-scope-adoption-seam` [Proposed] — how a pipeline discovers and adopts an ambient DI scope. Its affinity computation is the one line this ADR's flag is read at, and its ladder is unchanged by suppression
   - `0070-per-pipeline-di-scope-for-mapper-and-transform-factories` [Proposed] — the transform pipeline takes one DI scope, carried as a parameter; it removed all per-flow state from the design, and *Technology Choices* says why this ADR puts one bit back
