@@ -5,7 +5,7 @@ status: Proposed
 author:
   - "Ian Cooper"
 created: 2026-08-03
-summary: "Adds ScopeAffinity DefaultScopeAffinity to IBrighterOptions and BrighterOptions defaulting to AlwaysNew, and makes an opt-in extension's affinity argument reach the resolved IBrighterOptions on all four registration paths in any registration order — not by writing to the options object, which does not exist yet on two of them, but by registering an immutable ScopeAffinityOverride that Brighter's own IBrighterOptions factory delegate reads and applies from inside, through a single RegisterBrighterOptions definition every one of the four registration sites calls. An application that registers IBrighterOptions itself — before Brighter, winning the TryAdd, or after, winning resolution as the last descriptor — defeats the write-through in every ordering; that limit cannot be removed and is instead reported as an error by ADR 0074's FR-22.4 rule, for which RegisterBrighterOptions records which IBrighterOptions descriptor is Brighter's own."
+summary: "Adds ScopeAffinity DefaultScopeAffinity to IBrighterOptions and BrighterOptions defaulting to AlwaysNew, and makes an opt-in extension's affinity argument reach the resolved IBrighterOptions on all four registration paths in any registration order — not by writing to the options object, which does not exist yet on two of them, but by registering an immutable ScopeAffinityOverride that Brighter's own IBrighterOptions factory delegate reads and applies from inside, through a single RegisterBrighterOptions definition called from BrighterHandlerBuilder, the one method every registration path already funnels through, so a path that omits the write-through cannot be a Brighter host. An application that registers IBrighterOptions itself — before Brighter, winning the TryAdd, or after, winning resolution as the last descriptor — defeats the write-through in every ordering; that limit cannot be removed and is instead reported as an error by ADR 0074's FR-22.4 rule, for which RegisterBrighterOptions records which IBrighterOptions descriptor is Brighter's own."
 tags:
   - "di"
   - "lifetime"
@@ -139,7 +139,7 @@ flowchart TB
     subgraph di["Paramore.Brighter.Extensions.DependencyInjection"]
         opt["IBrighterOptions.DefaultScopeAffinity — NEW<br/>BrighterOptions.DefaultScopeAffinity = AlwaysNew — NEW"]
         ovr["ScopeAffinityOverride — NEW<br/>immutable, carries one ScopeAffinity"]
-        reg["RegisterBrighterOptions — NEW, public static, not an extension method<br/>the single definition of the write-through, called from all four sites"]
+        reg["RegisterBrighterOptions — NEW, private static<br/>the single definition of the write-through, called once,<br/>from the BrighterHandlerBuilder every path funnels through"]
         rec["BrighterOptionsRegistration — NEW, internal<br/>names the IBrighterOptions descriptor this package added,<br/>so ADR 0074's FR-22.4 rule can tell it from the application's"]
         reg --> opt
         reg --> ovr
@@ -165,7 +165,7 @@ The dependency direction is fixed and is the whole of NFR-2: an opt-in package d
 | --- | --- | --- | --- |
 | The affinity override | `ScopeAffinityOverride` (DI package) | **knowing** (information holder) | Carries one value — the affinity the opt-in gesture selected. It decides nothing and does nothing; it exists so the value has a type and a place to sit in the collection |
 | The options object | `BrighterOptions` / `ConsumersOptions` behind `IBrighterOptions` | **knowing** | The single object every reader takes configuration from: the five factories, `ScopeAffinityPolicy` (ADR 0072), and validation (ADR 0074) |
-| The options registration | `RegisterBrighterOptions` (DI package) | **doing** | Produces the options object each path supplies and applies the override to it before anyone can read it |
+| The options registration | `RegisterBrighterOptions` (DI package) | **doing** | Produces the options object the calling path supplied and applies the override to it before anyone can read it |
 | The registration record | `BrighterOptionsRegistration` (DI package) | **knowing** (information holder) | Names the `IBrighterOptions` descriptor this package added, and nothing else. It exists so that ADR 0074's FR-22.4 rule can ask whether the descriptor the container will resolve is Brighter's own, without resolving anything and without comparing affinity values |
 
 The division that matters is between the **override** and the **options object**. The override knows what the application asked for; the options object is what every reader reads. Keeping them as two roles rather than one is what makes the mechanism order-independent: the override can be registered before the options object exists, because it is not the options object.
@@ -244,21 +244,32 @@ It lives in the DI package, not core: core may name no container type and this t
 
 It is a type rather than a bare `ScopeAffinity` registered as a service because registering an enum as a service type is the primitive-obsession failure: `GetService(typeof(ScopeAffinity))` names nothing, collides with any other use of the enum as a service, and cannot be told apart from a default value. The wrapper names the role.
 
-#### `RegisterBrighterOptions` — where the override is applied (new, DI package, public static, not an extension method)
+#### `RegisterBrighterOptions` — where the override is applied (new, DI package, private static)
+
+It is called from **one** place: `BrighterHandlerBuilder`, which every registration path already funnels through.
 
 ```csharp
 // Paramore.Brighter.Extensions.DependencyInjection.ServiceCollectionExtensions
-// Public so that the ServiceActivator DI package can call it. DON'T CALL THIS DIRECTLY.
-public static void RegisterBrighterOptions(
+public static IBrighterBuilder BrighterHandlerBuilder(          // :142, existing
     IServiceCollection services,
     Func<IServiceProvider, BrighterOptions> optionsFunc)
 {
-    ArgumentNullException.ThrowIfNull(services);
-    ArgumentNullException.ThrowIfNull(optionsFunc);
+    RegisterBrighterOptions(services, optionsFunc);             // NEW, and the only call
+    ... existing body, unchanged ...
+}
+
+private static void RegisterBrighterOptions(
+    IServiceCollection services,
+    Func<IServiceProvider, BrighterOptions> optionsFunc)
+{
+    if (services is null) throw new ArgumentNullException(nameof(services));
+    if (optionsFunc is null) throw new ArgumentNullException(nameof(optionsFunc));
 
     //TryAddSingleton spelled out, because the descriptor we add has to be one we can hand on:
     //ADR 0074's FR-22.4 rule asks whether the effective IBrighterOptions descriptor is this one.
-    if (services.Any(d => d.ServiceType == typeof(IBrighterOptions)))
+    //ServiceKey is part of the test because that is what TryAdd itself matches on — without it,
+    //a host with a KEYED IBrighterOptions would get no Brighter registration at all.
+    if (services.Any(d => d.ServiceType == typeof(IBrighterOptions) && d.ServiceKey is null))
         return;
 
     var descriptor = ServiceDescriptor.Singleton<IBrighterOptions>(sp =>
@@ -276,26 +287,30 @@ public static void RegisterBrighterOptions(
 }
 ```
 
+**Why the single funnel, and not four call sites.** `BrighterHandlerBuilder` is what registers `IAmACommandProcessor`, so **calling it is what makes a registration path a Brighter host** — a fifth path cannot exist without it, which is a stronger guarantee than four sites kept in step by discipline. It already accepts the `Func<IServiceProvider, BrighterOptions>` this needs and **does not use it today**: the parameter is declared at `:144`, documented at `:140`, and referenced nowhere in the body, which is the only reason `AddBrighter(Action)`'s circular lambda at `:77-79` has been harmless. That lambda is corrected here to the factory `:74` uses today. ADR 0072 chose the same funnel for `ScopedArtefactCache` and `AmbientScopeDiagnostics`, so the set now answers "register one thing on every path" one way rather than two.
+
+The cost is that `BrighterHandlerBuilder` is `public` (`:119`, `:142`), so a caller invoking it directly now gets an `IBrighterOptions` registration it did not get before. No such caller exists in `src/`, `tests/` or `samples/` — the only callers are the four paths — and the added registration is the one such a caller would have had to make by hand anyway. It is not a break worth a release-note line, and step 7a does not gain one. **`RegisterBrighterOptions` is therefore `private`**, not public: nothing outside this class calls it, the ServiceActivator DI package reaches it through `BrighterHandlerBuilder` as it already does, and the "DON'T CALL THIS DIRECTLY" wart a public helper would need does not arise.
+
+**The `ServiceKey` clause is load-bearing and must not be simplified away.** `TryAdd` matches on `ServiceType` **and** `ServiceKey`, so a guard testing `ServiceType` alone is not `TryAddSingleton` and does not preserve today's behaviour. A host with a keyed `IBrighterOptions` — a multi-tenant registration, a test fixture — works today, because `TryAddSingleton` sees no *unkeyed* descriptor and registers Brighter's. Under a `ServiceType`-only guard it would get **no descriptor at all**, `GetRequiredService<IBrighterOptions>()` would throw during `BrighterHandlerBuilder`, and ADR 0074's FR-22.4 rule would additionally report an `Error` against an application that did nothing wrong.
+
 **Contract.**
 
 | Member | Input | Output | Error conditions |
 | --- | --- | --- | --- |
-| `RegisterBrighterOptions(services, optionsFunc)` | the collection, and this registration path's own options factory | nothing. On return the collection holds an `IBrighterOptions` descriptor that applies the override, and a `BrighterOptionsRegistration` naming it — **or**, where `IBrighterOptions` was already registered, neither, and the collection is unchanged | Throws `ArgumentNullException` on a null `services` or a null `optionsFunc`. It is `public` so that another assembly may call it, so it guards rather than relying on its four in-repo callers, all of which null-check already. Beyond that it does not throw: `optionsFunc` is invoked at first resolution, not here, so an exception it raises surfaces where the container resolves `IBrighterOptions` — exactly as today's `TryAddSingleton` delegate does |
-| the registered `IBrighterOptions` factory | the built provider | this path's options object, with `DefaultScopeAffinity` set from `ScopeAffinityOverride` if one is registered, and otherwise untouched | Whatever `optionsFunc` raises. A `null` **return** from `optionsFunc` raises `InvalidOperationException` naming the calling registration path: today MS DI raises its own error on a null-returning factory, but this delegate would dereference first whenever an override is registered, turning that into a `NullReferenceException` from inside Brighter. The guard restores the earlier failure shape. `GetService<ScopeAffinityOverride>()` returns `null` when no extension registered one, which is the ordinary no-opt-in case and not an error |
+| `RegisterBrighterOptions(services, optionsFunc)` | the collection, and the calling path's own options factory, as handed to `BrighterHandlerBuilder` | nothing. On return the collection holds an `IBrighterOptions` descriptor that applies the override, and a `BrighterOptionsRegistration` naming it — **or**, where an *unkeyed* `IBrighterOptions` was already registered, neither, and the collection is unchanged | Throws `ArgumentNullException` on a null `services` or a null `optionsFunc`; it is `private` with one caller, so these are assertions of an invariant rather than a public guard. Beyond that it does not throw: `optionsFunc` is invoked at first resolution, not here, so an exception it raises surfaces where the container resolves `IBrighterOptions` — exactly as today's `TryAddSingleton` delegate does |
+| the registered `IBrighterOptions` factory | the built provider | this path's options object, with `DefaultScopeAffinity` set from `ScopeAffinityOverride` if one is registered, and otherwise untouched | Whatever `optionsFunc` raises. A `null` **return** from `optionsFunc` raises `InvalidOperationException`: today MS DI raises its own error on a null-returning factory, but this delegate would dereference first whenever an override is registered, turning that into a `NullReferenceException` from inside Brighter. The guard restores the failure *shape* — the same exception type, at the same point, on resolution. It does not name the calling path, and cannot: `optionsFunc` is an anonymous delegate by the time it arrives, and no existing MS DI message names one either. `GetService<ScopeAffinityOverride>()` returns `null` when no extension registered one, which is the ordinary no-opt-in case and not an error |
 | `BrighterOptionsRegistration` | the descriptor this method added | a snapshot-readable record of *which* `IBrighterOptions` descriptor is Brighter's own | none — it is an immutable instance registration, read by ADR 0074 without resolving anything |
 
 `BrighterOptionsRegistration` is `internal` to this package: only `RegisterBrighterOptions` writes it and only ADR 0074's validator reads it, and both are in this assembly. It carries no affinity and no options object — only the descriptor identity — because the question it answers is about the *registration*, and an implementation that answered it by comparing affinity values would be the one FR-22.4 forbids.
 
-It is declared like `BrighterHandlerBuilder` (`:119`, `:142`) — public, not an extension method, carrying a "DON'T CALL THIS DIRECTLY" doc comment — so it does not appear in IntelliSense on `services.` beside `AddBrighter`, but is reachable from the ServiceActivator DI package, which already calls `ServiceCollectionExtensions.BrighterHandlerBuilder` across the assembly boundary.
-
-**Every one of the four registration sites is rewritten to call it**, and each keeps its own `optionsFunc`. This is the family the rule is stated over, and each member is stated:
+**Every one of the four registration sites stops registering `IBrighterOptions`**, and each keeps handing `BrighterHandlerBuilder` its own `optionsFunc` — which is now read rather than discarded. This is the family the rule is stated over, and each member is stated:
 
 | Site | Today | After |
 | --- | --- | --- |
-| `Extensions.DependencyInjection/ServiceCollectionExtensions.cs:74` | `TryAddSingleton<IBrighterOptions>(sp => sp.GetRequiredService<IOptions<BrighterOptions>>().Value)` | `RegisterBrighterOptions(services, sp => sp.GetRequiredService<IOptions<BrighterOptions>>().Value)`. The `AddOptions`/`Configure` pair at `:69-71` and the `BrighterHandlerBuilder` call at `:77-79` are unchanged |
-| `Extensions.DependencyInjection/ServiceCollectionExtensions.cs:97` | `TryAddSingleton<IBrighterOptions>(configure)` | `RegisterBrighterOptions(services, configure)`. `:98-100` unchanged |
-| `ServiceActivator.Extensions.DependencyInjection/ServiceCollectionExtensions.cs:38` | `TryAddSingleton<IBrighterOptions>(options)` — **the one instance registration** | `RegisterBrighterOptions(services, _ => options)`. `:39`'s `TryAddSingleton<IAmConsumerOptions>(options)` stays an **instance** registration — see below. `:64`'s `BrighterHandlerBuilder(services, options)` unchanged |
-| `ServiceActivator.Extensions.DependencyInjection/ServiceCollectionExtensions.cs:88` | `TryAddSingleton<IBrighterOptions>(configure)` | `RegisterBrighterOptions(services, configure)`. `:89-90`'s `IAmConsumerOptions` cast and `:131-133`'s `BrighterHandlerBuilder` unchanged |
+| `Extensions.DependencyInjection/ServiceCollectionExtensions.cs:74` | `TryAddSingleton<IBrighterOptions>(sp => sp.GetRequiredService<IOptions<BrighterOptions>>().Value)` | **deleted.** The `AddOptions`/`Configure` pair at `:69-71` is unchanged; the `BrighterHandlerBuilder` call at `:77-79` **is corrected** — it passes a lambda that resolves `IBrighterOptions` to build `IBrighterOptions`, which is harmless only while the parameter is ignored. It becomes `sp => sp.GetRequiredService<IOptions<BrighterOptions>>().Value`, the factory `:74` supplies today |
+| `Extensions.DependencyInjection/ServiceCollectionExtensions.cs:97` | `TryAddSingleton<IBrighterOptions>(configure)` | **deleted.** `:98-100` already passes `configure` to `BrighterHandlerBuilder`, so it is unchanged |
+| `ServiceActivator.Extensions.DependencyInjection/ServiceCollectionExtensions.cs:38` | `TryAddSingleton<IBrighterOptions>(options)` — **the one instance registration** | **deleted**, which also disposes of the instance-to-delegate change this ADR would otherwise have to make here. `:39`'s `TryAddSingleton<IAmConsumerOptions>(options)` stays an **instance** registration — see below. `:64`'s `BrighterHandlerBuilder(services, options)` is unchanged and reaches the `:119` overload, which already forwards `_ => options` |
+| `ServiceActivator.Extensions.DependencyInjection/ServiceCollectionExtensions.cs:88` | `TryAddSingleton<IBrighterOptions>(configure)` | **deleted.** `:89-90`'s `IAmConsumerOptions` cast is unchanged, and `:131-133` already passes `sp => configure(sp)` to `BrighterHandlerBuilder` |
 
 Three details of that table are behavioural and must be stated, not glossed.
 
@@ -309,7 +324,7 @@ Three details of that table are behavioural and must be stated, not glossed.
 
 That is a limit of this mechanism, not a defect in it, and there is no version of this ADR that removes it. Registering with a plain `AddSingleton` so that Brighter always wins was considered and is wrong twice over: it would silently discard an application's deliberate registration, and on the after-ordering it would not win anyway. Writing to whatever object `IBrighterOptions` happens to resolve to is banned by FR-17 ¶3 for the same reason — an application's options object is the application's. **So the limit is diagnosed instead**: it is `Error` under **FR-22.4**, evaluated by ADR 0074, whose rule asks the `BrighterOptionsRegistration` above whether the effective `IBrighterOptions` descriptor is the one this method added. That question is the only reason this method holds a reference to its own descriptor, and both orderings give the same answer — absent record in the first, present-but-not-last in the second. AC-50 pins it on all four paths; AC-45 pins the positive case on the same four.
 
-**In a mixed host the winner of the `TryAdd` applies the override, and both sides now do.** `IBrighterOptions` is `TryAddSingleton` in both assemblies, so first registration wins, whichever it is. Because all four sites route through `RegisterBrighterOptions`, whichever descriptor survives applies the override. A host where `AddConsumers(Action)` registers first gets the affinity on its `ConsumersOptions`; a host where `AddBrighter` registers first gets it on its `BrighterOptions`; in both, that is the object the factories read. The losing side's options object never receives the override and is never read for affinity. Applying it at only one of the two assemblies' sites would have made the opt-in depend on registration order in exactly the way AC-48 forbids.
+**In a mixed host the first registration wins, and it applies the override by construction.** Both assemblies reach `IBrighterOptions` through the same `BrighterHandlerBuilder`, so whichever entry point runs first registers, the second finds the descriptor present and returns — the guard's semantics, and today's `TryAddSingleton` semantics, are the same. Because there is only one registration site, the descriptor that survives is necessarily one that applies the override; there is no second implementation for it to be the wrong half of. A host where `AddConsumers(Action)` registers first gets the affinity on its `ConsumersOptions`; a host where `AddBrighter` registers first gets it on its `BrighterOptions`; in both, that is the object the factories read. The losing side's options object never receives the override and is never read for affinity. Applying it at only one of the two assemblies' sites would have made the opt-in depend on registration order in exactly the way AC-48 forbids.
 
 #### Where each type is touched
 
@@ -320,8 +335,8 @@ That is a limit of this mechanism, not a defect in it, and there is no version o
 | `…DependencyInjection` | `ConsumersOptions` | inherits the member; settable there, and inert on the consumer side (FR-19, D0b) |
 | `…DependencyInjection` | `ScopeAffinityOverride` | **new**, public — the immutable value an opt-in gesture deposits |
 | `…DependencyInjection` | `BrighterOptionsRegistration` | **new**, internal — names the `IBrighterOptions` descriptor this package added, so ADR 0074's FR-22.4 rule can ask which one is Brighter's |
-| `…DependencyInjection` | `ServiceCollectionExtensions.RegisterBrighterOptions` | **new**, public static, not an extension method; declared like `BrighterHandlerBuilder` (`:119`, `:142`) |
-| `…DependencyInjection` | `ServiceCollectionExtensions` (`:74`, `:97`) | both `TryAddSingleton<IBrighterOptions>` sites call `RegisterBrighterOptions` instead |
+| `…DependencyInjection` | `ServiceCollectionExtensions.RegisterBrighterOptions` | **new**, private static, called once — from `BrighterHandlerBuilder` (`:142`), which is where the write-through now happens |
+| `…DependencyInjection` | `ServiceCollectionExtensions` (`:74`, `:97`) | both `TryAddSingleton<IBrighterOptions>` sites are **deleted**; `BrighterHandlerBuilder` (`:142`) registers instead, reading the `optionsFunc` it already receives at `:144` and today ignores. `:77-79`'s lambda is corrected |
 | `Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection` | `ServiceCollectionExtensions` (`:38`, `:88`) | the same. `:38` is the one pre-built **instance** registration and becomes a factory delegate |
 
 Unchanged, and named so the omissions are not read as oversights: **`:39`'s `TryAddSingleton<IAmConsumerOptions>(options)` stays an instance registration**, deliberately, so the `Func` path's `InvalidCastException` (`:89-90`) is not imported onto the one consumer path that lacks it — and `:89-90` itself is untouched. The five container-backed factories keep reading `IBrighterOptions` exactly as they do today and gain nothing; `Paramore.Brighter` gains no member and no type, so NFR-1's source-level guard is untouched; `IAmConsumerOptions` (`src/Paramore.Brighter/IAmConsumerOptions.cs:7`) keeps its five members; `AddOptions<BrighterOptions>()` and the `Configure` pair (`:69-71`) are unchanged, and so is every `BrighterHandlerBuilder` call site; and no lifetime property moves.
@@ -344,7 +359,7 @@ Unchanged, and named so the omissions are not read as oversights: **`:39`'s `Try
 
 **2. Add `ScopeAffinityOverride`** to the DI package, `BrighterOptionsRegistration` beside it, and `RegisterBrighterOptions` to `ServiceCollectionExtensions` beside `BrighterHandlerBuilder`.
 
-**3. Move all four registration sites onto it, in one commit.** `:74`, `:97`, and the ServiceActivator package's `:38` and `:88`. Partial adoption gives a host whose opt-in works on some entry points and not others, which is the failure mode FR-17 exists to prevent. The ServiceActivator package's `:39` and `:89-90` are explicitly *not* touched.
+**3. Call it from `BrighterHandlerBuilder` (`:142`) and delete the four site registrations, in one commit.** `:74`, `:97`, and the ServiceActivator package's `:38` and `:88` stop registering `IBrighterOptions`; `:77-79`'s circular `optionsFunc` lambda is corrected to `sp => sp.GetRequiredService<IOptions<BrighterOptions>>().Value`. Doing half of this leaves a path registering `IBrighterOptions` *before* `BrighterHandlerBuilder` runs, which wins the guard and silently drops the override on that path — the failure mode FR-17 exists to prevent. The ServiceActivator package's `:39` and `:89-90` are explicitly *not* touched.
 
 **4. Documentation.** FR-25.11 requires the guidance page to state that assigning `DefaultScopeAffinity` while calling the opt-in extension is a configuration error whose outcome is the extension's value, in any order and on any path, and that it is **not** reported by validation. The three gestures themselves are ADR 0073's. `release_notes.md` gains the `IBrighterOptions` member, in the same entry as the other breaks ADR 0070 step 7a lists (C-18, AC-24).
 
@@ -355,7 +370,7 @@ Unchanged, and named so the omissions are not read as oversights: **`:39`'s `Try
 ### Positive
 
 - **Order-independence is structural, not tested-in.** The mechanism has no ordering to get wrong: the extension writes to the collection, the options factory reads from the container. AC-48's before-ordering clause and AC-45's four-path clause pass for the same reason.
-- **One definition of the write-through, four call sites.** `RegisterBrighterOptions` holds the knowledge once. A fifth registration path added later gets the behaviour by calling it, and a reviewer can see at a glance whether it did.
+- **One definition of the write-through, one call site.** `RegisterBrighterOptions` holds the knowledge once and is invoked from the one method every registration path already funnels through. A fifth registration path cannot omit it, because calling `BrighterHandlerBuilder` is what makes a path a Brighter host, and a reviewer can see at a glance whether the write-through ran.
 - **The default is exactly today's behaviour.** `AlwaysNew` is the property's default and `ScopeAffinity.AlwaysNew` is `0`, so a `BrighterOptions` that nobody configured, and any options object produced by any path, adopts nothing (FR-15).
 - **Core gains nothing.** Every type here is in the DI package. NFR-1's source-level clause is untouched.
 - **The mechanism is implementable off ASP.NET.** `ScopeAffinityOverride` names only `ScopeAffinity`, so an `AsyncLocal`-backed provider package for console hosts registers its provider and its override in exactly the same two lines (NFR-7).
@@ -376,7 +391,7 @@ Unchanged, and named so the omissions are not read as oversights: **`:39`'s `Try
 
 | Risk | Mitigation |
 | --- | --- |
-| A fifth registration path is added later and does not apply the override, so the opt-in fails silently on it | The write-through has exactly one definition, `RegisterBrighterOptions`, and the four existing sites are its only callers. AC-45 enumerates all four; a fifth path would need a fifth clause, and the absence of one is visible |
+| A fifth registration path is added later and does not apply the override, so the opt-in fails silently on it | It cannot. `RegisterBrighterOptions` is called from `BrighterHandlerBuilder`, and a path that does not call `BrighterHandlerBuilder` registers no `IAmACommandProcessor` and is therefore not a Brighter host. AC-45 still enumerates all four existing paths |
 | The extension is called before `AddBrighter` and the affinity is lost | The mechanism has no ordering: the override is a service, not a mutation of a descriptor. AC-48's second clause and AC-45's four-path clause both assert the before-ordering, and both start from a non-default affinity so a dropped argument fails them |
 | A mixed host applies the override to the losing options object | All four sites apply it, so whichever `TryAdd` wins carries it. **AC-20**'s mixed-host configuration states which entry point registers first and which `AddConsumers` overload is used, per C-12 — the `Action` overload specifically, because the `Func` one throws `InvalidCastException` in that ordering |
 | An application registers `IBrighterOptions` itself, the write-through never runs, and the opt-in is lost silently | It is not silent: `BrighterOptionsRegistration` names the descriptor this package added, and ADR 0074's FR-22.4 rule raises an `Error` when the effective descriptor is not it — in both orderings, and without comparing affinity values, which would miss a host that passed the default. AC-50 pins all four paths and both orderings |
