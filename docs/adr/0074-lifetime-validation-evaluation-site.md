@@ -160,7 +160,7 @@ flowchart TB
         pv["PipelineValidator — handler, producer and consumer rule families"]
         result["PipelineValidationResult — Errors, Warnings, IsValid, ThrowIfInvalid()<br/>Combine, which exists today and is unused in src"]
         specs["ISpecification, Specification, ValidationResultCollector<br/>ValidationError with ValidationSeverity, Source, Message"]
-        eval["SpecificationEvaluator — NEW<br/>the harvest loop, lifted out of PipelineValidator. Structural only"]
+        eval["Specification and ValidationResultCollector<br/>already public in core; the decorator evaluates<br/>its own specs over them. Nothing new here"]
         pv --> eval
     end
 
@@ -367,7 +367,7 @@ One consumer-host precondition is not this rule's but decides whether it is ever
 
 | Assembly | Type | Change |
 | --- | --- | --- |
-| `Paramore.Brighter` | `SpecificationEvaluator` | **new** — the entity/spec harvest loop lifted verbatim out of `PipelineValidator.EvaluateSpecs` (`:152`). No container types |
+| `Paramore.Brighter` | — | **nothing.** No new type, no changed signature, no new public API. `PipelineValidator.EvaluateSpecs` (`:152`) stays exactly where and as it is, `private static` |
 | `Paramore.Brighter` | `PipelineValidator` | calls the extracted evaluator; no behaviour change, no signature change |
 | `…DependencyInjection` | `ScopeConfigurationValidator` | **new**, public — `IAmAPipelineValidator`, `IDisposable` |
 | `…DependencyInjection` | `ScopeConfiguration`, `DescriptorRecord`, `ArtefactRegistration`, `ArtefactKind`, `ContainerRegistrationSnapshot`, `ArtefactConstructorSelector`, `ScopeConfigurationRules`, `ArtefactExclusionSet` | **new**, internal |
@@ -389,17 +389,19 @@ Unchanged, and named so the omission is not read as an oversight: `IAmAPipelineV
 
 **Why `ArtefactConstructorSelector` is its own object.** D15's rule is a *deciding* responsibility with three cases — widest, tie, none — and AC-42 tests each. Inlining it into the captive-dependency rule would make those cases reachable only through a built host.
 
-**Why the harvest loop moves to core rather than being copied.** The alternative is a second copy of "evaluate a spec family and collect the failed results", including its result conventions. Duplicating knowledge is the worse of the two costs; the extraction names no container type and is a structural change made ahead of the behavioural one, per Tidy First.
+**Why the harvest loop is NOT extracted to core, and the decorator writes its own.** The obvious move is to lift `PipelineValidator.EvaluateSpecs` (`:152`) into a shared type so both validators use one implementation, and duplicating knowledge is normally the worse cost. It is rejected here on a fact about this repository: **there is no `InternalsVisibleTo`, anywhere, and that is a rule rather than an omission.** A shared type in `Paramore.Brighter` called from `Paramore.Brighter.Extensions.DependencyInjection` would therefore have to be **`public`** — new, permanent public API on core's `netstandard2.0` surface, added for no reason an application would ever see, in the ADR whose whole claim is that core gains nothing. The signature would have to change too: `EvaluateSpecs` fills a caller's `List<ValidationError>`, which is not a shape to publish.
+
+The duplication that avoids it is small and the pieces are already public: `ISpecification<T>`, `Specification<T>` and `ValidationResultCollector<T>` are all `public` in core, and only `Specification<T>.LastResults` is `internal` — which this loop does not touch. So `ScopeConfigurationValidator` evaluates its own two entity families over core's existing public abstractions, in about ten lines, and `PipelineValidator` keeps its private helper untouched. Two copies of a short loop, over different entity families, in exchange for no new core surface. **The trade is stated rather than assumed, because the general rule points the other way.**
 
 **Naming.** `ScopeConfigurationValidator` is this ADR's name to choose — it is not one of C-11's working names. It is chosen over `LifetimeValidator` because the rule set is wider than lifetimes (three of the six are about registrations) and narrower than validation (the core validator is the other half), and all six rules are about how a pipeline is scoped.
 
 ### Implementation Approach
 
-1. **Structural, first and alone.** Extract `PipelineValidator.EvaluateSpecs` (`:152`) into `SpecificationEvaluator` in `Paramore.Brighter`; `PipelineValidator` calls it. No behaviour change; the existing validation tests are the guard.
+1. **No structural change in core.** `PipelineValidator.EvaluateSpecs` (`:152`) is not extracted, not moved and not widened — see *Technology Choices*. This ADR touches `Paramore.Brighter` not at all, so there is no Tidy-First step to sequence ahead of the behavioural one.
 2. **The snapshot.** Add `ContainerRegistrationSnapshot`, built from `builder.Services` inside `ValidatePipelines()` beside the existing `ValidationProviderRegistrations` computation (`:64-66`) and the transformer probe (`:68-69`). Two queries: the lifetime for a service type, and the artefact candidates with their kinds.
 3. **The entities and the selector.** `ScopeConfiguration`, `DescriptorRecord`, `ArtefactRegistration`, `ArtefactKind`, `ArtefactConstructorSelector`. The selector is testable with a `Type` alone.
 4. **The six rules.** `ScopeConfigurationRules` returns `ISpecification<ScopeConfiguration>` for FR-22.1, FR-22.2, FR-22.4, FR-24.3 and FR-17, and `ISpecification<ArtefactRegistration>` for FR-22.3, using the collapsed `Specification<T>` constructor where a rule yields more than one finding. Rules do not catch — `0064-validate-pipeline-assembly-and-provider-registration`'s precedent. They are evaluated as a set with no ordering between them; more than one may yield a finding on one host.
-5. **The decorator.** `ScopeConfigurationValidator` runs the inner validator, evaluates both entity families through `SpecificationEvaluator`, returns `PipelineValidationResult.Combine(...)`, and disposes the inner validator.
+5. **The decorator.** `ScopeConfigurationValidator` runs the inner validator, evaluates both entity families over core's public `ISpecification<T>`/`Specification<T>`/`ValidationResultCollector<T>` with its own harvest loop, returns `PipelineValidationResult.Combine(...)`, and disposes the inner validator.
 
 5a. **The exclusion set, and the four inputs it actually needs.** FR-22.3's exclusion is a conjunction over **two** attribute families, and neither half can be read from the descriptor snapshot — both need the reflection-only describe path, and they need different inputs. The **handler** half comes from `PipelineBuilder<IRequest>.Describe()` (`PipelineBuilder.cs:151`), an *instance* method on the builder the validation delegate already constructs (`BrighterPipelineValidationExtensions.cs:75`); the **transform** half from `TransformPipelineBuilder.DescribeTransforms` (`:270`, `public static`), called with **`includeAsync: true`** — the two-argument overload at `:255` defaults it to `false`, under which a transform declared only on an async-resolved mapper never enters the set and a Brighter-shipped transform reached only that way is warned against as the application's, which is the precise noise the conjunction exists to prevent. The request types both halves are walked over come from the publications and the subscriptions. So the signature is `ArtefactExclusionSet.Build(pipelineBuilder, registry, publications, subscriptions)`, with `registry` **nullable** because `mapperRegistryFactory` is (step 2): a registry alone cannot produce the handler half, a null one produces the handler half and an empty transform half, and AC-42's `[UsePolicyAsync]` clause is pinned on exactly that half. It makes the pass once and holds the resulting set.
 
@@ -413,7 +415,7 @@ Unchanged, and named so the omission is not read as an oversight: `IAmAPipelineV
 
 ### Positive
 
-- **Core gains no *container* concept.** Not a type, not a parameter, not a reference. AC-22.3's source scan returns zero matches before the change and zero after, and clause 1 of AC-22 is unaffected because no core interface changes at all. Core does gain one type — `SpecificationEvaluator`, lifted out of `PipelineValidator` — and it names no container type either.
+- **Core gains no *container* concept.** Not a type, not a parameter, not a reference. AC-22.3's source scan returns zero matches before the change and zero after, and clause 1 of AC-22 is unaffected because no core interface changes at all. Core gains **nothing at all** — not a container concept, and not a type: the harvest loop is written in the DI package over core abstractions that are already public, so this ADR adds no public API to a `netstandard2.0` assembly for a need no application can see.
 - **Both host shapes fire without either being touched.** The decorator is what `IAmAPipelineValidator` resolves to, so `BrighterValidationHostedService` and `ServiceActivatorHostedService` both pick it up unchanged — including the consumer path, which is where `MapperLifetime` and `TransformerLifetime` matter most and where a change would have been exercised only by tests that register the hosting package themselves.
 - **The reporting path is the one that already works.** Errors block under `ThrowOnError` and log at `Error` without it; warnings log and never block, in both hosts. No new exception type, no new hosted service, no new severity, no change to `ValidatePipelines(enabled, throwOnError = true)`.
 - **The inputs are the ones the factories honour, on all four registration paths.** Reading the resolved `IBrighterOptions` rather than `IOptions<BrighterOptions>.Value` means validation cannot pass a configuration the factories will ignore or fail one they would have honoured — the failure mode C-12a describes and AC-45 asserts against.
