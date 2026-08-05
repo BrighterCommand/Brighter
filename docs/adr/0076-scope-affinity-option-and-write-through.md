@@ -224,6 +224,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     /// whichever options object IBrighterOptions resolves to, in any registration order. It wins over
     /// any affinity the application assigned itself (D18).
     /// </summary>
+    /// <remarks>
+    /// Register it as a constructed instance under a plain AddSingleton — services.AddSingleton(new
+    /// ScopeAffinityOverride(affinity)). Never TryAdd*, which would make the first call win the affinity
+    /// while the last call wins the provider, and never a factory delegate, whose descriptor carries no
+    /// instance for validation to read an affinity from.
+    /// </remarks>
     public sealed class ScopeAffinityOverride
     {
         public ScopeAffinityOverride(ScopeAffinity affinity) => Affinity = affinity;
@@ -239,6 +245,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 | --- | --- | --- | --- |
 | `Affinity` | none | the affinity the opt-in gesture selected | Cannot throw. Immutable after construction, so a reader cannot observe it changing between the moment `IBrighterOptions` is built and the moment a pipeline reads it |
 | *(the type as a service)* | resolved with `GetService`, never `GetRequiredService` | `null` where no extension was called — the ordinary case for every host that does not opt in | Absence is not an error; it is the default configuration (FR-15) |
+| *(its registration form)* | — | a plain `AddSingleton` of a **constructed instance**: `services.AddSingleton(new ScopeAffinityOverride(affinity))` | **Both halves are obligations on the registrar, not preferences, and a package Brighter does not ship is as bound by them as ADR 0073's extension is.** `TryAdd*` is wrong because the provider beside it goes in under a plain `AddSingleton`: the first call would win the affinity while the last won the provider, and the second call's descriptor would not be in the collection for FR-17's repeat rule to see. A **factory delegate** is wrong because that rule reads affinity *values* off descriptors without resolving anything, and a `sp => new ScopeAffinityOverride(a)` descriptor supplies no `ImplementationInstance` — such an override still works, but it becomes invisible to validation (ADR 0074) |
 
 It lives in the DI package, not core: core may name no container type and this type exists only to be a service in a Microsoft service collection, but it names only `ScopeAffinity`, a core type, so it adds nothing to core's compile closure and the AC-22.3 source-level guard is untouched. It is public because an opt-in package is a separate assembly; `InternalsVisibleTo` was rejected for the reason ADR 0075 gives about suppression — the mechanism must be available to a package Brighter does not ship, since NFR-7 anticipates other ambient sources.
 
@@ -337,7 +344,7 @@ That is a limit of this mechanism, not a defect in it, and there is no version o
 | `…DependencyInjection` | `BrighterOptionsRegistration` | **new**, internal — names the `IBrighterOptions` descriptor this package added, so ADR 0074's FR-22.4 rule can ask which one is Brighter's |
 | `…DependencyInjection` | `ServiceCollectionExtensions.RegisterBrighterOptions` | **new**, private static, called once — from `BrighterHandlerBuilder` (`:142`), which is where the write-through now happens |
 | `…DependencyInjection` | `ServiceCollectionExtensions` (`:74`, `:97`) | both `TryAddSingleton<IBrighterOptions>` sites are **deleted**; `BrighterHandlerBuilder` (`:142`) registers instead, reading the `optionsFunc` it already receives at `:144` and today ignores. `:77-79`'s lambda is corrected |
-| `Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection` | `ServiceCollectionExtensions` (`:38`, `:88`) | the same. `:38` is the one pre-built **instance** registration and becomes a factory delegate |
+| `Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection` | `ServiceActivatorServiceCollectionExtensions` (`ServiceCollectionExtensions.cs:38`, `:88`) | the same. `:38` is the one pre-built **instance** registration and becomes a factory delegate |
 
 Unchanged, and named so the omissions are not read as oversights: **`:39`'s `TryAddSingleton<IAmConsumerOptions>(options)` stays an instance registration**, deliberately, so the `Func` path's `InvalidCastException` (`:89-90`) is not imported onto the one consumer path that lacks it — and `:89-90` itself is untouched. The five container-backed factories keep reading `IBrighterOptions` exactly as they do today and gain nothing; `Paramore.Brighter` gains no member and no type, so NFR-1's source-level guard is untouched; `IAmConsumerOptions` (`src/Paramore.Brighter/IAmConsumerOptions.cs:7`) keeps its five members; `AddOptions<BrighterOptions>()` and the `Configure` pair (`:69-71`) are unchanged, and so is every `BrighterHandlerBuilder` call site; and no lifetime property moves.
 
@@ -351,7 +358,7 @@ Unchanged, and named so the omissions are not read as oversights: **`:39`'s `Try
 
 **Why `GetService` and not `GetRequiredService`.** No override registered is the ordinary configuration — every host that has not opted in, which is every host that exists today. Absence must be silent (FR-15), so the read must tolerate it. This matches how the factories already read `IBrighterOptions` itself: `ServiceProviderMapperFactory.cs:44` uses `GetService` and falls back to a default.
 
-**Thread safety.** MS DI creates a singleton once, under its own lock, so the write to `DefaultScopeAffinity` happens exactly once and completes before any caller holds the reference **the `IBrighterOptions` factory returns** (NFR-4). That is the guarantee, and it is narrower than "nobody can see it half-configured": on the consumer `Action` path a reader that reaches the *same object* by another route can. `IAmConsumerOptions` and `IBrighterOptions` name one `ConsumersOptions` instance, and only the `IBrighterOptions` factory applies the override, so between a first resolution of the one and a first resolution of the other that object still holds whatever the application set — the residue described above. No pipeline reads affinity by that route; a diagnostic dump could.
+**Thread safety.** MS DI creates a singleton once, under its own lock, so the write to `DefaultScopeAffinity` happens exactly once and completes before any caller holds the reference **the `IBrighterOptions` factory returns**. That is MS DI's own guarantee about singleton construction, not NFR-4's, which is about pipeline scopes and ambient suppression under concurrent pipelines. That is the guarantee, and it is narrower than "nobody can see it half-configured": on the consumer `Action` path a reader that reaches the *same object* by another route can. `IAmConsumerOptions` and `IBrighterOptions` name one `ConsumersOptions` instance, and only the `IBrighterOptions` factory applies the override, so between a first resolution of the one and a first resolution of the other that object still holds whatever the application set — the residue described above. No pipeline reads affinity by that route; a diagnostic dump could.
 
 ### Implementation Approach
 
