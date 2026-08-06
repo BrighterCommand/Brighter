@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
@@ -57,5 +57,10 @@ public static class DynamoDbInboxTable
         {
             s_semaphoreSlim.Release();
         }
+    }
+
+    public static void Reset()
+    {
+        s_tableName = null;
     }
 }

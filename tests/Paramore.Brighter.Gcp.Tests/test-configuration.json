@@ -56,6 +56,20 @@
       "ReceiveMessageTimeoutInMilliseconds": 5000
     }
   },
+  "Inboxes": {
+    "Firestore": {
+      "InboxProvider": "FirestoreInboxProvider",
+      "InboxProviderAsync": "FirestoreInboxProvider",
+      "Category": "Firestore",
+      "CollectionName": "FirestoreInbox"
+    },
+    "Spanner": {
+      "InboxProvider": "SpannerInboxProvider",
+      "InboxProviderAsync": "SpannerInboxProvider",
+      "Category": "Spanner",
+      "CollectionName": "SpannerInbox"
+    }
+  },
   "Outboxes": {
     "Firestore": {
       "Transaction": "Paramore.Brighter.Firestore.FirestoreTransaction",

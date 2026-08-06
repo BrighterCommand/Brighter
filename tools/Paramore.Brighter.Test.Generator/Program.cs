@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -43,7 +43,7 @@ var configurationFileOptions = new Option<string>("--file")
 };
 
 var command = new RootCommand(
-    "Generates test code for Brighter shared and outbox components from a configuration file"
+    "Generates test code for Brighter shared, inbox, outbox, and messaging gateway components from a configuration file"
 );
 command.Options.Add(configurationFileOptions);
 
@@ -91,6 +91,7 @@ try
     }
 
     await new SharedGenerator(factory.CreateLogger<SharedGenerator>()).GenerateAsync(configuration);
+    await new InboxGenerator(factory.CreateLogger<InboxGenerator>()).GenerateAsync(configuration);
     await new OutboxGenerator(factory.CreateLogger<OutboxGenerator>()).GenerateAsync(configuration);
     await new MessagingGatewayGenerator(
         factory.CreateLogger<MessagingGatewayGenerator>()
