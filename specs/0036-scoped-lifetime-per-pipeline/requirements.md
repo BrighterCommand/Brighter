@@ -535,6 +535,18 @@ Each AC names the FR(s) or NFR(s) it discharges. Every FR and NFR is covered.
   **Then** the caller observes normal completion and the handler's result unchanged, and a capturing `ILoggerProvider` registered for `Paramore.Brighter.*` records the disposal failure at `LogLevel.Error`;
   **And when** a second `Send` is issued,
   **Then** it succeeds identically — the failure is logged and swallowed, not latched.
+- **AC-51 (FR-13, FR-5, FR-6) — A handler-factory `Release` that throws is logged and does not reach the caller.**
+  **Given** all three lifetimes `Scoped` and **not opted in**, so the handler pipeline's scope is one Brighter created and owns, and a handler factory whose `Release` throws `InvalidOperationException` — the sibling case to AC-33, which covers the *scope disposal* half of FR-13's teardown rule while this covers the *handler release* half,
+  **When** `Send` is called and the handler **completes normally**,
+  **Then** the caller observes normal completion and the handler's result unchanged, and a capturing `ILoggerProvider` registered for `Paramore.Brighter.*` records the release failure at `LogLevel.Error`;
+  **And given** the same host and a handler whose `Handle` throws `InvalidOperationException`,
+  **When** `Send` is called,
+  **Then** the caller observes **that** `InvalidOperationException` — not the release failure, and not an `AggregateException` composing the two — and the release failure appears only in the log at `LogLevel.Error`. This is the clause that fails on the natural wrong implementation: a teardown that rethrows replaces the handler's own exception, because the builder is disposed under `using var`, which FR-5 and FR-6 forbid;
+  **And given** three tracked handlers whose factory's `Release` throws on the **first**,
+  **When** the pipeline is released,
+  **Then** the other two are still released, the pipeline scope is still disposed, and exactly one `LogLevel.Error` record names the failing release — a failure must not skip the remaining reclamation, which is the latent defect this rule closes;
+  **And when** a second `Send` is issued in the same host,
+  **Then** it succeeds identically — the failure is logged and swallowed, not latched.
 
 **Adoption under ASP.NET**
 

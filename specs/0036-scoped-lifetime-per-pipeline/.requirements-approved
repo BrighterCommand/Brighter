@@ -1,3 +1,34 @@
+PENDING: revision 20 (27 FRs / 10 NFRs / 51 ACs / 122 normative bullets) — NOT YET APPROVED.
+
+Revision 20 was made during the design phase, in response to round 5 of the design review, and
+carries design decision 4 of that round. It is NEW SCOPE, not alignment, and therefore OWES AN
+INDEPENDENT REQUIREMENTS REVIEW ROUND under the requirement owner's standing rule. The design
+phase MUST NOT be approved until that round has run and its findings are closed.
+
+What it added: AC-51, the acceptance criterion for FR-13's handler-release half. ADR 0071 makes a
+handler-factory Release that throws logged at Error and swallowed rather than propagating - the one
+behavioural change that ADR calls observable to an application - and round 5 found the ADR citing
+AC-7 as its regression guard. AC-7's Given has a throwing HANDLER, not a throwing Release; it
+guards FR-6's release-exactly-once rule and says nothing about a failing teardown. So the rule had
+no criterion at all, and the mis-citation concealed the gap rather than declaring it.
+
+AC-51 has four clauses: the release failure is logged at Error and the caller's normal result is
+unchanged; a handler that throws has ITS OWN exception reach the caller rather than the release
+failure or an AggregateException composing the two (the clause that fails the natural wrong
+implementation, since the builder is disposed under `using var` and a rethrowing teardown replaces
+the handler's exception - FR-5 and FR-6 forbid it); a Release throwing on the first of three
+tracked handlers still releases the other two and still disposes the scope, with exactly one Error
+record; and the failure is not latched.
+
+AC-51 is the sibling of AC-33, which covers the same requirement's scope-disposal half. No FR, NFR
+or constraint changes, and no existing AC changes. Counts move from 50 ACs to 51; FRs, NFRs and
+normative bullets are unchanged at 27/10/122.
+
+Why a review round: the standing rule is that alignment needs none and an amendment that is more
+than alignment gets one. This adds a criterion that did not exist and imposes new obligations on
+the implementation, so it is more than alignment. Round-2's revision 16 set the precedent - it
+added FR-22.4 and AC-50 and had its own review round.
+
 Approved: revision 19, 2026-08-06 (27 FRs / 10 NFRs / 50 ACs / 122 normative bullets).
 
 Revision 19 was made during the design phase, in response to round 5 of the design review, and
