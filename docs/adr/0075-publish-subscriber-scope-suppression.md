@@ -320,6 +320,15 @@ Stating which is which matters, because a reader who believes the async restores
 
 ## References
 
+**Related ADRs — the other six of this set:**
+
+- ADR 0070 [0070-per-pipeline-di-scope-for-mapper-and-transform-factories](0070-per-pipeline-di-scope-for-mapper-and-transform-factories.md) — a transform pipeline takes one DI scope, carried as a parameter
+- ADR 0071 [0071-pipeline-scope-handle-for-handler-pipelines](0071-pipeline-scope-handle-for-handler-pipelines.md) — handler pipelines converge onto the same handle, carried on the object they already pass
+- ADR 0072 [0072-ambient-scope-adoption-seam](0072-ambient-scope-adoption-seam.md) — how a pipeline discovers an ambient DI scope the host owns
+- ADR 0073 [0073-aspnet-core-request-scope-package](0073-aspnet-core-request-scope-package.md) — the ASP.NET Core package, and the one line an application writes to opt in
+- ADR 0074 [0074-lifetime-validation-evaluation-site](0074-lifetime-validation-evaluation-site.md) — where the six scope-configuration rules are evaluated
+- ADR 0076 [0076-scope-affinity-option-and-write-through](0076-scope-affinity-option-and-write-through.md) — the affinity option, and how one setting reaches all four registration paths in any order
+
 - Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-5, FR-8, FR-9, FR-24.4, FR-25 (clause .5), FR-27.1, FR-27.2, FR-27.3, NFR-4, NFR-7, NFR-8, NFR-9 (its `Publish`-subscriber and nested-pipeline rows), C-2, C-4, C-5, C-16, D0b, D0c, D6, D10, D16, OOS-14; AC-10, AC-11, AC-12, AC-13, AC-22.3, AC-24, AC-36, AC-39, AC-46, AC-47
 - Related ADRs (cited by slug — ADR numbers are not unique in this repo, C-16):
   - `0072-ambient-scope-adoption-seam` [Proposed] — how a pipeline discovers and adopts an ambient DI scope. Its affinity computation is the one line this ADR's flag is read at, and its ladder is unchanged by suppression
