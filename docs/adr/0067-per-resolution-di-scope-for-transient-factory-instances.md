@@ -35,7 +35,7 @@ Four ADRs came out of the #4252 lifetime work, one decision each, and they are m
 | 0068 | that disposal is deterministic on the explicit path and best-effort in the finalizer |
 | 0069 | who owns, and therefore who disposes, the registry and the factories |
 
-ADRs 0070–0074 then build on all four: they give a *pipeline* its own DI scope, and let it join one the host already owns. The `Terms` block below is the one they reference rather than restate.
+ADRs 0070–0076 then build on all four: they give a *pipeline* its own DI scope, and let it join one the host already owns. The `Terms` block below is the one they reference rather than restate.
 
 ### Terms
 
