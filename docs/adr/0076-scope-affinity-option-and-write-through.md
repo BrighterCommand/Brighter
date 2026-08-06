@@ -436,6 +436,15 @@ Unchanged, and named so the omissions are not read as oversights: **`:39`'s `Try
 
 ## References
 
+**Related ADRs — the other six of this set:**
+
+- ADR 0070 [0070-per-pipeline-di-scope-for-mapper-and-transform-factories](0070-per-pipeline-di-scope-for-mapper-and-transform-factories.md) — a transform pipeline takes one DI scope, carried as a parameter
+- ADR 0071 [0071-pipeline-scope-handle-for-handler-pipelines](0071-pipeline-scope-handle-for-handler-pipelines.md) — handler pipelines converge onto the same handle, carried on the object they already pass
+- ADR 0072 [0072-ambient-scope-adoption-seam](0072-ambient-scope-adoption-seam.md) — how a pipeline discovers an ambient DI scope the host owns
+- ADR 0073 [0073-aspnet-core-request-scope-package](0073-aspnet-core-request-scope-package.md) — the ASP.NET Core package, and the one line an application writes to opt in
+- ADR 0074 [0074-lifetime-validation-evaluation-site](0074-lifetime-validation-evaluation-site.md) — where the six scope-configuration rules are evaluated
+- ADR 0075 [0075-publish-subscriber-scope-suppression](0075-publish-subscriber-scope-suppression.md) — how a `Publish` subscriber suppresses adoption, for itself and everything nested beneath it
+
 - Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-8, FR-14, FR-15, FR-16, FR-17, FR-18, FR-19, FR-20, FR-21, FR-22, FR-23, FR-24.3, FR-25.10, FR-25.11, FR-27; NFR-1, NFR-2, NFR-4, NFR-7, NFR-8; C-2, C-9, C-10, C-12, C-12a, C-15, C-16, C-18; D0b, D2, D3, D4, D5, D13, D14, D18; AC-20, AC-22, AC-24, AC-45, AC-48, AC-50
 - Related ADRs (cited by slug — ADR numbers are not unique in this repo, C-16):
   - `0073-aspnet-core-request-scope-package` [Proposed] — the first caller of this mechanism: the ASP.NET package, and the `AddBrighterRequestScope` extension whose argument this ADR carries to the options object
