@@ -1,34 +1,39 @@
-Approved: revision 18, 2026-08-04 (27 FRs / 10 NFRs / 50 ACs / 122 normative bullets).
+Approved: revision 19, 2026-08-06 (27 FRs / 10 NFRs / 50 ACs / 122 normative bullets).
 
-Revision 18 was made during the design phase, in response to round 4 of the design review, and
-carries design decision 3 of that round. It is ALIGNMENT, not new scope, and was approved without
+Revision 19 was made during the design phase, in response to round 5 of the design review, and
+carries design decision 2 of that round. It is ALIGNMENT, not new scope, and was approved without
 an independent requirements review round under the requirement owner's standing rule.
 
-What it changed: FR-23 asserted, as the cause of the condition it exists to handle, that because
-IHttpContextAccessor is AsyncLocal-backed an HttpContext flows into work that outlives the response
-and leaves HttpContext.RequestServices non-null over a disposed scope. A round-4 reviewer compiled
-and ran an ASP.NET probe and disproved it: the built-in HttpContextAccessor holds its AsyncLocal
-over a SHARED HOLDER OBJECT and clears that holder at end of request, so an already-captured flow
-sees a null HttpContext. The deferred-work case is therefore FR-24.2 (no ambient offered), which
-AC-29 expressly forbids - so AC-29 was unsatisfiable by a correct implementation, and it is the AC
-the design's usability probe is justified by.
+What it changed: FR-9(ii) named TWO ways of leaving the caller suppressed after Publish returns -
+establishing suppression around the loop in the caller's own flow, OR setting it inside a
+Parallel.ForEach body and never restoring it - and said AC-39's final clauses detect both. The
+round-5 reviewer of ADR 0075 built and ran a thirteen-case .NET probe. The second disjunct is
+mechanically FALSE: the runtime captures and restores ExecutionContext per REPLICA, including the
+replica Parallel.ForEach inlines on the calling thread, so a body-level write never reaches the
+caller. The probe measured a run in which the calling thread executed SEVEN of the bodies and the
+caller still read IsSuppressed = False.
 
-FR-23's rule, its Warning, its once-per-Brighter-container-per-provider-implementation-type latch
-(D19), and its evaluation order relative to FR-24.4 and FR-24.2 are ALL UNCHANGED. Only the
-population it applies to is stated correctly: a provider that CAPTURES a resolution source rather
-than reading it afresh on every ask - an AsyncLocal-backed provider for non-ASP.NET hosts (NFR-7,
-AC-35), one that stores HttpContext.RequestServices at construction, or a custom accessor that does
-not clear itself. FR-23 now names that population and states in a parenthesis that the built-in
-accessor is NOT in it. FR-23's example and AC-29's Given are re-sited onto that shape; AC-29's
-Then, its count, its latch clause and its second-Send branch are untouched.
+FR-9's rule, both brackets, their placement, their restore-on-every-exit-path obligation, AC-39 and
+AC-12 are ALL UNCHANGED, and no AC changes at all. Only the false disjunct is removed: FR-9(ii) now
+states that the caller-flow failure mode is the bracket's PLACEMENT, that a body-level write is
+confined to the worker, and that it therefore shows up only as FR-9(i)'s unobservable cross-body
+leak. The Design notes paragraph carried the same false claim in its fourth failure mode and is
+corrected to match - that mode is now stated as not detectable at all, which is what FR-9(i)
+already implied and what the probe establishes. FR-9(ii)'s reference to AC-39's clauses is also
+spelled as "leak clauses", matching AC-39's own wording; AC-39's actual final clause is the
+no-ordering, no-overlap constraint.
 
 Why no review round: the standing rule is that alignment needs none and an amendment that is more
-than alignment gets one. This adds no rule, no AC and no scope; it removes a false codebase claim
-and repoints one example and one Given at a scenario that can actually arise. Counts unchanged at
-27/10/50. The empirical basis is recorded in review-design.md (reviewer 0072, finding 1, score 85)
-and in PROMPT.md section 17.6.
+than alignment gets one. This adds no rule, no AC and no scope; it removes an empirically false
+claim about the .NET runtime and leaves every normative obligation in place. Counts unchanged at
+27/10/50/122. The probe output is recorded in review-design.md (reviewer 0075, finding 1, score 70,
+and the Verification log's probe section).
 
-This supersedes the revision-17 approval, which this file recorded. Revisions 16 and 17 were made
+Revision 18 (2026-08-04, round-4 decision 3) corrected FR-23's empirically false trigger - the
+built-in HttpContextAccessor clears its shared AsyncLocal holder at end of request, so the
+deferred-work case is FR-24.2 and not FR-23 - and re-sited FR-23's example and AC-29's Given onto a
+provider that CAPTURES a resolution source. It too was alignment and had no review round. It
+superseded the revision-17 approval, which this file recorded. Revisions 16 and 17 were made
 in response to round 2 of the design review: revision 16 carried the AddBrighterAspNetCoreScopes ->
 AddBrighterRequestScope rename (alignment) and FR-22.4 with its new AC-50 (new scope, and so it had
 its own review round - 11 findings, 9 at or above threshold, none Critical); revision 17 closed
