@@ -319,7 +319,7 @@ Only one ordering constraint is real, and it is FR-24's exclusivity rule: **FR-2
 | `…DependencyInjection` | `AmbientScopeProbe` | **new** — internal static, one member `CanResolveFrom(IAmAServiceProviderScope)`; the ladder's usability test, shared by all five factories |
 | `…DependencyInjection` | `ServiceProviderPipelineScope` | an **internal** borrowed construction path with non-owning disposal |
 | `…DependencyInjection` | `ServiceProviderLifetimeScope` | an internal borrowed mode (resolve from a given provider; create and dispose nothing); the `Scoped` path resolves its artefact cache from the scope in play rather than owning `_scopedInstances` (`:49`), and a faulted resolution is evicted rather than published (#4260's `Scoped` half, step 3a). `GetOrCreateSingleton` (`:152`) and its `_singletonInstances` cache are **not** touched |
-| `…DependencyInjection` | `ServiceProviderMapperFactory`, `ServiceProviderMapperFactoryAsync`, `ServiceProviderTransformerFactory`, `ServiceProviderTransformerFactoryAsync`, `ServiceProviderHandlerFactory` | keep a `ScopeAffinityPolicy`, the resolved `IAmAScopeProvider` and the diagnostics singleton; `CreatePipelineScope()` runs the protocol below, which includes **one read of core's `AmbientScopeSuppression.IsSuppressed`** at the affinity computation — the flag, both brackets and the reasoning are ADR 0075's, the read is at this ADR's step 3 |
+| `…DependencyInjection` | `ServiceProviderMapperFactory`, `ServiceProviderMapperFactoryAsync`, `ServiceProviderTransformerFactory`, `ServiceProviderTransformerFactoryAsync`, `ServiceProviderHandlerFactory` | keep a `ScopeAffinityPolicy`, the resolved `IAmAScopeProvider` and the diagnostics singleton; `CreatePipelineScope()` runs the protocol below, which includes **one read of core's `AmbientScopeSuppression.IsSuppressed`** at the affinity computation — the flag, both brackets, the reasoning **and this edit** are ADR 0075's. **The line appears at this ADR's step 3 to show where in the protocol it sits; it arrives with ADR 0075's commit and would not compile in this one**, because the type it reads does not exist until 0075 declares it |
 | `…DependencyInjection` | `ServiceCollectionExtensions.BrighterHandlerBuilder` (`:142`, reached from `:119`) | registers `ScopedArtefactCache` (`TryAddScoped`) and `AmbientScopeDiagnostics` (`TryAddSingleton`) |
 | `Paramore.Brighter.Extensions.AspNetCore` | the provider | **new package**, kept under that name by ADR 0073; its ambient implements `IAmAServiceProviderScope` over `HttpContext.RequestServices` |
 
@@ -362,7 +362,7 @@ CreatePipelineScope():
   2. if Scoped does not participate in this pipeline                 -> return an OWNED handle,
         (handler family only: HandlerLifetime == Transient)             make NO ask     [FR-27.1]
 
-  3. affinity = AmbientScopeSuppression.IsSuppressed                 [ADR 0075 owns it]
+  3. affinity = AmbientScopeSuppression.IsSuppressed        [ADR 0075: type AND edit]
                   ? ScopeAffinity.AlwaysNew
                   : policy.ForHandlerPipeline() / ForTransformPipeline()   [FR-27.2]
 
