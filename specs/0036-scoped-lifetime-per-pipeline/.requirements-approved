@@ -1,9 +1,18 @@
 PENDING: revision 20 (27 FRs / 10 NFRs / 51 ACs / 122 normative bullets) — NOT YET APPROVED.
 
 Revision 20 was made during the design phase, in response to round 5 of the design review, and
-carries design decision 4 of that round. It is NEW SCOPE, not alignment, and therefore OWES AN
-INDEPENDENT REQUIREMENTS REVIEW ROUND under the requirement owner's standing rule. The design
-phase MUST NOT be approved until that round has run and its findings are closed.
+carries design decision 4 of that round. It is NEW SCOPE, not alignment, and so it owes a
+requirements review - but NOT one of its own, and NOT now.
+
+THE OWNER CHANGED THE PROCESS AT THIS POINT, and the change governs every later revision too:
+requirements changes arising from design-review findings are ACCUMULATED and reviewed ONCE, in a
+single true-up at the end of the design phase, rather than each triggering its own round. The
+reason is that reviewing per change means reviewing text that is still moving - the design round
+that produced this change is not finished, and more requirements changes are likely - so a
+per-change round responds to flux and would be re-run against different text a few commits later.
+The standing alignment-vs-more-than-alignment rule is unchanged in substance; what changes is WHEN
+the round for a more-than-alignment change is run. PROMPT.md section 18.8 is the running ledger of
+what the true-up must cover.
 
 What it added: AC-51, the acceptance criterion for FR-13's handler-release half. ADR 0071 makes a
 handler-factory Release that throws logged at Error and swallowed rather than propagating - the one
@@ -24,10 +33,12 @@ AC-51 is the sibling of AC-33, which covers the same requirement's scope-disposa
 or constraint changes, and no existing AC changes. Counts move from 50 ACs to 51; FRs, NFRs and
 normative bullets are unchanged at 27/10/122.
 
-Why a review round: the standing rule is that alignment needs none and an amendment that is more
-than alignment gets one. This adds a criterion that did not exist and imposes new obligations on
-the implementation, so it is more than alignment. Round-2's revision 16 set the precedent - it
-added FR-22.4 and AC-50 and had its own review round.
+Why it owes a review, and why not yet: the standing rule is that alignment needs none and an
+amendment that is more than alignment gets one. This adds a criterion that did not exist and
+imposes new obligations on the implementation, so it is more than alignment and owes one. Under
+the process change above it is carried to the end-of-phase true-up instead of being reviewed on its
+own. Round-2's revision 16 - which added FR-22.4 and AC-50 and had its own round - remains the
+precedent for the RULE; the change is only to when the round runs.
 
 Approved: revision 19, 2026-08-06 (27 FRs / 10 NFRs / 50 ACs / 122 normative bullets).
 
