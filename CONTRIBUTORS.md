@@ -202,5 +202,5 @@ Brighter contributors (sorted alphabeticaly)
 **[Wilson](https://github.com/drewsuccess)**
   * Various fixes
 
-**[Islam Mohamed Zakaria](https://github.com/IslamZakaria)
+**[Islam Mohamed Zakaria](https://github.com/IslamZakaria)**
   * Set Kafka LibrdKafka error reporting levels
