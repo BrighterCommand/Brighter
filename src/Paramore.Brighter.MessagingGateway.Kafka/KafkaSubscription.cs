@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using Confluent.Kafka;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
@@ -54,6 +55,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Used to set properties that Brighter does not expose
         /// </summary>
         public Action<ConsumerConfig>? ConfigHook { get; set; }
+
+        /// <summary>
+        /// Allows you to classify or suppress the log level of non-fatal errors raised by the
+        /// underlying Kafka consumer. The hook is passed each error and returns the level at
+        /// which it should be logged; returning <see cref="LogLevel.None"/> suppresses the log
+        /// entry entirely. This only affects logging: fatal handling is unchanged and
+        /// <see cref="Error.IsFatal"/> remains authoritative, so a fatal error is always latched
+        /// regardless of the level returned.
+        /// </summary>
+        public Func<Error, LogLevel>? ErrorLogLevel { get; set; }
         
         /// <summary>
         /// Only one consumer in a group can read from a partition at any one time; this preserves ordering
@@ -215,7 +226,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin,
             Action<ConsumerConfig>? configHook = null,
             RoutingKey? deadLetterRoutingKey = null,
-            RoutingKey? invalidMessageRoutingKey = null)
+            RoutingKey? invalidMessageRoutingKey = null,
+            Func<Error, LogLevel>? errorLogLevel = null)
             : base(subscriptionName, channelName, routingKey,  requestType, getRequestType, bufferSize,
                 noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay, unacceptableMessageLimitWindow)
         {
@@ -234,6 +246,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             DeadLetterRoutingKey = deadLetterRoutingKey;
             InvalidMessageRoutingKey = invalidMessageRoutingKey;
             ConfigHook = configHook;
+            ErrorLogLevel = errorLogLevel;
         }
     }
 
@@ -277,6 +290,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="configHook">Allows you to modify the Kafka client configuration before a consumer is created. Used to set properties that Brighter does not expose</param>
         /// <param name="deadLetterRoutingKey">The routing key for the dead letter channel. Optional.</param>
         /// <param name="invalidMessageRoutingKey">The routing key for the invalid message channel. Optional.</param>
+        /// <param name="errorLogLevel">Allows you to classify or suppress the log level of non-fatal errors raised by the underlying Kafka consumer. Optional.</param>
         public KafkaSubscription(SubscriptionName? subscriptionName = null,
             ChannelName? channelName = null,
             RoutingKey? routingKey = null,
@@ -305,7 +319,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin,
             Action<ConsumerConfig>? configHook = null,
             RoutingKey? deadLetterRoutingKey = null,
-            RoutingKey? invalidMessageRoutingKey = null)
+            RoutingKey? invalidMessageRoutingKey = null,
+            Func<Error, LogLevel>? errorLogLevel = null)
             : base(
                 subscriptionName ?? new SubscriptionName(typeof(T).FullName!),
                 channelName ?? new ChannelName(typeof(T).FullName!),
@@ -336,7 +351,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 partitionAssignmentStrategy,
                 configHook,
                 deadLetterRoutingKey,
-                invalidMessageRoutingKey)
+                invalidMessageRoutingKey,
+                errorLogLevel)
         {
         }
     }

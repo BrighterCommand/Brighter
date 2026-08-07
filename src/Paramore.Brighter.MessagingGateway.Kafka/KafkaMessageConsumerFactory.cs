@@ -100,6 +100,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 topicFindTimeout: kafkaSubscription.TopicFindTimeout,
                 makeChannels: kafkaSubscription.MakeChannels,
                 configHook: kafkaSubscription.ConfigHook,
+                errorLogLevel: kafkaSubscription.ErrorLogLevel,
                 deadLetterRoutingKey: deadLetterRoutingKey,
                 invalidMessageRoutingKey: invalidMessageRoutingKey,
                 timeProvider: kafkaSubscription.TimeProvider,
