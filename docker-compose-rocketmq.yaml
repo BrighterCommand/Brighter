@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # RocketMQ Nameserver (Service Discovery)
   nameserver:
-    image: apache/rocketmq
+    image: apache/rocketmq:5.4.0
     platform: linux/amd64
     container_name: rocketmq-nameserver
     ports:
@@ -19,7 +19,7 @@ services:
 
   # RocketMQ Broker (Message Storage)
   broker:
-    image: apache/rocketmq
+    image: apache/rocketmq:5.4.0
     platform: linux/amd64
     container_name: rocketmq-broker
     ports:
@@ -43,18 +43,18 @@ services:
       retries: 10
   
   proxy:
-    image: apache/rocketmq
+    image: apache/rocketmq:5.4.0
     platform: linux/amd64
     container_name: rmqproxy
     depends_on:
       - broker
       - nameserver
     ports:
-      - "8081:8081"   # HTTP endpoint (for REST API)
-      - "9877:9877"   # gRPC endpoint (for clients)
+      - "8081:8081"   # gRPC endpoint (for clients)
+      - "9877:9877"   # Reserved (no service listens here by default)
     environment:
       - NAMESRV_ADDR=nameserver:9876
-      - JAVA_OPT_EXT=-Xms64m -Xmx64m -Xmn32m -XX:MaxDirectMemorySize=64m -XX:MaxMetaspaceSize=96m
+      - JAVA_OPT_EXT=-Xms64m -Xmx512m -Xmn32m -XX:MaxDirectMemorySize=64m -XX:MaxMetaspaceSize=96m
     command: sh mqproxy
     healthcheck: 
       test: [ "CMD", "sh", "-c", "netstat -an | grep 8081" ]
@@ -62,11 +62,11 @@ services:
       timeout: 10s
       retries: 10
     
-  # Service to create the RocketMQ topic
+  # Service to create the RocketMQ topics
   create-topic:
-    image: apache/rocketmq # Use the same RocketMQ image to get mqadmin tool
+    image: apache/rocketmq:5.4.0 # Use the same RocketMQ image to get mqadmin tool
     platform: linux/amd64
-    command: > # Multi-line command to create the topic
+    command: > # Multi-line command to create the topics
       sh -c "
             echo 'Waiting for broker to be healthy...' &&
             until curl -s http://broker:10911/ &>/dev/null; do
@@ -83,6 +83,9 @@ services:
             /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_dlq_source -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
             /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_dlq_target -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
             /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_dlq_invalid -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t orders -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t orders-dlq -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t orders-invalid -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
 
             echo 'Creating generated test topics...' &&
 
