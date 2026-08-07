@@ -62,6 +62,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private static readonly TimeSpan s_commitSyncTimeout = TimeSpan.FromSeconds(5);
         private readonly ITimer _sweeperTimer;
         private bool _hasFatalError;
+        private readonly Func<Error, LogLevel>? _errorLogLevel;
         private bool _isClosed;
         private readonly RoutingKey? _deadLetterRoutingKey;
         private readonly RoutingKey? _invalidMessageRoutingKey;
@@ -104,6 +105,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="makeChannels">Should we create infrastructure (topics) where it does not exist or check. Defaults to Create</param>
         /// <param name="configHook">Allows you to modify the Kafka client configuration before a consumer is created.</param>
         /// <param name="timeProvider">The <see cref="TimeProvider"/> used to create the timer for sweeping uncommitted offsets. Defaults to <see cref="TimeProvider.System"/> if not specified. Can be overridden for testing purposes.</param>
+        /// <param name="errorLogLevel">Allows you to classify or suppress the log level of non-fatal errors raised by the underlying Kafka consumer. Returning <see cref="LogLevel.None"/> suppresses the log entirely. Does not affect fatal handling, which is driven solely by <see cref="Error.IsFatal"/>. Defaults to <see langword="null"/>, logging fatal errors at <see cref="LogLevel.Error"/> and non-fatal at <see cref="LogLevel.Warning"/>.</param>
         /// <param name="deadLetterRoutingKey">If we support a dead letter topic what is the <see cref="RoutingKey"/></param>
         /// <param name="invalidMessageRoutingKey">If we support an invalid message topic what is the <see cref="RoutingKey"/></param>
         /// <param name="scheduler">Optional scheduler for delayed requeue operations. When provided, the lazily-created
@@ -132,7 +134,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             RoutingKey? invalidMessageRoutingKey = null,
             TimeProvider? timeProvider = null,
             IAmAMessageScheduler? scheduler = null,
-            IGroupProtocol? groupProtocol = null)
+            IGroupProtocol? groupProtocol = null,
+            Func<Error, LogLevel>? errorLogLevel = null)
         {
             if (groupId is null)
                 throw new ConfigurationException("You must set a GroupId for the consumer");
@@ -141,6 +144,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             
             _configuration = configuration ?? throw new ConfigurationException("You must set a KafkaMessagingGatewayConfiguration to connect to a broker");
             _scheduler = scheduler;
+            _errorLogLevel = errorLogLevel;
 
             _deadLetterRoutingKey = deadLetterRoutingKey;
             _invalidMessageRoutingKey = invalidMessageRoutingKey;
@@ -789,15 +793,19 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             // Latch: once librdkafka reports a fatal error the consumer is unrecoverable. Errors arrive
             // in bursts, so we must never clear the latch when a later non-fatal error follows a fatal one.
+            // This is authoritative and is never influenced by the ErrorLogLevel hook.
             if (error.IsFatal)
                 _hasFatalError = true;
 
+            // The hook only classifies/suppresses logging; when absent we preserve the default behaviour
+            // of logging fatal errors at Error and non-fatal at Warning. LogLevel.None suppresses the log.
+            var logLevel = _errorLogLevel?.Invoke(error) ?? (error.IsFatal ? LogLevel.Error : LogLevel.Warning);
+            if (logLevel == LogLevel.None)
+                return;
+
             // Log against the error we actually received, independent of the latch, so a non-fatal error
             // that arrives after a fatal one is still logged as non-fatal.
-            if (error.IsFatal)
-                Log.FatalError(s_logger, error.Code, error.Reason, true);
-            else
-                Log.NonFatalError(s_logger, error.Code, error.Reason, false);
+            Log.KafkaError(s_logger, logLevel, error.Code, error.Reason, error.IsFatal);
         }
 
         private void CheckHasPartitions()
@@ -1240,11 +1248,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             [LoggerMessage(LogLevel.Information, "Partitions for consumer lost {Channels}")]
             public static partial void PartitionsLost(ILogger logger, string channels);
             
-            [LoggerMessage(LogLevel.Error, "Code: {ErrorCode}, Reason: {ErrorMessage}, Fatal: {FatalError}")]
-            public static partial void FatalError(ILogger logger, ErrorCode errorCode, string errorMessage, bool fatalError);
-            
-            [LoggerMessage(LogLevel.Warning, "Code: {ErrorCode}, Reason: {ErrorMessage}, Fatal: {FatalError}")]
-            public static partial void NonFatalError(ILogger logger, ErrorCode errorCode, string errorMessage, bool fatalError);
+            // A dynamic-level logger cannot use the [LoggerMessage] attribute with a fixed Level, so we log
+            // through the ILogger directly. Named placeholders are preserved for structured logging providers.
+            public static void KafkaError(ILogger logger, LogLevel logLevel, ErrorCode errorCode, string errorMessage, bool fatalError)
+            {
+                logger.Log(logLevel, "Code: {ErrorCode}, Reason: {ErrorMessage}, Fatal: {FatalError}", errorCode, errorMessage, fatalError);
+            }
             
             [LoggerMessage(LogLevel.Information, "Kafka consumer subscribing to {Topic}")]
             public static partial void SubscribingToTopic(ILogger logger, RoutingKey topic);
