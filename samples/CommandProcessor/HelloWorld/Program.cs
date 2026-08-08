@@ -30,7 +30,7 @@ using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 
 var builder = Host.CreateApplicationBuilder();
-builder.Services.AddBrighter().AutoFromAssemblies();
+builder.Services.AddBrighter().AddFromThisAssembly();
 var host = builder.Build();
 
 var commandProcessor = host.Services.GetRequiredService<IAmACommandProcessor>();
