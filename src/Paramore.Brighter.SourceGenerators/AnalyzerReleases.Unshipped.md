@@ -13,3 +13,4 @@ BRGEN005 | Brighter | Warning | Generic message mappers and transforms are not r
 BRGEN006 | Brighter | Warning | Types nested in an open generic type are not registered
 BRGEN007 | Brighter | Info | Auto-registration suppressed by a manual registration method
 BRGEN008 | Brighter | Error | Brighter registration method must be in a non-nested, non-generic type
+BRGEN009 | Brighter | Error | Brighter is not referenced

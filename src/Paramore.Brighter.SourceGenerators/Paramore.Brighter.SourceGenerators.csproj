@@ -4,11 +4,16 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <Description>Source generators for Brighter — emits handler/mapper/transform registrations at compile time so consumers can avoid AutoFromAssemblies reflection scanning.</Description>
     <PackageTags>SourceGenerator;Brighter;Paramore.Brighter</PackageTags>
-    <IsPackable>false</IsPackable>
+    <IsPackable>true</IsPackable>
     <IsRoslynComponent>true</IsRoslynComponent>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <DevelopmentDependency>true</DevelopmentDependency>
+    <!-- The generator ships under analyzers/dotnet/cs, not lib/ — consumers must never get a
+         compile-time reference to it. -->
     <IncludeBuildOutput>false</IncludeBuildOutput>
+    <!-- Analyzer-only package: no lib/ per TFM, so NuGet's missing-dependency-group warning
+         (NU5128) is expected and suppressed. -->
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
     <Nullable>enable</Nullable>
     <!-- Generator assemblies do not need ref assemblies and shouldn't ship XML docs -->
     <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
@@ -32,8 +37,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Everything except the generator entry point is internal; the tests see it through here.
+         The Key is Brighter.snk's public key (all src assemblies are strong-named). -->
+    <InternalsVisibleTo Include="Paramore.Brighter.SourceGenerators.Tests" Key="0024000004800000940000000602000000240000525341310004000001000100dd46b10d01da89e50116953aefb31c2d3d0a7109d6c1587c347123c8a40e9e59cf3472d9f46a71330b6c58d5d0e36d5ca60257c362ceaccd86fb2aa1846e206743f7c56d60a70dae7055f0b2a926270e2d0001634b2ed663a70a7812ab77005302ca575c37591c10033e411d4fd728d6d4c09157643e94ef7d675362676b1dbf" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Pack the props into build/ so it applies only to direct PackageReferences (not transitive). -->
     <None Include="build\Paramore.Brighter.SourceGenerators.props" Pack="true" PackagePath="build\" />
+    <!-- The generator assembly itself, where the consumer's compiler loads analyzers from. -->
+    <None Include="$(OutputPath)$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
 
 </Project>

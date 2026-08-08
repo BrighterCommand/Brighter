@@ -36,7 +36,7 @@ namespace Paramore.Brighter.SourceGenerators;
 /// value-equatable records so the incremental pipeline can cache their output by value rather
 /// than by symbol identity (which is never stable across compilations).
 /// </summary>
-public static class SemanticModelReader
+internal static class SemanticModelReader
 {
     /// <summary>
     /// Transform for <see cref="IncrementalGeneratorInitializationContext.SyntaxProvider"/>
@@ -52,7 +52,15 @@ public static class SemanticModelReader
 
         var markers = MarkerSymbols.Resolve(ctx.SemanticModel.Compilation);
         if (!markers.IsValid)
-            return new MethodCandidate(null, null);
+        {
+            // The user has asked for registrations but the compilation can't see Brighter's types,
+            // so nothing can be generated. Say so, rather than leave them with a bare CS8795 on the
+            // unimplemented partial method.
+            return new MethodCandidate(null, new DiagnosticInfo(
+                Diagnostics.BrighterNotReferenced.Id,
+                LocationInfo.From(method.Locations.FirstOrDefault()),
+                method.Name));
+        }
 
         var diagnostic = ValidateMethod(method, markers);
         if (diagnostic is not null)
@@ -271,6 +279,10 @@ public static class SemanticModelReader
         if (type.TypeKind != TypeKind.Class)
             return false;
         if (type.IsAbstract || type.IsImplicitClass || type.IsAnonymousType)
+            return false;
+        // A file-local type reports Internal accessibility but can only be named from its own
+        // file, so the generated registration file could never reference it.
+        if (type.IsFileLocal)
             return false;
         return IsReachableFromGeneratedCode(type);
     }

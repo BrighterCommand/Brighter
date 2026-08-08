@@ -1,3 +1,18 @@
+---
+id: 0062-source-generated-handler-registration
+title: "Source-Generated Handler, Mapper and Transform Registration"
+status: Proposed
+author:
+  - "Brighter Team"
+created: 2026-06-04
+summary: "Adds an opt-in Roslyn incremental source generator that registers Brighter handlers, message mappers and message transforms at compile time via a RegistrationCatalog data type, as an additive alternative to AutoFromAssemblies runtime reflection scanning — restoring trimming/AOT compatibility and moving missing-registration failures from dispatch time to compile/startup time."
+tags:
+  - "source-generators"
+  - "dependency-injection"
+  - "registration"
+  - "aot"
+---
+
 # 62. Source-Generated Handler, Mapper and Transform Registration
 
 Date: 2026-06-04 (amended 2026-07-12: registration artefact reshaped from generated imperative
@@ -155,6 +170,16 @@ It applies catalogs through the existing public surface:
 - **Transforms** via the off-interface `BrighterBuilderExtensions.Transforms(...)` extension
   (added in this change so transform registration is symmetric with handlers/mappers **without**
   a binary-breaking addition to `IBrighterBuilder`).
+- **Framework pipeline handlers** via the off-interface
+  `BrighterBuilderExtensions.EnsureFrameworkHandlersRegistered(...)` extension, called once per
+  applied registration set. The scanning paths register Brighter's own pipeline handlers
+  (`ExceptionPolicyHandler<>`, `RequestLoggingHandler<>`, `FallbackPolicyHandler<>`,
+  `TimeoutPolicyHandler<>` and their async variants) implicitly, by appending the framework
+  assembly to every handler scan; without an equivalent call, generated registrations would leave
+  `[UsePolicy]`, `[RequestLogging]`, `[Fallback]` and `[Timeout]` failing to resolve at pipeline
+  build time. The extension funnels through the same scan-the-framework-assembly code path as
+  `AutoFromAssemblies`, so the list of framework handlers cannot drift between the two mechanisms
+  (and is not frozen into consumers' generated code).
 
 **Applying registrations is a set union, not an append.** Registering the identical entry —
 same `(requestType, handlerType, isAsync)` — twice is a no-op, at two levels: `AddRegistrations`
@@ -354,6 +379,15 @@ and may legitimately be records. A type is reachable when it (and any containing
 - **Handler inheritance can register a request type twice.** For `class B : A` where `A :
   RequestHandler<Cmd>`, both `A` and `B` report `IHandleRequests<Cmd>`, so both are registered. This
   matches the reflection scanner's behaviour rather than introducing a new asymmetry.
+- **Off-interface extensions throw for custom `IBrighterBuilder` implementations.**
+  `Transforms(...)`, `EnsureFrameworkHandlersRegistered(...)` (and `AddRegistrations` when it
+  lands) downcast to `ServiceCollectionBrighterBuilder` and throw `InvalidOperationException`
+  otherwise. Generated code calls them unconditionally, so a custom builder implementation gets a
+  startup throw from code it didn't write. Accepted: keeping these off the interface is exactly
+  what preserves binary compatibility for those same implementers (Alternative 4), the failure is
+  at startup with an explicit message rather than at dispatch, and no custom `IBrighterBuilder`
+  implementation could meaningfully satisfy these calls anyway (they manipulate registries only
+  the ServiceCollection implementation owns).
 
 ### Deferred follow-ups
 
@@ -498,6 +532,9 @@ possibly under a better name.
   leaves two registration verbs and a second generated output shape to maintain and document.
   Synthesising a default *holder* instead unifies the generator to one output shape and every
   composition line to `AddRegistrations(...)`.
+- The sugar was emitted into `Paramore.Brighter.Extensions.DependencyInjection` so it was
+  discoverable without a `using` — which means the *consumer's* assembly declares a type in the
+  vendor's namespace. A synthesised holder lives in the consumer's own root namespace instead.
 - The cost — losing IntelliSense discoverability of the zero-config call on `builder.` — is
   accepted: the feature is opted into via a package reference, so the package README is the
   discovery surface, and Phase 2's `GenerateBuilderExtensions` offers deliberate, named fluent

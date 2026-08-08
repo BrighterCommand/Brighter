@@ -44,6 +44,20 @@ public class RegistrationWriterTests
     }
 
     [Fact]
+    public void AlwaysEmitsFrameworkHandlerRegistration()
+    {
+        // AutoFromAssemblies registers Brighter's own pipeline handlers ([UsePolicy],
+        // [RequestLogging], [Fallback], [Timeout]...) by scanning the framework assembly; the
+        // generated method must call EnsureFrameworkHandlersRegistered for the same effect —
+        // even when nothing was discovered, matching the scanning path's behaviour.
+        var output = RegistrationWriter.Write(EmptyModel());
+
+        Assert.Contains(
+            "global::Paramore.Brighter.Extensions.DependencyInjection.BrighterBuilderExtensions.EnsureFrameworkHandlersRegistered(builder);",
+            output);
+    }
+
+    [Fact]
     public void EmptyModel_EmitsScaffoldAndReturnsBuilder()
     {
         var output = RegistrationWriter.Write(EmptyModel());

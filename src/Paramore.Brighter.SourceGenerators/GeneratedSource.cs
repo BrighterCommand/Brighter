@@ -29,7 +29,7 @@ namespace Paramore.Brighter.SourceGenerators;
 /// labelled consistently and the tool version is read from a single place. Modelled on the
 /// equivalent helpers in the ASP.NET Core source generators.
 /// </summary>
-public static class GeneratedSource
+internal static class GeneratedSource
 {
     /// <summary>The tool name recorded in <c>[GeneratedCode]</c>.</summary>
     public const string ToolName = "Paramore.Brighter.SourceGenerators";

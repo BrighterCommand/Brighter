@@ -6,6 +6,10 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <!-- The generator assembly is strong-named, so its InternalsVisibleTo can only name a
+         strong-named friend; sign the tests with the same key. -->
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>..\..\Brighter.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,7 +17,10 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <!-- Match the generator's pinned Roslyn floor (see Paramore.Brighter.SourceGenerators.csproj)
+         so the tests exercise the oldest compiler the generator claims to support — an accidental
+         use of a newer-only Roslyn API fails here rather than on a consumer's machine. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" VersionOverride="4.8.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.SourceGenerators.Testing" />
   </ItemGroup>
 

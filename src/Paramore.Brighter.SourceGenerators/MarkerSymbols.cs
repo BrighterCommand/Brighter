@@ -30,7 +30,7 @@ namespace Paramore.Brighter.SourceGenerators;
 /// Cached lookup of the Brighter framework type symbols the reader needs to recognise.
 /// Returns <see cref="IsValid"/> = false when Brighter isn't in the compilation's reference graph.
 /// </summary>
-public sealed class MarkerSymbols
+internal sealed class MarkerSymbols
 {
     public INamedTypeSymbol? BrighterBuilder { get; private set; }
     public INamedTypeSymbol? HandleRequests { get; private set; }

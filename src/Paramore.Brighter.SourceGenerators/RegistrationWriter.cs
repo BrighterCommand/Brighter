@@ -34,7 +34,7 @@ namespace Paramore.Brighter.SourceGenerators;
 /// without constructing a Compilation. Indentation is managed structurally by
 /// <see cref="CodeWriter"/> rather than by embedding whitespace in the emitted strings.
 /// </summary>
-public static class RegistrationWriter
+internal static class RegistrationWriter
 {
     public static string Write(RegistrationModel model)
     {
@@ -78,6 +78,11 @@ public static class RegistrationWriter
         code.WriteLine(GeneratedSource.GeneratedCodeAttribute);
         code.WriteLine(MethodSignature(target));
         code.StartBlock();
+
+        // The assembly-scanning paths register Brighter's own pipeline handlers ([UsePolicy],
+        // [RequestLogging], [Fallback], [Timeout]...) by appending the framework assembly to the
+        // scan set; the generated method must do the same or those attributes fail at runtime.
+        code.WriteLine($"global::Paramore.Brighter.Extensions.DependencyInjection.BrighterBuilderExtensions.EnsureFrameworkHandlersRegistered({target.ParameterName});");
 
         WriteHandlers(code, target.ParameterName, model.Handlers, isAsync: false);
         WriteHandlers(code, target.ParameterName, model.AsyncHandlers, isAsync: true);

@@ -31,7 +31,7 @@ namespace Paramore.Brighter.SourceGenerators.Model;
 /// method/type <see cref="Target"/> plus the discovered registrations. Deliberately free of Roslyn
 /// types so the writer can be unit-tested without a Compilation.
 /// </summary>
-public sealed record RegistrationModel(
+internal sealed record RegistrationModel(
     MethodTarget Target,
     EquatableArray<HandlerEntry> Handlers,
     EquatableArray<HandlerEntry> AsyncHandlers,
@@ -88,11 +88,11 @@ public sealed record RegistrationModel(
 /// (e.g. <c>global::Foo.Bar</c>). For open generics, <see cref="RequestTypeFullyQualified"/>
 /// is empty and <see cref="HandlerTypeFullyQualified"/> uses unbound form (e.g. <c>global::Foo&lt;&gt;</c>).
 /// </summary>
-public sealed record HandlerEntry(
+internal sealed record HandlerEntry(
     string RequestTypeFullyQualified,
     string HandlerTypeFullyQualified,
     bool IsOpenGeneric);
 
-public sealed record MapperEntry(
+internal sealed record MapperEntry(
     string RequestTypeFullyQualified,
     string MapperTypeFullyQualified);

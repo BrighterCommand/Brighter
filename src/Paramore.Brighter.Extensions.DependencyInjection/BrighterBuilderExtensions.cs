@@ -56,5 +56,29 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             throw new InvalidOperationException(
                 $"The {nameof(Transforms)} extension requires {nameof(ServiceCollectionBrighterBuilder)}; received {builder.GetType().FullName}.");
         }
+
+        /// <summary>
+        /// Register Brighter's own pipeline handlers (exception policy, request logging, fallback,
+        /// timeout and their async variants) with the ServiceCollection. The assembly-scanning
+        /// registration paths do this implicitly; callers that register handlers explicitly (for
+        /// example generated code) call this once so attributes such as [UsePolicy] or
+        /// [RequestLogging] can resolve their handlers at runtime.
+        /// </summary>
+        /// <param name="builder">The Brighter builder.</param>
+        /// <returns>The builder, to allow chaining.</returns>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown if <paramref name="builder"/> is not the <see cref="ServiceCollectionBrighterBuilder"/>
+        /// implementation that owns the subscriber registry.
+        /// </exception>
+        public static IBrighterBuilder EnsureFrameworkHandlersRegistered(this IBrighterBuilder builder)
+        {
+            if (builder == null) throw new ArgumentNullException(nameof(builder));
+
+            if (builder is ServiceCollectionBrighterBuilder concrete)
+                return concrete.EnsureFrameworkHandlersRegistered();
+
+            throw new InvalidOperationException(
+                $"The {nameof(EnsureFrameworkHandlersRegistered)} extension requires {nameof(ServiceCollectionBrighterBuilder)}; received {builder.GetType().FullName}.");
+        }
     }
 }

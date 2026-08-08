@@ -32,7 +32,7 @@ namespace Paramore.Brighter.SourceGenerators.Model;
 /// Value-equatable wrapper around an array, suitable for use in records that participate in
 /// the incremental generator pipeline (where structural equality is required for caching).
 /// </summary>
-public sealed class EquatableArray<T> : IEquatable<EquatableArray<T>>, IReadOnlyList<T>
+internal sealed class EquatableArray<T> : IEquatable<EquatableArray<T>>, IReadOnlyList<T>
     where T : IEquatable<T>
 {
     public static readonly EquatableArray<T> Empty = new(Array.Empty<T>());

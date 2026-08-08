@@ -30,7 +30,7 @@ namespace Paramore.Brighter.SourceGenerators;
 /// compilation. A stage that flips to <c>Modified</c> on an unrelated edit is the classic symptom
 /// of a pipeline value that lost its value equality.
 /// </summary>
-public static class TrackingNames
+internal static class TrackingNames
 {
     /// <summary>The per-method <c>[BrighterRegistrations]</c> projection (<c>MethodCandidate</c>).</summary>
     public const string MethodCandidates = "MethodCandidates";
@@ -43,4 +43,7 @@ public static class TrackingNames
 
     /// <summary>The per-method candidate combined with the discovered entries, ready to emit.</summary>
     public const string RegistrationInputs = "RegistrationInputs";
+
+    /// <summary>The flattened, de-duplicated discovery diagnostics (BRGEN005/006).</summary>
+    public const string DiscoveryDiagnostics = "DiscoveryDiagnostics";
 }

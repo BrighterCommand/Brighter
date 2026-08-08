@@ -43,6 +43,7 @@ public class IncrementalCachingTests
         TrackingNames.DiscoveryBatches,
         TrackingNames.DiscoveredEntries,
         TrackingNames.RegistrationInputs,
+        TrackingNames.DiscoveryDiagnostics,
     };
 
     private static (GeneratorDriver Driver, Compilation Compilation) RunInitial(string source)

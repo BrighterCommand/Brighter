@@ -61,7 +61,10 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
     private const string AutoClassName = "BrighterAssemblyRegistrations";
     private const string AutoMethodName = "AddFromThisAssembly";
 
-    private static readonly string AttributeSource = GeneratedSource.Header + "\n" + AttributeBody;
+    // Normalised to LF: both operands are raw string literals whose newlines follow this source
+    // file's line endings at compile time, so without this the file could mix CRLF and the hard \n.
+    private static readonly string AttributeSource =
+        (GeneratedSource.Header + "\n" + AttributeBody).Replace("\r\n", "\n");
 
     private const string AttributeBody = """
         #nullable enable
@@ -121,7 +124,8 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
         // reaches ReadClass once per declaration, producing identical diagnostics (same id + location).
         var discoveryDiagnostics = collectedBatches.Select(static (batches, _) =>
             new EquatableArray<DiagnosticInfo>(
-                batches.SelectMany(static b => (IEnumerable<DiagnosticInfo>)b.Diagnostics).Distinct()));
+                batches.SelectMany(static b => (IEnumerable<DiagnosticInfo>)b.Diagnostics).Distinct()))
+            .WithTrackingName(TrackingNames.DiscoveryDiagnostics);
 
         // True when the compilation hand-writes at least one valid [BrighterRegistrations] method.
         // Used to suppress the auto class so the two paths can't both register (double registration,
@@ -256,6 +260,7 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
         [Diagnostics.GenericMapperOrTransformIgnored.Id] = Diagnostics.GenericMapperOrTransformIgnored,
         [Diagnostics.NestedInOpenGeneric.Id] = Diagnostics.NestedInOpenGeneric,
         [Diagnostics.UnsupportedContainingType.Id] = Diagnostics.UnsupportedContainingType,
+        [Diagnostics.BrighterNotReferenced.Id] = Diagnostics.BrighterNotReferenced,
     };
 
     private static DiagnosticDescriptor DescriptorFor(string id) =>

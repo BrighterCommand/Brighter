@@ -25,7 +25,7 @@ using Microsoft.CodeAnalysis;
 
 namespace Paramore.Brighter.SourceGenerators;
 
-public static class Diagnostics
+internal static class Diagnostics
 {
     public static readonly DiagnosticDescriptor MustBePartial = new(
         "BRGEN001",
@@ -73,5 +73,11 @@ public static class Diagnostics
         "BRGEN008",
         "Brighter registration method must be in a non-nested, non-generic type",
         "Method '{0}' marked with [BrighterRegistrations] must be declared in a non-nested, non-generic type; move it to a top-level type",
+        "Brighter", DiagnosticSeverity.Error, isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor BrighterNotReferenced = new(
+        "BRGEN009",
+        "Brighter is not referenced",
+        "Method '{0}' is marked with [BrighterRegistrations] but the compilation does not reference Paramore.Brighter and Paramore.Brighter.Extensions.DependencyInjection, so no registration was generated; add the missing package reference",
         "Brighter", DiagnosticSeverity.Error, isEnabledByDefault: true);
 }

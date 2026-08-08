@@ -30,7 +30,7 @@ namespace Paramore.Brighter.SourceGenerators.Model;
 /// Per-method projection produced by the syntax-provider transform. Holds only value-equatable
 /// data so the incremental pipeline can cache it across runs.
 /// </summary>
-public sealed record MethodTarget(
+internal sealed record MethodTarget(
     string? Namespace,
     string ContainingTypeAccessibility,
     string ContainingTypeName,
@@ -45,7 +45,7 @@ public sealed record MethodTarget(
     bool IsPartial = true);
 
 /// <summary>The category of a discovered Brighter registration candidate.</summary>
-public enum DiscoveredKind
+internal enum DiscoveredKind
 {
     SyncHandler,
     AsyncHandler,
@@ -58,7 +58,7 @@ public enum DiscoveredKind
 /// One discovered registration candidate. Multiple entries may originate from the same class
 /// (e.g., a class implementing both a sync and async handler interface).
 /// </summary>
-public sealed record DiscoveredEntry(
+internal sealed record DiscoveredEntry(
     DiscoveredKind Kind,
     string RequestTypeFullyQualified,
     string TypeFullyQualified,
@@ -69,7 +69,7 @@ public sealed record DiscoveredEntry(
 /// through the pipeline so a diagnostic can be rebuilt at source-output time without holding
 /// onto non-cacheable Roslyn objects.
 /// </summary>
-public sealed record LocationInfo(string FilePath, TextSpan TextSpan, LinePositionSpan LineSpan)
+internal sealed record LocationInfo(string FilePath, TextSpan TextSpan, LinePositionSpan LineSpan)
 {
     public Location ToLocation() => Location.Create(FilePath, TextSpan, LineSpan);
 
@@ -86,19 +86,19 @@ public sealed record LocationInfo(string FilePath, TextSpan TextSpan, LinePositi
 /// Deferred diagnostic representation. Created in the syntax-provider transform; converted back
 /// to <see cref="Diagnostic"/> at source-output time.
 /// </summary>
-public sealed record DiagnosticInfo(string Id, LocationInfo? Location, string Argument);
+internal sealed record DiagnosticInfo(string Id, LocationInfo? Location, string Argument);
 
 /// <summary>
 /// Result of reading a single <c>[BrighterRegistrations]</c>-attributed method: either a valid
 /// <see cref="MethodTarget"/>, or a diagnostic describing why the method was rejected.
 /// </summary>
-public sealed record MethodCandidate(MethodTarget? Method, DiagnosticInfo? Diagnostic);
+internal sealed record MethodCandidate(MethodTarget? Method, DiagnosticInfo? Diagnostic);
 
 /// <summary>
 /// Per-class output from the discovery transform: zero or more registration entries, plus zero
 /// or more diagnostics (e.g. <c>BRGEN005</c> when a generic mapper/transform is observed).
 /// </summary>
-public sealed record DiscoveryBatch(
+internal sealed record DiscoveryBatch(
     EquatableArray<DiscoveredEntry> Entries,
     EquatableArray<DiagnosticInfo> Diagnostics)
 {
