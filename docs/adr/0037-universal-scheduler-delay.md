@@ -1,3 +1,18 @@
+---
+id: 0037-universal-scheduler-delay
+title: "Universal Scheduler Delay Support"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-01-28
+summary: "Decides to make delayed message delivery consistent across all Brighter transports by routing delayed requeues through the IAmAMessageScheduler interface rather than direct timer calls, with InMemoryScheduler as the default and lazy producer creation in consumers for transports without native delay support."
+tags:
+  - "scheduling"
+  - "messaging"
+  - "transports"
+  - "message-pump"
+---
+
 # 37. Universal Scheduler Delay Support
 
 Date: 2026-01-28

@@ -74,15 +74,15 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Handlers
                     break;
                 case ConfigurationCommandType.CM_STOPCHANNEL:
                     Log.LogSeparator(s_logger);
-                    Log.StoppingChannel(s_logger, configurationCommand.SubscriptionName);
+                    Log.StoppingChannel(s_logger, configurationCommand.SubscriptionName.Value);
                     Log.LogSeparator(s_logger);
-                    _dispatcher.Shut(new SubscriptionName(configurationCommand.SubscriptionName));
+                    _dispatcher.Shut(new SubscriptionName(configurationCommand.SubscriptionName.Value));
                     break;
                 case ConfigurationCommandType.CM_STARTCHANNEL:
                     Log.LogSeparator(s_logger);
-                    Log.StartingChannel(s_logger, configurationCommand.SubscriptionName);
+                    Log.StartingChannel(s_logger, configurationCommand.SubscriptionName.Value);
                     Log.LogSeparator(s_logger);
-                    _dispatcher.Open(new SubscriptionName(configurationCommand.SubscriptionName));
+                    _dispatcher.Open(new SubscriptionName(configurationCommand.SubscriptionName.Value));
                     break;
                 default:
                     throw new ArgumentException("{0} is an unknown Configuration Command", Enum.GetName(typeof(ConfigurationCommandType), configurationCommand.Type));

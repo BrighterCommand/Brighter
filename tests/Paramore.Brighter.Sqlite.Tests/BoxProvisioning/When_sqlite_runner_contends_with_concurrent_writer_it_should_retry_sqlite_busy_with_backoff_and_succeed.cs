@@ -57,7 +57,7 @@ public class SqliteRunnerSqliteBusyContentionTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Should_retry_sqlite_busy_with_backoff_and_succeed()
+    public async Task When_runner_contends_with_concurrent_writer_it_should_retry_sqlite_busy_with_backoff_and_succeed()
     {
         //Arrange — file-backed SQLite database in WAL mode so writers contend on a single
         //writer slot. A separate "writer" connection takes BEGIN IMMEDIATE and dirties the

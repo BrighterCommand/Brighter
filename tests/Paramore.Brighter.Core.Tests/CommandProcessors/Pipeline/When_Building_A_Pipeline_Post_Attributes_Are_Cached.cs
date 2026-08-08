@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -30,7 +31,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 
             pipelineBuilder.Build(new MyCommand(), new RequestContext()).First();
 
-            Assert.Contains(nameof(MyPreAndPostDecoratedHandler), GetPostAttributesCacheKeys());
+            Assert.Contains(typeof(MyPreAndPostDecoratedHandler), GetPostAttributesCacheKeys());
         }
 
         [Fact]
@@ -52,10 +53,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 
             pipelineBuilder.BuildAsync(new MyCommand(), new RequestContext(), false).First();
 
-            Assert.Contains(nameof(MyPreAndPostDecoratedHandlerAsync), GetPostAttributesCacheKeys());
+            Assert.Contains(typeof(MyPreAndPostDecoratedHandlerAsync), GetPostAttributesCacheKeys());
         }
 
-        private static IEnumerable<string> GetPostAttributesCacheKeys()
+        private static IEnumerable<Type> GetPostAttributesCacheKeys()
         {
             var field = typeof(PipelineBuilder<MyCommand>).GetField(
                 "s_postAttributesMemento",
@@ -63,7 +64,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             Assert.NotNull(field);
 
             var cache = (IDictionary)field!.GetValue(null)!;
-            return cache.Keys.Cast<string>();
+            return cache.Keys.Cast<Type>();
         }
     }
 }

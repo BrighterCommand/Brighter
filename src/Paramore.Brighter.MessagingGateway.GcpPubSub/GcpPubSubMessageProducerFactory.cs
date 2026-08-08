@@ -62,7 +62,7 @@ public class GcpPubSubMessageProducerFactory : GcpPubSubMessageGateway, IAmAMess
             publication.TopicAttributes ??= new TopicAttributes();
             if (string.IsNullOrEmpty(publication.TopicAttributes.Name))
             {
-                publication.TopicAttributes.Name = publication.Topic;
+                publication.TopicAttributes.Name = publication.Topic?.Value ?? string.Empty;
             }
 
             // Ensure the Google Cloud Pub/Sub Topic exists, creating it if configured to do so
@@ -77,7 +77,7 @@ public class GcpPubSubMessageProducerFactory : GcpPubSubMessageGateway, IAmAMess
                 publication.PublisherClientConfiguration ?? _connection.PublisherConfiguration);
 
             // Create the Brighter-specific producer wrapper and add it to the dictionary
-            producers[new ProducerKey(publication.Topic, publication.Type)] = new GcpMessageProducer(
+            producers[new ProducerKey(publication.Topic!, publication.Type)] = new GcpMessageProducer(
                 client,
                 publication,
                 _instrumentation ?? InstrumentationOptions.None

@@ -141,7 +141,7 @@ public abstract partial class AzureServiceBusMessageProducer : IAmAMessageProduc
         }
 
         var topic = topics.First()!;
-        var serviceBusSenderWrapper = await GetSenderAsync(topic);
+        var serviceBusSenderWrapper = await GetSenderAsync(topic.Value);
         var azureServiceBusMessageBatches =
             new AzureServiceBusMessageBatches(serviceBusSenderWrapper, topic);
 
@@ -166,7 +166,7 @@ public abstract partial class AzureServiceBusMessageProducer : IAmAMessageProduc
     {
         var topic = batch.RoutingKey;
         var messageCount = batch.Ids().Count();
-        var serviceBusSenderWrapper = await GetSenderAsync(topic);
+        var serviceBusSenderWrapper = await GetSenderAsync(topic.Value);
 
         Log.SendingBatch(Logger, messageCount, topic);
         
@@ -212,11 +212,11 @@ public abstract partial class AzureServiceBusMessageProducer : IAmAMessageProduc
 
         if (message.Header.Topic is null) throw new ArgumentException("Topic not be null");
 
-        var serviceBusSenderWrapper = await GetSenderAsync(message.Header.Topic);
+        var serviceBusSenderWrapper = await GetSenderAsync(message.Header.Topic.Value);
 
         try
         {
-            Log.PublishingMessage(Logger, message.Header.Topic, delay, message.Body.Value, message.Id);
+            Log.PublishingMessage(Logger, message.Header.Topic, delay, message.Body.Value, message.Id.Value);
 
             BrighterTracer.WriteProducerEvent(Span, "azure_service_bus", message, _options);
             var azureServiceBusMessage = AzureServiceBusMessagePublisher.ConvertToServiceBusMessage(message);
@@ -230,11 +230,11 @@ public abstract partial class AzureServiceBusMessageProducer : IAmAMessageProduc
                 await serviceBusSenderWrapper.ScheduleMessageAsync(azureServiceBusMessage, dateTimeOffset, cancellationToken);
             }
 
-            Log.PublishedMessage(Logger, message.Header.Topic, delay, message.Body.Value, message.Id);
+            Log.PublishedMessage(Logger, message.Header.Topic, delay, message.Body.Value, message.Id.Value);
         }
         catch (Exception e)
         {
-            Log.FailedToPublishMessage(Logger, e, message.Header.Topic, message.Id);
+            Log.FailedToPublishMessage(Logger, e, message.Header.Topic, message.Id.Value);
             throw new ChannelFailureException("Error talking to the broker, see inner exception for details", e);
         }
         finally

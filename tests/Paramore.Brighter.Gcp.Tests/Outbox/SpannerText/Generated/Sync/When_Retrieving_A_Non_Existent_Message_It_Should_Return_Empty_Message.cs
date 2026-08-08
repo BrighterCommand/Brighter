@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Gcp.Tests.Outbox.SpannerText.Sync;
 public class WhenRetrievingANonExistentMessageItShouldReturnEmptyMessage : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;
-    private readonly IAmAMessageFactory _messageFactory;
+    private readonly IAmAMessageBuilder _messageBuilder;
     private List<Message> _createdMessages = [];
 
     public WhenRetrievingANonExistentMessageItShouldReturnEmptyMessage()
@@ -46,7 +46,7 @@ public class WhenRetrievingANonExistentMessageItShouldReturnEmptyMessage : IDisp
         _outboxProvider = new SpannerTextOutboxProvider();
         _outboxProvider.CreateStore();
 
-        _messageFactory = new DefaultMessageFactory();
+        _messageBuilder = new DefaultMessageBuilder();
     }
 
     [Fact]

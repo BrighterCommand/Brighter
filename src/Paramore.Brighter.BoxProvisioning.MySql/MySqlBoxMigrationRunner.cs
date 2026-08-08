@@ -210,7 +210,7 @@ CREATE TABLE IF NOT EXISTS `{MIGRATION_HISTORY_TABLE}` (
             await ExecuteUpScriptAsync(connection, migration, cancellationToken);
             await InsertHistoryRowAsync(
                 connection, effectiveSchema, tableName,
-                migration.Version, migration.Description, cancellationToken);
+                migration.Version, migration.Description.Value, cancellationToken);
         }
     }
 
@@ -229,14 +229,14 @@ CREATE TABLE IF NOT EXISTS `{MIGRATION_HISTORY_TABLE}` (
             await ExecuteUpScriptAsync(connection, migration, cancellationToken);
             await InsertHistoryRowAsync(
                 connection, effectiveSchema, tableName,
-                migration.Version, migration.Description, cancellationToken);
+                migration.Version, migration.Description.Value, cancellationToken);
         }
     }
 
     private static Task ExecuteUpScriptAsync(
         MySqlConnection connection, IAmABoxMigration migration,
         CancellationToken cancellationToken)
-        => ExecuteDdlAsync(connection, migration.UpScript, cancellationToken);
+        => ExecuteDdlAsync(connection, migration.UpScript.Value, cancellationToken);
 
     private static async Task ExecuteDdlAsync(
         MySqlConnection connection, string ddl,

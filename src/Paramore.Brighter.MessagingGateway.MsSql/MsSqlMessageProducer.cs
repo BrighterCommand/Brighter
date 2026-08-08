@@ -139,7 +139,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             BrighterTracer.WriteProducerEvent(Span, "microsoft_sql_server", message, _instrumentation);
             var topic = message.Header.Topic;
 
-            Log.SendMessage(s_logger, topic, message.Id);
+            Log.SendMessage(s_logger, topic.Value, message.Id.Value);
 
             _sqlQ.Send(message, topic);
         }
@@ -176,9 +176,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             BrighterTracer.WriteProducerEvent(Span, "microsoft_sql_server", message, _instrumentation);
             var topic = message.Header.Topic;
 
-            Log.SendMessageAsync(s_logger, topic, message.Id);
+            Log.SendMessageAsync(s_logger, topic.Value, message.Id.Value);
 
-            await _sqlQ.SendAsync(message, topic, TimeSpan.Zero, cancellationToken);
+            await _sqlQ.SendAsync(message, topic.Value, TimeSpan.Zero, cancellationToken);
         }
 
         /// <summary>

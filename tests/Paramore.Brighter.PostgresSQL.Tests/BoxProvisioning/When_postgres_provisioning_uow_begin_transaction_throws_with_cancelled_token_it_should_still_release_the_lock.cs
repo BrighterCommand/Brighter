@@ -35,7 +35,7 @@ using Xunit;
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
 /// <summary>
-/// Companion to <c>When_postgres_provisioning_uow_begin_transaction_throws_after_acquire_it_should_release_the_lock</c>:
+/// Companion to <c>PostgreSqlProvisioningUnitOfWorkBeginTransactionThrowsTests</c>:
 /// that test pins the basic cleanup-release contract; THIS test pins that the cleanup
 /// release uses <see cref="CancellationToken.None"/>, not the caller-supplied token.
 /// <para>
@@ -60,7 +60,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// in a cancelled state. The fake lock then captures the token actually handed to
 /// <c>ReleaseAsync</c> for direct assertion.
 /// </remarks>
-public class When_postgres_provisioning_uow_begin_transaction_throws_with_cancelled_token_it_should_still_release_the_lock : IAsyncLifetime
+public class PostgreSqlProvisioningUnitOfWorkBeginTransactionCancelledTests : IAsyncLifetime
 {
     private readonly NpgsqlConnection _connection = new(PostgreSqlSettings.TestsBrighterConnectionString);
     private readonly FakePostgreSqlAdvisoryLock _advisoryLock = new(releaseResult: true);
@@ -79,7 +79,7 @@ public class When_postgres_provisioning_uow_begin_transaction_throws_with_cancel
     }
 
     [Fact]
-    public async Task Should_pass_None_token_to_cleanup_release_when_caller_token_is_cancelled()
+    public async Task When_postgres_provisioning_uow_begin_transaction_throws_with_cancelled_token_it_should_still_release_the_lock()
     {
         const string lockKey = "test_lock_resource_cancelled_token_cleanup";
 

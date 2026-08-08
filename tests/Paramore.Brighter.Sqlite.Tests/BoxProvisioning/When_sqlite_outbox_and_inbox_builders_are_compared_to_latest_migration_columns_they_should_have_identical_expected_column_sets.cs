@@ -90,7 +90,7 @@ public class SqliteOutboxBuilderDriftTests
         var migrations = new SqliteOutboxMigrationCatalog().All(config);
         var v1 = migrations[0];
 
-        Assert.Equal(1, v1.Version);
+        Assert.Equal(1, v1.Version.Value);
         Assert.DoesNotContain("Dispatched", v1.UpScript, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("HeaderBag", v1.UpScript, StringComparison.OrdinalIgnoreCase);
     }
@@ -115,6 +115,24 @@ public class SqliteOutboxBuilderDriftTests
         var actual = new SqliteOutboxMigrationCatalog().FreshInstallDdl(config);
 
         Assert.Equal(expected, actual);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void When_sqlite_outbox_builder_is_inspected_it_should_emit_the_causation_replay_index(
+        bool hasBinaryMessagePayload)
+    {
+        //The drift test above compares columns only; the new CausationId replay index (Spec 0027,
+        //#2541) is asserted separately here per AC9. The builder appends a CREATE INDEX IF NOT
+        //EXISTS after the CREATE TABLE IF NOT EXISTS so a fresh install lands the same index a V8
+        //migration does.
+        const string tableName = "outbox_test";
+        var ddl = SqliteOutboxBuilder.GetDDL(tableName, hasBinaryMessagePayload);
+
+        Assert.Contains("CREATE INDEX IF NOT EXISTS", ddl, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"idx_{tableName}_CausationId", ddl, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[CausationId]", ddl, StringComparison.OrdinalIgnoreCase);
     }
 }
 
@@ -167,7 +185,7 @@ public class SqliteInboxBuilderDriftTests
         var migrations = new SqliteInboxMigrationCatalog().All(config);
         var v1 = migrations[0];
 
-        Assert.Equal(1, v1.Version);
+        Assert.Equal(1, v1.Version.Value);
         Assert.Contains("ContextKey", v1.UpScript, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CommandBody", v1.UpScript, StringComparison.OrdinalIgnoreCase);
     }

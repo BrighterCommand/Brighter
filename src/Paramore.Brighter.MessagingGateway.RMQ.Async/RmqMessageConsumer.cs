@@ -176,12 +176,12 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
             
             if (Channel is null) throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
             
-            Log.AcknowledgingMessage(s_logger, message.Id, deliveryTag);
+            Log.AcknowledgingMessage(s_logger, message.Id.Value, deliveryTag);
             await Channel.BasicAckAsync(deliveryTag, false, cancellationToken);
         }
         catch (Exception exception)
         {
-            Log.ErrorAcknowledgingMessage(s_logger, exception, message.Id, deliveryTag);
+            Log.ErrorAcknowledgingMessage(s_logger, exception, message.Id.Value, deliveryTag);
             throw;
         }
     }
@@ -322,12 +322,12 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
 
             if (Channel is null) throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
 
-            Log.NackingMessage(s_logger, message.Id, deliveryTag);
+            Log.NackingMessage(s_logger, message.Id.Value, deliveryTag);
             await Channel.BasicNackAsync(deliveryTag, false, true, cancellationToken);
         }
         catch (Exception exception)
         {
-            Log.ErrorNackingMessage(s_logger, exception, message.Id, deliveryTag);
+            Log.ErrorNackingMessage(s_logger, exception, message.Id.Value, deliveryTag);
             throw;
         }
     }
@@ -356,7 +356,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
             var reasonString = reason is null ? nameof(RejectionReason.DeliveryError) : reason.RejectionReason.ToString();
             var description = reason is null ? "unknown" : reason.Description ?? "unknown";
             
-            Log.NoAckMessage(s_logger, message.Id, message.DeliveryTag, reasonString, description);
+            Log.NoAckMessage(s_logger, message.Id.Value, message.DeliveryTag, reasonString, description);
             
             //if we have a DLQ, this will force over to the DLQ
             await Channel.BasicRejectAsync(message.DeliveryTag, false, cancellationToken);
@@ -364,7 +364,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         }
         catch (Exception exception)
         {
-            Log.ErrorNoAckMessage(s_logger, exception, message.Id);
+            Log.ErrorNoAckMessage(s_logger, exception, message.Id.Value);
             throw;
         }
     }
@@ -423,7 +423,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
 
         try
         {
-            Log.RequeueingMessage(s_logger, message.Id, timeout.Value.TotalMilliseconds);
+            Log.RequeueingMessage(s_logger, message.Id.Value, timeout.Value.TotalMilliseconds);
 
             await EnsureChannelAsync(cancellationToken);
 
@@ -447,14 +447,14 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
             // If this fails after a successful publish, the message may be duplicated (not lost).
             // Consumers should be idempotent to handle potential duplicates.
             var deliveryTag = message.DeliveryTag;
-            Log.DeletingMessage(s_logger, message.Id, deliveryTag);
+            Log.DeletingMessage(s_logger, message.Id.Value, deliveryTag);
             await Channel.BasicAckAsync(deliveryTag, false, cancellationToken);
 
             return true;
         }
         catch (Exception exception)
         {
-            Log.ErrorRequeueingMessage(s_logger, exception, message.Id);
+            Log.ErrorRequeueingMessage(s_logger, exception, message.Id.Value);
             return false;
         }
     }
@@ -556,7 +556,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         
         foreach (var key in _routingKeys)
         {
-            await Channel.QueueBindAsync(_queueName.Value, Connection.Exchange.Name, key,
+            await Channel.QueueBindAsync(_queueName.Value, Connection.Exchange.Name, key.Value,
                 cancellationToken: cancellationToken);
         }
 

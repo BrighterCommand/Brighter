@@ -7,13 +7,13 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class When_mysql_outbox_provisioner_finds_existing_table_without_history_it_should_bootstrap : IAsyncLifetime
+public class MySqlOutboxProvisionerBootstrapTests : IAsyncLifetime
 {
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly string _tableName;
     private readonly MySqlOutboxProvisioner _provisioner;
 
-    public When_mysql_outbox_provisioner_finds_existing_table_without_history_it_should_bootstrap()
+    public MySqlOutboxProvisionerBootstrapTests()
     {
         _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
@@ -30,7 +30,7 @@ public class When_mysql_outbox_provisioner_finds_existing_table_without_history_
     }
 
     [Fact]
-    public async Task Should_bootstrap_with_synthetic_history()
+    public async Task When_mysql_outbox_provisioner_finds_existing_table_without_history_it_should_bootstrap()
     {
         // Arrange — create outbox table directly (simulating pre-migration install)
         using (var setupConn = new MySqlConnection(_connectionString))

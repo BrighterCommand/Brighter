@@ -11,7 +11,7 @@ namespace Paramore.Brighter.Inbox.MongoDb;
 /// retrieving, and checking the existence of messages in the inbox, ensuring
 /// idempotent message processing. It leverages MongoDB's TTL feature for message expiration.
 /// </summary>
-public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInboxSync
+public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInboxSync, IAmACausationTrackingInbox
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDbInbox"/> class with explicit
@@ -50,7 +50,7 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
     {
         var dbAttributes = new Dictionary<string, string>()
         {
-            {"db.operation.parameter.command.id", command.Id}
+            {"db.operation.parameter.command.id", command.Id.Value}
         };
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Mongodb,
@@ -63,8 +63,8 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
 
         try
         {
-            var message = new InboxMessage(command, command.Id, contextKey, Configuration.TimeProvider.GetUtcNow(),
-                ExpireAfterSeconds);
+            var message = new InboxMessage(command, command.Id.Value, contextKey, Configuration.TimeProvider.GetUtcNow(),
+                ExpireAfterSeconds, ReadCausationId(requestContext));
             await Collection.InsertOneAsync(message, cancellationToken: cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
@@ -159,7 +159,7 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
     {
         var dbAttributes = new Dictionary<string, string>()
         {
-            {"db.operation.parameter.command.id", command.Id}
+            {"db.operation.parameter.command.id", command.Id.Value}
         };
         var span = Tracer?.CreateDbSpan(
             new BoxSpanInfo(DbSystem.Mongodb,
@@ -172,8 +172,8 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
 
         try
         {
-            var message = new InboxMessage(command, command.Id, contextKey, Configuration.TimeProvider.GetUtcNow(),
-                ExpireAfterSeconds);
+            var message = new InboxMessage(command, command.Id.Value, contextKey, Configuration.TimeProvider.GetUtcNow(),
+                ExpireAfterSeconds, ReadCausationId(requestContext));
             Collection.InsertOne(message);
         }
         catch (MongoWriteException e)
@@ -254,4 +254,40 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
             Tracer?.EndSpan(span);
         }
     }
+
+    /// <inheritdoc />
+    public bool SupportsCausationTracking() => true;
+
+    /// <inheritdoc />
+    public Task<bool> SupportsCausationTrackingAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult(true);
+
+    /// <inheritdoc />
+    public string? GetCausationId(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1)
+    {
+        var commandId = new InboxMessage.InboxMessageId { Id = id, ContextKey = contextKey };
+        var filter = Builders<InboxMessage>.Filter.Eq(x => x.Id, commandId);
+
+        var message = Collection.Find(filter).FirstOrDefault();
+        return message?.CausationId;
+    }
+
+    /// <inheritdoc />
+    public async Task<string?> GetCausationIdAsync(string id, string contextKey, RequestContext? requestContext,
+        int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default)
+    {
+        var commandId = new InboxMessage.InboxMessageId { Id = id, ContextKey = contextKey };
+        var filter = Builders<InboxMessage>.Filter.Eq(x => x.Id, commandId);
+
+        var message = await Collection.Find(filter)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(ContinueOnCapturedContext);
+        return message?.CausationId;
+    }
+
+    // Reads the causation id from the request context bag, if present
+    private static string? ReadCausationId(RequestContext? requestContext)
+        => requestContext?.Bag.TryGetValue(RequestContextBagNames.CausationId, out var value) == true
+            ? value as string
+            : null;
 }

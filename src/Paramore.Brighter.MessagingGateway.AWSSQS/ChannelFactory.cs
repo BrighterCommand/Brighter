@@ -108,7 +108,7 @@ public partial class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
             if (_subscription.MakeChannels == OnMissingChannel.Assume)
                 return new ChannelAsync(
                     new ChannelName(queueName),
-                    new RoutingKey(_subscription.RoutingKey),
+                    new RoutingKey(_subscription.RoutingKey.Value),
                     _messageConsumerFactory.CreateAsync(subscription),
                     subscription.BufferSize
                 ); 
@@ -139,7 +139,7 @@ public partial class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
 
             return new ChannelAsync(
                 new ChannelName(queueName),
-                new RoutingKey(routingKey),
+                new RoutingKey(routingKey.Value),
                 _messageConsumerFactory.CreateAsync(subscription),
                 subscription.BufferSize
             );
@@ -217,7 +217,7 @@ public partial class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
             if (_subscription.MakeChannels == OnMissingChannel.Assume)
                 return new Channel(
                     new ChannelName(queueName),
-                    new RoutingKey(_subscription.RoutingKey),
+                    new RoutingKey(_subscription.RoutingKey.Value),
                     _messageConsumerFactory.Create(subscription),
                     subscription.BufferSize
                 ); 
@@ -247,7 +247,7 @@ public partial class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
 
             return new Channel(
                 new ChannelName(queueName),
-                new RoutingKey(routingKey),
+                new RoutingKey(routingKey.Value),
                 _messageConsumerFactory.Create(subscription),
                 subscription.BufferSize
             );

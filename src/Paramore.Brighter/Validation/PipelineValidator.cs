@@ -22,8 +22,10 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace Paramore.Brighter.Validation;
 
@@ -36,16 +38,60 @@ namespace Paramore.Brighter.Validation;
 /// <param name="publications">Optional publications to validate against producer rules.</param>
 /// <param name="subscriptions">Optional subscriptions to validate against consumer rules.</param>
 /// <param name="consumerSpecs">Optional consumer validation specifications.</param>
+/// <param name="inbox">Optional inbox the runtime pipeline uses; passed to rules that check causation tracking.</param>
+/// <param name="outbox">Optional outbox the runtime pipeline uses; passed to rules that check causation tracking.</param>
+/// <param name="providerRegistrations">Optional validation-provider registrations. When supplied, the
+/// validation-provider check runs over handler pipelines; null (the default) leaves it inert.</param>
+/// <param name="mapperRegistryFactory">Optional factory that builds the mapper registry used to describe a
+/// publication's transforms. The validator invokes it at most once — lazily, the first time a validation
+/// rule needs the registry — and takes ownership of the registry it returns, disposing it at teardown only
+/// if it was built. Taking a factory rather than a live instance keeps that ownership transfer
+/// explicit — the validator disposes only a registry it created — so a caller cannot hand in a registry it
+/// still uses elsewhere and have it disposed underneath them. Together with <paramref name="transformerProbe"/>
+/// it enables the producer wrap-transform check.</param>
+/// <param name="transformerProbe">Optional probe answering whether a declared transformer type is resolvable.
+/// Together with <paramref name="mapperRegistryFactory"/> it enables the producer wrap-transform check.</param>
 public class PipelineValidator(
     PipelineBuilder<IRequest> pipelineBuilder,
     IEnumerable<Publication>? publications = null,
     IEnumerable<Subscription>? subscriptions = null,
-    IEnumerable<ISpecification<Subscription>>? consumerSpecs = null) : IAmAPipelineValidator
+    IEnumerable<ISpecification<Subscription>>? consumerSpecs = null,
+    IAmAnInbox? inbox = null,
+    IAmAnOutbox? outbox = null,
+    ValidationProviderRegistrations? providerRegistrations = null,
+    Func<MessageMapperRegistry>? mapperRegistryFactory = null,
+    IAmATransformerResolvabilityProbe? transformerProbe = null) : IAmAPipelineValidator, IDisposable
 {
-    private readonly PipelineBuilder<IRequest> _pipelineBuilder = pipelineBuilder;
-    private readonly IEnumerable<Publication>? _publications = publications;
-    private readonly IEnumerable<Subscription>? _subscriptions = subscriptions;
-    private readonly IEnumerable<ISpecification<Subscription>>? _consumerSpecs = consumerSpecs;
+    //built lazily and at most once: the wrap-transform check may never run (no transformer probe, or no
+    //publications to validate against), so a factory supplied at construction must not build the registry —
+    //and its two mapper factories — until a rule actually needs it. The validator owns the registry it
+    //produces and disposes only that one, only if it was built.
+    private readonly Lazy<MessageMapperRegistry>? _mapperRegistry = mapperRegistryFactory is null
+        ? null
+        : new Lazy<MessageMapperRegistry>(mapperRegistryFactory);
+
+    //an int rather than a bool so Dispose can claim it with a single atomic Interlocked.Exchange:
+    //an owner and the container disposing concurrently then dispose the registry exactly once
+    private int _disposed;
+
+    /// <summary>
+    /// Disposes the mapper registry this validator built for the wrap-transform check.
+    /// </summary>
+    /// <remarks>
+    /// The validator is a singleton that owns its validation-time <see cref="MessageMapperRegistry"/>; the
+    /// container disposes the validator at shutdown. Cascading to the registry drains the mapper factory (and
+    /// any scope it holds) rather than retaining it until the process exits. Idempotent.
+    /// </remarks>
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            return;
+
+        //only a registry that was actually built needs draining; if no rule ever needed it, there is
+        //nothing to dispose
+        if (_mapperRegistry is { IsValueCreated: true })
+            _mapperRegistry.Value.Dispose();
+    }
 
     /// <inheritdoc />
     public PipelineValidationResult Validate()
@@ -64,35 +110,43 @@ public class PipelineValidator(
 
     private void ValidateHandlerPipelines(List<ValidationError> findings)
     {
-        var descriptions = _pipelineBuilder.Describe();
-        var specs = new ISpecification<HandlerPipelineDescription>[]
+        var descriptions = pipelineBuilder.Describe();
+        var specs = new List<ISpecification<HandlerPipelineDescription>>
         {
             HandlerPipelineValidationRules.HandlerTypeVisibility(),
             HandlerPipelineValidationRules.BackstopAttributeOrdering(),
-            HandlerPipelineValidationRules.AttributeAsyncConsistency()
+            HandlerPipelineValidationRules.AttributeAsyncConsistency(),
+            HandlerPipelineValidationRules.ReplayRequiresCausationTracking(inbox, outbox)
         };
+
+        if (providerRegistrations is not null)
+            specs.Add(HandlerPipelineValidationRules.ValidationProviderRegistered(providerRegistrations));
 
         EvaluateSpecs(descriptions, specs, findings);
     }
 
     private void ValidateProducers(List<ValidationError> findings)
     {
-        if (_publications == null) return;
+        if (publications == null) return;
 
-        var specs = new ISpecification<Publication>[]
+        var specs = new List<ISpecification<Publication>>
         {
             ProducerValidationRules.PublicationRequestTypeSet(),
             ProducerValidationRules.PublicationRequestTypeImplementsIRequest()
         };
 
-        EvaluateSpecs(_publications, specs, findings);
+        //accessing .Value here builds the registry — the first and only point a rule needs it
+        if (_mapperRegistry is not null && transformerProbe is not null)
+            specs.Add(ProducerValidationRules.WrapTransformResolvable(_mapperRegistry.Value, transformerProbe));
+
+        EvaluateSpecs(publications, specs, findings);
     }
 
     private void ValidateConsumers(List<ValidationError> findings)
     {
-        if (_subscriptions == null || _consumerSpecs == null) return;
+        if (subscriptions == null || consumerSpecs == null) return;
 
-        EvaluateSpecs(_subscriptions, _consumerSpecs, findings);
+        EvaluateSpecs(subscriptions, consumerSpecs, findings);
     }
 
     private static void EvaluateSpecs<T>(

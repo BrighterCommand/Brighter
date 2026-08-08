@@ -1,3 +1,18 @@
+---
+id: 0047-message-rejection-routing-strategy
+title: "Message Rejection Routing Strategy"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-01-11
+summary: "Defines the Reject() routing logic that directs DeliveryError messages to the dead letter queue and Unacceptable messages to the invalid message channel (with DLQ fallback), enriching rejected messages with origin metadata and acknowledging after attempted channel production."
+tags:
+  - "message-rejection"
+  - "dead-letter-queue"
+  - "error-handling"
+  - "messaging"
+---
+
 # 47. Message Rejection Routing Strategy
 
 Date: 2026-01-11

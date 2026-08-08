@@ -35,7 +35,7 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class When_postgres_advisory_unlock_returns_false_runner_should_log_warning_and_complete_normally : IAsyncLifetime
+public class PostgreSqlAdvisoryUnlockReturnsFalseTests : IAsyncLifetime
 {
     // pg_advisory_unlock returns false when the calling session does not currently hold the
     // named lock — a diagnostic anomaly because the runner just acquired it. The release
@@ -48,7 +48,7 @@ public class When_postgres_advisory_unlock_returns_false_runner_should_log_warni
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
     [Fact]
-    public async Task Should_log_one_warning_and_complete_migration_when_release_returns_false()
+    public async Task When_postgres_advisory_unlock_returns_false_runner_should_log_warning_and_complete_normally()
     {
         //Arrange — ensure database exists; runner uses a real Postgres connection for DDL,
         //          a fake advisory lock that returns false from Release, and a capturing

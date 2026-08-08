@@ -70,7 +70,7 @@ public class RmqMessageProducerConfirmationsMultipleMessagesTests : IDisposable
     public async Task When_confirming_multiple_messages_via_the_messaging_gateway()
     {
         // Subscribe to the OnMessagePublished event
-        _messageProducer.OnMessagePublished += (success, messageId) =>
+        _messageProducer.OnMessagePublished += result =>
         {
             Interlocked.Increment(ref _totalPublished);
         };

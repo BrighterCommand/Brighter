@@ -120,8 +120,9 @@ public class AsyncCommandProcessorClearObservabilityTests
         
         _traceProvider.ForceFlush();
         
-        //assert 
-        Assert.Equal(8, _exportedActivities.Count);
+        //assert
+        //+1 confirmation (settle) span emitted per confirmed message (FR-2)
+        Assert.Equal(9, _exportedActivities.Count);
         Assert.Contains(_exportedActivities, a => a.Source.Name == "Paramore.Brighter");
         
         //there should be a create span for the batch

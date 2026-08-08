@@ -48,7 +48,7 @@ public class AwsSchedulerFiredMapper : IAmAMessageMapper<FireAwsScheduler>
         return new Message
         {
             Header =
-                new MessageHeader(request.Id, publication.Topic!, MessageType.MT_EVENT,
+                new MessageHeader(request.Id, publication.Topic!, MessageType.MT_COMMAND,
                     subject: nameof(FireAwsScheduler)),
             Body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options))
         };

@@ -33,7 +33,7 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class When_mysql_runner_fails_mid_chain_it_should_resume_from_max_applied_version_on_next_invocation : IAsyncLifetime
+public class MySqlRunnerMidChainFailureResumeTests : IAsyncLifetime
 {
     private const int SeedVersion = 3;
     private const int BrokenVersion = 6;
@@ -45,7 +45,7 @@ public class When_mysql_runner_fails_mid_chain_it_should_resume_from_max_applied
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
     [Fact]
-    public async Task Should_keep_committed_history_rows_and_resume_from_max_v_on_retry()
+    public async Task When_mysql_runner_fails_mid_chain_it_should_resume_from_max_applied_version_on_next_invocation()
     {
         //Arrange — seed an outbox at V3 (no history) plus a marker row to prove preservation.
         MySqlOutboxLegacySeeder.SeedAtV(SeedVersion, _connectionString, _tableName);
@@ -101,9 +101,9 @@ public class When_mysql_runner_fails_mid_chain_it_should_resume_from_max_applied
             realRunner);
         await provisioner.ProvisionAsync();
 
-        //Assert — V6 + V7 now applied; total exactly 5 history rows (V3 synthetic + V4..V7 applied).
+        //Assert — V6..V8 now applied; total exactly 6 history rows (V3 synthetic + V4..V8 applied).
         var rowsAfterRetry = await GetHistoryRowsByVersion();
-        Assert.Equal(5, rowsAfterRetry.Count);
+        Assert.Equal(6, rowsAfterRetry.Count);
 
         for (var v = SeedVersion + 1; v <= ExpectedMigrationVersions.OutboxLatest; v++)
         {
@@ -113,10 +113,11 @@ public class When_mysql_runner_fails_mid_chain_it_should_resume_from_max_applied
                 $"V{v} should be an applied migration row on retry");
         }
 
-        //Assert — table now at V7 shape with marker still present.
+        //Assert — table now at V8 shape with marker still present.
         var columnsAfterRetry = await GetTableColumns();
-        Assert.Contains("WorkflowId", columnsAfterRetry); // V6 applied on retry
-        Assert.Contains("DataRef", columnsAfterRetry);    // V7 applied on retry
+        Assert.Contains("WorkflowId", columnsAfterRetry);  // V6 applied on retry
+        Assert.Contains("DataRef", columnsAfterRetry);     // V7 applied on retry
+        Assert.Contains("CausationId", columnsAfterRetry); // V8 applied on retry
         Assert.Equal(1, await GetMarkerRowCount());
     }
 

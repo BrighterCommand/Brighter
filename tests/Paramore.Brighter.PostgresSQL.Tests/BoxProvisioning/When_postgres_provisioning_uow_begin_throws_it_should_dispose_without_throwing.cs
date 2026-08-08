@@ -34,7 +34,7 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class When_postgres_provisioning_uow_begin_throws_it_should_dispose_without_throwing : IAsyncLifetime
+public class PostgreSqlProvisioningUnitOfWorkBeginThrowsTests : IAsyncLifetime
 {
     // Per ADR 0058 §B.3: the runner declares the UoW with `await using`, so DisposeAsync runs
     // on every exit path — including when BeginAsync itself throws. Postgres-specific subtlety:
@@ -73,7 +73,7 @@ public class When_postgres_provisioning_uow_begin_throws_it_should_dispose_witho
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
     [Fact]
-    public async Task Should_propagate_BeginAsync_exception_and_dispose_cleanly_without_releasing_lock()
+    public async Task When_postgres_provisioning_uow_begin_throws_it_should_dispose_without_throwing()
     {
         // Act — capture whatever exception ultimately surfaces from the `await using` scope
         var thrown = await Record.ExceptionAsync(async () =>

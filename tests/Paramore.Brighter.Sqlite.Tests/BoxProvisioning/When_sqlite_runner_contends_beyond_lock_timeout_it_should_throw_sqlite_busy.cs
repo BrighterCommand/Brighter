@@ -80,7 +80,7 @@ public class SqliteRunnerLockTimeoutBoundsContentionTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Should_throw_sqlite_busy_when_writer_hold_outlasts_lock_timeout()
+    public async Task When_writer_hold_outlasts_lock_timeout_it_should_throw_sqlite_busy()
     {
         // Arrange — file-backed SQLite in WAL mode; a separate writer connection takes the
         // writer slot and holds it for WriterHold (3s). The runner is constructed with a tight

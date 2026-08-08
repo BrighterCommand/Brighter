@@ -11,18 +11,18 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class When_mysql_box_provisioning_uses_connection_name_for_outbox_it_should_resolve_from_configuration : IAsyncLifetime
+public class MySqlOutboxConnectionNameResolutionTests : IAsyncLifetime
 {
     private readonly string _connectionString = Const.DefaultConnectingString;
     private readonly string _tableName;
 
-    public When_mysql_box_provisioning_uses_connection_name_for_outbox_it_should_resolve_from_configuration()
+    public MySqlOutboxConnectionNameResolutionTests()
     {
         _tableName = $"test_outbox_{Guid.NewGuid():N}";
     }
 
     [Fact]
-    public async Task Should_resolve_connection_string_and_provision()
+    public async Task When_mysql_box_provisioning_uses_connection_name_for_outbox_it_should_resolve_from_configuration()
     {
         //Arrange
         var configData = new Dictionary<string, string?>

@@ -34,7 +34,7 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class When_postgres_provisioning_uow_rollback_async_is_called_it_should_release_lock_without_throwing : IAsyncLifetime
+public class PostgreSqlProvisioningUnitOfWorkRollbackTests : IAsyncLifetime
 {
     // Per ADR 0058 §B.3: if CommitAsync throws, the runner enters its catch path and calls
     // RollbackAsync — even though the commit was already attempted. By that point the
@@ -64,7 +64,7 @@ public class When_postgres_provisioning_uow_rollback_async_is_called_it_should_r
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
     [Fact]
-    public async Task Should_swallow_finalised_transaction_exception_log_warning_and_release_lock()
+    public async Task When_postgres_provisioning_uow_rollback_async_is_called_it_should_release_lock_without_throwing()
     {
         // Arrange
         var capturingLogger = new CapturingLogger();

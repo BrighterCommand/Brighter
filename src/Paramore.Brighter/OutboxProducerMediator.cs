@@ -33,7 +33,6 @@ using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Scheduler.Events;
-using Polly;
 using Polly.Registry;
 
 // ReSharper disable StaticMemberInGenericType
@@ -52,6 +51,11 @@ namespace Paramore.Brighter
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
 
         private readonly ResiliencePipelineRegistry<string> _resiliencePipelineRegistry;
+        private readonly IAmAMessageMapperRegistry _messageMapperRegistry;
+        private readonly IAmAMessageTransformerFactory _messageTransformerFactory;
+        private readonly IAmAMessageTransformerFactoryAsync _messageTransformerFactoryAsync;
+        private readonly bool _ownsRegistry;
+        private readonly bool _ownsTransformerFactories;
         private readonly TransformPipelineBuilder _transformPipelineBuilder;
         private readonly TransformPipelineBuilderAsync _transformPipelineBuilderAsync;
         private readonly IAmAnOutboxSync<TMessage, TTransaction>? _outBox;
@@ -61,9 +65,9 @@ namespace Paramore.Brighter
         private readonly InstrumentationOptions _instrumentationOptions;
         private readonly IAmAPublicationFinder _publicationFinder;
         private readonly IAmAnOutboxCircuitBreaker? _outboxCircuitBreaker;
-        private readonly Dictionary<string, List<TMessage>> _outboxBatches = new();
+        private readonly ConcurrentDictionary<string, List<TMessage>> _outboxBatches = new();
 
-        private static readonly SemaphoreSlim s_backgroundClearSemaphoreToken = new(1, 1);
+        private readonly SemaphoreSlim _backgroundClearSemaphore = new(1, 1);
 
         //Used to checking the limit on outstanding messages for an Outbox. We throw at that point. Writes to the static
         //bool should be made thread-safe by locking the object
@@ -75,13 +79,19 @@ namespace Paramore.Brighter
         private const string NoAsyncOutboxError = "An async Outbox must be defined.";
             
         private int _outStandingCount;
-        private bool _disposed;
+        //an int rather than a bool so Dispose can claim it with a single atomic Interlocked.Exchange:
+        //an owner and the container disposing concurrently must run CloseAll() (broker I/O) and the factory
+        //disposals exactly once
+        private int _disposed;
         private readonly int _maxOutStandingMessages;
         private readonly TimeSpan _maxOutStandingCheckInterval;
         private readonly Dictionary<string, object> _outBoxBag;
         private readonly IAmABrighterTracer? _tracer;
         private readonly TimeProvider _timeProvider;
-
+        
+        /// <inheritdoc />
+        public IAmAnOutbox? Outbox => (IAmAnOutbox?)_outBox ?? _asyncOutbox;
+        
         /// <summary>
         /// Creates an instance of the Outbox Producer Mediator
         /// </summary>
@@ -101,13 +111,23 @@ namespace Paramore.Brighter
         /// <param name="outBoxBag">An outbox may require additional arguments, such as a topic list to search</param>
         /// <param name="timeProvider"></param>
         /// <param name="instrumentationOptions">How verbose do we want our instrumentation to be</param>
+        /// <param name="ownsRegistry">
+        /// Does this mediator own the message mapper registry, so that <see cref="Dispose()"/> should dispose it?
+        /// Defaults to <c>false</c> for the manual-wiring path, where the registry is routinely shared with a
+        /// Dispatcher or another bus and must not be torn down from under it. The DI path
+        /// (<c>BuildOutBoxProducerMediator</c>) news up a registry solely for this mediator and passes <c>true</c>.
+        /// </param>
+        /// <param name="ownsTransformerFactories">
+        /// Does this mediator own the transform factories, so that <see cref="Dispose()"/> should dispose them?
+        /// Defaults to <c>false</c> for the manual-wiring path; the DI path passes <c>true</c>.
+        /// </param>
         public OutboxProducerMediator(
             IAmAProducerRegistry producerRegistry,
             ResiliencePipelineRegistry<string> resiliencePipelineRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageTransformerFactory messageTransformerFactory,
             IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync,
-            IAmABrighterTracer? tracer, 
+            IAmABrighterTracer? tracer,
             IAmAPublicationFinder publicationFinder,
             IAmAnOutbox? outbox = null,
             IAmAnOutboxCircuitBreaker? outboxCircuitBreaker = null,
@@ -117,7 +137,9 @@ namespace Paramore.Brighter
             TimeSpan? maxOutStandingCheckInterval = null,
             Dictionary<string, object>? outBoxBag = null,
             TimeProvider? timeProvider = null,
-            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
+            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
+            bool ownsRegistry = false,
+            bool ownsTransformerFactories = false)
         {
             _producerRegistry = producerRegistry ??
                                 throw new ConfigurationException("Missing Producer Registry for External Bus Services");
@@ -138,6 +160,12 @@ namespace Paramore.Brighter
             
             _timeProvider = timeProvider ?? TimeProvider.System;
             _lastOutStandingMessageCheckAt = _timeProvider.GetUtcNow();
+
+            _messageMapperRegistry = mapperRegistry;
+            _messageTransformerFactory = messageTransformerFactory;
+            _messageTransformerFactoryAsync = messageTransformerFactoryAsync;
+            _ownsRegistry = ownsRegistry;
+            _ownsTransformerFactories = ownsTransformerFactories;
 
             _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, instrumentationOptions);
             _transformPipelineBuilderAsync =
@@ -173,12 +201,46 @@ namespace Paramore.Brighter
 
         private void Dispose(bool disposing)
         {
-            if (_disposed)
+            //claim disposed up front with a single atomic exchange: each step below is a teardown backstop
+            //that must run at most once. Interlocked closes the window two concurrent Dispose() callers (an
+            //owner and the container) would otherwise share — both reading false and both re-running CloseAll()
+            //broker I/O plus the factory disposals. A throw from any step must not leave the flag unclaimed.
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
                 return;
 
             if (disposing)
-                _producerRegistry.CloseAll();
-            _disposed = true;
+            {
+                //guard every step independently: a failure in one must not skip the rest. Otherwise a throw
+                //from CloseAll() would leak the per-resolution IServiceScope each factory retains for a
+                //mapper or transform obtained but not released — the exact retention this owner exists to drain.
+                try { _producerRegistry.CloseAll(); }
+                catch (Exception e) { Log.FailedToCloseProducers(s_logger, e); }
+
+                //dispose only what this mediator owns. On the DI path it is the sole owner of the runtime
+                //mapper/transform factories (built for it in ServiceCollectionExtensions and never registered in
+                //the container), so it is constructed owning them: disposing the registry cascades to the two
+                //mapper factories it holds; the two transform factories are disposed directly. Without this the
+                //per-resolution IServiceScope each factory retains for a mapper or transform obtained but not
+                //released is held until the process exits, not at container teardown. On the manual-wiring path
+                //the registry is routinely shared with a Dispatcher or another bus, so the mediator is
+                //constructed not owning it and leaves it intact for the other owner.
+                if (_ownsRegistry)
+                    DisposeQuietly(_messageMapperRegistry);
+
+                if (_ownsTransformerFactories)
+                {
+                    DisposeQuietly(_messageTransformerFactory);
+                    DisposeQuietly(_messageTransformerFactoryAsync);
+                }
+            }
+        }
+
+        //Disposes a member if it is IDisposable, swallowing and logging any failure so one factory's fault
+        //cannot skip the remaining disposals in the teardown chain.
+        private static void DisposeQuietly(object? member)
+        {
+            try { (member as IDisposable)?.Dispose(); }
+            catch (Exception e) { Log.FailedToDisposeOwnedResource(s_logger, member?.GetType().Name ?? "null", e); }
         }
 
         /// <summary>
@@ -204,7 +266,7 @@ namespace Paramore.Brighter
             
             if (batchId != null)
             {
-                _outboxBatches[batchId].Add(message);
+                GetBatchOrThrow(batchId).Add(message);
                 return;
             }
 
@@ -247,7 +309,7 @@ namespace Paramore.Brighter
             if (_outBox is null) throw new ArgumentException(NoSyncOutboxError);
             if (batchId != null)
             {
-                _outboxBatches[batchId].Add(message);
+                GetBatchOrThrow(batchId).Add(message);
                 return;
             }
 
@@ -327,7 +389,7 @@ namespace Paramore.Brighter
                         message.Id, _instrumentationOptions);
                     if (span is not null)
                     {
-                        childSpans.TryAdd(message.Id, span);
+                        childSpans.TryAdd(message.Id.Value, span);
                         requestContext.Span = span;
                     }
 
@@ -396,7 +458,7 @@ namespace Paramore.Brighter
                         message.Id, _instrumentationOptions);
                     if (span != null)
                     {
-                        childSpans.TryAdd(message.Id, span);
+                        childSpans.TryAdd(message.Id.Value, span);
                         requestContext.Span = span;
                     }
 
@@ -504,17 +566,33 @@ namespace Paramore.Brighter
         {
             if (_transformPipelineBuilderAsync.HasPipeline<TRequest>())
             {
-                request = _transformPipelineBuilderAsync
-                    .BuildUnwrapPipeline<TRequest>()
-                    .UnwrapAsync(message, requestContext)
-                    .GetAwaiter()
-                    .GetResult();
+                var pipeline = _transformPipelineBuilderAsync.BuildUnwrapPipeline<TRequest>();
+                try
+                {
+                    request = pipeline
+                        .UnwrapAsync(message, requestContext)
+                        .GetAwaiter()
+                        .GetResult();
+                }
+                finally
+                {
+                    //Release after the request is built. A throwing mapper/transform release must not abort
+                    //a reply whose request has already been unwrapped, so it is logged, not surfaced. This is
+                    //the sync-over-async Call path, so release synchronously through IDisposable.
+                    ReleasePipeline(pipeline, message.Id);
+                }
             }
             else if (_transformPipelineBuilder.HasPipeline<TRequest>())
             {
-                request = _transformPipelineBuilder
-                    .BuildUnwrapPipeline<TRequest>()
-                    .Unwrap(message, requestContext);
+                var pipeline = _transformPipelineBuilder.BuildUnwrapPipeline<TRequest>();
+                try
+                {
+                    request = pipeline.Unwrap(message, requestContext);
+                }
+                finally
+                {
+                    ReleasePipeline(pipeline, message.Id);
+                }
             }
             else
             {
@@ -529,29 +607,38 @@ namespace Paramore.Brighter
         public string StartBatchAddToOutbox()
         {
             var batchId = Uuid.NewAsString();
-            _outboxBatches.Add(batchId, new List<TMessage>());
+            while (!_outboxBatches.TryAdd(batchId, new List<TMessage>()))
+            {
+                batchId = Uuid.NewAsString();
+            }
+
             return batchId;
         }
 
+        /// <summary>
+        /// Flush the batch of Messages to the outbox.
+        /// </summary>
+        /// <param name="batchId">The ID of the batch to be flushed</param>
+        /// <param name="transactionProvider"></param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         public void EndBatchAddToOutbox(string batchId, IAmABoxTransactionProvider<TTransaction>? transactionProvider,
             RequestContext requestContext)
         {
-            CheckOutboxOutstandingLimit();
-
-            BrighterTracer.WriteOutboxEvent(BoxDbOperation.Add, _outboxBatches[batchId], requestContext.Span,
-                transactionProvider != null, false, _instrumentationOptions);
+            var batch = BeginBatchAddToOutbox(batchId, transactionProvider, requestContext, isAsync: false);
 
             if (_outBox is null) throw new ArgumentException(NoSyncOutboxError);
             
             var written = ExecuteWithResiliencePipeline(() =>
                 {
-                    _outBox.Add(_outboxBatches[batchId], requestContext, _outboxTimeout, transactionProvider);
+                    _outBox.Add(batch, requestContext, _outboxTimeout, transactionProvider);
                 },
                 requestContext
             );
 
             if (!written)
                 throw new ChannelFailureException($"Could not write batch {batchId} to the outbox");
+
+            _outboxBatches.TryRemove(batchId, out _);
         }
 
         /// <summary>
@@ -565,17 +652,14 @@ namespace Paramore.Brighter
             IAmABoxTransactionProvider<TTransaction>? transactionProvider, RequestContext requestContext,
             CancellationToken cancellationToken)
         {
-            CheckOutboxOutstandingLimit();
-
-            BrighterTracer.WriteOutboxEvent(BoxDbOperation.Add, _outboxBatches[batchId], requestContext.Span,
-                transactionProvider != null, true, _instrumentationOptions);
+            var batch = BeginBatchAddToOutbox(batchId, transactionProvider, requestContext, isAsync: true);
 
             if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
-            
+
             var written = await ExecuteWithResiliencePipelineAsync(
                 async _ =>
                 {
-                    await _asyncOutbox.AddAsync(_outboxBatches[batchId], requestContext, _outboxTimeout,
+                    await _asyncOutbox.AddAsync(batch, requestContext, _outboxTimeout,
                         transactionProvider, cancellationToken);
                 },
                 requestContext,
@@ -585,7 +669,7 @@ namespace Paramore.Brighter
             if (!written)
                 throw new ChannelFailureException($"Could not write batch {batchId} to the outbox");
 
-            _outboxBatches.Remove(batchId);
+            _outboxBatches.TryRemove(batchId, out _);
         }
 
         /// <summary>
@@ -606,6 +690,28 @@ namespace Paramore.Brighter
             return _outBox != null;
         }
 
+        private List<TMessage> BeginBatchAddToOutbox(string batchId,
+            IAmABoxTransactionProvider<TTransaction>? transactionProvider,
+            RequestContext requestContext,
+            bool isAsync)
+        {
+            CheckOutboxOutstandingLimit();
+            
+            var batch = GetBatchOrThrow(batchId);
+            
+            BrighterTracer.WriteOutboxEvent(BoxDbOperation.Add, batch, requestContext.Span,
+                transactionProvider != null, isAsync, _instrumentationOptions);
+            
+            return batch;
+        }
+        
+        private List<TMessage> GetBatchOrThrow(string batchId)
+        {
+            if (_outboxBatches.TryGetValue(batchId, out var batch)) return batch;
+
+            throw new ArgumentException($"Batch id {batchId} is not active", nameof(batchId));
+        }
+        
         private async Task BackgroundDispatchUsingAsync(
             int amountToClear,
             TimeSpan timeSinceSent,
@@ -617,7 +723,7 @@ namespace Paramore.Brighter
         {
             _outboxCircuitBreaker?.CoolDown();
 
-            if ( await s_backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero, cancellationToken))
+            if (await _backgroundClearSemaphore.WaitAsync(TimeSpan.Zero, cancellationToken))
             {
                 var parentSpan = requestContext.Span;
                 var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null,
@@ -658,7 +764,7 @@ namespace Paramore.Brighter
                 finally
                 {
                     _tracer?.EndSpan(span);
-                    s_backgroundClearSemaphoreToken.Release();
+                    _backgroundClearSemaphore.Release();
                 }
 
                 CheckOutstandingMessages(requestContext);
@@ -736,22 +842,104 @@ namespace Paramore.Brighter
         /// <returns></returns>
         private void ConfigureAsyncPublisherCallbackMaybe(IAmAMessageProducerAsync producer, RequestContext requestContext)
         {
-            if (producer is ISupportPublishConfirmation producerSync)
+            if (producer is ISupportPublishConfirmationAsync { UseAsyncPublishConfirmation: true } asyncConfirmingProducer)
             {
-                producerSync.OnMessagePublished += async delegate(bool success, string id)
+                asyncConfirmingProducer.OnMessagePublishedAsync += result =>
+                    HandleAsyncPublishConfirmation(result, requestContext);
+                return;
+            }
+
+            if (producer is ISupportPublishConfirmation confirmingProducer)
+            {
+                // Discard, not async void: HandleAsyncPublishConfirmation catches its own faults, and a
+                // discarded task cannot tear down the raising thread the way an async void throw would.
+                confirmingProducer.OnMessagePublished += result => _ = HandleAsyncPublishConfirmation(result, requestContext);
+            }
+        }
+
+        private async Task HandleAsyncPublishConfirmation(PublishConfirmationResult result, RequestContext requestContext)
+        {
+            var confirmationSpan = StartConfirmationSpan(result);
+
+            try
+            {
+                if (result.Success)
                 {
-                    if (success)
+                    Log.SentMessage(s_logger, result.MessageId.Value);
+                    if (_asyncOutbox != null)
                     {
-                        Log.SentMessage(s_logger, id);
-                        if (_asyncOutbox != null)
-                            await ExecuteWithResiliencePipelineAsync(
-                                async ct =>
-                                    await _asyncOutbox.MarkDispatchedAsync(id, requestContext, _timeProvider.GetUtcNow(),
-                                        cancellationToken: ct),
-                                requestContext
-                            );
+                        // Explicitly re-parent the MarkDispatched DB span to the confirmation
+                        // span (S2): CreateDbSpan parents from requestContext.Span, so we pass a
+                        // per-callback copy whose Span is S2 rather than relying on the ambient
+                        // Activity.Current fallback (C-6). A copy is required because
+                        // RequestContext.Span is thread-keyed and its setter ignores null, so we
+                        // must not mutate the shared construction-time context.
+                        var dispatchedContext = (RequestContext)requestContext.CreateCopy();
+                        dispatchedContext.Span = confirmationSpan;
+                        await ExecuteWithResiliencePipelineAsync(
+                            async ct =>
+                                await _asyncOutbox.MarkDispatchedAsync(result.MessageId, dispatchedContext, _timeProvider.GetUtcNow(),
+                                    cancellationToken: ct),
+                            dispatchedContext
+                        );
                     }
-                };
+                }
+                else
+                {
+                    Log.ConfirmationFailed(s_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty);
+                    // Trip the breaker on the wire topic (result.Topic == message.Header.Topic),
+                    // not the Publication topic — exact parity with the non-confirmation send
+                    // failure path (see DispatchAsync). TripTopic safely no-ops on null/empty.
+                    TripTopic(result.Topic);
+                }
+            }
+            catch (Exception ex)
+            {
+                // The callback must not allow a failed dispatch update to crash the producer. The
+                // message remains undispatched, so the Sweeper will retry it.
+                Log.ConfirmationDispatchError(s_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty, ex);
+            }
+            finally
+            {
+                EndConfirmationSpan(confirmationSpan);
+            }
+        }
+
+        /// <summary>
+        /// Emit a standalone confirmation span FIRST on every confirmation callback (success or
+        /// failure). It links back to the original publish span (when its context was captured at
+        /// send time) rather than reopening it, and degrades to no link when the context is absent.
+        /// The observability work is isolated in try/catch so a tracing fault can never destabilise
+        /// the producer thread (NFR-4); end the span via <see cref="EndConfirmationSpan"/> in the
+        /// callback's finally so it starts and stops within the callback (NFR-2).
+        /// </summary>
+        private Activity? StartConfirmationSpan(PublishConfirmationResult result)
+        {
+            try
+            {
+                var links = result.PublishSpanContext is { } publishContext
+                    ? new[] { new ActivityLink(publishContext) }
+                    : null;
+                return _tracer?.CreateConfirmationSpan(
+                    result.MessageId, result.Topic, result.Success, links);
+            }
+            catch (Exception ex)
+            {
+                Log.ConfirmationObservabilityFault(s_logger, ex);
+                return null;
+            }
+        }
+
+        private void EndConfirmationSpan(Activity? confirmationSpan)
+        {
+            try
+            {
+                // End via the tracer so its TimeProvider stamps the end consistently with the start.
+                _tracer?.EndSpan(confirmationSpan);
+            }
+            catch (Exception ex)
+            {
+                Log.ConfirmationObservabilityFault(s_logger, ex);
             }
         }
 
@@ -765,16 +953,53 @@ namespace Paramore.Brighter
         {
             if (producer is ISupportPublishConfirmation producerSync)
             {
-                producerSync.OnMessagePublished += delegate(bool success, string id)
+                producerSync.OnMessagePublished += delegate(PublishConfirmationResult result)
                 {
-                    if (success)
-                    {
-                        Log.SentMessage(s_logger, id);
+                    var confirmationSpan = StartConfirmationSpan(result);
 
-                        if (_outBox != null)
-                            ExecuteWithResiliencePipeline(
-                                () => _outBox.MarkDispatched(id, requestContext, _timeProvider.GetUtcNow()),
-                                requestContext);
+                    try
+                    {
+                        if (result.Success)
+                        {
+                            Log.SentMessage(s_logger, result.MessageId.Value);
+
+                            if (_outBox != null)
+                            {
+                                // Explicitly re-parent the MarkDispatched DB span to the confirmation
+                                // span (S2): CreateDbSpan parents from requestContext.Span, so we pass a
+                                // per-callback copy whose Span is S2 rather than relying on the ambient
+                                // Activity.Current fallback (C-6). A copy is required because
+                                // RequestContext.Span is thread-keyed and its setter ignores null, so we
+                                // must not mutate the shared construction-time context.
+                                var dispatchedContext = (RequestContext)requestContext.CreateCopy();
+                                dispatchedContext.Span = confirmationSpan;
+                                ExecuteWithResiliencePipeline(
+                                    () => _outBox.MarkDispatched(result.MessageId, dispatchedContext, _timeProvider.GetUtcNow()),
+                                    dispatchedContext);
+                            }
+                        }
+                        else
+                        {
+                            Log.ConfirmationFailed(s_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty);
+                            // Trip the breaker on the wire topic (result.Topic == message.Header.Topic),
+                            // not the Publication topic — exact parity with the non-confirmation send
+                            // failure path (see DispatchAsync). TripTopic safely no-ops on null/empty.
+                            TripTopic(result.Topic);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // This callback runs on the producer's invoking (broker/threadpool) thread; an
+                        // exception that escapes it can tear down that thread. Keep the safety LOCAL and obvious
+                        // rather than relying on ExecuteWithResiliencePipeline happening to absorb the
+                        // MarkDispatched path — a throwing breaker, logger or context copy must not be able to
+                        // crash the producer. The message is left un-dispatched, so the Sweeper will retry it
+                        // (C-1); we log at Warning, not Error, because nothing is lost.
+                        Log.ConfirmationDispatchError(s_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty, ex);
+                    }
+                    finally
+                    {
+                        EndConfirmationSpan(confirmationSpan);
                     }
                 };
                 return true;
@@ -819,13 +1044,13 @@ namespace Paramore.Brighter
                     // Log the wire topic (Header.Topic) — where the message is going. Producer
                     // lookup uses GetProducerLookupTopic, which may differ from Header.Topic when
                     // a mapper overrode it (e.g. Reply messages routed to a dynamic reply address).
-                    Log.DecoupledInvocationOfMessage(s_logger, message.Header.Topic, message.Id);
+                    Log.DecoupledInvocationOfMessage(s_logger, message.Header.Topic.Value, message.Id.Value);
 
                     var producer = _producerRegistry.LookupBy(GetProducerLookupTopic(message), message.Header.Type, requestContext);
                     var span = _tracer?.CreateProducerSpan(producer.Publication, message, requestContext.Span,
                         _instrumentationOptions);
                     producer.Span = span;
-                    if (span != null) producerSpans.TryAdd(message.Id, span);
+                    if (span != null) producerSpans.TryAdd(message.Id.Value, span);
 
                     if (producer is IAmAMessageProducerSync producerSync)
                     {
@@ -896,11 +1121,11 @@ namespace Paramore.Brighter
                         producerSpans.TryAdd(Uuid.NewAsString(), span);
                     }
 
-                    if (producer is IAmABulkMessageProducerAsync bulkMessageProducer and not ISupportPublishConfirmation)
+                    if (producer is IAmABulkMessageProducerAsync bulkMessageProducer)
                     {
                         var messages = topicBatch.ToArray();
 
-                        Log.BulkDispatchingMessages(s_logger, messages.Length, topicBatch.Key.WireTopic);
+                        Log.BulkDispatchingMessages(s_logger, messages.Length, topicBatch.Key.WireTopic.Value);
 
                         foreach (var batch in await bulkMessageProducer.CreateBatchesAsync(messages, cancellationToken))
                         {
@@ -964,13 +1189,13 @@ namespace Paramore.Brighter
                     // Log the wire topic (Header.Topic) — where the message is going. Producer
                     // lookup uses GetProducerLookupTopic, which may differ from Header.Topic when
                     // a mapper overrode it (e.g. Reply messages routed to a dynamic reply address).
-                    Log.DecoupledInvocationOfMessage(s_logger, message.Header.Topic, message.Id);
+                    Log.DecoupledInvocationOfMessage(s_logger, message.Header.Topic.Value, message.Id.Value);
 
                     var producer = _producerRegistry.LookupBy(GetProducerLookupTopic(message), message.Header.Type, requestContext);
                     var span = _tracer?.CreateProducerSpan(producer.Publication, message, parentSpan,
                         _instrumentationOptions);
                     producer.Span = span;
-                    if (span != null) producerSpans.TryAdd(message.Id, span);
+                    if (span != null) producerSpans.TryAdd(message.Id.Value, span);
 
                     if (producer is IAmAMessageProducerAsync producerAsync)
                     {
@@ -1020,9 +1245,18 @@ namespace Paramore.Brighter
             Message message;
             if (_transformPipelineBuilder.HasPipeline<TRequest>())
             {
-                message = _transformPipelineBuilder
-                    .BuildWrapPipeline<TRequest>()
-                    .Wrap(request, requestContext, publication);
+                var pipeline = _transformPipelineBuilder.BuildWrapPipeline<TRequest>();
+                try
+                {
+                    message = pipeline.Wrap(request, requestContext, publication);
+                }
+                finally
+                {
+                    //Release the pipeline after the message is built. A throwing mapper/transform release
+                    //must not abort a send whose message has already been produced, so it is logged, not
+                    //surfaced to the caller.
+                    ReleasePipeline(pipeline, request.Id);
+                }
             }
             else
             {
@@ -1030,6 +1264,30 @@ namespace Paramore.Brighter
             }
 
             return message;
+        }
+
+        private static void ReleasePipeline(IDisposable pipeline, Id requestId)
+        {
+            try
+            {
+                pipeline.Dispose();
+            }
+            catch (Exception releaseException)
+            {
+                Log.FailedToReleasePipeline(s_logger, releaseException, requestId.Value);
+            }
+        }
+
+        private static async ValueTask ReleasePipelineAsync(IAsyncDisposable pipeline, Id requestId)
+        {
+            try
+            {
+                await pipeline.DisposeAsync().ConfigureAwait(false);
+            }
+            catch (Exception releaseException)
+            {
+                Log.FailedToReleasePipeline(s_logger, releaseException, requestId.Value);
+            }
         }
 
         private async Task<Message> MapMessageAsync<TRequest>(
@@ -1048,9 +1306,20 @@ namespace Paramore.Brighter
             Message message;
             if (_transformPipelineBuilderAsync.HasPipeline<TRequest>())
             {
-                message = await _transformPipelineBuilderAsync
-                    .BuildWrapPipeline<TRequest>()
-                    .WrapAsync(request, requestContext, publication, cancellationToken);
+                //release asynchronously: when a handler drives this from the Proactor pump the dispose
+                //runs on the single-threaded pump context, so an IAsyncDisposable mapper/transform must be
+                //awaited rather than blocked on
+                var pipeline = _transformPipelineBuilderAsync.BuildWrapPipeline<TRequest>();
+                try
+                {
+                    message = await pipeline.WrapAsync(request, requestContext, publication, cancellationToken);
+                }
+                finally
+                {
+                    //Release after the message is built. A throwing mapper/transform release must not abort
+                    //a send whose message has already been produced, so it is logged, not surfaced.
+                    await ReleasePipelineAsync(pipeline, request.Id).ConfigureAwait(false);
+                }
             }
             else
             {
@@ -1175,6 +1444,9 @@ namespace Paramore.Brighter
         {
             [LoggerMessage(LogLevel.Information, "Found {NumberOfMessages} to clear out of amount {AmountToClear}")]
             public static partial void FoundMessagesToClear(ILogger logger, int numberOfMessages, int amountToClear);
+
+            [LoggerMessage(LogLevel.Warning, "Failed to release the transform pipeline for request {Id}; the message was mapped successfully and is unaffected")]
+            public static partial void FailedToReleasePipeline(ILogger logger, Exception ex, string id);
             
             [LoggerMessage(LogLevel.Debug, "Time since last check is {SecondsSinceLastCheck} seconds")]
             public static partial void TimeSinceLastCheck(ILogger logger, double secondsSinceLastCheck);
@@ -1187,6 +1459,15 @@ namespace Paramore.Brighter
             
             [LoggerMessage(LogLevel.Information, "Sent message: Id:{Id}")]
             public static partial void SentMessage(ILogger logger, string id);
+
+            [LoggerMessage(LogLevel.Warning, "Publish confirmation failed for message Id:{Id} on topic {Topic}")]
+            public static partial void ConfirmationFailed(ILogger logger, string id, string topic);
+
+            [LoggerMessage(LogLevel.Warning, "Observability failed while handling a publish confirmation; confirmation handling continued")]
+            public static partial void ConfirmationObservabilityFault(ILogger logger, Exception ex);
+
+            [LoggerMessage(LogLevel.Warning, "Error handling publish confirmation for message Id:{Id} on topic {Topic}; message left un-dispatched for Sweeper retry")]
+            public static partial void ConfirmationDispatchError(ILogger logger, string id, string topic, Exception ex);
             
             [LoggerMessage(LogLevel.Information, "Decoupled invocation of message: Topic:{Topic} Id:{Id}")]
             public static partial void DecoupledInvocationOfMessage(ILogger logger, string topic, string id);
@@ -1220,6 +1501,12 @@ namespace Paramore.Brighter
             
             [LoggerMessage(LogLevel.Debug, "Outbox outstanding message count is: {OutstandingMessageCount}")]
             public static partial void OutboxOutstandingMessageCount(ILogger logger, int outstandingMessageCount);
+
+            [LoggerMessage(LogLevel.Warning, "Failed to close the producer registry while disposing the mediator; continuing to dispose the mapper and transform factories")]
+            public static partial void FailedToCloseProducers(ILogger logger, Exception exception);
+
+            [LoggerMessage(LogLevel.Warning, "Failed to dispose owned resource {ResourceType} while disposing the mediator; continuing with the remaining resources")]
+            public static partial void FailedToDisposeOwnedResource(ILogger logger, string resourceType, Exception exception);
         }
     }
 }

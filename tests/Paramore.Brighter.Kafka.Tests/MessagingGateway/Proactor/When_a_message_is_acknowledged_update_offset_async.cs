@@ -53,9 +53,9 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
         var routingKey = new RoutingKey(_topic);
         var producerAsync = ((IAmAMessageProducerAsync)_producerRegistry.LookupBy(routingKey));
         var producerConfirm = producerAsync as ISupportPublishConfirmation;
-        producerConfirm.OnMessagePublished += delegate(bool success, string id)
+        producerConfirm.OnMessagePublished += delegate(PublishConfirmationResult result)
         {
-            if (success) sentMessages.TryUpdate(id, true, false);
+            if (result.Success) sentMessages.TryUpdate(result.MessageId.Value, true, false);
         };
 
         //send x messages to Kafka

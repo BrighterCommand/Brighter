@@ -56,7 +56,7 @@ public partial class PostgresMessageProducer(
         }
         
         BrighterTracer.WriteProducerEvent(Span, "postgres", message, instrumentations);
-        Log.PublishingMessage(s_logger, message.Header.Topic, message.Id, message.Body);
+        Log.PublishingMessage(s_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
         
         await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
@@ -66,7 +66,7 @@ public partial class PostgresMessageProducer(
         command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = MessagePayloadDbType});
         var id = await command.ExecuteScalarAsync(cancellationToken);
         
-        Log.PublishedMessage(s_logger, message.Header.Topic, message.Id, Convert.ToInt64(id));
+        Log.PublishedMessage(s_logger, message.Header.Topic.Value, message.Id.Value, Convert.ToInt64(id));
     }
 
     /// <inheritdoc />
@@ -84,7 +84,7 @@ public partial class PostgresMessageProducer(
         }
         
         BrighterTracer.WriteProducerEvent(Span, "postgres", message, instrumentations);
-        Log.PublishingMessage(s_logger, message.Header.Topic, message.Id, message.Body);
+        Log.PublishingMessage(s_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
         
         await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
@@ -95,7 +95,7 @@ public partial class PostgresMessageProducer(
         command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = MessagePayloadDbType});
         var id = await command.ExecuteScalarAsync(cancellationToken);
         
-        Log.PublishedMessage(s_logger, message.Header.Topic, message.Id, Convert.ToInt64(id));
+        Log.PublishedMessage(s_logger, message.Header.Topic.Value, message.Id.Value, Convert.ToInt64(id));
     }
     
     /// <inheritdoc />
@@ -107,7 +107,7 @@ public partial class PostgresMessageProducer(
         }
         
         BrighterTracer.WriteProducerEvent(Span, "postgres", message, instrumentations);
-        Log.PublishingMessage(s_logger, message.Header.Topic, message.Id, message.Body);
+        Log.PublishingMessage(s_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
         
         using var connection = _connectionProvider.GetConnection();
         using var command = connection.CreateCommand();
@@ -117,7 +117,7 @@ public partial class PostgresMessageProducer(
         command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = MessagePayloadDbType});
         var id = command.ExecuteScalar();
         
-        Log.PublishedMessage(s_logger, message.Header.Topic, message.Id, Convert.ToInt64(id));
+        Log.PublishedMessage(s_logger, message.Header.Topic.Value, message.Id.Value, Convert.ToInt64(id));
     }
 
     /// <inheritdoc />
@@ -135,7 +135,7 @@ public partial class PostgresMessageProducer(
         }
         
         BrighterTracer.WriteProducerEvent(Span, "postgres", message, instrumentations);
-        Log.PublishingMessage(s_logger, message.Header.Topic, message.Id, message.Body);
+        Log.PublishingMessage(s_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
         
         using var connection = _connectionProvider.GetConnection();
         using var command = connection.CreateCommand();
@@ -146,7 +146,7 @@ public partial class PostgresMessageProducer(
         command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = MessagePayloadDbType});
         var id = command.ExecuteScalar();
         
-        Log.PublishedMessage(s_logger, message.Header.Topic, message.Id, Convert.ToInt64(id));
+        Log.PublishedMessage(s_logger, message.Header.Topic.Value, message.Id.Value, Convert.ToInt64(id));
     }
 
 

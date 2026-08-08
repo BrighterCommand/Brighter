@@ -44,15 +44,21 @@ namespace Paramore.Brighter.ServiceActivator
     /// events translated from those messages to handlers. It controls the lifetime of the application through <see cref="Receive"/> and <see cref="End"/> and allows
     /// the stop and start of individual connections through <see cref="Open(string)"/> and <see cref="Shut(string)"/>
     /// </summary>
-    public partial class Dispatcher : IDispatcher
+    public partial class Dispatcher : IDispatcher, IDisposable, IAsyncDisposable
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<Dispatcher>();
 
         private Task? _controlTask;
+        //an int rather than a bool so Dispose can claim it with a single atomic Interlocked.Exchange,
+        //making the disposal body run exactly once even under concurrent Dispose (an application-level
+        //dispose racing the container's)
+        private int _disposed;
         private readonly IAmAMessageMapperRegistry? _messageMapperRegistry;
         private readonly IAmAMessageTransformerFactory? _messageTransformerFactory;
         private readonly IAmAMessageMapperRegistryAsync? _messageMapperRegistryAsync;
         private readonly IAmAMessageTransformerFactoryAsync? _messageTransformerFactoryAsync;
+        private readonly bool _ownsRegistry;
+        private readonly bool _ownsTransformerFactories;
         private readonly IAmARequestContextFactory _requestContextFactory;
         private readonly IAmABrighterTracer? _tracer;
         private readonly InstrumentationOptions _instrumentationOptions;
@@ -91,6 +97,16 @@ namespace Paramore.Brighter.ServiceActivator
         public DispatcherState State { get; private set; }
 
         /// <summary>
+        /// The maximum time <see cref="Dispose"/> waits for the pumps to drain their in-flight message —
+        /// after <see cref="End"/> has pushed a quit onto each pump — before it disposes the owned
+        /// mapper/transform factories. Increase it for consumers with long-running handlers (for example
+        /// video processing) so a message in progress can finish rather than be interrupted by teardown.
+        /// On expiry disposal proceeds regardless; an interrupted message is left un-acknowledged so the
+        /// broker redelivers it rather than dropping it. Defaults to 10 seconds.
+        /// </summary>
+        public TimeSpan ShutdownTimeout { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="Dispatcher"/> class.
         /// </summary>
         /// <param name="commandProcessor">The command processor we should use with the dispatcher (prefer to use Command Processor Provider for IoC Scope control</param>
@@ -102,25 +118,46 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="requestContextFactory">The factory used to make a request synchronizationHelper</param>
         /// <param name="tracer">What is the <see cref="BrighterTracer"/> we will use for telemetry</param>
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
+        /// <param name="ownsRegistry">
+        /// Does this Dispatcher own the message mapper registry, so that <see cref="Dispose"/> should dispose it?
+        /// Defaults to <c>false</c> for the manual-wiring path, where the registry is routinely shared with a
+        /// <see cref="CommandProcessor"/>'s external bus and must not be torn down from under it. The DI path
+        /// (<c>BuildDispatcher</c>) news up a registry solely for this Dispatcher and passes <c>true</c>.
+        /// </param>
+        /// <param name="ownsTransformerFactories">
+        /// Does this Dispatcher own the transform factories, so that <see cref="Dispose"/> should dispose them?
+        /// Defaults to <c>false</c> for the manual-wiring path; the DI path passes <c>true</c>.
+        /// </param>
+        /// <param name="shutdownTimeout">
+        /// The maximum time <see cref="Dispose"/> waits for the pumps to drain their in-flight message before
+        /// disposing the owned factories (see <see cref="ShutdownTimeout"/>). Defaults to 10 seconds when
+        /// <c>null</c>.
+        /// </param>
         /// throws <see cref="ConfigurationException">You must provide at least one type of message mapper registry</see>
         public Dispatcher(
             IAmACommandProcessor commandProcessor,
             IEnumerable<Subscription> subscriptions,
             IAmAMessageMapperRegistry? messageMapperRegistry = null,
-            IAmAMessageMapperRegistryAsync? messageMapperRegistryAsync = null, 
+            IAmAMessageMapperRegistryAsync? messageMapperRegistryAsync = null,
             IAmAMessageTransformerFactory? messageTransformerFactory = null,
             IAmAMessageTransformerFactoryAsync? messageTransformerFactoryAsync= null,
-            IAmARequestContextFactory? requestContextFactory = null, 
+            IAmARequestContextFactory? requestContextFactory = null,
             IAmABrighterTracer? tracer = null,
-            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
+            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
+            bool ownsRegistry = false,
+            bool ownsTransformerFactories = false,
+            TimeSpan? shutdownTimeout = null)
         {
             CommandProcessor = commandProcessor;
+            ShutdownTimeout = shutdownTimeout ?? TimeSpan.FromSeconds(10);
             
             Subscriptions = subscriptions;
             _messageMapperRegistry = messageMapperRegistry;
             _messageMapperRegistryAsync = messageMapperRegistryAsync;
             _messageTransformerFactory = messageTransformerFactory;
             _messageTransformerFactoryAsync = messageTransformerFactoryAsync;
+            _ownsRegistry = ownsRegistry;
+            _ownsTransformerFactories = ownsTransformerFactories;
             _requestContextFactory = requestContextFactory ?? new InMemoryRequestContextFactory();
             _tracer = tracer;
             _instrumentationOptions = instrumentationOptions;
@@ -138,6 +175,163 @@ namespace Paramore.Brighter.ServiceActivator
             _consumers = new ConcurrentDictionary<string, IAmAConsumer>();
 
             State = DispatcherState.DS_AWAITING;
+        }
+
+        /// <summary>
+        /// Disposes the runtime mapper registry and transform factories the Dispatcher owns.
+        /// </summary>
+        /// <remarks>
+        /// The Dispatcher disposes only what it is told it owns (<c>ownsRegistry</c>/<c>ownsTransformerFactories</c>).
+        /// On the DI path <c>BuildDispatcher</c> news up a fresh <see cref="IAmAMessageMapperRegistry"/>
+        /// plus both transform factories for this Dispatcher and registers none of them in the container, so
+        /// the Dispatcher is their sole owner and is constructed owning them. Each factory retains a
+        /// per-resolution <see cref="System.IServiceScope"/>
+        /// for any mapper/transform obtained but not released; without this cascade those scopes are held
+        /// until the process exits rather than at container teardown — the same retention the producer-side
+        /// <c>OutboxProducerMediator.Dispose</c> was extended to drain. The Dispatcher is registered as a
+        /// container singleton, so the container disposes it at shutdown. On the manual-wiring path the
+        /// registry is routinely shared with a <see cref="CommandProcessor"/>'s external bus, so the Dispatcher
+        /// is constructed <b>not</b> owning it and this disposal leaves it intact for the other owner.
+        /// <para>
+        /// Disposal stops the pumps before it frees the factories: it calls <see cref="End"/> — which pushes a
+        /// quit onto each running pump so it runs out its current message, acknowledges it, and stops — and
+        /// waits for that drain, bounded by <see cref="ShutdownTimeout"/>, before disposing. Without this a
+        /// still-running pump's in-flight <c>BuildUnwrapPipeline</c> would resolve through a disposed factory,
+        /// throw <see cref="System.ObjectDisposedException"/>, and get the good message rejected as Unacceptable
+        /// and dropped. The wait makes disposal self-ordering even when the hosted
+        /// <c>ServiceActivatorHostedService.StopAsync</c> was skipped or abandoned on its own timeout, or the
+        /// provider was disposed without a graceful stop. If the drain exceeds <see cref="ShutdownTimeout"/>
+        /// disposal proceeds regardless; the interrupted message is left un-acknowledged so the broker
+        /// redelivers it rather than losing it.
+        /// </para>
+        /// </remarks>
+        public void Dispose()
+        {
+            //claim disposed up front with a single atomic exchange: each disposal below is a teardown backstop
+            //that must run at most once. A throw from any step must not leave the flag unclaimed and let a
+            //second Dispose() (an application-level one after the container's) re-dispose the factories.
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+                return;
+
+            //stop the pumps before disposing the factories they resolve mappers/transforms from. End() pushes a
+            //quit onto each running pump so it runs out its current message, acknowledges it, and stops; waiting
+            //for that drain (bounded by ShutdownTimeout) keeps the factories from being torn down under an
+            //in-flight message — which would surface as an ObjectDisposedException, be reclassified as
+            //Unacceptable, and drop a good message. This makes disposal self-ordering even when the hosted
+            //StopAsync was skipped or abandoned on timeout, or the provider was disposed without a graceful stop.
+            //On expiry (a handler that will not finish in time) we dispose regardless; the interrupted message is
+            //left un-acknowledged so the broker redelivers it rather than losing it.
+            try
+            {
+                if (!End().Wait(ShutdownTimeout))
+                    Log.ShutdownDrainTimedOut(s_logger, ShutdownTimeout.TotalMilliseconds);
+            }
+            catch (Exception e)
+            {
+                Log.FailedToDrainPumpsOnShutdown(s_logger, e);
+            }
+
+            //dispose only what this Dispatcher owns, and each owned factory independently so one factory's fault
+            //cannot skip the rest. Disposing the registry cascades to the two mapper factories it holds. The
+            //sync and async registry are the same instance on the DI path (BuildDispatcher passes one
+            //MessageMapperRegistry as both), so guard the async disposal on reference identity to avoid
+            //disposing it twice; MessageMapperRegistry.Dispose is idempotent regardless, but this keeps the
+            //teardown log clean.
+            if (_ownsRegistry)
+            {
+                DisposeQuietly(_messageMapperRegistry);
+                if (!ReferenceEquals(_messageMapperRegistryAsync, _messageMapperRegistry))
+                    DisposeQuietly(_messageMapperRegistryAsync);
+            }
+
+            if (_ownsTransformerFactories)
+            {
+                DisposeQuietly(_messageTransformerFactory);
+                DisposeQuietly(_messageTransformerFactoryAsync);
+            }
+        }
+
+        //Disposes a member if it is IDisposable, swallowing and logging any failure so one factory's fault
+        //cannot skip the remaining disposals in the teardown chain.
+        private static void DisposeQuietly(object? member)
+        {
+            try { (member as IDisposable)?.Dispose(); }
+            catch (Exception e) { Log.FailedToDisposeOwnedResource(s_logger, member?.GetType().Name ?? "null", e); }
+        }
+
+        /// <summary>
+        /// The awaitable twin of <see cref="Dispose"/>. Prefer this on the graceful shutdown path.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="Dispose"/> drains the pumps with a blocking <c>End().Wait(ShutdownTimeout)</c>, which parks a
+        /// thread for up to <see cref="ShutdownTimeout"/> when a consumer is slow to finish its in-flight message.
+        /// A host that tears down its service provider through <c>DisposeAsync</c> — which Microsoft.Extensions.
+        /// DependencyInjection honours in preference to <see cref="IDisposable"/> when a service implements both —
+        /// gets that drain <b>awaited</b> here instead, freeing the thread while the pumps run out their current
+        /// message. The ordering and the ownership rules are identical to <see cref="Dispose"/> (see its remarks):
+        /// the drain (bounded by <see cref="ShutdownTimeout"/>) completes before the owned factories are disposed,
+        /// and an owned factory that is itself <see cref="IAsyncDisposable"/> is torn down through its async path.
+        /// <see cref="IDisposable"/> is kept alongside because MS DI throws if it must synchronously dispose a
+        /// service that is only <see cref="IAsyncDisposable"/>; the two paths share the run-at-most-once flag, so
+        /// disposing both ways (or twice) drains and disposes exactly once.
+        /// </remarks>
+        public async ValueTask DisposeAsync()
+        {
+            //share the atomic run-at-most-once flag with Dispose(): whichever path (or a race between them) claims
+            //it first runs the teardown; the other returns. Each disposal below is a backstop that must run once.
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+                return;
+
+            //await the pump drain rather than blocking on it. End() pushes a quit onto each running pump so it runs
+            //out its current message, acknowledges it, and stops; we await that drain bounded by ShutdownTimeout.
+            //On expiry we dispose regardless — the interrupted message is left un-acknowledged for redelivery — for
+            //the same message-loss reason spelled out on Dispose().
+            try
+            {
+                var drain = End();
+                if (await Task.WhenAny(drain, Task.Delay(ShutdownTimeout)).ConfigureAwait(false) != drain)
+                    Log.ShutdownDrainTimedOut(s_logger, ShutdownTimeout.TotalMilliseconds);
+                else
+                    await drain.ConfigureAwait(false); //observe any fault the drain surfaced
+            }
+            catch (Exception e)
+            {
+                Log.FailedToDrainPumpsOnShutdown(s_logger, e);
+            }
+
+            //dispose only what this Dispatcher owns, each independently, preferring the async path. Mirrors the
+            //reference-identity guard in Dispose() for the shared sync/async registry on the DI path.
+            if (_ownsRegistry)
+            {
+                await DisposeQuietlyAsync(_messageMapperRegistry).ConfigureAwait(false);
+                if (!ReferenceEquals(_messageMapperRegistryAsync, _messageMapperRegistry))
+                    await DisposeQuietlyAsync(_messageMapperRegistryAsync).ConfigureAwait(false);
+            }
+
+            if (_ownsTransformerFactories)
+            {
+                await DisposeQuietlyAsync(_messageTransformerFactory).ConfigureAwait(false);
+                await DisposeQuietlyAsync(_messageTransformerFactoryAsync).ConfigureAwait(false);
+            }
+        }
+
+        //Disposes a member through IAsyncDisposable when it offers one, else IDisposable, swallowing and logging
+        //any failure so one factory's fault cannot skip the remaining disposals in the teardown chain.
+        private static async ValueTask DisposeQuietlyAsync(object? member)
+        {
+            try
+            {
+                switch (member)
+                {
+                    case IAsyncDisposable asyncDisposable:
+                        await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+                        break;
+                    case IDisposable disposable:
+                        disposable.Dispose();
+                        break;
+                }
+            }
+            catch (Exception e) { Log.FailedToDisposeOwnedResource(s_logger, member?.GetType().Name ?? "null", e); }
         }
 
         /// <summary>
@@ -170,7 +364,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="subscription">The subscription.</param>
         public void Open(Subscription subscription)
         {
-            Log.OpeningSubscription(s_logger, subscription.Name);
+            Log.OpeningSubscription(s_logger, subscription.Name.Value);
 
             AddSubscriptionToSubscriptions(subscription);
             var addedConsumers = CreateConsumers([subscription]);
@@ -180,14 +374,14 @@ namespace Paramore.Brighter.ServiceActivator
                 case DispatcherState.DS_RUNNING:
                     addedConsumers.Each(consumer =>
                     {
-                        _consumers.TryAdd(consumer.Name, consumer);
+                        _consumers.TryAdd(consumer.Name.Value, consumer);
                         consumer.Open();
                         _tasks.TryAdd(consumer.JobId, consumer.Job!);
                     });
                     break;
                 case DispatcherState.DS_STOPPED:
                 case DispatcherState.DS_AWAITING:
-                    addedConsumers.Each(consumer => _consumers.TryAdd(consumer.Name, consumer));
+                    addedConsumers.Each(consumer => _consumers.TryAdd(consumer.Name.Value, consumer));
                     Start();
                     break;
                 default:
@@ -208,7 +402,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         public void Receive()
         {
-            CreateConsumers(Subscriptions).Each(consumer => _consumers.TryAdd(consumer.Name, consumer));
+            CreateConsumers(Subscriptions).Each(consumer => _consumers.TryAdd(consumer.Name.Value, consumer));
             Start();
         }
 
@@ -229,7 +423,7 @@ namespace Paramore.Brighter.ServiceActivator
         {
             if (State == DispatcherState.DS_RUNNING)
             {
-                Log.StoppingSubscription(s_logger, subscription.Name);
+                Log.StoppingSubscription(s_logger, subscription.Name.Value);
                 var consumersForConnection = Consumers.Where(consumer => consumer.Subscription.Name == subscription.Name).ToArray();
                 var noOfConsumers = consumersForConnection.Length;
                 for (int i = 0; i < noOfConsumers; ++i)
@@ -241,10 +435,10 @@ namespace Paramore.Brighter.ServiceActivator
 
         public DispatcherStateItem[] GetState()
         {
-            return Subscriptions.Select(s => new DispatcherStateItem(s.Name,
+            return Subscriptions.Select(s => new DispatcherStateItem(s.Name.Value,
                 s.NoOfPerformers,
                 _consumers.Where(c => c.Value.Subscription.Name == s.Name)
-                    .Select(c => new PerformerInformation(c.Value.Name, c.Value.State)).ToArray())
+                    .Select(c => new PerformerInformation(c.Value.Name.Value, c.Value.State)).ToArray())
             ).ToArray();
         }
 
@@ -263,7 +457,7 @@ namespace Paramore.Brighter.ServiceActivator
                 for (var i = currentPerformers; i < numberOfPerformers; i++)
                 {
                     var consumer = CreateConsumer(subscription, i);
-                    _consumers.TryAdd(consumer.Name, consumer);
+                    _consumers.TryAdd(consumer.Name.Value, consumer);
                     consumer.Open();
                     _tasks.TryAdd(consumer.JobId, consumer.Job!);
                 }
@@ -379,9 +573,9 @@ namespace Paramore.Brighter.ServiceActivator
             if (consumer is null)
                 return;
 
-            Log.RemovingConsumer(s_logger, consumer.Name);
+            Log.RemovingConsumer(s_logger, consumer.Name.Value);
 
-            if (_consumers.TryRemove(consumer.Name, out consumer))
+            if (_consumers.TryRemove(consumer.Name.Value, out consumer))
             {
                 consumer.Dispose();
             }
@@ -402,7 +596,7 @@ namespace Paramore.Brighter.ServiceActivator
         
         private Consumer CreateConsumer(Subscription subscription, int? consumerNumber)
         {
-            Log.CreatingConsumer(s_logger, consumerNumber, subscription.Name);
+            Log.CreatingConsumer(s_logger, consumerNumber, subscription.Name.Value);
                 
             if (subscription.MessagePumpType == MessagePumpType.Reactor)
             {
@@ -457,6 +651,15 @@ namespace Paramore.Brighter.ServiceActivator
             
             [LoggerMessage(LogLevel.Information, "Dispatcher: Creating consumer number {ConsumerNumber} for subscription: {ChannelName}")]
             public static partial void CreatingConsumer(ILogger logger, int? consumerNumber, string channelName);
+
+            [LoggerMessage(LogLevel.Error, "Dispatcher: Failed to dispose owned resource {Resource} at shutdown")]
+            public static partial void FailedToDisposeOwnedResource(ILogger logger, string resource, Exception exception);
+
+            [LoggerMessage(LogLevel.Warning, "Dispatcher: Pumps did not drain within {TimeoutMs}ms on shutdown; disposing anyway. Any in-flight message is left un-acknowledged for redelivery")]
+            public static partial void ShutdownDrainTimedOut(ILogger logger, double timeoutMs);
+
+            [LoggerMessage(LogLevel.Error, "Dispatcher: Failed while draining the pumps on shutdown; disposing anyway")]
+            public static partial void FailedToDrainPumpsOnShutdown(ILogger logger, Exception exception);
         }
     }
 }

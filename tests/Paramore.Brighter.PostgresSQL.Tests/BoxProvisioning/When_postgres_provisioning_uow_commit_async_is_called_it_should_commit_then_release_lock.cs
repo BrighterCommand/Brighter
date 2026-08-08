@@ -34,7 +34,7 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class When_postgres_provisioning_uow_commit_async_is_called_it_should_commit_then_release_lock : IAsyncLifetime
+public class PostgreSqlProvisioningUnitOfWorkCommitTests : IAsyncLifetime
 {
     // Per ADR 0058 §B.1: Postgres pg_advisory_lock is session-scoped — it is NOT released
     // implicitly when the surrounding transaction commits (unlike MSSQL's
@@ -62,7 +62,7 @@ public class When_postgres_provisioning_uow_commit_async_is_called_it_should_com
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
     [Fact]
-    public async Task Should_commit_transaction_and_release_lock()
+    public async Task When_postgres_provisioning_uow_commit_async_is_called_it_should_commit_then_release_lock()
     {
         // Arrange
         await using var uow = new PostgreSqlProvisioningUnitOfWork(

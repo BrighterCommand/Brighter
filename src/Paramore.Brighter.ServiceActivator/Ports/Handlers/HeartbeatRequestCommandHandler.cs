@@ -54,7 +54,7 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Handlers
         /// <returns>TRequest.</returns>
         public override HeartbeatRequest Handle(HeartbeatRequest heartbeatRequest)
         {
-            var heartbeat = new HeartbeatReply(_dispatcher.HostName, heartbeatRequest.ReplyAddress);
+            var heartbeat = new HeartbeatReply(_dispatcher.HostName.Value, heartbeatRequest.ReplyAddress);
             _dispatcher.Consumers.Each((consumer) => heartbeat.Consumers.Add(new RunningConsumer(consumer.Name, consumer.State)));
             
             _commandProcessor?.Post(heartbeat);

@@ -30,7 +30,7 @@ using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
-public class When_hosted_service_is_started_with_a_provisioner_for_an_unrecognised_box_type_it_should_throw_argument_out_of_range
+public class BoxProvisioningHostedServiceUnknownBoxTypeTests
 {
     // BoxProvisioningHostedService previously ordered provisioners with
     //     OrderBy(p => p.BoxType == BoxType.Outbox ? 0 : 1)
@@ -45,7 +45,7 @@ public class When_hosted_service_is_started_with_a_provisioner_for_an_unrecognis
     // BoxType addition will not collide with.
 
     [Fact]
-    public async Task Should_throw_argument_out_of_range_naming_the_unknown_box_type_and_the_switch_method()
+    public async Task When_hosted_service_is_started_with_a_provisioner_for_an_unrecognised_box_type_it_should_throw_argument_out_of_range()
     {
         //Arrange — drive the default arm of the new OrderingOrdinal switch with a BoxType
         //          value that no current or future enum addition is expected to use.

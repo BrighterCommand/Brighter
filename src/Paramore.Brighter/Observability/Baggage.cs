@@ -113,7 +113,9 @@ public class Baggage : IEnumerable<KeyValuePair<string, string?>>
             if (keyValue.Length != 2)
                 throw new ArgumentException($"Invalid tracestate format: {pair}", nameof(baggage));
 
-            Add(keyValue[0], keyValue[1]);
+            // The W3C baggage spec (https://www.w3.org/TR/baggage/#definition) permits optional
+            // whitespace (OWS) around the ',' and '=' delimiters, so trim it before validating.
+            Add(keyValue[0].Trim(), keyValue[1].Trim());
         }
     }
 

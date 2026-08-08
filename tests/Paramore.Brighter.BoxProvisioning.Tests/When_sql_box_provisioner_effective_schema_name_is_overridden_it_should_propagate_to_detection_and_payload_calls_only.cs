@@ -242,8 +242,8 @@ public class SqlBoxProvisionerEffectiveSchemaNameTests
         public List<string?> MigrateSchemas { get; } = new();
 
         public Task MigrateAsync(
-            string tableName,
-            string? schemaName,
+            BoxTableName tableName,
+            SchemaName? schemaName,
             BoxType boxType,
             BoxTableState tableState,
             CancellationToken cancellationToken = default)

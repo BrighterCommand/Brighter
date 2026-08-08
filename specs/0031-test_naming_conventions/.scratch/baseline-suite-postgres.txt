@@ -1,0 +1,1 @@
+Passed!  - Failed:     0, Passed:   191, Skipped:     0, Total:   191, Duration: 7 s - Paramore.Brighter.PostgresSQL.Tests.dll (net9.0)

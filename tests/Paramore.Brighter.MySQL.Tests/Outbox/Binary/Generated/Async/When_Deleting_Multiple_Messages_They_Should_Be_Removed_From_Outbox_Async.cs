@@ -10,16 +10,16 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MySQL.Tests.Outbox.Binary.Async;
 
+[Trait("Category", "MySQL")]
+[Collection("MySQLBinaryOutbox")]
 public class WhenDeletingMultipleMessagesTheyShouldBeRemovedFromOutboxAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;
-    private readonly IAmAMessageFactory _messageFactory;
     private List<Message> _createdMessages = [];
 
     public WhenDeletingMultipleMessagesTheyShouldBeRemovedFromOutboxAsync()
     {
         _outboxProvider = new MySQLBinaryOutboxProvider();
-        _messageFactory = new DefaultMessageFactory();
     }
 
     public async Task InitializeAsync()
@@ -37,9 +37,9 @@ public class WhenDeletingMultipleMessagesTheyShouldBeRemovedFromOutboxAsync : IA
     {
         // Arrange
         var context = new RequestContext();
-        var firstMessage = _messageFactory.Create();
-        var secondMessage = _messageFactory.Create();
-        var thirdMessage = _messageFactory.Create();
+        var firstMessage = new DefaultMessageBuilder().Build();
+        var secondMessage = new DefaultMessageBuilder().Build();
+        var thirdMessage = new DefaultMessageBuilder().Build();
 
         _createdMessages.Add(firstMessage);
         _createdMessages.Add(secondMessage);

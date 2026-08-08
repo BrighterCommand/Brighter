@@ -1,3 +1,18 @@
+---
+id: 0004-use-an-envelope-wrapper-with-transports
+title: "Use An Envelope Wrapper with Transports"
+status: Proposed
+author:
+  - "Brighter Team"
+created: 2022-10-04
+summary: "Brighter will implement a Wrap-Unwrap pipeline for the Message Mapper, allowing common message transformations (such as claim checks) to be mixed in via attributes on the mapper, extending existing behaviour without breaking changes to current code."
+tags:
+  - "message-mapping"
+  - "pipeline"
+  - "middleware"
+  - "transports"
+---
+
 # 4. Use An Envelope Wrapper with Transports
 
 Date: 2022-10-04

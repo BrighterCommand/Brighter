@@ -87,7 +87,7 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
     public BoxType BoxType { get; }
 
     /// <inheritdoc />
-    public string BoxTableName => BoxType == BoxType.Outbox
+    public BoxTableName BoxTableName => BoxType == BoxType.Outbox
         ? _configuration.OutBoxTableName
         : _configuration.InBoxTableName;
 
@@ -102,7 +102,7 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
         var boxTableNameParam = BoxType == BoxType.Outbox
             ? nameof(IAmARelationalDatabaseConfiguration.OutBoxTableName)
             : nameof(IAmARelationalDatabaseConfiguration.InBoxTableName);
-        Identifiers.AssertSafe(BoxTableName, boxTableNameParam);
+        Identifiers.AssertSafe(BoxTableName.Value, boxTableNameParam);
         if (_configuration.SchemaName is not null)
         {
             Identifiers.AssertSafe(
@@ -128,7 +128,7 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
             if (tableState.TableExists)
             {
                 await _payloadValidator.ValidateAsync(
-                    connection, BoxTableName, EffectiveSchemaName,
+                    connection, BoxTableName.Value, EffectiveSchemaName,
                     PayloadColumnName, _configuration.BinaryMessagePayload, cancellationToken);
             }
         }
@@ -139,7 +139,7 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
         // detection helper can infer current version from the column set.
         await _migrationRunner.MigrateAsync(
             BoxTableName,
-            _configuration.SchemaName,
+            _configuration.SchemaName != null ? (SchemaName)_configuration.SchemaName : null,
             BoxType,
             tableState,
             cancellationToken);
@@ -151,7 +151,7 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
         CancellationToken cancellationToken)
     {
         var tableExists = await _detectionHelper.DoesTableExistAsync(
-            connection, BoxTableName, EffectiveSchemaName, cancellationToken);
+            connection, BoxTableName.Value, EffectiveSchemaName, cancellationToken);
         if (!tableExists)
             return new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
@@ -169,7 +169,7 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
         try
         {
             historyExists = await _detectionHelper.DoesHistoryExistAsync(
-                connection, BoxTableName, EffectiveSchemaName, historySchema: null, cancellationToken);
+                connection, BoxTableName.Value, EffectiveSchemaName, historySchema: null, cancellationToken);
         }
         catch (DbException ex)
         {
@@ -185,7 +185,7 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
             // Negative or zero return values are not gated here — the runner is the single source
             // of truth for discriminator violations and unknown-schema rejections.
             var detectedVersion = await _detectionHelper.DetectCurrentVersionAsync(
-                connection, BoxTableName, EffectiveSchemaName,
+                connection, BoxTableName.Value, EffectiveSchemaName,
                 BoxType, migrations, cancellationToken);
             return new BoxTableState(
                 TableExists: true, HistoryExists: false,
@@ -198,7 +198,7 @@ public abstract class SqlBoxProvisioner<TConnection, TTransaction>
         try
         {
             maxVersion = await _detectionHelper.GetMaxVersionAsync(
-                connection, BoxTableName, EffectiveSchemaName, historySchema: null, cancellationToken);
+                connection, BoxTableName.Value, EffectiveSchemaName, historySchema: null, cancellationToken);
         }
         catch (DbException ex)
         {

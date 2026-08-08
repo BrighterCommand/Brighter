@@ -147,7 +147,7 @@ public class MessagePumpProcessSpanObservabilityTests
         // process span inherits producer trace context (parent = producer's traceparent), so handler spans descend from producer
         Assert.Equal(_message.Header.TraceParent?.Value, processSpan.ParentId);
 
-        // receive span is local (parent = pump begin span), not the producer — receive measures broker call only
+        // receive span is local, not the producer - receive measures broker call only
         Assert.NotEqual(_message.Header.TraceParent?.Value, receiveSpan.ParentId);
     }
 }

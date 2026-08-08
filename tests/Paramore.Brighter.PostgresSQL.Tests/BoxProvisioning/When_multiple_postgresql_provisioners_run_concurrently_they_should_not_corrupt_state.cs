@@ -6,18 +6,18 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class When_multiple_postgresql_provisioners_run_concurrently_they_should_not_corrupt_state : IAsyncLifetime
+public class PostgreSqlConcurrentProvisionersStateTests : IAsyncLifetime
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName;
 
-    public When_multiple_postgresql_provisioners_run_concurrently_they_should_not_corrupt_state()
+    public PostgreSqlConcurrentProvisionersStateTests()
     {
         _tableName = $"test_outbox_{Guid.NewGuid():N}";
     }
 
     [Fact]
-    public async Task Should_not_corrupt_state()
+    public async Task When_multiple_postgresql_provisioners_run_concurrently_they_should_not_corrupt_state()
     {
         //Arrange
         new PostgresSqlTestHelper().SetupDatabase();

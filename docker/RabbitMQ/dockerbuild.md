@@ -3,7 +3,7 @@ https://docs.docker.com/build/cloud/setup/
 
 This builds images that work on linux/amd64 and linux/arm64 which is really nice for us Mac M1, M2, M3 and other arm users.  
 
-You need an account which is connected the the brightercommand organisation https://hub.docker.com/u/brightercommand
+You need an account which is connected to the brightercommand organisation https://hub.docker.com/u/brightercommand
 
 ```shell
 docker login
@@ -21,7 +21,7 @@ Use the cloud builder.
 ```shell
 docker buildx build --builder cloud-brightercommand-jeffthebuilder \
   --platform linux/amd64,linux/arm64 \
-  --tag brightercommand/rabbitmq:3.13-management-delay \
+  --tag brightercommand/rabbitmq:4.2-management-delay \
   --push .
 ```
 And don't forget to do latest

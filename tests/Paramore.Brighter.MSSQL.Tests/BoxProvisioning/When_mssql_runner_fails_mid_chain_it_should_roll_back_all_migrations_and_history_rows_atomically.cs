@@ -33,7 +33,7 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class When_mssql_runner_fails_mid_chain_it_should_roll_back_all_migrations_and_history_rows_atomically : IAsyncLifetime
+public class MsSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
 {
     private const int SeedVersion = 3;
     private const int BrokenVersion = 6;
@@ -44,7 +44,7 @@ public class When_mssql_runner_fails_mid_chain_it_should_roll_back_all_migration
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
     [Fact]
-    public async Task Should_roll_back_all_history_and_ddl_then_succeed_on_retry()
+    public async Task When_mssql_runner_fails_mid_chain_it_should_roll_back_all_migrations_and_history_rows_atomically()
     {
         //Arrange — seed an outbox at V3 (no history) plus a marker row to prove preservation.
         Configuration.EnsureDatabaseExists(_connectionString);

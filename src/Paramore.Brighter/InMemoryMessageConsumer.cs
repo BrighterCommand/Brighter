@@ -113,7 +113,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     /// <param name="message">The<see cref="Message"/> to acknowledged</param>
     public void Acknowledge(Message message)
     {
-        _lockedMessages.TryRemove(message.Id, out _);
+        _lockedMessages.TryRemove(message.Id.Value, out _);
     }
 
     /// <summary>
@@ -134,7 +134,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     /// <param name="message">The <see cref="Message"/> to nack</param>
     public void Nack(Message message)
     {
-        _lockedMessages.TryRemove(message.Id, out _);
+        _lockedMessages.TryRemove(message.Id.Value, out _);
         _bus.Enqueue(message);
     }
 
@@ -187,7 +187,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
             //don't lock empty messages
             if (message.Header.MessageType == MessageType.MT_NONE)
                 continue;
-            _lockedMessages.TryAdd(message.Id, new LockedMessage(message, _timeProvider.GetUtcNow()));
+            _lockedMessages.TryAdd(message.Id.Value, new LockedMessage(message, _timeProvider.GetUtcNow()));
         }
 
         return messages;
@@ -217,7 +217,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     /// <returns>True if the message has been removed from the channel, false otherwise</returns>
     public bool Reject(Message message, MessageRejectionReason? reason = null)
     {
-        _lockedMessages.TryRemove(message.Id, out _);
+        _lockedMessages.TryRemove(message.Id.Value, out _);
 
         if (reason is { RejectionReason: RejectionReason.DeliveryError })
         {
@@ -282,14 +282,14 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
         {
             try
             {
-                _lockedMessages.TryRemove(message.Id, out _);
+                _lockedMessages.TryRemove(message.Id.Value, out _);
                 EnsureProducer(message.Header.Topic);
                 _requeueProducer!.SendWithDelay(message, timeOut);
                 return true;
             }
             catch
             {
-                _lockedMessages.TryAdd(message.Id, new LockedMessage(message, _timeProvider.GetUtcNow()));
+                _lockedMessages.TryAdd(message.Id.Value, new LockedMessage(message, _timeProvider.GetUtcNow()));
                 throw;
             }
         }
@@ -323,14 +323,14 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
         {
             try
             {
-                _lockedMessages.TryRemove(message.Id, out _);
+                _lockedMessages.TryRemove(message.Id.Value, out _);
                 EnsureProducer(message.Header.Topic);
                 await _requeueProducer!.SendWithDelayAsync(message, timeOut, cancellationToken);
                 return true;
             }
             catch
             {
-                _lockedMessages.TryAdd(message.Id, new LockedMessage(message, _timeProvider.GetUtcNow()));
+                _lockedMessages.TryAdd(message.Id.Value, new LockedMessage(message, _timeProvider.GetUtcNow()));
                 throw;
             }
         }
@@ -390,7 +390,7 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
     
     private bool RequeueNoDelay(Message message)
     {
-        _lockedMessages.TryRemove(message.Id, out _); //--allow requeue even if not from locked msg in bus
+        _lockedMessages.TryRemove(message.Id.Value, out _); //--allow requeue even if not from locked msg in bus
         _bus.Enqueue(message);
         return true;
     }

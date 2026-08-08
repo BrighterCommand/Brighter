@@ -47,7 +47,7 @@ public partial class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWith
         if (rmqSubscription == null)
             throw new ConfigurationException("MS SQL ChannelFactory We expect an MsSqlSubscription or MsSqlSubscription<T> as a parameter");
 
-        Log.MsSqlInputChannelFactoryCreateInputChannel(s_logger, subscription.ChannelName, subscription.RoutingKey);
+        Log.MsSqlInputChannelFactoryCreateInputChannel(s_logger, subscription.ChannelName, subscription.RoutingKey.Value);
         return new Channel(
             subscription.ChannelName,
             subscription.RoutingKey,
@@ -67,7 +67,7 @@ public partial class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWith
         if (rmqSubscription == null)
             throw new ConfigurationException("MS SQL ChannelFactory We expect an MsSqlSubscription or MsSqlSubscription<T> as a parameter");
 
-        Log.MsSqlInputChannelFactoryCreateInputChannel(s_logger, subscription.ChannelName, subscription.RoutingKey);
+        Log.MsSqlInputChannelFactoryCreateInputChannel(s_logger, subscription.ChannelName, subscription.RoutingKey.Value);
         return new ChannelAsync(
             subscription.ChannelName,
             subscription.RoutingKey,
@@ -89,7 +89,7 @@ public partial class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWith
         if (rmqSubscription == null)
             throw new ConfigurationException("MS SQL ChannelFactory We expect an MsSqlSubscription or MsSqlSubscription<T> as a parameter");
 
-        Log.MsSqlInputChannelFactoryCreateInputChannel(s_logger, subscription.ChannelName, subscription.RoutingKey);
+        Log.MsSqlInputChannelFactoryCreateInputChannel(s_logger, subscription.ChannelName, subscription.RoutingKey.Value);
         var channel = new ChannelAsync(
             subscription.ChannelName, 
             subscription.RoutingKey,

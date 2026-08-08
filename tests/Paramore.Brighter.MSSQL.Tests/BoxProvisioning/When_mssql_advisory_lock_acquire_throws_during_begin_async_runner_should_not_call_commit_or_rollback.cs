@@ -34,13 +34,13 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class When_mssql_advisory_lock_acquire_throws_during_begin_async_runner_should_not_call_commit_or_rollback : IAsyncLifetime
+public class MsSqlAdvisoryLockAcquireThrowsDuringBeginTests : IAsyncLifetime
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
     [Fact]
-    public async Task Should_propagate_MigrationLockDeadlockException_without_invoking_commit_or_rollback_and_dispose_runs()
+    public async Task When_mssql_advisory_lock_acquire_throws_during_begin_async_runner_should_not_call_commit_or_rollback()
     {
         //Arrange — fake IMsSqlAdvisoryLock whose AcquireAsync throws MigrationLockDeadlockException
         // (spec 0027 Item N -3 deadlock-victim path). The runner's CreateUnitOfWorkAsync hook is

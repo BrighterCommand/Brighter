@@ -34,7 +34,7 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class When_mysql_provisioning_uow_begin_async_is_called_it_should_acquire_get_lock_with_null_transaction : IAsyncLifetime
+public class MySqlProvisioningUnitOfWorkBeginTests : IAsyncLifetime
 {
     // Per ADR 0057 §5a / ADR 0058 §B.1: MySQL is the transactionless backend in the relational
     // family — DDL statements implicitly commit the surrounding transaction, so wrapping a
@@ -65,7 +65,7 @@ public class When_mysql_provisioning_uow_begin_async_is_called_it_should_acquire
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
     [Fact]
-    public async Task Should_acquire_GET_LOCK_and_leave_Transaction_null()
+    public async Task When_mysql_provisioning_uow_begin_async_is_called_it_should_acquire_get_lock_with_null_transaction()
     {
         // Arrange
         await using var uow = new MySqlProvisioningUnitOfWork(

@@ -30,6 +30,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
         public string OutstandingAllTopicsIndexName { get; set; }
 
         /// <summary>
+        /// The name of the global secondary index over the causation id, used to replay a causation's messages
+        /// </summary>
+        public string CausationIndexName { get; set; }
+
+        /// <summary>
         /// Timeout in milliseconds
         /// </summary>
         public int Timeout { get; }
@@ -63,6 +68,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
             OutstandingAllTopicsIndexName = "OutstandingAllTopics";
             DeliveredIndexName = "Delivered";
             DeliveredAllTopicsIndexName = "DeliveredAllTopics";
+            CausationIndexName = "Causation";
             Timeout = timeout;
             NumberOfShards = numberOfShards;
             ScanConcurrency = scanConcurrency;

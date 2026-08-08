@@ -7,12 +7,12 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class When_multiple_mssql_provisioners_run_concurrently_they_should_not_corrupt_state : IAsyncLifetime
+public class MsSqlConcurrentProvisionersStateTests : IAsyncLifetime
 {
     private readonly string _connectionString;
     private readonly string _tableName;
 
-    public When_multiple_mssql_provisioners_run_concurrently_they_should_not_corrupt_state()
+    public MsSqlConcurrentProvisionersStateTests()
     {
         var builder = new ConfigurationBuilder().AddEnvironmentVariables();
         var configuration = builder.Build();
@@ -23,7 +23,7 @@ public class When_multiple_mssql_provisioners_run_concurrently_they_should_not_c
     }
 
     [Fact]
-    public async Task Should_not_corrupt_state()
+    public async Task When_multiple_mssql_provisioners_run_concurrently_they_should_not_corrupt_state()
     {
         //Arrange
         Configuration.EnsureDatabaseExists(_connectionString);

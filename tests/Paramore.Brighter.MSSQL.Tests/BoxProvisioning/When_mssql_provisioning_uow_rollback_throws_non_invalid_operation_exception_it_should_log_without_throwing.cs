@@ -36,7 +36,7 @@ using Xunit;
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
 /// <summary>
-/// Companion to <c>When_mssql_provisioning_uow_rollback_async_is_called_after_commit_threw_it_should_not_throw</c>:
+/// Companion to <c>MsSqlProvisioningUnitOfWorkRollbackAfterCommitThrewTests</c>:
 /// that test pins the post-finalised-commit path (<see cref="InvalidOperationException"/>);
 /// this test pins the broader contract — RollbackAsync MUST NOT throw FOR ANY exception
 /// type. Sibling backends (Postgres
@@ -54,7 +54,7 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 /// This is the simplest deterministic surface; the same widened catch covers the
 /// zombied-connection cases the reviewer cited.
 /// </remarks>
-public class When_mssql_provisioning_uow_rollback_throws_non_invalid_operation_exception_it_should_log_without_throwing : IAsyncLifetime
+public class MsSqlProvisioningUnitOfWorkRollbackNonInvalidOperationTests : IAsyncLifetime
 {
     private readonly SqlConnection _connection = new(Configuration.DefaultConnectingString);
     private readonly FakeMsSqlAdvisoryLock _advisoryLock = new(throwOnAcquire: null);
@@ -64,7 +64,7 @@ public class When_mssql_provisioning_uow_rollback_throws_non_invalid_operation_e
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
     [Fact]
-    public async Task Should_swallow_non_invalid_operation_exception_and_log_warning()
+    public async Task When_mssql_provisioning_uow_rollback_throws_non_invalid_operation_exception_it_should_log_without_throwing()
     {
         var capturingLogger = new CapturingLogger();
         await using var uow = new MsSqlProvisioningUnitOfWork(_connection, _advisoryLock, capturingLogger);

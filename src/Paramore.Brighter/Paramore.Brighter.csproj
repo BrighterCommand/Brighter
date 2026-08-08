@@ -18,8 +18,14 @@
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
+    <!-- ReleaseAsync/IAsyncDisposable on the public async surface need these on netstandard2.0. Reference
+         them explicitly rather than relying on the transitive copy from System.Text.Json/System.Memory, so a
+         later dependency bump that drops or downgrades them cannot break netstandard2.0 consumers. -->
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
     <PackageReference Include="System.Memory" />
     <PackageReference Include="System.Text.Json" />
+    <PackageReference Include="System.Threading.Channels" />
+    <PackageReference Include="System.Threading.Tasks.Extensions" />
   </ItemGroup>
 
   <ItemGroup>

@@ -66,9 +66,9 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         /// <param name="rhs">The RHS.</param>
         /// <returns>The result of the conversion.</returns>
-        public static implicit operator string (ConsumerName rhs)
+        public static implicit operator string?(ConsumerName rhs)
         {
-            return rhs.ToString();
+            return rhs?.ToString();
         }
 
         /// <summary>

@@ -34,7 +34,7 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class When_mssql_provisioning_uow_begin_async_is_called_it_should_acquire_lock_after_begin_transaction : IAsyncLifetime
+public class MsSqlProvisioningUnitOfWorkBeginTests : IAsyncLifetime
 {
     // Per ADR 0058 §B.1: MSSQL uses sp_getapplock with @LockOwner='Transaction'. The lock is
     // bound to the surrounding transaction's lifetime, so BeginAsync MUST call BeginTransaction
@@ -55,7 +55,7 @@ public class When_mssql_provisioning_uow_begin_async_is_called_it_should_acquire
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
     [Fact]
-    public async Task Should_acquire_lock_with_the_transaction_opened_during_BeginAsync()
+    public async Task When_mssql_provisioning_uow_begin_async_is_called_it_should_acquire_lock_after_begin_transaction()
     {
         // Arrange
         await using var uow = new MsSqlProvisioningUnitOfWork(_connection, _advisoryLock, NullLogger.Instance);

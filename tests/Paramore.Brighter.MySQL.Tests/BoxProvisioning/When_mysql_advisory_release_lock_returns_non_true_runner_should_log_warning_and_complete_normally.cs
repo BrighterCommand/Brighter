@@ -35,7 +35,7 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class When_mysql_advisory_release_lock_returns_non_true_runner_should_log_warning_and_complete_normally : IAsyncLifetime
+public class MySqlAdvisoryReleaseLockNonTrueTests : IAsyncLifetime
 {
     // MySQL RELEASE_LOCK has three outcomes: 1 (released by this session — true), 0 (lock
     // exists but held by another session — false), NULL (lock did not exist). The runner
@@ -49,7 +49,7 @@ public class When_mysql_advisory_release_lock_returns_non_true_runner_should_log
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
     [Fact]
-    public async Task Should_log_one_warning_and_complete_migration_when_release_returns_false()
+    public async Task When_release_returns_false_it_should_log_one_warning_and_complete_migration()
     {
         await AssertSingleWarningAndMigrationCompletes(
             releaseResult: false,
@@ -57,7 +57,7 @@ public class When_mysql_advisory_release_lock_returns_non_true_runner_should_log
     }
 
     [Fact]
-    public async Task Should_log_one_warning_and_complete_migration_when_release_returns_null()
+    public async Task When_release_returns_null_it_should_log_one_warning_and_complete_migration()
     {
         await AssertSingleWarningAndMigrationCompletes(
             releaseResult: null,
@@ -65,7 +65,7 @@ public class When_mysql_advisory_release_lock_returns_non_true_runner_should_log
     }
 
     [Fact]
-    public async Task Should_complete_migration_with_no_warning_when_release_returns_true()
+    public async Task When_release_returns_true_it_should_complete_migration_with_no_warning()
     {
         //Arrange — happy-path fake returns 1 (released by us).
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);

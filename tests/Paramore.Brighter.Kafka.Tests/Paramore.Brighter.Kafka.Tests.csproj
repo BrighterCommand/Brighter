@@ -17,6 +17,9 @@
       </PackageReference>
       <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
       <PackageReference Include="Microsoft.NET.Test.Sdk" />
+      <PackageReference Include="Serilog.Extensions.Hosting" />
+      <PackageReference Include="Serilog.Sinks.TestCorrelator" />
+      <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
       <PackageReference Include="xunit" />
       <PackageReference Include="xunit.runner.visualstudio">
         <PrivateAssets>all</PrivateAssets>

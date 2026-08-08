@@ -80,17 +80,34 @@ services:
             /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t bt_named_gateway_dispatch -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
             /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t bt_mc_cloudevents -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
             /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t bt_mc_cloudevents_async -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t bt_mc_rmm -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t bt_mc_rmm_async -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_post_via_gateway -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_post_via_gateway_async -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_requeueing -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_requeueing_async -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_dead_letter -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
-            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_dead_letter_async -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
             /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_dlq_source -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
             /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_dlq_target -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
             /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t rmq_dlq_invalid -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+
+            echo 'Creating generated test topics...' &&
+
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t gen_r_post_msg -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t gen_r_multi_msg -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t gen_r_multi_thread -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t gen_r_activity -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t gen_r_requeue -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t gen_r_dlq -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t gen_r_dlq_target -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t gen_r_requeue_delay -c DefaultCluster -r 1 -w 1 -a +message.type=DELAY &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t gen_r_delayed_msg -c DefaultCluster -r 1 -w 1 -a +message.type=DELAY &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t gen_r_partition_key -c DefaultCluster -r 1 -w 1 -a +message.type=FIFO &&
+
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t gen_p_post_msg -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t gen_p_multi_msg -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t gen_p_multi_thread -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t gen_p_activity -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t gen_p_requeue -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t gen_p_dlq -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t gen_p_dlq_target -c DefaultCluster -r 1 -w 1 -a +message.type=NORMAL &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t gen_p_requeue_delay -c DefaultCluster -r 1 -w 1 -a +message.type=DELAY &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t gen_p_delayed_msg -c DefaultCluster -r 1 -w 1 -a +message.type=DELAY &&
+            /home/rocketmq/rocketmq-5.4.0/bin/mqadmin updateTopic -n nameserver:9876 -t gen_p_partition_key -c DefaultCluster -r 1 -w 1 -a +message.type=FIFO &&
+
             echo 'done'
         "
     depends_on: # Ensure broker is healthy before attempting topic creation
@@ -101,10 +118,10 @@ services:
   # RocketMQ Dashboard (Web UI - Optional)
   dashboard:
     image: apacherocketmq/rocketmq-dashboard
-    platform: linux/amd64
+    # platform: linux/amd64
     container_name: rocketmq-dashboard
     ports:
-      - "8080:8080"  # Dashboard UI port
+      - "8082:8082"  # Dashboard UI port
     environment:
       - NAMESRV_ADDR=nameserver:9876  # Connect to nameserver
     depends_on:

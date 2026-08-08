@@ -32,7 +32,7 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class When_mssql_runner_is_called_with_non_monotonic_migrations_it_should_throw : IAsyncLifetime
+public class MsSqlRunnerNonMonotonicMigrationsTests : IAsyncLifetime
 {
     // The runner validates that the supplied migrations list is contiguous and strictly
     // ascending (each V_{i+1} == V_i + 1) at MigrateAsync entry — before path branching, so
@@ -46,15 +46,15 @@ public class When_mssql_runner_is_called_with_non_monotonic_migrations_it_should
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
     [Fact]
-    public Task Should_throw_when_versions_contain_a_duplicate() =>
+    public Task When_versions_contain_a_duplicate_it_should_throw() =>
         AssertMigrationListRejected(BuildList(0, 0), expectedMarker: "V1 followed by V1");
 
     [Fact]
-    public Task Should_throw_when_versions_have_a_gap() =>
+    public Task When_versions_have_a_gap_it_should_throw() =>
         AssertMigrationListRejected(BuildList(0, 2), expectedMarker: "V1 followed by V3");
 
     [Fact]
-    public Task Should_throw_when_versions_are_not_strictly_ascending() =>
+    public Task When_versions_are_not_strictly_ascending_it_should_throw() =>
         // [V1, V2, V3, V2] — valid prefix isolates the V3→V2 descent as the sole violation.
         AssertMigrationListRejected(BuildList(0, 1, 2, 1), expectedMarker: "V3 followed by V2");
 

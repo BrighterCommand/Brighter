@@ -100,7 +100,7 @@ public class GcpPubSubChannelFactory(GcpMessagingGatewayConnection connection)
             await publisherServiceApiClient.DeleteTopicAsync(
                 new DeleteTopicRequest
                 {
-                    TopicAsTopicName = GetTopicName(pubSubSubscription.ProjectId, pubSubSubscription.RoutingKey)
+                    TopicAsTopicName = GetTopicName(pubSubSubscription.ProjectId, pubSubSubscription.RoutingKey.Value)
                 }, CallSettings.FromCancellationToken(cancellation));
 
             // Delete the Dead Letter Topic (DLT) if a DeadLetterPolicy is configured
@@ -109,7 +109,7 @@ public class GcpPubSubChannelFactory(GcpMessagingGatewayConnection connection)
                 await publisherServiceApiClient.DeleteTopicAsync(
                     new DeleteTopicRequest
                     {
-                        TopicAsTopicName = GetTopicName(pubSubSubscription.ProjectId, pubSubSubscription.DeadLetter.TopicName)
+                        TopicAsTopicName = GetTopicName(pubSubSubscription.ProjectId, pubSubSubscription.DeadLetter.TopicName.Value)
                     }, CallSettings.FromCancellationToken(cancellation));
             }
         }
@@ -141,7 +141,7 @@ public class GcpPubSubChannelFactory(GcpMessagingGatewayConnection connection)
             {
                 publisherServiceApiClient.DeleteTopic(new DeleteTopicRequest
                 {
-                    TopicAsTopicName = GetTopicName(pubSubSubscription.ProjectId, pubSubSubscription.DeadLetter.TopicName)
+                    TopicAsTopicName = GetTopicName(pubSubSubscription.ProjectId, pubSubSubscription.DeadLetter.TopicName.Value)
                 });
             }
         }

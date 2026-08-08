@@ -45,22 +45,24 @@ namespace Paramore.Brighter
         /// <summary>
         /// Constructs an instance of a wrap pipeline
         /// </summary>
-        /// <param name="messageMapper">The message mapper that forms the pipeline source</param>
+        /// <param name="messageMapperLease">The lease over the message mapper that forms the pipeline source</param>
         /// <param name="messageTransformerFactory">Factory for transforms, required to release</param>
-        /// <param name="transforms">The transforms applied after the message mapper</param>
+        /// <param name="transformLeases">The leases over the transforms applied after the message mapper</param>
         /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
+        /// <param name="mapperRegistry">The registry the message mapper came from, required to release it when the pipeline is disposed</param>
         public WrapPipeline(
-            IAmAMessageMapper<TRequest> messageMapper, 
-            IAmAMessageTransformerFactory? messageTransformerFactory, 
-            IEnumerable<IAmAMessageTransform> transforms,
-            InstrumentationOptions instrumentationOptions
-            ) : base(messageMapper, transforms)
+            Lease<IAmAMessageMapper<TRequest>> messageMapperLease,
+            IAmAMessageTransformerFactory? messageTransformerFactory,
+            IEnumerable<Lease<IAmAMessageTransform>> transformLeases,
+            InstrumentationOptions instrumentationOptions,
+            IAmAMessageMapperRegistry? mapperRegistry = null
+            ) : base(messageMapperLease, transformLeases, mapperRegistry)
         {
             _instrumentationOptions = instrumentationOptions;
             if (messageTransformerFactory != null)
             {
                 InstanceScope = new TransformLifetimeScope(messageTransformerFactory);
-                Transforms.Each(transform => InstanceScope.Add(transform));
+                TransformLeases.Each(lease => InstanceScope.Add(lease));
             }
         }
 
@@ -92,7 +94,7 @@ namespace Paramore.Brighter
 
             if (message.Header.Topic != publication.Topic)
             {
-                Log.DifferentPublicationAndMessageTopic(s_logger, publication.Topic?.Value ?? string.Empty, message.Header.Topic);
+                Log.DifferentPublicationAndMessageTopic(s_logger, publication.Topic?.Value ?? string.Empty, message.Header.Topic.Value);
                 if (publication.Topic is not null)
                 {
                     message.Header.Bag[Message.ProducerTopicHeaderName] = publication.Topic.Value;

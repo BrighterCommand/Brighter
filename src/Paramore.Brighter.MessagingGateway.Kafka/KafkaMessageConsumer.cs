@@ -62,6 +62,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private static readonly TimeSpan s_commitSyncTimeout = TimeSpan.FromSeconds(5);
         private readonly ITimer _sweeperTimer;
         private bool _hasFatalError;
+        private readonly Func<Error, LogLevel>? _errorLogLevel;
         private bool _isClosed;
         private readonly RoutingKey? _deadLetterRoutingKey;
         private readonly RoutingKey? _invalidMessageRoutingKey;
@@ -104,10 +105,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="makeChannels">Should we create infrastructure (topics) where it does not exist or check. Defaults to Create</param>
         /// <param name="configHook">Allows you to modify the Kafka client configuration before a consumer is created.</param>
         /// <param name="timeProvider">The <see cref="TimeProvider"/> used to create the timer for sweeping uncommitted offsets. Defaults to <see cref="TimeProvider.System"/> if not specified. Can be overridden for testing purposes.</param>
+        /// <param name="errorLogLevel">Allows you to classify or suppress the log level of non-fatal errors raised by the underlying Kafka consumer. Returning <see cref="LogLevel.None"/> suppresses the log entirely. Does not affect fatal handling, which is driven solely by <see cref="Error.IsFatal"/>. Defaults to <see langword="null"/>, logging fatal errors at <see cref="LogLevel.Error"/> and non-fatal at <see cref="LogLevel.Warning"/>.</param>
         /// <param name="deadLetterRoutingKey">If we support a dead letter topic what is the <see cref="RoutingKey"/></param>
         /// <param name="invalidMessageRoutingKey">If we support an invalid message topic what is the <see cref="RoutingKey"/></param>
         /// <param name="scheduler">Optional scheduler for delayed requeue operations. When provided, the lazily-created
         /// requeue producer will use this scheduler for delayed sends.</param>
+        /// <param name="groupProtocol">The <see cref="IGroupProtocol"/> used to apply Kafka group coordination settings. Defaults to <see cref="ClassicGroupProtocol"/> with <paramref name="sessionTimeout"/> when <see langword="null"/>.
+        /// The consumer back-fills any <see langword="null"/> properties of a <see cref="ClassicGroupProtocol"/> in place, so do not share an instance across subscriptions.</param>
         /// <exception cref="ConfigurationException">Throws an exception if required parameters missing</exception>
         public KafkaMessageConsumer(
             KafkaMessagingGatewayConfiguration configuration,
@@ -129,8 +133,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             RoutingKey? deadLetterRoutingKey = null,
             RoutingKey? invalidMessageRoutingKey = null,
             TimeProvider? timeProvider = null,
-            IAmAMessageScheduler? scheduler = null
-            )
+            IAmAMessageScheduler? scheduler = null,
+            IGroupProtocol? groupProtocol = null,
+            Func<Error, LogLevel>? errorLogLevel = null)
         {
             if (groupId is null)
                 throw new ConfigurationException("You must set a GroupId for the consumer");
@@ -139,6 +144,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             
             _configuration = configuration ?? throw new ConfigurationException("You must set a KafkaMessagingGatewayConfiguration to connect to a broker");
             _scheduler = scheduler;
+            _errorLogLevel = errorLogLevel;
 
             _deadLetterRoutingKey = deadLetterRoutingKey;
             _invalidMessageRoutingKey = invalidMessageRoutingKey;
@@ -177,7 +183,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             };
             
             // We repeat properties because copying them from the ClientConfig modifies the ClientConfig in place 
-            _consumerConfig = new ConsumerConfig()
+            _consumerConfig = new ConsumerConfig
             {
                 BootstrapServers = string.Join(",", configuration.BootStrapServers), 
                 ClientId = configuration.Name,
@@ -190,7 +196,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 SslCaLocation = configuration.SslCaLocation,
                 GroupId = groupId,
                 AutoOffsetReset = offsetDefault,
-                SessionTimeoutMs = Convert.ToInt32(sessionTimeout.Value.TotalMilliseconds),
                 MaxPollIntervalMs = Convert.ToInt32(maxPollInterval.Value.TotalMilliseconds),
                 EnablePartitionEof = true,
                 AllowAutoCreateTopics = false, //We will do this explicit always so as to allow us to set parameters for the topic
@@ -198,9 +203,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 //We commit the last offset for acknowledged requests when a batch of records has been processed. 
                 EnableAutoOffsetStore = false,
                 EnableAutoCommit = false,
-                // https://www.confluent.io/blog/cooperative-rebalancing-in-kafka-streams-consumer-ksqldb/
-                PartitionAssignmentStrategy = partitionAssignmentStrategy,
             };
+
+            groupProtocol ??= new ClassicGroupProtocol();
+            if (groupProtocol is ClassicGroupProtocol classicGroupProtocol)
+            {
+                classicGroupProtocol.SessionTimeout ??= sessionTimeout;
+                classicGroupProtocol.PartitionAssignmentStrategy ??= partitionAssignmentStrategy;
+            }
+
+            groupProtocol.Apply(_consumerConfig);
             
             if (configHook != null)
                 configHook(_consumerConfig);
@@ -250,15 +262,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     
                     _partitions = _partitions.Where(tp => list.All(tpo => tpo.TopicPartition != tp)).ToList();
                 })
-                .SetErrorHandler((_, error) =>
-                {
-                    _hasFatalError = error.IsFatal;
-                    
-                    if (_hasFatalError ) 
-                        Log.FatalError(s_logger, error.Code, error.Reason, true);
-                    else
-                        Log.NonFatalError(s_logger, error.Code, error.Reason, false);
-                })
+                .SetErrorHandler((_, error) => HandleError(error))
                 .Build();
 
             Log.SubscribingToTopic(s_logger, Topic);
@@ -298,16 +302,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (!message.Header.Bag.TryGetValue(HeaderNames.PARTITION_OFFSET, out var bagData))
             {
-                Log.CannotAcknowledgeMessage(s_logger, message.Id);
+                Log.CannotAcknowledgeMessage(s_logger, message.Id.Value);
                 return;
             }
-            
+
             try
             {
                 var topicPartitionOffset = bagData as TopicPartitionOffset;
                 if (topicPartitionOffset == null)
                 {
-                    Log.CannotAcknowledgeMessage(s_logger, message.Id);
+                    Log.CannotAcknowledgeMessage(s_logger, message.Id.Value);
                     return;
                 }
 
@@ -358,7 +362,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (!message.Header.Bag.TryGetValue(HeaderNames.PARTITION_OFFSET, out var bagData))
             {
-                Log.CannotNackMessage(s_logger, message.Id);
+                Log.CannotNackMessage(s_logger, message.Id.Value);
                 return;
             }
 
@@ -367,7 +371,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 var topicPartitionOffset = bagData as TopicPartitionOffset;
                 if (topicPartitionOffset == null)
                 {
-                    Log.CannotNackMessageTypeMismatch(s_logger, message.Id, bagData?.GetType().FullName ?? "null");
+                    Log.CannotNackMessageTypeMismatch(s_logger, message.Id.Value, bagData?.GetType().FullName ?? "null");
                     return;
                 }
 
@@ -432,10 +436,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
        /// <summary>
        /// Purges the specified queue name.
        /// </summary>
-       /// <remarks>
-       /// There is no 'queue' to purge in Kafka, so we treat this as moving past to the offset to tne end of any assigned partitions,
-       /// thus skipping over anything that exists at that point.
-       /// </remarks>
+        /// <remarks>
+        /// There is no 'queue' to purge in Kafka, so we treat this as moving the offset to the end of any assigned partitions,
+        /// thus skipping over anything that exists at that point.
+        /// </remarks>
         public void Purge()
         {
             if (!_consumer.Assignment.Any())
@@ -451,7 +455,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Purges the specified queue name.
         /// </summary>
         /// <remarks>
-        /// There is no 'queue' to purge in Kafka, so we treat this as moving past to the offset to tne end of any assigned partitions,
+        /// There is no 'queue' to purge in Kafka, so we treat this as moving the offset to the end of any assigned partitions,
         /// thus skipping over anything that exists at that point.
         /// As the Confluent library does not support async, this is sync over async and would block the main performer thread
         /// so we use a new thread pool thread to run this and await that. This could lead to thread pool exhaustion but Purge is rarely used
@@ -551,7 +555,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// We consume the next offset from the stream, and turn it into a Brighter message; we store the offset in the partition into the Brighter message
         /// headers for use in storing and committing offsets. If the stream is EOF or we are not allocated partitions, returns an empty message.
         /// Kafka does not support an async consumer, and probably never will. See <a href="https://github.com/confluentinc/confluent-kafka-dotnet/issues/487">Confluent Kafka</a>
-        /// As a result we use TimeSpan.Zero to run the recieve loop, which will stop it blocking
+        /// As a result we use TimeSpan.Zero to run the receive loop, which avoids blocking.
         /// </remarks>
         /// <param name="timeOut">The timeout for receiving a message. For async always treated as zero</param>
         /// <param name="cancellationToken">The cancellation token - not used as this is async over sync</param>
@@ -582,10 +586,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         }
 
         /// <summary>
-        /// Rejects the specified message. 
+        /// Rejects the specified message.
         /// </summary>
         /// <remarks>
-        /// This is just a commit of the offset to move past the record without processing it
+        /// Routes rejected messages to the invalid message channel or dead letter channel, based on
+        /// <paramref name="reason"/> and channel availability, then acknowledges the consumed offset.
+        /// If no rejection channel is configured, this falls back to acknowledging the message.
         /// </remarks>
         /// <param name="message">The message.</param>
         /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
@@ -597,7 +603,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
               {
                   if (reason != null)
                   {
-                      Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId, reason.RejectionReason.ToString());
+                      Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId.Value, reason.RejectionReason.ToString());
                   }
                   Acknowledge(message);
                   return true;
@@ -619,7 +625,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                   {
                       message.Header.Topic = routingKey!;
                       if (isFallingBackToDlq)
-                          Log.FallingBackToDLQ(s_logger, message.Header.MessageId);
+                          Log.FallingBackToDLQ(s_logger, message.Header.MessageId.Value);
 
                       // Get the appropriate producer based on routing
                       producer = GetRejectionProducer(routingKey);
@@ -628,16 +634,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                   if (producer != null)
                   {
                       producer.Send(message);
-                      Log.MessageSentToRejectionChannel(s_logger, message.Header.MessageId, rejectionReason.ToString());
+                      Log.MessageSentToRejectionChannel(s_logger, message.Header.MessageId.Value, rejectionReason.ToString());
                   }
                   else
                   {
-                      Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId, rejectionReason.ToString());
+                      Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId.Value, rejectionReason.ToString());
                   }
               }
               catch (Exception ex)
               {
-                  Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Header.MessageId, rejectionReason.ToString());
+                  Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Header.MessageId.Value, rejectionReason.ToString());
                   Acknowledge(message);
                   return true;
               }
@@ -652,6 +658,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <remarks>
         /// Routes rejected messages to dead letter queue or invalid message channel based on rejection reason.
         /// Enriches message with metadata and acknowledges after sending to error channel (or on failure).
+        /// If no rejection channel is configured, this falls back to acknowledging the message.
         /// </remarks>
         /// <param name="message">The message.</param>
         /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
@@ -663,7 +670,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             {
                 if (reason != null)
                 {
-                    Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId, reason.RejectionReason.ToString());
+                    Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId.Value, reason.RejectionReason.ToString());
                 }
                 await AcknowledgeAsync(message, cancellationToken);
                 return true;
@@ -685,7 +692,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     message.Header.Topic = routingKey!;
                     if (isFallingBackToDlq)
-                        Log.FallingBackToDLQ(s_logger, message.Header.MessageId);
+                        Log.FallingBackToDLQ(s_logger, message.Header.MessageId.Value);
 
                     // Get the appropriate producer based on routing
                     producer = GetRejectionProducer(routingKey);
@@ -694,16 +701,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 if (producer != null)
                 {
                     await producer.SendAsync(message, cancellationToken);
-                    Log.MessageSentToRejectionChannel(s_logger, message.Header.MessageId, rejectionReason.ToString());
+                    Log.MessageSentToRejectionChannel(s_logger, message.Header.MessageId.Value, rejectionReason.ToString());
                 }
                 else
                 {
-                    Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId, rejectionReason.ToString());
+                    Log.NoChannelsConfiguredForRejection(s_logger, message.Header.MessageId.Value, rejectionReason.ToString());
                 }
             }
             catch (Exception ex)
             {
-                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Header.MessageId, rejectionReason.ToString());
+                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Header.MessageId.Value, rejectionReason.ToString());
                 await AcknowledgeAsync(message, cancellationToken);
                 return true;
             }
@@ -777,6 +784,30 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             return true;
         }
         
+        /// <summary>
+        /// Handles an error raised by the underlying Kafka consumer. Extracted from the
+        /// <c>SetErrorHandler</c> callback so the behaviour is reachable from tests. Not intended to be
+        /// called directly outside of the error-callback wiring.
+        /// </summary>
+        public void HandleError(Error error)
+        {
+            // Latch: once librdkafka reports a fatal error the consumer is unrecoverable. Errors arrive
+            // in bursts, so we must never clear the latch when a later non-fatal error follows a fatal one.
+            // This is authoritative and is never influenced by the ErrorLogLevel hook.
+            if (error.IsFatal)
+                _hasFatalError = true;
+
+            // The hook only classifies/suppresses logging; when absent we preserve the default behaviour
+            // of logging fatal errors at Error and non-fatal at Warning. LogLevel.None suppresses the log.
+            var logLevel = _errorLogLevel?.Invoke(error) ?? (error.IsFatal ? LogLevel.Error : LogLevel.Warning);
+            if (logLevel == LogLevel.None)
+                return;
+
+            // Log against the error we actually received, independent of the latch, so a non-fatal error
+            // that arrives after a fatal one is still logged as non-fatal.
+            Log.KafkaError(s_logger, logLevel, error.Code, error.Reason, error.IsFatal);
+        }
+
         private void CheckHasPartitions()
         {
             if (_partitions.Count <= 0)
@@ -818,7 +849,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// Mainly used diagnostically in tests - how many offsets do we have now?
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The number of uncommitted offsets currently stored in memory as an <see cref="int"/>.</returns>
         public int StoredOffsets()
         {
             return _offsetStorage.Count;
@@ -1217,11 +1248,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             [LoggerMessage(LogLevel.Information, "Partitions for consumer lost {Channels}")]
             public static partial void PartitionsLost(ILogger logger, string channels);
             
-            [LoggerMessage(LogLevel.Error, "Code: {ErrorCode}, Reason: {ErrorMessage}, Fatal: {FatalError}")]
-            public static partial void FatalError(ILogger logger, ErrorCode errorCode, string errorMessage, bool fatalError);
-            
-            [LoggerMessage(LogLevel.Warning, "Code: {ErrorCode}, Reason: {ErrorMessage}, Fatal: {FatalError}")]
-            public static partial void NonFatalError(ILogger logger, ErrorCode errorCode, string errorMessage, bool fatalError);
+            // A dynamic-level logger cannot use the [LoggerMessage] attribute with a fixed Level, so we log
+            // through the ILogger directly. Named placeholders are preserved for structured logging providers.
+            public static void KafkaError(ILogger logger, LogLevel logLevel, ErrorCode errorCode, string errorMessage, bool fatalError)
+            {
+                logger.Log(logLevel, "Code: {ErrorCode}, Reason: {ErrorMessage}, Fatal: {FatalError}", errorCode, errorMessage, fatalError);
+            }
             
             [LoggerMessage(LogLevel.Information, "Kafka consumer subscribing to {Topic}")]
             public static partial void SubscribingToTopic(ILogger logger, RoutingKey topic);

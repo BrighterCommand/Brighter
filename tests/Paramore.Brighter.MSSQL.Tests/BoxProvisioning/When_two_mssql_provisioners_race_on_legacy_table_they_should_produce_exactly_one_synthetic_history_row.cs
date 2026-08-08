@@ -31,7 +31,7 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class When_two_mssql_provisioners_race_on_legacy_table_they_should_produce_exactly_one_synthetic_history_row : IAsyncLifetime
+public class MsSqlLegacyTableRaceTests : IAsyncLifetime
 {
     private const int OutboxSeedVersion = 3;
     private const string OutboxMarkerMessageId = "outbox-marker-must-survive";
@@ -42,7 +42,7 @@ public class When_two_mssql_provisioners_race_on_legacy_table_they_should_produc
     private readonly string _inboxTableName = $"test_inbox_{Guid.NewGuid():N}";
 
     [Fact]
-    public async Task Should_produce_exactly_one_synthetic_v3_when_two_outbox_provisioners_race()
+    public async Task When_two_outbox_provisioners_race_on_legacy_table_they_should_produce_exactly_one_synthetic_v3()
     {
         //Arrange — seed an outbox at V3 (no history row) plus a marker row to prove preservation.
         Configuration.EnsureDatabaseExists(_connectionString);
@@ -88,7 +88,7 @@ public class When_two_mssql_provisioners_race_on_legacy_table_they_should_produc
     }
 
     [Fact]
-    public async Task Should_produce_exactly_one_synthetic_v1_when_two_inbox_provisioners_race()
+    public async Task When_two_inbox_provisioners_race_on_legacy_table_they_should_produce_exactly_one_synthetic_v1()
     {
         //Arrange — seed a V1 inbox (no ContextKey, no history) plus a marker command row.
         Configuration.EnsureDatabaseExists(_connectionString);
@@ -112,9 +112,9 @@ public class When_two_mssql_provisioners_race_on_legacy_table_they_should_produc
         //Act — race two provisioners against the same legacy table.
         await Task.WhenAll(provisionerA.ProvisionAsync(), provisionerB.ProvisionAsync());
 
-        //Assert — exactly one synthetic V1 + one applied V2 (no duplicates).
+        //Assert — exactly one synthetic V1 + one applied V2 + one applied V3 (no duplicates).
         var rowsByVersion = GetHistoryRowsByVersion(_inboxTableName);
-        Assert.Equal(2, rowsByVersion.Count);
+        Assert.Equal(3, rowsByVersion.Count);
 
         var syntheticDescription = Assert.Contains(1, rowsByVersion);
         Assert.StartsWith("bootstrap: detected at V1", syntheticDescription);
@@ -125,8 +125,17 @@ public class When_two_mssql_provisioners_race_on_legacy_table_they_should_produc
             $"V2 should be an applied migration row, not a synthetic bootstrap row " +
             $"(description was: '{appliedDescription}')");
 
-        //Assert — table ends at V2 with seeded marker preserved (ContextKey NULL on existing row).
-        Assert.Contains("ContextKey", GetTableColumns(_inboxTableName));
+        var appliedV3Description = Assert.Contains(3, rowsByVersion);
+        Assert.False(
+            appliedV3Description.StartsWith("bootstrap:", StringComparison.Ordinal),
+            $"V3 should be an applied migration row, not a synthetic bootstrap row " +
+            $"(description was: '{appliedV3Description}')");
+
+        //Assert — table ends at V3 (ContextKey + CausationId) with seeded marker preserved
+        //(ContextKey NULL on the existing row).
+        var inboxColumns = GetTableColumns(_inboxTableName);
+        Assert.Contains("ContextKey", inboxColumns);
+        Assert.Contains("CausationId", inboxColumns);
         Assert.True(InboxMarkerRowExistsWithNullContextKey());
     }
 

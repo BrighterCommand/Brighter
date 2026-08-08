@@ -37,7 +37,7 @@ using Xunit;
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
 /// <summary>
-/// Companion to <c>When_sqlite_provisioning_uow_rollback_async_is_called_it_should_not_throw</c>:
+/// Companion to <c>ProvisioningUnitOfWorkRollbackTests</c>:
 /// that test pins the post-finalised-commit path (<see cref="InvalidOperationException"/>);
 /// this test pins the broader contract — RollbackAsync MUST NOT throw FOR ANY exception type.
 /// Sibling backends (MSSQL
@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 /// This is the simplest deterministic surface; the same widened catch covers the
 /// zombied-connection cases the reviewer cited.
 /// </remarks>
-public class When_sqlite_provisioning_uow_rollback_throws_non_invalid_operation_exception_it_should_log_without_throwing : IAsyncLifetime
+public class ProvisioningUnitOfWorkRollbackNonInvalidOperationTests : IAsyncLifetime
 {
     private readonly string _dbPath = Path.Combine(
         Path.GetTempPath(), $"brighter_sqlite_uow_rollback_non_ioe_{Guid.NewGuid():N}.db");
@@ -64,7 +64,7 @@ public class When_sqlite_provisioning_uow_rollback_throws_non_invalid_operation_
     private readonly string _connectionString;
     private readonly SqliteConnection _connection;
 
-    public When_sqlite_provisioning_uow_rollback_throws_non_invalid_operation_exception_it_should_log_without_throwing()
+    public ProvisioningUnitOfWorkRollbackNonInvalidOperationTests()
     {
         _connectionString = $"Data Source={_dbPath}";
         _connection = new SqliteConnection(_connectionString);
@@ -87,7 +87,7 @@ public class When_sqlite_provisioning_uow_rollback_throws_non_invalid_operation_
     }
 
     [Fact]
-    public async Task Should_swallow_non_invalid_operation_exception_and_log_warning()
+    public async Task When_sqlite_provisioning_uow_rollback_throws_non_invalid_operation_exception_it_should_log_without_throwing()
     {
         var capturingLogger = new CapturingLogger();
         await using var uow = new SqliteProvisioningUnitOfWork(_connection, capturingLogger);

@@ -7,13 +7,13 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class When_postgresql_outbox_provisioner_finds_existing_table_without_history_it_should_bootstrap : IAsyncLifetime
+public class PostgreSqlOutboxProvisionerBootstrapTests : IAsyncLifetime
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName;
     private readonly PostgreSqlOutboxProvisioner _provisioner;
 
-    public When_postgresql_outbox_provisioner_finds_existing_table_without_history_it_should_bootstrap()
+    public PostgreSqlOutboxProvisionerBootstrapTests()
     {
         _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
@@ -30,7 +30,7 @@ public class When_postgresql_outbox_provisioner_finds_existing_table_without_his
     }
 
     [Fact]
-    public async Task Should_bootstrap_with_synthetic_history()
+    public async Task When_postgresql_outbox_provisioner_finds_existing_table_without_history_it_should_bootstrap()
     {
         //Arrange
         new PostgresSqlTestHelper().SetupDatabase();

@@ -31,7 +31,7 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class When_mysql_runner_fresh_path_acquires_lock_it_should_re_check_table_existence_before_creating : IAsyncLifetime
+public class MySqlRunnerFreshPathRecheckTests : IAsyncLifetime
 {
     private const string MarkerMessageId = "marker-row-must-survive";
 
@@ -40,14 +40,14 @@ public class When_mysql_runner_fresh_path_acquires_lock_it_should_re_check_table
     private readonly RelationalDatabaseConfiguration _config;
     private readonly MySqlBoxMigrationRunner _runner;
 
-    public When_mysql_runner_fresh_path_acquires_lock_it_should_re_check_table_existence_before_creating()
+    public MySqlRunnerFreshPathRecheckTests()
     {
         _config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
         _runner = new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), _config, TimeSpan.FromSeconds(30));
     }
 
     [Fact]
-    public async Task Should_re_check_table_existence_under_lock_and_fall_through_to_bootstrap()
+    public async Task When_mysql_runner_fresh_path_acquires_lock_it_should_re_check_table_existence_before_creating()
     {
         //Arrange — simulate the TOCTOU race: another instance created the V_latest-shape outbox
         //table after detection ran but before this runner acquires GET_LOCK. We seed the table

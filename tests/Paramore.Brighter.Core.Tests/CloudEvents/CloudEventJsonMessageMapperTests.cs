@@ -186,6 +186,29 @@ public class CloudEventJsonMessageMapperTests
     }
 
     [Fact]
+    public void When_mapping_command_to_message_with_explicit_type_it_should_appear_in_body()
+    {
+        //Arrange
+        var mapper = new CloudEventJsonMessageMapper<MyCommand>();
+        var command = new MyCommand { Value = Guid.NewGuid().ToString() };
+        const string typeName = "com.example.test.event";
+        var publication = new Publication
+        {
+            Topic = new RoutingKey("test-topic"),
+            Type = new CloudEventsType(typeName)
+        };
+
+        //Act
+        var message = mapper.MapToMessage(command, publication);
+
+        //Assert
+        var body = JsonSerializer.Deserialize<CloudEventJsonMessageMapper<MyCommand>.CloudEventMessage>(
+            message.Body.Bytes, JsonSerialisationOptions.Options);
+        Assert.NotNull(body);
+        Assert.Equal(typeName, body.Type);
+    }
+
+    [Fact]
     public void When_mapping_message_to_command()
     {
         var command = new MyCommand { Value = Guid.NewGuid().ToString() };

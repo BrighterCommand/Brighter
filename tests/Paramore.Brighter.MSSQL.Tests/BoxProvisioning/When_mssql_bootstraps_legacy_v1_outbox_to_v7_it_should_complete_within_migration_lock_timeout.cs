@@ -32,7 +32,7 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class When_mssql_bootstraps_legacy_v1_outbox_to_v7_it_should_complete_within_migration_lock_timeout : IAsyncLifetime
+public class MsSqlLegacyV1ToV7BootstrapTimingTests : IAsyncLifetime
 {
     private const int SeedVersion = 1;
     private static readonly TimeSpan MigrationLockTimeout = TimeSpan.FromSeconds(30);
@@ -42,7 +42,7 @@ public class When_mssql_bootstraps_legacy_v1_outbox_to_v7_it_should_complete_wit
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
     [Fact]
-    public async Task Should_complete_v1_to_v7_bootstrap_well_under_lock_timeout()
+    public async Task When_mssql_bootstraps_legacy_v1_outbox_to_v7_it_should_complete_within_migration_lock_timeout()
     {
         //Arrange — seed a V1-shaped outbox (the heaviest bootstrap path: stamps V1 + applies V2..V7).
         Configuration.EnsureDatabaseExists(_connectionString);

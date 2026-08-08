@@ -46,8 +46,8 @@ namespace Paramore.Brighter
         private readonly IAmAHandlerFactoryAsync? _asyncHandlerFactory;
         private readonly List<IAmALifetime> _instanceScopes = new List<IAmALifetime>();
         //GLOBAL! cache of handler attributes - won't change post-startup so avoid re-calculation. Method to clear cache below (if a broken test brought you here)
-        private static readonly ConcurrentDictionary<string, IOrderedEnumerable<RequestHandlerAttribute>> s_preAttributesMemento = new ConcurrentDictionary<string, IOrderedEnumerable<RequestHandlerAttribute>>();
-        private static readonly ConcurrentDictionary<string, IOrderedEnumerable<RequestHandlerAttribute>> s_postAttributesMemento = new ConcurrentDictionary<string, IOrderedEnumerable<RequestHandlerAttribute>>();
+        private static readonly ConcurrentDictionary<Type, IOrderedEnumerable<RequestHandlerAttribute>> s_preAttributesMemento = new ConcurrentDictionary<Type, IOrderedEnumerable<RequestHandlerAttribute>>();
+        private static readonly ConcurrentDictionary<Type, IOrderedEnumerable<RequestHandlerAttribute>> s_postAttributesMemento = new ConcurrentDictionary<Type, IOrderedEnumerable<RequestHandlerAttribute>>();
 
         /// <summary>
         /// Used to build a pipeline of handlers from the target handler and the attributes on that
@@ -114,23 +114,30 @@ namespace Paramore.Brighter
             foreach (var handlerType in handlerTypes)
             {
                 var handlerMethod = HandlerMethodDiscovery.FindHandlerMethod(handlerType, requestType);
-                var attributes = handlerMethod.GetOtherHandlersInPipeline();
+                var isAsync = HandlerMethodDiscovery.IsAsyncHandler(handlerType);
 
-                var beforeSteps = attributes
+                var otherHandlers = handlerMethod.GetOtherHandlersInPipeline().ToList();
+
+                var beforeAttributes = otherHandlers
                     .Where(a => a.Timing == HandlerTiming.Before)
+                    .ToList();
+
+                var globalInbox = TryCreateGlobalInboxAttribute(handlerMethod, handlerType, isAsync);
+                if (globalInbox is not null)
+                    beforeAttributes.Add(globalInbox);
+
+                var beforeSteps = beforeAttributes
                     .OrderByDescending(a => a.Step)
-                    .Select(a => new PipelineStepDescription(a.GetType(), a.GetHandlerType(), a.Step, a.Timing))
+                    .Select(a => new PipelineStepDescription(a.GetType(), a.GetHandlerType(), a.Step, a.Timing) { Attribute = a })
                     .ToList()
                     .AsReadOnly();
 
-                var afterSteps = attributes
+                var afterSteps = otherHandlers
                     .Where(a => a.Timing == HandlerTiming.After)
                     .OrderByDescending(a => a.Step)
-                    .Select(a => new PipelineStepDescription(a.GetType(), a.GetHandlerType(), a.Step, a.Timing))
+                    .Select(a => new PipelineStepDescription(a.GetType(), a.GetHandlerType(), a.Step, a.Timing) { Attribute = a })
                     .ToList()
                     .AsReadOnly();
-
-                var isAsync = HandlerMethodDiscovery.IsAsyncHandler(handlerType);
 
                 yield return new HandlerPipelineDescription(requestType, handlerType, isAsync, beforeSteps, afterSteps);
             }
@@ -272,7 +279,7 @@ namespace Paramore.Brighter
 
             implicitHandler.Context = requestContext;
 
-            if (!s_preAttributesMemento.TryGetValue(implicitHandler.Name.ToString(),
+            if (!s_preAttributesMemento.TryGetValue(implicitHandler.GetType(),
                     out IOrderedEnumerable<RequestHandlerAttribute>? preAttributes))
             {
                 preAttributes =
@@ -281,7 +288,7 @@ namespace Paramore.Brighter
                         .Where(attribute => attribute.Timing == HandlerTiming.Before)
                         .OrderByDescending(attribute => attribute.Step);
 
-                s_preAttributesMemento.TryAdd(implicitHandler.Name.ToString(), preAttributes);
+                s_preAttributesMemento.TryAdd(implicitHandler.GetType(), preAttributes);
             }
 
             AddGlobalInboxAttributes(ref preAttributes, implicitHandler);
@@ -289,7 +296,7 @@ namespace Paramore.Brighter
             var firstInPipeline = PushOntoPipeline(preAttributes, implicitHandler, requestContext, instanceScope);
 
 
-            if (!s_postAttributesMemento.TryGetValue(implicitHandler.Name.ToString(),
+            if (!s_postAttributesMemento.TryGetValue(implicitHandler.GetType(),
                     out IOrderedEnumerable<RequestHandlerAttribute>? postAttributes))
             {
                 postAttributes =
@@ -298,7 +305,7 @@ namespace Paramore.Brighter
                         .Where(attribute => attribute.Timing == HandlerTiming.After)
                         .OrderByDescending(attribute => attribute.Step);
 
-                s_postAttributesMemento.TryAdd(implicitHandler.Name.ToString(), postAttributes);
+                s_postAttributesMemento.TryAdd(implicitHandler.GetType(), postAttributes);
             }
 
             AppendToPipeline(postAttributes, implicitHandler, requestContext, instanceScope);
@@ -316,7 +323,7 @@ namespace Paramore.Brighter
             implicitHandler.Context = requestContext;
             implicitHandler.ContinueOnCapturedContext = continueOnCapturedContext;
 
-            if (!s_preAttributesMemento.TryGetValue(implicitHandler.Name.ToString(), out IOrderedEnumerable<RequestHandlerAttribute>? preAttributes))
+            if (!s_preAttributesMemento.TryGetValue(implicitHandler.GetType(), out IOrderedEnumerable<RequestHandlerAttribute>? preAttributes))
             {
                 preAttributes =
                     implicitHandler.FindHandlerMethod()
@@ -324,14 +331,14 @@ namespace Paramore.Brighter
                         .Where(attribute => attribute.Timing == HandlerTiming.Before)
                         .OrderByDescending(attribute => attribute.Step);
 
-                s_preAttributesMemento.TryAdd(implicitHandler.Name.ToString(), preAttributes);
+                s_preAttributesMemento.TryAdd(implicitHandler.GetType(), preAttributes);
             }
 
             AddGlobalInboxAttributesAsync(ref preAttributes, implicitHandler);
 
             var firstInPipeline = PushOntoAsyncPipeline(preAttributes, implicitHandler, requestContext, instanceScope, continueOnCapturedContext);
 
-            if (!s_postAttributesMemento.TryGetValue(implicitHandler.Name.ToString(), out IOrderedEnumerable<RequestHandlerAttribute>? postAttributes))
+            if (!s_postAttributesMemento.TryGetValue(implicitHandler.GetType(), out IOrderedEnumerable<RequestHandlerAttribute>? postAttributes))
             {
                 postAttributes =
                     implicitHandler.FindHandlerMethod()
@@ -339,12 +346,44 @@ namespace Paramore.Brighter
                         .Where(attribute => attribute.Timing == HandlerTiming.After)
                         .OrderByDescending(attribute => attribute.Step);
 
-                s_postAttributesMemento.TryAdd(implicitHandler.Name.ToString(), postAttributes);
+                s_postAttributesMemento.TryAdd(implicitHandler.GetType(), postAttributes);
             }
 
             AppendToAsyncPipeline(postAttributes, implicitHandler, requestContext, instanceScope);
             Log.NewAsyncHandlerPipelineCreated(s_logger, TracePipeline(firstInPipeline).ToString());
             return firstInPipeline;
+        }
+
+        /// <summary>
+        /// Reflection-only counterpart to <see cref="AddGlobalInboxAttributes"/> used by <see cref="Describe(Type)"/>.
+        /// Returns the global inbox attribute that <see cref="Build"/> would inject for this handler, or null
+        /// when no global inbox applies. Uses the same guards as the build path so the description does not drift.
+        /// </summary>
+        private RequestHandlerAttribute? TryCreateGlobalInboxAttribute(System.Reflection.MethodInfo handlerMethod, Type handlerType, bool isAsync)
+        {
+            if (_inboxConfiguration == null
+                || handlerMethod.HasNoInboxAttributesInPipeline()
+                || handlerMethod.HasExistingUseInboxAttributesInPipeline())
+                return null;
+
+            if (_inboxConfiguration.Context is null)
+                throw new ArgumentException("Inbox Configuration must be set");
+
+            var contextKey = _inboxConfiguration.Context(handlerType);
+
+            return isAsync
+                ? new UseInboxAsyncAttribute(
+                    step: 0,
+                    contextKey: contextKey,
+                    onceOnly: _inboxConfiguration.OnceOnly,
+                    timing: HandlerTiming.Before,
+                    onceOnlyAction: _inboxConfiguration.ActionOnExists)
+                : new UseInboxAttribute(
+                    step: 0,
+                    contextKey: contextKey,
+                    onceOnly: _inboxConfiguration.OnceOnly,
+                    timing: HandlerTiming.Before,
+                    onceOnlyAction: _inboxConfiguration.ActionOnExists);
         }
 
         private void AddGlobalInboxAttributes(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes, RequestHandler<TRequest> implicitHandler)

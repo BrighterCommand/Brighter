@@ -29,7 +29,7 @@ public class OutboxProvisionerFreshDatabaseTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Should_create_outbox_table()
+    public async Task When_outbox_provisioner_runs_on_fresh_database_it_should_create_outbox_table()
     {
         // Act
         await _provisioner.ProvisionAsync();

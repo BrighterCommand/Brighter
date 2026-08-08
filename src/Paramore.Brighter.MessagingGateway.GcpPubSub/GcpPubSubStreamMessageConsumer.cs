@@ -37,7 +37,7 @@ public partial class GcpPubSubStreamMessageConsumer(
         }
         
         gcpStreamMessage.Accepted();
-        Log.AcknowledgeSuccess(s_logger, message.Id, "", subscriptionName.ToString());
+        Log.AcknowledgeSuccess(s_logger, message.Id.Value, "", subscriptionName.ToString());
     }
     
     /// <summary>
@@ -89,7 +89,7 @@ public partial class GcpPubSubStreamMessageConsumer(
         }
         
         gcpStreamMessage.Accepted();
-        Log.RejectMessage(s_logger, message.Id, "", subscriptionName.ToString());
+        Log.RejectMessage(s_logger, message.Id.Value, "", subscriptionName.ToString());
         return true;
     }
     
@@ -222,7 +222,7 @@ public partial class GcpPubSubStreamMessageConsumer(
         }
         
         gcpStreamMessage.Reject();
-        Log.RequeueComplete(s_logger, message.Id);
+        Log.RequeueComplete(s_logger, message.Id.Value);
         return true;
     }
 

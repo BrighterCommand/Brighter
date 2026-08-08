@@ -177,8 +177,8 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
 
     /// <inheritdoc />
     public async Task MigrateAsync(
-        string tableName,
-        string? schemaName,
+        BoxTableName tableName,
+        SchemaName? schemaName,
         BoxType boxType,
         BoxTableState tableState,
         CancellationToken cancellationToken = default)
@@ -186,12 +186,24 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
         // Defence-in-depth at the framework chokepoint. Catalogs gate AssertSafe at the entry to
         // All(...), but the runner is independently reachable (callers can construct a migration
         // list and invoke MigrateAsync directly), so the public entry point must validate too.
-        // schemaName is nullable: SQLite has no schema concept per ADR 0057 §6, so a null value
-        // is legitimate and must not be rejected as "missing".
-        Identifiers.AssertSafe(tableName, nameof(tableName));
-        if (schemaName is not null)
+        Identifiers.AssertSafe(tableName.Value, nameof(tableName));
+
+        // schemaName is optional: SQLite has no schema concept per ADR 0057 §6, so an absent value
+        // is legitimate and must not be rejected as "missing". A SchemaName is "absent" when it is
+        // a null reference OR wraps a null/empty string — callers commonly reach the latter via the
+        // implicit string->SchemaName conversion of a null/empty value (e.g. an unconfigured
+        // RelationalDatabaseConfiguration.SchemaName). Collapse every absent form to a single null
+        // using SchemaName.IsNullOrEmpty (the canonical "absent" check, mirroring Id.IsNullOrEmpty)
+        // so the AssertSafe gate and every downstream `schemaName?.Value ?? <backend default>` treat
+        // them identically — preserving the semantics of the `string?` parameter this value type
+        // replaced (spec 0030), which a bare `is not null` reference check silently broke.
+        if (SchemaName.IsNullOrEmpty(schemaName))
         {
-            Identifiers.AssertSafe(schemaName, nameof(schemaName));
+            schemaName = null;
+        }
+        else
+        {
+            Identifiers.AssertSafe(schemaName.Value, nameof(schemaName));
         }
 
         // D3 misconfiguration guard (FR1a/AC1a): on a placement backend, PerSchema needs a schema
@@ -218,12 +230,12 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
                 $"Migration list for '{(schemaName is null ? tableName : $"{schemaName}.{tableName}")}' was null. The injected IAmABoxMigrationCatalog must return a non-null list from All(...).");
         }
 
-        ValidateMigrationsMonotonic(schemaName, tableName, migrations);
+        ValidateMigrationsMonotonic(schemaName?.Value, tableName.Value, migrations);
 
         // Span name follows OTel DB convention "{operation} {target}" — the table name is the
         // operator-meaningful target. Tags carry backend/schema/box-type so a multi-table
         // startup trace can be filtered without re-parsing the display name.
-        using var activity = StartMigrationActivity(tableName, schemaName, boxType);
+        using var activity = StartMigrationActivity(tableName.Value, schemaName?.Value, boxType);
 
         // Spec 0029 NF5/AC7 (ADR 0060 D6): surface the placement decision per run so an operator
         // can answer "where did THIS tenant's migration history go?" without correlating to the
@@ -253,8 +265,8 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
             try
             {
                 connection = await OpenConnectionAsync(cancellationToken);
-                var lockResource = LockResourceFor(schemaName, tableName);
-                uow = await CreateUnitOfWorkAsync(connection, schemaName, tableName, cancellationToken);
+                var lockResource = LockResourceFor(schemaName?.Value, tableName.Value);
+                uow = await CreateUnitOfWorkAsync(connection, schemaName?.Value, tableName.Value, cancellationToken);
                 await uow.BeginAsync(lockResource, _lockTimeout, cancellationToken);
             }
             catch (Exception ex)
@@ -267,10 +279,10 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
             try
             {
                 activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventEnsureHistory));
-                await EnsureHistoryTableAsync(connection, uow.Transaction, schemaName, tableName, cancellationToken);
+                await EnsureHistoryTableAsync(connection, uow.Transaction, schemaName?.Value, tableName.Value, cancellationToken);
 
                 var (tableExists, historyExists) = await RedetectStateAsync(
-                    connection, uow.Transaction, schemaName, tableName, cancellationToken);
+                    connection, uow.Transaction, schemaName?.Value, tableName.Value, cancellationToken);
 
                 if (!tableExists)
                 {
@@ -282,9 +294,9 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
                     // post-install column set always matches V_latest regardless of how the
                     // historical V1 looked.
                     var freshInstallDdl = _catalog.FreshInstallDdl(_configuration);
-                    var latestVersion = migrations.Count == 0 ? 0 : migrations[migrations.Count - 1].Version;
+                    var latestVersion = migrations.Count == 0 ? (MigrationVersion)0 : migrations[migrations.Count - 1].Version;
                     await RunFreshPathAsync(
-                        connection, uow.Transaction, schemaName, tableName,
+                        connection, uow.Transaction, schemaName?.Value, tableName.Value,
                         freshInstallDdl, latestVersion, cancellationToken);
                 }
                 else if (!historyExists)
@@ -292,14 +304,14 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
                     activity?.SetTag(BrighterSemanticConventions.BoxMigrationPath, "bootstrap");
                     activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventBootstrap));
                     await RunBootstrapPathAsync(
-                        connection, uow.Transaction, schemaName, tableName, boxType, migrations, cancellationToken);
+                        connection, uow.Transaction, schemaName?.Value, tableName.Value, boxType, migrations, cancellationToken);
                 }
                 else
                 {
                     activity?.SetTag(BrighterSemanticConventions.BoxMigrationPath, "normal");
                     activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventNormalUpdate));
                     await RunNormalPathAsync(
-                        connection, uow.Transaction, schemaName, tableName, migrations, cancellationToken);
+                        connection, uow.Transaction, schemaName?.Value, tableName.Value, migrations, cancellationToken);
                 }
 
                 await uow.CommitAsync(cancellationToken);

@@ -54,11 +54,11 @@ namespace Paramore.Brighter
         private readonly InstrumentationOptions _instrumentationOptions;
 
         //GLOBAL! Cache of message mapper transform attributes. This will not be recalculated post start up. Method to clear cache below (if a broken test brought you here).
-        private static readonly ConcurrentDictionary<string, IOrderedEnumerable<WrapWithAttribute>> s_wrapTransformsMemento =
-            new ConcurrentDictionary<string, IOrderedEnumerable<WrapWithAttribute>>();
-
-        private static readonly ConcurrentDictionary<string, IOrderedEnumerable<UnwrapWithAttribute>> s_unWrapTransformsMemento =
-            new ConcurrentDictionary<string, IOrderedEnumerable<UnwrapWithAttribute>>();
+        //materialised (sorted once at insertion) rather than a lazy IOrderedEnumerable: the cached value is
+        //enumerated more than once per build (BuildTransformPipeline plus the Find*.Any() ignored-attribute
+        //check) and on every message, so a lazy OrderByDescending would re-run the sort each time
+        private static readonly ConcurrentDictionary<Type, WrapWithAttribute[]> s_wrapTransformsMemento = new();
+        private static readonly ConcurrentDictionary<Type, UnwrapWithAttribute[]> s_unWrapTransformsMemento = new();
 
         /// <summary>
         /// Creates an instance of a transform pipeline builder.
@@ -92,17 +92,20 @@ namespace Paramore.Brighter
         /// <returns></returns>
         public WrapPipeline<TRequest> BuildWrapPipeline<TRequest>() where TRequest : class, IRequest
         {
+            Lease<IAmAMessageMapper<TRequest>>? messageMapperLease = null;
+            IEnumerable<Lease<IAmAMessageTransform>>? transformLeases = null;
+            WrapPipeline<TRequest>? pipeline = null;
             try
             {
-                var messageMapper = FindMessageMapper<TRequest>();
+                messageMapperLease = FindMessageMapper<TRequest>();
 
-                var transforms = BuildTransformPipeline<TRequest>(FindWrapTransforms(messageMapper));
+                transformLeases = BuildTransformPipeline<TRequest>(FindWrapTransforms(messageMapperLease.Instance));
 
-                var pipeline = new WrapPipeline<TRequest>(messageMapper, _messageTransformerFactory, transforms, _instrumentationOptions);
+                pipeline = new WrapPipeline<TRequest>(messageMapperLease, _messageTransformerFactory, transformLeases, _instrumentationOptions, _mapperRegistry);
 
                 Log.NewWrapPipelineCreated(s_logger, typeof(TRequest).Name, TraceWrapPipeline(pipeline));
 
-                var unwraps = FindUnwrapTransforms(messageMapper);
+                var unwraps = FindUnwrapTransforms(messageMapperLease.Instance);
                 if (unwraps.Any())
                 {
                     Log.UnwrapAttributesOnMapToMessageMethodIgnored(s_logger, typeof(TRequest).Name, TraceWrapPipeline(pipeline));
@@ -112,6 +115,12 @@ namespace Paramore.Brighter
             }
             catch (Exception e)
             {
+                //nothing was returned to the caller to take ownership of the mapper and transforms, so
+                //release them here rather than leak them. Cleanup may throw (Release/Dispose surface
+                //exceptions), so guard it: a disposal failure must not mask the configuration error
+                //the caller needs to see.
+                try { CleanUpAfterFailedBuild(pipeline, transformLeases, messageMapperLease); }
+                catch (Exception cleanupException) { Log.FailedToCleanUpAfterFailedBuild(s_logger, cleanupException); }
                 throw new ConfigurationException("Error building wrap pipeline for outgoing message, see inner exception for details", e);
             }
         }
@@ -124,17 +133,20 @@ namespace Paramore.Brighter
         /// <returns></returns>
         public UnwrapPipeline<TRequest> BuildUnwrapPipeline<TRequest>() where TRequest : class, IRequest
         {
+            Lease<IAmAMessageMapper<TRequest>>? messageMapperLease = null;
+            IEnumerable<Lease<IAmAMessageTransform>>? transformLeases = null;
+            UnwrapPipeline<TRequest>? pipeline = null;
             try
             {
-                var messageMapper = FindMessageMapper<TRequest>();
+                messageMapperLease = FindMessageMapper<TRequest>();
 
-                var transforms = BuildTransformPipeline<TRequest>(FindUnwrapTransforms(messageMapper));
+                transformLeases = BuildTransformPipeline<TRequest>(FindUnwrapTransforms(messageMapperLease.Instance));
 
-                var pipeline = new UnwrapPipeline<TRequest>(transforms, _messageTransformerFactory, messageMapper);
+                pipeline = new UnwrapPipeline<TRequest>(transformLeases, _messageTransformerFactory, messageMapperLease, _mapperRegistry);
 
                 Log.NewUnwrapPipelineCreated(s_logger, typeof(TRequest).Name, TraceUnwrapPipeline(pipeline));
 
-                var wraps = FindWrapTransforms(messageMapper);
+                var wraps = FindWrapTransforms(messageMapperLease.Instance);
                 if (wraps.Any())
                 {
                     Log.WrapAttributesOnMapToRequestMethodIgnored(s_logger, typeof(TRequest).Name, TraceUnwrapPipeline(pipeline));
@@ -144,19 +156,25 @@ namespace Paramore.Brighter
             }
             catch (Exception e)
             {
+                //nothing was returned to the caller to take ownership of the mapper and transforms, so
+                //release them here rather than leak them. Cleanup may throw (Release/Dispose surface
+                //exceptions), so guard it: a disposal failure must not mask the configuration error
+                //the caller needs to see.
+                try { CleanUpAfterFailedBuild(pipeline, transformLeases, messageMapperLease); }
+                catch (Exception cleanupException) { Log.FailedToCleanUpAfterFailedBuild(s_logger, cleanupException); }
                 throw new ConfigurationException("Error building unwrap pipeline for outgoing message, see inner exception for details", e);
             }
         }
 
         public bool HasPipeline<TRequest>() where TRequest : class, IRequest
-        {
-            return _mapperRegistry.Get<TRequest>() != null;
-        }
+            //resolve the mapper type rather than create an instance: this runs once per message and only
+            //answers "is there a pipeline?", so there is nothing to release and no probe to leak
+            => _mapperRegistry.ResolveMapperInfo(typeof(TRequest)).MapperType is not null;
 
-        private IEnumerable<IAmAMessageTransform> BuildTransformPipeline<TRequest>(IEnumerable<TransformAttribute> transformAttributes)
+        private IEnumerable<Lease<IAmAMessageTransform>> BuildTransformPipeline<TRequest>(IEnumerable<TransformAttribute> transformAttributes)
             where TRequest : class, IRequest
         {
-            var transforms = new List<IAmAMessageTransform>();
+            var transforms = new List<Lease<IAmAMessageTransform>>();
 
             //Allowed to be null to avoid breaking v9 interfaces
             if (_messageTransformerFactory is null)
@@ -168,22 +186,62 @@ namespace Paramore.Brighter
                 return transforms;
             }
 
-            transformAttributes.Each((attribute) =>
+            try
             {
-                var transformType = attribute.GetHandlerType();
-                var transformer = new TransformerFactory<TRequest>(attribute, _messageTransformerFactory).CreateMessageTransformer();
-                if (transformer is null)
+                transformAttributes.Each((attribute) =>
                 {
-                    throw new InvalidOperationException(string.Format("Message Transformer Factory could not create a transform of type {0}",
-                        transformType.Name));
-                }
-                else
-                {
-                    transforms.Add(transformer);
-                }
-            });
+                    var transformerLease = new TransformerFactory<TRequest>(attribute, _messageTransformerFactory).CreateMessageTransformer();
+                    transforms.Add(transformerLease);
+                });
+            }
+            catch (Exception)
+            {
+                //a transform later in the pipeline failed to build; we own every transform created
+                //before it, so release them rather than leak them before the error propagates. No
+                //pipeline was constructed to take ownership of them.
+                ReleaseTransforms(transforms);
+                throw;
+            }
 
             return transforms;
+        }
+
+        //Releases transforms back to the factory. Used to clean up a partially-built pipeline; a no-op
+        //when no transformer factory was supplied (v9 compatibility), because none were created.
+        private void ReleaseTransforms(IEnumerable<Lease<IAmAMessageTransform>> transformLeases)
+        {
+            if (_messageTransformerFactory is null) return;
+
+            //release every transform even when one Release throws: on the failed-build path no pipeline
+            //owns these transforms and no finalizer retries, so skipping the rest would leak their DI
+            //scopes permanently. Swallow each failure so it neither skips a later transform nor masks the
+            //build error the caller rethrows.
+            foreach (var transformLease in transformLeases)
+            {
+                try { _messageTransformerFactory.Release(transformLease); }
+                catch (Exception releaseException) { Log.FailedToReleaseTransform(s_logger, releaseException); }
+            }
+        }
+
+        //Releases the resources created for a pipeline whose build failed before it was returned to the
+        //caller. If the pipeline was constructed it owns the mapper and transforms, so disposing it
+        //releases both exactly once (and suppresses its finalizer); otherwise we release whatever we
+        //built directly. BuildTransformPipeline releases its own partial list when it throws, so
+        //transforms is only non-null here when it returned successfully.
+        private void CleanUpAfterFailedBuild<TRequest>(
+            TransformPipeline<TRequest>? pipeline,
+            IEnumerable<Lease<IAmAMessageTransform>>? transformLeases,
+            Lease<IAmAMessageMapper<TRequest>>? messageMapperLease)
+            where TRequest : class, IRequest
+        {
+            if (pipeline is not null)
+            {
+                pipeline.Dispose();
+                return;
+            }
+
+            if (transformLeases is not null) ReleaseTransforms(transformLeases);
+            if (messageMapperLease is not null) _mapperRegistry.Release(messageMapperLease);
         }
 
         /// <summary>
@@ -196,29 +254,72 @@ namespace Paramore.Brighter
         /// <returns>A <see cref="TransformPipelineDescription"/>, or null if no mapper is registered.</returns>
         public static TransformPipelineDescription? DescribeTransforms(
             MessageMapperRegistry mapperRegistry, Type requestType)
+            => DescribeTransforms(mapperRegistry, requestType, includeAsync: false);
+
+        /// <summary>
+        /// Describes the transform pipeline for a given request type using reflection only —
+        /// no mappers or transforms are instantiated. When <paramref name="includeAsync"/> is
+        /// <c>true</c>, the transforms declared by the async-resolved mapper are unioned with those
+        /// of the sync-resolved mapper (de-duplicated by transformer type and step), so a request
+        /// type served only by an async mapper is still described.
+        /// </summary>
+        /// <param name="mapperRegistry">The message mapper registry to resolve mapper types from.</param>
+        /// <param name="requestType">The request type to describe transforms for.</param>
+        /// <param name="includeAsync">Whether to also include the async-resolved mapper's transforms.</param>
+        /// <returns>A <see cref="TransformPipelineDescription"/>, or null if no mapper (sync or async) is registered.</returns>
+        public static TransformPipelineDescription? DescribeTransforms(
+            MessageMapperRegistry mapperRegistry, Type requestType, bool includeAsync)
         {
-            var (mapperType, isDefault) = mapperRegistry.ResolveMapperInfo(requestType);
-            if (mapperType == null)
+            var (syncMapperType, syncIsDefault) = mapperRegistry.ResolveMapperInfo(requestType);
+            var (asyncMapperType, asyncIsDefault) = includeAsync
+                ? mapperRegistry.ResolveAsyncMapperInfo(requestType)
+                : ((Type?)null, false);
+
+            if (syncMapperType is null && asyncMapperType is null)
                 return null;
 
-            var mapToMessage = MapperMethodDiscovery.FindMapToMessage(mapperType, requestType);
-            var wrapTransforms = mapToMessage != null
-                ? mapToMessage.GetOtherWrapsInPipeline()
-                    .OrderByDescending(a => a.Step)
-                    .Select(a => new TransformStepDescription(a.GetType(), a.GetHandlerType(), a.Step))
-                    .ToList()
-                : new List<TransformStepDescription>();
+            var wrapTransforms = UnionTransformSteps(
+                DescribeSteps(syncMapperType, type => MapperMethodDiscovery.FindMapToMessage(type, requestType), method => method.GetOtherWrapsInPipeline()),
+                DescribeSteps(asyncMapperType, type => MapperMethodDiscovery.FindMapToMessageAsync(type, requestType), method => method.GetOtherWrapsInPipeline()));
 
-            var mapToRequest = MapperMethodDiscovery.FindMapToRequest(mapperType);
-            var unwrapTransforms = mapToRequest != null
-                ? mapToRequest.GetOtherUnwrapsInPipeline()
-                    .OrderByDescending(a => a.Step)
-                    .Select(a => new TransformStepDescription(a.GetType(), a.GetHandlerType(), a.Step))
-                    .ToList()
-                : new List<TransformStepDescription>();
+            var unwrapTransforms = UnionTransformSteps(
+                DescribeSteps(syncMapperType, MapperMethodDiscovery.FindMapToRequest, method => method.GetOtherUnwrapsInPipeline()),
+                DescribeSteps(asyncMapperType, MapperMethodDiscovery.FindMapToRequestAsync, method => method.GetOtherUnwrapsInPipeline()));
+
+            var mapperType = syncMapperType ?? asyncMapperType!;
+            var isDefault = AllResolvedMappersAreDefault(syncMapperType, syncIsDefault, asyncMapperType, asyncIsDefault);
 
             return new TransformPipelineDescription(mapperType, isDefault, wrapTransforms, unwrapTransforms);
         }
+
+        // The description is "from the default mapper" only when every mapper that contributed to it is a default;
+        // if any custom mapper resolved (e.g. an async-only registration while the sync side falls back to the
+        // default), its transforms must still be evaluated.
+        private static bool AllResolvedMappersAreDefault(
+            Type? syncMapperType, bool syncIsDefault, Type? asyncMapperType, bool asyncIsDefault)
+            => (syncMapperType is null || syncIsDefault) && (asyncMapperType is null || asyncIsDefault);
+
+        private static List<TransformStepDescription> DescribeSteps(
+            Type? mapperType,
+            Func<Type, MethodInfo?> findMapperMethod,
+            Func<MethodInfo, IEnumerable<TransformAttribute>> getTransforms)
+        {
+            var mapperMethod = mapperType is null ? null : findMapperMethod(mapperType);
+            return mapperMethod is null
+                ? new List<TransformStepDescription>()
+                : getTransforms(mapperMethod)
+                    .Select(transform => new TransformStepDescription(
+                        transform.GetType(), transform.GetHandlerType(), transform.Step))
+                    .ToList();
+        }
+
+        private static List<TransformStepDescription> UnionTransformSteps(
+            IEnumerable<TransformStepDescription> syncSteps, IEnumerable<TransformStepDescription> asyncSteps)
+            => syncSteps.Concat(asyncSteps)
+                .GroupBy(step => (step.TransformType, step.Step))
+                .Select(group => group.First())
+                .OrderByDescending(step => step.Step)
+                .ToList();
 
         public static void ClearPipelineCache()
         {
@@ -226,21 +327,22 @@ namespace Paramore.Brighter
             s_unWrapTransformsMemento.Clear();
         }
 
-        private IAmAMessageMapper<TRequest> FindMessageMapper<TRequest>() where TRequest : class, IRequest
+        private Lease<IAmAMessageMapper<TRequest>> FindMessageMapper<TRequest>() where TRequest : class, IRequest
         {
-            var messageMapper = _mapperRegistry.Get<TRequest>();
-            if (messageMapper == null) throw new InvalidOperationException(string.Format("Could not find mapper for {0}. Hint: did you set MessagePumpType.Reactor on the subscription to match the mapper type?", typeof(TRequest).Name));
-            return messageMapper;
+            var messageMapperLease = _mapperRegistry.Get<TRequest>();
+            if (messageMapperLease == null) throw new InvalidOperationException(string.Format("Could not find mapper for {0}. Hint: did you set MessagePumpType.Reactor on the subscription to match the mapper type?", typeof(TRequest).Name));
+            return messageMapperLease;
         }
 
-        private IOrderedEnumerable<WrapWithAttribute> FindWrapTransforms<T>(IAmAMessageMapper<T> messageMapper) where T : class, IRequest
+        private WrapWithAttribute[] FindWrapTransforms<T>(IAmAMessageMapper<T> messageMapper) where T : class, IRequest
         {
-            var key = messageMapper.GetType().Name;
-            if (!s_wrapTransformsMemento.TryGetValue(key, out IOrderedEnumerable<WrapWithAttribute>? transformAttributes))
+            var key = messageMapper.GetType();
+            if (!s_wrapTransformsMemento.TryGetValue(key, out WrapWithAttribute[]? transformAttributes))
             {
                 transformAttributes = FindMapToMessage(messageMapper)
                     .GetOtherWrapsInPipeline()
-                    .OrderByDescending(attribute => attribute.Step);
+                    .OrderByDescending(attribute => attribute.Step)
+                    .ToArray();
 
                 s_wrapTransformsMemento.TryAdd(key, transformAttributes);
             }
@@ -248,14 +350,15 @@ namespace Paramore.Brighter
             return transformAttributes;
         }
 
-        private IOrderedEnumerable<UnwrapWithAttribute> FindUnwrapTransforms<T>(IAmAMessageMapper<T> messageMapper) where T : class, IRequest
+        private UnwrapWithAttribute[] FindUnwrapTransforms<T>(IAmAMessageMapper<T> messageMapper) where T : class, IRequest
         {
-            var key = messageMapper.GetType().Name;
-            if (!s_unWrapTransformsMemento.TryGetValue(key, out IOrderedEnumerable<UnwrapWithAttribute>? transformAttributes))
+            var key = messageMapper.GetType();
+            if (!s_unWrapTransformsMemento.TryGetValue(key, out UnwrapWithAttribute[]? transformAttributes))
             {
                 transformAttributes = FindMapToRequest(messageMapper)
                     .GetOtherUnwrapsInPipeline()
-                    .OrderByDescending(attribute => attribute.Step);
+                    .OrderByDescending(attribute => attribute.Step)
+                    .ToArray();
 
                 s_unWrapTransformsMemento.TryAdd(key, transformAttributes);
             }
@@ -301,6 +404,12 @@ namespace Paramore.Brighter
 
             [LoggerMessage(LogLevel.Warning, "No message transformer factory configured, so no transforms will be created but {TransformCount} configured")]
             public static partial void NoMessageTransformerFactoryConfigured(ILogger logger, int transformCount);
+
+            [LoggerMessage(LogLevel.Warning, "Failed to release resources while cleaning up after a failed pipeline build; the build error is preserved and rethrown. A repeated failure here points at a mapper/transform Release or Dispose that throws.")]
+            public static partial void FailedToCleanUpAfterFailedBuild(ILogger logger, Exception exception);
+
+            [LoggerMessage(LogLevel.Warning, "Failed to release a transform while cleaning up a partially-built pipeline; releasing the remaining transforms. A repeated failure here points at a transform Release or Dispose that throws.")]
+            public static partial void FailedToReleaseTransform(ILogger logger, Exception exception);
         }
     }
 }

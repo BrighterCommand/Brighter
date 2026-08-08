@@ -44,14 +44,14 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 // SchemaName, the outbox table MUST land in the configured schema, AND a second
 // ProvisionAsync run MUST be a clean no-op (no error, history still has exactly one
 // V_latest row, table still resident in the configured schema).
-public class When_mssql_outbox_provisioner_runs_on_fresh_database_with_non_default_schema_it_should_create_in_configured_schema : IAsyncLifetime
+public class MsSqlOutboxNonDefaultSchemaTests : IAsyncLifetime
 {
     private const string NonDefaultSchema = "billing_for_schema_test";
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
     private readonly MsSqlOutboxProvisioner _provisioner;
 
-    public When_mssql_outbox_provisioner_runs_on_fresh_database_with_non_default_schema_it_should_create_in_configured_schema()
+    public MsSqlOutboxNonDefaultSchemaTests()
     {
         // Configuration explicitly carries the non-default SchemaName so the catalog's
         // FreshInstallDdl + V2..V7 ALTERs + detection helper all see the same target schema.
@@ -69,7 +69,7 @@ public class When_mssql_outbox_provisioner_runs_on_fresh_database_with_non_defau
     }
 
     [Fact]
-    public async Task Should_create_outbox_in_configured_schema_and_no_op_on_second_run()
+    public async Task When_mssql_outbox_provisioner_runs_on_fresh_database_with_non_default_schema_it_should_create_in_configured_schema()
     {
         //Arrange — the database exists and the non-default schema is pre-created. The MSSQL
         //runner does not create the box schema itself; operators provision schemas via

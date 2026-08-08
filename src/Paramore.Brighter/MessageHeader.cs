@@ -154,8 +154,9 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// A property bag that can be used for extended header attributes.
-        /// Use camelCase for the key names if you intend to read it yourself, as when converted to and from Json serializers will tend convert the property
-        /// name from UpperCase to camelCase
+        /// Key names round-trip verbatim through Brighter's serialization, so you can read a key back
+        /// using the exact name you wrote (for example "SessionId"); Brighter no longer applies a naming
+        /// policy to bag keys.
         /// </summary>
         /// <value>The bag.</value>
         public Dictionary<string, object> Bag { get; set; } = new();

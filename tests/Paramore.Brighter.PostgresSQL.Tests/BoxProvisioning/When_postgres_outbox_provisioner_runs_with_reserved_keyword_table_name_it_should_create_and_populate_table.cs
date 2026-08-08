@@ -14,7 +14,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 /// is idempotent, runtime DML round-trips a message, and history is keyed under the
 /// PG-folded lowercase form.
 /// </summary>
-public class When_postgres_outbox_provisioner_runs_with_reserved_keyword_table_name_it_should_create_and_populate_table
+public class PostgreSqlReservedKeywordTableNameTests
     : IAsyncLifetime
 {
     // "Order" is a SQL reserved keyword. Unquoted PG DDL `CREATE TABLE Order ...` is a
@@ -29,7 +29,7 @@ public class When_postgres_outbox_provisioner_runs_with_reserved_keyword_table_n
     private readonly PostgreSqlOutboxProvisioner _provisioner;
     private readonly PostgreSqlBoxMigrationRunner _runner;
 
-    public When_postgres_outbox_provisioner_runs_with_reserved_keyword_table_name_it_should_create_and_populate_table()
+    public PostgreSqlReservedKeywordTableNameTests()
     {
         _config = new RelationalDatabaseConfiguration(
             _connectionString,
@@ -45,7 +45,7 @@ public class When_postgres_outbox_provisioner_runs_with_reserved_keyword_table_n
     }
 
     [Fact]
-    public async Task Should_provision_reserved_keyword_table_and_round_trip_a_message()
+    public async Task When_postgres_outbox_provisioner_runs_with_reserved_keyword_table_name_it_should_create_and_populate_table()
     {
         new PostgresSqlTestHelper().SetupDatabase();
 

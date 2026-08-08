@@ -59,11 +59,17 @@ public class AzureServiceBusMessagePublisher
             azureServiceBusMessage.CorrelationId = message.Header.CorrelationId;
         if (!string.IsNullOrEmpty(message.Header.ReplyTo!))
             azureServiceBusMessage.ReplyTo = message.Header.ReplyTo?.Value;
-        if (message.Header.Bag.TryGetValue(ASBConstants.SessionIdKey, out object? value))
-            azureServiceBusMessage.SessionId = value.ToString();
+        //Brighter's Outbox serializes bag keys with the configured JsonNamingPolicy, so a key written as
+        //"SessionId" returns transformed (e.g. "sessionId" or "session_id") after a round-trip. Resolve the
+        //SessionId using the same policy so we stay correct whatever policy is configured (see ASBConstants.IsBagKey).
+        var sessionId = message.Header.Bag
+            .FirstOrDefault(h => ASBConstants.IsBagKey(h.Key, ASBConstants.SessionIdKey))
+            .Value;
+        if (sessionId is not null)
+            azureServiceBusMessage.SessionId = sessionId.ToString();
 
         foreach (var header in message.Header.Bag.Where(h =>
-                     !ASBConstants.ReservedHeaders.Contains(h.Key)
+                     !ASBConstants.IsReservedHeader(h.Key)
                      && !MessageHeader.IsLocalHeader(h.Key)))
         {
             azureServiceBusMessage.ApplicationProperties[header.Key] = header.Value;

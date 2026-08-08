@@ -111,11 +111,45 @@ Skills are invoked using slash commands in Claude Code:
 
 ---
 
+### 4. Bugfix - Diagnosis-First Bug Workflow
+
+**Commands**: `/bugfix:triage`, `/bugfix:confirm`, `/bugfix:test`, `/bugfix:fix`, `/bugfix:verify` (plus `/bugfix:status`, `/bugfix:switch`)
+
+**Purpose**: A lightweight, diagnosis-first workflow for fixing bugs. It is `/test-first` wrapped with an explicit **Confirm** gate up front — because a bug's root cause is a hypothesis until proven.
+
+**When to use**:
+- A defect whose root cause is not yet proven
+- An issue that arrived with a suggested fix (including agent-authored) you should verify before trusting
+- Anywhere `/test-first` alone would jump to a test for an *assumed* cause
+
+**Workflow**:
+1. **Triage** (`/bugfix:triage [issue|description]`) - Restate the symptom, locate the code, form a root-cause hypothesis (any suggested fix is UNVERIFIED)
+2. ✋ **Confirm** (`/bugfix:confirm`) - Prove the hypothesis by code-trace and/or red repro before any fix; surfaces scope changes / extra defects
+3. ✋ **Test-first** (`/bugfix:test`) - Delegates to `/test-first` for the failing regression test
+4. **Fix** (`/bugfix:fix`) - Minimal change to green, scoped to the confirmed cause
+5. **Verify** (`/bugfix:verify`) - Run the suite; capture the root cause and `Fixes #N` in the commit/PR
+
+**Example**:
+```bash
+/bugfix:triage 4054     # ASB SessionId case-sensitivity
+/bugfix:confirm         # proves CamelCase round-trip cause; finds a 2nd defect
+/bugfix:test            # red regression test (via /test-first)
+/bugfix:fix             # minimal fix scoped to the confirmed cause
+/bugfix:verify          # suite green; fix: commit with Fixes #4054
+```
+
+**Why it matters**: The Confirm gate stops you fixing a symptom or trusting a wrong suggested fix — and frequently changes the scope of the fix. It deliberately omits the ADR/requirements/review rounds that `/spec` mandates.
+
+📖 **Documentation**: [.claude/commands/bugfix/README.md](bugfix/README.md)
+
+---
+
 ## Skill Categories
 
 ### Development Workflow Skills
 - **`/test-first`** - TDD with approval gate
 - **`/tidy-first`** - Safe refactoring workflow
+- **`/bugfix:*`** - Diagnosis-first bug workflow (Triage → Confirm → Test-first → Fix → Verify)
 
 ### Documentation Skills
 - **`/adr`** - Architecture Decision Records
@@ -142,7 +176,14 @@ Do you need to document an architectural decision?
 ├─ Yes → /adr <title>
 └─ No ↓
 
-Are you adding new behavior or fixing a bug?
+Are you fixing a bug?
+├─ Yes ↓
+│   └─ Is the root cause already proven/obvious?
+│       ├─ No  → /bugfix:triage  (Triage → Confirm gate → Test-first → Fix → Verify)
+│       └─ Yes → /test-first <behavior>  (cause is clear; just need the test)
+└─ No ↓
+
+Are you adding new behavior?
 ├─ Yes ↓
 │   └─ Does existing code need refactoring first?
 │       ├─ Yes → /tidy-first <description>
@@ -401,6 +442,7 @@ Three new skills enforce Brighter's mandatory engineering practices:
 | `/test-first` | TDD with approval | Tests → Implementation → Refactoring |
 | `/adr` | Documented decisions | Numbered ADR files |
 | `/tidy-first` | Structural/behavioral separation | Two commits: refactor + feat |
+| `/bugfix:*` | Confirm root cause before fixing | Bug record + regression test + scoped `fix:` commit |
 
 **Key insight**: These skills make the **correct approach the easy path** by automating multi-step workflows and enforcing approval gates.
 

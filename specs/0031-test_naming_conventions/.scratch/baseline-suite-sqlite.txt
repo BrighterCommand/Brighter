@@ -1,0 +1,1 @@
+Passed!  - Failed:     0, Passed:   127, Skipped:     0, Total:   127, Duration: 5 s - Paramore.Brighter.Sqlite.Tests.dll (net9.0)

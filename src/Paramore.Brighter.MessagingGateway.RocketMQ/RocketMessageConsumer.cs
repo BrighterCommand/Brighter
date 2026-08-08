@@ -123,12 +123,12 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
             return false;
         }
 
-        Log.RejectingMessage(s_logger, message.Id);
+        Log.RejectingMessage(s_logger, message.Id.Value);
 
         if (_deadLetterRoutingKey == null && _invalidMessageRoutingKey == null)
         {
             if (reason != null)
-                Log.NoChannelsConfiguredForRejection(s_logger, message.Id, reason.RejectionReason.ToString());
+                Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value, reason.RejectionReason.ToString());
 
             await consumer.Ack(view);
             return true;
@@ -147,7 +147,7 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
             {
                 message.Header.Topic = routingKey!;
                 if (isFallingBackToDlq)
-                    Log.FallingBackToDlq(s_logger, message.Id);
+                    Log.FallingBackToDlq(s_logger, message.Id.Value);
 
                 producer = await GetProducerForRouteAsync(routingKey!);
             }
@@ -155,16 +155,16 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
             if (producer != null)
             {
                 await producer.SendAsync(message, cancellationToken);
-                Log.MessageSentToRejectionChannel(s_logger, message.Id, rejectionReason.ToString());
+                Log.MessageSentToRejectionChannel(s_logger, message.Id.Value, rejectionReason.ToString());
             }
             else
             {
-                Log.NoChannelsConfiguredForRejection(s_logger, message.Id, rejectionReason.ToString());
+                Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value, rejectionReason.ToString());
             }
         }
         catch (Exception ex)
         {
-            Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id, rejectionReason.ToString());
+            Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id.Value, rejectionReason.ToString());
             return true;
         }
         finally

@@ -1,10 +1,25 @@
+---
+id: 0031-support-agreement-dispatcher
+title: "Support Agreement Dispatcher"
+status: Proposed
+author:
+  - "Brighter Team"
+created: 2025-07-07
+summary: "Changes SubscriberRegistry to accept a lambda routing strategy (IRequest x IRequestContext -> List<Type>) enabling dynamic handler selection based on message content or context, following Fowler's Agreement Dispatcher pattern."
+tags:
+  - "dispatcher"
+  - "messaging"
+  - "architecture"
+  - "workflow"
+---
+
 # 31.  Support Agreement Dispatcher
 
 Date: 2025-07-07
 
 ## Status
 
-Draft
+Proposed
 
 ## Context
 

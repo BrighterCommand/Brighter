@@ -33,14 +33,14 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class When_postgres_runner_runs_two_provisioners_in_distinct_schemas_they_should_not_block_each_other : IAsyncLifetime
+public class PostgreSqlRunnerDistinctSchemaNonBlockingTests : IAsyncLifetime
 {
     private readonly string _connectionString = PostgreSqlSettings.TestsBrighterConnectionString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
     private readonly string _billingSchema = $"billing_{Guid.NewGuid():N}";
 
     [Fact]
-    public async Task Should_not_block_each_other()
+    public async Task When_postgres_runner_runs_two_provisioners_in_distinct_schemas_they_should_not_block_each_other()
     {
         //Arrange — two provisioners share a table name but use distinct schemas (public vs. a
         //test-only billing_<guid>). Provisioner A's advisory lock is wrapped with a holding

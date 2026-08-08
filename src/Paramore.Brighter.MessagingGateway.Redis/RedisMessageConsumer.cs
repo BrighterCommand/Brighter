@@ -104,8 +104,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <param name="message"></param>
         public void Acknowledge(Message message)
         {
-            Log.AcknowledgingMessage(s_logger, message.Id);
-            _inflight.Remove(message.Id);
+            Log.AcknowledgingMessage(s_logger, message.Id.Value);
+            _inflight.Remove(message.Id.Value);
         }
         
         /// <summary>
@@ -252,7 +252,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 var message = RedisMessageCreator.CreateMessage(redisMessage.rawMsg);
                 if (message.Header.MessageType != MessageType.MT_NONE && message.Header.MessageType != MessageType.MT_UNACCEPTABLE)
                 {
-                    _inflight.Add(message.Id, redisMessage.msgId);
+                    _inflight.Add(message.Id.Value, redisMessage.msgId);
                 }
                 
                 return [message];
@@ -301,7 +301,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
                 if (message.Header.MessageType != MessageType.MT_NONE && message.Header.MessageType != MessageType.MT_UNACCEPTABLE)
                 {
-                    _inflight.Add(message.Id, redisMessage.msgId);
+                    _inflight.Add(message.Id.Value, redisMessage.msgId);
                 }
 
                 return [message];
@@ -328,9 +328,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             if (_deadLetterProducer == null && _invalidMessageProducer == null)
             {
                 if (reason != null)
-                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id, reason.RejectionReason.ToString());
+                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value, reason.RejectionReason.ToString());
 
-                _inflight.Remove(message.Id);
+                _inflight.Remove(message.Id.Value);
                 return true;
             }
 
@@ -348,7 +348,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 {
                     message.Header.Topic = routingKey!;
                     if (isFallingBackToDlq)
-                        Log.FallingBackToDlq(s_logger, message.Id);
+                        Log.FallingBackToDlq(s_logger, message.Id.Value);
 
                     if (routingKey == _invalidMessageRoutingKey)
                         producer = _invalidMessageProducer?.Value;
@@ -359,23 +359,23 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 if (producer != null)
                 {
                     producer.Send(message);
-                    Log.MessageSentToRejectionChannel(s_logger, message.Id, rejectionReason.ToString());
+                    Log.MessageSentToRejectionChannel(s_logger, message.Id.Value, rejectionReason.ToString());
                 }
                 else
                 {
-                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id, rejectionReason.ToString());
+                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value, rejectionReason.ToString());
                 }
             }
             catch (Exception ex)
             {
                 // DLQ send failed — the message was already popped from Redis so we cannot
                 // requeue it. Remove from inflight to prevent blocking subsequent receives.
-                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id, rejectionReason.ToString());
-                _inflight.Remove(message.Id);
+                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id.Value, rejectionReason.ToString());
+                _inflight.Remove(message.Id.Value);
                 return true;
             }
 
-            _inflight.Remove(message.Id);
+            _inflight.Remove(message.Id.Value);
             return true;
         }
 
@@ -390,9 +390,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             if (_deadLetterProducer == null && _invalidMessageProducer == null)
             {
                 if (reason != null)
-                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id, reason.RejectionReason.ToString());
+                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value, reason.RejectionReason.ToString());
 
-                _inflight.Remove(message.Id);
+                _inflight.Remove(message.Id.Value);
                 return true;
             }
 
@@ -410,7 +410,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 {
                     message.Header.Topic = routingKey!;
                     if (isFallingBackToDlq)
-                        Log.FallingBackToDlq(s_logger, message.Id);
+                        Log.FallingBackToDlq(s_logger, message.Id.Value);
 
                     if (routingKey == _invalidMessageRoutingKey)
                         producer = _invalidMessageProducer?.Value;
@@ -421,23 +421,23 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 if (producer != null)
                 {
                     await producer.SendAsync(message, cancellationToken);
-                    Log.MessageSentToRejectionChannel(s_logger, message.Id, rejectionReason.ToString());
+                    Log.MessageSentToRejectionChannel(s_logger, message.Id.Value, rejectionReason.ToString());
                 }
                 else
                 {
-                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id, rejectionReason.ToString());
+                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value, rejectionReason.ToString());
                 }
             }
             catch (Exception ex)
             {
                 // DLQ send failed — the message was already popped from Redis so we cannot
                 // requeue it. Remove from inflight to prevent blocking subsequent receives.
-                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id, rejectionReason.ToString());
-                _inflight.Remove(message.Id);
+                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id.Value, rejectionReason.ToString());
+                _inflight.Remove(message.Id.Value);
                 return true;
             }
 
-            _inflight.Remove(message.Id);
+            _inflight.Remove(message.Id.Value);
             return true;
         }
 
@@ -459,8 +459,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                         $"RedisMessageConsumer: delay of {delay} was requested for requeue but no scheduler is configured; configure a scheduler via MessageSchedulerFactory.");
                 }
 
-                _inflight.TryGetValue(message.Id, out string? removedMsgId);
-                _inflight.Remove(message.Id);
+                _inflight.TryGetValue(message.Id.Value, out string? removedMsgId);
+                _inflight.Remove(message.Id.Value);
                 try
                 {
                     EnsureRequeueProducer();
@@ -470,7 +470,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 catch
                 {
                     if (removedMsgId != null)
-                        _inflight[message.Id] = removedMsgId;
+                        _inflight[message.Id.Value] = removedMsgId;
                     throw;
                 }
             }
@@ -479,17 +479,17 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             if (client == null)
                 throw new ChannelFailureException("RedisMessagingGateway: No Redis client available");
 
-            if (_inflight.TryGetValue(message.Id, out string? msgId))
+            if (_inflight.TryGetValue(message.Id.Value, out string? msgId))
             {
                 client.AddItemToList(_queueName, msgId);
                 var redisMsg = CreateRedisMessage(message);
                 StoreMessage(client, redisMsg, long.Parse(msgId));
-                _inflight.Remove(message.Id);
+                _inflight.Remove(message.Id.Value);
                 return true;
             }
             else
             {
-                Log.MessageNotFoundInFlight(s_logger, message.Id);
+                Log.MessageNotFoundInFlight(s_logger, message.Id.Value);
                 return false;
             }
         }
@@ -513,8 +513,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                         $"RedisMessageConsumer: delay of {delay} was requested for requeue but no scheduler is configured; configure a scheduler via MessageSchedulerFactory.");
                 }
 
-                _inflight.TryGetValue(message.Id, out string? removedMsgId);
-                _inflight.Remove(message.Id);
+                _inflight.TryGetValue(message.Id.Value, out string? removedMsgId);
+                _inflight.Remove(message.Id.Value);
                 try
                 {
                     EnsureRequeueProducer();
@@ -524,7 +524,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 catch
                 {
                     if (removedMsgId != null)
-                        _inflight[message.Id] = removedMsgId;
+                        _inflight[message.Id.Value] = removedMsgId;
                     throw;
                 }
             }
@@ -533,17 +533,17 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             if (client == null)
                 throw new ChannelFailureException("RedisMessagingGateway: No Redis client available");
 
-            if (_inflight.TryGetValue(message.Id, out string? msgId))
+            if (_inflight.TryGetValue(message.Id.Value, out string? msgId))
             {
                 await client.AddItemToListAsync(_queueName, msgId, cancellationToken);
                 var redisMsg = CreateRedisMessage(message);
                 await StoreMessageAsync(client, redisMsg, long.Parse(msgId));
-                _inflight.Remove(message.Id);
+                _inflight.Remove(message.Id.Value);
                 return true;
             }
             else
             {
-                Log.MessageNotFoundInFlight(s_logger, message.Id);
+                Log.MessageNotFoundInFlight(s_logger, message.Id.Value);
                 return false;
             }
         }

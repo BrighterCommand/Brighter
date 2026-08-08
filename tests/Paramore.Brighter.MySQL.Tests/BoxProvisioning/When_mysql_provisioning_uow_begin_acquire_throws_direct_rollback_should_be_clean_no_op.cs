@@ -35,10 +35,10 @@ using Xunit;
 
 namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 
-public class When_mysql_provisioning_uow_begin_acquire_throws_direct_rollback_should_be_clean_no_op : IAsyncLifetime
+public class MySqlProvisioningUnitOfWorkBeginAcquireThrowsTests : IAsyncLifetime
 {
     // Companion to the partial-init DisposeAsync test
-    // (When_mysql_provisioning_uow_begin_throws_it_should_dispose_without_throwing): that one
+    // (MySqlProvisioningUnitOfWorkBeginThrowsTests): that one
     // exercises the `await using` dispose path; this one exercises a direct RollbackAsync call
     // after a failed BeginAsync. Both must be clean no-ops because the lock was never acquired
     // — issuing RELEASE_LOCK on a never-acquired lock would return NULL and produce a
@@ -71,7 +71,7 @@ public class When_mysql_provisioning_uow_begin_acquire_throws_direct_rollback_sh
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
     [Fact]
-    public async Task Should_not_release_lock_or_emit_warning()
+    public async Task When_mysql_provisioning_uow_begin_acquire_throws_direct_rollback_should_be_clean_no_op()
     {
         // Arrange — capturing logger so we can assert on Warning emissions.
         var logger = new CapturingLogger();

@@ -35,10 +35,10 @@ namespace Paramore.Brighter
     public interface ISupportPublishConfirmation
     {
         /// <summary>
-        /// Fired when a confirmation is received that a message has been published
-        /// bool => was the message published
-        /// Guid => what was the id of the published message
+        /// Fired when a confirmation is received that a message has been published. The
+        /// <see cref="PublishConfirmationResult"/> carries whether the broker persisted the message, the id of the
+        /// message, the wire topic it was published to, and the context of the originating publish span.
         /// </summary>
-        event Action<bool, string> OnMessagePublished;
+        event Action<PublishConfirmationResult> OnMessagePublished;
    }
 }

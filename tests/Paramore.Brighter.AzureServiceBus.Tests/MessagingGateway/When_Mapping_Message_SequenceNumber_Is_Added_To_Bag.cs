@@ -13,7 +13,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 [Trait("Category", "ASB")]
 public class AzureServiceBusMessageSequenceNumberTests
 {
-    private readonly AzureServiceBusMesssageCreator _creator;
+    private readonly AzureServiceBusMessageCreator _creator;
 
     public AzureServiceBusMessageSequenceNumberTests()
     {
@@ -23,7 +23,7 @@ public class AzureServiceBusMessageSequenceNumberTests
             routingKey: new RoutingKey("test-topic"),
             messagePumpType: MessagePumpType.Reactor);
 
-        _creator = new AzureServiceBusMesssageCreator(subscription);
+        _creator = new AzureServiceBusMessageCreator(subscription);
     }
 
     [Fact]

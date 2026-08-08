@@ -35,16 +35,16 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MongoDB.Tests.Outbox.Async;
 
+[Trait("Category", "MongoDB")]
+[Collection("MongoDbOutbox")]
 public class WhenDeletingOneMessageItShouldBeRemovedFromOutboxAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;
-    private readonly IAmAMessageFactory _messageFactory;
     private List<Message> _createdMessages = [];
 
     public WhenDeletingOneMessageItShouldBeRemovedFromOutboxAsync()
     {
         _outboxProvider = new Paramore.Brighter.MongoDb.Tests.Outbox.MongoDbOutboxProvider();
-        _messageFactory = new DefaultMessageFactory();
     }
 
     public async Task InitializeAsync()
@@ -63,9 +63,9 @@ public class WhenDeletingOneMessageItShouldBeRemovedFromOutboxAsync : IAsyncLife
         // Arrange
         var context = new RequestContext();
 
-        var firstMessage = _messageFactory.Create();
-        var secondMessage = _messageFactory.Create();
-        var thirdMessage = _messageFactory.Create();
+        var firstMessage = new DefaultMessageBuilder().Build();
+        var secondMessage = new DefaultMessageBuilder().Build();
+        var thirdMessage = new DefaultMessageBuilder().Build();
 
         _createdMessages.Add(firstMessage);
         _createdMessages.Add(secondMessage);

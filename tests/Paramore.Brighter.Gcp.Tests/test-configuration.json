@@ -1,19 +1,79 @@
 {
   "Namespace": "Paramore.Brighter.Gcp.Tests",
+  "MessagingGateways": {
+    "Pull": {
+      "Publication": "Paramore.Brighter.MessagingGateway.GcpPubSub.GcpPublication",
+      "Subscription": "Paramore.Brighter.MessagingGateway.GcpPubSub.GcpPubSubSubscription",
+      "MessageGatewayProvider": "Paramore.Brighter.Gcp.Tests.MessagingGateway.GcpPullMessageGatewayProvider",
+      "Category": "GcpPubSubPull",
+      "CollectionName": "Pull",
+      "HasSupportToPublishConfirmation": false,
+      "HasSupportToDeadLetterQueue": true,
+      "HasSupportToDelayedMessages": false,
+      "HasSupportToValidateBrokerExistence": true,
+      "HasSupportToRequeue": true,
+      "ReceiveMessageTimeoutInMilliseconds": 5000
+    },
+    "PullOrdering": {
+      "Publication": "Paramore.Brighter.MessagingGateway.GcpPubSub.GcpPublication",
+      "Subscription": "Paramore.Brighter.MessagingGateway.GcpPubSub.GcpPubSubSubscription",
+      "MessageGatewayProvider": "Paramore.Brighter.Gcp.Tests.MessagingGateway.GcpPullOrderingMessageGatewayProvider",
+      "MessageBuilder": "FifoMessageBuilder",
+      "Category": "GcpPubSubPullOrdering",
+      "CollectionName": "PullOrdering",
+      "HasSupportToPublishConfirmation": false,
+      "HasSupportToDeadLetterQueue": true,
+      "HasSupportToDelayedMessages": false,
+      "HasSupportToValidateBrokerExistence": true,
+      "HasSupportToRequeue": true,
+      "ReceiveMessageTimeoutInMilliseconds": 5000
+    },
+    "Stream": {
+      "Publication": "Paramore.Brighter.MessagingGateway.GcpPubSub.GcpPublication",
+      "Subscription": "Paramore.Brighter.MessagingGateway.GcpPubSub.GcpPubSubSubscription",
+      "MessageGatewayProvider": "Paramore.Brighter.Gcp.Tests.MessagingGateway.GcpStreamMessageGatewayProvider",
+      "Category": "GcpPubSubStream",
+      "CollectionName": "Stream",
+      "HasSupportToPublishConfirmation": false,
+      "HasSupportToDeadLetterQueue": true,
+      "HasSupportToDelayedMessages": false,
+      "HasSupportToValidateBrokerExistence": true,
+      "HasSupportToRequeue": true,
+      "ReceiveMessageTimeoutInMilliseconds": 5000
+    },
+    "StreamOrdering": {
+      "Publication": "Paramore.Brighter.MessagingGateway.GcpPubSub.GcpPublication",
+      "Subscription": "Paramore.Brighter.MessagingGateway.GcpPubSub.GcpPubSubSubscription",
+      "MessageGatewayProvider": "Paramore.Brighter.Gcp.Tests.MessagingGateway.GcpStreamOrderingMessageGatewayProvider",
+      "MessageBuilder": "FifoMessageBuilder",
+      "Category": "GcpPubSubStreamOrdering",
+      "CollectionName": "StreamOrdering",
+      "HasSupportToPublishConfirmation": false,
+      "HasSupportToDeadLetterQueue": true,
+      "HasSupportToDelayedMessages": false,
+      "HasSupportToValidateBrokerExistence": true,
+      "HasSupportToRequeue": true,
+      "ReceiveMessageTimeoutInMilliseconds": 5000
+    }
+  },
   "Outboxes": {
     "Firestore": {
       "Transaction": "Paramore.Brighter.Firestore.FirestoreTransaction",
-      "OutboxProvider": "FirestoreOutboxProvider"
+      "OutboxProvider": "FirestoreOutboxProvider",
+      "Category": "Firestore",
+      "CollectionName": "FirestoreOutbox"
     },
     "SpannerBinary": {
       "Transaction": "System.Data.Common.DbTransaction",
       "OutboxProvider": "SpannerBinaryOutboxProvider",
-      "Category": "Spanner"
+      "Category": "Spanner",
+      "CollectionName": "SpannerBinaryOutbox"
     },
     "SpannerText": {
       "Transaction": "System.Data.Common.DbTransaction",
       "OutboxProvider": "SpannerTextOutboxProvider",
-      "Category": "Spanner"
+      "Category": "Spanner",
+      "CollectionName": "SpannerTextOutbox"
     }
   }
 }

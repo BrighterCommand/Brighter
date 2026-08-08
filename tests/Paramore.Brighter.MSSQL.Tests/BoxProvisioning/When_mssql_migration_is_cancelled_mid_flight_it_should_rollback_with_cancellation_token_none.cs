@@ -32,13 +32,13 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class When_mssql_migration_is_cancelled_mid_flight_it_should_rollback_with_cancellation_token_none : IAsyncLifetime
+public class MsSqlMigrationCancellationRollbackTests : IAsyncLifetime
 {
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
 
     [Fact]
-    public async Task Should_invoke_rollback_with_cancellation_token_none_and_release_lock_when_caller_cancels_mid_flight()
+    public async Task When_mssql_migration_is_cancelled_mid_flight_it_should_rollback_with_cancellation_token_none()
     {
         //Arrange — fresh database; the cancelling runner's RunFreshPathAsync override blocks
         // on Task.Delay so the caller's cancellation hits AFTER BeginAsync has opened the

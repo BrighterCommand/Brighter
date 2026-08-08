@@ -52,11 +52,11 @@ public class RmqMessageProducerConfirmationsSendMessageTests : IDisposable
         };
 
         _messageProducer = new RmqMessageProducer(rmqConnection);
-        _messageProducer.OnMessagePublished += (success, guid) =>
+        _messageProducer.OnMessagePublished += result =>
         {
-            if (success)
+            if (result.Success)
             {
-                Assert.Equal(_message.Id, guid);
+                Assert.Equal(_message.Id, result.MessageId);
                 _messageWasPublished = true;
                 _messageWasNotPublished = false;
             }

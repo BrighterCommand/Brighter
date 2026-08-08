@@ -52,14 +52,14 @@ namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 // TFM matrices run sequentially) and the discriminator/detection tests catch regressions in
 // the same area.
 [Trait("Fragile", "CI")]
-public class When_history_table_exists_in_a_non_dbo_schema_runner_should_still_create_it_in_dbo : IAsyncLifetime
+public class MsSqlHistoryTableNonDboSchemaTests : IAsyncLifetime
 {
     private const string CollidingSchema = "stage_for_history_clash_test";
     private readonly string _connectionString = Configuration.DefaultConnectingString;
     private readonly string _tableName = $"test_outbox_{Guid.NewGuid():N}";
     private readonly MsSqlOutboxProvisioner _provisioner;
 
-    public When_history_table_exists_in_a_non_dbo_schema_runner_should_still_create_it_in_dbo()
+    public MsSqlHistoryTableNonDboSchemaTests()
     {
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
         var runner = new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
@@ -72,7 +72,7 @@ public class When_history_table_exists_in_a_non_dbo_schema_runner_should_still_c
     }
 
     [Fact]
-    public async Task Should_filter_history_existence_check_by_schema_id()
+    public async Task When_history_table_exists_in_a_non_dbo_schema_runner_should_still_create_it_in_dbo()
     {
         //Arrange — pre-create [stage].[__BrighterMigrationHistory] with a deliberately wrong
         //shape. Without a schema_id filter on the runner's IF NOT EXISTS check, the runner sees

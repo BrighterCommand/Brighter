@@ -33,7 +33,7 @@ public class RocketMessageConsumerFactory(RocketMessagingGatewayConnection conne
             .SetAwaitDuration(rocketSubscription.ReceiveMessageTimeout)
             .SetSubscriptionExpression(new Dictionary<string, FilterExpression>
             {
-                [rocketSubscription.RoutingKey] = rocketSubscription.Filter
+                [rocketSubscription.RoutingKey.Value] = rocketSubscription.Filter
             });
 
         var deadLetterRoutingKey = (subscription as IUseBrighterDeadLetterSupport)?.DeadLetterRoutingKey;

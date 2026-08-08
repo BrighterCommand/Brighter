@@ -38,7 +38,7 @@ for test_folder in "$test_path"/*; do
         fi
         
         # Run the test generator
-        if ! dotnet run --project "$tool_path"; then
+        if ! dotnet run --project "$tool_path" --framework net10.0; then
             echo "Error: Test generation failed for $test_folder" >&2
             error_count=$((error_count + 1))
         fi

@@ -115,9 +115,11 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
     //   VLatestInbox === new MsSqlInboxMigrationCatalog().All(...).Count
     //                === new MySqlInboxMigrationCatalog().All(...).Count
     //                === new SqliteInboxMigrationCatalog().All(...).Count
-    //                  (PostgreSQL inbox is V1-only by design — ADR 0057 §E, the PG inbox was
-    //                   born post-ContextKey-era so its V1 already includes the column the
-    //                   other three add at V2; the cross-backend test excludes it.)
+    //                  (PostgreSQL inbox is one version behind the other three — ADR 0057 §E,
+    //                   the PG inbox was born post-ContextKey-era so its V1 already includes the
+    //                   column the other three add at V2. Spec 0027 (#2541) adds CausationId to
+    //                   every relational inbox, advancing MsSql/MySql/Sqlite V2→V3 and PG V1→V2,
+    //                   so PG stays exactly one behind and the cross-backend test carves it out.)
     // Spanner has no V_k chain (ADR 0057 §6 — fresh-install-only), so the latest version is
     // effectively a stamp on a freshly-built table. When a relational backend advances to
     // V8/V3 etc., bump these values so Spanner's history row keeps the same V_latest as
@@ -133,16 +135,16 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
     // this assembly pick up a new V_latest after a recompile of *this* assembly alone. With
     // `const` the old value would persist in downstream IL until every consumer also rebuilt,
     // letting an out-of-date V_latest silently flow through a partial-rebuild deployment.
-    public static readonly int VLatestOutbox = 7;
-    public static readonly int VLatestInbox = 2;
+    public static readonly int VLatestOutbox = 8;
+    public static readonly int VLatestInbox = 3;
 
     private const string BootstrapDescription =
         "bootstrap: spanner-assumed-current (no known legacy installations, A-2)";
 
     /// <inheritdoc />
     public async Task MigrateAsync(
-        string tableName,
-        string? schemaName,
+        BoxTableName tableName,
+        SchemaName? schemaName,
         BoxType boxType,
         BoxTableState tableState,
         CancellationToken cancellationToken = default)
@@ -150,7 +152,7 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
         // Defence in depth (ADR 0057 §1, spec 0027 PR #4039 review #46-3 #4): Spanner has no
         // *Migrations.All(...) factory, so this is the only place to reject unsafe identifiers
         // before they reach BuildBoxDdl / BootstrapExistingTableAsync's information_schema probe.
-        Identifiers.AssertSafe(tableName, nameof(tableName));
+        Identifiers.AssertSafe(tableName.Value, nameof(tableName));
 
         _ = schemaName; // Spanner does not use schemas; the configuration's database is implicit.
 
@@ -158,7 +160,7 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
         // skips the advisory-lock / re-detection orchestration, but the operator-facing span
         // still carries the same tag + child-event vocabulary so a multi-backend startup trace
         // reads consistently).
-        using var activity = StartMigrationActivity(tableName, schemaName, boxType);
+        using var activity = StartMigrationActivity(tableName.Value, schemaName?.Value, boxType);
 
         using var connection = SpannerConnectionHelper.CreateConnection(_configuration.ConnectionString);
         await connection.OpenAsync(cancellationToken);
@@ -174,19 +176,19 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
             {
                 activity?.SetTag(BrighterSemanticConventions.BoxMigrationPath, "fresh");
                 activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventFreshInstall));
-                await FreshInstallAsync(connection, tableName, boxType, vLatest, cancellationToken);
+                await FreshInstallAsync(connection, tableName.Value, boxType, vLatest, cancellationToken);
             }
             else if (!tableState.HistoryExists)
             {
                 activity?.SetTag(BrighterSemanticConventions.BoxMigrationPath, "bootstrap");
                 activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventBootstrap));
-                await BootstrapExistingTableAsync(connection, tableName, boxType, vLatest, cancellationToken);
+                await BootstrapExistingTableAsync(connection, tableName.Value, boxType, vLatest, cancellationToken);
             }
             else
             {
                 activity?.SetTag(BrighterSemanticConventions.BoxMigrationPath, "normal");
                 activity?.AddEvent(new ActivityEvent(BrighterSemanticConventions.BoxMigrationEventNormalUpdate));
-                VerifyAtLatestVersionOrThrow(tableName, vLatest, tableState.CurrentVersion);
+                VerifyAtLatestVersionOrThrow(tableName.Value, vLatest, tableState.CurrentVersion);
             }
             activity?.SetStatus(ActivityStatusCode.Ok);
         }
@@ -235,10 +237,17 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
             connection, tableName, vLatest, $"fresh install at V{vLatest}", cancellationToken);
     }
 
-    private string BuildBoxDdl(BoxType boxType, string tableName) => boxType switch
+    // Returns the fresh-install DDL statements for the box. The outbox carries a second
+    // statement — the CausationId replay index (Spec 0027, #2541) — which Spanner cannot express
+    // inline in the CREATE TABLE, so it is batched alongside the table create.
+    private string[] BuildBoxDdl(BoxType boxType, string tableName) => boxType switch
     {
-        BoxType.Outbox => SpannerOutboxBuilder.GetDDL(tableName, _configuration.BinaryMessagePayload),
-        BoxType.Inbox => SpannerInboxBuilder.GetDDL(tableName),
+        BoxType.Outbox =>
+        [
+            SpannerOutboxBuilder.GetDDL(tableName, _configuration.BinaryMessagePayload),
+            SpannerOutboxBuilder.GetCausationIndexDDL(tableName)
+        ],
+        BoxType.Inbox => [SpannerInboxBuilder.GetDDL(tableName)],
         _ => throw new ArgumentOutOfRangeException(nameof(boxType), boxType, "Unsupported box type")
     };
 
@@ -308,12 +317,14 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
     // on every replica, not as a flake. The combined catch keeps the original AlreadyExists
     // arm strict and adds a FailedPrecondition arm scoped to CREATE TABLE IF NOT EXISTS DDL.
     private async Task ExecuteCreateTableIfNotExistsSafeAsync(
-        SpannerConnection connection, string ddl,
+        SpannerConnection connection, string[] ddlStatements,
         CancellationToken cancellationToken)
     {
         try
         {
-            var command = connection.CreateDdlCommand(ddl);
+            // CreateDdlCommand batches the CREATE TABLE IF NOT EXISTS with any trailing
+            // statements (e.g. the outbox CausationId index) so they apply together.
+            var command = connection.CreateDdlCommand(ddlStatements[0], ddlStatements[1..]);
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
         catch (SpannerException ex) when (ex.RpcException.StatusCode == StatusCode.AlreadyExists)

@@ -1,3 +1,17 @@
+---
+id: 0038-remove-clear-service-bus
+title: "Remove ClearServiceBus"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-02-07
+summary: "Decides to empty CommandProcessor.ClearServiceBus() to a no-op and remove all internal call sites and [Collection(\"CommandProcessor\")] xUnit attributes, since ADR 0034's instance-based mediator eliminated the static state that originally required this workaround."
+tags:
+  - "architecture"
+  - "mediator"
+  - "testing"
+---
+
 # 38. Remove ClearServiceBus
 
 Date: 2026-02-07

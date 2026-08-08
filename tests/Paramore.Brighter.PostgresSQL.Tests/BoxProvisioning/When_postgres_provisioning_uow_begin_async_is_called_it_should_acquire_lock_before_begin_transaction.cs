@@ -34,7 +34,7 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.BoxProvisioning;
 
-public class When_postgres_provisioning_uow_begin_async_is_called_it_should_acquire_lock_before_begin_transaction : IAsyncLifetime
+public class PostgreSqlProvisioningUnitOfWorkBeginTests : IAsyncLifetime
 {
     // Per ADR 0058 §B.1: Postgres uses pg_advisory_lock, which is session-scoped — the lock
     // outlives any transaction on the same connection and is released either by an explicit
@@ -58,7 +58,7 @@ public class When_postgres_provisioning_uow_begin_async_is_called_it_should_acqu
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
     [Fact]
-    public async Task Should_acquire_lock_before_starting_transaction()
+    public async Task When_postgres_provisioning_uow_begin_async_is_called_it_should_acquire_lock_before_begin_transaction()
     {
         // Arrange
         await using var uow = new PostgreSqlProvisioningUnitOfWork(

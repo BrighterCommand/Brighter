@@ -35,7 +35,7 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning;
 // Per PR #4039 reviewer item M4-1 (F1c): MySqlInboxBuilder.GetDDL is now schema-aware, and
 // MySqlInboxMigrationCatalog threads configuration.SchemaName through to both FreshInstallDdl
 // and the V2 AddContextKey ALTER.
-public class When_mysql_inbox_provisioner_runs_on_fresh_database_with_non_default_schema_it_should_create_in_configured_schema : IAsyncLifetime
+public class MySqlInboxNonDefaultSchemaTests : IAsyncLifetime
 {
     private readonly string _baseConnectionString = Const.DefaultConnectingString;
     private readonly string _tableName = $"test_inbox_{Guid.NewGuid():N}";
@@ -60,7 +60,7 @@ public class When_mysql_inbox_provisioner_runs_on_fresh_database_with_non_defaul
     }
 
     [Fact]
-    public async Task Should_create_inbox_in_configured_schema_and_no_op_on_second_run()
+    public async Task When_mysql_inbox_provisioner_runs_on_fresh_database_with_non_default_schema_it_should_create_in_configured_schema()
     {
         //Arrange
         await DropAnyExistingTableAsync(_tableName, _nonDefaultDatabase);

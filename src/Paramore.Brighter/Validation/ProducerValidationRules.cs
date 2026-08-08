@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Linq;
+
 namespace Paramore.Brighter.Validation;
 
 /// <summary>
@@ -57,4 +59,40 @@ public static class ProducerValidationRules
                 ValidationSeverity.Error,
                 $"Publication '{p.Topic}'",
                 $"Publication.RequestType '{p.RequestType!.FullName}' does not implement IRequest"));
+
+    /// <summary>
+    /// Validates that every wrap transform the publication's resolved mapper declares can be resolved.
+    /// A declared transform whose transformer type is not registered is a strong signal that its assembly
+    /// was not scanned. Reports one <see cref="ValidationSeverity.Warning"/> per
+    /// unresolvable transform, naming the request type, the transformer type, the topic, and prompting an
+    /// <c>AutoFromAssemblies</c> check. Publications with a null <see cref="Publication.RequestType"/>, whose
+    /// request type resolves to no mapper, or whose request type resolves to the default mapper (whose
+    /// transforms are Brighter built-ins and out of scope) are skipped.
+    /// </summary>
+    /// <param name="mapperRegistry">The mapper registry used to describe the publication's transforms.</param>
+    /// <param name="probe">Answers whether a declared transformer type is resolvable, without instantiating it.</param>
+    /// <returns>A specification that reports a Warning per unresolvable wrap transform.</returns>
+    public static ISpecification<Publication> WrapTransformResolvable(
+        MessageMapperRegistry mapperRegistry, IAmATransformerResolvabilityProbe probe)
+        => new Specification<Publication>(publication =>
+        {
+            if (publication.RequestType is null)
+                return [];
+
+            var description = TransformPipelineBuilder.DescribeTransforms(
+                mapperRegistry, publication.RequestType, includeAsync: true);
+
+            if (description is null || description.IsDefaultMapper)
+                return [];
+
+            return description.WrapTransforms
+                .Where(step => !probe.Resolves(step.TransformType))
+                .Select(step => ValidationResult.Fail(new ValidationError(
+                    ValidationSeverity.Warning,
+                    $"Publication '{publication.Topic}'",
+                    $"Request '{publication.RequestType.Name}' declares wrap transform '{step.TransformType.Name}' " +
+                    $"on topic '{publication.Topic}' — that transformer is not registered. " +
+                    "Is its assembly included in AutoFromAssemblies()?")))
+                .ToList();
+        });
 }

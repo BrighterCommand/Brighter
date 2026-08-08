@@ -34,7 +34,7 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class When_mssql_provisioning_uow_commit_async_is_called_it_should_commit_transaction_without_explicit_lock_release : IAsyncLifetime
+public class MsSqlProvisioningUnitOfWorkCommitTests : IAsyncLifetime
 {
     // Per ADR 0058 §B.1: MSSQL uses sp_getapplock with @LockOwner='Transaction'. CommitAsync
     // therefore only needs to commit the underlying SqlTransaction — SQL Server releases the
@@ -57,7 +57,7 @@ public class When_mssql_provisioning_uow_commit_async_is_called_it_should_commit
     public async Task DisposeAsync() => await _connection.DisposeAsync();
 
     [Fact]
-    public async Task Should_commit_the_underlying_transaction()
+    public async Task When_mssql_provisioning_uow_commit_async_is_called_it_should_commit_transaction_without_explicit_lock_release()
     {
         // Arrange
         await using var uow = new MsSqlProvisioningUnitOfWork(_connection, _advisoryLock, NullLogger.Instance);

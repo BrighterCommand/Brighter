@@ -52,9 +52,24 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="messageMapperType">The type of mapper to instantiate</param>
         /// <returns>The created mapper instance</returns>
-        public IAmAMessageMapper? Create(Type messageMapperType)
+        public Lease<IAmAMessageMapper>? Create(Type messageMapperType)
         {
-            return _lifetimeScope.GetOrCreate<IAmAMessageMapper>(messageMapperType);
+            var mapper = _lifetimeScope.GetOrCreate<IAmAMessageMapper>(messageMapperType, out var releaseToken);
+            return mapper is null ? null : new Lease<IAmAMessageMapper>(mapper, releaseToken);
+        }
+
+        /// <summary>
+        /// Releases a mapper created by this factory, disposing the per-instance
+        /// <see cref="Microsoft.Extensions.DependencyInjection.IServiceScope"/> a transient mapper was
+        /// resolved from. Without this the scope — and any <see cref="IDisposable"/> mapper it holds —
+        /// is retained until the factory is disposed at shutdown.
+        /// </summary>
+        /// <param name="lease">The lease returned by <see cref="Create"/> for the mapper to release</param>
+        public void Release(Lease<IAmAMessageMapper>? lease)
+        {
+            //over-release of a lease is a harmless no-op, including a null lease
+            if (lease is null) return;
+            _lifetimeScope.Release(lease.ReleaseToken);
         }
 
         /// <summary>

@@ -34,12 +34,13 @@ namespace Paramore.Brighter
     public class SimpleMessageTransformerFactory(Func<Type, IAmAMessageTransform> factoryMethod)
         : IAmAMessageTransformerFactory
     {
-        public IAmAMessageTransform Create(Type transformerType)
+        public Lease<IAmAMessageTransform>? Create(Type transformerType)
         {
-            return factoryMethod(transformerType);
+            var transform = factoryMethod(transformerType);
+            return transform is null ? null : Lease<IAmAMessageTransform>.Untracked(transform);
         }
 
-        public void Release(IAmAMessageTransform transformer)
+        public void Release(Lease<IAmAMessageTransform>? lease)
         {
             return;
         }

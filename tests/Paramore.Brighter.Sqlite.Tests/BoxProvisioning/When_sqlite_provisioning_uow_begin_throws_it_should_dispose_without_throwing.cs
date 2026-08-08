@@ -33,7 +33,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.BoxProvisioning;
 
-public class When_sqlite_provisioning_uow_begin_throws_it_should_dispose_without_throwing
+public class ProvisioningUnitOfWorkBeginThrowsTests
 {
     // Per ADR 0058 §B.3: the runner declares the UoW with `await using`, so DisposeAsync runs
     // on every exit path — including when BeginAsync itself throws. In that case the UoW is
@@ -64,7 +64,7 @@ public class When_sqlite_provisioning_uow_begin_throws_it_should_dispose_without
     // unconditionally clean up" mutation from regressing the partial-init contract.
 
     [Fact]
-    public async Task Should_propagate_BeginAsync_exception_and_dispose_cleanly()
+    public async Task When_sqlite_provisioning_uow_begin_throws_it_should_dispose_without_throwing()
     {
         // Arrange — closed connection. SqliteConnection.BeginTransaction throws
         // InvalidOperationException when the connection is not in the Open state.

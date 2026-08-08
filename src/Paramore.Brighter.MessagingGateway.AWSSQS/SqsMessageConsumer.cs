@@ -128,7 +128,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 return;
 
             var receiptHandle = value.ToString();
-            await DeleteSourceMessageAsync(receiptHandle!, message.Id, cancellationToken);
+            await DeleteSourceMessageAsync(receiptHandle!, message.Id.Value, cancellationToken);
         }
 
          /// <summary>
@@ -258,14 +258,14 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             var reasonString = reason is null ? nameof(RejectionReason.DeliveryError) : reason.RejectionReason.ToString();
             var description = reason is null ? "unknown" : reason.Description ?? "unknown";
 
-            Log.RejectingMessage(s_logger, message.Id, receiptHandle, _queueName, reasonString, description);
+            Log.RejectingMessage(s_logger, message.Id.Value, receiptHandle, _queueName, reasonString, description);
 
             // If no channels configured, just delete the original message
             if (_deadLetterProducer == null && _invalidMessageProducer == null)
             {
                 if (reason != null)
                 {
-                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id, reason.RejectionReason.ToString());
+                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value, reason.RejectionReason.ToString());
                 }
 
                 await AcknowledgeAsync(message, cancellationToken);
@@ -286,7 +286,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 {
                     message.Header.Topic = routingKey!;
                     if (isFallingBackToDlq)
-                        Log.FallingBackToDlq(s_logger, message.Id);
+                        Log.FallingBackToDlq(s_logger, message.Id.Value);
 
                     if (routingKey == _invalidMessageRoutingKey)
                         producer = _invalidMessageProducer?.Value;
@@ -297,26 +297,26 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 if (producer != null)
                 {
                     await producer.SendAsync(message, cancellationToken);
-                    Log.MessageSentToRejectionChannel(s_logger, message.Id, rejectionReason.ToString());
+                    Log.MessageSentToRejectionChannel(s_logger, message.Id.Value, rejectionReason.ToString());
                 }
                 else
                 {
-                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id, rejectionReason.ToString());
+                    Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value, rejectionReason.ToString());
                 }
             }
             catch (Exception ex)
             {
                 // Sending to DLQ failed — delete the original to prevent infinite
                 // reprocessing. The message is lost rather than stuck in a retry loop.
-                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id, rejectionReason.ToString());
-                await DeleteSourceMessageAsync(receiptHandle!, message.Id, cancellationToken);
+                Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id.Value, rejectionReason.ToString());
+                await DeleteSourceMessageAsync(receiptHandle!, message.Id.Value, cancellationToken);
                 return true;
             }
 
-            await DeleteSourceMessageAsync(receiptHandle!, message.Id, cancellationToken);
+            await DeleteSourceMessageAsync(receiptHandle!, message.Id.Value, cancellationToken);
             return true;
         }
-        
+
         /// <summary>
         /// Nacks the specified message, setting its visibility timeout to zero so it is immediately
         /// available for redelivery.
@@ -340,7 +340,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             try
             {
-                Log.NackingMessage(s_logger, message.Id, receiptHandle, _queueName);
+                Log.NackingMessage(s_logger, message.Id.Value, receiptHandle, _queueName);
 
                 using var client = _clientFactory.CreateSqsClient();
                 await EnsureChannelUrl(client, cancellationToken);
@@ -349,7 +349,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     cancellationToken
                 );
 
-                Log.NackedMessage(s_logger, message.Id, receiptHandle, _channelUrl!);
+                Log.NackedMessage(s_logger, message.Id.Value, receiptHandle, _channelUrl!);
             }
             catch (ReceiptHandleIsInvalidException ex)
             {
@@ -357,11 +357,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 // SQS has already made the message visible again for redelivery by another consumer.
                 // Nack sets visibility to zero for immediate redelivery — but the message is already
                 // visible again, so the net effect is the same. Log a warning and continue.
-                Log.NackFailedReceiptHandleExpired(s_logger, ex, message.Id, receiptHandle, _queueName);
+                Log.NackFailedReceiptHandleExpired(s_logger, ex, message.Id.Value, receiptHandle, _queueName);
             }
             catch (Exception exception)
             {
-                Log.ErrorNackingMessage(s_logger, exception, message.Id, receiptHandle, _queueName);
+                Log.ErrorNackingMessage(s_logger, exception, message.Id.Value, receiptHandle, _queueName);
                 throw;
             }
         }
@@ -393,7 +393,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             try
             {
-                Log.RequeueingMessage(s_logger, message.Id);
+                Log.RequeueingMessage(s_logger, message.Id.Value);
 
                 using (var client = _clientFactory.CreateSqsClient())
                 {
@@ -404,7 +404,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     );
                 }
 
-                Log.RequeuedMessage(s_logger, message.Id);
+                Log.RequeuedMessage(s_logger, message.Id.Value);
 
                 return true;
             }
@@ -413,12 +413,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 // Receipt handle is invalid (most likely because the visibility timeout elapsed).
                 // SQS has already made the message visible again for redelivery by another consumer,
                 // but without the intended delay. Log a warning so operators are aware.
-                Log.RequeueFailedReceiptHandleExpired(s_logger, ex, message.Id, receiptHandle, _queueName, delay.Value);
+                Log.RequeueFailedReceiptHandleExpired(s_logger, ex, message.Id.Value, receiptHandle, _queueName, delay.Value);
                 return false;
             }
             catch (Exception exception)
             {
-                Log.ErrorRequeueingMessage(s_logger, exception, message.Id, receiptHandle, _queueName);
+                Log.ErrorRequeueingMessage(s_logger, exception, message.Id.Value, receiptHandle, _queueName);
                 return false;
             }
         }

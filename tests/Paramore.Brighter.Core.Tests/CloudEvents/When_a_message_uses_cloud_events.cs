@@ -396,4 +396,24 @@ public class CloudEventsTransformerTests
         Assert.Single(unwrap.Header.Bag);
         Assert.Equal("test-header", unwrap.Header.Bag["test"]);
     }
+
+    [Fact]
+    public void When_wrapping_message_with_no_type_as_json_it_should_produce_empty_type_string()
+    {
+        //Arrange
+        var typelessMessage = new Message(
+            new MessageHeader(Id.Random(), new RoutingKey("Test Topic"), MessageType.MT_COMMAND,
+                contentType: new ContentType(MediaTypeNames.Text.Plain)),
+            new MessageBody("test content", contentType: new ContentType(MediaTypeNames.Text.Plain)));
+
+        _transformer.InitializeWrapFromAttributeParams(_source.AbsoluteUri, CloudEventsType.Empty, null, null, null, null, CloudEventFormat.Json);
+
+        //Act
+        var cloudEvents = _transformer.Wrap(typelessMessage, new Publication { Source = _source });
+
+        //Assert
+        var json = JsonSerializer.Deserialize<CloudEventsTransformer.JsonEvent>(cloudEvents.Body.Bytes, JsonSerialisationOptions.Options);
+        Assert.NotNull(json);
+        Assert.Equal(string.Empty, json.Type);
+    }
 }

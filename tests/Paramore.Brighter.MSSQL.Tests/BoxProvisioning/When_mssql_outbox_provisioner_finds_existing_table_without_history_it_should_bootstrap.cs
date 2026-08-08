@@ -8,13 +8,13 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class When_mssql_outbox_provisioner_finds_existing_table_without_history_it_should_bootstrap : IAsyncLifetime
+public class MsSqlOutboxProvisionerBootstrapTests : IAsyncLifetime
 {
     private readonly string _connectionString;
     private readonly string _tableName;
     private readonly MsSqlOutboxProvisioner _provisioner;
 
-    public When_mssql_outbox_provisioner_finds_existing_table_without_history_it_should_bootstrap()
+    public MsSqlOutboxProvisionerBootstrapTests()
     {
         var builder = new ConfigurationBuilder().AddEnvironmentVariables();
         var configuration = builder.Build();
@@ -36,7 +36,7 @@ public class When_mssql_outbox_provisioner_finds_existing_table_without_history_
     }
 
     [Fact]
-    public async Task Should_bootstrap_with_synthetic_history()
+    public async Task When_mssql_outbox_provisioner_finds_existing_table_without_history_it_should_bootstrap()
     {
         //Arrange
         Configuration.EnsureDatabaseExists(_connectionString);

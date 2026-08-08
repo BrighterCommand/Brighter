@@ -7,13 +7,13 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.BoxProvisioning;
 
-public class When_mssql_inbox_provisioner_runs_on_fresh_database_it_should_create_inbox_table : IAsyncLifetime
+public class MsSqlInboxProvisionerFreshDatabaseTests : IAsyncLifetime
 {
     private readonly string _connectionString;
     private readonly string _tableName;
     private readonly MsSqlInboxProvisioner _provisioner;
 
-    public When_mssql_inbox_provisioner_runs_on_fresh_database_it_should_create_inbox_table()
+    public MsSqlInboxProvisionerFreshDatabaseTests()
     {
         var builder = new ConfigurationBuilder().AddEnvironmentVariables();
         var configuration = builder.Build();
@@ -35,7 +35,7 @@ public class When_mssql_inbox_provisioner_runs_on_fresh_database_it_should_creat
     }
 
     [Fact]
-    public async Task Should_create_inbox_table()
+    public async Task When_mssql_inbox_provisioner_runs_on_fresh_database_it_should_create_inbox_table()
     {
         //Arrange
         Configuration.EnsureDatabaseExists(_connectionString);

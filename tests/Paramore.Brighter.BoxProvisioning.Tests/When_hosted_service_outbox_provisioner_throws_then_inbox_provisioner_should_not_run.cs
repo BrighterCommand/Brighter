@@ -30,7 +30,7 @@ using Xunit;
 
 namespace Paramore.Brighter.BoxProvisioning.Tests;
 
-public class When_hosted_service_outbox_provisioner_throws_then_inbox_provisioner_should_not_run
+public class BoxProvisioningHostedServiceFailureShortCircuitTests
 {
     // BoxProvisioningHostedService.StartAsync orders provisioners outbox-first then iterates
     // with a foreach that re-raises after wrapping any non-cancellation failure in
@@ -42,7 +42,7 @@ public class When_hosted_service_outbox_provisioner_throws_then_inbox_provisione
     // foreach for Task.WhenAll, a try/continue, or any aggregator that collects failures.
 
     [Fact]
-    public async Task Should_short_circuit_after_outbox_failure_and_leave_inbox_provisioner_untouched()
+    public async Task When_hosted_service_outbox_provisioner_throws_then_inbox_provisioner_should_not_run()
     {
         //Arrange — register the inbox FIRST in the IEnumerable so that any failure to apply
         //          OrderingOrdinal would surface as "inbox ran before outbox could fail",

@@ -46,7 +46,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
 /// The <see cref="RmqMessageProducer"/> is used by a client to talk to a server and abstracts the infrastructure for inter-process communication away from clients.
 /// It handles subscription establishment, request sending and error handling
 /// </summary>
-public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation
+public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation, ISupportPublishConfirmationAsync
 {
     private readonly InstrumentationOptions _instrumentationOptions;
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageProducer>();
@@ -57,7 +57,7 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
     private const int DefaultActiveSendsShutdownTimeoutMs = 5000;
 
     private RmqPublication _publication;
-    private readonly Dictionary<ulong, string> _pendingConfirmations = new();
+    private readonly Dictionary<ulong, PendingConfirmation> _pendingConfirmations = new();
     private readonly object _stateLock = new();
     private readonly int _waitForConfirmsTimeOutInMilliseconds;
     private TaskCompletionSource<bool> _activeSendsCompleted = NewCompletedTaskCompletionSource();
@@ -66,12 +66,26 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
     // The base guard separately protects channel and pool cleanup after producer shutdown.
     private int _activeSends;
     private int _disposed;
+    // Confirmations whose broker ack has arrived but whose awaited callbacks are still running.
+    // Guarded by _stateLock; _publisherConfirmationsCompleted only completes when both the pending
+    // dictionary and this counter are drained, so disposal waits for the full confirmation pipeline.
+    private int _inFlightConfirmationCallbacks;
+    private event Func<PublishConfirmationResult, Task>? _onMessagePublishedAsync;
 
     /// <summary>
     /// Action taken when a message is published, following receipt of a confirmation from the broker
     /// see https://www.rabbitmq.com/blog/2011/02/10/introducing-publisher-confirms#how-confirms-work for more
     /// </summary>
-    public event Action<bool, string>? OnMessagePublished;
+    public event Action<PublishConfirmationResult>? OnMessagePublished;
+
+    /// <inheritdoc cref="ISupportPublishConfirmationAsync.UseAsyncPublishConfirmation"/>
+    bool ISupportPublishConfirmationAsync.UseAsyncPublishConfirmation => true;
+
+    event Func<PublishConfirmationResult, Task> ISupportPublishConfirmationAsync.OnMessagePublishedAsync
+    {
+        add => _onMessagePublishedAsync += value;
+        remove => _onMessagePublishedAsync -= value;
+    }
 
     /// <summary>
     /// The publication configuration for this producer
@@ -147,6 +161,11 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
     
     private async Task SendWithDelayAsync(Message message, TimeSpan? delay, bool useSchedulerAsync, CancellationToken cancellationToken = default)
     {
+        // Capture the ambient publish context synchronously, before any await or child activity, so the
+        // confirmation raise (ack or nack) can link the settle span back to the producer (S1) span.
+        // Activity.Current flows via AsyncLocal, so reading it here is race-free.
+        var publishContext = Activity.Current?.Context;
+
         // BeginSend is intentionally outside the try block; if it rejects a disposed producer, CompleteSend must not run.
         BeginSend();
 
@@ -178,13 +197,13 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
             BrighterTracer.WriteProducerEvent(Span, MessagingSystem.RabbitMQ, message, _instrumentationOptions);
 
             Log.PublishingMessageAsync(s_logger, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delay.Value.TotalMilliseconds,
-                message.Header.Topic, message.Persist, message.Id, message.Body.Value);
+                message.Header.Topic.Value, message.Persist, message.Id.Value, message.Body.Value);
 
             if (PublishesOnChannel(delay.Value))
             {
                 var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection);
                 var deliveryTag = await Channel.GetNextPublishSequenceNumberAsync(cancellationToken);
-                AddPendingConfirmation(deliveryTag, message.Id);
+                AddPendingConfirmation(deliveryTag, new PendingConfirmation(message.Id, message.Header.Topic, publishContext));
                 pendingDeliveryTag = deliveryTag;
                 await rmqMessagePublisher.PublishMessageAsync(message, delay.Value, cancellationToken);
                 // Publish succeeded; the broker now owns the confirmation and will ack/nack via the handler.
@@ -202,7 +221,7 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
             }
 
             Log.PublishedMessageAsync(s_logger, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delay,
-                message.Header.Topic, message.Persist, message.Id,
+                message.Header.Topic.Value, message.Persist, message.Id.Value,
                 JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), DateTime.UtcNow);
         }
         catch (IOException io)
@@ -228,7 +247,7 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
             // the registered tag in flight without a corresponding broker ack — remove it so disposal does
             // not block waiting on a confirmation that will never arrive.
             if (pendingDeliveryTag.HasValue)
-                RemovePendingConfirmations(pendingDeliveryTag.Value, multiple: false);
+                RemovePendingConfirmations(pendingDeliveryTag.Value, multiple: false, beginCallbacks: false);
 
             CompleteSend();
         }
@@ -363,7 +382,11 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
         // and drained active sends, so the producer send path cannot replace Channel while this snapshot is taken.
         lock (_stateLock)
         {
-            if (Channel is not { IsOpen: true } || _pendingConfirmations.Count == 0)
+            // Broker acks need an open channel to arrive; in-flight callbacks (ack received, awaited
+            // handler still running) complete regardless of channel state, so wait for those even
+            // when the channel has closed.
+            var brokerAcksOutstanding = Channel is { IsOpen: true } && _pendingConfirmations.Count > 0;
+            if (!brokerAcksOutstanding && _inFlightConfirmationCallbacks == 0)
                 return;
 
             if (waitMilliseconds == 0)
@@ -383,25 +406,30 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
         }
 
         int pendingConfirmations;
+        int inFlightCallbacks;
         lock (_stateLock)
         {
             pendingConfirmations = _pendingConfirmations.Count;
+            inFlightCallbacks = _inFlightConfirmationCallbacks;
         }
 
-        if (pendingConfirmations == 0)
-            return;
+        if (pendingConfirmations > 0)
+            Log.FailedToAwaitPublisherConfirms(s_logger, pendingConfirmations, waitMilliseconds);
 
-        Log.FailedToAwaitPublisherConfirms(s_logger, pendingConfirmations, waitMilliseconds);
+        if (inFlightCallbacks > 0)
+            Log.FailedToAwaitConfirmationCallbacks(s_logger, inFlightCallbacks, waitMilliseconds);
     }
 
-    private void AddPendingConfirmation(ulong deliveryTag, string messageId)
+    private void AddPendingConfirmation(ulong deliveryTag, PendingConfirmation confirmation)
     {
         lock (_stateLock)
         {
-            if (_pendingConfirmations.Count == 0)
+            // Reset only when the previous drain fully completed; replacing a still-pending source
+            // would orphan a waiter that captured the old Task (its completion would never fire).
+            if (_publisherConfirmationsCompleted.Task.IsCompleted)
                 _publisherConfirmationsCompleted = NewPendingTaskCompletionSource();
 
-            _pendingConfirmations[deliveryTag] = messageId;
+            _pendingConfirmations[deliveryTag] = confirmation;
         }
     }
 
@@ -410,13 +438,34 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
         lock (_stateLock)
         {
             _pendingConfirmations.Clear();
+            CompleteConfirmationsIfDrainedLocked();
+        }
+    }
+
+    // Callers must hold _stateLock.
+    private void CompleteConfirmationsIfDrainedLocked()
+    {
+        if (_pendingConfirmations.Count == 0 && _inFlightConfirmationCallbacks == 0)
             _publisherConfirmationsCompleted.TrySetResult(true);
+    }
+
+    private void EndConfirmationCallback()
+    {
+        lock (_stateLock)
+        {
+            // An unbalanced decrement would drive the count negative and the drain TCS would never
+            // complete; assert loudly in debug builds and refuse to go below zero in release.
+            Debug.Assert(_inFlightConfirmationCallbacks > 0, "EndConfirmationCallback called without a matching beginCallbacks removal");
+            if (_inFlightConfirmationCallbacks > 0)
+                _inFlightConfirmationCallbacks--;
+
+            CompleteConfirmationsIfDrainedLocked();
         }
     }
 
     private bool PublishesOnChannel(TimeSpan delay) => delay == TimeSpan.Zero || DelaySupported || Scheduler == null;
 
-    private IReadOnlyCollection<string> RemovePendingConfirmations(ulong deliveryTag, bool multiple)
+    private IReadOnlyCollection<PendingConfirmation> RemovePendingConfirmations(ulong deliveryTag, bool multiple, bool beginCallbacks)
     {
         lock (_stateLock)
         {
@@ -428,30 +477,35 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
                     deliveryTagsToRemove.Add(pendingDeliveryTag);
             }
 
-            var messageIds = RemoveConfirmationsLocked(deliveryTagsToRemove);
+            var confirmations = RemoveConfirmationsLocked(deliveryTagsToRemove);
 
-            if (_pendingConfirmations.Count == 0)
-                _publisherConfirmationsCompleted.TrySetResult(true);
+            // The ack/nack handlers raise a callback per removed confirmation; keep the drain TCS
+            // pending until each one calls EndConfirmationCallback. The orphan-cleanup path in
+            // SendWithDelayAsync raises no callbacks, so it leaves beginCallbacks false.
+            if (beginCallbacks)
+                _inFlightConfirmationCallbacks += confirmations.Count;
 
-            return messageIds;
+            CompleteConfirmationsIfDrainedLocked();
+
+            return confirmations;
         }
     }
 
-    private List<string> RemoveConfirmationsLocked(IEnumerable<ulong> deliveryTagsToRemove)
+    private List<PendingConfirmation> RemoveConfirmationsLocked(IEnumerable<ulong> deliveryTagsToRemove)
     {
-        var messageIds = new List<string>();
+        var confirmations = new List<PendingConfirmation>();
 
         foreach (var pendingDeliveryTag in deliveryTagsToRemove)
         {
             // Dictionary.Remove(key, out value) is unavailable on netstandard2.0; use the lookup-then-remove pattern.
-            if (_pendingConfirmations.TryGetValue(pendingDeliveryTag, out var messageId))
+            if (_pendingConfirmations.TryGetValue(pendingDeliveryTag, out var confirmation))
             {
                 _pendingConfirmations.Remove(pendingDeliveryTag);
-                messageIds.Add(messageId);
+                confirmations.Add(confirmation);
             }
         }
 
-        return messageIds;
+        return confirmations;
     }
 
     private static bool IsConfirmedBy(ulong pendingDeliveryTag, ulong deliveryTag, bool multiple)
@@ -473,26 +527,47 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
         Channel?.BasicNacksAsync -= OnPublishFailed;
     }
 
-    private Task OnPublishFailed(object sender, BasicNackEventArgs e)
+    private Task OnPublishFailed(object sender, BasicNackEventArgs e) => SettleConfirmationsAsync(e.DeliveryTag, e.Multiple, success: false);
+
+    private Task OnPublishSucceeded(object sender, BasicAckEventArgs e) => SettleConfirmationsAsync(e.DeliveryTag, e.Multiple, success: true);
+
+    private async Task SettleConfirmationsAsync(ulong deliveryTag, bool multiple, bool success)
     {
-        foreach (var messageId in RemovePendingConfirmations(e.DeliveryTag, e.Multiple))
+        // Raise the whole batch concurrently, then await it: a multiple-ack's callbacks (each an
+        // Outbox mark-dispatched) overlap rather than serializing on the channel's ack-dispatch
+        // loop, while awaiting the batch preserves backpressure on that loop.
+        var raiseTasks = new List<Task>();
+        foreach (var confirmation in RemovePendingConfirmations(deliveryTag, multiple, beginCallbacks: true))
         {
-            OnMessagePublished?.Invoke(false, messageId);
-            Log.FailedToPublishMessageAsync(s_logger, messageId);
+            if (success)
+                Log.PublishedMessage(s_logger, confirmation.MessageId.Value);
+            else
+                Log.FailedToPublishMessageAsync(s_logger, confirmation.MessageId.Value);
+
+            raiseTasks.Add(RaiseConfirmationCallbacksAsync(new PublishConfirmationResult(success, confirmation.MessageId, confirmation.Topic, confirmation.Context)));
         }
 
-        return Task.CompletedTask;
+        await Task.WhenAll(raiseTasks);
     }
 
-    private Task OnPublishSucceeded(object sender, BasicAckEventArgs e)
+    private async Task RaiseConfirmationCallbacksAsync(PublishConfirmationResult result)
     {
-        foreach (var messageId in RemovePendingConfirmations(e.DeliveryTag, e.Multiple))
+        // A subscriber fault must not abort the other confirmations in the batch or fault the
+        // ack-dispatch loop, and the in-flight counter must be released on every path or disposal
+        // would hang.
+        try
         {
-            OnMessagePublished?.Invoke(true, messageId);
-            Log.PublishedMessage(s_logger, messageId);
+            OnMessagePublished?.Invoke(result);
+            await _onMessagePublishedAsync.InvokeAllAsync(result);
         }
-
-        return Task.CompletedTask;
+        catch (Exception ex)
+        {
+            Log.ConfirmationCallbackFault(s_logger, result.MessageId.Value, ex);
+        }
+        finally
+        {
+            EndConfirmationCallback();
+        }
     }
 
     private static partial class Log
@@ -520,6 +595,23 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
 
         [LoggerMessage(LogLevel.Information, "Published message: {MessageId}")]
         public static partial void PublishedMessage(ILogger logger, string messageId);
+
+        [LoggerMessage(LogLevel.Warning, "Failed to await {CallbackCount} confirmation callbacks after {TimeoutMs}ms when shutting down")]
+        public static partial void FailedToAwaitConfirmationCallbacks(ILogger logger, int callbackCount, int timeoutMs);
+
+        [LoggerMessage(LogLevel.Warning, "Confirmation callback for message {MessageId} faulted; remaining confirmations continue")]
+        public static partial void ConfirmationCallbackFault(ILogger logger, string messageId, Exception exception);
     }
 }
+
+/// <summary>
+/// Tracks the data needed to raise an enriched <see cref="PublishConfirmationResult"/> when the broker
+/// later acks or nacks a publish. Keyed by the publish sequence number (delivery tag) while the confirmation
+/// is in flight. The same entry feeds both the ack (<c>OnPublishSucceeded</c>) and nack (<c>OnPublishFailed</c>)
+/// handlers, so the enrichment is identical on success and failure.
+/// </summary>
+/// <param name="MessageId">The id of the published message.</param>
+/// <param name="Topic">The wire topic the message was published to (<c>message.Header.Topic</c>).</param>
+/// <param name="Context">The publish span context captured at send time, used to link the settle span; null when no <see cref="Activity"/> was active.</param>
+internal readonly record struct PendingConfirmation(Id MessageId, RoutingKey Topic, ActivityContext? Context);
 

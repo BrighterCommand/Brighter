@@ -173,12 +173,14 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
                 }
             }
 
+            //the registry and transform factories are newed up above solely for this Dispatcher and are not
+            //container-registered, so the Dispatcher is their sole owner and disposes them at container teardown
             return dispatcherBuilder
                 .MessageMappers(messageMapperRegistry, messageMapperRegistry, messageTransformFactory, messageTransformFactoryAsync)
                 .ChannelFactory(channelFactory)
                 .Subscriptions(options.Subscriptions)
                 .ConfigureInstrumentation(tracer, options.InstrumentationOptions)
-                .Build();
+                .Build(ownsRegistry: true, ownsTransformerFactories: true, shutdownTimeout: options.ShutdownTimeout);
         }
 
         private static T BuildInbox<T>(IServiceProvider serviceProvider) where T : class, IAmAnInbox
@@ -210,6 +212,20 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
             });
             services.AddSingleton<ISpecification<Subscription>>(_ =>
                 ConsumerValidationRules.RequestTypeSubtype());
+            services.AddSingleton<ISpecification<Subscription>>(sp =>
+            {
+                // The transformer-resolvability probe is registered by ValidatePipelines (a complete snapshot
+                // of the service collection). When it — or the mapper registry — is absent (e.g. AddConsumers
+                // without ValidatePipelines), the check is inert; validation only runs when ValidatePipelines
+                // is enabled, so the inert specification is never evaluated in that case.
+                var probe = sp.GetService<IAmATransformerResolvabilityProbe>();
+                var mapperRegistryBuilder = sp.GetService<ServiceCollectionMessageMapperRegistryBuilder>();
+                if (probe is null || mapperRegistryBuilder is null)
+                    return new Specification<Subscription>(_ => []);
+
+                return ConsumerValidationRules.UnwrapTransformResolvable(
+                    () => ServiceCollectionExtensions.MessageMapperRegistry(sp), probe);
+            });
         }
     }
 }
