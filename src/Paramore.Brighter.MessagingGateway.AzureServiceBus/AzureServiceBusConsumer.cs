@@ -62,8 +62,8 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
         AzureServiceBusSubscription subscription,
         IAmAMessageProducer messageProducer,
         IAdministrationClientWrapper administrationClientWrapper,
-        bool isAsync = false,
-        ILoggerFactory loggerFactory
+        ILoggerFactory loggerFactory,
+        bool isAsync = false
     )
     {
         Subscription = subscription;
@@ -74,7 +74,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
         AdministrationClientWrapper = administrationClientWrapper;
         _azureServiceBusMesssageCreator = new AzureServiceBusMessageCreator(subscription, loggerFactory);
     }
-        
+
     /// <summary>
     /// Dispose of the Consumer.
     /// </summary>
@@ -83,10 +83,11 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
         ServiceBusReceiver?.Close();
         GC.SuppressFinalize(this);
     }
-        
+
     public async ValueTask DisposeAsync()
     {
-        if (ServiceBusReceiver is not null) await ServiceBusReceiver.CloseAsync();
+        if (ServiceBusReceiver is not null)
+            await ServiceBusReceiver.CloseAsync();
         GC.SuppressFinalize(this);
     }
 
@@ -94,7 +95,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
     /// Acknowledges the specified message.
     /// </summary>
     /// <param name="message">The message.</param>
-    public void Acknowledge(Message message) => BrighterAsyncContext.Run(async() => await AcknowledgeAsync(message));
+    public void Acknowledge(Message message) => BrighterAsyncContext.Run(async () => await AcknowledgeAsync(message));
 
     /// <summary>
     /// Acknowledges the specified message.
@@ -111,14 +112,15 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
             if (string.IsNullOrEmpty(lockToken))
                 throw new Exception($"LockToken for message with id {message.Id} is null or empty");
             Log.AcknowledgingMessage(Logger, message.Id.Value, lockToken);
-                
-            if(ServiceBusReceiver == null)
+
+            if (ServiceBusReceiver == null)
                 await GetMessageReceiverProviderAsync();
 
             await ServiceBusReceiver!.CompleteAsync(lockToken);
-                
+
             if (SubscriptionConfiguration.RequireSession)
-                if (ServiceBusReceiver is not null) await ServiceBusReceiver.CloseAsync();
+                if (ServiceBusReceiver is not null)
+                    await ServiceBusReceiver.CloseAsync();
         }
         catch (AggregateException ex)
         {
@@ -145,12 +147,12 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
     /// Purges the specified queue name.
     /// </summary>
     public void Purge() => BrighterAsyncContext.Run(() => PurgeAsync());
-        
+
     /// <summary>
     /// Purges the specified queue name.
     /// </summary>
     public abstract Task PurgeAsync(CancellationToken cancellationToken = default(CancellationToken));
-        
+
     /// <summary>
     /// Receives the specified queue name.
     /// An abstraction over a third-party messaging library. Used to read messages from the broker and to acknowledge
@@ -161,7 +163,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
     /// <param name="timeOut">The timeout for a message being available. Defaults to 300ms.</param>
     /// <returns>Message.</returns>
     public Message[] Receive(TimeSpan? timeOut = null) => BrighterAsyncContext.Run(() => ReceiveAsync(timeOut));
-        
+
     /// <summary>
     /// Receives the specified queue name.
     /// An abstraction over a third-party messaging library. Used to read messages from the broker and to acknowledge
@@ -188,7 +190,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
                 if (ServiceBusReceiver == null)
                 {
                     Log.CouldNotGetSessionLock(Logger, Topic);
-                    return messagesToReturn.ToArray();   
+                    return messagesToReturn.ToArray();
                 }
             }
 
@@ -198,11 +200,11 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
         }
         catch (Exception e)
         {
-            if (ServiceBusReceiver is {IsClosedOrClosing: true} && !SubscriptionConfiguration.RequireSession)
+            if (ServiceBusReceiver is { IsClosedOrClosing: true } && !SubscriptionConfiguration.RequireSession)
             {
                 Log.MessageReceiverClosing(Logger);
                 var message = new Message(
-                    new MessageHeader(string.Empty, new RoutingKey(Topic), MessageType.MT_QUIT), 
+                    new MessageHeader(string.Empty, new RoutingKey(Topic), MessageType.MT_QUIT),
                     new MessageBody(string.Empty));
                 messagesToReturn.Add(message);
                 return messagesToReturn.ToArray();
@@ -211,7 +213,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
             Log.FailingToReceiveMessages(Logger, e);
 
             //The connection to Azure Service bus may have failed so we re-establish the connection.
-            if(!SubscriptionConfiguration.RequireSession || ServiceBusReceiver == null)
+            if (!SubscriptionConfiguration.RequireSession || ServiceBusReceiver == null)
                 await GetMessageReceiverProviderAsync();
 
             throw new ChannelFailureException("Failing to receive messages.", e);
@@ -225,7 +227,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
 
         return messagesToReturn.ToArray();
     }
-               
+
     /// <summary>
     /// Nacks the specified message, abandoning the lock so it is available for redelivery.
     /// Sync over Async
@@ -256,7 +258,8 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
             await ServiceBusReceiver!.AbandonAsync(lockToken);
 
             if (SubscriptionConfiguration.RequireSession)
-                if (ServiceBusReceiver is not null) await ServiceBusReceiver.CloseAsync();
+                if (ServiceBusReceiver is not null)
+                    await ServiceBusReceiver.CloseAsync();
         }
         catch (AggregateException ex)
         {
@@ -304,18 +307,19 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
 
             if (string.IsNullOrEmpty(lockToken))
                 throw new Exception($"LockToken for message with id {message.Id} is null or empty");
-           
+
             var reasonString = reason is null ? nameof(RejectionReason.DeliveryError) : reason.RejectionReason.ToString();
             var description = reason is null ? "unknown" : reason.Description ?? "unknown";
-            
+
             Log.DeadLetteringMessage(Logger, message.Id.Value, lockToken, reasonString, description);
 
-            if(ServiceBusReceiver == null)
+            if (ServiceBusReceiver == null)
                 await GetMessageReceiverProviderAsync();
 
             await ServiceBusReceiver!.DeadLetterAsync(lockToken, reasonString, description);
             if (SubscriptionConfiguration.RequireSession)
-                if (ServiceBusReceiver is not null) await ServiceBusReceiver.CloseAsync();
+                if (ServiceBusReceiver is not null)
+                    await ServiceBusReceiver.CloseAsync();
         }
         catch (Exception ex)
         {
@@ -349,12 +353,12 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
         Log.RequeuingMessage(Logger, topic, message.Id.Value);
 
         var messageProducerAsync = _messageProducer as IAmAMessageProducerAsync;
-            
-        if (messageProducerAsync  is null)
+
+        if (messageProducerAsync is null)
         {
-            throw new ChannelFailureException("Message Producer is not of type IAmAMessageProducerSync");    
+            throw new ChannelFailureException("Message Producer is not of type IAmAMessageProducerSync");
         }
-            
+
         if (delay.Value > TimeSpan.Zero)
         {
             await messageProducerAsync.SendWithDelayAsync(message, delay.Value, cancellationToken);
@@ -363,7 +367,7 @@ public abstract partial class AzureServiceBusConsumer : IAmAMessageConsumerSync,
         {
             await messageProducerAsync.SendAsync(message, cancellationToken);
         }
-            
+
         await AcknowledgeAsync(message, cancellationToken);
 
         return true;

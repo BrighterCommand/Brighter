@@ -30,7 +30,6 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace Paramore.Brighter.Outbox.Hosting
@@ -54,18 +53,18 @@ namespace Paramore.Brighter.Outbox.Hosting
         /// <param name="serviceScopeFactory">Needed to create a scope within which to create a <see cref="CommandProcessor"/></param>
         /// <param name="distributedLock">Used to ensure that only one instance of the <see cref="TimedOutboxSweeper"/> is running</param>
         /// <param name="options">The <see cref="TimedOutboxSweeperOptions"/> that can be used to configure how this runs, such as interval or age</param>
-        /// <param name="logger">The logger; defaults to a no-op logger when not supplied</param>
+        /// <param name="logger">The logger.</param>
         public TimedOutboxSweeper(
             IServiceScopeFactory serviceScopeFactory,
             IDistributedLock distributedLock,
             TimedOutboxSweeperOptions options,
-            ILogger<TimedOutboxSweeper>? logger
+            ILogger<TimedOutboxSweeper> logger
         )
         {
             _serviceScopeFactory = serviceScopeFactory;
             _distributedLock = distributedLock;
             _options = options;
-            _logger = logger ?? NullLogger<TimedOutboxSweeper>.Instance;
+            _logger = logger;
         }
 
         /// <summary>
@@ -123,14 +122,14 @@ namespace Paramore.Brighter.Outbox.Hosting
                         _options.BatchSize,
                         _options.UseBulk,
                         _options.Args);
-                    
+
                     await outBoxSweeper.SweepAsync();
                 }
                 finally
                 {
                     //on a timer thread, so blocking is OK
                     await _distributedLock.ReleaseLockAsync(LockingResourceName, lockId, CancellationToken.None);
-                        
+
                     scope.Dispose();
                 }
             }
@@ -149,13 +148,13 @@ namespace Paramore.Brighter.Outbox.Hosting
 
             [LoggerMessage(LogLevel.Information, "Outbox Sweeper Service is stopping.")]
             public static partial void OutboxSweeperServiceIsStopping(ILogger logger);
-            
+
             [LoggerMessage(LogLevel.Information, "Outbox Sweeper looking for unsent messages")]
             public static partial void OutboxSweeperLookingForUnsentMessages(ILogger logger);
-            
+
             [LoggerMessage(LogLevel.Warning, "Outbox Sweeper is still running - abandoning attempt.")]
             public static partial void OutboxSweeperIsStillRunningAbandoningAttempt(ILogger logger);
-            
+
             [LoggerMessage(LogLevel.Information, "Outbox Sweeper sleeping")]
             public static partial void OutboxSweeperSleeping(ILogger logger);
         }

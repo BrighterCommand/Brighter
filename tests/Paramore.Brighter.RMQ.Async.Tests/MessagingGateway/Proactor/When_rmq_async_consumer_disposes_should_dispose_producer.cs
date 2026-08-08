@@ -57,7 +57,7 @@ public class When_rmq_async_consumer_disposes_should_dispose_producer
             _rmqConnection,
             new ChannelName(Guid.NewGuid().ToString()),
             new RoutingKey(Guid.NewGuid().ToString()),
-            isDurable: false);
+            isDurable: false, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         // Act & Assert - should not throw
         var exception = Record.Exception(() => consumer.Dispose());
@@ -77,9 +77,9 @@ public class When_rmq_async_consumer_disposes_should_dispose_producer
             queueName,
             topic,
             isDurable: false,
-            scheduler: scheduler);
+            scheduler: scheduler, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
-        var sendProducer = new RmqMessageProducer(_rmqConnection);
+        var sendProducer = new RmqMessageProducer(_rmqConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         new QueueFactory(_rmqConnection, queueName, new RoutingKeys(topic))
             .CreateAsync()
@@ -116,9 +116,9 @@ public class When_rmq_async_consumer_disposes_should_dispose_producer
             queueName,
             topic,
             isDurable: false,
-            scheduler: scheduler);
+            scheduler: scheduler, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
-        var sendProducer = new RmqMessageProducer(_rmqConnection);
+        var sendProducer = new RmqMessageProducer(_rmqConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         new QueueFactory(_rmqConnection, queueName, new RoutingKeys(topic))
             .CreateAsync()

@@ -59,14 +59,14 @@ public class TransformLifetimeScopeFinalizerReleaseTests
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static void CreateAndAbandonLifetimeScope()
     {
-        var scope = new TransformLifetimeScope(new ThrowingOnReleaseTransformerFactory());
+        var scope = new TransformLifetimeScope(new ThrowingOnReleaseTransformerFactory(), loggerFactory: Initializer.TestLoggerFactory);
         scope.Add(Lease<IAmAMessageTransform>.Untracked(new MinimalTransform()));
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static void CreateAndAbandonLifetimeScopeAsync()
     {
-        var scope = new TransformLifetimeScopeAsync(new ThrowingOnReleaseTransformerFactoryAsync());
+        var scope = new TransformLifetimeScopeAsync(new ThrowingOnReleaseTransformerFactoryAsync(), loggerFactory: Initializer.TestLoggerFactory);
         scope.Add(Lease<IAmAMessageTransformAsync>.Untracked(new MinimalTransformAsync()));
     }
 

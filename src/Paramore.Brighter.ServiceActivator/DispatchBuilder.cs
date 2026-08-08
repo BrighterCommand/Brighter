@@ -26,7 +26,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.ServiceActivator
@@ -49,7 +48,7 @@ namespace Paramore.Brighter.ServiceActivator
         private IAmARequestContextFactory? _requestContextFactory;
         private IAmABrighterTracer? _tracer;
         private InstrumentationOptions _instrumentationOptions;
-        private ILoggerFactory _loggerFactory = NullLoggerFactory.Instance;
+        private ILoggerFactory? _loggerFactory;
 
         private DispatchBuilder() { }
 
@@ -91,16 +90,16 @@ namespace Paramore.Brighter.ServiceActivator
             IAmAMessageMapperRegistry messageMapperRegistry,
             IAmAMessageMapperRegistryAsync? messageMapperRegistryAsync,
             IAmAMessageTransformerFactory? messageTransformerFactory,
-            IAmAMessageTransformerFactoryAsync?  messageTransformFactoryAsync)
+            IAmAMessageTransformerFactoryAsync? messageTransformFactoryAsync)
         {
             _messageMapperRegistry = messageMapperRegistry;
             _messageMapperRegistryAsync = messageMapperRegistryAsync;
             _messageTransformerFactory = messageTransformerFactory;
             _messageTransformerFactoryAsync = messageTransformFactoryAsync;
-            
+
             if (messageMapperRegistry is null && messageMapperRegistryAsync is null)
                 throw new ConfigurationException("You must provide a message mapper registry or an async message mapper registry");
-            
+
             return this;
         }
 
@@ -116,7 +115,7 @@ namespace Paramore.Brighter.ServiceActivator
             _defaultChannelFactory = defaultChannelFactory;
             return this;
         }
-       
+
         /// <summary>
         /// Configures OpenTelemetry for the Dispatcher
         /// </summary>
@@ -125,11 +124,11 @@ namespace Paramore.Brighter.ServiceActivator
         /// <returns>INeedAListOfSubcriptions</returns>
         public IAmADispatchBuilder ConfigureInstrumentation(IAmABrighterTracer? tracer, InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
-             _tracer = tracer;
-             _instrumentationOptions = instrumentationOptions;
-             return this;
+            _tracer = tracer;
+            _instrumentationOptions = instrumentationOptions;
+            return this;
         }
-        
+
         public IAmADispatchBuilder NoInstrumentation()
         {
             _tracer = null;
@@ -138,9 +137,9 @@ namespace Paramore.Brighter.ServiceActivator
         }
 
         /// <inheritdoc />
-        public IAmADispatchBuilder ConfigureLogging(ILoggerFactory? loggerFactory)
+        public IAmADispatchBuilder ConfigureLogging(ILoggerFactory loggerFactory)
         {
-            _loggerFactory = loggerFactory;
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
             return this;
         }
 
@@ -160,7 +159,7 @@ namespace Paramore.Brighter.ServiceActivator
 
             return this;
         }
-        
+
         /// <summary>
         /// Builds this instance.
         /// </summary>
@@ -183,11 +182,14 @@ namespace Paramore.Brighter.ServiceActivator
         {
             if (_commandProcessor is null || _subscriptions is null)
                 throw new ArgumentException("Command Processor Factory and Subscription are required.");
-            return new Dispatcher(_commandProcessor, _subscriptions, _messageMapperRegistry,
-                _messageMapperRegistryAsync, _messageTransformerFactory, _messageTransformerFactoryAsync,
-                _requestContextFactory, _tracer, _instrumentationOptions, ownsRegistry, ownsTransformerFactories,
-                shutdownTimeout, _loggerFactory
-            );
+
+            var loggerFactory = _loggerFactory ?? throw new ConfigurationException(
+                "A logger factory is required. Call ConfigureLogging before Build.");
+
+            return new Dispatcher(_commandProcessor, _subscriptions, loggerFactory,
+                _messageMapperRegistry, _messageMapperRegistryAsync, _messageTransformerFactory,
+                _messageTransformerFactoryAsync, _requestContextFactory, _tracer, _instrumentationOptions,
+                ownsRegistry, ownsTransformerFactories, shutdownTimeout);
         }
 
 
@@ -229,7 +231,7 @@ namespace Paramore.Brighter.ServiceActivator
             IAmAMessageMapperRegistry messageMapperRegistry,
             IAmAMessageMapperRegistryAsync? messageMapperRegistryAsync,
             IAmAMessageTransformerFactory? messageTransformerFactory,
-            IAmAMessageTransformerFactoryAsync?  messageTransformFactoryAsync);
+            IAmAMessageTransformerFactoryAsync? messageTransformFactoryAsync);
     }
     /// <summary>
     /// Interface INeedAChannelFactory
@@ -273,13 +275,13 @@ namespace Paramore.Brighter.ServiceActivator
         /// </param>
         /// <returns>IAmADispatchBuilder</returns>
         IAmADispatchBuilder ConfigureInstrumentation(IAmABrighterTracer? tracer, InstrumentationOptions instrumentationOptions = InstrumentationOptions.All);
-       
+
         /// <summary>
         /// We do not need any instrumentation for the Dispatcher
         /// </summary>
         /// <returns>IAmADispatchBuilder</returns>
         IAmADispatchBuilder NoInstrumentation();
-    } 
+    }
 
     /// <summary>
     /// Interface IAmADispatchBuilder

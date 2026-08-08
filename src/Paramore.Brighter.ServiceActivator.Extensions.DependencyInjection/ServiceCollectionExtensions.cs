@@ -2,7 +2,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator.Validation;
@@ -14,7 +13,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
     /// <summary>
     /// Extension methods for adding a service activator to the .NET IoC container
     /// </summary>
-    public static class  ServiceActivatorServiceCollectionExtensions 
+    public static class ServiceActivatorServiceCollectionExtensions
     {
         /// <summary>
         /// Adds a service activator to the .NET IoC Container, used to register one or more message pump for a subscription to messages on an external bus
@@ -32,16 +31,16 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
         {
             if (services == null)
                 throw new ArgumentNullException(nameof(services));
-            
+
             var options = new ConsumersOptions();
             configure?.Invoke(options);
             services.TryAddSingleton<IBrighterOptions>(options);
             services.TryAddSingleton<IAmConsumerOptions>(options);
-            
+
             services.TryAdd(new ServiceDescriptor(typeof(IDispatcher),
                 BuildDispatcher,
                 ServiceLifetime.Singleton));
-            
+
             services.TryAddSingleton(options.InboxConfiguration);
             var inbox = options.InboxConfiguration.Inbox;
             if (inbox is IAmAnInboxSync)
@@ -56,7 +55,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
                     new ServiceDescriptor(
                         typeof(IAmAnInboxAsync), BuildInbox<IAmAnInboxAsync>, ServiceLifetime.Singleton));
             }
-            
+
             services.Configure<BrighterPipelineValidationOptions>(o => o.ConsumerOwnsValidation = true);
 
             RegisterConsumerValidationSpecs(services);
@@ -137,25 +136,25 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
         {
             //Resolve the container's logger factory and flow it through the builder as an instance,
             //rather than copying it into a process-wide static (which would be disposed with the container).
-            var loggerFactory = serviceProvider.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance;
+            var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
 
             var options = serviceProvider.GetRequiredService<IAmConsumerOptions>();
-            
+
             var commandProcessor = serviceProvider.GetRequiredService<IAmACommandProcessor>();
-        
+
             var requestContextFactory = serviceProvider.GetService<IAmARequestContextFactory>() ?? new InMemoryRequestContextFactory();
-            
+
             var dispatcherBuilder = DispatchBuilder
                 .StartNew()
                 .CommandProcessor(commandProcessor, requestContextFactory);
-        
+
             var messageMapperRegistry = ServiceCollectionExtensions.MessageMapperRegistry(serviceProvider);
             var messageTransformFactory = ServiceCollectionExtensions.TransformFactory(serviceProvider);
             var messageTransformFactoryAsync = ServiceCollectionExtensions.TransformFactoryAsync(serviceProvider);
-            
+
             var tracer = serviceProvider.GetService<IAmABrighterTracer>();
 
-            var channelFactory = options.DefaultChannelFactory ?? new InMemoryChannelFactory(new InternalBus(), TimeProvider.System);
+            var channelFactory = options.DefaultChannelFactory ?? new InMemoryChannelFactory(new InternalBus(), TimeProvider.System, loggerFactory);
             var scheduler = serviceProvider.GetService<IAmAMessageScheduler>();
             if (channelFactory is IAmAChannelFactoryWithScheduler schedulerAwareFactory)
             {

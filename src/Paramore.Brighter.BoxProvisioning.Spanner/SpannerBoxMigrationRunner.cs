@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -29,7 +29,6 @@ using System.Threading.Tasks;
 using Google.Cloud.Spanner.Data;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Inbox.Spanner;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Outbox.Spanner;
@@ -84,14 +83,14 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
     public SpannerBoxMigrationRunner(
         IAmABoxMigrationDetectionHelper<SpannerConnection, SpannerTransaction> detectionHelper,
         IAmARelationalDatabaseConfiguration configuration,
+        ILoggerFactory loggerFactory,
         IAmABrighterTracer? tracer = null,
-        ILogger? logger = null,
-        ILoggerFactory loggerFactory)
+        ILogger? logger = null)
     {
         _detectionHelper = detectionHelper;
         _configuration = configuration;
         _tracer = tracer;
-        _logger = logger ?? (loggerFactory).CreateLogger<SpannerBoxMigrationRunner>();
+        _logger = logger ?? loggerFactory.CreateLogger<SpannerBoxMigrationRunner>();
     }
 
     /// <summary>
@@ -101,10 +100,10 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
     /// </summary>
     public SpannerBoxMigrationRunner(
         IAmARelationalDatabaseConfiguration configuration,
+        ILoggerFactory loggerFactory,
         IAmABrighterTracer? tracer = null,
-        ILogger? logger = null,
-        ILoggerFactory loggerFactory)
-        : this(new SpannerBoxDetectionHelper(), configuration, tracer, logger, loggerFactory)
+        ILogger? logger = null)
+        : this(new SpannerBoxDetectionHelper(), configuration, loggerFactory, tracer, logger)
     {
     }
 
@@ -206,7 +205,8 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
         var activity = _tracer?.ActivitySource.StartActivity(
             $"{BrighterSemanticConventions.BoxMigration} {tableName}",
             ActivityKind.Internal);
-        if (activity is null) return null;
+        if (activity is null)
+            return null;
         activity.SetTag(BrighterSemanticConventions.DbSystem, DbSystem.Spanner.ToDbName());
         activity.SetTag(BrighterSemanticConventions.DbTable, tableName);
         if (schemaName is not null)
@@ -282,7 +282,8 @@ public class SpannerBoxMigrationRunner : IAmABoxMigrationRunner
     // history-divergence case Spanner has no in-place migration path to fix.
     private static void VerifyAtLatestVersionOrThrow(string tableName, int vLatest, int currentVersion)
     {
-        if (currentVersion == vLatest) return;
+        if (currentVersion == vLatest)
+            return;
 
         // Per ADR 0057 §6: Spanner has no advisory-lock concept and no in-place migration
         // chain — fresh-install is the only forward path, and the relational backends'

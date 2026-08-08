@@ -26,7 +26,6 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.ServiceActivator
@@ -49,8 +48,8 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary> The message pump terminated because the unacceptable message was breached within its window</summary>
         MP_LIMIT_EXCEEDED,
     }
-    
-    
+
+
     /// <summary>
     /// The message pump is the heart of a consumer. It runs a loop that performs the following:
     ///  - Gets a message from a queue/stream
@@ -79,7 +78,7 @@ namespace Paramore.Brighter.ServiceActivator
         protected readonly Dictionary<Type, MethodInfo> UnWrapPipelineFactoryCache = new();
         protected readonly Dictionary<Type, MethodInfo> DispatchMethodCache = new();
         protected DateTimeOffset? UnacceptableMessageWindowOpenedA = null;
-        
+
         /// <summary>
         /// The delay to wait when the channel has failed
         /// </summary>
@@ -95,12 +94,12 @@ namespace Paramore.Brighter.ServiceActivator
         /// The delay to wait when the channel is empty
         /// </summary>
         public TimeSpan EmptyChannelDelay { get; set; }
-        
+
         /// <summary>
         /// The <see cref="MessagePumpType"/> of this message pump; indicates Reactor or Proactor
         /// </summary>
         public abstract MessagePumpType MessagePumpType { get; }
-        
+
         /// <summary>
         /// Sets the <see cref="TimeProvider"/> used by the pump. Defaults to TimeProviderSystem
         /// </summary>
@@ -108,7 +107,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// Allows you to override the time provider, intended for testing purposes. 
         /// </remarks>
         public TimeProvider PumpTimeProvider { get; set; }
-  
+
         /// <summary>
         /// How many times to requeue a message before discarding it
         /// </summary>
@@ -118,12 +117,12 @@ namespace Paramore.Brighter.ServiceActivator
         /// How long to wait before requeuing a message
         /// </summary>
         public TimeSpan RequeueDelay { get; set; }
-        
+
         /// <summary>
         /// The <see cref="MessagePumpStatus"/> of the pump
         /// </summary>
         public MessagePumpStatus Status { get; set; }
-        
+
         /// <summary>
         /// How long to wait for a message before timing out
         /// </summary>
@@ -133,12 +132,12 @@ namespace Paramore.Brighter.ServiceActivator
         /// The number of unacceptable messages to receive before stopping the message pump
         /// </summary>
         public int UnacceptableMessageLimit { get; set; }
-        
+
         /// <summary>
         /// Gets the window in which we monitor the unacceptable message count. The count resets at the end of the window.
         /// If null, the count never resets.
         /// </summary>
-        public TimeSpan? UnacceptableMessageLimitWindow  { get; set; }
+        public TimeSpan? UnacceptableMessageLimitWindow { get; set; }
 
         /// <summary>
         /// Constructs a message pump. The message pump is the heart of a consumer. It runs a loop that performs the following:
@@ -157,16 +156,16 @@ namespace Paramore.Brighter.ServiceActivator
             IAmACommandProcessor commandProcessor,
             IAmARequestContextFactory requestContextFactory,
             IAmABrighterTracer? tracer,
+            ILoggerFactory loggerFactory,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
-            TimeProvider? timeProvider = null,
-            ILoggerFactory loggerFactory)
+            TimeProvider? timeProvider = null)
         {
             CommandProcessor = commandProcessor;
             RequestContextFactory = requestContextFactory;
             Tracer = tracer;
             InstrumentationOptions = instrumentationOptions;
             PumpTimeProvider = timeProvider ?? TimeProvider.System;
-            _logger = (loggerFactory).CreateLogger<MessagePump>();
+            _logger = loggerFactory.CreateLogger<MessagePump>();
         }
 
 
@@ -179,7 +178,7 @@ namespace Paramore.Brighter.ServiceActivator
         {
             if (UnacceptableMessageWindowOpenedA is null)
                 UnacceptableMessageWindowOpenedA = PumpTimeProvider.GetUtcNow();
-            
+
             var timeSinceWindowOpened = PumpTimeProvider.GetUtcNow() - UnacceptableMessageWindowOpenedA.Value;
             if (UnacceptableMessageLimitWindow.HasValue && timeSinceWindowOpened > UnacceptableMessageLimitWindow)
             {
@@ -211,6 +210,6 @@ namespace Paramore.Brighter.ServiceActivator
             [LoggerMessage(LogLevel.Error, "Message {MessageId} mismatch. Message type is '{MessageType}' yet mapper produced message of type ICommand")]
             public static partial void MessageMismatchEvent(ILogger logger, string messageId, MessageType messageType);
         }
-   }
+    }
 }
 

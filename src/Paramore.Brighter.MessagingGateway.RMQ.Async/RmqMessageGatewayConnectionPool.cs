@@ -28,7 +28,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Tasks;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -44,7 +43,7 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
     private static readonly Dictionary<string, PooledConnection> s_connectionPool = new();
 
     private static readonly SemaphoreSlim s_lock = new SemaphoreSlim(1, 1);
-    private readonly ILogger _logger = (loggerFactory).CreateLogger<RmqMessageGatewayConnectionPool>();
+    private readonly ILogger _logger = loggerFactory.CreateLogger<RmqMessageGatewayConnectionPool>();
     private static readonly Random jitter = new Random();
 
     /// <summary>
@@ -85,29 +84,29 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
         }
     }
 
-      public async Task ResetConnectionAsync(ConnectionFactory connectionFactory, CancellationToken cancellationToken = default)
-      {
-          await s_lock.WaitAsync(cancellationToken).ConfigureAwait(false);
+    public async Task ResetConnectionAsync(ConnectionFactory connectionFactory, CancellationToken cancellationToken = default)
+    {
+        await s_lock.WaitAsync(cancellationToken).ConfigureAwait(false);
 
-          try
-          {
-              await DelayReconnectingAsync().ConfigureAwait(false);
+        try
+        {
+            await DelayReconnectingAsync().ConfigureAwait(false);
 
-              try
-              {
-                  await CreateConnectionAsync(connectionFactory, cancellationToken).ConfigureAwait(false);
-              }
-              catch (BrokerUnreachableException exception)
-              {
-                  Log.FailedToResetSubscriptionToRabbitMqEndpoint(_logger, connectionFactory.Endpoint, exception);
-              }
-          }
-          finally
-          {
-              s_lock.Release();
-          }
-      }
-    
+            try
+            {
+                await CreateConnectionAsync(connectionFactory, cancellationToken).ConfigureAwait(false);
+            }
+            catch (BrokerUnreachableException exception)
+            {
+                Log.FailedToResetSubscriptionToRabbitMqEndpoint(_logger, connectionFactory.Endpoint, exception);
+            }
+        }
+        finally
+        {
+            s_lock.Release();
+        }
+    }
+
     /// <summary>
     /// Remove the connection from the pool
     /// </summary>
@@ -180,7 +179,7 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
 
         return pooledConnection;
     }
-    
+
     private static async Task DelayReconnectingAsync() => await Task.Delay(jitter.Next(5, 100)).ConfigureAwait(false);
 
     private async Task TryRemoveConnectionAsync(string connectionId)

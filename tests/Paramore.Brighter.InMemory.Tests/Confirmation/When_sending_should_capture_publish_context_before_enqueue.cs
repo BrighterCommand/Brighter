@@ -49,7 +49,7 @@ public class ContextCaptureBeforeEnqueueTests
         var capturedContext = publishActivity.Context; // what we expect to arrive in the confirmation
 
         var bus = new InternalBus();
-        var producer = new InMemoryMessageProducer(bus, instrumentationOptions: InstrumentationOptions.All)
+        var producer = new InMemoryMessageProducer(bus, instrumentationOptions: InstrumentationOptions.All, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
         {
             UseAsyncPublishConfirmation = true
         };

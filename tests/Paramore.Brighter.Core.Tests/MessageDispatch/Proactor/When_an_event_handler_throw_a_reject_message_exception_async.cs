@@ -43,14 +43,14 @@ public class MessageDispatchRejectMessageExceptionTestsAsync
             new InMemoryRequestContextFactory(),
             new PolicyRegistry(),
             resiliencePipelineRegistry,
-            new InMemorySchedulerFactory()
-        );
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+            loggerFactory: Initializer.TestLoggerFactory);
         
         var subscription = new InMemorySubscription<MyRejectedEvent>(
             new SubscriptionName("test"), 
             noOfPerformers: 1, 
             timeOut: TimeSpan.FromMilliseconds(1000), 
-            channelFactory: new InMemoryChannelFactory(_bus, _timeProvider),
+            channelFactory: new InMemoryChannelFactory(_bus, _timeProvider, loggerFactory: Initializer.TestLoggerFactory),
             channelName: new ChannelName("myChannel"), 
             messagePumpType: MessagePumpType.Proactor,
             routingKey: _routingKey
@@ -61,8 +61,8 @@ public class MessageDispatchRejectMessageExceptionTestsAsync
         _dispatcher = new Dispatcher(
             commandProcessor, 
             new List<Subscription> { subscription },
-            null,
-            messageMapperRegistryAsync,
+            loggerFactory: Initializer.TestLoggerFactory,
+            messageMapperRegistryAsync: messageMapperRegistryAsync,
             requestContextFactory: new InMemoryRequestContextFactory()
         );
         

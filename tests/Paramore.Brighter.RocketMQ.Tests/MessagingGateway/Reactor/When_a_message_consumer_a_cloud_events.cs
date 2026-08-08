@@ -19,7 +19,7 @@ public class BufferedConsumerCloudEventsTests : IDisposable
         var consumer = GatewayFactory.CreateSimpleConsumer(connection, publication).GetAwaiter().GetResult();
         var producer = GatewayFactory.CreateProducer(connection, publication).GetAwaiter().GetResult();
 
-        _consumer = new RocketMessageConsumer(consumer, BatchSize, TimeSpan.FromSeconds(30));
+        _consumer = new RocketMessageConsumer(consumer, BatchSize, TimeSpan.FromSeconds(30), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _producer = new RocketMqMessageProducer(connection, producer, publication);
     }
 

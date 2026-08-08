@@ -1,7 +1,6 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Paramore.Brighter
 {
@@ -14,7 +13,7 @@ namespace Paramore.Brighter
         public TransformLifetimeScope(IAmAMessageTransformerFactory factory, ILoggerFactory loggerFactory)
         {
             _factory = factory;
-            _logger = (loggerFactory).CreateLogger<TransformLifetimeScope>();
+            _logger = loggerFactory.CreateLogger<TransformLifetimeScope>();
         }
 
         public void Dispose()
@@ -22,7 +21,8 @@ namespace Paramore.Brighter
             //SuppressFinalize in a finally: the drain can now throw (a Release failure surfaces as an
             //AggregateException to an explicit Dispose), and if it does the object would otherwise stay
             //registered for finalization, whose retry only re-runs the already-drained list — wasted work
-            try { ReleaseTrackedObjects(); }
+            try
+            { ReleaseTrackedObjects(); }
             finally { GC.SuppressFinalize(this); }
         }
 
@@ -35,16 +35,17 @@ namespace Paramore.Brighter
             //Finalization order is non-deterministic, so this scope can be finalized before its owning
             //pipeline disposes it. Release best-effort here and swallow; an explicit Dispose still
             //surfaces the exception to the owner.
-            try { ReleaseTrackedObjects(); }
+            try
+            { ReleaseTrackedObjects(); }
             catch { /* swallowed: a finalizer must not throw */ }
         }
-        
+
         public void Add(Lease<IAmAMessageTransform> lease)
         {
             _trackedObjects.Add(lease);
             Log.TrackingInstance(_logger, lease.Instance.GetHashCode(), lease.Instance.GetType());
-         }
-        
+        }
+
         private void ReleaseTrackedObjects()
         {
             //drain as we go: remove each transform before releasing it, so a Release that throws (MS DI's
@@ -63,7 +64,7 @@ namespace Paramore.Brighter
                 _trackedObjects.RemoveAt(lastIndex);
                 try
                 {
-                    factory.Release(trackedItem);
+                    _factory.Release(trackedItem);
                     Log.ReleasingHandlerInstance(_logger, trackedItem.Instance.GetHashCode(), trackedItem.Instance.GetType());
                 }
                 catch (Exception ex)

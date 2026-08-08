@@ -29,7 +29,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Paramore.Brighter.Mediator;
 
@@ -47,10 +46,10 @@ public class InMemoryStateStoreAsync : IAmAStateStoreAsync
     /// <summary>
     /// Represents an in-memory store for jobs.
     /// </summary>
-    public InMemoryStateStoreAsync(TimeProvider? timeProvider = null, ILoggerFactory loggerFactory)
+    public InMemoryStateStoreAsync(ILoggerFactory loggerFactory, TimeProvider? timeProvider = null)
     {
-        _timeProvider = timeProvider ??  TimeProvider.System;
-        _logger = (loggerFactory).CreateLogger<InMemoryStateStoreAsync>();
+        _timeProvider = timeProvider ?? TimeProvider.System;
+        _logger = loggerFactory.CreateLogger<InMemoryStateStoreAsync>();
     }
 
     /// <summary>
@@ -64,9 +63,10 @@ public class InMemoryStateStoreAsync : IAmAStateStoreAsync
         var dueJobs = _jobs.Values
             .Where(job =>
             {
-                if (job is null || !job.IsScheduled)  return false;
+                if (job is null || !job.IsScheduled)
+                    return false;
                 _sinceTime = _timeProvider.GetUtcNow().Subtract(jobAge);
-                return  job.DueTime > _sinceTime;
+                return job.DueTime > _sinceTime;
             })
             .ToList();
 
@@ -91,7 +91,7 @@ public class InMemoryStateStoreAsync : IAmAStateStoreAsync
         tcs.SetResult(job);
         return tcs.Task;
     }
-    
+
     /// <summary>
     /// Saves the job asynchronously.
     /// </summary>
@@ -101,9 +101,11 @@ public class InMemoryStateStoreAsync : IAmAStateStoreAsync
     /// <returns>A task that represents the asynchronous save operation.</returns>
     public Task SaveJobAsync<TData>(Job<TData>? job, CancellationToken cancellationToken = default(CancellationToken))
     {
-        if (cancellationToken.IsCancellationRequested) return Task.FromCanceled(cancellationToken);
+        if (cancellationToken.IsCancellationRequested)
+            return Task.FromCanceled(cancellationToken);
 
-        if (job is null) return Task.CompletedTask;
+        if (job is null)
+            return Task.CompletedTask;
 
         try
         {

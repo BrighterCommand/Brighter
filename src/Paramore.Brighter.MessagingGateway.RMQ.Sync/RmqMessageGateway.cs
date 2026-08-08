@@ -26,7 +26,6 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Polly;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -64,7 +63,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         ///  Use if you need to inject a test logger
         /// </summary>
         /// <param name="connection">The amqp uri and exchange to connect to</param>
-        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger; defaults to <see cref="NullLoggerFactory"/></param>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger.</param>
         protected RmqMessageGateway(RmqMessagingGatewayConnection connection, ILoggerFactory loggerFactory)
         {
             LoggerFactory = loggerFactory;
@@ -118,7 +117,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         protected void EnsureBroker(ChannelName? queueName = null, OnMissingChannel makeExchange = OnMissingChannel.Create)
         {
             queueName ??= new ChannelName("Producer Channel");
-            
+
             ConnectWithCircuitBreaker(queueName, makeExchange);
         }
 
@@ -129,7 +128,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
         private void ConnectWithRetry(ChannelName queueName, OnMissingChannel makeExchange)
         {
-            _retryPolicy.Execute((_) => ConnectToBroker(makeExchange), new Dictionary<string, object> {{"queueName", queueName.Value}});
+            _retryPolicy.Execute((_) => ConnectToBroker(makeExchange), new Dictionary<string, object> { { "queueName", queueName.Value } });
         }
 
         protected virtual void ConnectToBroker(OnMissingChannel makeExchange)
@@ -138,14 +137,14 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             {
                 if (Connection.Name is null)
                     throw new InvalidOperationException("RMQMessagingGateway: Connection must have a name");
-                
+
                 if (Connection.AmpqUri is null)
                     throw new InvalidOperationException("RMQMessagingGateway: Connection must have an AMPQ URI");
-                
+
                 var connection = new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat, LoggerFactory).GetConnection(_connectionFactory);
 
                 if (connection is null)
-                    throw new InvalidOperationException($"RMQMessagingGateway: Connection to {Connection.AmpqUri.GetSanitizedUri()} failed" );
+                    throw new InvalidOperationException($"RMQMessagingGateway: Connection to {Connection.AmpqUri.GetSanitizedUri()} failed");
 
                 connection.ConnectionBlocked += HandleBlocked;
                 connection.ConnectionUnblocked += HandleUnBlocked;

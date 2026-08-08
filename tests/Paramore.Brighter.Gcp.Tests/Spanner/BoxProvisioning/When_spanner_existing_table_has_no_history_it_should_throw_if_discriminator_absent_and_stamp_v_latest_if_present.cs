@@ -52,7 +52,7 @@ public class SpannerOutboxBootstrapDiscriminatorTests : IAsyncLifetime
         var config = new RelationalDatabaseConfiguration(
             _connectionString,
             outBoxTableName: _tableName);
-        var runner = new SpannerBoxMigrationRunner(config);
+        var runner = new SpannerBoxMigrationRunner(config, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _provisioner = new SpannerOutboxProvisioner(
             new SpannerBoxDetectionHelper(),
             new SpannerPayloadModeValidator(),
@@ -175,7 +175,7 @@ public class SpannerInboxBootstrapDiscriminatorTests : IAsyncLifetime
         var config = new RelationalDatabaseConfiguration(
             _connectionString,
             inboxTableName: _tableName);
-        var runner = new SpannerBoxMigrationRunner(config);
+        var runner = new SpannerBoxMigrationRunner(config, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _provisioner = new SpannerInboxProvisioner(
             new SpannerBoxDetectionHelper(),
             new SpannerPayloadModeValidator(),

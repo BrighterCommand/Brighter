@@ -200,10 +200,10 @@ public sealed class PostgresLegacySchemaCausationCompatibilityTests : IDisposabl
             _connectionString,
             databaseName: "brightertests",
             outBoxTableName: tableName,
-            binaryMessagePayload: false));
+            binaryMessagePayload: false), logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.PostgreSql.PostgreSqlOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 
     private IAmAnInboxSync InboxFor(string tableName)
-        => new PostgreSqlInbox(new RelationalDatabaseConfiguration(_connectionString, inboxTableName: tableName));
+        => new PostgreSqlInbox(new RelationalDatabaseConfiguration(_connectionString, inboxTableName: tableName), logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Inbox.Postgres.PostgreSqlInbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 
     private void ExecuteDdl(string ddl)
     {

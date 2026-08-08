@@ -27,7 +27,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
@@ -56,21 +55,23 @@ namespace Paramore.Brighter
         public OutboxArchiver(
             IAmAnOutbox outbox,
             IAmAnArchiveProvider archiveProvider,
+            ILoggerFactory loggerFactory,
             IAmARequestContextFactory? requestContextFactory = null,
             int archiveBatchSize = 100,
             IAmABrighterTracer? tracer = null,
-            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
-            ILoggerFactory loggerFactory)
+            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
             _archiveProvider = archiveProvider;
             _archiveBatchSize = archiveBatchSize;
             _tracer = tracer;
             _instrumentationOptions = instrumentationOptions;
             _requestContextFactory = requestContextFactory ?? new InMemoryRequestContextFactory();
-            _logger = (loggerFactory).CreateLogger<OutboxArchiver<TMessage, TTransaction>>();
-            
-            if (outbox is IAmAnOutboxSync<TMessage, TTransaction> syncOutbox) _outBox = syncOutbox;
-            if (outbox is IAmAnOutboxAsync<TMessage, TTransaction> asyncOutbox) _asyncOutbox = asyncOutbox;
+            _logger = loggerFactory.CreateLogger<OutboxArchiver<TMessage, TTransaction>>();
+
+            if (outbox is IAmAnOutboxSync<TMessage, TTransaction> syncOutbox)
+                _outBox = syncOutbox;
+            if (outbox is IAmAnOutboxAsync<TMessage, TTransaction> asyncOutbox)
+                _asyncOutbox = asyncOutbox;
         }
 
         /// <summary>
@@ -96,25 +97,28 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="dispatchedSince">How stale is the message that we want archive</param>
         /// <param name="requestContext">The context for the request pipeline; gives us the OTel span for example</param>
-         public void Archive(TimeSpan dispatchedSince, RequestContext? requestContext = null)
+        public void Archive(TimeSpan dispatchedSince, RequestContext? requestContext = null)
         {
             requestContext ??= _requestContextFactory.Create();
             //This is an archive span parent; we expect individual archiving operations for messages to have their own spans
             var parentSpan = requestContext.Span;
             var span = _tracer?.CreateArchiveSpan(requestContext.Span, dispatchedSince, options: _instrumentationOptions);
             requestContext.Span = span;
-            
+
             try
             {
-                if (_outBox is null) throw new ArgumentException(NoSyncOutboxError);
-                if (_archiveProvider is null) throw new ArgumentException(NoArchiveProviderError);
+                if (_outBox is null)
+                    throw new ArgumentException(NoSyncOutboxError);
+                if (_archiveProvider is null)
+                    throw new ArgumentException(NoArchiveProviderError);
                 var messages = _outBox
                     .DispatchedMessages(dispatchedSince, requestContext, _archiveBatchSize)
                     .ToArray();
 
                 Log.FoundMessagesToArchive(_logger, messages.Length, _archiveBatchSize);
 
-                if (messages.Length <= 0) return;
+                if (messages.Length <= 0)
+                    return;
 
                 foreach (var message in messages)
                 {
@@ -153,11 +157,13 @@ namespace Paramore.Brighter
             var parentSpan = requestContext.Span;
             var span = _tracer?.CreateArchiveSpan(requestContext.Span, dispatchedSince, options: _instrumentationOptions);
             requestContext.Span = span;
-            
+
             try
             {
-                if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
-                if (_archiveProvider is null) throw new ArgumentException(NoArchiveProviderError);
+                if (_asyncOutbox is null)
+                    throw new ArgumentException(NoAsyncOutboxError);
+                if (_archiveProvider is null)
+                    throw new ArgumentException(NoArchiveProviderError);
                 var messages = (await _asyncOutbox.DispatchedMessagesAsync(
                     dispatchedSince, requestContext, pageSize: _archiveBatchSize,
                     cancellationToken: cancellationToken

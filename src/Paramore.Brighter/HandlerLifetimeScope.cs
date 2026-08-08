@@ -25,7 +25,6 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter
@@ -41,17 +40,17 @@ namespace Paramore.Brighter
 
         public HandlerLifetimeScope(IAmAHandlerFactorySync handlerFactorySync, ILoggerFactory loggerFactory)
             : this(handlerFactorySync, null, loggerFactory)
-        {}
+        { }
 
         public HandlerLifetimeScope(IAmAHandlerFactoryAsync asyncHandlerFactory, ILoggerFactory loggerFactory)
             : this(null, asyncHandlerFactory, loggerFactory)
-        {}
+        { }
 
         public HandlerLifetimeScope(IAmAHandlerFactorySync? handlerFactorySync, IAmAHandlerFactoryAsync? asyncHandlerFactory, ILoggerFactory loggerFactory)
         {
             _handlerFactorySync = handlerFactorySync;
             _asyncHandlerFactory = asyncHandlerFactory;
-            _logger = (loggerFactory).CreateLogger<HandlerLifetimeScope>();
+            _logger = loggerFactory.CreateLogger<HandlerLifetimeScope>();
         }
 
         public int TrackedItemCount => _trackedObjects.Count + _trackedAsyncObjects.Count;

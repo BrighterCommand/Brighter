@@ -27,7 +27,6 @@ using System;
 using System.Data;
 using System.Data.Common;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using MySqlConnector;
 using Paramore.Brighter.MySql;
 using Paramore.Brighter.Observability;
@@ -46,12 +45,12 @@ namespace Paramore.Brighter.Outbox.MySql
         /// </summary>
         /// <param name="configuration">The configuration to connect to this data store</param>
         /// <param name="connectionProvider">Provides a connection to the Db that allows us to enlist in an ambient transaction</param>
-        /// <param name="logger">The logger to use; defaults to a null logger when not supplied</param>
+        /// <param name="logger">The logger to use.</param>
         public MySqlOutbox(IAmARelationalDatabaseConfiguration configuration,
             IAmARelationalDbConnectionProvider connectionProvider,
-            ILogger<MySqlOutbox>? logger)
+            ILogger<MySqlOutbox> logger)
             : base(DbSystem.MySql, configuration, connectionProvider,
-                new MySqlQueries(), logger ?? NullLogger<MySqlOutbox>.Instance)
+                new MySqlQueries(), logger)
         {
         }
 
@@ -59,7 +58,7 @@ namespace Paramore.Brighter.Outbox.MySql
         /// Initializes a new instance of the <see cref="MySqlOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration to connect to this data store</param>
-        /// <param name="logger">The logger to use; defaults to a null logger when not supplied</param>
+        /// <param name="logger">The logger to use.</param>
         public MySqlOutbox(IAmARelationalDatabaseConfiguration configuration, ILogger<MySqlOutbox> logger)
             : this(configuration, new MySqlConnectionProvider(configuration), logger)
         {
@@ -82,7 +81,7 @@ namespace Paramore.Brighter.Outbox.MySql
         {
             return ex is MySqlException { Number: MySqlDuplicateKeyError };
         }
-        
+
         /// <inheritdoc />
         protected override DateTimeOffset GetTimeStamp(DbDataReader dr)
         {
@@ -93,7 +92,7 @@ namespace Paramore.Brighter.Outbox.MySql
 
             var reader = (MySqlDataReader)dr;
             var dataTime = reader.GetDateTimeOffset(ordinal);
-            return dataTime; 
+            return dataTime;
         }
     }
 }

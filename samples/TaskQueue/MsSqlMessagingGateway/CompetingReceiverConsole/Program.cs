@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using CompetingReceiverConsole;
@@ -27,16 +27,16 @@ var messagingConfiguration = new RelationalDatabaseConfiguration(
     @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;",
     databaseName: "BrighterSqlQueue",
     queueStoreTable: "QueueData");
-var messageConsumerFactory = new MsSqlMessageConsumerFactory(messagingConfiguration);
+var messageConsumerFactory = new MsSqlMessageConsumerFactory(messagingConfiguration, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
 builder.Services.AddConsumers(options =>
 {
     options.Subscriptions = subscriptions;
-    options.DefaultChannelFactory = new ChannelFactory(messageConsumerFactory);
+    options.DefaultChannelFactory = new ChannelFactory(messageConsumerFactory, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.MessagingGateway.MsSql.ChannelFactory>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 })
 // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
 // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-.UseScheduler(new InMemorySchedulerFactory())
+.UseScheduler(new InMemorySchedulerFactory(loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance))
 .AutoFromAssemblies();
 
 builder.Services.AddHostedService<ServiceActivatorHostedService>();

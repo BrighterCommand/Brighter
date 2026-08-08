@@ -53,7 +53,7 @@ namespace GreetingsSender
 
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddSingleton<ILoggerFactory>(new SerilogLoggerFactory());
-            
+
             if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
             {
                 var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
@@ -70,9 +70,9 @@ namespace GreetingsSender
                             FindTopicBy = TopicFindBy.Convention,
                             MakeChannels = OnMissingChannel.Create
                         }
-                    ]
-                ).Create();
-                
+                    ],
+                    loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create();
+
                 serviceCollection.AddBrighter()
                     .AddProducers((configure) =>
                     {
@@ -83,20 +83,20 @@ namespace GreetingsSender
                 var serviceProvider = serviceCollection.BuildServiceProvider();
 
                 var commandProcessor = serviceProvider.GetRequiredService<IAmACommandProcessor>();
-                
+
                 Console.WriteLine($"Sending Event to SNS topic {topic} ");
 
                 commandProcessor.Post(new GreetingEvent("Hi Ian"));
-                
+
                 Console.WriteLine($"Sent Event to SNS topic {topic} ");
             }
         }
-        
+
         public static string CreateString(int length)
         {
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
             return new string(Enumerable.Repeat(chars, length)
                 .Select(s => s[new Random().Next(s.Length)]).ToArray());
-        }    
+        }
     }
 }

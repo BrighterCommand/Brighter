@@ -2,7 +2,6 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql;
 
@@ -28,13 +27,13 @@ public partial class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWith
     /// Initializes a new instance of the <see cref="ChannelFactory"/> class.
     /// </summary>
     /// <param name="msSqlMessageConsumerFactory">The factory for creating MS SQL message consumers.</param>
-    /// <param name="logger">The optional logger; defaults to a no-op logger.</param>
+    /// <param name="logger">The logger.</param>
     /// <exception cref="ArgumentNullException">Thrown when the msSqlMessageConsumerFactory is null.</exception>
-    public ChannelFactory(MsSqlMessageConsumerFactory msSqlMessageConsumerFactory, ILogger<ChannelFactory>? logger)
+    public ChannelFactory(MsSqlMessageConsumerFactory msSqlMessageConsumerFactory, ILogger<ChannelFactory> logger)
     {
         _msSqlMessageConsumerFactory = msSqlMessageConsumerFactory ??
                                        throw new ArgumentNullException(nameof(msSqlMessageConsumerFactory));
-        _logger = logger ?? NullLogger<ChannelFactory>.Instance;
+        _logger = logger;
     }
 
     /// <summary>
@@ -93,7 +92,7 @@ public partial class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWith
 
         Log.MsSqlInputChannelFactoryCreateInputChannel(_logger, subscription.ChannelName, subscription.RoutingKey.Value);
         var channel = new ChannelAsync(
-            subscription.ChannelName, 
+            subscription.ChannelName,
             subscription.RoutingKey,
             _msSqlMessageConsumerFactory.CreateAsync(subscription),
             subscription.BufferSize);

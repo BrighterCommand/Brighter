@@ -24,7 +24,6 @@ THE SOFTWARE. */
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Paramore.Brighter.Locking.DynamoDB.V4;
 
@@ -37,7 +36,7 @@ public partial class DynamoDbLockingProvider : IDistributedLock
     private readonly ILogger _logger;
 
     public DynamoDbLockingProvider(IAmazonDynamoDB dynamoDb, DynamoDbLockingProviderOptions options, ILoggerFactory loggerFactory)
-        :this(dynamoDb, options, TimeProvider.System, loggerFactory)
+        : this(dynamoDb, options, TimeProvider.System, loggerFactory)
     {
     }
 
@@ -46,7 +45,7 @@ public partial class DynamoDbLockingProvider : IDistributedLock
         _dynamoDb = dynamoDb;
         _options = options;
         _timeProvider = timeProvider;
-        _logger = (loggerFactory).CreateLogger<DynamoDbLockingProvider>();
+        _logger = loggerFactory.CreateLogger<DynamoDbLockingProvider>();
     }
 
     /// <summary>

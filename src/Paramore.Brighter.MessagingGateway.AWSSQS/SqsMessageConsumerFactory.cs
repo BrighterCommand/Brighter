@@ -31,7 +31,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     public class SqsMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly AWSMessagingGatewayConnection _awsConnection;
-        private readonly ILoggerFactory? _loggerFactory;
+        private readonly ILoggerFactory _loggerFactory;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SqsMessageConsumerFactory"/> class.
@@ -61,12 +61,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         private SqsMessageConsumer CreateImpl(Subscription subscription)
         {
             SqsSubscription? sqsSubscription = subscription as SqsSubscription;
-            if (sqsSubscription == null) throw new ConfigurationException("We expect an SqsSubscription or SqsSubscription<T> as a parameter");
+            if (sqsSubscription == null)
+                throw new ConfigurationException("We expect an SqsSubscription or SqsSubscription<T> as a parameter");
 
             //if it is a url, don't alter; if it is just a name, ensure it is valid
             ChannelName queueName = subscription.ChannelName;
             if (sqsSubscription.FindQueueBy == QueueFindBy.Name)
-               queueName =queueName.ToValidSQSQueueName(sqsSubscription.QueueAttributes.Type == SqsType.Fifo);
+                queueName = queueName.ToValidSQSQueueName(sqsSubscription.QueueAttributes.Type == SqsType.Fifo);
 
             // Extract DLQ and invalid message routing keys if subscription supports them
             RoutingKey? deadLetterRoutingKey = null;

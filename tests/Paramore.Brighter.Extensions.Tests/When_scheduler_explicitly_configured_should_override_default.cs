@@ -37,7 +37,7 @@ public class When_scheduler_explicitly_configured_should_override_default
         // Arrange — configure a custom scheduler factory via UseScheduler
         var customFactory = new StubSchedulerFactory();
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddBrighter()
             .UseScheduler(customFactory);
         var provider = services.BuildServiceProvider();
@@ -57,7 +57,7 @@ public class When_scheduler_explicitly_configured_should_override_default
         // Arrange — configure a custom scheduler factory via UseScheduler
         var customFactory = new StubSchedulerFactory();
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddBrighter()
             .UseScheduler(customFactory);
         var provider = services.BuildServiceProvider();
@@ -76,7 +76,7 @@ public class When_scheduler_explicitly_configured_should_override_default
         // Arrange — configure a custom scheduler factory via UseScheduler
         var customFactory = new StubSchedulerFactory();
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddBrighter()
             .UseScheduler(customFactory);
         var provider = services.BuildServiceProvider();

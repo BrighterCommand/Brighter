@@ -2,7 +2,6 @@
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 
@@ -19,8 +18,8 @@ public partial class GcpPullMessageConsumer(
     ILoggerFactory loggerFactory)
     : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
 {
-    private readonly ILogger _logger = (loggerFactory).CreateLogger<GcpPullMessageConsumer>();
-    
+    private readonly ILogger _logger = loggerFactory.CreateLogger<GcpPullMessageConsumer>();
+
     /// <summary>
     /// Synchronously acknowledges a message.
     /// </summary>
@@ -153,7 +152,7 @@ public partial class GcpPullMessageConsumer(
             response = await client.PullAsync(
                 new PullRequest
                 {
-                    SubscriptionAsSubscriptionName = subscriptionName, 
+                    SubscriptionAsSubscriptionName = subscriptionName,
                     MaxMessages = batchSize,
                 },
                 cancellationToken);
@@ -178,7 +177,7 @@ public partial class GcpPullMessageConsumer(
         return response.ReceivedMessages.Select(Parser.ToBrighterMessage).ToArray();
     }
 
-    
+
     /// <summary>
     /// Synchronously receives a batch of messages from the subscription using the Pull API.
     /// </summary>
@@ -193,7 +192,8 @@ public partial class GcpPullMessageConsumer(
             var client = connection.GetOrCreateSubscriberServiceApiClient();
             response = client.Pull(new PullRequest
             {
-                SubscriptionAsSubscriptionName = subscriptionName, MaxMessages = batchSize
+                SubscriptionAsSubscriptionName = subscriptionName,
+                MaxMessages = batchSize
             });
 
             if (response.ReceivedMessages.Count == 0)
@@ -215,8 +215,8 @@ public partial class GcpPullMessageConsumer(
 
         return response.ReceivedMessages.Select(Parser.ToBrighterMessage).ToArray();
     }
-    
-       /// <summary>
+
+    /// <summary>
     /// Synchronously rejects a message.
     /// </summary>
     /// <param name="message">The message to reject.</param>
@@ -244,7 +244,7 @@ public partial class GcpPullMessageConsumer(
 
         return true;
     }
-    
+
     /// <summary>
     /// Asynchronously rejects a message.
     /// </summary>
@@ -306,7 +306,7 @@ public partial class GcpPullMessageConsumer(
             return false;
         }
     }
-    
+
     /// <summary>
     /// Asynchronously requeues a message by setting its acknowledgment deadline to zero seconds.
     /// This tells Pub/Sub to immediately redeliver the message according to the subscription's retry policy.

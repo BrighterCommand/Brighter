@@ -19,7 +19,7 @@ public class TransformPipelineBuilderFailureReleaseTests
         var mapperRegistry = new MessageMapperRegistry(mapperFactory, null);
         mapperRegistry.Register<MinimalCommand, MapperWithUncreatableTransform>();
 
-        var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, new NullTransformerFactory());
+        var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, new NullTransformerFactory(), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //act — the mapper is created, then building the transforms fails, so no pipeline is ever
         //constructed to take ownership of it
@@ -38,7 +38,7 @@ public class TransformPipelineBuilderFailureReleaseTests
         var mapperRegistry = new MessageMapperRegistry(mapperFactory, null);
         mapperRegistry.Register<MinimalCommand, MapperWithUncreatableTransform>();
 
-        var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, new NullTransformerFactory());
+        var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, new NullTransformerFactory(), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //act
         Assert.Throws<ConfigurationException>(() => pipelineBuilder.BuildUnwrapPipeline<MinimalCommand>());
@@ -57,7 +57,7 @@ public class TransformPipelineBuilderFailureReleaseTests
         mapperRegistry.RegisterAsync<MinimalCommand, AsyncMapperWithUncreatableTransform>();
 
         var pipelineBuilder = new TransformPipelineBuilderAsync(
-            mapperRegistry, new NullTransformerFactoryAsync(), InstrumentationOptions.None);
+            mapperRegistry, new NullTransformerFactoryAsync(), global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, InstrumentationOptions.None);
 
         //act
         Assert.Throws<ConfigurationException>(() => pipelineBuilder.BuildWrapPipeline<MinimalCommand>());
@@ -76,7 +76,7 @@ public class TransformPipelineBuilderFailureReleaseTests
         mapperRegistry.RegisterAsync<MinimalCommand, AsyncMapperWithUncreatableTransform>();
 
         var pipelineBuilder = new TransformPipelineBuilderAsync(
-            mapperRegistry, new NullTransformerFactoryAsync(), InstrumentationOptions.None);
+            mapperRegistry, new NullTransformerFactoryAsync(), global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, InstrumentationOptions.None);
 
         //act
         Assert.Throws<ConfigurationException>(() => pipelineBuilder.BuildUnwrapPipeline<MinimalCommand>());
@@ -87,7 +87,7 @@ public class TransformPipelineBuilderFailureReleaseTests
 
     private static ScopeTracker BuildScopeTracker(out IServiceProvider trackingProvider, bool async = false)
     {
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         if (async)
             collection.AddTransient<AsyncMapperWithUncreatableTransform>();
         else

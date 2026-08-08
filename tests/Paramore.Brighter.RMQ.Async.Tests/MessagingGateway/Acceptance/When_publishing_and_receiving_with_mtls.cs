@@ -57,7 +57,7 @@ public class RmqMutualTlsAcceptanceTests : IDisposable
         };
 
         // Act
-        var producer = new RmqMessageProducer(connection);
+        var producer = new RmqMessageProducer(connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var message = new Message(
             new MessageHeader(Id.Random(), "test.mtls.topic.async", MessageType.MT_EVENT),
             new MessageBody("Test message over mTLS (async)")
@@ -99,11 +99,11 @@ public class RmqMutualTlsAcceptanceTests : IDisposable
         };
 
         // Act - Create consumer first to ensure queue exists and is bound
-        var consumer = new RmqMessageConsumer(connection, queueName, routingKey, false);
+        var consumer = new RmqMessageConsumer(connection, queueName, routingKey, false, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         consumer.Purge(); // Ensure queue is created and bound before publishing
 
         // Act - Publish
-        var producer = new RmqMessageProducer(connection);
+        var producer = new RmqMessageProducer(connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var sentMessage = new Message(
             new MessageHeader(Id.Random(), routingKey, MessageType.MT_EVENT),
             new MessageBody("Round-trip test over mTLS (async)")

@@ -4,7 +4,6 @@ using System.Data.Common;
 using Google.Cloud.Spanner.Data;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Spanner;
 
@@ -31,16 +30,16 @@ namespace Paramore.Brighter.Inbox.Spanner;
 public class SpannerInboxAsync(
     IAmARelationalDatabaseConfiguration configuration,
     IAmARelationalDbConnectionProvider connectionProvider,
-    ILogger<SpannerInboxAsync>? logger)
+    ILogger<SpannerInboxAsync> logger)
     : RelationalDatabaseInbox(DbSystem.Spanner, configuration, connectionProvider,
-        new SpannerSqlQueries(), logger ?? NullLogger<SpannerInboxAsync>.Instance)
+        new SpannerSqlQueries(), logger)
 {
     public SpannerInboxAsync(IAmARelationalDatabaseConfiguration configuration, ILogger<SpannerInboxAsync> logger)
         : this(configuration, new SpannerConnectionProvider(configuration), logger)
     {
 
     }
-    
+
     /// <inheritdoc />
     protected override DbCommand CreateCommand(DbConnection connection, string sqlText, int outBoxTimeout,
         params IDbDataParameter[] parameters)
@@ -90,11 +89,11 @@ public class SpannerInboxAsync(
 
     protected override IDbDataParameter CreateJsonSqlParameter(string parameterName, object? value)
     {
-        return new SpannerParameter 
+        return new SpannerParameter
         {
-            ParameterName = parameterName, 
+            ParameterName = parameterName,
             SpannerDbType = SpannerDbType.Json,
-            Value = value ?? DBNull.Value 
+            Value = value ?? DBNull.Value
         };
     }
 

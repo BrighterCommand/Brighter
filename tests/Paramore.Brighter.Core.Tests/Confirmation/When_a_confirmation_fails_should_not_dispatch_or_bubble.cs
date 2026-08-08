@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
             // deterministic.
             var bus = new InternalBus();
             _outbox = new InMemoryOutbox(_timeProvider);
-            _producer = new InMemoryMessageProducer(bus, new Publication { Topic = _topic })
+            _producer = new InMemoryMessageProducer(bus, Initializer.TestLoggerFactory, new Publication { Topic = _topic })
             {
                 UseAsyncPublishConfirmation = true,
                 PublishFailurePredicate = _ => true
@@ -73,7 +73,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
                 tracer: null,
                 new FindPublicationByPublicationTopicOrRequestType(),
                 outbox: _outbox,
-                timeProvider: _timeProvider);
+                timeProvider: _timeProvider, loggerFactory: Initializer.TestLoggerFactory);
 
             _message = new Message(
                 new MessageHeader(new Id(Guid.NewGuid().ToString()), _topic, MessageType.MT_EVENT),

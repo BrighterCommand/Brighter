@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Greetings.Ports.CommandHandlers;
 using Greetings.Ports.Events;
 using Microsoft.Extensions.DependencyInjection;
@@ -42,7 +42,7 @@ var subscriptions = new Subscription[]
 //TODO: add your ASB qualified name here
 var clientProvider = new ServiceBusConnectionStringClientProvider("Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;");
 
-var asbConsumerFactory = new AzureServiceBusConsumerFactory(clientProvider);
+var asbConsumerFactory = new AzureServiceBusConsumerFactory(clientProvider, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 builder.Services.AddConsumers(options =>
 {
     options.Subscriptions = subscriptions;

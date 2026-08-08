@@ -31,7 +31,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Tasks;
 using Polly.CircuitBreaker;
@@ -86,12 +85,13 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     /// <param name="makeChannels">Should we validate, or create missing channels</param>
     /// <param name="queueType">The type of queue to use - Classic or Quorum; defaults to Classic</param>
     /// <param name="scheduler">Optional scheduler for delayed requeue operations</param>
-    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger; defaults to <see cref="NullLoggerFactory"/></param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger.</param>
     public RmqMessageConsumer(
         RmqMessagingGatewayConnection connection,
         ChannelName queueName,
         RoutingKey routingKey,
         bool isDurable,
+        ILoggerFactory loggerFactory,
         bool highAvailability = false,
         int batchSize = 1,
         ChannelName? deadLetterQueueName = null,
@@ -100,10 +100,9 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         int? maxQueueLength = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create,
         QueueType queueType = QueueType.Classic,
-        IAmAMessageScheduler? scheduler = null,
-        ILoggerFactory loggerFactory)
-        : this(connection, queueName, new RoutingKeys(routingKey), isDurable, highAvailability,
-            batchSize, deadLetterQueueName, deadLetterRoutingKey, ttl, maxQueueLength, makeChannels, queueType, scheduler, loggerFactory)
+        IAmAMessageScheduler? scheduler = null)
+        : this(connection, queueName, new RoutingKeys(routingKey), isDurable, loggerFactory, highAvailability,
+            batchSize, deadLetterQueueName, deadLetterRoutingKey, ttl, maxQueueLength, makeChannels, queueType, scheduler)
     {
     }
 
@@ -123,12 +122,13 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     /// <param name="makeChannels">Should we validate or create missing channels</param>
     /// <param name="queueType">The type of queue to use - Classic or Quorum; defaults to Classic</param>
     /// <param name="scheduler">Optional scheduler for delayed requeue operations</param>
-    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger; defaults to <see cref="NullLoggerFactory"/></param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger.</param>
     public RmqMessageConsumer(
         RmqMessagingGatewayConnection connection,
         ChannelName queueName,
         RoutingKeys routingKeys,
         bool isDurable,
+        ILoggerFactory loggerFactory,
         bool highAvailability = false,
         int batchSize = 1,
         ChannelName? deadLetterQueueName = null,
@@ -137,11 +137,10 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         int? maxQueueLength = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create,
         QueueType queueType = QueueType.Classic,
-        IAmAMessageScheduler? scheduler = null,
-        ILoggerFactory loggerFactory)
+        IAmAMessageScheduler? scheduler = null)
         : base(connection, loggerFactory)
     {
-        _logger = (loggerFactory).CreateLogger<RmqMessageConsumer>();
+        _logger = loggerFactory.CreateLogger<RmqMessageConsumer>();
         _messageCreator = new RmqMessageCreator(LoggerFactory.CreateLogger<RmqMessageCreator>());
         _queueName = queueName;
         _routingKeys = routingKeys;
@@ -172,7 +171,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     /// Acknowledges the specified message.
     /// </summary>
     /// <param name="message">The message.</param>
-    public void Acknowledge(Message message) => BrighterAsyncContext.Run(async () =>await AcknowledgeAsync(message));
+    public void Acknowledge(Message message) => BrighterAsyncContext.Run(async () => await AcknowledgeAsync(message));
 
     public async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default)
     {
@@ -180,9 +179,10 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         try
         {
             await EnsureBrokerAsync(cancellationToken: cancellationToken);
-            
-            if (Channel is null) throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
-            
+
+            if (Channel is null)
+                throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
+
             Log.AcknowledgingMessage(_logger, message.Id.Value, deliveryTag);
             await Channel.BasicAckAsync(deliveryTag, false, cancellationToken);
         }
@@ -204,8 +204,9 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         {
             //Why bind a queue? Because we use purge to initialize a queue for RPC
             await EnsureChannelAsync(cancellationToken);
-            
-            if (Channel is null) throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
+
+            if (Channel is null)
+                throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
 
             Log.PurgingChannel(_logger, _queueName.Value);
 
@@ -229,7 +230,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
             throw;
         }
     }
-    
+
     /// <summary>
     /// Receives the specified queue name.
     /// </summary>
@@ -240,7 +241,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     /// <param name="timeOut">The timeout in milliseconds. We retry on timeout 5 ms intervals, with a min of 5ms
     /// until the timeout value is reached. </param>
     /// <returns>Message.</returns>
-    public Message[] Receive(TimeSpan? timeOut = null) => BrighterAsyncContext.Run(() => ReceiveAsync(timeOut)); 
+    public Message[] Receive(TimeSpan? timeOut = null) => BrighterAsyncContext.Run(() => ReceiveAsync(timeOut));
 
     /// <summary>
     /// Receives the specified queue name.
@@ -257,20 +258,24 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         try
         {
             await EnsureChannelAsync(cancellationToken);
-            
-            if (_consumer is null) throw new ChannelFailureException($"RmwMessageConsumer: consumer for {_queueName.Value} is null");
-            if (Connection.Exchange is null) throw new ConfigurationException($"RmqMessageConsumer: exchange for {_queueName.Value} is null");
-           if (Connection.AmpqUri is null) throw new ConfigurationException($"RmqMessageConsumer: ampqUri for {_queueName.Value} is null");
+
+            if (_consumer is null)
+                throw new ChannelFailureException($"RmwMessageConsumer: consumer for {_queueName.Value} is null");
+            if (Connection.Exchange is null)
+                throw new ConfigurationException($"RmqMessageConsumer: exchange for {_queueName.Value} is null");
+            if (Connection.AmpqUri is null)
+                throw new ConfigurationException($"RmqMessageConsumer: ampqUri for {_queueName.Value} is null");
 
             Log.RetrievingNextMessage(_logger, _queueName.Value,
                 string.Join(";", _routingKeys.Select(rk => rk.Value)),
                 Connection.Exchange.Name,
                 Connection.AmpqUri.GetSanitizedUri());
-        
+
             var (resultCount, results) = await _consumer.DeQueue(timeOut.Value, _batchSize);
 
-            if (results is not null && results.Length == 0) return [_noopMessage];
-            
+            if (results is not null && results.Length == 0)
+                return [_noopMessage];
+
             var messages = new Message[resultCount];
             for (var i = 0; i < resultCount; i++)
             {
@@ -307,7 +312,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
 
         return [_noopMessage]; // Default return in case of exception
     }
-    
+
     /// <summary>
     /// Nacks the specified message, releasing it back to RabbitMQ for redelivery.
     /// Sync over Async
@@ -327,7 +332,8 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         {
             await EnsureBrokerAsync(cancellationToken: cancellationToken);
 
-            if (Channel is null) throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
+            if (Channel is null)
+                throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
 
             Log.NackingMessage(_logger, message.Id.Value, deliveryTag);
             await Channel.BasicNackAsync(deliveryTag, false, true, cancellationToken);
@@ -357,14 +363,15 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         try
         {
             await EnsureBrokerAsync(_queueName, cancellationToken: cancellationToken);
-            
-            if (Channel is null) throw new InvalidOperationException($"RmqMessageConsumer: channel {_queueName.Value} is null");
-            
+
+            if (Channel is null)
+                throw new InvalidOperationException($"RmqMessageConsumer: channel {_queueName.Value} is null");
+
             var reasonString = reason is null ? nameof(RejectionReason.DeliveryError) : reason.RejectionReason.ToString();
             var description = reason is null ? "unknown" : reason.Description ?? "unknown";
-            
+
             Log.NoAckMessage(_logger, message.Id.Value, message.DeliveryTag, reasonString, description);
-            
+
             //if we have a DLQ, this will force over to the DLQ
             await Channel.BasicRejectAsync(message.DeliveryTag, false, cancellationToken);
             return true;
@@ -434,7 +441,8 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
 
             await EnsureChannelAsync(cancellationToken);
 
-            if (Channel is null) throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
+            if (Channel is null)
+                throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
 
             // Step 1: Publish the message back to the queue first.
             // This ordering ensures at-least-once delivery: if publish fails, the original remains unacked.
@@ -465,7 +473,7 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
             return false;
         }
     }
- 
+
     protected virtual async Task EnsureChannelAsync(CancellationToken cancellationToken = default)
     {
         if (Channel == null || Channel.IsClosed)
@@ -487,10 +495,13 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
             }
 
             await CreateConsumerAsync(cancellationToken);
-            
-            if (Channel is null) throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
-            if (Connection.Exchange is null) throw new ConfigurationException($"RmqMessageConsumer: exchange for {_queueName.Value} is null");
-           if (Connection.AmpqUri is null) throw new ConfigurationException($"RmqMessageConsumer: ampqUri for {_queueName.Value} is null");
+
+            if (Channel is null)
+                throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
+            if (Connection.Exchange is null)
+                throw new ConfigurationException($"RmqMessageConsumer: exchange for {_queueName.Value} is null");
+            if (Connection.AmpqUri is null)
+                throw new ConfigurationException($"RmqMessageConsumer: ampqUri for {_queueName.Value} is null");
 
             Log.CreatedChannel(_logger, Channel.ChannelNumber, _queueName.Value,
                 string.Join(";", _routingKeys.Select(rk => rk.Value)),
@@ -514,13 +525,17 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
 
     private async Task CreateConsumerAsync(CancellationToken cancellationToken)
     {
-        if (Channel is null) throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
-        if (Connection.Exchange is null) throw new ConfigurationException($"RmqMessageConsumer: exchange for {_queueName.Value} is null");
-       if (Connection.AmpqUri is null) throw new ConfigurationException($"RmqMessageConsumer: ampqUri for {_queueName.Value} is null");
-        
+        if (Channel is null)
+            throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
+        if (Connection.Exchange is null)
+            throw new ConfigurationException($"RmqMessageConsumer: exchange for {_queueName.Value} is null");
+        if (Connection.AmpqUri is null)
+            throw new ConfigurationException($"RmqMessageConsumer: ampqUri for {_queueName.Value} is null");
+
         _consumer = new PullConsumer(Channel, LoggerFactory);
-        if (_consumer is null) throw new InvalidOperationException($"RmqMessageConsumer: consumer for {_queueName.Value} is null");
-        
+        if (_consumer is null)
+            throw new InvalidOperationException($"RmqMessageConsumer: consumer for {_queueName.Value} is null");
+
         await _consumer.SetChannelBatchSizeAsync(_batchSize);
 
         await Channel.BasicConsumeAsync(_queueName.Value,
@@ -540,14 +555,17 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
 
     private async Task CreateQueueAsync(CancellationToken cancellationToken)
     {
-        if (Channel is null) throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
-        if (Connection.Exchange is null) throw new ConfigurationException($"RmqMessageConsumer: exchange for {_queueName.Value} is null");
-       if (Connection.AmpqUri is null) throw new ConfigurationException($"RmqMessageConsumer: ampqUri for {_queueName.Value} is null");
-        
+        if (Channel is null)
+            throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
+        if (Connection.Exchange is null)
+            throw new ConfigurationException($"RmqMessageConsumer: exchange for {_queueName.Value} is null");
+        if (Connection.AmpqUri is null)
+            throw new ConfigurationException($"RmqMessageConsumer: ampqUri for {_queueName.Value} is null");
+
         Log.CreatingQueue(_logger, _queueName.Value, Connection.AmpqUri.GetSanitizedUri());
         await Channel.QueueDeclareAsync(_queueName.Value, _isDurable, false, false, SetQueueArguments(),
             cancellationToken: cancellationToken);
-        
+
         if (_hasDlq)
         {
             await Channel.QueueDeclareAsync(_deadLetterQueueName!.Value, _isDurable, false, false,
@@ -557,10 +575,13 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
 
     private async Task BindQueueAsync(CancellationToken cancellationToken)
     {
-        if (Channel is null) throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
-        if (Connection.Exchange is null) throw new ConfigurationException($"RmqMessageConsumer: exchange for {_queueName.Value} is null");
-       if (Connection.AmpqUri is null) throw new ConfigurationException($"RmqMessageConsumer: ampqUri for {_queueName.Value} is null");
-        
+        if (Channel is null)
+            throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
+        if (Connection.Exchange is null)
+            throw new ConfigurationException($"RmqMessageConsumer: exchange for {_queueName.Value} is null");
+        if (Connection.AmpqUri is null)
+            throw new ConfigurationException($"RmqMessageConsumer: ampqUri for {_queueName.Value} is null");
+
         foreach (var key in _routingKeys)
         {
             await Channel.QueueBindAsync(_queueName.Value, Connection.Exchange.Name, key.Value,
@@ -576,23 +597,29 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
 
     private async Task HandleExceptionAsync(Exception exception, bool resetConnection = false, CancellationToken cancellationToken = default)
     {
-        if (Connection.Exchange is null) throw new ConfigurationException($"RmqMessageConsumer: exchange for {_queueName.Value} is null", exception);
-       if (Connection.AmpqUri is null) throw new ConfigurationException($"RmqMessageConsumer: ampqUri for {_queueName.Value} is null", exception);
-        
+        if (Connection.Exchange is null)
+            throw new ConfigurationException($"RmqMessageConsumer: exchange for {_queueName.Value} is null", exception);
+        if (Connection.AmpqUri is null)
+            throw new ConfigurationException($"RmqMessageConsumer: ampqUri for {_queueName.Value} is null", exception);
+
         Log.ErrorListeningToQueue(_logger, exception, _queueName.Value,
             string.Join(";", _routingKeys.Select(rk => rk.Value)),
             Connection.Exchange.Name,
             Connection.AmpqUri.GetSanitizedUri());
-        
-        if (resetConnection) await ResetConnectionToBrokerAsync(cancellationToken);
+
+        if (resetConnection)
+            await ResetConnectionToBrokerAsync(cancellationToken);
         throw new ChannelFailureException("Error connecting to RabbitMQ, see inner exception for details", exception);
     }
 
     private async Task ValidateQueueAsync(CancellationToken cancellationToken)
     {
-        if (Channel is null) throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
-        if (Connection.Exchange is null) throw new ConfigurationException($"RmqMessageConsumer: exchange for {_queueName.Value} is null");
-       if (Connection.AmpqUri is null) throw new ConfigurationException($"RmqMessageConsumer: ampqUri for {_queueName.Value} is null");
+        if (Channel is null)
+            throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
+        if (Connection.Exchange is null)
+            throw new ConfigurationException($"RmqMessageConsumer: exchange for {_queueName.Value} is null");
+        if (Connection.AmpqUri is null)
+            throw new ConfigurationException($"RmqMessageConsumer: ampqUri for {_queueName.Value} is null");
 
         Log.ValidatingQueue(_logger, _queueName.Value, Connection.AmpqUri.GetSanitizedUri());
 
@@ -609,13 +636,13 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     private Dictionary<string, object?> SetQueueArguments()
     {
         var arguments = new Dictionary<string, object?>();
-        
+
         // Set queue type for quorum queues
         if (_queueType == QueueType.Quorum)
         {
             arguments.Add("x-queue-type", "quorum");
         }
-        
+
         if (_highAvailability)
         {
             // Only work for RabbitMQ Server version before 3.0
@@ -658,8 +685,9 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     private string GetDeadletterExchangeName()
     {
         //never likely to happen as caller will generally have asserted this
-        if (Connection.Exchange is null) throw new ConfigurationException($"RmqMessageConsumer: exchange for {_queueName.Value} is null");
-        
+        if (Connection.Exchange is null)
+            throw new ConfigurationException($"RmqMessageConsumer: exchange for {_queueName.Value} is null");
+
         return Connection.DeadLetterExchange is not null ? Connection.DeadLetterExchange.Name : Connection.Exchange.Name;
     }
 
@@ -678,7 +706,8 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     public override async ValueTask DisposeAsync()
     {
         await CancelConsumerAsync(CancellationToken.None);
-        if (_requeueProducer != null) await _requeueProducer.DisposeAsync();
+        if (_requeueProducer != null)
+            await _requeueProducer.DisposeAsync();
         await base.DisposeAsync();
         GC.SuppressFinalize(this);
     }

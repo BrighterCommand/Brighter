@@ -39,7 +39,7 @@ public class MediatorFailingChoiceFlowTests
             });
 
         commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
-            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
+            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<MyCommand>.ClearPipelineCache();
 
         var workflowData= new WorkflowTestData();
@@ -52,33 +52,33 @@ public class MediatorFailingChoiceFlowTests
             new FireAndForgetAsync<MyOtherCommand, WorkflowTestData>((data) => 
                 new MyOtherCommand { Value = (data.Bag["MyValue"] as string)! }),
             () => { _stepCompletedThree = true; },
-            null);
+            null, loggerFactory: Initializer.TestLoggerFactory);
         
         var stepTwo = new Sequential<WorkflowTestData>(
             "Test of Job SequenceStep Two",
             new FireAndForgetAsync<MyCommand, WorkflowTestData>((data) => 
                 new MyCommand { Value = (data.Bag["MyValue"] as string)! }),
             () => { _stepCompletedTwo = true; },
-            null);
+            null, loggerFactory: Initializer.TestLoggerFactory);
 
         var stepOne = new ExclusiveChoice<WorkflowTestData>(
             "Test of Job SequenceStep One",
             new Specification<WorkflowTestData>(data => data.Bag["MyValue"] as string == "Pass"),
             () => { _stepCompletedOne = true; },
             stepTwo,
-            stepThree);
+            stepThree, loggerFactory: Initializer.TestLoggerFactory);
        
         _job.InitSteps(stepOne);
         
-        InMemoryStateStoreAsync store = new();
-        _channel = new InMemoryJobChannel<WorkflowTestData>();
+        InMemoryStateStoreAsync store = new(loggerFactory: Initializer.TestLoggerFactory);
+        _channel = new InMemoryJobChannel<WorkflowTestData>(loggerFactory: Initializer.TestLoggerFactory);
 
         _scheduler = new Scheduler<WorkflowTestData>(
             _channel,
             store
         );
 
-        _runner = new Runner<WorkflowTestData>(_channel, store, commandProcessor, _scheduler);
+        _runner = new Runner<WorkflowTestData>(_channel, store, commandProcessor, _scheduler, loggerFactory: Initializer.TestLoggerFactory);
     }
     
     [Fact]

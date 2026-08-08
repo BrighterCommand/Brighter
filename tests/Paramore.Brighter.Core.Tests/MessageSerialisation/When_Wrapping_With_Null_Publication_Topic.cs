@@ -36,7 +36,7 @@ public class WrapNullPublicationTopicTests
             RequestType = typeof(MyResponse)
         };
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, loggerFactory: Initializer.TestLoggerFactory);
     }
 
     [Fact]

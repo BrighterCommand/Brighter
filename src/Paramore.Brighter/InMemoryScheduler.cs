@@ -30,7 +30,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Tasks;
@@ -57,7 +56,7 @@ public class InMemoryScheduler(
 {
     private readonly ConcurrentDictionary<string, (ITimer Timer, long Generation)> _timers = new();
     private long _generation;
-    private readonly ILogger _logger = (loggerFactory).CreateLogger<InMemoryScheduler>();
+    private readonly ILogger _logger = loggerFactory.CreateLogger<InMemoryScheduler>();
 
     /// <inheritdoc />
     public string Schedule(Message message, DateTimeOffset at)

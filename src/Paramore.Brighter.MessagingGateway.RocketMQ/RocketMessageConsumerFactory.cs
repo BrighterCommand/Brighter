@@ -17,7 +17,7 @@ public class RocketMessageConsumerFactory(RocketMessagingGatewayConnection conne
         => BrighterAsyncContext.Run(() => CreateConsumerAsync(subscription));
 
     /// <inheritdoc />
-    public IAmAMessageConsumerAsync CreateAsync(Subscription subscription) 
+    public IAmAMessageConsumerAsync CreateAsync(Subscription subscription)
         => BrighterAsyncContext.Run(() => CreateConsumerAsync(subscription));
 
     internal async Task<RocketMessageConsumer> CreateConsumerAsync(Subscription subscription)
@@ -28,7 +28,7 @@ public class RocketMessageConsumerFactory(RocketMessagingGatewayConnection conne
         }
 
         var builder = new SimpleConsumer.Builder();
-        
+
         builder.SetClientConfig(connection.ClientConfig)
             .SetConsumerGroup(rocketSubscription.ConsumerGroup)
             .SetAwaitDuration(rocketSubscription.ReceiveMessageTimeout)
@@ -42,6 +42,6 @@ public class RocketMessageConsumerFactory(RocketMessagingGatewayConnection conne
 
         var consumer = await builder.Build();
         return new RocketMessageConsumer(consumer, rocketSubscription.BufferSize,
-            rocketSubscription.InvisibilityTimeout, connection, deadLetterRoutingKey, invalidMessageRoutingKey, loggerFactory);
+            rocketSubscription.InvisibilityTimeout, loggerFactory, connection, deadLetterRoutingKey, invalidMessageRoutingKey);
     }
 }

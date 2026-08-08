@@ -33,7 +33,7 @@ public class AsyncMessageWrapRequestWithAttributesTests
             Topic = new RoutingKey("MyTransformableCommand"), RequestType = typeof(MyTransformableCommand)
         };
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.All);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, Initializer.TestLoggerFactory, InstrumentationOptions.All);
     }
     
     [Fact]

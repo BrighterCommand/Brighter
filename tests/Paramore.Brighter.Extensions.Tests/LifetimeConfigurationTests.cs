@@ -44,7 +44,7 @@ public class LifetimeConfigurationTests
     public void AddBrighter_WithDefaultLifetimes_RegistersAllAsTransient()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
 
         // Act - Don't configure any lifetimes
         services.AddBrighter().AutoFromAssemblies();

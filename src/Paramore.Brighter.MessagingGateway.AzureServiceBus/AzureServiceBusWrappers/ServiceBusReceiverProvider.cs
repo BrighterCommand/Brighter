@@ -31,7 +31,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
     internal sealed class ServiceBusReceiverProvider(IServiceBusClientProvider clientProvider, ILoggerFactory loggerFactory) : IServiceBusReceiverProvider
     {
         private readonly ServiceBusClient _client = clientProvider.GetServiceBusClient();
-        private readonly ILoggerFactory? _loggerFactory = loggerFactory;
+        private readonly ILoggerFactory _loggerFactory = loggerFactory;
 
         /// <summary>
         /// Gets a <see cref="IServiceBusReceiverWrapper"/> for a Service Bus Queue
@@ -47,7 +47,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
                 try
                 {
                     return new ServiceBusReceiverWrapper(await _client.AcceptNextSessionAsync(queueName,
-                        new ServiceBusSessionReceiverOptions() {ReceiveMode = ServiceBusReceiveMode.PeekLock}), _loggerFactory);
+                        new ServiceBusSessionReceiverOptions() { ReceiveMode = ServiceBusReceiveMode.PeekLock }), _loggerFactory);
                 }
                 catch (ServiceBusException e)
                 {
@@ -82,7 +82,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
                 try
                 {
                     return new ServiceBusReceiverWrapper(await _client.AcceptNextSessionAsync(topicName, subscriptionName,
-                        new ServiceBusSessionReceiverOptions() {ReceiveMode = ServiceBusReceiveMode.PeekLock}), _loggerFactory);
+                        new ServiceBusSessionReceiverOptions() { ReceiveMode = ServiceBusReceiveMode.PeekLock }), _loggerFactory);
                 }
                 catch (ServiceBusException e)
                 {

@@ -28,7 +28,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Mime;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Extensions;
 using RabbitMQ.Client;
 
@@ -58,7 +57,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// </summary>
         /// <param name="channel">The channel.</param>
         /// <param name="connection">The exchange we want to talk to.</param>
-        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger; defaults to <see cref="NullLoggerFactory"/></param>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger.</param>
         /// <exception cref="System.ArgumentNullException">
         /// channel
         /// or
@@ -68,7 +67,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         {
             _connection = connection ?? throw new ArgumentNullException(nameof(connection));
             _channel = channel ?? throw new ArgumentNullException(nameof(channel));
-            _logger = (loggerFactory).CreateLogger<RmqMessagePublisher>();
+            _logger = loggerFactory.CreateLogger<RmqMessagePublisher>();
         }
 
         /// <summary>

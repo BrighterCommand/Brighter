@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -57,22 +57,21 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="tracer">What is the tracer we will use for telemetry</param>
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
         /// <param name="timeProvider">The <see cref="TimeProvider"/> used by the pump. Defaults to TimeProvider.System, intended for testing</param>
-        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers.</param>
         public Reactor(
             IAmACommandProcessor commandProcessor,
             Func<Message, Type> mapRequestType,
-            IAmAMessageMapperRegistry messageMapperRegistry, 
+            IAmAMessageMapperRegistry messageMapperRegistry,
             IAmAMessageTransformerFactory messageTransformerFactory,
             IAmARequestContextFactory requestContextFactory,
             IAmAChannelSync channel,
             ILoggerFactory loggerFactory,
             IAmABrighterTracer? tracer = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
-            TimeProvider? timeProvider = null) 
-            : base(commandProcessor, requestContextFactory, tracer,  instrumentationOptions, timeProvider, loggerFactory)
+            TimeProvider? timeProvider = null)
+            : base(commandProcessor, requestContextFactory, tracer, loggerFactory, instrumentationOptions, timeProvider)
         {
             _mapRequestType = mapRequestType;
-            _transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, messageTransformerFactory, instrumentationOptions, loggerFactory);
+            _transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, messageTransformerFactory, loggerFactory, instrumentationOptions);
             Channel = channel;
         }
 
@@ -80,7 +79,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// The channel to receive messages from
         /// </summary>
         public IAmAChannelSync Channel { get; set; }
-        
+
         /// <summary>
         /// The <see cref="MessagePumpType"/> of this message pump; indicates Reactor or Proactor
         /// </summary>
@@ -256,7 +255,7 @@ namespace Paramore.Brighter.ServiceActivator
 
                         if (deferAction != null)
                         {
-                            Log.DeferringMessage(_logger, message.Id.Value, Channel.Name, Channel.RoutingKey.Value,Environment.CurrentManagedThreadId);
+                            Log.DeferringMessage(_logger, message.Id.Value, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
                             processSpan?.SetStatus(ActivityStatusCode.Error, $"Deferring message {message.Id} for later action");
                             if (RequeueMessage(message, deferAction.Delay))
                                 continue;
@@ -319,7 +318,8 @@ namespace Paramore.Brighter.ServiceActivator
                     {
                         Log.DeferringMessage2(_logger, message.Id.Value, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
                         processSpan?.SetStatus(ActivityStatusCode.Error, $"Deferring message {message.Id} for later action");
-                        if (RequeueMessage(message, deferAction.Delay)) continue;
+                        if (RequeueMessage(message, deferAction.Delay))
+                            continue;
                     }
                     catch (DontAckAction dontAckAction)
                     {
@@ -345,7 +345,10 @@ namespace Paramore.Brighter.ServiceActivator
                         IncrementUnacceptableMessageCount();
                         RejectMessage(message, new MessageRejectionReason(RejectionReason.Unacceptable, invalidMessageAction.Message));
                         continue;
-                    }…31 tokens truncated… var description = $"MessagePump: Failed to map message {message.Id} from {Channel.Name} with {Channel.RoutingKey} on thread # {Thread.CurrentThread.ManagedThreadId}";
+                    }
+                    catch (MessageMappingException messageMappingException)
+                    {
+                        var description = $"MessagePump: Failed to map message {message.Id} from {Channel.Name} with {Channel.RoutingKey} on thread # {Thread.CurrentThread.ManagedThreadId}";
                         Log.FailedToMapMessage(_logger, messageMappingException, message.Id.Value, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
                         IncrementUnacceptableMessageCount();
                         processSpan?.SetStatus(ActivityStatusCode.Error, description);
@@ -356,7 +359,7 @@ namespace Paramore.Brighter.ServiceActivator
                     {
                         Log.FailedToDispatchMessage2(_logger, e, message.Id.Value, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
                         IncrementUnacceptableMessageCount();
-                        processSpan?.SetStatus(ActivityStatusCode.Error,$"MessagePump: Failed to dispatch message '{message.Id}' from {Channel.Name} with {Channel.RoutingKey} on thread # {Environment.CurrentManagedThreadId}");
+                        processSpan?.SetStatus(ActivityStatusCode.Error, $"MessagePump: Failed to dispatch message '{message.Id}' from {Channel.Name} with {Channel.RoutingKey} on thread # {Environment.CurrentManagedThreadId}");
                     }
                     finally
                     {
@@ -382,7 +385,7 @@ namespace Paramore.Brighter.ServiceActivator
 
             Channel.Acknowledge(message);
         }
-        
+
         private void DispatchRequest<TRequest>(MessageHeader messageHeader, TRequest request, RequestContext requestContext) where TRequest : class, IRequest
         {
             Log.DispatchingMessage(_logger, request.Id.Value, Thread.CurrentThread.ManagedThreadId, Channel.Name);
@@ -395,16 +398,16 @@ namespace Paramore.Brighter.ServiceActivator
             switch (messageType)
             {
                 case MessageType.MT_COMMAND:
-                {
-                    CommandProcessor.Send(request, requestContext);
-                    break;
-                }
+                    {
+                        CommandProcessor.Send(request, requestContext);
+                        break;
+                    }
                 case MessageType.MT_DOCUMENT:
                 case MessageType.MT_EVENT:
-                {
-                    CommandProcessor.Publish(request, requestContext);
-                    break;
-                }
+                    {
+                        CommandProcessor.Publish(request, requestContext);
+                        break;
+                    }
             }
         }
 
@@ -426,7 +429,7 @@ namespace Paramore.Brighter.ServiceActivator
 
             return Channel.Reject(message, reason);
         }
-        
+
         private void InvokeDispatchRequest(IRequest request, Message message, RequestContext context)
         {
             // NOTE: DispatchRequest<TRequest> is a generic method constrained to TRequest : class, IRequest, but at runtime
@@ -511,7 +514,7 @@ namespace Paramore.Brighter.ServiceActivator
 
             return Channel.Requeue(message, delay ?? RequeueDelay);
         }
-        
+
         private IRequest TranslateMessage(Message message, RequestContext requestContext)
         {
             Log.TranslateMessage(_logger, message.Id.Value, Thread.CurrentThread.ManagedThreadId);
@@ -521,9 +524,9 @@ namespace Paramore.Brighter.ServiceActivator
 
             var requestType = _mapRequestType(message);
             if (requestType == null)
-                throw new MessageMappingException($"Failed to find request type for message {message.Id} ", 
+                throw new MessageMappingException($"Failed to find request type for message {message.Id} ",
                     new ArgumentNullException(nameof(requestType), "The request type cannot be null."));
-            
+
             object? pipeline = null;
             try
             {
@@ -584,79 +587,80 @@ namespace Paramore.Brighter.ServiceActivator
 
         private bool UnacceptableMessageLimitReached()
         {
-            if (UnacceptableMessageLimit <= 0) return false;
+            if (UnacceptableMessageLimit <= 0)
+                return false;
 
             if (UnacceptableMessageCount >= UnacceptableMessageLimit)
             {
                 Log.UnacceptableMessageLimitReached(_logger, UnacceptableMessageLimit, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
-                
+
                 return true;
             }
             return false;
         }
-        
+
         private static partial class Log
         {
             [LoggerMessage(LogLevel.Debug, "MessagePump: Receiving messages from channel {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}")]
             internal static partial void ReceivingMessages(ILogger logger, string? channelName, string routingKey, int managementThreadId);
-            
+
             [LoggerMessage(LogLevel.Warning, "MessagePump: BrokenCircuitException messages from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}")]
             internal static partial void BrokenCircuitException(ILogger logger, string? channelName, string routingKey, int managementThreadId);
-            
+
             [LoggerMessage(LogLevel.Warning, "MessagePump: ChannelFailureException messages from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}")]
             internal static partial void ChannelFailureException(ILogger logger, string? channelName, string routingKey, int managementThreadId);
-            
+
             [LoggerMessage(LogLevel.Error, "MessagePump: Exception receiving messages from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}")]
             internal static partial void ExceptionReceivingMessages(ILogger logger, Exception ex, string? channelName, string routingKey, int managementThreadId);
-            
+
             [LoggerMessage(LogLevel.Warning, "MessagePump: Failed to parse a message from the incoming message with id {Id} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}")]
             internal static partial void FailedToParseMessage(ILogger logger, string id, string? channelName, string routingKey, int managementThreadId);
-            
+
             [LoggerMessage(LogLevel.Information, "MessagePump: Quit receiving messages from {ChannelName} on thread #{ManagementThreadId}")]
             internal static partial void QuitReceivingMessages(ILogger logger, string? channelName, int managementThreadId);
-            
+
             [LoggerMessage(LogLevel.Critical, "MessagePump: Stopping receiving of messages from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}")]
             internal static partial void StoppingReceivingMessages(ILogger logger, Exception ex, string? channelName, string routingKey, int managementThreadId);
-            
+
             [LoggerMessage(LogLevel.Error, "MessagePump: Failed to dispatch message {Id} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}")]
             internal static partial void FailedToDispatchMessage(ILogger logger, Exception ex, string id, string? channelName, string routingKey, int managementThreadId);
 
             [LoggerMessage(LogLevel.Debug, "MessagePump: Deferring message {Id} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}")]
             internal static partial void DeferringMessage(ILogger logger, string id, string? channelName, string routingKey, int managementThreadId);
-            
+
             [LoggerMessage(LogLevel.Critical, "MessagePump: Stopping receiving of messages from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}")]
             internal static partial void StoppingReceivingMessages2(ILogger logger, ConfigurationException configurationException, string? channelName, string routingKey, int managementThreadId);
-            
+
             [LoggerMessage(LogLevel.Debug, "MessagePump: Deferring message {Id} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}")]
             internal static partial void DeferringMessage2(ILogger logger, string id, string? channelName, string routingKey, int managementThreadId);
-            
+
             [LoggerMessage(LogLevel.Warning, "MessagePump: Failed to map message {Id} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}")]
             internal static partial void FailedToMapMessage(ILogger logger, Exception ex, string id, string? channelName, string routingKey, int managementThreadId);
 
             [LoggerMessage(LogLevel.Warning, "MessagePump: Failed to release the transform pipeline for message {Id} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}; the message was mapped successfully and is unaffected")]
             internal static partial void FailedToReleasePipeline(ILogger logger, Exception ex, string id, string? channelName, string routingKey, int managementThreadId);
-            
+
             [LoggerMessage(LogLevel.Error, "MessagePump: Failed to dispatch message '{Id}' from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}")]
             internal static partial void FailedToDispatchMessage2(ILogger logger, Exception e, string id, string? channelName, string routingKey, int managementThreadId);
-            
+
             [LoggerMessage(LogLevel.Debug, "MessagePump: Acknowledge message {Id} read from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}")]
             internal static partial void AcknowledgeMessage(ILogger logger, string id, string? channelName, string routingKey, int managementThreadId);
-            
+
             [LoggerMessage(LogLevel.Debug, "MessagePump: Dispatching message {Id} from {ChannelName} on thread # {ManagementThreadId}")]
             internal static partial void DispatchingMessage(ILogger logger, string id, int managementThreadId, string? channelName);
-            
+
             [LoggerMessage(LogLevel.Warning, "MessagePump: Rejecting message {Id} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}")]
             internal static partial void RejectingMessage(ILogger logger, string id, string? channelName, string routingKey, int managementThreadId);
-            
+
             [LoggerMessage(LogLevel.Error, "MessagePump: Have tried {RequeueCount} times to handle this message {Id}{OriginalMessageId} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}, dropping message.")]
             internal static partial void DroppingMessage(ILogger logger, int requeueCount, string id, string originalMessageId, string? channelName, string routingKey, int managementThreadId);
-            
+
             [LoggerMessage(LogLevel.Debug, "MessagePump: Re-queueing message {Id} from {ManagementThreadId} on thread # {ChannelName} with {RoutingKey}")]
             internal static partial void RequeueingMessage(ILogger logger, string id, int managementThreadId, string? channelName, string routingKey);
-            
+
             [LoggerMessage(LogLevel.Debug, "MessagePump: Translate message {Id} on thread # {ManagementThreadId}")]
             internal static partial void TranslateMessage(ILogger logger, string id, int managementThreadId);
-            
+
             [LoggerMessage(LogLevel.Critical, "MessagePump: Unacceptable message limit of {UnacceptableMessageLimit} reached, stopping reading messages from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}")]
             internal static partial void UnacceptableMessageLimitReached(ILogger logger, int unacceptableMessageLimit, string? channelName, string routingKey, int managementThreadId);
 
@@ -671,5 +675,3 @@ namespace Paramore.Brighter.ServiceActivator
         }
     }
 }
-
-

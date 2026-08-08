@@ -42,7 +42,7 @@ public class SchedulerNotConfiguredTests
     {
         // Arrange - no scheduler configured
         var bus = new InternalBus();
-        _producer = new InMemoryMessageProducer(bus);
+        _producer = new InMemoryMessageProducer(bus, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         // Note: Scheduler is NOT set - testing exception behavior
 
         var routingKey = new RoutingKey("test.topic");

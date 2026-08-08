@@ -6,7 +6,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.JsonConverters;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
@@ -27,9 +26,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         /// </summary>
         /// <param name="configuration"></param>
         /// <param name="connectionProvider"></param>
-        public MsSqlMessageQueue(RelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider  connectionProvider, ILoggerFactory loggerFactory)
+        public MsSqlMessageQueue(RelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider, ILoggerFactory loggerFactory)
         {
-            _logger = (loggerFactory).CreateLogger<MsSqlMessageQueue<T>>();
+            _logger = loggerFactory.CreateLogger<MsSqlMessageQueue<T>>();
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _connectionProvider = connectionProvider;
             Log.MsSqlMessageQueueCtor(_logger, _configuration.ConnectionString, _configuration.QueueStoreTable);
@@ -55,7 +54,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         public void Send(T message, RoutingKey topic, TimeSpan? timeOut = null)
         {
             timeOut ??= TimeSpan.FromMilliseconds(-1);
-            
+
             Log.Send(_logger, typeof(T).FullName, topic);
 
             var parameters = InitAddDbParameters(topic.Value, message);
@@ -78,7 +77,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
             Log.SendAsync(_logger, typeof(T).FullName, topic);
 
             timeOut ??= TimeSpan.FromMilliseconds(-1);
-            
+
             var parameters = InitAddDbParameters(topic, message);
 
             using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
@@ -96,9 +95,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         public ReceivedResult<T> TryReceive(string topic, TimeSpan? timeout = null)
         {
             timeout ??= TimeSpan.FromMilliseconds(-1);
-            
+
             Log.TryReceive(_logger, typeof(T).FullName, timeout.Value.TotalMilliseconds);
-            
+
             var rc = TryReceive(topic);
             var timeLeft = timeout.Value.TotalMilliseconds;
             while (!rc.IsDataValid && timeLeft > 0)
@@ -127,9 +126,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
             var reader = sqlCmd.ExecuteReader();
             if (!reader.Read())
                 return ReceivedResult<T>.Empty;
-            var json = (string) reader[0];
-            var messageType = (string) reader[1];
-            var id = (long) reader[3];
+            var json = (string)reader[0];
+            var messageType = (string)reader[1];
+            var id = (long)reader[3];
             var message = JsonSerializer.Deserialize<T>(json, JsonSerialisationOptions.Options);
             return new ReceivedResult<T>(true, json, topic, messageType, id, message);
         }
@@ -153,9 +152,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
                 .ConfigureAwait(ContinueOnCapturedContext);
             if (!await reader.ReadAsync(cancellationToken))
                 return ReceivedResult<T>.Empty;
-            var json = (string) reader[0];
-            var messageType = (string) reader[1];
-            var id = (long) reader[3];
+            var json = (string)reader[0];
+            var messageType = (string)reader[1];
+            var id = (long)reader[3];
             var message = JsonSerializer.Deserialize<T>(json, JsonSerialisationOptions.Options);
             return new ReceivedResult<T>(true, json, topic, messageType, id, message);
         }
@@ -172,10 +171,11 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
             var sqlCmd = connection.CreateCommand();
             sqlCmd.CommandText = sql;
             object? count = sqlCmd.ExecuteScalar();
-            
-            if (count is null) return 0;
-            
-            return (int) count;
+
+            if (count is null)
+                return 0;
+
+            return (int)count;
         }
 
         /// <summary>
@@ -189,7 +189,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
             var sqlCmd = InitPurgeDbCommand(connection);
             sqlCmd.ExecuteNonQuery();
         }
-        
+
         private static IDbDataParameter CreateDbDataParameter(string parameterName, object value)
         {
             return new SqlParameter(parameterName, value);
@@ -199,8 +199,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         {
             string? fullName = typeof(T).FullName;
             //not sure how we would ever get here.
-            if (fullName is null) throw new ArgumentNullException(nameof(fullName), "MsSQLMessageQueue: The type of the message must have a full name");
-           
+            if (fullName is null)
+                throw new ArgumentNullException(nameof(fullName), "MsSQLMessageQueue: The type of the message must have a full name");
+
             var parameters = new[]
             {
                 CreateDbDataParameter("topic", topic),
@@ -215,7 +216,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
             var sql =
                 $"set nocount on;insert into [{_configuration.QueueStoreTable}] (Topic, MessageType, Payload) values(@topic, @messageType, @payload);";
             var sqlCmd = connection.CreateCommand();
-            if (timeOut != TimeSpan.FromSeconds(-1)) sqlCmd.CommandTimeout = timeOut.Seconds;
+            if (timeOut != TimeSpan.FromSeconds(-1))
+                sqlCmd.CommandTimeout = timeOut.Seconds;
 
             sqlCmd.CommandText = sql;
             sqlCmd.Parameters.AddRange(parameters);
@@ -263,7 +265,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
 
             [LoggerMessage(LogLevel.Debug, "TryReceive<{CommandType}>(..., {Timeout})")]
             public static partial void TryReceive(ILogger logger, string? commandType, double timeout);
-            
+
             [LoggerMessage(LogLevel.Debug, "TryReceive<{CommandType}>(...)")]
             public static partial void TryReceiveInner(ILogger logger, string? commandType);
 

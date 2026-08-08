@@ -28,7 +28,6 @@ using System.Data;
 using System.Data.Common;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.MsSql;
 
 namespace Paramore.Brighter.Locking.MsSql;
@@ -43,7 +42,7 @@ public class MsSqlLockingProvider(MsSqlConnectionProvider connectionProvider, IL
 {
     private readonly ConcurrentDictionary<string, DbConnection> _connections = new();
 
-    private readonly ILogger _logger = (loggerFactory).CreateLogger<MsSqlLockingProvider>();
+    private readonly ILogger _logger = loggerFactory.CreateLogger<MsSqlLockingProvider>();
 
     /// <summary>
     /// Attempt to obtain a lock on a resource

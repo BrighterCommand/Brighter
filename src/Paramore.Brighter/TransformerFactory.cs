@@ -25,15 +25,15 @@ THE SOFTWARE. */
 
 using System;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter
 {
-    internal sealed partial class TransformerFactory<TRequest>(TransformAttribute attribute, IAmAMessageTransformerFactory factory)
+    internal sealed partial class TransformerFactory<TRequest>(
+        TransformAttribute attribute,
+        IAmAMessageTransformerFactory factory,
+        ILogger logger)
         where TRequest : class, IRequest
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<TransformerFactory<TRequest>>();
-
         private readonly Type _messageType = typeof(TRequest);
 
         public Lease<IAmAMessageTransform> CreateMessageTransformer()
@@ -45,8 +45,10 @@ namespace Paramore.Brighter
             try
             {
                 var transformer = lease.Instance;
-                if (attribute is WrapWithAttribute) transformer.InitializeWrapFromAttributeParams(attribute.InitializerParams());
-                if (attribute is UnwrapWithAttribute) transformer.InitializeUnwrapFromAttributeParams(attribute.InitializerParams());
+                if (attribute is WrapWithAttribute)
+                    transformer.InitializeWrapFromAttributeParams(attribute.InitializerParams());
+                if (attribute is UnwrapWithAttribute)
+                    transformer.InitializeUnwrapFromAttributeParams(attribute.InitializerParams());
             }
             catch (Exception)
             {
@@ -56,8 +58,9 @@ namespace Paramore.Brighter
                 //netstandard2.0 for an IAsyncDisposable-only transform); log-and-swallow it so it cannot
                 //mask the real initialization error being rethrown, but a repeated failure here (an
                 //unreleased transform scope) is not left invisible.
-                try { factory.Release(lease); }
-                catch (Exception releaseException) { Log.FailedToReleaseTransformerAfterInitFailure(s_logger, releaseException); }
+                try
+                { factory.Release(lease); }
+                catch (Exception releaseException) { Log.FailedToReleaseTransformerAfterInitFailure(logger, releaseException); }
                 throw;
             }
             return lease;

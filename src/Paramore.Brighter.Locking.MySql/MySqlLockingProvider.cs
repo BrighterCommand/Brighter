@@ -7,7 +7,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using MySqlConnector;
 using Paramore.Brighter.MySql;
 
@@ -20,7 +19,7 @@ namespace Paramore.Brighter.Locking.MySql;
 /// <param name="loggerFactory">The factory used to create the logger for this provider.</param>
 public class MySqlLockingProvider(MySqlConnectionProvider connectionProvider, ILoggerFactory loggerFactory) : IDistributedLock, IAsyncDisposable
 {
-    private readonly ILogger _logger = (loggerFactory).CreateLogger<MySqlConnectionProvider>();
+    private readonly ILogger _logger = loggerFactory.CreateLogger<MySqlConnectionProvider>();
     private readonly ConcurrentDictionary<string, DbConnection> _connections = new();
 
     /// <summary>
@@ -50,7 +49,7 @@ public class MySqlLockingProvider(MySqlConnectionProvider connectionProvider, IL
 
         command.Parameters.Add(new MySqlParameter("@TIMEOUT", MySqlDbType.UInt32)
         {
-            Value = 1 
+            Value = 1
         });
 
         var result = await command.ExecuteScalarAsync(cancellationToken) ?? -1;
@@ -89,7 +88,7 @@ public class MySqlLockingProvider(MySqlConnectionProvider connectionProvider, IL
 
         await command.ExecuteNonQueryAsync(cancellationToken);
 
-        
+
 #if NETSTANDARD2_0
         connection.Close();
         connection.Dispose();
@@ -138,7 +137,8 @@ public class MySqlLockingProvider(MySqlConnectionProvider connectionProvider, IL
             MaxNameLength,
             convertToValidName: s =>
             {
-                if (s.Length == 0) { return "__empty__"; }
+                if (s.Length == 0)
+                { return "__empty__"; }
 
                 return s.ToLowerInvariant();
             },

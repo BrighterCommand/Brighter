@@ -4,7 +4,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using NpgsqlTypes;
 using Paramore.Brighter.JsonConverters;
@@ -21,10 +20,10 @@ namespace Paramore.Brighter.MessagingGateway.Postgres;
 public partial class PostgresMessageProducer(
     RelationalDatabaseConfiguration configuration,
     PostgresPublication publication,
-    InstrumentationOptions instrumentations = InstrumentationOptions.All,
-    ILoggerFactory loggerFactory) : IAmAMessageProducerAsync, IAmAMessageProducerSync
+    ILoggerFactory loggerFactory,
+    InstrumentationOptions instrumentations = InstrumentationOptions.All) : IAmAMessageProducerAsync, IAmAMessageProducerSync
 {
-    private readonly ILogger _logger = (loggerFactory).CreateLogger<PostgresMessageProducer>();
+    private readonly ILogger _logger = loggerFactory.CreateLogger<PostgresMessageProducer>();
     private readonly PostgreSqlConnectionProvider _connectionProvider = new(configuration);
     private PostgresPublication _publication = publication;
 
@@ -32,9 +31,9 @@ public partial class PostgresMessageProducer(
     private string TableName => _publication.QueueStoreTable ?? configuration.QueueStoreTable;
     private string QueueName => _publication.Topic!.Value;
     private bool BinaryMessagePayload => _publication.BinaryMessagePayload ?? configuration.BinaryMessagePayload;
-    
+
     private NpgsqlDbType MessagePayloadDbType => BinaryMessagePayload ? NpgsqlDbType.Jsonb : NpgsqlDbType.Json;
-    
+
     /// <inheritdoc />
     public Publication Publication
     {
@@ -44,10 +43,10 @@ public partial class PostgresMessageProducer(
 
     /// <inheritdoc />
     public Activity? Span { get; set; }
-    
+
     /// <inheritdoc />
     public IAmAMessageScheduler? Scheduler { get; set; }
-    
+
     /// <inheritdoc />
     public async Task SendAsync(Message message, CancellationToken cancellationToken = default)
     {
@@ -55,18 +54,18 @@ public partial class PostgresMessageProducer(
         {
             throw new ConfigurationException("No publication specified for producer");
         }
-        
+
         BrighterTracer.WriteProducerEvent(Span, "postgres", message, instrumentations);
         Log.PublishingMessage(_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
-        
+
         await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
 
         command.CommandText = $"INSERT INTO \"{SchemaName}\".\"{TableName}\"(\"visible_timeout\", \"queue\", \"content\") VALUES (CURRENT_TIMESTAMP, $1, $2) RETURNING \"id\"";
         command.Parameters.Add(new NpgsqlParameter { Value = QueueName });
-        command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = MessagePayloadDbType});
+        command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = MessagePayloadDbType });
         var id = await command.ExecuteScalarAsync(cancellationToken);
-        
+
         Log.PublishedMessage(_logger, message.Header.Topic.Value, message.Id.Value, Convert.ToInt64(id));
     }
 
@@ -78,46 +77,46 @@ public partial class PostgresMessageProducer(
             await SendAsync(message, cancellationToken);
             return;
         }
-        
+
         if (_publication is null)
         {
             throw new ConfigurationException("No publication specified for producer");
         }
-        
+
         BrighterTracer.WriteProducerEvent(Span, "postgres", message, instrumentations);
         Log.PublishingMessage(_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
-        
+
         await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
 
         command.CommandText = $"INSERT INTO \"{SchemaName}\".\"{TableName}\"(\"visible_timeout\", \"queue\", \"content\") VALUES (CURRENT_TIMESTAMP + $1, $2, $3) RETURNING \"id\"";
         command.Parameters.Add(new NpgsqlParameter { Value = delay.Value });
         command.Parameters.Add(new NpgsqlParameter { Value = QueueName });
-        command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = MessagePayloadDbType});
+        command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = MessagePayloadDbType });
         var id = await command.ExecuteScalarAsync(cancellationToken);
-        
+
         Log.PublishedMessage(_logger, message.Header.Topic.Value, message.Id.Value, Convert.ToInt64(id));
     }
-    
+
     /// <inheritdoc />
     public void Send(Message message)
-    { 
+    {
         if (_publication is null)
         {
             throw new ConfigurationException("No publication specified for producer");
         }
-        
+
         BrighterTracer.WriteProducerEvent(Span, "postgres", message, instrumentations);
         Log.PublishingMessage(_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
-        
+
         using var connection = _connectionProvider.GetConnection();
         using var command = connection.CreateCommand();
 
         command.CommandText = $"INSERT INTO \"{SchemaName}\".\"{TableName}\"(\"visible_timeout\", \"queue\", \"content\") VALUES (CURRENT_TIMESTAMP, $1, $2) RETURNING \"id\"";
         command.Parameters.Add(new NpgsqlParameter { Value = QueueName });
-        command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = MessagePayloadDbType});
+        command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = MessagePayloadDbType });
         var id = command.ExecuteScalar();
-        
+
         Log.PublishedMessage(_logger, message.Header.Topic.Value, message.Id.Value, Convert.ToInt64(id));
     }
 
@@ -129,24 +128,24 @@ public partial class PostgresMessageProducer(
             Send(message);
             return;
         }
-        
+
         if (_publication is null)
         {
             throw new ConfigurationException("No publication specified for producer");
         }
-        
+
         BrighterTracer.WriteProducerEvent(Span, "postgres", message, instrumentations);
         Log.PublishingMessage(_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
-        
+
         using var connection = _connectionProvider.GetConnection();
         using var command = connection.CreateCommand();
 
         command.CommandText = $"INSERT INTO \"{SchemaName}\".\"{TableName}\"(\"visible_timeout\", \"queue\", \"content\") VALUES (CURRENT_TIMESTAMP + $1, $2, $3) RETURNING \"id\"";
         command.Parameters.Add(new NpgsqlParameter { Value = delay.Value });
         command.Parameters.Add(new NpgsqlParameter { Value = QueueName });
-        command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = MessagePayloadDbType});
+        command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = MessagePayloadDbType });
         var id = command.ExecuteScalar();
-        
+
         Log.PublishedMessage(_logger, message.Header.Topic.Value, message.Id.Value, Convert.ToInt64(id));
     }
 
@@ -157,7 +156,7 @@ public partial class PostgresMessageProducer(
         Dispose();
         return ValueTask.CompletedTask;
     }
-    
+
     /// <inheritdoc />
     public void Dispose() => Span?.Dispose();
 

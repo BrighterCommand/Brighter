@@ -50,13 +50,13 @@ public class MySqlInboxNonDefaultSchemaTests : IAsyncLifetime
             _baseConnectionString,
             inboxTableName: _tableName,
             schemaName: _nonDefaultDatabase);
-        var runner = new MySqlBoxMigrationRunner(new MySqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
+        var runner = new MySqlBoxMigrationRunner(new MySqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _provisioner = new MySqlInboxProvisioner(
             new MySqlBoxDetectionHelper(),
             new MySqlInboxMigrationCatalog(),
             new MySqlPayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

@@ -17,7 +17,7 @@ public class MsSqlCausationTrackingInboxTest : CausationTrackingInboxBaseTests
         _configuration = new RelationalDatabaseConfiguration(
             Tests.Configuration.DefaultConnectingString,
             inboxTableName: $"{Tests.Configuration.TablePrefix}{Uuid.New():N}");
-        _inbox = new MsSqlInbox(_configuration);
+        _inbox = new MsSqlInbox(_configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Inbox.MsSql.MsSqlInbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         base.BeforeEachTest();
     }
 

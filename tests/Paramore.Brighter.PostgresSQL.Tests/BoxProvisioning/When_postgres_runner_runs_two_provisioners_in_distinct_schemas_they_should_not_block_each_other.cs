@@ -62,17 +62,17 @@ public class PostgreSqlRunnerDistinctSchemaNonBlockingTests : IAsyncLifetime
             _connectionString, outBoxTableName: _tableName, schemaName: _billingSchema);
 
         var provisionerA = new PostgreSqlOutboxProvisioner(
-            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlBoxDetectionHelper(logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.BoxProvisioning.PostgreSql.PostgreSqlBoxDetectionHelper>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)),
             new PostgreSqlOutboxMigrationCatalog(),
             new PostgreSqlPayloadModeValidator(),
             configA,
-            new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), configA, TimeSpan.FromSeconds(30), holdingLock));
+            new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), configA, TimeSpan.FromSeconds(30), global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, holdingLock), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var provisionerB = new PostgreSqlOutboxProvisioner(
-            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlBoxDetectionHelper(logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.BoxProvisioning.PostgreSql.PostgreSqlBoxDetectionHelper>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)),
             new PostgreSqlOutboxMigrationCatalog(),
             new PostgreSqlPayloadModeValidator(),
             configB,
-            new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), configB, TimeSpan.FromSeconds(1)));
+            new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), configB, TimeSpan.FromSeconds(1), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //Act
         var taskA = Task.Run(() => provisionerA.ProvisionAsync());

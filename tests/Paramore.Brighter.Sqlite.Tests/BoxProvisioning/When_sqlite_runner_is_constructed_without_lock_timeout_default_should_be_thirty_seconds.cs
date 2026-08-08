@@ -103,7 +103,8 @@ file sealed class TimeoutCapturingSqliteBoxMigrationRunner : SqliteBoxMigrationR
 
     // Uses the detection-helper ctor with `lockTimeout` OMITTED — the path under regression-pin.
     public TimeoutCapturingSqliteBoxMigrationRunner(IAmARelationalDatabaseConfiguration configuration)
-        : base(new SqliteBoxDetectionHelper(), new SqliteOutboxMigrationCatalog(), configuration)
+        : base(new SqliteBoxDetectionHelper(), new SqliteOutboxMigrationCatalog(), configuration,
+            global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
     {
     }
 

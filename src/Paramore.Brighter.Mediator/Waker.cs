@@ -26,7 +26,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Paramore.Brighter.Mediator;
 
@@ -52,7 +51,7 @@ public class Waker<TData>
     {
         _jobAge = jobAge;
         _scheduler = scheduler;
-        _logger = (loggerFactory).CreateLogger<Waker<TData>>();
+        _logger = loggerFactory.CreateLogger<Waker<TData>>();
     }
 
     /// <summary>
@@ -81,7 +80,7 @@ public class Waker<TData>
         {
             if (cancellationToken.IsCancellationRequested)
                 break;
-            
+
             await _scheduler.TriggerDueJobsAsync(_jobAge, cancellationToken);
             await Task.Delay(_jobAge, cancellationToken);
         }

@@ -41,7 +41,7 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
     private readonly SqsPublication _publication;
     private readonly AWSClientFactory _clientFactory;
     private readonly InstrumentationOptions _instrumentation;
-    private readonly ILoggerFactory? _loggerFactory;
+    private readonly ILoggerFactory _loggerFactory;
 
     /// <summary>
     /// The publication configuration for this producer
@@ -64,8 +64,8 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
     /// <param name="instrumentation"></param>
     public SqsMessageProducer(AWSMessagingGatewayConnection connection,
         SqsPublication publication,
-        InstrumentationOptions instrumentation = InstrumentationOptions.All,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        InstrumentationOptions instrumentation = InstrumentationOptions.All)
         : base(connection, loggerFactory)
     {
         _publication = publication ?? throw new ArgumentNullException(nameof(publication));
@@ -110,10 +110,10 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
         //Only do this on first send for a queue for efficiency; won't auto-recreate when goes missing at runtime as a result
         if (!string.IsNullOrEmpty(ChannelQueueUrl))
             return true;
-        
+
         if (_publication is null)
             throw new ConfigurationException("No publication specified for producer");
-        
+
         if (_publication.ChannelName is null)
             throw new ConfigurationException("No channel name specified for publication");
 
@@ -124,7 +124,7 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
             _publication.QueueAttributes,
             _publication.MakeChannels,
             cancellationToken);
-        
+
         ChannelQueueUrl = queueUrl;
 
         return !string.IsNullOrEmpty(queueUrl);
@@ -137,13 +137,13 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
     /// <inheritdoc />
     public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
         => await SendWithDelayAsync(message, delay, true, cancellationToken);
-    
-    
+
+
     private async Task SendWithDelayAsync(Message message, TimeSpan? delay, bool useAsyncScheduler, CancellationToken cancellationToken = default)
     {
         if (_publication is null)
             throw new ConfigurationException("No publication specified for producer");
-        
+
         delay ??= TimeSpan.Zero;
         // SQS support delay until 15min, more than that we are going to use scheduler
         if (delay > TimeSpan.FromMinutes(15) && _publication.QueueAttributes.Type == SqsType.Standard)
@@ -159,7 +159,7 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
             schedulerSync.Schedule(message, delay.Value);
             return;
         }
-        
+
         BrighterTracer.WriteProducerEvent(Span, MessagingSystem.AWSSQS, message, _instrumentation);
         Log.PublishingMessage(_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
 

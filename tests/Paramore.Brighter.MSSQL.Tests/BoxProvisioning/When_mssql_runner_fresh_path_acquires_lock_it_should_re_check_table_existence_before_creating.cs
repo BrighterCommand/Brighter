@@ -41,7 +41,7 @@ public class MsSqlRunnerFreshPathRecheckTests : IAsyncLifetime
     public MsSqlRunnerFreshPathRecheckTests()
     {
         _config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        _runner = new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), _config, TimeSpan.FromSeconds(30));
+        _runner = new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), _config, TimeSpan.FromSeconds(30), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

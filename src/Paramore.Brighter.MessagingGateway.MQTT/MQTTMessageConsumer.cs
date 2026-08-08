@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using MQTTnet;
 using MQTTnet.Client;
 using MQTTnet.Packets;
@@ -26,7 +25,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         private readonly MqttMessagingGatewayConsumerConfiguration _configuration;
         private readonly ConcurrentQueue<Message> _messageQueue = new();
         private readonly ILogger _logger;
-        private readonly ILoggerFactory? _loggerFactory;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly Message _noopMessage = new();
         private readonly IMqttClient _mqttClient;
         private readonly MqttClientOptions _mqttClientOptions;
@@ -65,13 +64,13 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// </remarks>
         public MqttMessageConsumer(
             MqttMessagingGatewayConsumerConfiguration configuration,
+            ILoggerFactory loggerFactory,
             IAmAMessageScheduler? scheduler = null,
             RoutingKey? deadLetterRoutingKey = null,
-            RoutingKey? invalidMessageRoutingKey = null,
-            ILoggerFactory loggerFactory)
+            RoutingKey? invalidMessageRoutingKey = null)
         {
             _loggerFactory = loggerFactory;
-            _logger = (loggerFactory).CreateLogger<MqttMessageConsumer>();
+            _logger = loggerFactory.CreateLogger<MqttMessageConsumer>();
             _configuration = configuration;
             _scheduler = scheduler;
             _deadLetterRoutingKey = deadLetterRoutingKey;
@@ -171,7 +170,8 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
         public async ValueTask DisposeAsync()
         {
-            if (_requeueProducer != null) await _requeueProducer.DisposeAsync();
+            if (_requeueProducer != null)
+                await _requeueProducer.DisposeAsync();
             // IMqttClient only implements IDisposable, not IAsyncDisposable (MQTTnet 4.3)
             _mqttClient.Dispose();
         }
@@ -234,7 +234,8 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         public bool Reject(Message message, MessageRejectionReason? reason = null)
         {
             var (producer, routingKey) = ResolveRejectionProducer(message, reason);
-            if (producer == null || routingKey == null) return true;
+            if (producer == null || routingKey == null)
+                return true;
 
             try
             {
@@ -263,7 +264,8 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         public async Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default)
         {
             var (producer, routingKey) = ResolveRejectionProducer(message, reason);
-            if (producer == null || routingKey == null) return true;
+            if (producer == null || routingKey == null)
+                return true;
 
             try
             {
@@ -397,7 +399,8 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             message.Header.Bag["rejectionTimestamp"] = DateTimeOffset.UtcNow.ToString("o");
             message.Header.Bag["originalMessageType"] = message.Header.MessageType.ToString();
 
-            if (reason == null) return;
+            if (reason == null)
+                return;
 
             message.Header.Bag["rejectionReason"] = reason.RejectionReason.ToString();
             if (!string.IsNullOrEmpty(reason.Description))
@@ -422,7 +425,8 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
         private MqttMessageProducer? CreateDeadLetterProducer()
         {
-            if (_deadLetterRoutingKey == null) return null;
+            if (_deadLetterRoutingKey == null)
+                return null;
 
             try
             {
@@ -448,7 +452,8 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
         private MqttMessageProducer? CreateInvalidMessageProducer()
         {
-            if (_invalidMessageRoutingKey == null) return null;
+            if (_invalidMessageRoutingKey == null)
+                return null;
 
             try
             {

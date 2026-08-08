@@ -26,7 +26,6 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
@@ -54,11 +53,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             IAdministrationClientWrapper administrationClientWrapper,
             IServiceBusSenderProvider serviceBusSenderProvider,
             AzureServiceBusPublication publication,
-            int bulkSendBatchSize = 10,
-            ILoggerFactory loggerFactory
+            ILoggerFactory loggerFactory,
+            int bulkSendBatchSize = 10
         ) : base(serviceBusSenderProvider, publication, bulkSendBatchSize)
         {
-            _logger = (loggerFactory).CreateLogger<AzureServiceBusQueueMessageProducer>();
+            _logger = loggerFactory.CreateLogger<AzureServiceBusQueueMessageProducer>();
             _administrationClientWrapper = administrationClientWrapper;
         }
 

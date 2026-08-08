@@ -37,7 +37,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             _replyTwo = new MyResponse(replyAddress) { ReplyValue = "World" };
 
             InMemoryMessageProducer messageProducer = new(_internalBus,
-                new Publication
+            Initializer.TestLoggerFactory, new Publication
                 {
                     Topic = producerRoutingKey,
                     RequestType = typeof(MyResponse)
@@ -68,7 +68,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                outbox,
+                Initializer.TestLoggerFactory, outbox,
                 maxOutStandingMessages: -1
             );
 
@@ -77,8 +77,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new DefaultPolicy(),
                 resiliencePipelineRegistry,
                 _mediator,
-                new InMemorySchedulerFactory()
-            );
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+                loggerFactory: Initializer.TestLoggerFactory);
         }
 
         [Fact]

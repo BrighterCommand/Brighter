@@ -28,7 +28,6 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -36,7 +35,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
 
 public partial class PullConsumer(IChannel channel, ILoggerFactory loggerFactory) : AsyncDefaultBasicConsumer(channel)
 {
-    private readonly ILogger _logger = (loggerFactory).CreateLogger<RmqMessageConsumer>();
+    private readonly ILogger _logger = loggerFactory.CreateLogger<RmqMessageConsumer>();
 
     //we do end up creating a second buffer to the Brighter Channel, but controlling the flow from RMQ depends
     //on us being able to buffer up to the set QoS and then pull. This matches other implementations.

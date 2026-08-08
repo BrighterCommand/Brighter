@@ -39,14 +39,14 @@ public class LargeMessagePaylodUnwrapTests : IDisposable
             BucketName = _bucketName
         };
         
-        _luggageStore = new GcsLuggageStore(_luggageStoreOptions);
+        _luggageStore = new GcsLuggageStore(_luggageStoreOptions, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             
         _luggageStore.EnsureStoreExists();
 
         var messageTransformerFactory =
             new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.None);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, InstrumentationOptions.None);
     }
 
     [Fact]

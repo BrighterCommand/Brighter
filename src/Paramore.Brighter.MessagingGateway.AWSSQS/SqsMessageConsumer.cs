@@ -31,7 +31,6 @@ using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Tasks;
 
@@ -45,7 +44,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         private readonly ILogger _logger;
 
         private readonly AWSMessagingGatewayConnection _connection;
-        private readonly ILoggerFactory? _loggerFactory;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly AWSClientFactory _clientFactory;
         private readonly string _queueName;
         private readonly int _batchSize;
@@ -75,19 +74,19 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         public SqsMessageConsumer(
             AWSMessagingGatewayConnection awsConnection,
             string? queueName,
+            ILoggerFactory loggerFactory,
             int batchSize = 1,
             RoutingKey? deadLetterRoutingKey = null,
             RoutingKey? invalidMessageRoutingKey = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             bool isQueueUrl = false,
             bool rawMessageDelivery = true,
-            SqsAttributes? queueAttributes = null,
-            ILoggerFactory loggerFactory)
+            SqsAttributes? queueAttributes = null)
         {
             if (string.IsNullOrEmpty(queueName))
                 throw new ConfigurationException("QueueName is mandatory");
 
-            _logger = (loggerFactory).CreateLogger<SqsMessageConsumer>();
+            _logger = loggerFactory.CreateLogger<SqsMessageConsumer>();
             _loggerFactory = loggerFactory;
             _connection = awsConnection;
             _clientFactory = new AWSClientFactory(awsConnection);
@@ -136,12 +135,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             await DeleteSourceMessageAsync(receiptHandle!, message.Id.Value, cancellationToken);
         }
 
-         /// <summary>
+        /// <summary>
         /// Purges the specified queue name.
         /// Sync over Async
         /// </summary>
         public void Purge() => BrighterAsyncContext.Run(() => PurgeAsync());
-        
+
         /// <summary>
         /// Purges the specified queue name.
         /// </summary>
@@ -163,8 +162,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 throw;
             }
         }
-        
-         /// <summary>
+
+        /// <summary>
         /// Receives the specified queue name.
         /// Sync over async 
         /// </summary>
@@ -184,11 +183,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             try
             {
                 client = _clientFactory.CreateSqsClient();
-                
+
                 await EnsureChannelUrl(client, cancellationToken);
                 timeOut ??= TimeSpan.Zero;
 
-                Log.RetrievingNextMessage(_logger,_channelUrl!);
+                Log.RetrievingNextMessage(_logger, _channelUrl!);
 
                 var request = new ReceiveMessageRequest(_channelUrl)
                 {
@@ -237,7 +236,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             return messages;
         }
-        
+
         /// <summary>
         /// Rejects the specified message.
         /// Sync over async
@@ -456,7 +455,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             GC.SuppressFinalize(this);
         }
-        
+
         private SqsMessageProducer? CreateDeadLetterProducer()
         {
             var publication = new SqsPublication(
@@ -508,7 +507,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             // Remove SQS-specific headers that will be reset when sent to the DLQ
             message.Header.Bag.Remove("ReceiptHandle");
 
-            if (reason == null) return;
+            if (reason == null)
+                return;
 
             message.Header.Bag["rejectionReason"] = reason.RejectionReason.ToString();
             if (!string.IsNullOrEmpty(reason.Description))
@@ -571,8 +571,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             //only grab the queue url once
             if (_channelUrl is not null)
                 return;
-            
-            var urlResponse = await client.GetQueueUrlAsync(_queueName, cancellationToken);      
+
+            var urlResponse = await client.GetQueueUrlAsync(_queueName, cancellationToken);
             _channelUrl = urlResponse.QueueUrl;
         }
 
@@ -607,7 +607,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             [LoggerMessage(LogLevel.Error, "SqsMessageConsumer: Error purging queue {ChannelName}")]
             public static partial void ErrorPurgingQueue(ILogger logger, Exception exception, string channelName);
-            
+
             [LoggerMessage(LogLevel.Debug, "SqsMessageConsumer: Preparing to retrieve next message from queue {Url}")]
             public static partial void RetrievingNextMessage(ILogger logger, string url);
 

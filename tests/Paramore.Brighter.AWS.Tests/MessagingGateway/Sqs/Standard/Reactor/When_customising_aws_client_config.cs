@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -30,7 +30,7 @@ public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
         var routingKey = new RoutingKey(queueName);
 
         var channelName = new ChannelName(queueName);
-        
+
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(subscriptionName),
             channelName: channelName,
@@ -48,7 +48,7 @@ public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
             config.HttpClientFactory = new InterceptingHttpClientFactory(new InterceptingDelegatingHandler("sqs_sync_sub"));
         });
 
-        _channelFactory = new ChannelFactory(subscribeAwsConnection);
+        _channelFactory = new ChannelFactory(subscribeAwsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _channel = _channelFactory.CreateSyncChannel(subscription);
 
         var publishAwsConnection = GatewayFactory.CreateFactory(config =>
@@ -57,7 +57,7 @@ public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
         });
 
         _messageProducer = new SqsMessageProducer(publishAwsConnection,
-            new SqsPublication { ChannelName = channelName, MakeChannels = OnMissingChannel.Create });
+            new SqsPublication { ChannelName = channelName, MakeChannels = OnMissingChannel.Create }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]
@@ -76,7 +76,7 @@ public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
         //publish_and_subscribe_should_use_custom_http_client_factory
         Assert.Contains("sqs_sync_sub", InterceptingDelegatingHandler.RequestCount);
         Assert.True((InterceptingDelegatingHandler.RequestCount["sqs_sync_sub"]) > (0));
-        
+
         Assert.Contains("sqs_sync_pub", InterceptingDelegatingHandler.RequestCount);
         Assert.True((InterceptingDelegatingHandler.RequestCount["sqs_sync_pub"]) > (0));
     }

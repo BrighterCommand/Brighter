@@ -25,8 +25,8 @@ public class ServiceBusMessageStoreArchiverTests
 
         _archiver = new OutboxArchiver<Message, CommittableTransaction>(
             _outbox,
-            _archiveProvider
-        );
+            _archiveProvider,
+            loggerFactory: Initializer.TestLoggerFactory);
 
     }
 

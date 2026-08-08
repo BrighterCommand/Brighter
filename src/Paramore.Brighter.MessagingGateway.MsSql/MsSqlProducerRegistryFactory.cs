@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
 {
@@ -11,7 +10,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
     {
         private readonly RelationalDatabaseConfiguration _msSqlConfiguration;
         private readonly ILogger _logger;
-        private readonly ILoggerFactory? _loggerFactory;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly IEnumerable<Publication> _publications; //-- placeholder for future use
 
         public MsSqlProducerRegistryFactory(
@@ -25,7 +24,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                 throw new ArgumentNullException(nameof(msSqlConfiguration.QueueStoreTable));
             _publications = publications;
             _loggerFactory = loggerFactory;
-            _logger = (loggerFactory).CreateLogger<MsSqlProducerRegistryFactory>();
+            _logger = loggerFactory.CreateLogger<MsSqlProducerRegistryFactory>();
         }
 
         /// <summary>
@@ -51,7 +50,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <returns>A registry of middleware clients by topic, for sending messages to the middleware</returns>
         public Task<IAmAProducerRegistry> CreateAsync(CancellationToken ct = default)
         {
-           return Task.FromResult(Create()); 
+            return Task.FromResult(Create());
         }
 
         private static partial class Log

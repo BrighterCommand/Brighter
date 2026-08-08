@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Net.Mime;
 using System.Text.Json;
@@ -21,7 +21,7 @@ public class AwsValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public AwsValidateInfrastructureByUrlTests ()
+    public AwsValidateInfrastructureByUrlTests()
     {
         var replyTo = new RoutingKey("http:\\queueUrl");
         var contentType = new ContentType(MediaTypeNames.Text.Plain);
@@ -37,14 +37,14 @@ public class AwsValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
         var queueAttributes = new SqsAttributes(
             type: SqsType.Fifo,
             tags: new Dictionary<string, string> { { "Environment", "Test" } });
-        
+
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(subscriptionName),
             channelName: channelName,
             channelType: ChannelType.PointToPoint,
-            routingKey: routingKey, 
-            messagePumpType: MessagePumpType.Reactor, 
-            queueAttributes: queueAttributes, 
+            routingKey: routingKey,
+            messagePumpType: MessagePumpType.Reactor,
+            queueAttributes: queueAttributes,
             makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
@@ -58,7 +58,7 @@ public class AwsValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
         //We need to do this manually in a test - will create the channel from subscriber parameters
         //This doesn't look that different from our create tests - this is because we create using the channel factory in
         //our AWS transport, not the consumer (as it's a more likely to use infrastructure declared elsewhere)
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var channel = _channelFactory.CreateSyncChannel(subscription);
 
         var queueUrl = FindQueueUrl(awsConnection, routingKey.ToValidSQSQueueName(true));
@@ -70,14 +70,14 @@ public class AwsValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
 
         _messageProducer = new SqsMessageProducer(
             awsConnection,
-            new SqsPublication (
-                channelName: new ChannelName(queueUrl), 
-                queueAttributes: queueAttributes, 
-                findQueueBy: QueueFindBy.Url, 
-                makeChannels: OnMissingChannel.Validate)
-            );
+            new SqsPublication(
+                channelName: new ChannelName(queueUrl),
+                queueAttributes: queueAttributes,
+                findQueueBy: QueueFindBy.Url,
+                makeChannels: OnMissingChannel.Validate),
+                loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
-        _consumer = new SqsMessageConsumerFactory(awsConnection).Create(subscription);
+        _consumer = new SqsMessageConsumerFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create(subscription);
     }
 
     [Fact]
@@ -117,7 +117,7 @@ public class AwsValidateInfrastructureByUrlTests : IDisposable, IAsyncDisposable
 
     private static string FindQueueUrl(AWSMessagingGatewayConnection connection, string queueName)
     {
-         using var snsClient = new AWSClientFactory(connection).CreateSqsClient();
+        using var snsClient = new AWSClientFactory(connection).CreateSqsClient();
         var topicResponse = snsClient.GetQueueUrlAsync(queueName).GetAwaiter().GetResult();
         return topicResponse.QueueUrl;
     }

@@ -28,7 +28,6 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.MessagingGateway.MsSql.SqlQueues;
 using Paramore.Brighter.MsSql;
 using Paramore.Brighter.Observability;
@@ -68,12 +67,12 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         public MsSqlMessageProducer(
             RelationalDatabaseConfiguration msSqlConfiguration,
             IAmARelationalDbConnectionProvider connectonProvider,
+            ILoggerFactory loggerFactory,
             Publication? publication = null,
-            InstrumentationOptions instrumentation = InstrumentationOptions.All,
-            ILoggerFactory loggerFactory
+            InstrumentationOptions instrumentation = InstrumentationOptions.All
         )
         {
-            _logger = (loggerFactory).CreateLogger<MsSqlMessageProducer>();
+            _logger = loggerFactory.CreateLogger<MsSqlMessageProducer>();
             _sqlQ = new MsSqlMessageQueue<Message>(msSqlConfiguration, connectonProvider, loggerFactory);
             _instrumentation = instrumentation;
             Publication = publication ?? new Publication { MakeChannels = OnMissingChannel.Create };
@@ -86,9 +85,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <param name="publication">The publication configuration.</param>
         public MsSqlMessageProducer(
             RelationalDatabaseConfiguration msSqlConfiguration,
-            Publication? publication = null,
-            ILoggerFactory loggerFactory)
-            : this(msSqlConfiguration, new MsSqlConnectionProvider(msSqlConfiguration), publication, loggerFactory: loggerFactory)
+            ILoggerFactory loggerFactory,
+            Publication? publication = null)
+            : this(msSqlConfiguration, new MsSqlConnectionProvider(msSqlConfiguration), loggerFactory, publication)
         {
         }
 
@@ -119,7 +118,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <param name="message">The message to send.</param>
         /// <param name="delay">The delay to use.</param>
         public void SendWithDelay(Message message, TimeSpan? delay = null)
-        { 
+        {
             delay ??= TimeSpan.Zero;
             if (delay != TimeSpan.Zero)
             {
@@ -128,17 +127,17 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                     sync.Schedule(message, delay.Value);
                     return;
                 }
-                  
+
                 if (Scheduler is IAmAMessageSchedulerAsync async)
                 {
                     BrighterAsyncContext.Run(() => async.ScheduleAsync(message, delay.Value));
                     return;
-                } 
-                  
+                }
+
                 throw new ConfigurationException(
                     $"MsSqlMessageProducer: delay of {delay} was requested but no scheduler is configured; configure a scheduler via MessageSchedulerFactory.");
             }
-              
+
             BrighterTracer.WriteProducerEvent(Span, "microsoft_sql_server", message, _instrumentation);
             var topic = message.Header.Topic;
 
@@ -171,7 +170,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                     sync.Schedule(message, delay.Value);
                     return;
                 }
-                
+
                 throw new ConfigurationException(
                     $"MsSqlMessageProducer: delay of {delay} was requested but no scheduler is configured; configure a scheduler via MessageSchedulerFactory.");
             }
@@ -198,7 +197,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         {
             [LoggerMessage(LogLevel.Debug, "MsSqlMessageProducer: send message with topic {Topic} and id {Id}")]
             public static partial void SendMessage(ILogger logger, string topic, string id);
-            
+
             [LoggerMessage(LogLevel.Debug, "MsSqlMessageProducer: send async message with topic {Topic} and id {Id}")]
             public static partial void SendMessageAsync(ILogger logger, string topic, string id);
         }

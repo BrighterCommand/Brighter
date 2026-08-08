@@ -42,7 +42,7 @@ public class AzureServiceBusMessageProducerFactory : IAmAMessageProducerFactory
     private readonly IServiceBusClientProvider _clientProvider;
     private readonly IEnumerable<AzureServiceBusPublication> _publications;
     private readonly int _bulkSendBatchSize;
-    private readonly ILoggerFactory? _loggerFactory;
+    private readonly ILoggerFactory _loggerFactory;
 
     /// <summary>
     /// Factory to create a dictionary of Azure Service Bus Producers indexed by topic name
@@ -82,13 +82,13 @@ public class AzureServiceBusMessageProducerFactory : IAmAMessageProducerFactory
 
             if (publication.UseServiceBusQueue)
             {
-                var producer = new AzureServiceBusQueueMessageProducer(nameSpaceManagerWrapper, topicClientProvider, publication, _bulkSendBatchSize, _loggerFactory);
+                var producer = new AzureServiceBusQueueMessageProducer(nameSpaceManagerWrapper, topicClientProvider, publication, _loggerFactory, _bulkSendBatchSize);
                 producer.Publication = publication;
                 RegisterProducer(publication, producers, producer);
             }
             else
             {
-                var producer = new AzureServiceBusTopicMessageProducer(nameSpaceManagerWrapper, topicClientProvider, publication, _bulkSendBatchSize, _loggerFactory);
+                var producer = new AzureServiceBusTopicMessageProducer(nameSpaceManagerWrapper, topicClientProvider, publication, _loggerFactory, _bulkSendBatchSize);
                 producer.Publication = publication;
                 RegisterProducer(publication, producers, producer);
 
@@ -97,12 +97,12 @@ public class AzureServiceBusMessageProducerFactory : IAmAMessageProducerFactory
 
         return producers;
     }
-    
+
     public Task<Dictionary<ProducerKey, IAmAMessageProducer>> CreateAsync()
     {
         return Task.FromResult(Create());
     }
-       
+
     private static void RegisterProducer(AzureServiceBusPublication publication, Dictionary<ProducerKey, IAmAMessageProducer> producers, IAmAMessageProducer producer)
     {
         var producerKey = new ProducerKey(publication.Topic!, publication.Type);
@@ -111,5 +111,5 @@ public class AzureServiceBusMessageProducerFactory : IAmAMessageProducerFactory
         producers[producerKey] = producer;
     }
 
-   
+
 }

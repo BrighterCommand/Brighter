@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.Postgres;
 
@@ -14,7 +14,7 @@ public class PostgresConsumerFactory(PostgresMessagingGatewayConnection connecti
         => CreateMessageConsumer(subscription);
 
     /// <inheritdoc />
-    public IAmAMessageConsumerAsync CreateAsync(Subscription subscription) 
+    public IAmAMessageConsumerAsync CreateAsync(Subscription subscription)
         => CreateMessageConsumer(subscription);
 
     private PostgresMessageConsumer CreateMessageConsumer(Subscription subscription)
@@ -30,8 +30,8 @@ public class PostgresConsumerFactory(PostgresMessagingGatewayConnection connecti
         return new PostgresMessageConsumer(
             connection.Configuration,
             postgresSubscription,
+            loggerFactory,
             deadLetterRoutingKey,
-            invalidMessageRoutingKey,
-            loggerFactory);
+            invalidMessageRoutingKey);
     }
 }

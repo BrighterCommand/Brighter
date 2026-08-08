@@ -16,14 +16,14 @@ public class TimedOutboxArchiverNoOutboxTests
         //Arrange — NullOutbox implements only IAmAnOutbox (neither sync nor async)
         var nullOutbox = new NullOutbox();
         var archiveProvider = new InMemoryArchiveProvider();
-        var archiver = new OutboxArchiver<Message, CommittableTransaction>(nullOutbox, archiveProvider);
+        var archiver = new OutboxArchiver<Message, CommittableTransaction>(nullOutbox, archiveProvider, loggerFactory: Initializer.TestLoggerFactory);
         var distributedLock = new InMemoryLock();
         var options = new TimedOutboxArchiverOptions
         {
             TimerInterval = 5,
             MinimumAge = TimeSpan.FromMilliseconds(500)
         };
-        var timedArchiver = new TimedOutboxArchiver<Message, CommittableTransaction>(archiver, distributedLock, options);
+        var timedArchiver = new TimedOutboxArchiver<Message, CommittableTransaction>(archiver, distributedLock, options, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.Hosting.TimedOutboxArchiver<global::Paramore.Brighter.Message, global::System.Transactions.CommittableTransaction>>(Initializer.TestLoggerFactory));
 
         //Act — should complete without throwing (FR3)
         using var cts = new CancellationTokenSource();

@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
         {
             // Arrange: an InMemory producer whose publish confirmation always fails, wired to a
             // mediator that owns a real circuit breaker.
-            _producer = new InMemoryMessageProducer(_bus, new Publication { Topic = _publicationTopic })
+            _producer = new InMemoryMessageProducer(_bus, Initializer.TestLoggerFactory, new Publication { Topic = _publicationTopic })
             {
                 UseAsyncPublishConfirmation = true,
                 PublishFailurePredicate = _ => true
@@ -72,7 +72,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer: null,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                outboxCircuitBreaker: _circuitBreaker);
+                outboxCircuitBreaker: _circuitBreaker, loggerFactory: Initializer.TestLoggerFactory);
         }
 
         private static Message MessageWithWireTopic(RoutingKey wireTopic) =>

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -28,7 +28,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 
@@ -40,10 +39,10 @@ namespace Paramore.Brighter
     /// Takes a request and maps it to a message
     /// Runs transforms on that message
     /// </summary>
-    public partial class WrapPipelineAsync<TRequest> : TransformPipelineAsync<TRequest> where TRequest: class, IRequest
+    public partial class WrapPipelineAsync<TRequest> : TransformPipelineAsync<TRequest> where TRequest : class, IRequest
     {
         private readonly ILogger _logger;
-        
+
         private readonly InstrumentationOptions _instrumentationOptions;
 
         /// <summary>
@@ -54,7 +53,7 @@ namespace Paramore.Brighter
         /// <param name="transformLeases">The leases over the transforms applied after the message mapper</param>
         /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
         /// <param name="mapperRegistry">The registry the message mapper came from, required to release it when the pipeline is disposed</param>
-        /// <param name="loggerFactory">The factory used to create the logger; falls back to a no-op factory when null.</param>
+        /// <param name="loggerFactory">The factory used to create loggers.</param>
         public WrapPipelineAsync(
             Lease<IAmAMessageMapperAsync<TRequest>> messageMapperLease,
             IAmAMessageTransformerFactoryAsync? messageTransformerFactoryAsync,
@@ -68,7 +67,7 @@ namespace Paramore.Brighter
             _instrumentationOptions = instrumentationOptions;
             if (messageTransformerFactoryAsync != null)
             {
-                InstanceScope = new TransformLifetimeScopeAsync(messageTransformerFactoryAsync);
+                InstanceScope = new TransformLifetimeScopeAsync(messageTransformerFactoryAsync, loggerFactory);
                 TransformLeases.Each(lease => InstanceScope.Add(lease));
             }
         }
@@ -98,10 +97,10 @@ namespace Paramore.Brighter
             requestContext.Span ??= Activity.Current;
 
             MessageMapper.Context = requestContext;
-            
-            MessageMapper.Context = requestContext; 
-            var message = await MessageMapper.MapToMessageAsync(request, publication, cancellationToken); 
-            
+
+            MessageMapper.Context = requestContext;
+            var message = await MessageMapper.MapToMessageAsync(request, publication, cancellationToken);
+
             if (message.Header.Topic != publication.Topic)
             {
                 Log.DifferentPublicationAndMessageTopic(_logger, publication.Topic?.Value ?? string.Empty, message.Header.Topic.Value);
@@ -110,24 +109,24 @@ namespace Paramore.Brighter
                     message.Header.Bag[Message.ProducerTopicHeaderName] = publication.Topic.Value;
                 }
             }
-            
+
             BrighterTracer.WriteMapperEvent(message, publication, requestContext.Span, MessageMapper.GetType().Name, true, _instrumentationOptions, true);
-            
+
             await Transforms.EachAsync(async transform =>
             {
                 transform.Context = requestContext;
                 message = await transform.WrapAsync(message, publication, cancellationToken);
                 BrighterTracer.WriteMapperEvent(message, publication, requestContext.Span, transform.GetType().Name, true, _instrumentationOptions);
-            }); 
-            
+            });
+
             if (!string.IsNullOrEmpty(publication.ReplyTo))
             {
                 message.Header.ReplyTo = publication.ReplyTo!;
-            } 
-            
+            }
+
             return message;
         }
-        
+
         private static partial class Log
         {
             [LoggerMessage(LogLevel.Warning, "Topic mismatch detected: The found topic ({FindPublicationTopic}) differs from the message topic ({MessageTopic}). This discrepancy could lead to invalid data in the pipeline")]

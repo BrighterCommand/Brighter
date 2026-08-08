@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Actions;
 
 namespace Paramore.Brighter.Defer.Handlers;
@@ -47,10 +46,10 @@ public partial class DeferMessageOnErrorHandler<TRequest> : RequestHandler<TRequ
     /// <summary>
     /// Initializes a new instance of the <see cref="DeferMessageOnErrorHandler{TRequest}"/> class.
     /// </summary>
-    /// <param name="logger">The logger; falls back to a no-op logger when null.</param>
-    public DeferMessageOnErrorHandler(ILogger<DeferMessageOnErrorHandler<TRequest>>? logger = null)
+    /// <param name="logger">The logger.</param>
+    public DeferMessageOnErrorHandler(ILogger<DeferMessageOnErrorHandler<TRequest>> logger)
     {
-        _logger = logger ?? NullLogger<DeferMessageOnErrorHandler<TRequest>>.Instance;
+        _logger = logger;
     }
 
     /// <summary>

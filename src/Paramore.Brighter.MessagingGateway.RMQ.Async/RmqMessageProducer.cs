@@ -32,7 +32,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
@@ -48,7 +47,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
 /// </summary>
 public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation, ISupportPublishConfirmationAsync
 {
-    private readonly InstrumentationOptions _insredismesstrumentationOptions;
+    private readonly InstrumentationOptions _instrumentationOptions;
     private readonly ILogger _logger;
 
     // Used to bound the active-send wait when the user opts out of confirms (timeout=0).
@@ -100,7 +99,7 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
     /// The OTel Span we are writing Producer events too
     /// </summary>
     public Activity? Span { get; set; }
-    
+
     /// <summary>
     /// The <see cref="IAmAMessageScheduler"/>
     /// </summary>
@@ -111,9 +110,9 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
     /// </summary>
     /// <param name="connection">The subscription information needed to talk to RMQ</param>
     /// <param name="instrumentationOptions"> The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
-    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger; defaults to <see cref="NullLoggerFactory"/></param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger.</param>
     /// Make Channels = Create
-    public RmqMessageProducer(RmqMessagingGatewayConnection connection, InstrumentationOptions instrumentationOptions = InstrumentationOptions.All, ILoggerFactory loggerFactory)
+    public RmqMessageProducer(RmqMessagingGatewayConnection connection, ILoggerFactory loggerFactory, InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         : this(connection, new RmqPublication { MakeChannels = OnMissingChannel.Create }, loggerFactory)
     {
         _instrumentationOptions = instrumentationOptions;
@@ -126,11 +125,11 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
     /// <param name="publication">How should we configure this producer. If not provided use default behaviours:
     ///     Make Channels = Create
     /// </param>
-    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger; defaults to <see cref="NullLoggerFactory"/></param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger.</param>
     public RmqMessageProducer(RmqMessagingGatewayConnection connection, RmqPublication? publication, ILoggerFactory loggerFactory)
         : base(connection, loggerFactory)
     {
-        _logger = (loggerFactory).CreateLogger<RmqMessageProducer>();
+        _logger = loggerFactory.CreateLogger<RmqMessageProducer>();
         _publication = publication ?? new RmqPublication { MakeChannels = OnMissingChannel.Create };
         _waitForConfirmsTimeOutInMilliseconds = _publication.WaitForConfirmsTimeOutInMilliseconds;
     }
@@ -161,7 +160,7 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
     /// <inheritdoc />
     public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
         => await SendWithDelayAsync(message, delay, true, cancellationToken);
-    
+
     private async Task SendWithDelayAsync(Message message, TimeSpan? delay, bool useSchedulerAsync, CancellationToken cancellationToken = default)
     {
         // Capture the ambient publish context synchronously, before any await or child activity, so the
@@ -178,8 +177,10 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
 
         try
         {
-            if (Connection.Exchange is null) throw new ConfigurationException("RmqMessageProducer: Exchange is not set");
-            if (Connection.AmpqUri is null) throw new ConfigurationException("RmqMessageProducer: Broker URL is not set");
+            if (Connection.Exchange is null)
+                throw new ConfigurationException("RmqMessageProducer: Exchange is not set");
+            if (Connection.AmpqUri is null)
+                throw new ConfigurationException("RmqMessageProducer: Broker URL is not set");
 
             delay ??= TimeSpan.Zero;
 
@@ -188,7 +189,8 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
             var channelInitialized = Channel is not null;
             await EnsureBrokerAsync(makeExchange: _publication.MakeChannels, cancellationToken: cancellationToken);
 
-            if (Channel is null) throw new ChannelFailureException($"RmqMessageProducer: Channel is not set for {_publication.Topic}");
+            if (Channel is null)
+                throw new ChannelFailureException($"RmqMessageProducer: Channel is not set for {_publication.Topic}");
             if (!channelInitialized)
             {
                 Channel.BasicAcksAsync += OnPublishSucceeded;
@@ -258,7 +260,8 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
 
     public sealed override void Dispose()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            return;
 
         WaitForActiveSends();
         WaitForPendingPublisherConfirmations();
@@ -283,7 +286,8 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
 
     public sealed override async ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            return;
 
         await WaitForActiveSendsAsync();
         await WaitForPendingPublisherConfirmationsAsync();
@@ -586,7 +590,7 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
 
         [LoggerMessage(LogLevel.Error, "RmqMessageProducer: Error talking to the socket on {URL}, resetting subscription")]
         public static partial void ErrorTalkingToSocketAsync(ILogger logger, Exception exception, string url);
-        
+
         [LoggerMessage(LogLevel.Debug, "Failed to publish message: {MessageId}")]
         public static partial void FailedToPublishMessageAsync(ILogger logger, string messageId);
 

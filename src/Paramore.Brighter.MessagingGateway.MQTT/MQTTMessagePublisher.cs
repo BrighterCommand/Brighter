@@ -3,7 +3,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using MQTTnet;
 using MQTTnet.Client;
 using MQTTnet.Protocol;
@@ -30,7 +29,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create the logger.</param>
         public MqttMessagePublisher(MqttMessagingGatewayConfiguration config, ILoggerFactory loggerFactory)
         {
-            _logger = (loggerFactory).CreateLogger<MqttMessageProducer>();
+            _logger = loggerFactory.CreateLogger<MqttMessageProducer>();
             _config = config;
 
             _mqttClient = new MqttFactory().CreateMqttClient();

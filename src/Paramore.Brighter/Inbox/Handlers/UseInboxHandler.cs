@@ -26,7 +26,6 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
@@ -43,7 +42,7 @@ namespace Paramore.Brighter.Inbox.Handlers
     /// approach is typically called Command Sourcing.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public partial class UseInboxHandler<T> : RequestHandler<T> where T: class, IRequest
+    public partial class UseInboxHandler<T> : RequestHandler<T> where T : class, IRequest
     {
         private readonly ILogger _logger;
 
@@ -65,20 +64,20 @@ namespace Paramore.Brighter.Inbox.Handlers
         /// <param name="inbox">The store for commands that pass into the system</param>
         /// <param name="outbox">An optional causation-tracking outbox, used to replay messages when a duplicate is
         /// seen and <see cref="OnceOnlyAction.Replay"/> is configured. Resolved from DI when registered.</param>
-        /// <param name="logger">The logger; falls back to a no-op logger when null.</param>
-        public UseInboxHandler(IAmAnInboxSync inbox, IAmACausationTrackingOutbox? outbox = null, ILogger<UseInboxHandler<T>>? logger = null)
+        /// <param name="logger">The logger.</param>
+        public UseInboxHandler(IAmAnInboxSync inbox, ILogger<UseInboxHandler<T>> logger, IAmACausationTrackingOutbox? outbox = null)
         {
             _inbox = inbox;
             _outbox = outbox;
-            _logger = logger ?? NullLogger<UseInboxHandler<T>>.Instance;
+            _logger = logger;
         }
-        
+
         public override void InitializeFromAttributeParams(params object?[] initializerList)
         {
-            _onceOnly = (bool?) initializerList[0] ?? false;
+            _onceOnly = (bool?)initializerList[0] ?? false;
             _contextKey = (string?)initializerList[1];
             _onceOnlyAction = (OnceOnlyAction?)initializerList[2] ?? OnceOnlyAction.Throw;
-            
+
             base.InitializeFromAttributeParams(initializerList);
         }
 

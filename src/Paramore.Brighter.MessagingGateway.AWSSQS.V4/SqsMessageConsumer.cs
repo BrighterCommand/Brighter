@@ -30,7 +30,6 @@ using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Tasks;
 
@@ -44,7 +43,7 @@ public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageCo
     private readonly ILogger _logger;
 
     private readonly AWSMessagingGatewayConnection _connection;
-    private readonly ILoggerFactory? _loggerFactory;
+    private readonly ILoggerFactory _loggerFactory;
     private readonly AWSClientFactory _clientFactory;
     private readonly string _queueName;
     private readonly int _batchSize;
@@ -72,21 +71,21 @@ public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageCo
     /// <param name="queueAttributes">The <see cref="SqsAttributes"/> for the queue (used by DLQ producers for FIFO support)</param>
     /// <param name="loggerFactory">The factory used to create a logger for this consumer</param>
     public SqsMessageConsumer(
-        AWSMessagingGatewayConnection awsConnection,
-        string? queueName,
-        int batchSize = 1,
+            AWSMessagingGatewayConnection awsConnection,
+            string? queueName,
+            ILoggerFactory loggerFactory,
+            int batchSize = 1,
         RoutingKey? deadLetterRoutingKey = null,
         RoutingKey? invalidMessageRoutingKey = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create,
         bool isQueueUrl = false,
         bool rawMessageDelivery = true,
-        SqsAttributes? queueAttributes = null,
-        ILoggerFactory loggerFactory)
+            SqsAttributes? queueAttributes = null)
     {
         if (string.IsNullOrEmpty(queueName))
             throw new ConfigurationException("QueueName is mandatory");
 
-        _logger = (loggerFactory).CreateLogger<SqsMessageConsumer>();
+        _logger = loggerFactory.CreateLogger<SqsMessageConsumer>();
         _loggerFactory = loggerFactory;
         _connection = awsConnection;
         _clientFactory = new AWSClientFactory(awsConnection);
@@ -271,7 +270,7 @@ public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageCo
             await EnsureChannelUrl(client, cancellationToken);
             timeOut ??= TimeSpan.Zero;
 
-            Log.RetrievingNextMessage(_logger,_channelUrl!);
+            Log.RetrievingNextMessage(_logger, _channelUrl!);
 
             var request = new ReceiveMessageRequest(_channelUrl)
             {
@@ -501,7 +500,8 @@ public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageCo
         // Remove SQS-specific headers that will be reset when sent to the DLQ
         message.Header.Bag.Remove("ReceiptHandle");
 
-        if (reason == null) return;
+        if (reason == null)
+            return;
 
         message.Header.Bag["rejectionReason"] = reason.RejectionReason.ToString();
         if (!string.IsNullOrEmpty(reason.Description))

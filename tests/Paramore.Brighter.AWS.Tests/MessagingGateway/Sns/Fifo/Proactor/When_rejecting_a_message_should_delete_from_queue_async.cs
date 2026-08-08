@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -26,7 +26,7 @@ public class SqsMessageConsumerRejectTestsAsync : IDisposable, IAsyncDisposable
         _myCommand = new MyCommand { Value = "Test" };
         var replyTo = new RoutingKey("http:\\queueUrl");
         var contentType = new ContentType(MediaTypeNames.Text.Plain);
-        var correlationId =Id.Random();
+        var correlationId = Id.Random();
         var channelName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var topicName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
@@ -38,9 +38,9 @@ public class SqsMessageConsumerRejectTestsAsync : IDisposable, IAsyncDisposable
             channelName: new ChannelName(channelName),
             channelType: ChannelType.PubSub,
             routingKey: routingKey,
-            queueAttributes: new SqsAttributes(type: SqsType.Fifo, tags: new Dictionary<string, string> { { "Environment", "Test" } }), 
-            topicAttributes: topicAttributes, 
-            messagePumpType: MessagePumpType.Proactor, 
+            queueAttributes: new SqsAttributes(type: SqsType.Fifo, tags: new Dictionary<string, string> { { "Environment", "Test" } }),
+            topicAttributes: topicAttributes,
+            messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
@@ -51,7 +51,7 @@ public class SqsMessageConsumerRejectTestsAsync : IDisposable, IAsyncDisposable
 
         var awsConnection = GatewayFactory.CreateFactory();
 
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _channel = _channelFactory.CreateAsyncChannel(subscription);
 
         _messageProducer = new SnsMessageProducer(awsConnection,
@@ -60,7 +60,7 @@ public class SqsMessageConsumerRejectTestsAsync : IDisposable, IAsyncDisposable
                 MakeChannels = OnMissingChannel.Create,
                 Topic = routingKey,
                 TopicAttributes = topicAttributes
-            });
+            }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

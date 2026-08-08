@@ -37,7 +37,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     {
         private readonly KafkaMessagingGatewayConfiguration _globalConfiguration;
         private readonly IEnumerable<KafkaPublication> _publications;
-        private readonly ILoggerFactory? _loggerFactory;
+        private readonly ILoggerFactory _loggerFactory;
         private Action<ProducerConfig>? _configHook;
 
         /// <summary>
@@ -64,12 +64,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Creates a message producer registry.
         /// </summary>
         /// <returns>A registry of middleware clients by topic, for sending messages to the middleware</returns>
-        public Dictionary<ProducerKey,IAmAMessageProducer> Create()
+        public Dictionary<ProducerKey, IAmAMessageProducer> Create()
         {
             var publicationsByTopic = new Dictionary<ProducerKey, IAmAMessageProducer>();
             foreach (var publication in _publications)
             {
-                if (publication.Topic is null) continue;
+                if (publication.Topic is null)
+                    continue;
                 var producer = new KafkaMessageProducer(_globalConfiguration, publication, loggerFactory: _loggerFactory);
                 if (_configHook != null)
                     producer.ConfigHook(_configHook);
@@ -89,7 +90,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <returns>A registry of middleware clients by topic, for sending messages to the middleware</returns>
         public Task<Dictionary<ProducerKey, IAmAMessageProducer>> CreateAsync()
         {
-           return Task.FromResult(Create()); 
+            return Task.FromResult(Create());
         }
 
         /// <summary>

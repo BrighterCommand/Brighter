@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net.Mime;
 using System.Threading.Tasks;
@@ -21,7 +21,7 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
     {
         var awsConnection = GatewayFactory.CreateFactory();
 
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var queueName = $"Raw-Msg-Delivery-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         _routingKey = new RoutingKey(queueName);
 
@@ -33,7 +33,7 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
             type: SqsType.Fifo,
             tags: new Dictionary<string, string> { { "Environment", "Test" } });
         var channelName = new ChannelName(queueName);
-        
+
         _channel = _channelFactory.CreateAsyncChannel(new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(queueName),
             channelName: channelName,
@@ -41,17 +41,17 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
             routingKey: _routingKey,
             bufferSize: bufferSize,
             messagePumpType: MessagePumpType.Proactor,
-            queueAttributes: queueAttributes, 
+            queueAttributes: queueAttributes,
             makeChannels: OnMissingChannel.Create)
         );
 
         _messageProducer = new SqsMessageProducer(
             awsConnection,
             new SqsPublication(
-                channelName: channelName, 
-                queueAttributes: queueAttributes,  
-                makeChannels: OnMissingChannel.Create)
-            );
+                channelName: channelName,
+                queueAttributes: queueAttributes,
+                makeChannels: OnMissingChannel.Create),
+                loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]
@@ -67,7 +67,8 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
             correlationId: Guid.NewGuid().ToString(),
             replyTo: RoutingKey.Empty,
             contentType: new ContentType(MediaTypeNames.Text.Plain),
-            partitionKey: messageGroupId) { Bag = { [HeaderNames.DeduplicationId] = deduplicationId } };
+            partitionKey: messageGroupId)
+        { Bag = { [HeaderNames.DeduplicationId] = deduplicationId } };
 
         var customHeaderItem = new KeyValuePair<string, object>("custom-header-item", "custom-header-item-value");
         messageHeader.Bag.Add(customHeaderItem.Key, customHeaderItem.Value);

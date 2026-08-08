@@ -37,7 +37,7 @@ public class SqsProducerRegistryFactory : IAmAProducerRegistryFactory
 {
     private readonly AWSMessagingGatewayConnection _connection;
     private readonly IEnumerable<SqsPublication> _sqsPublications;
-    private readonly ILoggerFactory? _loggerFactory;
+    private readonly ILoggerFactory _loggerFactory;
 
     /// <summary>
     /// Create a collection of producers from the publication information

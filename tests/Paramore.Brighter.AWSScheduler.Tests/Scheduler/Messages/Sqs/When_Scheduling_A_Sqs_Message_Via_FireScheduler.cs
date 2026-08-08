@@ -12,7 +12,7 @@ namespace Paramore.Brighter.AWSScheduler.Tests.Scheduler.Messages.Sqs;
 [Collection("Scheduler SQS")]
 public class SqsSchedulingMessageViaFireSchedulerTest : IDisposable
 {
-    private readonly ContentType _contentType = new (MediaTypeNames.Text.Plain); 
+    private readonly ContentType _contentType = new(MediaTypeNames.Text.Plain);
     private const int BufferSize = 3;
     private readonly SqsMessageProducer _messageProducer;
     private readonly SqsMessageConsumer _consumer;
@@ -24,7 +24,7 @@ public class SqsSchedulingMessageViaFireSchedulerTest : IDisposable
     {
         var awsConnection = GatewayFactory.CreateFactory();
 
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var subscriptionName = $"Buffered-Scheduler-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         _queueName = $"Buffered-Scheduler-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
 
@@ -39,13 +39,13 @@ public class SqsSchedulingMessageViaFireSchedulerTest : IDisposable
 
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
         //just for the tests, so create a new consumer from the properties
-        _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), BufferSize);
+        _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, BufferSize);
         _messageProducer = new SqsMessageProducer(awsConnection,
-            new SqsPublication { MakeChannels = OnMissingChannel.Create, QueueAttributes = new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } }) });
+            new SqsPublication { MakeChannels = OnMissingChannel.Create, QueueAttributes = new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } }) }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         _factory = new AwsSchedulerFactory(awsConnection, "brighter-scheduler")
         {
-            UseMessageTopicAsTarget = false, 
+            UseMessageTopicAsTarget = false,
             MakeRole = OnMissingRole.Create,
             SchedulerTopicOrQueue = routingKey
         };

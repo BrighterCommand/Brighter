@@ -15,7 +15,7 @@ public class LuggageUploadMissingParametersTests
         //arrange
         var exception = Assert.Throws<ConfigurationException>(() =>
         {
-            var gcs = new GcsLuggageStore(new GcsLuggageOptions());
+            var gcs = new GcsLuggageStore(new GcsLuggageOptions(), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             gcs.EnsureStoreExists();
         });
 
@@ -34,7 +34,7 @@ public class LuggageUploadMissingParametersTests
             {
                 ProjectId = Guid.NewGuid().ToString(),
                 BucketName = bucketName!
-            });
+            }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             
             gcs.EnsureStoreExists();
         });
@@ -47,7 +47,7 @@ public class LuggageUploadMissingParametersTests
         //arrange
         var exception = await Assert.ThrowsAsync<ConfigurationException>(async () =>
         {
-            var gcs = new GcsLuggageStore(new GcsLuggageOptions());
+            var gcs = new GcsLuggageStore(new GcsLuggageOptions(), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             await gcs.EnsureStoreExistsAsync();
         });
 
@@ -66,7 +66,7 @@ public class LuggageUploadMissingParametersTests
             {
                 ProjectId = Guid.NewGuid().ToString(),
                 BucketName = bucketName!
-            });
+            }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             
             await gcs.EnsureStoreExistsAsync();
         });

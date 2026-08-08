@@ -38,7 +38,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     {
         private readonly KafkaMessagingGatewayConfiguration _globalConfiguration;
         private readonly IEnumerable<KafkaPublication> _publications;
-        private readonly ILoggerFactory? _loggerFactory;
+        private readonly ILoggerFactory _loggerFactory;
         private Action<ProducerConfig>? _configHook;
 
         /// <summary>
@@ -80,7 +80,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <returns>An <see cref="IAmAProducerRegistry"/> that represents a collection of Kafka Message Producers</returns>
         public Task<IAmAProducerRegistry> CreateAsync(CancellationToken ct = default)
         {
-            return Task.FromResult(Create());    
+            return Task.FromResult(Create());
         }
 
         /// <summary>

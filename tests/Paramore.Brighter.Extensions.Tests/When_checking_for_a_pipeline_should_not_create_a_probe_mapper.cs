@@ -15,7 +15,7 @@ public class TransformPipelineBuilderHasPipelineTests
         const int messageCount = 10;
         var disposals = new MapperDisposalLog();
 
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddSingleton(disposals);
         collection.AddTransient<DisposableMapper>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions { MapperLifetime = ServiceLifetime.Transient });
@@ -25,7 +25,7 @@ public class TransformPipelineBuilderHasPipelineTests
         var mapperRegistry = new MessageMapperRegistry(mapperFactory, null);
         mapperRegistry.Register<MinimalCommand, DisposableMapper>();
 
-        var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, new EmptyMessageTransformerFactory());
+        var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, new EmptyMessageTransformerFactory(), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //act — HasPipeline resolves the mapper TYPE to answer "is there a pipeline?"; it no longer creates
         //an instance, so on the mediator's once-per-message probe there is nothing to release or leak

@@ -38,7 +38,7 @@ public class ServiceCollectionSubscriberRegistryInspectorTests
     public ServiceCollectionSubscriberRegistryInspectorTests()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         _registry = new ServiceCollectionSubscriberRegistry(services);
         _registry.Register<MyDescribableCommand, MyPublicSyncHandler>();
     }

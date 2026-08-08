@@ -27,7 +27,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.JsonConverters;
 
 namespace Paramore.Brighter.Logging.Handlers
@@ -47,10 +46,10 @@ namespace Paramore.Brighter.Logging.Handlers
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestLoggingHandlerAsync{TRequest}"/> class.
         /// </summary>
-        /// <param name="logger">The logger; falls back to a no-op logger when null.</param>
-        public RequestLoggingHandlerAsync(ILogger<RequestLoggingHandlerAsync<TRequest>>? logger = null)
+        /// <param name="logger">The logger.</param>
+        public RequestLoggingHandlerAsync(ILogger<RequestLoggingHandlerAsync<TRequest>> logger)
         {
-            _logger = logger ?? NullLogger<RequestLoggingHandlerAsync<TRequest>>.Instance;
+            _logger = logger;
         }
 
         /// <summary>

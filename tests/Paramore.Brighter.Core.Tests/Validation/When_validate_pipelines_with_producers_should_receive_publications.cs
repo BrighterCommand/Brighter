@@ -38,11 +38,11 @@ public class ValidatePipelinesWithProducersTests
         // Arrange — set up a producer whose publication has no RequestType
         var routingKey = new RoutingKey("test.validation.topic");
         var producer = new InMemoryMessageProducer(
-            new InternalBus(), new Publication { Topic = routingKey });
+            new InternalBus(), Initializer.TestLoggerFactory, new Publication { Topic = routingKey });
         var producerRegistry = new ProducerRegistry(
             new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, producer } });
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         services.AddSingleton(subscriberRegistry);
         services.AddSingleton<IAmAProducerRegistry>(producerRegistry);
@@ -69,11 +69,11 @@ public class ValidatePipelinesWithProducersTests
         var routingKey = new RoutingKey("test.validation.topic");
         var producer = new InMemoryMessageProducer(
             new InternalBus(),
-            new Publication { Topic = routingKey, RequestType = typeof(MyValidationCommand) });
+            Initializer.TestLoggerFactory, new Publication { Topic = routingKey, RequestType = typeof(MyValidationCommand) });
         var producerRegistry = new ProducerRegistry(
             new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, producer } });
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         services.AddSingleton(subscriberRegistry);
         services.AddSingleton<IAmAProducerRegistry>(producerRegistry);

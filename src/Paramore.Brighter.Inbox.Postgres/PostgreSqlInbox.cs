@@ -27,7 +27,6 @@ using System;
 using System.Data;
 using System.Linq;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using NpgsqlTypes;
 using Paramore.Brighter.Observability;
@@ -37,9 +36,9 @@ namespace Paramore.Brighter.Inbox.Postgres;
 
 public class PostgreSqlInbox : RelationalDatabaseInbox
 {
-    public PostgreSqlInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider, ILogger<PostgreSqlInbox>? logger)
+    public PostgreSqlInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider, ILogger<PostgreSqlInbox> logger)
         : base(DbSystem.Postgresql, configuration, connectionProvider,
-            new PostgreSqlQueries(), logger ?? NullLogger<PostgreSqlInbox>.Instance)
+            new PostgreSqlQueries(), logger)
     {
     }
 
@@ -63,7 +62,7 @@ public class PostgreSqlInbox : RelationalDatabaseInbox
 
     protected override IDbDataParameter CreateJsonSqlParameter(string parameterName, object? value)
     {
-        return new NpgsqlParameter { ParameterName = parameterName, NpgsqlDbType = DatabaseConfiguration.BinaryMessagePayload ? NpgsqlDbType.Jsonb : NpgsqlDbType.Json,Value = value ?? DBNull.Value };
+        return new NpgsqlParameter { ParameterName = parameterName, NpgsqlDbType = DatabaseConfiguration.BinaryMessagePayload ? NpgsqlDbType.Jsonb : NpgsqlDbType.Json, Value = value ?? DBNull.Value };
     }
 
     /// <summary>

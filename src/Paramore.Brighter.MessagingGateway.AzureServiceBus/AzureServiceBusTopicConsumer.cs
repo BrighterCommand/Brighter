@@ -28,7 +28,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 using Paramore.Brighter.Tasks;
 
@@ -63,11 +62,11 @@ public partial class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
         ILoggerFactory loggerFactory)
         : base(subscription, messageProducer, administrationClientWrapper, loggerFactory: loggerFactory)
     {
-        _logger = (loggerFactory).CreateLogger<AzureServiceBusTopicConsumer>();
+        _logger = loggerFactory.CreateLogger<AzureServiceBusTopicConsumer>();
         _subscriptionName = subscription.ChannelName.Value;
         _serviceBusReceiverProvider = serviceBusReceiverProvider;
     }
-    
+
     /// <summary>
     /// Purges the specified queue name.
     /// </summary>
@@ -78,7 +77,7 @@ public partial class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
         await AdministrationClientWrapper.DeleteTopicAsync(Topic);
         await EnsureChannelAsync();
     }
- 
+
     protected override async Task EnsureChannelAsync()
     {
         if (_subscriptionCreated || Subscription.MakeChannels.Equals(OnMissingChannel.Assume))
@@ -123,7 +122,7 @@ public partial class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
             throw new ChannelFailureException("Failing to check or create subscription", e);
         }
     }
-        
+
     protected override async Task GetMessageReceiverProviderAsync()
     {
         Log.GettingMessageReceiverProviderForTopicAndSubscription(_logger, Topic, _subscriptionName);
@@ -148,7 +147,7 @@ public partial class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
 
         [LoggerMessage(LogLevel.Error, "Failing to check or create subscription")]
         public static partial void FailingToCheckOrCreateSubscription(ILogger logger, Exception e);
-        
+
         [LoggerMessage(LogLevel.Information, "Getting message receiver provider for topic {Topic} and subscription {ChannelName}...")]
         public static partial void GettingMessageReceiverProviderForTopicAndSubscription(ILogger logger, string topic, string channelName);
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
@@ -32,13 +32,13 @@ var messagingConfiguration = new RelationalDatabaseConfiguration(
 
 var producerRegistry = new MsSqlProducerRegistryFactory(
         messagingConfiguration,
-        [new Publication()])
+        [new Publication()], loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
     .Create();
 
 builder.Services.AddBrighter()
     // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
     // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-    .UseScheduler(new InMemorySchedulerFactory())
+    .UseScheduler(new InMemorySchedulerFactory(loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance))
     .AddProducers((configure) =>
     {
         configure.ProducerRegistry = producerRegistry;

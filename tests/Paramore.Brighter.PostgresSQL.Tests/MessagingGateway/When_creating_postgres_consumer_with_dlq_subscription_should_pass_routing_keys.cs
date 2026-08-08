@@ -41,7 +41,7 @@ public class PostgresMessageConsumerFactoryDlqTests : IDisposable
         var configuration = new RelationalDatabaseConfiguration(
             "Host=localhost;Port=5432;Database=BrighterTests;Username=brighteruser;Password=Password1!");
         var connection = new PostgresMessagingGatewayConnection(configuration);
-        _factory = new PostgresConsumerFactory(connection);
+        _factory = new PostgresConsumerFactory(connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

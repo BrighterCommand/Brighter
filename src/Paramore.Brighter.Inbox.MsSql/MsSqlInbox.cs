@@ -27,7 +27,6 @@ using System;
 using System.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.MsSql;
 using Paramore.Brighter.Observability;
 
@@ -46,10 +45,10 @@ public class MsSqlInbox : RelationalDatabaseInbox
     /// </summary>
     /// <param name="configuration">The configuration.</param>
     /// <param name="connectionProvider">The Connection Provider.</param>
-    /// <param name="logger">The logger to use; defaults to a null logger when not supplied</param>
-    public MsSqlInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider, ILogger<MsSqlInbox>? logger)
+    /// <param name="logger">The logger to use.</param>
+    public MsSqlInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider, ILogger<MsSqlInbox> logger)
         : base(DbSystem.MsSql, configuration, connectionProvider,
-            new MsSqlQueries(), logger ?? NullLogger<MsSqlInbox>.Instance)
+            new MsSqlQueries(), logger)
     {
     }
 
@@ -57,7 +56,7 @@ public class MsSqlInbox : RelationalDatabaseInbox
     ///     Initializes a new instance of the <see cref="MsSqlInbox" /> class.
     /// </summary>
     /// <param name="configuration">The configuration.</param>
-    /// <param name="logger">The logger to use; defaults to a null logger when not supplied</param>
+    /// <param name="logger">The logger to use.</param>
     public MsSqlInbox(IAmARelationalDatabaseConfiguration configuration, ILogger<MsSqlInbox> logger) : this(configuration,
         new MsSqlConnectionProvider(configuration), logger)
     {

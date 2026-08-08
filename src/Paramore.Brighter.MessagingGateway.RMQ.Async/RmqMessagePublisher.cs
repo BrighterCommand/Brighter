@@ -31,7 +31,6 @@ using System.Net.Mime;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Extensions;
 using RabbitMQ.Client;
 
@@ -62,7 +61,7 @@ internal sealed partial class RmqMessagePublisher
     /// </summary>
     /// <param name="channel">The channel.</param>
     /// <param name="connection">The exchange we want to talk to.</param>
-    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger; defaults to <see cref="NullLoggerFactory"/></param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger.</param>
     /// <exception cref="System.ArgumentNullException">
     /// channel
     /// or
@@ -80,7 +79,7 @@ internal sealed partial class RmqMessagePublisher
             throw new ArgumentNullException(nameof(connection));
         }
 
-        _logger = (loggerFactory).CreateLogger<RmqMessagePublisher>();
+        _logger = loggerFactory.CreateLogger<RmqMessagePublisher>();
 
         _connection = connection;
 

@@ -34,7 +34,7 @@ public class SnsMessageProducerFactory : IAmAMessageProducerFactory
 {
     private readonly AWSMessagingGatewayConnection _connection;
     private readonly IEnumerable<SnsPublication> _publications;
-    private readonly ILoggerFactory? _loggerFactory;
+    private readonly ILoggerFactory _loggerFactory;
 
     /// <summary>
     /// Creates a collection of SNS message producers from the SNS publication information
@@ -67,7 +67,7 @@ public class SnsMessageProducerFactory : IAmAMessageProducerFactory
 
             var producer = new SnsMessageProducer(_connection, publication, loggerFactory: _loggerFactory);
             producer.Publication = publication;
-            
+
             if (producer.ConfirmTopicExists())
             {
                 var producerKey = new ProducerKey(publication.Topic, publication.Type);
@@ -99,7 +99,7 @@ public class SnsMessageProducerFactory : IAmAMessageProducerFactory
 
             var producer = new SnsMessageProducer(_connection, publication, loggerFactory: _loggerFactory);
             producer.Publication = publication;
-            
+
             if (await producer.ConfirmTopicExistsAsync())
             {
                 var producerKey = new ProducerKey(publication.Topic, publication.Type);

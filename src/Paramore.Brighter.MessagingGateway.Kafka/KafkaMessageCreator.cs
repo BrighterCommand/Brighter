@@ -30,7 +30,6 @@ using System.Net.Mime;
 using System.Text;
 using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 
@@ -47,9 +46,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     {
         private readonly ILogger _logger;
 
-        public KafkaMessageCreator(ILogger<KafkaMessageCreator>? logger)
+        public KafkaMessageCreator(ILogger<KafkaMessageCreator> logger)
         {
-            _logger = logger ?? NullLogger<KafkaMessageCreator>.Instance;
+            _logger = logger;
         }
 
         private sealed class MessageHeaderResults
@@ -70,7 +69,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             public required HeaderResult<Uri?> Source { get; set; }
             public required HeaderResult<TraceParent?> TraceParent { get; set; }
             public required HeaderResult<TraceState?> TraceState { get; set; }
-            public required HeaderResult<Baggage?> Baggage { get; set; } 
+            public required HeaderResult<Baggage?> Baggage { get; set; }
         }
 
         public Message CreateMessage(ConsumeResult<string, byte[]> consumeResult)
@@ -123,7 +122,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             var message = SuccessMessage(headers, consumeResult);
             AddPartitionOffset(message, consumeResult);
             AddCustomHeaders(message, consumeResult.Message.Headers);
-            
+
             return message;
         }
 
@@ -166,9 +165,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private HeaderResult<ContentType?> ReadContentType(Headers headers)
         {
             var contentType = ReadHeader(headers, HeaderNames.CLOUD_EVENTS_DATA_CONTENT_TYPE, true);
-            
+
             if (contentType.Success && !string.IsNullOrEmpty(contentType.Result))
-                return new HeaderResult<ContentType?>( new ContentType(contentType.Result!), true);
+                return new HeaderResult<ContentType?>(new ContentType(contentType.Result!), true);
 
             contentType = ReadHeader(headers, HeaderNames.CONTENT_TYPE);
             if (contentType.Success && !string.IsNullOrEmpty(contentType.Result))
@@ -299,7 +298,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             var id = ReadHeader(headers, HeaderNames.CLOUD_EVENTS_ID, true)
                 .Map(messageId => new HeaderResult<Id?>(string.IsNullOrEmpty(messageId) ? Id.Random() : Id.Create(messageId), true));
-            
+
             if (id.Success)
             {
                 return id;
@@ -339,16 +338,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             {
                 return pKey;
             }
-           
+
             //if we have no partition key header, but we have a message key, we assume it is not a Brighter message,
             //and we use the message key as the partition key
             if (!string.IsNullOrEmpty(message.Key))
             {
                 return new HeaderResult<PartitionKey?>(message.Key, true);
             }
-            
+
             //if we have no partition key header, and no message key, we return empty
-            return new HeaderResult<PartitionKey?>(PartitionKey.Empty, false); 
+            return new HeaderResult<PartitionKey?>(PartitionKey.Empty, false);
         }
 
         private HeaderResult<string?> ReadSubject(Headers headers)
@@ -356,7 +355,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         private HeaderResult<CloudEventsType?> ReadType(Headers headers)
             => ReadHeader(headers, HeaderNames.CLOUD_EVENTS_TYPE)
-                .Map(x =>x is not null 
+                .Map(x => x is not null
                     ? new HeaderResult<CloudEventsType?>(new CloudEventsType(x), true)
                     : new HeaderResult<CloudEventsType?>(CloudEventsType.Empty, true));
 

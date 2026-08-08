@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Polly;
 using RabbitMQ.Client.Exceptions;
 
@@ -42,21 +41,23 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
         /// </summary>
         public ConnectionPolicyFactory(ILoggerFactory loggerFactory)
            : this(new RmqMessagingGatewayConnection(), loggerFactory)
-        {}
+        { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ConnectionPolicyFactory"/> class.
         /// Use if you need to inject a test logger
         /// </summary>
         /// <param name="connection"></param>
-        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger; defaults to <see cref="NullLoggerFactory"/></param>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger.</param>
         public ConnectionPolicyFactory(RmqMessagingGatewayConnection connection, ILoggerFactory loggerFactory)
         {
-            _logger = (loggerFactory).CreateLogger<ConnectionPolicyFactory>();
+            _logger = loggerFactory.CreateLogger<ConnectionPolicyFactory>();
 
-            if (connection.Exchange is null) throw new ConfigurationException("RabbitMQ Exchange is not set");
-            if (connection.AmpqUri is null) throw new ConfigurationException("RabbitMQ Broker URL is not set");
-            
+            if (connection.Exchange is null)
+                throw new ConfigurationException("RabbitMQ Exchange is not set");
+            if (connection.AmpqUri is null)
+                throw new ConfigurationException("RabbitMQ Broker URL is not set");
+
             var retries = connection.AmpqUri.ConnectionRetryCount;
             var retryWaitInMilliseconds = connection.AmpqUri.RetryWaitInMilliseconds;
             var circuitBreakerTimeout = connection.AmpqUri.CircuitBreakTimeInMilliseconds;
@@ -77,7 +78,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
                         {
                             Log.ExceptionOnSubscription(_logger, exception, context["queueName"].ToString(), connection.Exchange.Name, connection.AmpqUri.GetSanitizedUri());
 
-                            throw new ChannelFailureException($"RMQMessagingGateway: Exception on subscription to queue { context["queueName"]} via exchange {connection.Exchange.Name} on subscription {connection.AmpqUri.GetSanitizedUri()}", exception);
+                            throw new ChannelFailureException($"RMQMessagingGateway: Exception on subscription to queue {context["queueName"]} via exchange {connection.Exchange.Name} on subscription {connection.AmpqUri.GetSanitizedUri()}", exception);
                         }
                     });
 

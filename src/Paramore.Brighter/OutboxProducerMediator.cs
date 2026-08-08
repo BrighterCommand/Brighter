@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -29,8 +29,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.CircuitBreaker;
+using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Scheduler.Events;
 using Polly.Registry;
@@ -42,7 +42,7 @@ namespace Paramore.Brighter
     /// <summary>
     /// Mediates the interaction between a producer and an outbox. As we want to write to the outbox, and then send from there
     /// to the producer, we need to take control of produce operations to mediate between the two in a transaction.
-    /// NOTE: This class is singleton. The CommandProcessor by contrast, is transient or more typically scoped. 
+    /// NOTE: This class is singleton. The CommandProcessor by contrast, is transient or more typically scoped.
     /// </summary>
     public partial class OutboxProducerMediator<TMessage, TTransaction> : IAmAnOutboxProducerMediator,
         IAmAnOutboxProducerMediator<TMessage, TTransaction>
@@ -77,7 +77,7 @@ namespace Paramore.Brighter
 
         private const string NoSyncOutboxError = "A sync Outbox must be defined.";
         private const string NoAsyncOutboxError = "An async Outbox must be defined.";
-            
+
         private int _outStandingCount;
         //an int rather than a bool so Dispose can claim it with a single atomic Interlocked.Exchange:
         //an owner and the container disposing concurrently must run CloseAll() (broker I/O) and the factory
@@ -88,10 +88,10 @@ namespace Paramore.Brighter
         private readonly Dictionary<string, object> _outBoxBag;
         private readonly IAmABrighterTracer? _tracer;
         private readonly TimeProvider _timeProvider;
-        
+
         /// <inheritdoc />
         public IAmAnOutbox? Outbox => (IAmAnOutbox?)_outBox ?? _asyncOutbox;
-        
+
         /// <summary>
         /// Creates an instance of the Outbox Producer Mediator
         /// </summary>
@@ -121,7 +121,6 @@ namespace Paramore.Brighter
         /// Does this mediator own the transform factories, so that <see cref="Dispose()"/> should dispose them?
         /// Defaults to <c>false</c> for the manual-wiring path; the DI path passes <c>true</c>.
         /// </param>
-        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers.</param>
         public OutboxProducerMediator(
             IAmAProducerRegistry producerRegistry,
             ResiliencePipelineRegistry<string> resiliencePipelineRegistry,
@@ -161,7 +160,7 @@ namespace Paramore.Brighter
             if (messageTransformerFactory is null || messageTransformerFactoryAsync is null)
                 throw new ConfigurationException(
                     "A Command Processor with an external bus must have a message transformer factory");
-            
+
             _timeProvider = timeProvider ?? TimeProvider.System;
             _lastOutStandingMessageCheckAt = _timeProvider.GetUtcNow();
 
@@ -171,16 +170,18 @@ namespace Paramore.Brighter
             _ownsRegistry = ownsRegistry;
             _ownsTransformerFactories = ownsTransformerFactories;
 
-            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, instrumentationOptions, loggerFactory);
+            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, loggerFactory, instrumentationOptions);
             _transformPipelineBuilderAsync =
-                new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync, instrumentationOptions, loggerFactory);
+                new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync, loggerFactory, instrumentationOptions);
 
             //default to in-memory; expectation for an in memory box is Message and CommittableTransaction
             outbox ??= new InMemoryOutbox(TimeProvider.System);
             outbox.Tracer = tracer;
 
-            if (outbox is IAmAnOutboxSync<TMessage, TTransaction> syncOutbox) _outBox = syncOutbox;
-            if (outbox is IAmAnOutboxAsync<TMessage, TTransaction> asyncOutbox) _asyncOutbox = asyncOutbox;
+            if (outbox is IAmAnOutboxSync<TMessage, TTransaction> syncOutbox)
+                _outBox = syncOutbox;
+            if (outbox is IAmAnOutboxAsync<TMessage, TTransaction> asyncOutbox)
+                _asyncOutbox = asyncOutbox;
             _outboxCircuitBreaker = outboxCircuitBreaker;
 
             _outboxTimeout = outboxTimeout;
@@ -217,7 +218,8 @@ namespace Paramore.Brighter
                 //guard every step independently: a failure in one must not skip the rest. Otherwise a throw
                 //from CloseAll() would leak the per-resolution IServiceScope each factory retains for a
                 //mapper or transform obtained but not released — the exact retention this owner exists to drain.
-                try { _producerRegistry.CloseAll(); }
+                try
+                { _producerRegistry.CloseAll(); }
                 catch (Exception e) { Log.FailedToCloseProducers(_logger, e); }
 
                 //dispose only what this mediator owns. On the DI path it is the sole owner of the runtime
@@ -241,9 +243,10 @@ namespace Paramore.Brighter
 
         //Disposes a member if it is IDisposable, swallowing and logging any failure so one factory's fault
         //cannot skip the remaining disposals in the teardown chain.
-        private static void DisposeQuietly(object? member)
+        private void DisposeQuietly(object? member)
         {
-            try { (member as IDisposable)?.Dispose(); }
+            try
+            { (member as IDisposable)?.Dispose(); }
             catch (Exception e) { Log.FailedToDisposeOwnedResource(_logger, member?.GetType().Name ?? "null", e); }
         }
 
@@ -266,8 +269,9 @@ namespace Paramore.Brighter
             CancellationToken cancellationToken = default,
             string? batchId = null)
         {
-            if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
-            
+            if (_asyncOutbox is null)
+                throw new ArgumentException(NoAsyncOutboxError);
+
             if (batchId != null)
             {
                 GetBatchOrThrow(batchId).Add(message);
@@ -310,7 +314,8 @@ namespace Paramore.Brighter
             string? batchId = null
         )
         {
-            if (_outBox is null) throw new ArgumentException(NoSyncOutboxError);
+            if (_outBox is null)
+                throw new ArgumentException(NoSyncOutboxError);
             if (batchId != null)
             {
                 GetBatchOrThrow(batchId).Add(message);
@@ -337,7 +342,7 @@ namespace Paramore.Brighter
         /// Used with RPC to call a remote service via the external bus
         /// </summary>
         /// <param name="outMessage">The message to send</param>
-        /// <param name="requestContext">The context of the request pipeline</param>        
+        /// <param name="requestContext">The context of the request pipeline</param>
         /// <typeparam name="T">The type of the call</typeparam>
         /// <typeparam name="TResponse">The type of the response</typeparam>
         public void CallViaExternalBus<T, TResponse>(Message outMessage, RequestContext? requestContext)
@@ -345,10 +350,10 @@ namespace Paramore.Brighter
         {
             //We assume that this only occurs over a blocking producer
             var producer = _producerRegistry.LookupSyncBy(outMessage.Header.Topic);
-                ExecuteWithResiliencePipeline(
-                    () => producer.Send(outMessage),
-                    requestContext
-                );
+            ExecuteWithResiliencePipeline(
+                () => producer.Send(outMessage),
+                requestContext
+            );
         }
 
         /// <summary>
@@ -357,7 +362,751 @@ namespace Paramore.Brighter
         /// <param name="posts">The ids of the posts that you would like to clear</param>
         /// <param name="requestContext">The request context for the pipeline</param>
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
-        /// <exception cref="InvalidOperationException">Thrown if there is no outbox…8631 tokens truncated…            RequestContext requestContext,
+        /// <exception cref="InvalidOperationException">Thrown if there is no outbox defined</exception>
+        /// <remarks>
+        /// If any of the requested message ids are not found in the outbox (for example because compaction has
+        /// already removed them), the missing ids are logged at Error level and the remaining messages are
+        /// dispatched. No exception is thrown for missing messages.
+        /// </remarks>
+        public void ClearOutbox(
+            Id[] posts,
+            RequestContext requestContext,
+            Dictionary<string, object>? args = null)
+        {
+            if (!HasOutbox())
+                throw new InvalidOperationException("No outbox defined.");
+
+            // Only allow a single Clear to happen at a time
+            var parentSpan = requestContext.Span;
+
+            var childSpans = new ConcurrentDictionary<string, Activity>();
+            try
+            {
+                // Get all the messages being cleared in a batch to keep db operations down
+                var messages = _outBox!.Get(posts, requestContext).ToArray();
+                if (messages.Length != posts.Length)
+                {
+                    var missingMessageIds = posts.Where(id => !messages.Any(m => m.Id == id));
+                    Log.OutboxMessagesNotFound(_logger, string.Join(",", missingMessageIds));
+                }
+                BrighterTracer.WriteOutboxEvent(BoxDbOperation.Get, messages, parentSpan, false, false,
+                        _instrumentationOptions);
+
+                foreach (var message in messages)
+                {
+                    var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span,
+                        message.Id, _instrumentationOptions);
+                    if (span is not null)
+                    {
+                        childSpans.TryAdd(message.Id.Value, span);
+                        requestContext.Span = span;
+                    }
+
+                    try
+                    {
+                        Dispatch([message], requestContext, args);
+                    }
+                    finally
+                    {
+                        _tracer?.EndSpan(span);
+                    }
+                }
+            }
+            finally
+            {
+                requestContext.Span = parentSpan;
+            }
+
+            CheckOutstandingMessages(requestContext);
+        }
+
+        /// <summary>
+        /// This is the clear outbox for explicit clearing of messages.
+        /// </summary>
+        /// <param name="posts">The ids of the posts that you would like to clear</param>
+        /// <param name="continueOnCapturedContext">Should we use the same thread in the callback</param>
+        /// <param name="requestContext">The request context for the pipeline</param>
+        /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
+        /// <param name="cancellationToken">Allow cancellation of the operation</param>
+        /// <exception cref="InvalidOperationException">Thrown if there is no async outbox defined</exception>
+        /// <remarks>
+        /// If any of the requested message ids are not found in the outbox (for example because compaction has
+        /// already removed them), the missing ids are logged at Error level and the remaining messages are
+        /// dispatched. No exception is thrown for missing messages.
+        /// </remarks>
+        public async Task ClearOutboxAsync(
+            IEnumerable<Id> posts,
+            RequestContext requestContext,
+            bool continueOnCapturedContext = true,
+            Dictionary<string, object>? args = null,
+            CancellationToken cancellationToken = default
+        )
+        {
+            if (!HasAsyncOutbox())
+                throw new InvalidOperationException("No async outbox defined.");
+
+            var parentSpan = requestContext.Span;
+
+            var childSpans = new ConcurrentDictionary<string, Activity>();
+            try
+            {
+                // Get all the messages being cleared in a batch to keep db operations down
+                var postArray = posts as Id[] ?? posts.ToArray();
+                Message[] messages = (await _asyncOutbox!.GetAsync(postArray, requestContext)).ToArray();
+                if (messages.Length != postArray.Length)
+                {
+                    var missingMessageIds = postArray.Where(id => !messages.Any(m => m.Id == id));
+                    Log.OutboxMessagesNotFound(_logger, string.Join(",", missingMessageIds));
+                }
+                BrighterTracer.WriteOutboxEvent(BoxDbOperation.Get, messages, parentSpan, false, true,
+                        _instrumentationOptions);
+
+                foreach (var message in messages)
+                {
+                    var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span,
+                        message.Id, _instrumentationOptions);
+                    if (span != null)
+                    {
+                        childSpans.TryAdd(message.Id.Value, span);
+                        requestContext.Span = span;
+                    }
+
+                    try
+                    {
+                        await DispatchAsync([message], requestContext, continueOnCapturedContext, cancellationToken);
+                    }
+                    finally
+                    {
+                        _tracer?.EndSpan(span);
+                    }
+                }
+            }
+            finally
+            {
+                requestContext.Span = parentSpan;
+            }
+
+            CheckOutstandingMessages(requestContext);
+        }
+
+        /// <summary>
+        /// This is the clear outbox for explicit clearing of messages. It runs a task in the background to clear the outbox.
+        /// This method returns whilst that thread runs, so it is non-blocking but also does not indicate the clear has
+        /// happened by returning control - that happens in parallel.
+        /// </summary>
+        /// <remarks>Only works for Async Outboxes</remarks>
+        /// <param name="amountToClear">Maximum number to clear.</param>
+        /// <param name="minimumAge">The minimum age of messages to be cleared.</param>
+        /// <param name="useBulk">Use bulk sending capability of the message producer, this must be paired with useAsync.</param>
+        /// <param name="requestContext">The request context for the pipeline</param>
+        /// <param name="args">Optional bag of arguments required by an outbox implementation to sweep</param>
+        /// <param name="cancellationToken">Cancellation Token</param>
+        public async Task ClearOutstandingFromOutboxAsync(int amountToClear,
+            TimeSpan minimumAge,
+            bool useBulk,
+            RequestContext requestContext,
+            Dictionary<string, object>? args = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (HasAsyncOutbox())
+                await BackgroundDispatchUsingAsync(amountToClear, minimumAge, useBulk, requestContext, args, cancellationToken);
+            else
+                throw new InvalidOperationException("No Async outbox defined.");
+        }
+
+        /// <summary>
+        /// Given a request, run the transformation pipeline to create a message
+        /// </summary>
+        /// <param name="request">The request</param>
+        /// <param name="requestContext">The context of the request pipeline</param>
+        /// <typeparam name="TRequest">the type of the request</typeparam>
+        /// <returns></returns>
+        public Message CreateMessageFromRequest<TRequest>(TRequest request, RequestContext requestContext)
+            where TRequest : class, IRequest
+        {
+            // The fired scheduler message is a special case
+            // Because the message is in the raw form already, just waiting to be fired
+            if (request is FireSchedulerMessage scheduler)
+            {
+                return scheduler.Message;
+            }
+
+            var message = MapMessage(request, requestContext);
+            return message;
+        }
+
+        /// <summary>
+        /// Given a request, run the transformation pipeline to create a message
+        /// </summary>
+        /// <param name="request">The request</param>
+        /// <param name="requestContext">The context of the request pipeline</param>
+        /// <param name="cancellationToken">Cancel the in-flight operation</param>
+        /// <typeparam name="TRequest">The type of the request</typeparam>
+        /// <returns></returns>
+        public async Task<Message> CreateMessageFromRequestAsync<TRequest>(
+            TRequest request,
+            RequestContext requestContext,
+            CancellationToken cancellationToken
+        ) where TRequest : class, IRequest
+        {
+            // The fired scheduler message is a special case
+            // Because the message is in the raw form already, just waiting to be fired
+            if (request is FireSchedulerMessage schedulerMessage)
+            {
+                return schedulerMessage.Message;
+            }
+
+            var message = await MapMessageAsync(request, requestContext, cancellationToken);
+            return message;
+        }
+
+        /// <summary>
+        /// Intended for usage with the CommandProcessor's Call method, this method will create a request from a message
+        /// Sync over async as we block on Call
+        /// </summary>
+        /// <param name="message">The message that forms a reply to a call</param>
+        /// <param name="request">The request constructed from that message</param>
+        /// <param name="requestContext">The context of the request pipeline</param>
+        /// <typeparam name="TRequest">The type of the request</typeparam>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown if there is no message mapper for the request</exception>
+        public void CreateRequestFromMessage<TRequest>(Message message, RequestContext? requestContext,
+            out TRequest request)
+            where TRequest : class, IRequest
+        {
+            if (_transformPipelineBuilderAsync.HasPipeline<TRequest>())
+            {
+                var pipeline = _transformPipelineBuilderAsync.BuildUnwrapPipeline<TRequest>();
+                try
+                {
+                    request = pipeline
+                        .UnwrapAsync(message, requestContext)
+                        .GetAwaiter()
+                        .GetResult();
+                }
+                finally
+                {
+                    //Release after the request is built. A throwing mapper/transform release must not abort
+                    //a reply whose request has already been unwrapped, so it is logged, not surfaced. This is
+                    //the sync-over-async Call path, so release synchronously through IDisposable.
+                    ReleasePipeline(pipeline, message.Id);
+                }
+            }
+            else if (_transformPipelineBuilder.HasPipeline<TRequest>())
+            {
+                var pipeline = _transformPipelineBuilder.BuildUnwrapPipeline<TRequest>();
+                try
+                {
+                    request = pipeline.Unwrap(message, requestContext);
+                }
+                finally
+                {
+                    ReleasePipeline(pipeline, message.Id);
+                }
+            }
+            else
+            {
+                throw new ArgumentOutOfRangeException(nameof(request), "No message mapper defined for request");
+            }
+        }
+
+        /// <summary>
+        /// Commence a batch of outbox messages to add
+        /// </summary>
+        /// <returns>The ID of the new batch</returns>
+        public string StartBatchAddToOutbox()
+        {
+            var batchId = Uuid.NewAsString();
+            while (!_outboxBatches.TryAdd(batchId, new List<TMessage>()))
+            {
+                batchId = Uuid.NewAsString();
+            }
+
+            return batchId;
+        }
+
+        /// <summary>
+        /// Flush the batch of Messages to the outbox.
+        /// </summary>
+        /// <param name="batchId">The ID of the batch to be flushed</param>
+        /// <param name="transactionProvider"></param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
+        public void EndBatchAddToOutbox(string batchId, IAmABoxTransactionProvider<TTransaction>? transactionProvider,
+            RequestContext requestContext)
+        {
+            var batch = BeginBatchAddToOutbox(batchId, transactionProvider, requestContext, isAsync: false);
+
+            if (_outBox is null)
+                throw new ArgumentException(NoSyncOutboxError);
+
+            var written = ExecuteWithResiliencePipeline(() =>
+                {
+                    _outBox.Add(batch, requestContext, _outboxTimeout, transactionProvider);
+                },
+                requestContext
+            );
+
+            if (!written)
+                throw new ChannelFailureException($"Could not write batch {batchId} to the outbox");
+
+            _outboxBatches.TryRemove(batchId, out _);
+        }
+
+        /// <summary>
+        /// Flush the batch of Messages to the outbox.
+        /// </summary>
+        /// <param name="batchId">The ID of the batch to be flushed</param>
+        /// <param name="transactionProvider"></param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
+        /// <param name="cancellationToken"></param>
+        public async Task EndBatchAddToOutboxAsync(string batchId,
+            IAmABoxTransactionProvider<TTransaction>? transactionProvider, RequestContext requestContext,
+            CancellationToken cancellationToken)
+        {
+            var batch = BeginBatchAddToOutbox(batchId, transactionProvider, requestContext, isAsync: true);
+
+            if (_asyncOutbox is null)
+                throw new ArgumentException(NoAsyncOutboxError);
+
+            var written = await ExecuteWithResiliencePipelineAsync(
+                async _ =>
+                {
+                    await _asyncOutbox.AddAsync(batch, requestContext, _outboxTimeout,
+                        transactionProvider, cancellationToken);
+                },
+                requestContext,
+                cancellationToken: cancellationToken
+            );
+
+            if (!written)
+                throw new ChannelFailureException($"Could not write batch {batchId} to the outbox");
+
+            _outboxBatches.TryRemove(batchId, out _);
+        }
+
+        /// <summary>
+        /// Do we have an async outbox defined?
+        /// </summary>
+        /// <returns>true if defined</returns>
+        public bool HasAsyncOutbox()
+        {
+            return _asyncOutbox != null;
+        }
+
+        /// <summary>
+        /// Do we have a synchronous outbox defined?
+        /// </summary>
+        /// <returns>true if defined</returns>
+        public bool HasOutbox()
+        {
+            return _outBox != null;
+        }
+
+        private List<TMessage> BeginBatchAddToOutbox(string batchId,
+            IAmABoxTransactionProvider<TTransaction>? transactionProvider,
+            RequestContext requestContext,
+            bool isAsync)
+        {
+            CheckOutboxOutstandingLimit();
+
+            var batch = GetBatchOrThrow(batchId);
+
+            BrighterTracer.WriteOutboxEvent(BoxDbOperation.Add, batch, requestContext.Span,
+                transactionProvider != null, isAsync, _instrumentationOptions);
+
+            return batch;
+        }
+
+        private List<TMessage> GetBatchOrThrow(string batchId)
+        {
+            if (_outboxBatches.TryGetValue(batchId, out var batch))
+                return batch;
+
+            throw new ArgumentException($"Batch id {batchId} is not active", nameof(batchId));
+        }
+
+        private async Task BackgroundDispatchUsingAsync(
+            int amountToClear,
+            TimeSpan timeSinceSent,
+            bool useBulk,
+            RequestContext requestContext,
+            Dictionary<string, object>? args,
+            CancellationToken cancellationToken
+        )
+        {
+            _outboxCircuitBreaker?.CoolDown();
+
+            if (await _backgroundClearSemaphore.WaitAsync(TimeSpan.Zero, cancellationToken))
+            {
+                var parentSpan = requestContext.Span;
+                var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null,
+                    _instrumentationOptions);
+                try
+                {
+                    requestContext.Span = span;
+
+                    if (_asyncOutbox is null)
+                        throw new ArgumentException(NoAsyncOutboxError);
+                    var messages =
+                        (await _asyncOutbox.OutstandingMessagesAsync(timeSinceSent, requestContext,
+                            pageSize: amountToClear, trippedTopics: _outboxCircuitBreaker?.TrippedTopics, args: args, cancellationToken: cancellationToken)).ToArray();
+
+                    BrighterTracer.WriteOutboxEvent(BoxDbOperation.OutStandingMessages, messages, span, false, true,
+                        _instrumentationOptions);
+
+                    requestContext.Span = parentSpan;
+
+                    Log.FoundMessagesToClear(_logger, messages.Length, amountToClear);
+
+                    if (useBulk)
+                    {
+                        await BulkDispatchAsync(messages, requestContext, false, cancellationToken);
+                    }
+                    else
+                    {
+                        await DispatchAsync(messages, requestContext, false, cancellationToken);
+                    }
+
+                    Log.MessagesHaveBeenCleared(_logger);
+                }
+                catch (Exception e)
+                {
+                    Log.ErrorWhileDispatchingFromOutbox(_logger, e);
+                    requestContext.Span?.SetStatus(ActivityStatusCode.Error, "Error while dispatching from outbox");
+                    throw;
+                }
+                finally
+                {
+                    _tracer?.EndSpan(span);
+                    _backgroundClearSemaphore.Release();
+                }
+
+                CheckOutstandingMessages(requestContext);
+            }
+            else
+            {
+                requestContext.Span?.SetStatus(ActivityStatusCode.Error);
+                Log.SkippingDispatchOfMessages(_logger);
+            }
+        }
+
+        private void CheckOutboxOutstandingLimit()
+        {
+            bool hasOutBox = (_outBox != null || _asyncOutbox != null);
+            if (!hasOutBox)
+                return;
+
+            Log.OutboxOutstandingMessageCount(_logger, _outStandingCount);
+            // Because a thread recalculates this, we may always be in a delay, so we check on entry for the next outstanding item
+            bool exceedsOutstandingMessageLimit =
+                _maxOutStandingMessages != -1 && _outStandingCount > _maxOutStandingMessages;
+
+            if (exceedsOutstandingMessageLimit)
+                throw new OutboxLimitReachedException(
+                    $"The outbox limit of {_maxOutStandingMessages} has been exceeded");
+        }
+
+        private void CheckOutstandingMessages(RequestContext? requestContext)
+        {
+            var now = _timeProvider.GetUtcNow();
+
+            var timeSinceLastCheck = now - _lastOutStandingMessageCheckAt;
+
+            Log.TimeSinceLastCheck(_logger, timeSinceLastCheck.TotalSeconds);
+
+            if (timeSinceLastCheck < _maxOutStandingCheckInterval)
+            {
+                Log.CheckNotReadyToRunYet(_logger);
+                return;
+            }
+
+            Log.RunningOutstandingMessageCheck(_logger, now, timeSinceLastCheck.TotalSeconds);
+            //This is expensive, so use a background thread
+            Task.Run(
+                () => OutstandingMessagesCheck(requestContext)
+            );
+        }
+
+        /// <summary>
+        /// Configure the callbacks for the producers
+        /// </summary>
+        private void ConfigureCallbacks(RequestContext requestContext)
+        {
+            //Only register one, to avoid two callbacks where we support both interfaces on a producer
+            foreach (var producer in _producerRegistry.Producers)
+            {
+                switch (producer)
+                {
+                    case IAmAMessageProducerAsync producerAsync:
+                        ConfigureAsyncPublisherCallbackMaybe(producerAsync, requestContext);
+                        break;
+                    case IAmAMessageProducerSync producerSync:
+                        ConfigurePublisherCallbackMaybe(producerSync, requestContext);
+                        break;
+                }
+            }
+        }
+
+        /// <summary>
+        /// If a producer supports a callback then we can use this to mark a message as dispatched in an asynchronous
+        /// Outbox
+        /// </summary>
+        /// <param name="producer">The producer to add a callback for</param>
+        /// <param name="requestContext">The request context for the pipeline</param>
+        /// <returns></returns>
+        private void ConfigureAsyncPublisherCallbackMaybe(IAmAMessageProducerAsync producer, RequestContext requestContext)
+        {
+            if (producer is ISupportPublishConfirmationAsync { UseAsyncPublishConfirmation: true } asyncConfirmingProducer)
+            {
+                asyncConfirmingProducer.OnMessagePublishedAsync += result =>
+                    HandleAsyncPublishConfirmation(result, requestContext);
+                return;
+            }
+
+            if (producer is ISupportPublishConfirmation confirmingProducer)
+            {
+                // Discard, not async void: HandleAsyncPublishConfirmation catches its own faults, and a
+                // discarded task cannot tear down the raising thread the way an async void throw would.
+                confirmingProducer.OnMessagePublished += result => _ = HandleAsyncPublishConfirmation(result, requestContext);
+            }
+        }
+
+        private async Task HandleAsyncPublishConfirmation(PublishConfirmationResult result, RequestContext requestContext)
+        {
+            var confirmationSpan = StartConfirmationSpan(result);
+
+            try
+            {
+                if (result.Success)
+                {
+                    Log.SentMessage(_logger, result.MessageId.Value);
+                    if (_asyncOutbox != null)
+                    {
+                        // Explicitly re-parent the MarkDispatched DB span to the confirmation
+                        // span (S2): CreateDbSpan parents from requestContext.Span, so we pass a
+                        // per-callback copy whose Span is S2 rather than relying on the ambient
+                        // Activity.Current fallback (C-6). A copy is required because
+                        // RequestContext.Span is thread-keyed and its setter ignores null, so we
+                        // must not mutate the shared construction-time context.
+                        var dispatchedContext = (RequestContext)requestContext.CreateCopy();
+                        dispatchedContext.Span = confirmationSpan;
+                        await ExecuteWithResiliencePipelineAsync(
+                            async ct =>
+                                await _asyncOutbox.MarkDispatchedAsync(result.MessageId, dispatchedContext, _timeProvider.GetUtcNow(),
+                                    cancellationToken: ct),
+                            dispatchedContext
+                        );
+                    }
+                }
+                else
+                {
+                    Log.ConfirmationFailed(_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty);
+                    // Trip the breaker on the wire topic (result.Topic == message.Header.Topic),
+                    // not the Publication topic — exact parity with the non-confirmation send
+                    // failure path (see DispatchAsync). TripTopic safely no-ops on null/empty.
+                    TripTopic(result.Topic);
+                }
+            }
+            catch (Exception ex)
+            {
+                // The callback must not allow a failed dispatch update to crash the producer. The
+                // message remains undispatched, so the Sweeper will retry it.
+                Log.ConfirmationDispatchError(_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty, ex);
+            }
+            finally
+            {
+                EndConfirmationSpan(confirmationSpan);
+            }
+        }
+
+        /// <summary>
+        /// Emit a standalone confirmation span FIRST on every confirmation callback (success or
+        /// failure). It links back to the original publish span (when its context was captured at
+        /// send time) rather than reopening it, and degrades to no link when the context is absent.
+        /// The observability work is isolated in try/catch so a tracing fault can never destabilise
+        /// the producer thread (NFR-4); end the span via <see cref="EndConfirmationSpan"/> in the
+        /// callback's finally so it starts and stops within the callback (NFR-2).
+        /// </summary>
+        private Activity? StartConfirmationSpan(PublishConfirmationResult result)
+        {
+            try
+            {
+                var links = result.PublishSpanContext is { } publishContext
+                    ? new[] { new ActivityLink(publishContext) }
+                    : null;
+                return _tracer?.CreateConfirmationSpan(
+                    result.MessageId, result.Topic, result.Success, links);
+            }
+            catch (Exception ex)
+            {
+                Log.ConfirmationObservabilityFault(_logger, ex);
+                return null;
+            }
+        }
+
+        private void EndConfirmationSpan(Activity? confirmationSpan)
+        {
+            try
+            {
+                // End via the tracer so its TimeProvider stamps the end consistently with the start.
+                _tracer?.EndSpan(confirmationSpan);
+            }
+            catch (Exception ex)
+            {
+                Log.ConfirmationObservabilityFault(_logger, ex);
+            }
+        }
+
+        /// <summary>
+        /// If a producer supports a callback then we can use this to mark a message as dispatched in a synchronous
+        /// Outbox
+        /// </summary>
+        /// <param name="producer">The producer to add a callback for</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
+        private bool ConfigurePublisherCallbackMaybe(IAmAMessageProducerSync producer, RequestContext requestContext)
+        {
+            if (producer is ISupportPublishConfirmation producerSync)
+            {
+                producerSync.OnMessagePublished += delegate (PublishConfirmationResult result)
+                {
+                    var confirmationSpan = StartConfirmationSpan(result);
+
+                    try
+                    {
+                        if (result.Success)
+                        {
+                            Log.SentMessage(_logger, result.MessageId.Value);
+
+                            if (_outBox != null)
+                            {
+                                // Explicitly re-parent the MarkDispatched DB span to the confirmation
+                                // span (S2): CreateDbSpan parents from requestContext.Span, so we pass a
+                                // per-callback copy whose Span is S2 rather than relying on the ambient
+                                // Activity.Current fallback (C-6). A copy is required because
+                                // RequestContext.Span is thread-keyed and its setter ignores null, so we
+                                // must not mutate the shared construction-time context.
+                                var dispatchedContext = (RequestContext)requestContext.CreateCopy();
+                                dispatchedContext.Span = confirmationSpan;
+                                ExecuteWithResiliencePipeline(
+                                    () => _outBox.MarkDispatched(result.MessageId, dispatchedContext, _timeProvider.GetUtcNow()),
+                                    dispatchedContext);
+                            }
+                        }
+                        else
+                        {
+                            Log.ConfirmationFailed(_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty);
+                            // Trip the breaker on the wire topic (result.Topic == message.Header.Topic),
+                            // not the Publication topic — exact parity with the non-confirmation send
+                            // failure path (see DispatchAsync). TripTopic safely no-ops on null/empty.
+                            TripTopic(result.Topic);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // This callback runs on the producer's invoking (broker/threadpool) thread; an
+                        // exception that escapes it can tear down that thread. Keep the safety LOCAL and obvious
+                        // rather than relying on ExecuteWithResiliencePipeline happening to absorb the
+                        // MarkDispatched path — a throwing breaker, logger or context copy must not be able to
+                        // crash the producer. The message is left un-dispatched, so the Sweeper will retry it
+                        // (C-1); we log at Warning, not Error, because nothing is lost.
+                        Log.ConfirmationDispatchError(_logger, result.MessageId.Value, result.Topic?.Value ?? string.Empty, ex);
+                    }
+                    finally
+                    {
+                        EndConfirmationSpan(confirmationSpan);
+                    }
+                };
+                return true;
+            }
+
+            return false;
+        }
+
+        private static RoutingKey GetProducerLookupTopic(Message message)
+        {
+            // Reply messages set the ProducerTopic bag entry so the dispatcher can locate
+            // the registered producer even though Header.Topic has been rewritten to the
+            // dynamic reply address. Normal publications don't carry the bag entry, so we
+            // fall back to Header.Topic — and a null/empty Header.Topic remains a lookup
+            // failure, matching pre-fix behaviour.
+            //
+            // The `is string` cast is safe across persistent outboxes (SQL family,
+            // Mongo, DynamoDB) because Brighter's bag round-trip uses
+            // JsonSerialisationOptions.Options, which registers DictionaryStringObjectJsonConverter
+            // + ObjectToInferredTypesConverter — together they preserve the string runtime
+            // type through serialise/deserialise rather than handing back JsonElement.
+            // See When_Bag_String_Values_Round_Trip_Through_Brighter_Json_Options for
+            // a regression pin on that contract.
+            if (message.Header.Bag.TryGetValue(Message.ProducerTopicHeaderName, out var producerTopic)
+                && producerTopic is string topic)
+            {
+                return new RoutingKey(topic);
+            }
+
+            return message.Header.Topic;
+        }
+
+        private void Dispatch(IEnumerable<Message> posts, RequestContext requestContext, Dictionary<string, object>? args = null)
+        {
+            var parentSpan = requestContext.Span;
+            var producerSpans = new ConcurrentDictionary<string, Activity>();
+            try
+            {
+                if (_outBox is null)
+                    throw new ArgumentException(NoSyncOutboxError);
+                foreach (var message in posts)
+                {
+                    // Log the wire topic (Header.Topic) — where the message is going. Producer
+                    // lookup uses GetProducerLookupTopic, which may differ from Header.Topic when
+                    // a mapper overrode it (e.g. Reply messages routed to a dynamic reply address).
+                    Log.DecoupledInvocationOfMessage(_logger, message.Header.Topic.Value, message.Id.Value);
+
+                    var producer = _producerRegistry.LookupBy(GetProducerLookupTopic(message), message.Header.Type, requestContext);
+                    var span = _tracer?.CreateProducerSpan(producer.Publication, message, requestContext.Span,
+                        _instrumentationOptions);
+                    producer.Span = span;
+                    if (span != null)
+                        producerSpans.TryAdd(message.Id.Value, span);
+
+                    if (producer is IAmAMessageProducerSync producerSync)
+                    {
+                        if (producer is ISupportPublishConfirmation)
+                        {
+                            //mark dispatch handled by a callback - set in constructor
+                            ExecuteWithResiliencePipeline(
+                                () => { producerSync.Send(message); },
+                                requestContext);
+                        }
+                        else
+                        {
+                            var sent = ExecuteWithResiliencePipeline(
+                                () => { producerSync.Send(message); },
+                                requestContext
+                            );
+                            if (sent)
+                            {
+                                ExecuteWithResiliencePipeline(
+                                    () => _outBox.MarkDispatched(message.Id, requestContext, _timeProvider.GetUtcNow(), args),
+                                    requestContext
+                                );
+                            }
+                        }
+                    }
+                    else
+                        throw new InvalidOperationException("No sync message producer defined.");
+
+                    Activity.Current = parentSpan;
+                    producer.Span = null;
+                }
+            }
+            finally
+            {
+                _tracer?.EndSpans(producerSpans);
+            }
+        }
+
+        private async Task BulkDispatchAsync(
+            IEnumerable<Message> posts,
+            RequestContext requestContext,
             bool continueOnCapturedContext,
             CancellationToken cancellationToken)
         {
@@ -367,7 +1116,8 @@ namespace Paramore.Brighter
             //Chunk into Topics
             try
             {
-                if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
+                if (_asyncOutbox is null)
+                    throw new ArgumentException(NoAsyncOutboxError);
                 // Group by (wire topic, producer-lookup topic) so a batch is guaranteed to
                 // resolve to a single producer — messages with the same wire topic but
                 // different ProducerTopic bag values land in separate batches.
@@ -449,7 +1199,8 @@ namespace Paramore.Brighter
 
             try
             {
-                if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
+                if (_asyncOutbox is null)
+                    throw new ArgumentException(NoAsyncOutboxError);
                 foreach (var message in posts)
                 {
                     // Log the wire topic (Header.Topic) — where the message is going. Producer
@@ -461,7 +1212,8 @@ namespace Paramore.Brighter
                     var span = _tracer?.CreateProducerSpan(producer.Publication, message, parentSpan,
                         _instrumentationOptions);
                     producer.Span = span;
-                    if (span != null) producerSpans.TryAdd(message.Id.Value, span);
+                    if (span != null)
+                        producerSpans.TryAdd(message.Id.Value, span);
 
                     if (producer is IAmAMessageProducerAsync producerAsync)
                     {
@@ -486,7 +1238,8 @@ namespace Paramore.Brighter
                             );
                         }
 
-                        if(!sent) TripTopic(message.Header.Topic);
+                        if (!sent)
+                            TripTopic(message.Header.Topic);
                     }
                     else
                         throw new InvalidOperationException("No async message producer defined.");
@@ -532,7 +1285,7 @@ namespace Paramore.Brighter
             return message;
         }
 
-        private static void ReleasePipeline(IDisposable pipeline, Id requestId)
+        private void ReleasePipeline(IDisposable pipeline, Id requestId)
         {
             try
             {
@@ -544,7 +1297,7 @@ namespace Paramore.Brighter
             }
         }
 
-        private static async ValueTask ReleasePipelineAsync(IAsyncDisposable pipeline, Id requestId)
+        private async ValueTask ReleasePipelineAsync(IAsyncDisposable pipeline, Id requestId)
         {
             try
             {
@@ -657,7 +1410,7 @@ namespace Paramore.Brighter
                 {
                     resiliencePipeline.Execute(action);
                 }
-                
+
                 return true;
             }
             catch (Exception ex)
@@ -689,7 +1442,7 @@ namespace Paramore.Brighter
                     await resiliencePipeline.ExecuteAsync(async ct => await send(ct), cancellationToken)
                         .ConfigureAwait(continueOnCapturedContext);
                 }
-                
+
                 return true;
             }
             catch (Exception ex)
@@ -702,10 +1455,10 @@ namespace Paramore.Brighter
 
         private void TripTopic(RoutingKey? routingKey)
         {
-            if(!RoutingKey.IsNullOrEmpty(routingKey))
+            if (!RoutingKey.IsNullOrEmpty(routingKey))
                 _outboxCircuitBreaker?.TripTopic(routingKey);
         }
-        
+
         private static partial class Log
         {
             [LoggerMessage(LogLevel.Information, "Found {NumberOfMessages} to clear out of amount {AmountToClear}")]
@@ -713,16 +1466,16 @@ namespace Paramore.Brighter
 
             [LoggerMessage(LogLevel.Warning, "Failed to release the transform pipeline for request {Id}; the message was mapped successfully and is unaffected")]
             public static partial void FailedToReleasePipeline(ILogger logger, Exception ex, string id);
-            
+
             [LoggerMessage(LogLevel.Debug, "Time since last check is {SecondsSinceLastCheck} seconds")]
             public static partial void TimeSinceLastCheck(ILogger logger, double secondsSinceLastCheck);
-            
+
             [LoggerMessage(LogLevel.Debug, "Check not ready to run yet")]
             public static partial void CheckNotReadyToRunYet(ILogger logger);
-            
+
             [LoggerMessage(LogLevel.Debug, "Running outstanding message check at {MessageCheckTime} after {SecondsSinceLastCheck} seconds wait")]
             public static partial void RunningOutstandingMessageCheck(ILogger logger, DateTimeOffset messageCheckTime, double secondsSinceLastCheck);
-            
+
             [LoggerMessage(LogLevel.Information, "Sent message: Id:{Id}")]
             public static partial void SentMessage(ILogger logger, string id);
 
@@ -734,37 +1487,37 @@ namespace Paramore.Brighter
 
             [LoggerMessage(LogLevel.Warning, "Error handling publish confirmation for message Id:{Id} on topic {Topic}; message left un-dispatched for Sweeper retry")]
             public static partial void ConfirmationDispatchError(ILogger logger, string id, string topic, Exception ex);
-            
+
             [LoggerMessage(LogLevel.Information, "Decoupled invocation of message: Topic:{Topic} Id:{Id}")]
             public static partial void DecoupledInvocationOfMessage(ILogger logger, string topic, string id);
-            
+
             [LoggerMessage(LogLevel.Information, "Bulk Dispatching {NumberOfMessages} for Topic {TopicName}")]
             public static partial void BulkDispatchingMessages(ILogger logger, int numberOfMessages, string topicName);
-            
+
             [LoggerMessage(LogLevel.Debug, "Begin count of outstanding messages")]
             public static partial void BeginCountOfOutstandingMessages(ILogger logger);
-            
+
             [LoggerMessage(LogLevel.Error, "Error getting outstanding message count, reset count")]
             public static partial void ErrorGettingOutstandingMessageCount(ILogger logger, Exception ex);
-            
+
             [LoggerMessage(LogLevel.Debug, "Current outstanding count is {OutstandingCount}")]
             public static partial void CurrentOutstandingCount(ILogger logger, int outstandingCount);
-            
+
             [LoggerMessage(LogLevel.Error, "Exception whilst trying to publish message")]
             public static partial void ExceptionWhilstTryingToPublishMessage(ILogger logger, Exception exception);
-            
+
             [LoggerMessage(LogLevel.Information, "Messages have been cleared")]
             public static partial void MessagesHaveBeenCleared(ILogger logger);
-            
+
             [LoggerMessage(LogLevel.Error, "Error while dispatching from outbox")]
             public static partial void ErrorWhileDispatchingFromOutbox(ILogger logger, Exception exception);
-            
+
             [LoggerMessage(LogLevel.Information, "Skipping dispatch of messages as another thread is running")]
             public static partial void SkippingDispatchOfMessages(ILogger logger);
 
             [LoggerMessage(LogLevel.Error, "Message(s) with Id(s) {MissingIds} not found in Outbox; dispatching found messages")]
             public static partial void OutboxMessagesNotFound(ILogger logger, string missingIds);
-            
+
             [LoggerMessage(LogLevel.Debug, "Outbox outstanding message count is: {OutstandingMessageCount}")]
             public static partial void OutboxOutstandingMessageCount(ILogger logger, int outstandingMessageCount);
 
@@ -776,4 +1529,3 @@ namespace Paramore.Brighter
         }
     }
 }
-

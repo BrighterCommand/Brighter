@@ -16,7 +16,7 @@ using Xunit;
 namespace Paramore.Brighter.AWS.V4.Tests.Transformers;
 
 [Trait("Category", "AWS")]
-public class LargeMessagePaylodUnwrapTests : IAsyncDisposable 
+public class LargeMessagePaylodUnwrapTests : IAsyncDisposable
 {
     private readonly TransformPipelineBuilderAsync _pipelineBuilder;
     private readonly AmazonS3Client _client;
@@ -48,14 +48,14 @@ public class LargeMessagePaylodUnwrapTests : IAsyncDisposable
             BucketAddressTemplate = CredentialsChain.GetBucketAddressTemplate(),
             ACLs = S3CannedACL.Private,
             Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }]
-        });
-            
+        }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+
         _luggageStore.EnsureStoreExists();
 
         var messageTransformerFactory =
             new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.None);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, InstrumentationOptions.None);
     }
 
     [Fact]

@@ -27,7 +27,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 {
@@ -47,7 +46,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         public ServiceBusReceiverWrapper(ServiceBusReceiver messageReceiver, ILoggerFactory loggerFactory)
         {
             _messageReceiver = messageReceiver;
-            _logger = (loggerFactory).CreateLogger<ServiceBusReceiverWrapper>();
+            _logger = loggerFactory.CreateLogger<ServiceBusReceiverWrapper>();
         }
 
         /// <summary>
@@ -76,7 +75,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             _messageReceiver.CloseAsync().GetAwaiter().GetResult();
             Log.MessageReceiverConnectionStopped(_logger);
         }
-        
+
         public async Task CloseAsync()
         {
             Log.ClosingMessageReceiverConnection(_logger);

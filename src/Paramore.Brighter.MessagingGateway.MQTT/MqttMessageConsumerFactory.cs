@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -32,7 +32,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
     public class MqttMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly MqttMessagingGatewayConsumerConfiguration _configuration;
-        private readonly ILoggerFactory? _loggerFactory;
+        private readonly ILoggerFactory _loggerFactory;
         private IAmAMessageScheduler? _scheduler;
 
         /// <summary>
@@ -53,8 +53,8 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers for the consumers.</param>
         public MqttMessageConsumerFactory(
             MqttMessagingGatewayConsumerConfiguration configuration,
-            IAmAMessageScheduler? scheduler = null,
-            ILoggerFactory loggerFactory)
+            ILoggerFactory loggerFactory,
+            IAmAMessageScheduler? scheduler = null)
         {
             _configuration = configuration;
             _scheduler = scheduler;
@@ -71,7 +71,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             var deadLetterRoutingKey = (subscription as IUseBrighterDeadLetterSupport)?.DeadLetterRoutingKey;
             var invalidMessageRoutingKey = (subscription as IUseBrighterInvalidMessageSupport)?.InvalidMessageRoutingKey;
 
-            return new MqttMessageConsumer(_configuration, _scheduler, deadLetterRoutingKey, invalidMessageRoutingKey, _loggerFactory);
+            return new MqttMessageConsumer(_configuration, _loggerFactory, _scheduler, deadLetterRoutingKey, invalidMessageRoutingKey);
         }
 
         /// <summary>
@@ -84,7 +84,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             var deadLetterRoutingKey = (subscription as IUseBrighterDeadLetterSupport)?.DeadLetterRoutingKey;
             var invalidMessageRoutingKey = (subscription as IUseBrighterInvalidMessageSupport)?.InvalidMessageRoutingKey;
 
-            return new MqttMessageConsumer(_configuration, _scheduler, deadLetterRoutingKey, invalidMessageRoutingKey, _loggerFactory);
+            return new MqttMessageConsumer(_configuration, _loggerFactory, _scheduler, deadLetterRoutingKey, invalidMessageRoutingKey);
         }
     }
 }

@@ -29,7 +29,6 @@ using System.Threading.Tasks;
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
@@ -42,7 +41,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     public partial class KafkaMessagingGateway
     {
         protected readonly ILogger _logger;
-        protected readonly ILoggerFactory? _loggerFactory;
+        protected readonly ILoggerFactory _loggerFactory;
         protected ClientConfig? ClientConfig;
         protected OnMissingChannel MakeChannels;
         protected RoutingKey? Topic;
@@ -57,7 +56,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         protected KafkaMessagingGateway(ILoggerFactory loggerFactory)
         {
             _loggerFactory = loggerFactory;
-            _logger = (loggerFactory).CreateLogger<KafkaMessageProducer>();
+            _logger = loggerFactory.CreateLogger<KafkaMessageProducer>();
         }
 
         /// <summary>
@@ -87,8 +86,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         private async Task MakeTopic()
         {
-            if (RoutingKey.IsNullOrEmpty(Topic)) throw new InvalidOperationException("Topic cannot be null");
-            
+            if (RoutingKey.IsNullOrEmpty(Topic))
+                throw new InvalidOperationException("Topic cannot be null");
+
             using var adminClient = new AdminClientBuilder(ClientConfig).Build();
             try
             {
@@ -116,8 +116,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         private bool FindTopic()
         {
-            if (RoutingKey.IsNullOrEmpty(Topic)) throw new InvalidOperationException("Topic cannot be null");
-            
+            if (RoutingKey.IsNullOrEmpty(Topic))
+                throw new InvalidOperationException("Topic cannot be null");
+
             using var adminClient = new AdminClientBuilder(ClientConfig).Build();
             try
             {
@@ -129,7 +130,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 if (matchingTopics.Length > 0)
                 {
                     var matchingTopic = matchingTopics[0];
-                        
+
                     //was it found?
                     found = matchingTopic.Error != null && matchingTopic.Error.Code != ErrorCode.UnknownTopicOrPart;
                     if (found)
@@ -171,7 +172,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
                 if (found)
                     Log.TopicExists(_logger, Topic.Value);
-                    
+
                 return found;
             }
             catch (Exception e)
@@ -187,7 +188,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             [LoggerMessage(LogLevel.Warning, "{TopicMisconfiguredError}")]
             public static partial void TopicMisconfiguredWarning(ILogger logger, string topicMisconfiguredError);
-            
+
             [LoggerMessage(LogLevel.Information, "Topic {Topic} exists")]
             public static partial void TopicExists(ILogger logger, string topic);
         }

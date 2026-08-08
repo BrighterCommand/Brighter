@@ -28,7 +28,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Tasks;
 using Polly;
 using RabbitMQ.Client;
@@ -68,7 +67,7 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
     ///  Use if you need to inject a test logger
     /// </summary>
     /// <param name="connection">The amqp uri and exchange to connect to</param>
-    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger; defaults to <see cref="NullLoggerFactory"/></param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger.</param>
     protected RmqMessageGateway(RmqMessagingGatewayConnection connection, ILoggerFactory loggerFactory)
     {
         LoggerFactory = loggerFactory;
@@ -80,7 +79,8 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
         _retryPolicy = connectionPolicyFactory.RetryPolicyAsync;
         _circuitBreakerPolicy = connectionPolicyFactory.CircuitBreakerPolicyAsync;
 
-       if (Connection.AmpqUri is null) throw new ConfigurationException("RMQMessagingGateway: No AMPQ URI specified");
+        if (Connection.AmpqUri is null)
+            throw new ConfigurationException("RMQMessagingGateway: No AMPQ URI specified");
 
         _connectionFactory = new ConnectionFactory
         {
@@ -92,7 +92,8 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
         // Configure SSL/TLS for mutual authentication if certificate is provided
         RmqTlsConfigurator.ConfigureIfEnabled(_connectionFactory, connection);
 
-        if (Connection.Exchange is null) throw new InvalidOperationException("RMQMessagingGateway: No Exchange specified");
+        if (Connection.Exchange is null)
+            throw new InvalidOperationException("RMQMessagingGateway: No Exchange specified");
 
         DelaySupported = Connection.Exchange.SupportDelay;
     }
@@ -147,7 +148,8 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
             var connection = await new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat, LoggerFactory)
                 .GetConnectionAsync(_connectionFactory, cancellationToken);
 
-           if (Connection.AmpqUri is null) throw new ConfigurationException("RMQMessagingGateway: No AMPQ URI specified");
+            if (Connection.AmpqUri is null)
+                throw new ConfigurationException("RMQMessagingGateway: No AMPQ URI specified");
 
             connection.ConnectionBlockedAsync += HandleBlockedAsync;
             connection.ConnectionUnblockedAsync += HandleUnBlockedAsync;
@@ -167,7 +169,8 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
 
     private Task HandleBlockedAsync(object sender, ConnectionBlockedEventArgs args)
     {
-       if (Connection.AmpqUri is null) throw new ConfigurationException("RMQMessagingGateway: No AMPQ URI specified");
+        if (Connection.AmpqUri is null)
+            throw new ConfigurationException("RMQMessagingGateway: No AMPQ URI specified");
 
         Log.SubscriptionBlocked(_logger, Connection.AmpqUri.GetSanitizedUri(), args.Reason);
 
@@ -176,7 +179,8 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
 
     private Task HandleUnBlockedAsync(object sender, AsyncEventArgs args)
     {
-       if (Connection.AmpqUri is null) throw new ConfigurationException("RMQMessagingGateway: No AMPQ URI specified");
+        if (Connection.AmpqUri is null)
+            throw new ConfigurationException("RMQMessagingGateway: No AMPQ URI specified");
 
         Log.SubscriptionUnblocked(_logger, Connection.AmpqUri.GetSanitizedUri());
         return Task.CompletedTask;
@@ -194,7 +198,8 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
 
     public virtual async ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            return;
 
         if (Channel != null)
         {
@@ -208,7 +213,8 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
 
     protected virtual void Dispose(bool disposing)
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            return;
 
         if (disposing)
         {

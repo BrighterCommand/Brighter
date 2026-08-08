@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -27,7 +27,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 // ReSharper disable StaticMemberInGenericType
 
 namespace Paramore.Brighter.Outbox.Hosting
@@ -49,17 +48,17 @@ namespace Paramore.Brighter.Outbox.Hosting
         /// <param name="archiver">The archiver to use</param>
         /// <param name="distributedLock">Used to ensure that only one instance of the <see cref="TimedOutboxSweeper"/> is running</param>
         /// <param name="options">The <see cref="TimedOutboxArchiverOptions"/> that control how the archiver runs, such as interval</param>
-        /// <param name="logger">The logger; defaults to a no-op logger when not supplied</param>
+        /// <param name="logger">The logger.</param>
         public TimedOutboxArchiver(
             OutboxArchiver<TMessage, TTransaction> archiver,
             IDistributedLock distributedLock,
             TimedOutboxArchiverOptions options,
-            ILogger<TimedOutboxArchiver<TMessage, TTransaction>>? logger = null)
+            ILogger<TimedOutboxArchiver<TMessage, TTransaction>> logger)
         {
             _archiver = archiver;
             _distributedLock = distributedLock;
             _options = options;
-            _logger = logger ?? NullLogger<TimedOutboxArchiver<TMessage, TTransaction>>.Instance;
+            _logger = logger;
         }
 
         private const string LockingResourceName = "Archiver";
@@ -73,7 +72,7 @@ namespace Paramore.Brighter.Outbox.Hosting
         {
             Log.OutboxArchiverServiceIsStarting(_logger);
 
-            _timer = new Timer(_ => Archive(cancellationToken).GetAwaiter().GetResult(), 
+            _timer = new Timer(_ => Archive(cancellationToken).GetAwaiter().GetResult(),
                 null,
                 TimeSpan.Zero,
                 TimeSpan.FromSeconds(_options.TimerInterval));
@@ -146,7 +145,7 @@ namespace Paramore.Brighter.Outbox.Hosting
 
             [LoggerMessage(LogLevel.Information, "Outbox Archiver Service is stopping")]
             public static partial void OutboxArchiverServiceIsStopping(ILogger logger);
-            
+
             [LoggerMessage(LogLevel.Information, "Outbox Archiver looking for messages to Archive")]
             public static partial void OutboxArchiverLookingForMessagesToArchive(ILogger logger);
 

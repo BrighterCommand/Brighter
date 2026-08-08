@@ -26,7 +26,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
 
@@ -48,9 +47,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         {
             _connectionName = connectionName;
             _connectionHeartbeat = connectionHeartbeat;
-            _logger = (loggerFactory).CreateLogger<RmqMessageGatewayConnectionPool>();
+            _logger = loggerFactory.CreateLogger<RmqMessageGatewayConnectionPool>();
         }
-        
+
         /// <summary>
         /// Return matching RabbitMQ subscription if exist (match by amqp scheme)
         /// or create new subscription to RabbitMQ (thread-safe)
@@ -125,7 +124,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
             connection.ConnectionShutdown += ShutdownHandler;
 
-            var pooledConnection = new PooledConnection{Connection = connection, ShutdownHandler = ShutdownHandler};
+            var pooledConnection = new PooledConnection { Connection = connection, ShutdownHandler = ShutdownHandler };
 
             s_connectionPool.Add(connectionId, pooledConnection);
 
@@ -134,8 +133,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
         private void TryRemoveConnection(string connectionId)
         {
-            if (!s_connectionPool.TryGetValue(connectionId, out PooledConnection? pooledConnection)) return;
-            
+            if (!s_connectionPool.TryGetValue(connectionId, out PooledConnection? pooledConnection))
+                return;
+
             //netstandard20 issue, if connectionfound is true, pooledConnection is not null
             pooledConnection.Connection!.ConnectionShutdown -= pooledConnection.ShutdownHandler;
             pooledConnection.Connection.Dispose();

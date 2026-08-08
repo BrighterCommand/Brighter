@@ -49,7 +49,7 @@ public class PostgreSqlDetectionHelperNullSchemaTests : IAsyncLifetime
         await EnsureHistoryTable();
         await SeedHistoryRow(tableName, schemaName: "public", migrationVersion: 3);
 
-        var helper = new PostgreSqlBoxDetectionHelper();
+        var helper = new PostgreSqlBoxDetectionHelper(logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.BoxProvisioning.PostgreSql.PostgreSqlBoxDetectionHelper>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 
         await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync();

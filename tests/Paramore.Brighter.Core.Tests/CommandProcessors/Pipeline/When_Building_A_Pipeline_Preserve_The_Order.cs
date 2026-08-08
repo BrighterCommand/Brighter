@@ -17,7 +17,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyDoubleDecoratedHandler>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyDoubleDecoratedHandler>();
             container.AddTransient<MyValidationHandler<MyCommand>>();
             container.AddTransient<MyLoggingHandler<MyCommand>>();
@@ -25,7 +25,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
-            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory);
+            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory, loggerFactory: Initializer.TestLoggerFactory);
         }
 
         [Fact]

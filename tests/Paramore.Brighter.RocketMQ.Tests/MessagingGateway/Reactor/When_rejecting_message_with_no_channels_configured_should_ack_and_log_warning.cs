@@ -62,7 +62,7 @@ public class RocketMqNoChannelsConfiguredTests : IDisposable
             consumerGroup: Guid.NewGuid().ToString(),
             messagePumpType: MessagePumpType.Reactor);
 
-        var consumerFactory = new RocketMessageConsumerFactory(connection);
+        var consumerFactory = new RocketMessageConsumerFactory(connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _consumer = consumerFactory.Create(sourceSub);
 
         _message = new Message(

@@ -61,8 +61,8 @@ public class MessageDispatchPropogateContextTests
         messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
         var cloudEventsType = new CloudEventsType("io.goparamore.brighter.myevent");
-        InMemoryMessageProducer messageProducer = new(_internalBus, 
-            new Publication
+        InMemoryMessageProducer messageProducer = new(_internalBus,
+        Initializer.TestLoggerFactory, new Publication
             {
                 Source = new Uri("http://localhost"),
                 RequestType = typeof(MyEvent),
@@ -84,7 +84,7 @@ public class MessageDispatchPropogateContextTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            outbox,
+            Initializer.TestLoggerFactory, outbox,
             maxOutStandingMessages: -1
         );
         
@@ -95,10 +95,10 @@ public class MessageDispatchPropogateContextTests
             policyRegistry, 
             new ResiliencePipelineRegistry<string>(),
             _mediator,
-            new InMemorySchedulerFactory(),
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
             tracer: tracer, 
-            instrumentationOptions: InstrumentationOptions.All
-        );
+            instrumentationOptions: InstrumentationOptions.All,
+            loggerFactory: Initializer.TestLoggerFactory);
 
     }
 

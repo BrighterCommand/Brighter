@@ -36,7 +36,6 @@ using Amazon.SimpleNotificationService.Model;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS.Extensions;
 using Paramore.Brighter.Tasks;
@@ -53,7 +52,7 @@ public class AwsMessagingGateway
 
     public AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection, ILoggerFactory loggerFactory)
     {
-        _logger = (loggerFactory).CreateLogger<AwsMessagingGateway>();
+        _logger = loggerFactory.CreateLogger<AwsMessagingGateway>();
         _awsClientFactory = new AWSClientFactory(awsConnection);
         AwsConnection = awsConnection;
     }
@@ -94,16 +93,16 @@ public class AwsMessagingGateway
         ChannelQueueUrl = makeChannel switch
         {
             //on validate or assume, turn a routing key into a queueUrl
-            OnMissingChannel.Assume or OnMissingChannel.Validate => 
+            OnMissingChannel.Assume or OnMissingChannel.Validate =>
                 await ValidateQueueAsync(queue, findQueueBy, sqsAttributes.Type, makeChannel, cancellationToken),
-            OnMissingChannel.Create => 
+            OnMissingChannel.Create =>
                 await CreateQueueAsync(queue, sqsAttributes, cancellationToken),
             _ => ChannelQueueUrl
         };
 
         return ChannelQueueUrl;
     }
-    
+
     protected RoutingKey EnsureSubscription(
         bool isFifo,
         string queueUrl,
@@ -113,7 +112,7 @@ public class AwsMessagingGateway
         SqsAttributes? sqsAttributes,
         OnMissingChannel makeChannels = OnMissingChannel.Create)
     => BrighterAsyncContext.Run(() => EnsureSubscriptionAsync(isFifo, queueUrl, routingKey, findTopicBy, snsAttributes, sqsAttributes, makeChannels));
-    
+
 
     protected async Task<RoutingKey> EnsureSubscriptionAsync(
         bool isFifo,
@@ -156,7 +155,7 @@ public class AwsMessagingGateway
         ChannelTopicArn = makeTopic switch
         {
             //on validate or assume, turn a routing key into a topicARN
-            OnMissingChannel.Assume or OnMissingChannel.Validate => 
+            OnMissingChannel.Assume or OnMissingChannel.Validate =>
                 await ValidateTopicAsync(topic, topicFindBy, type, cancellationToken),
             OnMissingChannel.Create =>
                 await CreateTopicAsync(topic, attributes),
@@ -165,7 +164,7 @@ public class AwsMessagingGateway
 
         return ChannelTopicArn;
     }
-    
+
     private async Task CheckQueueSubscribedAsync(
         string queueUrl,
         SqsAttributes? sqsAttributes,
@@ -207,11 +206,11 @@ public class AwsMessagingGateway
     private async Task<string> CreateTopicAsync(RoutingKey topic, SnsAttributes? snsAttributes)
     {
         snsAttributes ??= SnsAttributes.Empty;
-        
+
         using var snsClient = _awsClientFactory.CreateSnsClient();
 
         var topicName = topic.Value;
-        
+
         if (snsAttributes.Type == SqsType.Fifo)
         {
             topicName = topic.ToValidSNSTopicName(true);
@@ -327,7 +326,8 @@ public class AwsMessagingGateway
 
         CreateCommonQueueAttributes(sqsAttributes, isDLQ, attributes);
 
-        if (sqsAttributes.Type != SqsType.Fifo) return attributes;
+        if (sqsAttributes.Type != SqsType.Fifo)
+            return attributes;
 
         CreateFifoQueueAttributes(sqsAttributes, attributes);
 
@@ -343,8 +343,8 @@ public class AwsMessagingGateway
         }
 
         if (sqsAttributes.DeduplicationScope == null || sqsAttributes.FifoThroughputLimit == null)
-            return ;
-     
+            return;
+
         attributes.Add(QueueAttributeName.FifoThroughputLimit, Convert.ToString(sqsAttributes.FifoThroughputLimit.Value.AsString()));
         attributes.Add(QueueAttributeName.DeduplicationScope, sqsAttributes.DeduplicationScope switch
         {
@@ -359,7 +359,7 @@ public class AwsMessagingGateway
         {
             var policy = new
             {
-                maxReceiveCount = sqsAttributes.RedrivePolicy.MaxReceiveCount, 
+                maxReceiveCount = sqsAttributes.RedrivePolicy.MaxReceiveCount,
                 deadLetterTargetArn = ChannelDeadLetterQueueArn
             };
 
@@ -417,8 +417,9 @@ public class AwsMessagingGateway
         if (!string.IsNullOrEmpty(snsAttributes.Policy))
             attributes.Add("Policy", snsAttributes.Policy);
 
-        if (snsAttributes.Type != SqsType.Fifo) return attributes;
-        
+        if (snsAttributes.Type != SqsType.Fifo)
+            return attributes;
+
         attributes.Add("FifoTopic", "true");
         if (snsAttributes.ContentBasedDeduplication)
         {

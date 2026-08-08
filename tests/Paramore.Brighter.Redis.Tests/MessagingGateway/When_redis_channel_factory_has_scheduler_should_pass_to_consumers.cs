@@ -23,7 +23,7 @@ public class When_redis_channel_factory_has_scheduler_should_pass_to_consumers
     public void Should_implement_channel_factory_with_scheduler()
     {
         // Arrange
-        var consumerFactory = new RedisMessageConsumerFactory(_configuration);
+        var consumerFactory = new RedisMessageConsumerFactory(_configuration, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var channelFactory = new ChannelFactory(consumerFactory);
 
         // Assert
@@ -35,7 +35,7 @@ public class When_redis_channel_factory_has_scheduler_should_pass_to_consumers
     {
         // Arrange
         var scheduler = new StubMessageScheduler();
-        var consumerFactory = new RedisMessageConsumerFactory(_configuration);
+        var consumerFactory = new RedisMessageConsumerFactory(_configuration, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var channelFactory = new ChannelFactory(consumerFactory);
         ((IAmAChannelFactoryWithScheduler)channelFactory).Scheduler = scheduler;
 
@@ -52,7 +52,7 @@ public class When_redis_channel_factory_has_scheduler_should_pass_to_consumers
     {
         // Arrange
         var scheduler = new StubMessageScheduler();
-        var consumerFactory = new RedisMessageConsumerFactory(_configuration);
+        var consumerFactory = new RedisMessageConsumerFactory(_configuration, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var channelFactory = new ChannelFactory(consumerFactory);
         ((IAmAChannelFactoryWithScheduler)channelFactory).Scheduler = scheduler;
 
@@ -68,7 +68,7 @@ public class When_redis_channel_factory_has_scheduler_should_pass_to_consumers
     public void Should_create_channel_without_scheduler_for_backward_compat()
     {
         // Arrange — no scheduler set
-        var consumerFactory = new RedisMessageConsumerFactory(_configuration);
+        var consumerFactory = new RedisMessageConsumerFactory(_configuration, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var channelFactory = new ChannelFactory(consumerFactory);
 
         // Act

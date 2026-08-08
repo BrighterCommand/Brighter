@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using Google.Api.Gax;
 using Google.Cloud.PubSub.V1;
 using Microsoft.Extensions.Logging;
@@ -18,7 +18,7 @@ public class GcpPubSubConsumerFactory(GcpMessagingGatewayConnection connection, 
     : GcpPubSubMessageGateway(connection), IAmAMessageConsumerFactory
 {
     private readonly GcpMessagingGatewayConnection _connection = connection;
-    private readonly ILoggerFactory? _loggerFactory = loggerFactory;
+    private readonly ILoggerFactory _loggerFactory = loggerFactory;
 
     /// <summary>
     /// Creates a synchronous message consumer for the given subscription.

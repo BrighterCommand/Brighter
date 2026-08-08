@@ -37,7 +37,7 @@ public class AzureServiceBusProducerRegistryFactory : IAmAProducerRegistryFactor
     private readonly IServiceBusClientProvider _clientProvider;
     private readonly IEnumerable<AzureServiceBusPublication> _asbPublications;
     private readonly int _bulkSendBatchSize;
-    private readonly ILoggerFactory? _loggerFactory;
+    private readonly ILoggerFactory _loggerFactory;
 
     /// <summary>
     /// Creates a producer registry initialized with producers for ASB derived from the publications
@@ -66,8 +66,8 @@ public class AzureServiceBusProducerRegistryFactory : IAmAProducerRegistryFactor
     public AzureServiceBusProducerRegistryFactory(
         IServiceBusClientProvider clientProvider,
         IEnumerable<AzureServiceBusPublication> asbPublications,
-        int bulkSendBatchSize = 10,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        int bulkSendBatchSize = 10)
     {
         _clientProvider = clientProvider;
         _asbPublications = asbPublications;

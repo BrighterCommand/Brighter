@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Toby Henderson
 
@@ -29,7 +29,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
     public class RmqMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly RmqMessagingGatewayConnection _rmqConnection;
-        private readonly ILoggerFactory? _loggerFactory;
+        private readonly ILoggerFactory _loggerFactory;
         private IAmAMessageScheduler? _scheduler;
 
         /// <summary>
@@ -48,7 +48,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
         /// <param name="rmqConnection">The subscription to the broker hosting the queue</param>
         /// <param name="scheduler">Optional scheduler for delayed requeue operations</param>
         /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers for the consumers</param>
-        public RmqMessageConsumerFactory(RmqMessagingGatewayConnection rmqConnection, IAmAMessageScheduler? scheduler = null, ILoggerFactory loggerFactory)
+        public RmqMessageConsumerFactory(RmqMessagingGatewayConnection rmqConnection, ILoggerFactory loggerFactory, IAmAMessageScheduler? scheduler = null)
         {
             _rmqConnection = rmqConnection;
             _scheduler = scheduler;
@@ -77,6 +77,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
                 rmqSubscription.ChannelName, //RMQ Queue Name
                 rmqSubscription.RoutingKey,
                 rmqSubscription.IsDurable,
+                _loggerFactory,
                 rmqSubscription.HighAvailability,
                 rmqSubscription.BufferSize,
                 rmqSubscription.DeadLetterChannelName,
@@ -85,8 +86,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
                 rmqSubscription.MaxQueueLength,
                 subscription.MakeChannels,
                 rmqSubscription.QueueType,
-                scheduler: _scheduler,
-                loggerFactory: _loggerFactory);
+                scheduler: _scheduler);
         }
 
         public IAmAMessageConsumerAsync CreateAsync(Subscription subscription)
@@ -100,6 +100,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
                 rmqSubscription.ChannelName, //RMQ Queue Name
                 rmqSubscription.RoutingKey,
                 rmqSubscription.IsDurable,
+                _loggerFactory,
                 rmqSubscription.HighAvailability,
                 rmqSubscription.BufferSize,
                 rmqSubscription.DeadLetterChannelName,
@@ -108,8 +109,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
                 rmqSubscription.MaxQueueLength,
                 subscription.MakeChannels,
                 rmqSubscription.QueueType,
-                scheduler: _scheduler,
-                loggerFactory: _loggerFactory);
+                scheduler: _scheduler);
         }
     }
 }

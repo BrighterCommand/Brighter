@@ -26,7 +26,6 @@ THE SOFTWARE. */
 using System;
 using System.Net.Mime;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 using Paramore.Brighter.Observability;
 
@@ -97,9 +96,9 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
         // https://github.com/Azure/azure-sdk-for-net/blob/main/sdk/servicebus/Azure.Messaging.ServiceBus/samples/Sample11_CloudEvents.md
 
         var headers = new MessageHeader(
-            messageId: azureServiceBusMessage.Id, 
+            messageId: azureServiceBusMessage.Id,
             topic: new RoutingKey(_topic.Value),
-            messageType: messageType, 
+            messageType: messageType,
             source: source,
             type: type,
             timeStamp: time,

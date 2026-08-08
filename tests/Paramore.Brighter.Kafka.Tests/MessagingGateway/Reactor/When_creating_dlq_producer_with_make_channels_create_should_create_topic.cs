@@ -64,7 +64,7 @@ public class KafkaMessageConsumerMakeChannelsTests : IDisposable
                 Name = "Kafka Producer MakeChannels Test",
                 BootStrapServers = new[] { "localhost:9092" }
             },
-            publication);
+            publication, loggerFactory: Initializer.TestLoggerFactory);
 
         _producer.Init();
     }
@@ -138,7 +138,7 @@ public class KafkaMessageConsumerMakeChannelsTests : IDisposable
                 {
                     Name = "Kafka Consumer MakeChannels Test",
                     BootStrapServers = new[] { "localhost:9092" }
-                })
+                }, loggerFactory: Initializer.TestLoggerFactory)
             .Create(new KafkaSubscription<MyCommand>
             (
                 subscriptionName: new SubscriptionName("Paramore.Brighter.Tests"),
@@ -161,7 +161,7 @@ public class KafkaMessageConsumerMakeChannelsTests : IDisposable
                 {
                     Name = "Kafka DLQ Consumer Test",
                     BootStrapServers = new[] { "localhost:9092" }
-                })
+                }, loggerFactory: Initializer.TestLoggerFactory)
             .Create(new KafkaSubscription<MyCommand>
             (
                 subscriptionName: new SubscriptionName("Paramore.Brighter.DLQ.Tests"),

@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 asyncTransformerFactory,
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                new InMemoryOutbox(timeProvider) { Tracer = tracer });
+                Initializer.TestLoggerFactory, new InMemoryOutbox(timeProvider) { Tracer = tracer });
 
             //act
             mediator.Dispose();
@@ -76,7 +76,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 asyncTransformerFactory,
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                new InMemoryOutbox(timeProvider) { Tracer = tracer },
+                Initializer.TestLoggerFactory, new InMemoryOutbox(timeProvider) { Tracer = tracer },
                 ownsRegistry: true,
                 ownsTransformerFactories: false);
 
@@ -112,7 +112,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 asyncTransformerFactory,
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                new InMemoryOutbox(timeProvider) { Tracer = tracer },
+                Initializer.TestLoggerFactory, new InMemoryOutbox(timeProvider) { Tracer = tracer },
                 ownsRegistry: false,
                 ownsTransformerFactories: true);
 

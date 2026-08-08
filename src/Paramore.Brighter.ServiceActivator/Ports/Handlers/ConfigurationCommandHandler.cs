@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 
 namespace Paramore.Brighter.ServiceActivator.Ports.Handlers
@@ -42,11 +41,11 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Handlers
         /// Initializes a new instance of the <see cref="ConfigurationCommandHandler" /> class.
         /// </summary>
         /// <param name="dispatcher"></param>
-        /// <param name="logger">The logger; falls back to a no-op logger when null.</param>
-        public ConfigurationCommandHandler(IDispatcher dispatcher, ILogger<ConfigurationCommandHandler>? logger)
+        /// <param name="logger">The logger.</param>
+        public ConfigurationCommandHandler(IDispatcher dispatcher, ILogger<ConfigurationCommandHandler> logger)
         {
             _dispatcher = dispatcher;
-            _logger = logger ?? NullLogger<ConfigurationCommandHandler>.Instance;
+            _logger = logger;
         }
 
         /// <summary>
@@ -112,10 +111,10 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Handlers
 
             [LoggerMessage(LogLevel.Debug, "Configuration Command received and now starting channel {ChannelName}")]
             public static partial void StartingChannel(ILogger logger, string channelName);
-            
+
             [LoggerMessage(LogLevel.Debug, "--------------------------------------------------------------------------")]
             public static partial void LogSeparator(ILogger logger);
-            
+
             [LoggerMessage(LogLevel.Debug, "...")]
             public static partial void LogEllipsis(ILogger logger);
         }

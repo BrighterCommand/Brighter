@@ -67,8 +67,8 @@ public partial class SnsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
     /// <param name="instrumentation"></param>
     public SnsMessageProducer(AWSMessagingGatewayConnection connection,
         SnsPublication publication,
-        InstrumentationOptions instrumentation = InstrumentationOptions.All,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        InstrumentationOptions instrumentation = InstrumentationOptions.All)
         : base(connection, loggerFactory)
     {
         _publication = publication;

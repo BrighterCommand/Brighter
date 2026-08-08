@@ -29,7 +29,6 @@ using System.Linq;
 using System.Net.Mime;
 using System.Text;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 using RabbitMQ.Client;
@@ -41,9 +40,9 @@ internal sealed partial class RmqMessageCreator
 {
     private readonly ILogger _logger;
 
-    public RmqMessageCreator(ILogger<RmqMessageCreator>? logger)
+    public RmqMessageCreator(ILogger<RmqMessageCreator> logger)
     {
-        _logger = logger ?? NullLogger<RmqMessageCreator>.Instance;
+        _logger = logger;
     }
 
     public Message CreateMessage(BasicDeliverEventArgs fromQueue)
@@ -107,7 +106,7 @@ internal sealed partial class RmqMessageCreator
             timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
             correlationId: correlationId.Result,
             replyTo: new RoutingKey(replyTo.Result?.Value ?? string.Empty),
-            contentType: new ContentType(fromQueue.BasicProperties.ContentType), 
+            contentType: new ContentType(fromQueue.BasicProperties.ContentType),
             handledCount: handledCount.Result,
             dataSchema: dataSchema.Result,
             subject: subject.Result,
@@ -218,10 +217,10 @@ internal sealed partial class RmqMessageCreator
         switch (header)
         {
             case byte[] value:
-            {
-                var val = int.TryParse(Encoding.UTF8.GetString(value), out var handledCount) ? handledCount : 0;
-                return new HeaderResult<int>(val, true);
-            }
+                {
+                    var val = int.TryParse(Encoding.UTF8.GetString(value), out var handledCount) ? handledCount : 0;
+                    return new HeaderResult<int>(val, true);
+                }
             case int value:
                 return new HeaderResult<int>(value, true);
             default:
@@ -244,34 +243,34 @@ internal sealed partial class RmqMessageCreator
         switch (delayedMsHeader)
         {
             case byte[] value:
-            {
-                if (!int.TryParse(Encoding.UTF8.GetString(value), out var handledCount))
-                    delayedMilliseconds = 0;
-                else
                 {
-                    if (handledCount < 0)
-                        handledCount = Math.Abs(handledCount);
-                    delayedMilliseconds = handledCount;
+                    if (!int.TryParse(Encoding.UTF8.GetString(value), out var handledCount))
+                        delayedMilliseconds = 0;
+                    else
+                    {
+                        if (handledCount < 0)
+                            handledCount = Math.Abs(handledCount);
+                        delayedMilliseconds = handledCount;
+                    }
+
+                    break;
                 }
-
-                break;
-            }
             case int value:
-            {
-                if (value < 0)
-                    value = Math.Abs(value);
+                {
+                    if (value < 0)
+                        value = Math.Abs(value);
 
-                delayedMilliseconds = value;
-                break;
-            }
+                    delayedMilliseconds = value;
+                    break;
+                }
             case long value:
-            {
-                if (value < 0)
-                    value = Math.Abs(value);
+                {
+                    if (value < 0)
+                        value = Math.Abs(value);
 
-                delayedMilliseconds = (int)value;
-                break;
-            }
+                    delayedMilliseconds = (int)value;
+                    break;
+                }
             default:
                 return new HeaderResult<TimeSpan>(TimeSpan.Zero, false);
         }
@@ -291,7 +290,7 @@ internal sealed partial class RmqMessageCreator
         {
             return res;
         }
-        
+
         return new HeaderResult<RoutingKey?>(new RoutingKey(fromQueue.RoutingKey), true);
     }
 

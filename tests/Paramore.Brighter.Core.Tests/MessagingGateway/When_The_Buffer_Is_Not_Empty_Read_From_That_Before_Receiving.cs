@@ -15,7 +15,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
 
         public BufferedChannelTests()
         {
-            _gateway = new InMemoryMessageConsumer(new RoutingKey(_routingKey), _bus,new FakeTimeProvider(), ackTimeout: TimeSpan.FromMilliseconds(1000)); 
+            _gateway = new InMemoryMessageConsumer(new RoutingKey(_routingKey), _bus,new FakeTimeProvider(), ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory);
             _channel = new Channel(new (Channel), new (_routingKey), _gateway, BufferLimit);
         }
 
@@ -26,26 +26,26 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
             var messageOne = new Message(
                 new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
                 new MessageBody("FirstMessage"));
-           
+
             var messageTwo = new Message(
                 new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
                 new MessageBody("SecondMessage"));
-            
+
             //put BufferLimit messages on the channel first
             _channel.Enqueue(messageOne, messageTwo);
-            
+
             var messageThree = new Message(
                 new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
                 new MessageBody("ThirdMessage"));
-            
+
             //put a message on the bus, to pull once the buffer is empty
             _bus.Enqueue(messageThree);
-            
+
             //act
             var msgOne = _channel.Receive(TimeSpan.FromMilliseconds(10));
             var msgTwo = _channel.Receive(TimeSpan.FromMilliseconds(10));
             var msgThree = _channel.Receive(TimeSpan.FromMilliseconds(10));
-            
+
             //assert
             Assert.Equal(messageOne.Id, msgOne.Id);
             Assert.Equal(messageTwo.Id, msgTwo.Id);
@@ -59,21 +59,21 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
             var messageOne = new Message(
                 new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
                 new MessageBody("FirstMessage"));
-            
+
             var messageTwo = new Message(
                 new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
                 new MessageBody("SecondMessage"));
-            
+
             var messageThree = new Message(
                 new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
                 new MessageBody("ThirdMessage"));
-            
+
             // This should be fine
              _channel.Enqueue(messageOne, messageTwo, messageThree);
-            
+
              //This should throw an exception
              Assert.Throws<InvalidOperationException>(() => _channel.Enqueue(messageThree));
-            
+
         }
 
         [Fact]

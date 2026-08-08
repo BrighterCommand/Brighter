@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 
@@ -33,11 +32,11 @@ public partial class SqsMessageSender
     /// <param name="loggerFactory">The factory used to create a logger for this sender</param>
     public SqsMessageSender(string queueUrl, AmazonSQSClient client, ILoggerFactory loggerFactory)
     {
-        _logger = (loggerFactory).CreateLogger<SqsMessageSender>();
+        _logger = loggerFactory.CreateLogger<SqsMessageSender>();
         _queueUrl = queueUrl;
         _client = client;
     }
-    
+
     /// <summary>
     /// Sending message via SQS
     /// </summary>
@@ -95,7 +94,7 @@ public partial class SqsMessageSender
         {
             return;
         }
-        
+
         request.MessageGroupId = message.Header.PartitionKey;
         if (message.Header.Bag.TryGetValue(HeaderNames.DeduplicationId, out var deduplicationId))
         {
@@ -157,7 +156,7 @@ public partial class SqsMessageSender
 
         if (message.Header.DataRef != null)
             cloudEventHeaders[HeaderNames.DataRef] = message.Header.DataRef;
-        
+
         if (message.Header.TraceParent != null)
             cloudEventHeaders[HeaderNames.TraceParent] = message.Header.TraceParent.Value;
 

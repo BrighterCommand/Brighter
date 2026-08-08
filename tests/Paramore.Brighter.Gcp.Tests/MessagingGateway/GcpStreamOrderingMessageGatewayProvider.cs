@@ -67,7 +67,7 @@ public class GcpStreamOrderingMessageGatewayProvider
                 cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction;
             },
         };
-        _channelFactory = new GcpPubSubChannelFactory(_connection);
+        _channelFactory = new GcpPubSubChannelFactory(_connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     public RoutingKey GetOrCreateRoutingKey([CallerMemberName] string? testName = null)

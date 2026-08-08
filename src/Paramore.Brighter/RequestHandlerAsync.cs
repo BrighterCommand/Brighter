@@ -28,7 +28,6 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Policies.Attributes;
 using Paramore.Brighter.Policies.Handlers;
@@ -51,9 +50,15 @@ namespace Paramore.Brighter
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
-    public abstract partial class RequestHandlerAsync<TRequest>(InstrumentationOptions instrumentationOptions = InstrumentationOptions.All, ILoggerFactory loggerFactory) : IHandleRequestsAsync<TRequest> where TRequest : class, IRequest
+    public abstract partial class RequestHandlerAsync<TRequest>(InstrumentationOptions instrumentationOptions = InstrumentationOptions.All) : IHandleRequestsAsync<TRequest>, IRequireLoggerFactory where TRequest : class, IRequest
     {
-        private readonly ILogger _logger = (loggerFactory).CreateLogger<RequestHandlerAsync<TRequest>>();
+        private ILogger? _logger;
+
+        private ILogger Logger => _logger ?? throw new InvalidOperationException(
+            "Handler logging must be configured by PipelineBuilder before the handler executes.");
+
+        void IRequireLoggerFactory.ConfigureLogging(ILoggerFactory loggerFactory)
+            => _logger = loggerFactory.CreateLogger<RequestHandlerAsync<TRequest>>();
 
         private IHandleRequestsAsync<TRequest>? _successor;
 
@@ -120,12 +125,12 @@ namespace Paramore.Brighter
         {
             if (Context?.Span != null)
             {
-                BrighterTracer.WriteHandlerEvent(Context.Span, this.GetType().Name, isAsync:true, instrumentationOptions, isSink:_successor == null);
-            }   
-            
+                BrighterTracer.WriteHandlerEvent(Context.Span, this.GetType().Name, isAsync: true, instrumentationOptions, isSink: _successor == null);
+            }
+
             if (_successor != null)
             {
-                Log.PassingRequest(_logger, Name, _successor.Name);
+                Log.PassingRequest(Logger, Name, _successor.Name);
                 return await _successor.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
 
@@ -156,12 +161,12 @@ namespace Paramore.Brighter
         {
             if (Context?.Span != null)
             {
-                BrighterTracer.WriteHandlerEvent(Context.Span, $"{this.GetType().Name} Fallback", isAsync:true, instrumentationOptions, isSink:_successor == null);
-            }   
-            
+                BrighterTracer.WriteHandlerEvent(Context.Span, $"{this.GetType().Name} Fallback", isAsync: true, instrumentationOptions, isSink: _successor == null);
+            }
+
             if (_successor != null)
             {
-                Log.FallingBack(_logger, Name, _successor.Name);
+                Log.FallingBack(Logger, Name, _successor.Name);
                 return await _successor.FallbackAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
 

@@ -67,7 +67,7 @@ public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsetsAsync : IAsy
                 RequestTimeoutMs = 2000,
                 MakeChannels = OnMissingChannel.Create
             }
-            ]).CreateAsync().Result;
+            ], loggerFactory: Initializer.TestLoggerFactory).CreateAsync().Result;
 
         // Create a fake time provider to control time in the test
         _fakeTimeProvider = new FakeTimeProvider();
@@ -89,7 +89,7 @@ public class WhenSweeperTimeoutReachedShouldCommitUncommittedOffsetsAsync : IAsy
                 {
                     Name = "Kafka Consumer Test",
                     BootStrapServers = ["localhost:9092"]
-                })
+                }, loggerFactory: Initializer.TestLoggerFactory)
             .CreateAsync(subscription);
     }
 

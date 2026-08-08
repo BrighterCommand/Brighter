@@ -72,10 +72,10 @@ public class CommandProcessorSchedulerObservabilityAsyncTests
             new InMemoryRequestContextFactory(),
             policyRegistry,
             new ResiliencePipelineRegistry<string>(),
-            new InMemorySchedulerFactory{TimeProvider = _timeProvider},
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory) {TimeProvider = _timeProvider},
             tracer: tracer, 
-            instrumentationOptions: InstrumentationOptions.All
-        );
+            instrumentationOptions: InstrumentationOptions.All,
+            loggerFactory: Initializer.TestLoggerFactory);
     }
 
     [Fact]

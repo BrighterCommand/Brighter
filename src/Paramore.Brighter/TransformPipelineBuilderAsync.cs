@@ -29,7 +29,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
 
@@ -47,6 +46,7 @@ namespace Paramore.Brighter
     public partial class TransformPipelineBuilderAsync
     {
         private readonly ILogger _logger;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly IAmAMessageMapperRegistryAsync _mapperRegistryAsync;
 
         private readonly IAmAMessageTransformerFactoryAsync _messageTransformerFactoryAsync;
@@ -74,8 +74,8 @@ namespace Paramore.Brighter
         public TransformPipelineBuilderAsync(
             IAmAMessageMapperRegistryAsync mapperRegistryAsync,
             IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync,
-            InstrumentationOptions instrumentationOptions,
-            ILoggerFactory loggerFactory
+            ILoggerFactory loggerFactory,
+            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All
         )
         {
             _mapperRegistryAsync = mapperRegistryAsync ??
@@ -83,7 +83,8 @@ namespace Paramore.Brighter
                                        "TransformPipelineBuilder expected a Message Mapper Registry but none supplied");
             _messageTransformerFactoryAsync = messageTransformerFactoryAsync;
             _instrumentationOptions = instrumentationOptions;
-            _logger = (loggerFactory).CreateLogger<TransformPipelineBuilder>();
+            _loggerFactory = loggerFactory;
+            _logger = loggerFactory.CreateLogger<TransformPipelineBuilderAsync>();
         }
 
         /// <summary>
@@ -103,7 +104,7 @@ namespace Paramore.Brighter
 
                 transformLeases = BuildTransformPipeline<TRequest>(FindWrapTransforms(messageMapperLease.Instance));
 
-                pipeline = new WrapPipelineAsync<TRequest>(messageMapperLease, _messageTransformerFactoryAsync, transformLeases, _instrumentationOptions, _mapperRegistryAsync);
+                pipeline = new WrapPipelineAsync<TRequest>(messageMapperLease, _messageTransformerFactoryAsync, transformLeases, _instrumentationOptions, _loggerFactory, _mapperRegistryAsync);
 
                 Log.NewWrapPipelineCreated(_logger, typeof(TRequest).Name, TraceWrapPipeline(pipeline));
 
@@ -121,8 +122,9 @@ namespace Paramore.Brighter
                 //release them here rather than leak them. Cleanup may throw (Release/Dispose surface
                 //exceptions), so guard it: a disposal failure must not mask the configuration error
                 //the caller needs to see.
-                try { CleanUpAfterFailedBuild(pipeline, transformLeases, messageMapperLease); }
-                catch (Exception cleanupException) { Log.FailedToCleanUpAfterFailedBuild(s_logger, cleanupException); }
+                try
+                { CleanUpAfterFailedBuild(pipeline, transformLeases, messageMapperLease); }
+                catch (Exception cleanupException) { Log.FailedToCleanUpAfterFailedBuild(_logger, cleanupException); }
                 throw new ConfigurationException("Error building wrap pipeline for outgoing message, see inner exception for details", e);
             }
         }
@@ -144,7 +146,7 @@ namespace Paramore.Brighter
 
                 transformLeases = BuildTransformPipeline<TRequest>(FindUnwrapTransforms(messageMapperLease.Instance));
 
-                pipeline = new UnwrapPipelineAsync<TRequest>(transformLeases, _messageTransformerFactoryAsync, messageMapperLease, _mapperRegistryAsync);
+                pipeline = new UnwrapPipelineAsync<TRequest>(transformLeases, _messageTransformerFactoryAsync, messageMapperLease, _loggerFactory, _mapperRegistryAsync);
 
                 Log.NewUnwrapPipelineCreated(_logger, typeof(TRequest).Name, TraceUnwrapPipeline(pipeline));
 
@@ -162,12 +164,13 @@ namespace Paramore.Brighter
                 //release them here rather than leak them. Cleanup may throw (Release/Dispose surface
                 //exceptions), so guard it: a disposal failure must not mask the configuration error
                 //the caller needs to see.
-                try { CleanUpAfterFailedBuild(pipeline, transformLeases, messageMapperLease); }
-                catch (Exception cleanupException) { Log.FailedToCleanUpAfterFailedBuild(s_logger, cleanupException); }
+                try
+                { CleanUpAfterFailedBuild(pipeline, transformLeases, messageMapperLease); }
+                catch (Exception cleanupException) { Log.FailedToCleanUpAfterFailedBuild(_logger, cleanupException); }
                 throw new ConfigurationException("Error building unwrap pipeline for outgoing message, see inner exception for details", e);
             }
         }
-        
+
         public bool HasPipeline<TRequest>() where TRequest : class, IRequest
             //resolve the mapper type rather than create an instance: this runs once per message and only
             //answers "is there a pipeline?", so there is nothing to release and no probe to leak
@@ -192,7 +195,7 @@ namespace Paramore.Brighter
             {
                 transformAttributes.Each((attribute) =>
                 {
-                    var transformerLease = new TransformerFactoryAsync<TRequest>(attribute, _messageTransformerFactoryAsync).CreateMessageTransformer();
+                    var transformerLease = new TransformerFactoryAsync<TRequest>(attribute, _messageTransformerFactoryAsync, _logger).CreateMessageTransformer();
                     transforms.Add(transformerLease);
                 });
             }
@@ -212,7 +215,8 @@ namespace Paramore.Brighter
         //when no transformer factory was supplied (v9 compatibility), because none were created.
         private void ReleaseTransforms(IEnumerable<Lease<IAmAMessageTransformAsync>> transformLeases)
         {
-            if (_messageTransformerFactoryAsync is null) return;
+            if (_messageTransformerFactoryAsync is null)
+                return;
 
             //release every transform even when one Release throws: on the failed-build path no pipeline
             //owns these transforms and no finalizer retries, so skipping the rest would leak their DI
@@ -220,8 +224,9 @@ namespace Paramore.Brighter
             //build error the caller rethrows.
             foreach (var transformLease in transformLeases)
             {
-                try { _messageTransformerFactoryAsync.Release(transformLease); }
-                catch (Exception releaseException) { Log.FailedToReleaseTransform(s_logger, releaseException); }
+                try
+                { _messageTransformerFactoryAsync.Release(transformLease); }
+                catch (Exception releaseException) { Log.FailedToReleaseTransform(_logger, releaseException); }
             }
         }
 
@@ -242,8 +247,10 @@ namespace Paramore.Brighter
                 return;
             }
 
-            if (transformLeases is not null) ReleaseTransforms(transformLeases);
-            if (messageMapperLease is not null) _mapperRegistryAsync.Release(messageMapperLease);
+            if (transformLeases is not null)
+                ReleaseTransforms(transformLeases);
+            if (messageMapperLease is not null)
+                _mapperRegistryAsync.Release(messageMapperLease);
         }
 
         public static void ClearPipelineCache()
@@ -255,7 +262,8 @@ namespace Paramore.Brighter
         private Lease<IAmAMessageMapperAsync<TRequest>> FindMessageMapper<TRequest>() where TRequest : class, IRequest
         {
             var messageMapperLease = _mapperRegistryAsync.GetAsync<TRequest>();
-            if (messageMapperLease == null) throw new InvalidOperationException($"Could not find mapper for {typeof(TRequest).Name}. Hint: did you set MessagePumpType.Proactor on the subscription to match the mapper type?");
+            if (messageMapperLease == null)
+                throw new InvalidOperationException($"Could not find mapper for {typeof(TRequest).Name}. Hint: did you set MessagePumpType.Proactor on the subscription to match the mapper type?");
             return messageMapperLease;
         }
 

@@ -64,7 +64,7 @@ public class KafkaMessageConsumerUnknownReasonTests : IDisposable
                 Name = "Kafka Producer Unknown Reason Test",
                 BootStrapServers = new[] { "localhost:9092" }
             },
-            publication);
+            publication, loggerFactory: Initializer.TestLoggerFactory);
 
         _producer.Init();
     }
@@ -136,7 +136,7 @@ public class KafkaMessageConsumerUnknownReasonTests : IDisposable
                 {
                     Name = "Kafka Consumer Unknown Reason Test",
                     BootStrapServers = new[] { "localhost:9092" }
-                })
+                }, loggerFactory: Initializer.TestLoggerFactory)
             .Create(new KafkaSubscription<MyCommand>
             (
                 subscriptionName: new SubscriptionName("Paramore.Brighter.Tests"),
@@ -159,7 +159,7 @@ public class KafkaMessageConsumerUnknownReasonTests : IDisposable
                 {
                     Name = "Kafka DLQ Consumer Test",
                     BootStrapServers = new[] { "localhost:9092" }
-                })
+                }, loggerFactory: Initializer.TestLoggerFactory)
             .Create(new KafkaSubscription<MyCommand>
             (
                 subscriptionName: new SubscriptionName("Paramore.Brighter.DLQ.Tests"),

@@ -6,7 +6,6 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Transforms.Attributes;
@@ -42,10 +41,10 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
     /// <summary>
     /// Initializes a new instance of the <see cref="CloudEventsTransformer"/> class.
     /// </summary>
-    /// <param name="loggerFactory">The factory used to create the logger; falls back to a no-op factory when null.</param>
+    /// <param name="loggerFactory">The factory used to create the logger.</param>
     public CloudEventsTransformer(ILoggerFactory loggerFactory)
     {
-        _logger = (loggerFactory).CreateLogger<CloudEventsTransformer>();
+        _logger = loggerFactory.CreateLogger<CloudEventsTransformer>();
     }
 
     private Uri? _source;
@@ -124,7 +123,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
         if (initializerList[0] is CloudEventFormat format)
         {
             _format = format;
-        } 
+        }
     }
 
     /// <inheritdoc />
@@ -141,7 +140,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
     /// <inheritdoc />
     public Message Wrap(Message message, Publication publication)
     {
-        var msg =  ApplyCloudEventsPrecedence(message,  publication);
+        var msg = ApplyCloudEventsPrecedence(message, publication);
         return _format == CloudEventFormat.Binary ? msg : WriteJsonMessage(msg, publication);
     }
 
@@ -161,7 +160,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
     {
         try
         {
-            #if NETSTANDARD2_0
+#if NETSTANDARD2_0
             var cloudEvents = JsonSerializer.Deserialize<JsonEvent>(message.Body.Memory.ToArray(), JsonSerialisationOptions.Options);
 #else
             var cloudEvents = JsonSerializer.Deserialize<JsonEvent>(message.Body.Memory.Span, JsonSerialisationOptions.Options);
@@ -199,7 +198,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
                 TraceState = message.Header.TraceState,
                 Bag = bag
             };
-           
+
             MessageBody body;
             if (!string.IsNullOrEmpty(cloudEvents.DataBase64))
             {
@@ -210,18 +209,18 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
             else if (cloudEvents.Data.HasValue)
             {
                 // JSON or string data
-                body = cloudEvents.Data.Value.ValueKind == JsonValueKind.String 
-                    ? new MessageBody(cloudEvents.Data.Value.GetString() ?? string.Empty) 
+                body = cloudEvents.Data.Value.ValueKind == JsonValueKind.String
+                    ? new MessageBody(cloudEvents.Data.Value.GetString() ?? string.Empty)
                     : new MessageBody(cloudEvents.Data.Value.GetRawText());
             }
             else
             {
                 body = new MessageBody(string.Empty);
             }
-            
+
             return new Message(header, body);
         }
-        catch(JsonException ex)
+        catch (JsonException ex)
         {
             Log.ErrorDuringDeserializerOnUnwrap(_logger, ex);
             return message;
@@ -252,18 +251,20 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
     private static T? ResolveWithSentinel<T>(T? attrValue, T? headerValue, T sentinel, T? publicationValue)
         where T : class
     {
-        if (attrValue is not null) return attrValue;
-        if (!Equals(headerValue, sentinel)) return headerValue;
+        if (attrValue is not null)
+            return attrValue;
+        if (!Equals(headerValue, sentinel))
+            return headerValue;
         return publicationValue;
     }
-    
+
     private Message WriteJsonMessage(Message message, Publication publication)
     {
         try
         {
             JsonElement? data = null;
             string? dataBase64 = null;
-            var contentType = message.Header.ContentType.ToString()?? string.Empty;
+            var contentType = message.Header.ContentType.ToString() ?? string.Empty;
             if (message.Body.Value.Length > 0)
             {
                 if (contentType.Contains("application/json") || contentType.Contains("text/json"))
@@ -286,7 +287,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
                     data = JsonDocument.Parse($"\"{encoded.ToString()}\"").RootElement;
                 }
             }
-            
+
             var defaultCloudEventsAdditionalProperties = publication.CloudEventsAdditionalProperties ?? new Dictionary<string, object>();
 
             var cloudEvent = new JsonEvent

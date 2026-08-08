@@ -103,7 +103,7 @@ public class MsSqlAdvisoryLockAcquireThrowsDuringBeginTests : IAsyncLifetime
         // resource, proving the failed acquire left no lingering server-side state. If the
         // partial transaction had been left undisposed, the next BeginTransaction on the same
         // connection-pool slot would block or error.
-        var freshRunner = new MsSqlBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(5));
+        var freshRunner = new MsSqlBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(5), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         await freshRunner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, freshHint, CancellationToken.None);
 
@@ -159,7 +159,8 @@ file sealed class SpyingMsSqlBoxMigrationRunner : MsSqlBoxMigrationRunner
         IAmARelationalDatabaseConfiguration configuration,
         TimeSpan lockTimeout,
         IMsSqlAdvisoryLock advisoryLock)
-        : base(catalog, configuration, lockTimeout, advisoryLock)
+        : base(catalog, configuration, lockTimeout,
+            global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, advisoryLock)
     {
     }
 

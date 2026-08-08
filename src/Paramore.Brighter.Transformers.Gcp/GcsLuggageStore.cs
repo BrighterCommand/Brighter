@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Google;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Transforms.Storage;
 
@@ -42,12 +41,12 @@ namespace Paramore.Brighter.Transformers.Gcp;
 public partial class GcsLuggageStore(GcsLuggageOptions options, ILoggerFactory loggerFactory) : IAmAStorageProvider, IAmAStorageProviderAsync
 {
     private const string ClaimCheckProvider = "gcp_gcs";
-    private readonly ILogger _logger = (loggerFactory).CreateLogger<GcsLuggageStore>();
+    private readonly ILogger _logger = loggerFactory.CreateLogger<GcsLuggageStore>();
     private static readonly Dictionary<string, string> s_spanAttributes = new();
-    
+
     /// <inheritdoc cref="IAmAStorageProvider.Tracer" />
     public IAmABrighterTracer? Tracer { get; set; }
-    
+
     /// <inheritdoc />
     public async Task EnsureStoreExistsAsync(CancellationToken cancellationToken = default)
     {
@@ -77,13 +76,13 @@ public partial class GcsLuggageStore(GcsLuggageOptions options, ILoggerFactory l
             {
                 throw new InvalidOperationException($"Bucket {options.BucketName} does not exist");
             }
-            
+
             await client.CreateBucketAsync(options.ProjectId, options.BucketName, options.CreateBucketOptions, cancellationToken);
         }
-        catch(Exception e)
+        catch (Exception e)
         {
             Log.ErrorCreatingValidatingLuggageStore(_logger, options.BucketName, e);
-            throw;   
+            throw;
         }
     }
 
@@ -159,14 +158,14 @@ public partial class GcsLuggageStore(GcsLuggageOptions options, ILoggerFactory l
         {
             prefix += "/";
         }
-        
+
         var claimCheck = $"{prefix}{Guid.NewGuid().ToString()}";
         var span = Tracer?.CreateClaimCheckSpan(new ClaimCheckSpanInfo(ClaimCheckOperation.Store, ClaimCheckProvider, options.BucketName, claimCheck, s_spanAttributes, stream.Length));
         try
         {
             var client = await options.CreateStorageClientAsync();
-            await client.UploadObjectAsync(options.BucketName, 
-                claimCheck, 
+            await client.UploadObjectAsync(options.BucketName,
+                claimCheck,
                 "application/vnd.brighter.claim-check",
                 stream,
                 options.UploadObjectOptions,
@@ -208,7 +207,7 @@ public partial class GcsLuggageStore(GcsLuggageOptions options, ILoggerFactory l
             {
                 throw new InvalidOperationException($"Bucket {options.BucketName} does not exist");
             }
-            
+
             client.CreateBucket(options.ProjectId, options.BucketName, options.CreateBucketOptions);
         }
     }
@@ -219,7 +218,7 @@ public partial class GcsLuggageStore(GcsLuggageOptions options, ILoggerFactory l
         var span = Tracer?.CreateClaimCheckSpan(new ClaimCheckSpanInfo(ClaimCheckOperation.Delete, ClaimCheckProvider, options.BucketName, claimCheck, s_spanAttributes));
         try
         {
-            var client =  options.CreateStorageClient();
+            var client = options.CreateStorageClient();
             client.DeleteObject(options.BucketName, claimCheck, options.DeleteObjectOptions);
         }
         catch (GoogleApiException ex) when (ex.HttpStatusCode == HttpStatusCode.NotFound)
@@ -234,8 +233,8 @@ public partial class GcsLuggageStore(GcsLuggageOptions options, ILoggerFactory l
 
     /// <inheritdoc />
     public Stream Retrieve(string claimCheck)
-    { 
-        var span = Tracer?.CreateClaimCheckSpan(new ClaimCheckSpanInfo(ClaimCheckOperation.Retrieve, ClaimCheckProvider, options.BucketName, claimCheck, s_spanAttributes)); 
+    {
+        var span = Tracer?.CreateClaimCheckSpan(new ClaimCheckSpanInfo(ClaimCheckOperation.Retrieve, ClaimCheckProvider, options.BucketName, claimCheck, s_spanAttributes));
         try
         {
             var client = options.CreateStorageClient();
@@ -260,7 +259,7 @@ public partial class GcsLuggageStore(GcsLuggageOptions options, ILoggerFactory l
     /// <inheritdoc />
     public bool HasClaim(string claimCheck)
     {
-       var span = Tracer?.CreateClaimCheckSpan(new ClaimCheckSpanInfo(ClaimCheckOperation.HasClaim, ClaimCheckProvider, options.BucketName, claimCheck, s_spanAttributes));
+        var span = Tracer?.CreateClaimCheckSpan(new ClaimCheckSpanInfo(ClaimCheckOperation.HasClaim, ClaimCheckProvider, options.BucketName, claimCheck, s_spanAttributes));
         try
         {
             var client = options.CreateStorageClient();
@@ -285,15 +284,15 @@ public partial class GcsLuggageStore(GcsLuggageOptions options, ILoggerFactory l
         {
             prefix += "/";
         }
-        
+
         var claimCheck = $"{prefix}{Guid.NewGuid().ToString()}";
         var span = Tracer?.CreateClaimCheckSpan(new ClaimCheckSpanInfo(ClaimCheckOperation.Store, ClaimCheckProvider, options.BucketName, claimCheck, s_spanAttributes, stream.Length));
         try
         {
             var client = options.CreateStorageClient();
             client.UploadObject(options.BucketName,
-                claimCheck, 
-                "application/vnd.brighter.claim-check", 
+                claimCheck,
+                "application/vnd.brighter.claim-check",
                 stream,
                 options.UploadObjectOptions);
             return claimCheck;
@@ -319,7 +318,7 @@ public partial class GcsLuggageStore(GcsLuggageOptions options, ILoggerFactory l
         public static partial void CouldNotDownload(ILogger logger, string claimCheck, string bucketName);
 
         [LoggerMessage(LogLevel.Error, "Unable to read {ClaimCheck} from {Bucket}")]
-        public static partial void UnableToRead(ILogger logger, string claimCheck, string bucket,  Exception exception);
+        public static partial void UnableToRead(ILogger logger, string claimCheck, string bucket, Exception exception);
 
         [LoggerMessage(LogLevel.Information, "Uploading {ClaimCheck} to {Bucket}")]
         public static partial void Uploading(ILogger logger, string claimCheck, string bucket);

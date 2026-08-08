@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         public ConfigurationCommandAllStopTests()
         {
             _dispatcher = A.Fake<IDispatcher>();
-            _configurationCommandHandler = new ConfigurationCommandHandler(_dispatcher);
+            _configurationCommandHandler = new ConfigurationCommandHandler(_dispatcher, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.ServiceActivator.Ports.Handlers.ConfigurationCommandHandler>(Initializer.TestLoggerFactory));
             _configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STOPALL, "");
         }
 

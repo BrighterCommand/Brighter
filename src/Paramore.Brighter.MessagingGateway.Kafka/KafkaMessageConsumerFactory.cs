@@ -33,7 +33,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     public class KafkaMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly KafkaMessagingGatewayConfiguration _configuration;
-        private readonly ILoggerFactory? _loggerFactory;
+        private readonly ILoggerFactory _loggerFactory;
         private IAmAMessageScheduler? _scheduler;
 
         /// <summary>
@@ -54,8 +54,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers for the consumers</param>
         public KafkaMessageConsumerFactory(
             KafkaMessagingGatewayConfiguration configuration,
-            IAmAMessageScheduler? scheduler = null,
-            ILoggerFactory loggerFactory
+            ILoggerFactory loggerFactory,
+            IAmAMessageScheduler? scheduler = null
             )
         {
             _configuration = configuration;
@@ -70,10 +70,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <returns>A consumer that can be used to read from the stream</returns>
         public IAmAMessageConsumerSync Create(Subscription subscription)
         {
-            KafkaSubscription? kafkaSubscription = subscription as KafkaSubscription;  
+            KafkaSubscription? kafkaSubscription = subscription as KafkaSubscription;
             if (kafkaSubscription == null)
                 throw new ConfigurationException("We expect a KafkaSubscription or KafkaSubscription<T> as a parameter");
-            
+
             // Extract DLQ and invalid message routing keys if subscription supports them
             RoutingKey? deadLetterRoutingKey = null;
             RoutingKey? invalidMessageRoutingKey = null;
@@ -91,7 +91,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 #pragma warning disable CS0618
             return new KafkaMessageConsumer(
                 configuration: _configuration,
-                routingKey:kafkaSubscription.RoutingKey, //topic
+                routingKey: kafkaSubscription.RoutingKey, //topic
                 groupId: kafkaSubscription.GroupId,
                 offsetDefault: kafkaSubscription.OffsetDefault,
                 sessionTimeout: kafkaSubscription.SessionTimeout,

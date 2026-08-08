@@ -27,7 +27,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -44,7 +43,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         public PullConsumer(IModel channel, ushort batchSize, ILoggerFactory loggerFactory)
             : base(channel)
         {
-            _logger = (loggerFactory).CreateLogger<RmqMessageConsumer>();
+            _logger = loggerFactory.CreateLogger<RmqMessageConsumer>();
 
             //set the number of messages to fetch -- defaults to 1 unless set on subscription, no impact on
             //BasicGet, only works on BasicConsume
@@ -62,12 +61,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             var now = DateTime.UtcNow;
             var end = now.Add(timeOut);
             var pause = (timeOut > TimeSpan.FromMilliseconds(25)) ? Convert.ToInt32(timeOut.TotalMilliseconds) / 5 : 5;
- 
-            
+
+
             var buffer = new BasicDeliverEventArgs[bufferSize];
             var bufferIndex = 0;
-            
-            
+
+
             while (now < end && bufferIndex < bufferSize)
             {
                 if (_messages.TryDequeue(out BasicDeliverEventArgs? result))
@@ -84,21 +83,21 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
             return bufferIndex == 0 ? (0, null) : (bufferIndex, buffer);
         }
-        
-         public override void HandleBasicDeliver(
-            string consumerTag, 
-            ulong deliveryTag, 
-            bool redelivered, 
-            string exchange, 
-            string routingKey,
-            IBasicProperties properties, 
-            ReadOnlyMemory<byte> body)
+
+        public override void HandleBasicDeliver(
+           string consumerTag,
+           ulong deliveryTag,
+           bool redelivered,
+           string exchange,
+           string routingKey,
+           IBasicProperties properties,
+           ReadOnlyMemory<byte> body)
         {
             //We have to copy the body, before returning, as the memory in body is pooled and may be re-used after (see base class documentation)
             //See also https://docs.microsoft.com/en-us/dotnet/standard/memory-and-spans/memory-t-usage-guidelines
             var payload = new byte[body.Length];
             body.CopyTo(payload);
-            
+
             _messages.Enqueue(new BasicDeliverEventArgs
             {
                 BasicProperties = properties,
@@ -126,7 +125,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 //don't impede shutdown, just log
                 Log.NackUnhandledMessagesOnShutdownFailed(_logger, e.Message);
             }
-           
+
             base.OnCancel();
         }
 
@@ -135,6 +134,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             [LoggerMessage(LogLevel.Warning, "Tried to nack unhandled messages on shutdown but failed for {ErrorMessage}")]
             public static partial void NackUnhandledMessagesOnShutdownFailed(ILogger logger, string errorMessage);
         }
-   }
+    }
 }
 

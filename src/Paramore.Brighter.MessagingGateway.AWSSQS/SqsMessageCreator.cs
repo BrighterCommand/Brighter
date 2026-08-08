@@ -32,7 +32,6 @@ using Amazon;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
@@ -59,7 +58,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
 
     public SqsMessageCreator(ILoggerFactory loggerFactory)
     {
-        _logger = (loggerFactory).CreateLogger<SqsMessageCreator>();
+        _logger = loggerFactory.CreateLogger<SqsMessageCreator>();
     }
 
     public Message CreateMessage(Amazon.SQS.Model.Message sqsMessage)
@@ -97,7 +96,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
                 messageId: messageId.Result ?? Id.Empty,
                 topic: topic.Result ?? RoutingKey.Empty,
                 messageType.Result,
-                source:  source.Result,
+                source: source.Result,
                 type: type.Result,
                 timeStamp: timeStamp.Result,
                 correlationId: correlationId.Success ? correlationId.Result : Id.Empty,
@@ -152,7 +151,7 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
 
         return new HeaderResult<Uri?>(null, false);
     }
-    
+
     private static Dictionary<string, string> ReadCloudEventHeaders(Amazon.SQS.Model.Message sqsMessage)
     {
         if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.CloudEventHeaders, out var value))
@@ -167,11 +166,12 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
             catch (Exception)
             {
                 //we weill just suppress conversion errors, and return an empty bag
-            }        }
+            }
+        }
 
         return new Dictionary<string, string>();
     }
-    
+
     private static HeaderResult<Uri?> ReadCloudEventSource(Dictionary<string, string> cloudEventHeaders)
     {
         if (cloudEventHeaders.TryGetValue(HeaderNames.Source, out var value))
@@ -184,13 +184,13 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
 
         return new HeaderResult<Uri?>(null, false);
     }
-    
-    private static HeaderResult<string> ReadCloudEventsSpecVersion(Dictionary<string,string> cloudEventHeaders)
+
+    private static HeaderResult<string> ReadCloudEventsSpecVersion(Dictionary<string, string> cloudEventHeaders)
     {
         if (cloudEventHeaders.TryGetValue(HeaderNames.SpecVersion, out var value))
         {
             return new HeaderResult<string>(value, true);
-        }  
+        }
         return new HeaderResult<string>(MessageHeader.DefaultSpecVersion, true);
     }
 
@@ -203,34 +203,34 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
 
         return new HeaderResult<CloudEventsType?>(CloudEventsType.Empty, false);
     }
-    
-    private static HeaderResult<TraceParent> ReadCloudEventsTraceParent(Dictionary<string,string> cloudEventHeaders)
+
+    private static HeaderResult<TraceParent> ReadCloudEventsTraceParent(Dictionary<string, string> cloudEventHeaders)
     {
         if (cloudEventHeaders.TryGetValue(HeaderNames.TraceParent, out var value))
         {
             return new HeaderResult<TraceParent>(new TraceParent(value), true);
         }
-        
+
         return new HeaderResult<TraceParent>(null, true);
     }
-    
-    private static HeaderResult<TraceState> ReadCloudEventsTraceState(Dictionary<string,string> cloudEventHeaders)
+
+    private static HeaderResult<TraceState> ReadCloudEventsTraceState(Dictionary<string, string> cloudEventHeaders)
     {
         if (cloudEventHeaders.TryGetValue(HeaderNames.TraceState, out var value))
         {
             return new HeaderResult<TraceState>(new TraceState(value), true);
-        }  
+        }
         return new HeaderResult<TraceState>(null, true);
     }
-    
-    private static HeaderResult<Baggage> ReadCloudEventsBaggage(Dictionary<string,string> cloudEventHeaders)
+
+    private static HeaderResult<Baggage> ReadCloudEventsBaggage(Dictionary<string, string> cloudEventHeaders)
     {
         var baggage = new Baggage();
         if (cloudEventHeaders.TryGetValue(HeaderNames.Baggage, out var value))
         {
             baggage.LoadBaggage(value);
-        }  
-        
+        }
+
         return new HeaderResult<Baggage>(baggage, true);
     }
 
@@ -291,18 +291,18 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
 
     private static HeaderResult<DateTimeOffset> ReadTimestamp(Amazon.SQS.Model.Message sqsMessage, Dictionary<string, string> headers)
     {
-        if (headers.TryGetValue(HeaderNames.Timestamp, out var val) 
+        if (headers.TryGetValue(HeaderNames.Timestamp, out var val)
             && DateTimeOffset.TryParse(val, out var timestamp))
         {
             return new HeaderResult<DateTimeOffset>(timestamp, true);
         }
-        
+
         if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Time, out var value)
             && DateTimeOffset.TryParse(value.StringValue, out timestamp))
         {
             return new HeaderResult<DateTimeOffset>(timestamp, true);
         }
-        
+
         if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Timestamp, out value)
             && DateTimeOffset.TryParse(value.StringValue, out timestamp))
         {
@@ -354,13 +354,13 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
         {
             return new HeaderResult<ContentType>(new ContentType(value.StringValue), true);
         }
-        
-        if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.ContentType, out value) 
+
+        if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.ContentType, out value)
             && !string.IsNullOrEmpty(value.StringValue))
         {
             return new HeaderResult<ContentType>(new ContentType(value.StringValue), true);
         }
-        
+
         if (headers.TryGetValue(HeaderNames.DataContentType, out var val))
         {
             return new HeaderResult<ContentType>(new ContentType(val), true);
@@ -426,22 +426,22 @@ internal sealed partial class SqsMessageCreator : SqsMessageCreatorBase, ISqsMes
 
         return new HeaderResult<string>(null, false);
     }
-    
+
     private static HeaderResult<string> ReadSubject(Amazon.SQS.Model.Message sqsMessage, Dictionary<string, string> headers)
     {
         if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Subject, out var value))
         {
             return new HeaderResult<string>(value.StringValue, true);
         }
-        
+
         if (headers.TryGetValue(HeaderNames.Subject, out var subject))
         {
             return new HeaderResult<string>(subject, true);
         }
-        
+
         return new HeaderResult<string>(null, false);
     }
-   
+
     private static partial class Log
     {
         [LoggerMessage(LogLevel.Warning, "Failed to create message from amqp message")]

@@ -36,7 +36,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
     {
         private readonly RedisMessagingGatewayConfiguration _redisConfiguration;
         private readonly IEnumerable<RedisMessagePublication> _publications;
-        private readonly ILoggerFactory? _loggerFactory;
+        private readonly ILoggerFactory _loggerFactory;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RedisMessageProducerFactory"/> class.
@@ -66,11 +66,11 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             foreach (var publication in _publications)
             {
                 if (publication.Topic is null)
-                    throw new ConfigurationException("RmqMessageProducerFactory.Create => An RmqPublication must have a topic/routing key");    
+                    throw new ConfigurationException("RmqMessageProducerFactory.Create => An RmqPublication must have a topic/routing key");
 
                 var messageProducer = new RedisMessageProducer(_redisConfiguration, publication, loggerFactory: _loggerFactory);
                 messageProducer.Publication = publication;
-                
+
                 var producerKey = new ProducerKey(publication.Topic, publication.Type);
                 if (producers.ContainsKey(producerKey))
                     throw new ArgumentException($"A publication with the topic {publication.Topic}  and {publication.Type} already exists in the producer registry. Each topic + type must be unique in the producer registry. If you did not set a type, we will match against an empty type, so you cannot have two publications with the same topic and no type in the producer registry.");

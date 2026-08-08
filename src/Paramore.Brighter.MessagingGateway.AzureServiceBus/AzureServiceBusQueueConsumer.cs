@@ -28,7 +28,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 using Paramore.Brighter.Tasks;
 
@@ -61,7 +60,7 @@ public partial class AzureServiceBusQueueConsumer : AzureServiceBusConsumer
         ILoggerFactory loggerFactory) : base(subscription,
         messageProducer, administrationClientWrapper, loggerFactory: loggerFactory)
     {
-        _logger = (loggerFactory).CreateLogger<AzureServiceBusQueueConsumer>();
+        _logger = loggerFactory.CreateLogger<AzureServiceBusQueueConsumer>();
         _serviceBusReceiverProvider = serviceBusReceiverProvider;
     }
 
@@ -77,7 +76,7 @@ public partial class AzureServiceBusQueueConsumer : AzureServiceBusConsumer
             Log.FailedToGetMessageReceiverProviderAsync(_logger, Topic, e);
         }
     }
-        
+
     /// <summary>
     /// Purges the specified queue name.
     /// </summary>
@@ -140,7 +139,7 @@ public partial class AzureServiceBusQueueConsumer : AzureServiceBusConsumer
 
         [LoggerMessage(LogLevel.Error, "Failed to get message receiver provider for queue {Queue}")]
         public static partial void FailedToGetMessageReceiverProviderAsync(ILogger logger, string queue, Exception e);
-        
+
         [LoggerMessage(LogLevel.Information, "Purging messages from Queue {Queue}")]
         public static partial void PurgingMessagesFromQueueAsync(ILogger logger, string queue);
 

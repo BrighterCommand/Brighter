@@ -21,7 +21,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         public PostFailureLimitCommandTests()
         {
             var routingKey = new RoutingKey("MyCommand");
-            
+
             IAmAMessageProducer producer = new FakeErroringMessageProducerSync{Publication = { Topic = routingKey, RequestType = typeof(MyCommand)}};
 
             var messageMapperRegistry =
@@ -35,35 +35,36 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             _outbox = new InMemoryOutbox(_timeProvider) {Tracer = tracer};
 
             var producerRegistry =
-                new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, producer }, }); 
-            
+                new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, producer }, });
+
             var externalBus = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry: producerRegistry,
                 resiliencePipelineRegistry: new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
                 mapperRegistry: messageMapperRegistry,
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
-                messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(),     
+                messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 outbox: _outbox,
                 maxOutStandingMessages:3,
                 maxOutStandingCheckInterval: TimeSpan.FromMilliseconds(250),
-                publicationFinder: new FindPublicationByPublicationTopicOrRequestType()
-            );  
-            
+                publicationFinder: new FindPublicationByPublicationTopicOrRequestType(),
+                loggerFactory: Initializer.TestLoggerFactory);
+
             _commandProcessor = CommandProcessorBuilder.StartNew()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactorySync()))
                 .DefaultResilience()
                 .ExternalBus(ExternalBusType.FireAndForget, externalBus)
                 .ConfigureInstrumentation(new BrighterTracer(TimeProvider.System), InstrumentationOptions.All)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
-                .RequestSchedulerFactory(new InMemorySchedulerFactory())
+                .RequestSchedulerFactory(new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory))
+                .ConfigureLogging(Initializer.TestLoggerFactory)
                 .Build();
         }
 
         [Fact]
         public async Task When_Posting_Fails_Limit_Total_Writes_To_OutBox_In_Window()
         {
-            var sentList = new List<string>(); 
+            var sentList = new List<string>();
             bool shouldThrowException = false;
             try
             {
@@ -72,7 +73,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                     var command = new MyCommand{Value = $"Hello World: {sentList.Count + 1}"};
                     _commandProcessor.Post(command);
                     sentList.Add(command.Id);
-                    
+
                     _timeProvider.Advance(TimeSpan.FromMilliseconds(500));
 
                     //We need to wait for the sweeper thread to check the outstanding in the outbox
@@ -84,10 +85,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             {
                 shouldThrowException = true;
             }
-            
+
             //We should error before the end
             Assert.True(shouldThrowException);
-            
+
             //should store the message in the sent outbox
             foreach (var id in sentList)
             {

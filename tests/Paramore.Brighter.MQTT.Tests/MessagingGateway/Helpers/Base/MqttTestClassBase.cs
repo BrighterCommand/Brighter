@@ -64,7 +64,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base
                 TopicPrefix = topicPrefix
             };
 
-            MqttMessagePublisher mqttMessagePublisher = new(mqttProducerConfig);
+            MqttMessagePublisher mqttMessagePublisher = new(mqttProducerConfig, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             MessageProducerAsync = new MqttMessageProducer(mqttMessagePublisher, new Publication());
 
             MqttMessagingGatewayConsumerConfiguration mqttConsumerConfig = new()
@@ -75,7 +75,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Helpers.Base
                 ClientID = clientID
             };
 
-            MessageConsumerAsync = new MqttMessageConsumer(mqttConsumerConfig);
+            MessageConsumerAsync = new MqttMessageConsumer(mqttConsumerConfig, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         }
 
         /// <summary>

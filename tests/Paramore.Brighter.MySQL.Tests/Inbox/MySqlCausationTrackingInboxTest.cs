@@ -16,7 +16,7 @@ public class MySqlCausationTrackingInboxTest : CausationTrackingInboxBaseTests
         _configuration = new RelationalDatabaseConfiguration(
             Const.DefaultConnectingString,
             inboxTableName: $"{Const.TablePrefix}{Uuid.New():N}");
-        _inbox = new MySqlInbox(_configuration);
+        _inbox = new MySqlInbox(_configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Inbox.MySql.MySqlInbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         base.BeforeEachTest();
     }
 

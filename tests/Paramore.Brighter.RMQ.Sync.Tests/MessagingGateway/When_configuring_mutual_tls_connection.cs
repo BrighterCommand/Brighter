@@ -194,7 +194,7 @@ public class RmqMutualTlsConnectionConfigurationTests : IDisposable
     private sealed class TestableRmqMessageConsumer : RmqMessageGateway
     {
         public TestableRmqMessageConsumer(RmqMessagingGatewayConnection connection)
-            : base(connection)
+            : base(connection, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
         {
         }
 

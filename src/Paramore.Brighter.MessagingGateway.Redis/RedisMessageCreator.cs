@@ -28,7 +28,6 @@ using System.IO;
 using System.Net.Mime;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using ServiceStack;
@@ -39,9 +38,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
     {
         private readonly ILogger _logger;
 
-        public RedisMessageCreator(ILogger<RedisMessageCreator>? logger)
+        public RedisMessageCreator(ILogger<RedisMessageCreator> logger)
         {
-            _logger = logger ?? NullLogger<RedisMessageCreator>.Instance;
+            _logger = logger;
         }
 
         /// <summary>
@@ -129,7 +128,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 Log.ExpectedBodyEndError(_logger, redisMessage);
                 return message;
             }
-                
+
             message = new Message(messageHeader, messageBody);
 
             return message;
@@ -151,12 +150,12 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             if (headersJson is null)
                 return MessageHeader.FailureMessageHeader(RoutingKey.Empty, Id.Empty);
-            
-            var headers = JsonSerializer.Deserialize<Dictionary<string, string>>(headersJson, JsonSerialisationOptions.Options);  
-            
+
+            var headers = JsonSerializer.Deserialize<Dictionary<string, string>>(headersJson, JsonSerialisationOptions.Options);
+
             if (headers is null)
                 return MessageHeader.FailureMessageHeader(RoutingKey.Empty, Id.Empty);
-            
+
             var messageId = ReadMessageId(headers);
             var timeStamp = ReadTimeStamp(headers);
             var topic = ReadTopic(headers);
@@ -167,14 +166,14 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             var replyTo = ReadReplyTo(headers);
             var contentType = ReadContentType(headers);
             var correlationId = ReadCorrelationId(headers);
-            var source = ReadSource(headers);  
+            var source = ReadSource(headers);
             var type = ReadType(headers);
             var dataSchema = ReadDataSchema(headers);
             var subject = ReadSubject(headers);
             var traceParent = ReadTraceParent(headers);
             var traceState = ReadTraceState(headers);
             var baggage = ReadBaggage(headers);
-            
+
 
             var messageHeader = new MessageHeader(
                 messageId: messageId.Result,
@@ -194,7 +193,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 traceState: traceState.Result,
                 baggage: baggage.Result);
 
-            if (!bag.Success) return messageHeader;
+            if (!bag.Success)
+                return messageHeader;
 
             var bagResult = bag.Result;
             foreach (var keyValue in bagResult)
@@ -213,7 +213,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             }
             return new HeaderResult<Baggage>(new Baggage(), false);
         }
-        
+
         private HeaderResult<ContentType?> ReadContentType(Dictionary<string, string> headers)
         {
             if (headers.TryGetValue(HeaderNames.CONTENT_TYPE, out string? header))
@@ -227,15 +227,15 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         private HeaderResult<string> ReadCorrelationId(Dictionary<string, string> headers)
         {
             var newCorrelationId = string.Empty;
-            
+
             if (headers.TryGetValue(HeaderNames.CORRELATION_ID, out string? correlatonId))
             {
                 return new HeaderResult<string>(correlatonId, true);
             }
-            
+
             return new HeaderResult<string>(newCorrelationId, false);
         }
-        
+
         private HeaderResult<Uri?> ReadDataSchema(Dictionary<string, string> headers)
         {
             if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_DATA_SCHEMA, out string? header)
@@ -243,7 +243,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             {
                 return new HeaderResult<Uri?>(dataSchema, true);
             }
-            
+
             return new HeaderResult<Uri?>(null, false);
         }
 
@@ -253,25 +253,25 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             {
                 if (int.TryParse(header, out int delayedMilliseconds))
                 {
-                    return new HeaderResult<TimeSpan>(TimeSpan.FromMilliseconds(delayedMilliseconds), true); 
+                    return new HeaderResult<TimeSpan>(TimeSpan.FromMilliseconds(delayedMilliseconds), true);
                 }
             }
             return new HeaderResult<TimeSpan>(TimeSpan.Zero, true);
-         }
-        
+        }
+
         private HeaderResult<int> ReadHandledCount(Dictionary<string, string> headers)
         {
             if (headers.TryGetValue(HeaderNames.HANDLED_COUNT, out string? header))
             {
                 if (int.TryParse(header, out int handledCount))
                 {
-                    return new HeaderResult<int>(handledCount, true); 
+                    return new HeaderResult<int>(handledCount, true);
                 }
             }
-            
+
             return new HeaderResult<int>(0, true);
         }
-        
+
         /// <summary>
         /// The bag is JSON dictionary, so we just need to serialize that dictionary and set values
         /// The one thing to watch for here is that we don't know about types in a bag, and as such
@@ -287,14 +287,14 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 var bag = JsonSerializer.Deserialize<Dictionary<string, object>>(header, JsonSerialisationOptions.Options);
                 if (bag is null)
                     return new HeaderResult<Dictionary<string, object>>(new Dictionary<string, object>(), false);
-                
+
                 return new HeaderResult<Dictionary<string, object>>(bag, true);
             }
 
             return new HeaderResult<Dictionary<string, object>>(new Dictionary<string, object>(), false);
         }
 
-         private HeaderResult<MessageType> ReadMessageType(Dictionary<string, string> headers)
+        private HeaderResult<MessageType> ReadMessageType(Dictionary<string, string> headers)
         {
             if (headers.TryGetValue(HeaderNames.MESSAGE_TYPE, out string? header))
             {
@@ -303,7 +303,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                     return new HeaderResult<MessageType>(messageType, true);
                 }
             }
-            
+
             return new HeaderResult<MessageType>(MessageType.MT_EVENT, true);
         }
 
@@ -313,10 +313,10 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             {
                 return new HeaderResult<Id>(Id.Create(header), true);
             }
-            
+
             return new HeaderResult<Id>(Id.Random(), true);
         }
-        
+
         private HeaderResult<RoutingKey> ReadReplyTo(Dictionary<string, string> headers)
         {
             if (headers.TryGetValue(HeaderNames.REPLY_TO, out string? header))
@@ -325,7 +325,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             }
             return new HeaderResult<RoutingKey>(RoutingKey.Empty, false);
         }
-        
+
         private HeaderResult<Uri?> ReadSource(Dictionary<string, string> headers)
         {
             if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_SOURCE, out string? header)
@@ -335,7 +335,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             }
             return new HeaderResult<Uri?>(new Uri(MessageHeader.DefaultSource), true);
         }
-        
+
         private HeaderResult<string> ReadSubject(Dictionary<string, string> headers)
         {
             if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_SUBJECT, out string? header))
@@ -345,7 +345,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             return new HeaderResult<string>(string.Empty, false);
         }
 
-       /// <summary>
+        /// <summary>
         /// Note that RMQ uses a unix timestamp, we just System.Text's JSON date format in Redis 
         /// </summary>
         /// <param name="headers">The collection of headers</param>
@@ -357,11 +357,11 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             {
                 return new HeaderResult<DateTimeOffset>(timestamp, true);
             }
-            
+
             return new HeaderResult<DateTimeOffset>(DateTimeOffset.UtcNow, true);
         }
-       
-       private HeaderResult<TraceParent> ReadTraceParent(Dictionary<string, string> headers)
+
+        private HeaderResult<TraceParent> ReadTraceParent(Dictionary<string, string> headers)
         {
             if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TRACE_PARENT, out string? header))
             {
@@ -378,8 +378,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             }
             return new HeaderResult<TraceState>(TraceState.Empty, false);
         }
-       
-       private HeaderResult<CloudEventsType> ReadType(Dictionary<string, string> headers)
+
+        private HeaderResult<CloudEventsType> ReadType(Dictionary<string, string> headers)
         {
             if (headers.TryGetValue(HeaderNames.CLOUD_EVENTS_TYPE, out string? header))
             {
@@ -415,5 +415,5 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             [LoggerMessage(LogLevel.Error, "Expected message to find end of BODY/>, but was {ErrorMessage}")]
             public static partial void ExpectedBodyEndError(ILogger logger, string errorMessage);
         }
-     }
+    }
 }

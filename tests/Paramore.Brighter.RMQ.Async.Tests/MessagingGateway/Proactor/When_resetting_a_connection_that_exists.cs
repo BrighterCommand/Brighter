@@ -37,7 +37,7 @@ public class RMQMessageGatewayConnectionPoolResetConnectionExists
 
     public RMQMessageGatewayConnectionPoolResetConnectionExists()
     {
-        _connectionPool = new RmqMessageGatewayConnectionPool("MyConnectionName", 7);
+        _connectionPool = new RmqMessageGatewayConnectionPool("MyConnectionName", 7, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         var connectionFactory = new ConnectionFactory { HostName = "localhost" };
 

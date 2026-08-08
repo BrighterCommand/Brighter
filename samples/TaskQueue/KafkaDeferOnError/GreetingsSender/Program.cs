@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -52,7 +52,8 @@ var host = Host.CreateDefaultBuilder(args)
         var producerRegistry = new KafkaProducerRegistryFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
-                    Name = "paramore.brighter.greetingsender", BootStrapServers = new[] { "localhost:9092" }
+                    Name = "paramore.brighter.greetingsender",
+                    BootStrapServers = new[] { "localhost:9092" }
                 },
                 [
                     new KafkaPublication<GreetingEvent>
@@ -64,14 +65,14 @@ var host = Host.CreateDefaultBuilder(args)
                         MessageTimeoutMs = 1000,
                         MaxInFlightRequestsPerConnection = 1
                     }
-                ])
+                ], loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
             .Create();
 
         services
             .AddBrighter()
             // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
             // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-            .UseScheduler(new InMemorySchedulerFactory())
+            .UseScheduler(new InMemorySchedulerFactory(loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance))
             .AddProducers((configure) =>
             {
                 configure.ProducerRegistry = producerRegistry;

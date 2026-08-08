@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -27,7 +27,6 @@ using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Specialized;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Paramore.Brighter.Locking.Azure;
 
@@ -41,7 +40,7 @@ public class AzureBlobLockingProvider(AzureBlobLockingProviderOptions options, I
     private readonly BlobContainerClient _containerClient =
         new BlobContainerClient(options.BlobContainerUri, options.TokenCredential);
 
-    private readonly ILogger _logger = (loggerFactory).CreateLogger<AzureBlobLockingProviderOptions>();
+    private readonly ILogger _logger = loggerFactory.CreateLogger<AzureBlobLockingProviderOptions>();
 
     /// <summary>
     /// Attempt to obtain a lock on a resource

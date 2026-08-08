@@ -2,7 +2,6 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.MessagingGateway.MsSql.SqlQueues;
 using Paramore.Brighter.MsSql;
 
@@ -12,7 +11,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
     {
         private readonly string _topic;
         private readonly ILogger _logger;
-        private readonly ILoggerFactory? _loggerFactory;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly MsSqlMessageQueue<Message> _sqlMessageQueue;
         private readonly RelationalDatabaseConfiguration _msSqlConfiguration;
         private readonly RoutingKey? _deadLetterRoutingKey;
@@ -28,13 +27,13 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             RelationalDatabaseConfiguration msSqlConfiguration,
             string topic,
             RelationalDbConnectionProvider connectionProvider,
+            ILoggerFactory loggerFactory,
             IAmAMessageScheduler? scheduler = null,
             RoutingKey? deadLetterRoutingKey = null,
-            RoutingKey? invalidMessageRoutingKey = null,
-            ILoggerFactory loggerFactory)
+            RoutingKey? invalidMessageRoutingKey = null)
         {
             _loggerFactory = loggerFactory;
-            _logger = (loggerFactory).CreateLogger<MsSqlMessageConsumer>();
+            _logger = loggerFactory.CreateLogger<MsSqlMessageConsumer>();
             _topic = topic ?? throw new ArgumentNullException(nameof(topic));
             _msSqlConfiguration = msSqlConfiguration ?? throw new ArgumentNullException(nameof(msSqlConfiguration));
             _sqlMessageQueue = new MsSqlMessageQueue<Message>(msSqlConfiguration, connectionProvider, loggerFactory);
@@ -54,12 +53,12 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         public MsSqlMessageConsumer(
             RelationalDatabaseConfiguration msSqlConfiguration,
             string topic,
+            ILoggerFactory loggerFactory,
             IAmAMessageScheduler? scheduler = null,
             RoutingKey? deadLetterRoutingKey = null,
-            RoutingKey? invalidMessageRoutingKey = null,
-            ILoggerFactory loggerFactory)
-            : this(msSqlConfiguration, topic, new MsSqlConnectionProvider(msSqlConfiguration), scheduler, deadLetterRoutingKey, invalidMessageRoutingKey, loggerFactory)
-        {}
+            RoutingKey? invalidMessageRoutingKey = null)
+            : this(msSqlConfiguration, topic, new MsSqlConnectionProvider(msSqlConfiguration), loggerFactory, scheduler, deadLetterRoutingKey, invalidMessageRoutingKey)
+        { }
 
         /// <summary>
         /// Acknowledges the specified message.
@@ -68,7 +67,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// No implementation required because of atomic 'read-and-delete'
         /// </remarks>
         /// <param name="message">The message.</param>
-        public void Acknowledge(Message message) {}
+        public void Acknowledge(Message message) { }
 
         public Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -82,7 +81,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// No implementation required because of atomic 'read-and-delete'
         /// </remarks>
         /// <param name="message">The message.</param>
-        public void Nack(Message message) {}
+        public void Nack(Message message) { }
 
         public Task NackAsync(Message message, CancellationToken cancellationToken = default)
         {
@@ -101,7 +100,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         public async Task PurgeAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
             Log.PurgingQueue(_logger);
-            await Task.Run( () => _sqlMessageQueue.Purge(), cancellationToken);
+            await Task.Run(() => _sqlMessageQueue.Purge(), cancellationToken);
         }
 
         /// <summary>
@@ -337,7 +336,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 
         public async ValueTask DisposeAsync()
         {
-            if (_requeueProducer != null) await _requeueProducer.DisposeAsync();
+            if (_requeueProducer != null)
+                await _requeueProducer.DisposeAsync();
             GC.SuppressFinalize(this);
         }
 
@@ -352,12 +352,13 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 
         private MsSqlMessageProducer? CreateDeadLetterProducer()
         {
-            if (_deadLetterRoutingKey == null) return null;
+            if (_deadLetterRoutingKey == null)
+                return null;
 
             try
             {
-                return new MsSqlMessageProducer(_msSqlConfiguration,
-                    new Publication { Topic = _deadLetterRoutingKey }, _loggerFactory);
+                return new MsSqlMessageProducer(_msSqlConfiguration, _loggerFactory,
+                    new Publication { Topic = _deadLetterRoutingKey });
             }
             catch (Exception e)
             {
@@ -368,12 +369,13 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 
         private MsSqlMessageProducer? CreateInvalidMessageProducer()
         {
-            if (_invalidMessageRoutingKey == null) return null;
+            if (_invalidMessageRoutingKey == null)
+                return null;
 
             try
             {
-                return new MsSqlMessageProducer(_msSqlConfiguration,
-                    new Publication { Topic = _invalidMessageRoutingKey }, _loggerFactory);
+                return new MsSqlMessageProducer(_msSqlConfiguration, _loggerFactory,
+                    new Publication { Topic = _invalidMessageRoutingKey });
             }
             catch (Exception e)
             {
@@ -388,7 +390,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             message.Header.Bag["rejectionTimestamp"] = DateTimeOffset.UtcNow.ToString("o");
             message.Header.Bag["originalMessageType"] = message.Header.MessageType.ToString();
 
-            if (reason == null) return;
+            if (reason == null)
+                return;
 
             message.Header.Bag["rejectionReason"] = reason.RejectionReason.ToString();
             if (!string.IsNullOrEmpty(reason.Description))

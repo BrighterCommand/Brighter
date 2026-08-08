@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2025 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,7 +26,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Actions;
 
 namespace Paramore.Brighter.Reject.Handlers;
@@ -49,10 +48,10 @@ public partial class RejectMessageOnErrorHandlerAsync<TRequest> : RequestHandler
     /// <summary>
     /// Initializes a new instance of the <see cref="RejectMessageOnErrorHandlerAsync{TRequest}"/> class.
     /// </summary>
-    /// <param name="logger">The logger; falls back to a no-op logger when null.</param>
-    public RejectMessageOnErrorHandlerAsync(ILogger<RejectMessageOnErrorHandlerAsync<TRequest>>? logger = null)
+    /// <param name="logger">The logger.</param>
+    public RejectMessageOnErrorHandlerAsync(ILogger<RejectMessageOnErrorHandlerAsync<TRequest>> logger)
     {
-        _logger = logger ?? NullLogger<RejectMessageOnErrorHandlerAsync<TRequest>>.Instance;
+        _logger = logger;
     }
 
     /// <summary>

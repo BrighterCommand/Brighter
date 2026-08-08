@@ -2,7 +2,6 @@
 using System.Text.Json;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Tasks;
 
@@ -22,7 +21,7 @@ public class AzureServiceBusScheduler(
     ILoggerFactory loggerFactory)
     : IAmAMessageSchedulerAsync, IAmAMessageSchedulerSync, IAmARequestSchedulerAsync, IAmARequestSchedulerSync
 {
-    private readonly ILogger _logger = (loggerFactory).CreateLogger<AzureServiceBusScheduler>();
+    private readonly ILogger _logger = loggerFactory.CreateLogger<AzureServiceBusScheduler>();
 
     /// <inheritdoc />
     public async Task<string> ScheduleAsync(Message message, DateTimeOffset at,
@@ -146,7 +145,7 @@ public class AzureServiceBusScheduler(
         }
 
         var contentType = message.Header.ContentType ?? new ContentType(MediaTypeNames.Text.Plain);
-        
+
         azureServiceBusMessage.ContentType = contentType.ToString();
         azureServiceBusMessage.MessageId = message.Header.MessageId;
         if (message.Header.Bag.TryGetValue(ASBConstants.SessionIdKey, out object? value))

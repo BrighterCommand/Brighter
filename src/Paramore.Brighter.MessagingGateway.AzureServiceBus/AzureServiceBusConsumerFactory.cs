@@ -36,7 +36,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
 {
     private readonly IServiceBusClientProvider _clientProvider;
-    private readonly ILoggerFactory? _loggerFactory;
+    private readonly ILoggerFactory _loggerFactory;
 
     /// <summary>
     /// Factory to create an Azure Service Bus Consumer

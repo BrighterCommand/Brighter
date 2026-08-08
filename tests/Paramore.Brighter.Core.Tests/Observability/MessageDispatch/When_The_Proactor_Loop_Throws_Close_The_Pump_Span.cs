@@ -73,9 +73,9 @@ public class ProactorLoopThrowsPumpSpanObservabilityTests
             new InMemoryRequestContextFactory(),
             new PolicyRegistry(),
             new ResiliencePipelineRegistry<string>(),
-            new InMemorySchedulerFactory(),
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
             tracer: tracer,
-            instrumentationOptions: instrumentationOptions);
+            instrumentationOptions: instrumentationOptions, loggerFactory: Initializer.TestLoggerFactory);
 
         PipelineBuilder<MyEvent>.ClearPipelineCache();
 
@@ -83,7 +83,7 @@ public class ProactorLoopThrowsPumpSpanObservabilityTests
         //which throws out of the receive loop (Proactor.cs:190)
         var channel = new NullReturningChannelAsync(
             new(ChannelName), _routingKey,
-            new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)));
+            new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory));
 
         var messageMapperRegistry = new MessageMapperRegistry(
             null,
@@ -91,7 +91,7 @@ public class ProactorLoopThrowsPumpSpanObservabilityTests
         messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
         _messagePump = new Proactor(commandProcessor, (message) => typeof(MyEvent),
-            messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), channel, tracer, instrumentationOptions)
+            messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), channel, Initializer.TestLoggerFactory, tracer, instrumentationOptions)
         {
             Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000), EmptyChannelDelay = TimeSpan.FromMilliseconds(1000)
         };

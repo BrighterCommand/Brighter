@@ -98,17 +98,13 @@ public class InstanceScopedLoggingTests
     }
 
     [Fact]
-    public void NoLoggerFactoryRegistered_FallsBackSafely_AndDoesNotThrow()
+    public void When_no_logger_factory_is_registered_should_fail_fast()
     {
-        // No AddLogging(): the DI extension must fall back to a no-op factory, never the disposed/absent one.
+        // No AddLogging(): callers must register a logger factory or explicitly register NullLoggerFactory.Instance.
         var services = new ServiceCollection();
         services.AddBrighter();
         using var provider = services.BuildServiceProvider();
 
-        var commandProcessor = provider.GetRequiredService<IAmACommandProcessor>();
-
-        var exception = Record.Exception(() => commandProcessor.Publish(new LogProbeEvent()));
-
-        Assert.Null(exception);
+        Assert.Throws<InvalidOperationException>(() => provider.GetRequiredService<IAmACommandProcessor>());
     }
 }

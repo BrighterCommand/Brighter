@@ -27,7 +27,6 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Paramore.Brighter.Mediator;
 
@@ -59,7 +58,7 @@ public class Runner<TData>
         _stateStore = stateStore;
         _commandProcessor = commandProcessor;
         _scheduler = scheduler;
-        _logger = (loggerFactory).CreateLogger<Runner<TData>>();
+        _logger = loggerFactory.CreateLogger<Runner<TData>>();
     }
 
     /// <summary>
@@ -85,9 +84,9 @@ public class Runner<TData>
     {
         if (job is null)
             return;
-        
+
         _logger.LogInformation("Executing job {JobId} on runner {RunnerName}", job.Id, _runnerName);
-        
+
         job.State = JobState.Running;
         await _stateStore.SaveJobAsync(job, cancellationToken);
 
@@ -103,18 +102,18 @@ public class Runner<TData>
             //if the job  has a pending step, finish execution of this job.
             if (job.State == JobState.Waiting)
                 break;
-            
+
             //assume execute has advanced he step, if you your step loops endlessly it has not advanced the step!!
             step = job.CurrentStep();
             _logger.LogInformation(
-                "Next step is {StepName} with state {StepState}", 
-                step is not null ? step.Name : "flow ends", 
+                "Next step is {StepName} with state {StepState}",
+                step is not null ? step.Name : "flow ends",
                 step is not null ? step.State : StepState.Done);
         }
-        
-        if (job.State != JobState.Waiting) 
+
+        if (job.State != JobState.Waiting)
             job.State = JobState.Done;
-        
+
         _logger.LogInformation("Finished executing job {JobId} on {RunnerName}", job.Id, _runnerName);
     }
 
@@ -124,7 +123,7 @@ public class Runner<TData>
         {
             if (cancellationToken.IsCancellationRequested)
                 break;
-            
+
             if (_channel.IsClosed())
                 break;
 
@@ -132,7 +131,7 @@ public class Runner<TData>
             var job = await _channel.DequeueJobAsync(cancellationToken);
             if (job is null)
                 continue;
-            
+
             _logger.LogInformation("Executing job {JobId} on {RunnerName}", job.Id, _runnerName);
             await Execute(job, cancellationToken);
             _logger.LogInformation("Finished job {JobId} on {RunnerName}", job.Id, _runnerName);

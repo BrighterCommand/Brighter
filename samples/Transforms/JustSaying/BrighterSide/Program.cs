@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Amazon;
 using Amazon.Runtime;
 using Microsoft.Extensions.DependencyInjection;
@@ -33,7 +33,7 @@ builder.Services
                 messagePumpType: MessagePumpType.Reactor)
         ];
 
-        configure.DefaultChannelFactory = new ChannelFactory(connection);
+        configure.DefaultChannelFactory = new ChannelFactory(connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     })
     .AddProducers(configure =>
     {
@@ -44,7 +44,7 @@ builder.Services
                         Topic = nameof(Greeting).ToLower(),
                         RequestType = typeof(Greeting)
                     }
-                ])
+                ], loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
             .Create();
     })
     .TransformsFromAssemblies([typeof(JustSayingAttribute).Assembly])
@@ -56,7 +56,7 @@ var host = builder.Build();
 await host.StartAsync();
 
 var cts = new CancellationTokenSource();
-Console.CancelKeyPress  += (_,_) => cts.Cancel();
+Console.CancelKeyPress += (_, _) => cts.Cancel();
 
 while (!cts.IsCancellationRequested)
 {
@@ -100,12 +100,12 @@ public class GreetingMapper : IAmAMessageMapper<Greeting>, IAmAMessageMapperAsyn
     public Message MapToMessage(Greeting request, Publication publication)
     {
         return new Message(new MessageHeader
-            {
-                MessageId = request.Id,
-                CorrelationId = Id.Random(),
-                MessageType = MessageType.MT_COMMAND,
-                Topic = publication.Topic!,
-            },
+        {
+            MessageId = request.Id,
+            CorrelationId = Id.Random(),
+            MessageType = MessageType.MT_COMMAND,
+            Topic = publication.Topic!,
+        },
             new MessageBody(JsonSerializer.SerializeToUtf8Bytes(request, JsonSerialisationOptions.Options)));
     }
 

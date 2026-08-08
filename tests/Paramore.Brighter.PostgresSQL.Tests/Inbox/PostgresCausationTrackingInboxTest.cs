@@ -16,7 +16,7 @@ public class PostgresCausationTrackingInboxTest : CausationTrackingInboxBaseTest
         _configuration = new RelationalDatabaseConfiguration(
             Const.ConnectionString,
             inboxTableName: $"{Const.TablePrefix}{Uuid.New():N}");
-        _inbox = new PostgreSqlInbox(_configuration);
+        _inbox = new PostgreSqlInbox(_configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Inbox.Postgres.PostgreSqlInbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         base.BeforeEachTest();
     }
 

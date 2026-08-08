@@ -12,7 +12,7 @@ public class SqsMessageProducerFactory : IAmAMessageProducerFactory
 {
     private readonly AWSMessagingGatewayConnection _connection;
     private readonly IEnumerable<SqsPublication> _publications;
-    private readonly ILoggerFactory? _loggerFactory;
+    private readonly ILoggerFactory _loggerFactory;
 
     /// <summary>
     /// Initialize new instance of <see cref="SqsMessageProducerFactory"/>.

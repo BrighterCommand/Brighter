@@ -44,7 +44,7 @@ public class When_sending_with_delay_and_scheduler_configured_should_use_schedul
     {
         // Arrange
         _bus = new InternalBus();
-        _producer = new InMemoryMessageProducer(_bus);
+        _producer = new InMemoryMessageProducer(_bus, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _scheduler = new SpyScheduler();
         _producer.Scheduler = _scheduler;
 

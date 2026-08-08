@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2025 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Actions;
 
 namespace Paramore.Brighter.Reject.Handlers;
@@ -46,10 +45,10 @@ public partial class RejectMessageOnErrorHandler<TRequest> : RequestHandler<TReq
     /// <summary>
     /// Initializes a new instance of the <see cref="RejectMessageOnErrorHandler{TRequest}"/> class.
     /// </summary>
-    /// <param name="logger">The logger; falls back to a no-op logger when null.</param>
-    public RejectMessageOnErrorHandler(ILogger<RejectMessageOnErrorHandler<TRequest>>? logger = null)
+    /// <param name="logger">The logger.</param>
+    public RejectMessageOnErrorHandler(ILogger<RejectMessageOnErrorHandler<TRequest>> logger)
     {
-        _logger = logger ?? NullLogger<RejectMessageOnErrorHandler<TRequest>>.Instance;
+        _logger = logger;
     }
 
     /// <summary>

@@ -65,7 +65,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
             _tracer = new BrighterTracer();
 
             var bus = new InternalBus();
-            _producer = new InMemoryMessageProducer(bus, new Publication { Topic = _topic })
+            _producer = new InMemoryMessageProducer(bus, Initializer.TestLoggerFactory, new Publication { Topic = _topic })
             {
                 UseAsyncPublishConfirmation = true,
                 PublishFailurePredicate = _ => true
@@ -85,7 +85,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer: _tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                outboxCircuitBreaker: _circuitBreaker);
+                outboxCircuitBreaker: _circuitBreaker, loggerFactory: Initializer.TestLoggerFactory);
         }
 
         public void Dispose()

@@ -31,7 +31,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
@@ -103,9 +102,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// </summary>
         /// <param name="connection">The subscription information needed to talk to RMQ</param>
         /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
-        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger; defaults to <see cref="NullLoggerFactory"/></param>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger.</param>
         /// Make Channels = Create
-        public RmqMessageProducer(RmqMessagingGatewayConnection connection, InstrumentationOptions instrumentationOptions = InstrumentationOptions.All, ILoggerFactory loggerFactory)
+        public RmqMessageProducer(RmqMessagingGatewayConnection connection, ILoggerFactory loggerFactory, InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
             : this(connection, new RmqPublication { MakeChannels = OnMissingChannel.Create }, loggerFactory)
         {
             _instrumentationOptions = instrumentationOptions;
@@ -118,11 +117,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// <param name="publication">How should we configure this producer. If not provided use default behaviours:
         ///     Make Channels = Create
         /// </param>
-        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger; defaults to <see cref="NullLoggerFactory"/></param>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger.</param>
         public RmqMessageProducer(RmqMessagingGatewayConnection connection, RmqPublication? publication, ILoggerFactory loggerFactory)
             : base(connection, loggerFactory)
         {
-            _logger = (loggerFactory).CreateLogger<RmqMessageProducer>();
+            _logger = loggerFactory.CreateLogger<RmqMessageProducer>();
             _publication = publication ?? new RmqPublication { MakeChannels = OnMissingChannel.Create };
             _waitForConfirmsTimeOutInMilliseconds = _publication.WaitForConfirmsTimeOutInMilliseconds;
         }
@@ -175,20 +174,20 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
                     _pendingConfirmations.TryAdd(Channel.NextPublishSeqNo, new PendingConfirmation(message.Id, message.Header.Topic, publishContext));
 
-                     if (delay == TimeSpan.Zero || DelaySupported || Scheduler == null)
-                     {
-                         rmqMessagePublisher.PublishMessage(message, delay.Value);
-                     }
-                     else if(useSchedulerAsync)
-                     {
-                         var schedulerAsync = (IAmAMessageSchedulerAsync)Scheduler!;
-                         BrighterAsyncContext.Run(() => schedulerAsync.ScheduleAsync(message, delay.Value));
-                     }
-                     else
-                     {
-                         var schedulerSync = (IAmAMessageSchedulerSync)Scheduler!;
-                         schedulerSync.Schedule(message, delay.Value);
-                     }
+                    if (delay == TimeSpan.Zero || DelaySupported || Scheduler == null)
+                    {
+                        rmqMessagePublisher.PublishMessage(message, delay.Value);
+                    }
+                    else if (useSchedulerAsync)
+                    {
+                        var schedulerAsync = (IAmAMessageSchedulerAsync)Scheduler!;
+                        BrighterAsyncContext.Run(() => schedulerAsync.ScheduleAsync(message, delay.Value));
+                    }
+                    else
+                    {
+                        var schedulerSync = (IAmAMessageSchedulerSync)Scheduler!;
+                        schedulerSync.Schedule(message, delay.Value);
+                    }
 
                     Log.PublishedMessage(_logger, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delay,
                         message.Header.Topic.Value, message.Persist, message.Id.Value,
@@ -225,7 +224,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-        
+
         public ValueTask DisposeAsync()
         {
             // The sync client has no async teardown, so dispose runs synchronously here; returning
@@ -324,7 +323,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
             [LoggerMessage(LogLevel.Debug, "RmqMessageProducer: Publishing message to exchange {ExchangeName} on subscription {URL} with a delay of {Delay} and topic {Topic} and persisted {Persist} and id {Id} and body: {Request}")]
             public static partial void PublishingMessage(ILogger logger, string exchangeName, string url, double delay, string topic, bool persist, string id, string request);
-            
+
             [LoggerMessage(LogLevel.Information, "RmqMessageProducer: Published message to exchange {ExchangeName} on broker {URL} with a delay of {Delay} and topic {Topic} and persisted {Persist} and id {Id} and message: {Request} at {Time}")]
             public static partial void PublishedMessage(ILogger logger, string exchangeName, string url, TimeSpan? delay, string topic, bool persist, string id, string request, DateTime time);
 

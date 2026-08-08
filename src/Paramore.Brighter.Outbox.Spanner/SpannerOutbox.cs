@@ -6,7 +6,6 @@ using System.Linq;
 using Google.Cloud.Spanner.Data;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Spanner;
 
@@ -29,8 +28,8 @@ namespace Paramore.Brighter.Outbox.Spanner;
 /// encapsulates the Spanner-specific SQL queries for outbox operations.
 /// </para>
 /// </remarks>
-public class SpannerOutbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider, ILogger<SpannerOutbox>? logger)
-    : RelationDatabaseOutbox(DbSystem.Spanner, configuration, connectionProvider, new SpannerQueries(), logger ?? NullLogger<SpannerOutbox>.Instance)
+public class SpannerOutbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider, ILogger<SpannerOutbox> logger)
+    : RelationDatabaseOutbox(DbSystem.Spanner, configuration, connectionProvider, new SpannerQueries(), logger)
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="SpannerOutbox"/> class with only
@@ -39,13 +38,13 @@ public class SpannerOutbox(IAmARelationalDatabaseConfiguration configuration, IA
     /// </summary>
     /// <param name="configuration">The configuration settings specific to the relational database,
     /// including connection string, database name, and outbox table name.</param>
-    /// <param name="logger">The logger to use; defaults to a null logger when not supplied</param>
+    /// <param name="logger">The logger to use.</param>
     public SpannerOutbox(IAmARelationalDatabaseConfiguration configuration, ILogger<SpannerOutbox> logger)
         : this(configuration, new SpannerConnectionProvider(configuration), logger)
     {
 
     }
-    
+
     /// <inheritdoc />
     protected override DbCommand CreateCommand(DbConnection connection, string sqlText, int outBoxTimeout,
         params IDbDataParameter[] parameters)
@@ -89,7 +88,7 @@ public class SpannerOutbox(IAmARelationalDatabaseConfiguration configuration, IA
     }
 
     /// <inheritdoc />
-    protected override bool IsExceptionUniqueOrDuplicateIssue(Exception ex) 
+    protected override bool IsExceptionUniqueOrDuplicateIssue(Exception ex)
         => ex is SpannerException se && se.RpcException.StatusCode == StatusCode.AlreadyExists;
 
     /// <inheritdoc />
@@ -106,7 +105,7 @@ public class SpannerOutbox(IAmARelationalDatabaseConfiguration configuration, IA
         {
             value = dateTimeOffset.DateTime;
         }
-        
+
         return new SpannerParameter(parameterName, spannerType, value ?? DBNull.Value);
     }
 
@@ -114,7 +113,7 @@ public class SpannerOutbox(IAmARelationalDatabaseConfiguration configuration, IA
     {
         return dbType switch
         {
-            DbType.String  => SpannerDbType.String,
+            DbType.String => SpannerDbType.String,
             DbType.DateTimeOffset => SpannerDbType.Timestamp,
             DbType.Binary => SpannerDbType.Bytes,
             DbType.Int32 => SpannerDbType.Int64,

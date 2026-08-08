@@ -29,7 +29,6 @@ using System.Data.Common;
 using System.Linq;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.MsSql;
 using Paramore.Brighter.Observability;
 
@@ -48,12 +47,12 @@ public class MsSqlOutbox : RelationDatabaseOutbox
     /// </summary>
     /// <param name="configuration">The configuration.</param>
     /// <param name="connectionProvider">The connection factory.</param>
-    /// <param name="logger">The logger to use; defaults to a null logger when not supplied</param>
+    /// <param name="logger">The logger to use.</param>
     public MsSqlOutbox(IAmARelationalDatabaseConfiguration configuration,
         IAmARelationalDbConnectionProvider connectionProvider,
-        ILogger<MsSqlOutbox>? logger)
+        ILogger<MsSqlOutbox> logger)
         : base(DbSystem.MsSql, configuration, connectionProvider,
-            new MsSqlQueries(), logger ?? NullLogger<MsSqlOutbox>.Instance)
+            new MsSqlQueries(), logger)
     {
     }
 
@@ -61,7 +60,7 @@ public class MsSqlOutbox : RelationDatabaseOutbox
     ///     Initializes a new instance of the <see cref="MsSqlOutbox" /> class.
     /// </summary>
     /// <param name="configuration">The configuration.</param>
-    /// <param name="logger">The logger to use; defaults to a null logger when not supplied</param>
+    /// <param name="logger">The logger to use.</param>
     public MsSqlOutbox(IAmARelationalDatabaseConfiguration configuration, ILogger<MsSqlOutbox> logger) : this(configuration,
         new MsSqlConnectionProvider(configuration), logger)
     {
@@ -80,7 +79,7 @@ public class MsSqlOutbox : RelationDatabaseOutbox
         {
             return new SqlParameter { ParameterName = parameterName, Value = dateTimeOffset.ToUniversalTime().DateTime };
         }
-        
+
         return new SqlParameter { ParameterName = parameterName, Value = value ?? DBNull.Value };
     }
 
@@ -91,31 +90,31 @@ public class MsSqlOutbox : RelationDatabaseOutbox
         {
             return new SqlParameter { ParameterName = parameterName, Value = dateTimeOffset.ToUniversalTime().DateTime, DbType = DbType.DateTime };
         }
-        
+
         return new SqlParameter { ParameterName = parameterName, Value = value ?? DBNull.Value, DbType = dbType };
     }
-    
-   protected override IDbDataParameter[] CreatePagedOutstandingParameters(TimeSpan since, int pageSize, 
-       int pageNumber, IDbDataParameter[] inParams)
-   {
-       var parameters = new IDbDataParameter[3];
-       parameters[0] = new SqlParameter { ParameterName = "PageNumber", Value = pageNumber };
-       parameters[1] = new SqlParameter { ParameterName = "PageSize", Value = pageSize };
-       parameters[2] = CreateSqlParameter("DispatchedSince", DateTimeOffset.UtcNow.Subtract(since));
-       
-       return parameters.Concat(inParams).ToArray();
+
+    protected override IDbDataParameter[] CreatePagedOutstandingParameters(TimeSpan since, int pageSize,
+        int pageNumber, IDbDataParameter[] inParams)
+    {
+        var parameters = new IDbDataParameter[3];
+        parameters[0] = new SqlParameter { ParameterName = "PageNumber", Value = pageNumber };
+        parameters[1] = new SqlParameter { ParameterName = "PageSize", Value = pageSize };
+        parameters[2] = CreateSqlParameter("DispatchedSince", DateTimeOffset.UtcNow.Subtract(since));
+
+        return parameters.Concat(inParams).ToArray();
     }
-   
+
     protected override IDbDataParameter[] CreatePagedDispatchedParameters(TimeSpan dispatchedSince, int pageSize, int pageNumber)
     {
         var parameters = new IDbDataParameter[3];
         parameters[0] = new SqlParameter { ParameterName = "PageNumber", Value = pageNumber };
         parameters[1] = new SqlParameter { ParameterName = "PageSize", Value = pageSize };
         parameters[2] = CreateSqlParameter("DispatchedSince", DateTimeOffset.UtcNow.Subtract(dispatchedSince));
-   
+
         return parameters;
     }
-   
+
     protected override IDbDataParameter[] CreatePagedReadParameters(int pageSize, int pageNumber)
     {
         var parameters = new IDbDataParameter[2];
@@ -132,7 +131,7 @@ public class MsSqlOutbox : RelationDatabaseOutbox
             return DateTimeOffset.UtcNow;
         }
 
-        
+
         var dateTime = sql.GetDateTime(ordinal);
         return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
     }

@@ -38,7 +38,7 @@ public class PipelineDiagnosticWriterSubscriptionDetailTests
         // Arrange — one subscription with known channel, routing key, and pump type
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyDescribableCommand), typeof(MyPublicSyncHandler));
-        var pipelineBuilder = new PipelineBuilder<IRequest>(registry);
+        var pipelineBuilder = new PipelineBuilder<IRequest>(registry, loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<IRequest>.ClearPipelineCache();
 
         var subscriptions = new[]

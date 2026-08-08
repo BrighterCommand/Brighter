@@ -5,7 +5,6 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using NpgsqlTypes;
 using Paramore.Brighter.JsonConverters;
@@ -21,12 +20,12 @@ namespace Paramore.Brighter.MessagingGateway.Postgres;
 public partial class PostgresMessageConsumer(
     RelationalDatabaseConfiguration configuration,
     PostgresSubscription subscription,
+    ILoggerFactory loggerFactory,
     RoutingKey? deadLetterRoutingKey = null,
-    RoutingKey? invalidMessageRoutingKey = null,
-    ILoggerFactory loggerFactory
+    RoutingKey? invalidMessageRoutingKey = null
     ) : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
 {
-    private readonly ILogger _logger = (loggerFactory).CreateLogger<PostgresMessageConsumer>();
+    private readonly ILogger _logger = loggerFactory.CreateLogger<PostgresMessageConsumer>();
     private readonly RelationalDatabaseConfiguration _configuration = configuration;
     private readonly PostgreSqlConnectionProvider _connectionProvider = new(configuration);
     private readonly RoutingKey? _deadLetterRoutingKey = deadLetterRoutingKey;
@@ -46,7 +45,7 @@ public partial class PostgresMessageConsumer(
     private int BufferSize => subscription.BufferSize;
     private TimeSpan VisibleTimeout => subscription.VisibleTimeout;
     private bool HasLargeMessage => subscription.TableWithLargeMessage;
-    
+
     private NpgsqlDbType DbType => BinaryMessagePayload ? NpgsqlDbType.Jsonb : NpgsqlDbType.Json;
 
     /// <inheritdoc />
@@ -72,7 +71,7 @@ public partial class PostgresMessageConsumer(
             throw;
         }
     }
-    
+
     /// <inheritdoc />
     public async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default)
     {
@@ -96,7 +95,7 @@ public partial class PostgresMessageConsumer(
             throw;
         }
     }
-  
+
     /// <inheritdoc />
     public async Task PurgeAsync(CancellationToken cancellationToken = default)
     {
@@ -108,7 +107,7 @@ public partial class PostgresMessageConsumer(
             command.CommandText = $"DELETE FROM \"{SchemaName}\".\"{TableName}\" WHERE \"queue\" = $1";
             command.Parameters.Add(new NpgsqlParameter { Value = QueueName });
             await command.ExecuteNonQueryAsync(cancellationToken);
-            
+
             Log.PurgedQueue(_logger, QueueName);
         }
         catch (Exception exception)
@@ -116,7 +115,7 @@ public partial class PostgresMessageConsumer(
             Log.ErrorPurgingQueue(_logger, exception, QueueName);
             throw;
         }
-        
+
     }
 
     /// <inheritdoc />
@@ -131,7 +130,7 @@ public partial class PostgresMessageConsumer(
             {
                 command.CommandTimeout = Convert.ToInt32(timeOut.Value.TotalSeconds);
             }
-            
+
             command.CommandText = $"""
                                    UPDATE "{SchemaName}"."{TableName}" queue
                                    SET
@@ -155,7 +154,7 @@ public partial class PostgresMessageConsumer(
             {
                 if (HasLargeMessage)
                 {
-                    messages.Add(await ToLargeMessageAsync(reader,cancellationToken));
+                    messages.Add(await ToLargeMessageAsync(reader, cancellationToken));
                 }
                 else
                 {
@@ -176,7 +175,7 @@ public partial class PostgresMessageConsumer(
             throw;
         }
     }
-    
+
     /// <inheritdoc />
     public void Nack(Message message)
     {
@@ -255,7 +254,7 @@ public partial class PostgresMessageConsumer(
 
         return true;
     }
-    
+
     /// <inheritdoc />
     public async Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default)
     {
@@ -322,7 +321,7 @@ public partial class PostgresMessageConsumer(
         return true;
     }
 
-    
+
 
     /// <inheritdoc />
     public async Task<bool> RequeueAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default)
@@ -331,7 +330,7 @@ public partial class PostgresMessageConsumer(
         {
             return false;
         }
-        
+
         try
         {
             Log.RequeueingMessage(_logger, message.Id.Value);
@@ -346,10 +345,10 @@ public partial class PostgresMessageConsumer(
 
             command.CommandText = $"UPDATE \"{SchemaName}\".\"{TableName}\" SET \"visible_timeout\" = CURRENT_TIMESTAMP + $1, \"content\" = $2 WHERE \"id\" = $3";
             command.Parameters.Add(new NpgsqlParameter { Value = delay ?? TimeSpan.Zero });
-            command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = DbType});
+            command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = DbType });
             command.Parameters.Add(new NpgsqlParameter { Value = receiptHandle });
             await command.ExecuteNonQueryAsync(cancellationToken);
-            
+
             Log.RequeuedMessage(_logger, message.Id.Value);
 
             return true;
@@ -362,7 +361,7 @@ public partial class PostgresMessageConsumer(
     }
 
 
- 
+
 
     /// <inheritdoc />
     public void Purge()
@@ -390,7 +389,7 @@ public partial class PostgresMessageConsumer(
         try
         {
             Log.RetrievingNextMessage(_logger, QueueName);
-            
+
             using var connection = _connectionProvider.GetConnection();
             using var command = connection.CreateCommand();
             if (timeOut != null && timeOut.Value != TimeSpan.Zero)
@@ -421,7 +420,7 @@ public partial class PostgresMessageConsumer(
             {
                 messages.Add(HasLargeMessage ? ToLargeMessage(reader) : ToMessage(reader));
             }
-            
+
             if (messages.Count == 0)
             {
                 messages.Add(new Message());
@@ -443,7 +442,7 @@ public partial class PostgresMessageConsumer(
         {
             return false;
         }
-        
+
         try
         {
             Log.RequeueingMessage(_logger, message.Id.Value);
@@ -462,7 +461,7 @@ public partial class PostgresMessageConsumer(
             command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = DbType });
             command.Parameters.Add(new NpgsqlParameter { Value = receiptHandle });
             command.ExecuteNonQuery();
-            
+
             Log.RequeuedMessage(_logger, message.Id.Value);
 
             return true;
@@ -473,7 +472,7 @@ public partial class PostgresMessageConsumer(
             return false;
         }
     }
-    
+
     /// <inheritdoc />
     public ValueTask DisposeAsync()
     {
@@ -489,11 +488,11 @@ public partial class PostgresMessageConsumer(
         var id = reader.GetInt64(0);
         var content = reader.GetFieldValue<byte[]>(3);
         var message = JsonSerializer.Deserialize<Message>(content, JsonSerialisationOptions.Options)!;
-        
+
         message.Header.Bag["ReceiptHandle"] = id;
         return message;
     }
-    
+
     private Message ToLargeMessage(DbDataReader reader)
     {
         var id = reader.GetInt64(0);
@@ -504,13 +503,13 @@ public partial class PostgresMessageConsumer(
             // Skipping the first by https://github.com/npgsql/npgsql/issues/6044
             content.Position = 1;
         }
-        
+
         var message = JsonSerializer.Deserialize<Message>(content, JsonSerialisationOptions.Options)!;
-        
+
         message.Header.Bag["ReceiptHandle"] = id;
         return message;
     }
-    
+
     private async Task<Message> ToLargeMessageAsync(DbDataReader reader, CancellationToken cancellationToken)
     {
         var id = reader.GetInt64(0);
@@ -521,14 +520,14 @@ public partial class PostgresMessageConsumer(
             // Skipping the first by https://github.com/npgsql/npgsql/issues/6044
             content.Position = 1;
         }
-        
+
         var message = await JsonSerializer.DeserializeAsync<Message>(content, JsonSerialisationOptions.Options, cancellationToken);
-        
+
         message!.Header.Bag["ReceiptHandle"] = id;
         return message;
     }
-    
-    private static PostgresMessageProducer? CreateProducer(RelationalDatabaseConfiguration config, RoutingKey routingKey, ILoggerFactory? loggerFactory)
+
+    private static PostgresMessageProducer? CreateProducer(RelationalDatabaseConfiguration config, RoutingKey routingKey, ILoggerFactory loggerFactory)
     {
         try
         {
@@ -536,7 +535,7 @@ public partial class PostgresMessageConsumer(
         }
         catch (Exception e)
         {
-            var logger = (loggerFactory).CreateLogger<PostgresMessageConsumer>();
+            var logger = loggerFactory.CreateLogger<PostgresMessageConsumer>();
             Log.ErrorCreatingProducer(logger, e, routingKey.Value);
             return null;
         }
@@ -548,7 +547,8 @@ public partial class PostgresMessageConsumer(
         message.Header.Bag["rejectionTimestamp"] = DateTimeOffset.UtcNow.ToString("o");
         message.Header.Bag["originalMessageType"] = message.Header.MessageType.ToString();
 
-        if (reason == null) return;
+        if (reason == null)
+            return;
 
         message.Header.Bag["rejectionReason"] = reason.RejectionReason.ToString();
         if (!string.IsNullOrEmpty(reason.Description))
@@ -618,16 +618,16 @@ public partial class PostgresMessageConsumer(
     {
         [LoggerMessage(LogLevel.Information, "PostgresPullMessageConsumer: Deleted the message {Id} with receipt handle {ReceiptHandle} on the queue {QueueName}")]
         public static partial void DeletedMessage(ILogger logger, string id, object receiptHandle, string queueName);
-        
+
         [LoggerMessage(LogLevel.Error, "PostgresPullMessageConsumer: Error during deleting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}")]
         public static partial void ErrorDeletingMessage(ILogger logger, Exception exception, string id, object receiptHandle, string channelName);
-        
+
         [LoggerMessage(LogLevel.Information, "PostgresPullMessageConsumer: Rejecting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}")]
         public static partial void RejectingMessage(ILogger logger, string id, object? receiptHandle, string channelName);
 
         [LoggerMessage(LogLevel.Error, "PostgresPullMessageConsumer: Error during rejecting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}")]
         public static partial void ErrorRejectingMessage(ILogger logger, Exception exception, string id, object? receiptHandle, string channelName);
-        
+
         [LoggerMessage(LogLevel.Information, "PostgresPullMessageConsumer: Purging the queue {ChannelName}")]
         public static partial void PurgingQueue(ILogger logger, string channelName);
 
@@ -639,10 +639,10 @@ public partial class PostgresMessageConsumer(
 
         [LoggerMessage(LogLevel.Debug, "PostgresPullMessageConsumer: Preparing to retrieve next message from queue {TableName}")]
         public static partial void RetrievingNextMessage(ILogger logger, string tableName);
-        
+
         [LoggerMessage(LogLevel.Error, "PostgresPullMessageConsumer: There was an error listening to queue {ChannelName}")]
         public static partial void ErrorListeningToQueue(ILogger logger, Exception exception, string channelName);
-        
+
         [LoggerMessage(LogLevel.Information, "PostgresPullMessageConsumer: re-queueing the message {Id}")]
         public static partial void RequeueingMessage(ILogger logger, string id);
 

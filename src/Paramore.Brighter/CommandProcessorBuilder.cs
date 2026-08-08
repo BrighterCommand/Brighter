@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -23,9 +23,9 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Observability;
@@ -104,7 +104,7 @@ namespace Paramore.Brighter
         private InstrumentationOptions? _instrumetationOptions;
         private IAmABrighterTracer? _tracer;
         private IAmARequestSchedulerFactory _requestSchedulerFactory = null!;
-        private ILoggerFactory _loggerFactory = NullLoggerFactory.Instance;
+        private ILoggerFactory? _loggerFactory;
 
         private CommandProcessorBuilder()
         {
@@ -150,7 +150,7 @@ namespace Paramore.Brighter
             {
                 throw new ConfigurationException("The resilience pipeline registry is missing the CommandProcessor.OutboxProducer resilience pipeline which is required");
             }
-            
+
             policyRegistry ??= new DefaultPolicy();
 #pragma warning disable CS0618 // Type or member is obsolete
             if (!policyRegistry.ContainsKey(CommandProcessor.RETRYPOLICY))
@@ -169,7 +169,7 @@ namespace Paramore.Brighter
             return this;
         }
 
-        
+
         /// <inheritdoc />
         public INeedMessaging DefaultResilience()
         {
@@ -206,7 +206,7 @@ namespace Paramore.Brighter
                     break;
                 case ExternalBusType.FireAndForget:
                     _bus = bus;
-                    _transactionType = transactionType;   
+                    _transactionType = transactionType;
                     break;
                 case ExternalBusType.RPC:
                     _bus = bus;
@@ -280,9 +280,9 @@ namespace Paramore.Brighter
         }
 
         /// <inheritdoc />
-        public IAmACommandProcessorBuilder ConfigureLogging(ILoggerFactory? loggerFactory)
+        public IAmACommandProcessorBuilder ConfigureLogging(ILoggerFactory loggerFactory)
         {
-            _loggerFactory = loggerFactory;
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
             return this;
         }
 
@@ -292,6 +292,9 @@ namespace Paramore.Brighter
         /// <returns>CommandProcessor.</returns>
         public CommandProcessor Build()
         {
+            var loggerFactory = _loggerFactory ?? throw new ConfigurationException(
+                "A logger factory is required. Call ConfigureLogging before Build.");
+
             if (_registry == null)
                 throw new ConfigurationException(
                     "A SubscriberRegistry must be provided to construct a command processor");
@@ -313,15 +316,15 @@ namespace Paramore.Brighter
 
             if (_bus == null)
             {
-                return new CommandProcessor(subscriberRegistry: _registry, 
+                return new CommandProcessor(subscriberRegistry: _registry,
                     handlerFactory: _handlerFactory,
-                    requestContextFactory: _requestContextFactory, 
+                    requestContextFactory: _requestContextFactory,
                     policyRegistry: _policyRegistry,
                     resilienceResiliencePipelineRegistry: _resiliencePipelineRegistry,
                     featureSwitchRegistry: _featureSwitchRegistry,
                     instrumentationOptions: _instrumetationOptions.Value,
                     requestSchedulerFactory: _requestSchedulerFactory,
-                    loggerFactory: _loggerFactory);
+                    loggerFactory: loggerFactory);
             }
 
             if (!_useRequestReplyQueues)
@@ -333,12 +336,12 @@ namespace Paramore.Brighter
                     resilienceResiliencePipelineRegistry: _resiliencePipelineRegistry,
                     bus: _bus,
                     transactionType: _transactionType,
-                    featureSwitchRegistry: _featureSwitchRegistry, 
+                    featureSwitchRegistry: _featureSwitchRegistry,
                     inboxConfiguration: _inboxConfiguration,
                     tracer: _tracer,
                     instrumentationOptions: _instrumetationOptions.Value,
                     requestSchedulerFactory: _requestSchedulerFactory,
-                    loggerFactory: _loggerFactory
+                    loggerFactory: loggerFactory
                 );
 
             if (_useRequestReplyQueues)
@@ -350,14 +353,14 @@ namespace Paramore.Brighter
                     resilienceResiliencePipelineRegistry: _resiliencePipelineRegistry,
                     bus: _bus,
                     transactionType: _transactionType,
-                    featureSwitchRegistry: _featureSwitchRegistry, 
+                    featureSwitchRegistry: _featureSwitchRegistry,
                     inboxConfiguration: _inboxConfiguration,
                     replySubscriptions: _replySubscriptions,
                     responseChannelFactory: _responseChannelFactory,
                     tracer: _tracer,
                     instrumentationOptions: _instrumetationOptions.Value,
                     requestSchedulerFactory: _requestSchedulerFactory,
-                    loggerFactory: _loggerFactory
+                    loggerFactory: loggerFactory
                 );
 
             throw new ConfigurationException(
@@ -406,7 +409,7 @@ namespace Paramore.Brighter
         /// <returns>An <see cref="INeedMessaging"/> interface to continue configuring the messaging pipeline.</returns>
         INeedMessaging DefaultResilience();
     }
-    
+
     /// <summary>
     /// Interface INeedMessaging
     /// Note that a single command builder does not support both task queues and rpc, using the builder
@@ -496,7 +499,7 @@ namespace Paramore.Brighter
     {
         /// <summary>
         /// Supplies the <see cref="ILoggerFactory"/> used to create instance-scoped loggers for the <see cref="CommandProcessor"/>
-        /// and the object graph it constructs. If not called, a no-op logger factory is used.
+        /// and the object graph it constructs. This must be called before <see cref="Build"/>.
         /// </summary>
         /// <param name="loggerFactory">The logger factory.</param>
         /// <returns>IAmACommandProcessorBuilder.</returns>
