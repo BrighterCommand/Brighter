@@ -42,7 +42,7 @@ public class DispatcherResolutionScopedDependencyTests
     
     private void Build(InternalBus bus)
     {
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
 
         AddServices(services, bus);
 
@@ -74,7 +74,7 @@ public class DispatcherResolutionScopedDependencyTests
                 options.HandlerLifetime = ServiceLifetime.Scoped;
                 options.TransformerLifetime = ServiceLifetime.Scoped;
                 
-                options.DefaultChannelFactory = new InMemoryChannelFactory(bus, TimeProvider.System);
+                options.DefaultChannelFactory = new InMemoryChannelFactory(bus, TimeProvider.System, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             })    
             .AddProducers(configure =>
             {
@@ -83,7 +83,7 @@ public class DispatcherResolutionScopedDependencyTests
                     {
                         {
                             new ProducerKey("in-memory"), new InMemoryMessageProducer(bus,
-                                new Publication { Topic = "test" })
+                            global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, new Publication { Topic = "test" })
                         }
                     });
                 var outboxConfiguration = new RelationalDatabaseConfiguration(
@@ -96,7 +96,7 @@ public class DispatcherResolutionScopedDependencyTests
                 //We need this as it is a dependency of the SqliteConnectionProvider
                 services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
                 
-                configure.Outbox = new SqliteOutbox(outboxConfiguration, new SqliteConnectionProvider(outboxConfiguration));
+                configure.Outbox = new SqliteOutbox(outboxConfiguration, new SqliteConnectionProvider(outboxConfiguration), logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.Sqlite.SqliteOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
                 configure.TransactionProvider = typeof(SqliteEntityFrameworkTransactionProvider<Discography>);
                 configure.ConnectionProvider = typeof(SqliteConnectionProvider);
                 configure.MaxOutStandingMessages = 5;

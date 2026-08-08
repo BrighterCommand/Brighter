@@ -69,8 +69,8 @@ public class MsSqlMessageGatewayProvider
             _configuration = testHelper.QueueConfiguration;
         }
 
-        var consumerFactory = new MsSqlMessageConsumerFactory(_configuration);
-        var channel = new ChannelFactory(consumerFactory).CreateSyncChannel(subscription);
+        var consumerFactory = new MsSqlMessageConsumerFactory(_configuration, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        var channel = new ChannelFactory(consumerFactory, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.MessagingGateway.MsSql.ChannelFactory>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)).CreateSyncChannel(subscription);
 
         if (subscription.DeadLetterRoutingKey != null && subscription.RequeueCount > 0)
         {
@@ -92,8 +92,8 @@ public class MsSqlMessageGatewayProvider
             _configuration = testHelper.QueueConfiguration;
         }
 
-        var consumerFactory = new MsSqlMessageConsumerFactory(_configuration);
-        var channel = new ChannelFactory(consumerFactory).CreateAsyncChannel(subscription);
+        var consumerFactory = new MsSqlMessageConsumerFactory(_configuration, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        var channel = new ChannelFactory(consumerFactory, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.MessagingGateway.MsSql.ChannelFactory>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)).CreateAsyncChannel(subscription);
 
         if (subscription.DeadLetterRoutingKey != null && subscription.RequeueCount > 0)
         {
@@ -112,7 +112,7 @@ public class MsSqlMessageGatewayProvider
             _configuration = testHelper.QueueConfiguration;
         }
 
-        var producers = new MsSqlMessageProducerFactory(_configuration, [publication]).Create();
+        var producers = new MsSqlMessageProducerFactory(_configuration, [publication], loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create();
         var producer = producers.First().Value;
         return (IAmAMessageProducerSync)producer;
     }
@@ -129,7 +129,7 @@ public class MsSqlMessageGatewayProvider
             _configuration = testHelper.QueueConfiguration;
         }
 
-        var producers = await new MsSqlMessageProducerFactory(_configuration, [publication])
+        var producers = await new MsSqlMessageProducerFactory(_configuration, [publication], loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
             .CreateAsync();
         var producer = producers.First().Value;
         return (IAmAMessageProducerAsync)producer;
@@ -199,8 +199,8 @@ public class MsSqlMessageGatewayProvider
 
         var dlqConsumer = new MsSqlMessageConsumer(
             _configuration,
-            dlqSubscription.RoutingKey.Value
-        );
+            dlqSubscription.RoutingKey.Value,
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         try
         {
@@ -239,8 +239,8 @@ public class MsSqlMessageGatewayProvider
 
         var dlqConsumer = new MsSqlMessageConsumer(
             _configuration,
-            dlqSubscription.RoutingKey.Value
-        );
+            dlqSubscription.RoutingKey.Value,
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         try
         {

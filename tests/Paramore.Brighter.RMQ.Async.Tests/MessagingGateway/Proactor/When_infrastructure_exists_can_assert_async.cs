@@ -24,7 +24,7 @@ public class RmqAssumeExistingInfrastructureTestsAsync : IDisposable, IAsyncDisp
             Exchange = new Exchange(Guid.NewGuid().ToString())
         };
 
-        _messageProducer = new RmqMessageProducer(rmqConnection, new RmqPublication{MakeChannels = OnMissingChannel.Assume});
+        _messageProducer = new RmqMessageProducer(rmqConnection, new RmqPublication{MakeChannels = OnMissingChannel.Assume}, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var queueName = new ChannelName(Guid.NewGuid().ToString());
             
         _messageConsumer = new RmqMessageConsumer(
@@ -33,7 +33,7 @@ public class RmqAssumeExistingInfrastructureTestsAsync : IDisposable, IAsyncDisp
             routingKey:_message.Header.Topic, 
             isDurable: false, 
             highAvailability:false,
-            makeChannels: OnMissingChannel.Assume);
+            makeChannels: OnMissingChannel.Assume, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //This creates the infrastructure we want
         new QueueFactory(rmqConnection, queueName, new RoutingKeys( _message.Header.Topic))

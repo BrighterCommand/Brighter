@@ -39,7 +39,7 @@ public class PipelineValidatorWarningsSeparationTests
         // Handler path: misordered backstop/resilience triggers a Warning
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyDescribableCommand), typeof(MyMisorderedBackstopHandler));
-        var pipelineBuilder = new PipelineBuilder<IRequest>(registry);
+        var pipelineBuilder = new PipelineBuilder<IRequest>(registry, loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<IRequest>.ClearPipelineCache();
 
         // Producer path: null RequestType triggers an Error

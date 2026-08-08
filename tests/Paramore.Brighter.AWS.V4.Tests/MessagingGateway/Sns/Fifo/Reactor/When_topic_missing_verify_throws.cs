@@ -31,7 +31,7 @@ public class AwsValidateMissingTopicTests
             {
                 MakeChannels = OnMissingChannel.Validate,
                 TopicAttributes = new SnsAttributes(type: SqsType.Fifo, tags: [new Tag { Key = "Environment", Value = "Test" }])
-            });
+            }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
 

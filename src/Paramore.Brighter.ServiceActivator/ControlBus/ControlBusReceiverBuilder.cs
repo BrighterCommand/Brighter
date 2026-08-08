@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Transactions;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
@@ -58,6 +59,12 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         private IAmAChannelFactory? _channelFactory;
         private IDispatcher? _dispatcher;
         private IAmAProducerRegistryFactory? _producerRegistryFactory;
+        private readonly ILoggerFactory _loggerFactory;
+
+        private ControlBusReceiverBuilder(ILoggerFactory loggerFactory)
+        {
+            _loggerFactory = loggerFactory;
+        }
 
         /// <summary>
         /// We need a dispatcher to pull messages off the control bus and dispatch them out to control bus handlers.
@@ -110,9 +117,9 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// Begins the progressive interface.
         /// </summary>
         /// <returns>INeedALogger.</returns>
-        public static INeedADispatcher With()
+        public static INeedADispatcher With(ILoggerFactory loggerFactory)
         {
-            return new ControlBusReceiverBuilder();
+            return new ControlBusReceiverBuilder(loggerFactory);
         }
 
         /// <summary>
@@ -127,7 +134,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             // an internal HandlerFactory to build these for you.
             // We also need to  pass the supervised dispatcher as a dependency to our command handlers, so this allows us to manage
             // the injection of the dependency as part of our handler factory
-            
+
             var retryPolicy = Policy
                 .Handle<Exception>()
                 .WaitAndRetry(
@@ -151,11 +158,11 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
 
             var resiliencePipeline = new ResiliencePipelineRegistry<string>()
                 .AddBrighterDefault();
-            
+
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<ConfigurationCommand, ConfigurationCommandHandler>();
             subscriberRegistry.Register<HeartbeatRequest, HeartbeatRequestCommandHandler>();
-            
+
             var incomingMessageMapperRegistry = new MessageMapperRegistry(
             new ControlBusMessageMapperFactory(), null
                 );
@@ -169,36 +176,39 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
 
             if (_producerRegistryFactory is null)
                 throw new ArgumentException("Producer Registry Factory must not be null.");
-            
+
             var producerRegistry = _producerRegistryFactory.Create();
 
             var outbox = new SinkOutboxSync();
-            
+
             var mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry: producerRegistry,
                 resiliencePipelineRegistry: new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
                 mapperRegistry: outgoingMessageMapperRegistry,
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
-                messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), 
+                messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(),
                 tracer: new BrighterTracer(),   //TODO: Do we need to pass in a tracer?
                 outbox: outbox,
                 outboxCircuitBreaker: new InMemoryOutboxCircuitBreaker(),
-                publicationFinder: _publicationFinder
+                publicationFinder: _publicationFinder,
+                loggerFactory: _loggerFactory
             );
 
-            if (_dispatcher is null) throw new ArgumentException("Dispatcher must not be null");
+            if (_dispatcher is null)
+                throw new ArgumentException("Dispatcher must not be null");
 
             CommandProcessor? commandProcessor = null;
-            
+
             commandProcessor = CommandProcessorBuilder.StartNew()
-                .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactorySync(_dispatcher, () => commandProcessor)))
+                .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactorySync(_dispatcher, () => commandProcessor, _loggerFactory)))
                 .Resilience(resiliencePipeline, policyRegistry)
                 .ExternalBus(ExternalBusType.FireAndForget, mediator)
                 .ConfigureInstrumentation(null, InstrumentationOptions.None)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
-                .RequestSchedulerFactory(new InMemorySchedulerFactory())
+                .RequestSchedulerFactory(new InMemorySchedulerFactory(_loggerFactory))
+                .ConfigureLogging(_loggerFactory)
                 .Build();
-            
+
             // These are the control bus channels, we hardcode them because we want to know they exist, but we use
             // a base naming scheme to allow centralized management.
             var subscriptions = new Subscription[]
@@ -213,15 +223,17 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                     routingKey: new RoutingKey($"{hostName}.{HEARTBEAT}"))
             };
 
-            if (_channelFactory is null) throw new ArgumentException("Channel Factory must not be null");
-            
+            if (_channelFactory is null)
+                throw new ArgumentException("Channel Factory must not be null");
+
             return DispatchBuilder.StartNew()
                 .CommandProcessor(commandProcessor, new InMemoryRequestContextFactory()
                 )
                 .MessageMappers(incomingMessageMapperRegistry, null, null, null)
-                .ChannelFactory(_channelFactory)                                        
+                .ChannelFactory(_channelFactory)
                 .Subscriptions(subscriptions)
                 .NoInstrumentation()
+                .ConfigureLogging(_loggerFactory)
                 .Build();
         }
 
@@ -231,8 +243,8 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// </summary>
         private sealed class SinkOutboxSync : IAmAnOutboxSync<Message, CommittableTransaction>
         {
-            public IAmABrighterTracer? Tracer { private get; set; } 
-            
+            public IAmABrighterTracer? Tracer { private get; set; }
+
             public void Add(Message message, RequestContext requestContext, int outBoxTimeout = -1, IAmABoxTransactionProvider<CommittableTransaction>? transactionProvider = null)
             {
                 //discard message
@@ -240,9 +252,9 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
 
             public void Add(IEnumerable<Message> messages, RequestContext? requestContext, int outBoxTimeout = -1, IAmABoxTransactionProvider<CommittableTransaction>? transactionProvider = null)
             {
-               //discard message 
+                //discard message
             }
-            
+
             public void Delete(Id[] messageIds, RequestContext? requestContext, Dictionary<string, object>? args = null)
             {
                 //ignore
@@ -250,7 +262,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
 
             public Message Get(Id messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
             {
-                 return new Message(){Header = new MessageHeader("",new RoutingKey(""), MessageType.MT_NONE)};
+                return new Message() { Header = new MessageHeader("", new RoutingKey(""), MessageType.MT_NONE) };
             }
 
             public IEnumerable<Message> Get(IEnumerable<Id> messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
@@ -264,11 +276,11 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             }
 
             public IEnumerable<Message> DispatchedMessages(
-                TimeSpan millisecondsDispatchedSince, 
+                TimeSpan millisecondsDispatchedSince,
                 RequestContext requestContext,
-                int pageSize = 100, 
+                int pageSize = 100,
                 int pageNumber = 1,
-                int outboxTimeout = -1, 
+                int outboxTimeout = -1,
                 Dictionary<string, object>? args = null
             )
             {
@@ -276,20 +288,20 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             }
 
             public IEnumerable<Message> OutstandingMessages(
-                TimeSpan dispatchedSince, 
+                TimeSpan dispatchedSince,
                 RequestContext? requestContext,
-                int pageSize = 100, 
+                int pageSize = 100,
                 int pageNumber = 1,
                 IEnumerable<RoutingKey>? trippedTopics = null,
                 Dictionary<string, object>? args = null)
             {
-                return []; 
+                return [];
             }
 
 
             public IEnumerable<Message> OutstandingMessages(TimeSpan dispatchedSince)
             {
-               return []; 
+                return [];
             }
 
             public int GetOutstandingMessageCount(TimeSpan dispatchedSince, RequestContext? requestContext, int maxCount = 100, Dictionary<string, object>? args = null)

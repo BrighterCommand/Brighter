@@ -19,15 +19,15 @@ public static class InboxFactory
     {
         return rdbms switch
         {
-            Rdbms.Sqlite => new SqliteInbox(configuration),
-            Rdbms.MySql => new MySqlInbox(configuration),
-            Rdbms.MsSql => new MsSqlInbox(configuration),
-            Rdbms.Postgres => new PostgreSqlInbox(configuration),
+            Rdbms.Sqlite => new SqliteInbox(configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Inbox.Sqlite.SqliteInbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)),
+            Rdbms.MySql => new MySqlInbox(configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Inbox.MySql.MySqlInbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)),
+            Rdbms.MsSql => new MsSqlInbox(configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Inbox.MsSql.MsSqlInbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)),
+            Rdbms.Postgres => new PostgreSqlInbox(configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Inbox.Postgres.PostgreSqlInbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)),
             _ => throw new ArgumentOutOfRangeException(nameof(rdbms), "Database type is not supported")
         };
     }
 
-       public static void CreateInbox<T>(IAmazonDynamoDB client, IServiceCollection services) where T : class, IRequest
+    public static void CreateInbox<T>(IAmazonDynamoDB client, IServiceCollection services) where T : class, IRequest
     {
         var tableRequestFactory = new DynamoDbTableFactory();
         var dbTableBuilder = new DynamoDbTableBuilder(client);

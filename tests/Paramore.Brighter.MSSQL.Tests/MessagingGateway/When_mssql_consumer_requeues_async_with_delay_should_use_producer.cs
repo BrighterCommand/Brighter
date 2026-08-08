@@ -55,7 +55,7 @@ public class MssqlConsumerRequeueTestsAsync : IAsyncDisposable
         _consumer = new MsSqlMessageConsumer(
             testHelper.QueueConfiguration,
             topicName,
-            _scheduler);
+            global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, _scheduler);
 
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_COMMAND),

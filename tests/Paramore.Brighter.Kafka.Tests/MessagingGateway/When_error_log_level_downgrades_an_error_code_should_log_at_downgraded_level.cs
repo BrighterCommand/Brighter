@@ -29,8 +29,8 @@ public class When_error_log_level_downgrades_an_error_code_should_log_at_downgra
             numPartitions: 1,
             replicationFactor: 1,
             makeChannels: OnMissingChannel.Assume,
-            errorLogLevel: error => error.Code == ErrorCode.Local_TimedOut ? LogLevel.Debug : LogLevel.Warning
-        );
+            errorLogLevel: error => error.Code == ErrorCode.Local_TimedOut ? LogLevel.Debug : LogLevel.Warning,
+            loggerFactory: Initializer.TestLoggerFactory);
     }
 
     [Fact]

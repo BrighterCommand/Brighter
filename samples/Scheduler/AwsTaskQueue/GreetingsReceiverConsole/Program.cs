@@ -107,7 +107,7 @@ public class Program
                     services.AddConsumers(options =>
                         {
                             options.Subscriptions = subscriptions;
-                            options.DefaultChannelFactory = new ChannelFactory(awsConnection);
+                            options.DefaultChannelFactory = new ChannelFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
                         })
                         .AddProducers(configure =>
                         {
@@ -132,8 +132,8 @@ public class Program
                                         Topic = new RoutingKey("message-scheduler-topic"),
                                         RequestType = typeof(FireAwsScheduler)
                                     }
-                                ]
-                            ).Create();
+                                ],
+                                loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create();
                         })
                         .AutoFromAssemblies();
                 }

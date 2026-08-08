@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using Npgsql;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 
@@ -38,8 +39,9 @@ public class PostgreSqlInboxProvisioner : SqlBoxProvisioner<NpgsqlConnection, Np
         IAmABoxMigrationCatalog catalog,
         IAmABoxPayloadModeValidator<NpgsqlConnection> payloadValidator,
         IAmARelationalDatabaseConfiguration configuration,
-        IAmABoxMigrationRunner migrationRunner)
-        : base(detectionHelper, catalog, payloadValidator, configuration, migrationRunner, BoxType.Inbox)
+        IAmABoxMigrationRunner migrationRunner,
+        ILoggerFactory loggerFactory)
+        : base(detectionHelper, catalog, payloadValidator, configuration, migrationRunner, BoxType.Inbox, loggerFactory)
     {
     }
 

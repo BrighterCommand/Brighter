@@ -13,7 +13,7 @@ public class MsSqlTextInboxTest : RelationalDatabaseInboxTests
 
     protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration)
     {
-        return new MsSqlInbox(configuration);
+        return new MsSqlInbox(configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Inbox.MsSql.MsSqlInbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
     }
 
     protected override void CreateInboxTable(RelationalDatabaseConfiguration configuration)

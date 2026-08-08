@@ -36,7 +36,7 @@ var routingKey = new RoutingKey("greeting.command");
 
 var bus = new InternalBus();
 
-var publications = new[] { new Publication { Topic = routingKey, RequestType = typeof(GreetingCommand)} };
+var publications = new[] { new Publication { Topic = routingKey, RequestType = typeof(GreetingCommand) } };
 
 var subscriptions = new[]
 {
@@ -52,14 +52,14 @@ var builder = Host.CreateApplicationBuilder();
 builder.Services.AddConsumers(options =>
     {
         options.Subscriptions = subscriptions;
-        options.DefaultChannelFactory = new InMemoryChannelFactory(bus, TimeProvider.System);
+        options.DefaultChannelFactory = new InMemoryChannelFactory(bus, TimeProvider.System, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         options.HandlerLifetime = ServiceLifetime.Scoped;
         options.MapperLifetime = ServiceLifetime.Singleton;
         options.InboxConfiguration = new InboxConfiguration(new InMemoryInbox(TimeProvider.System));
     })
     .AddProducers((config) =>
     {
-        config.ProducerRegistry = new InMemoryProducerRegistryFactory(bus, publications, InstrumentationOptions.All).Create();
+        config.ProducerRegistry = new InMemoryProducerRegistryFactory(bus, publications, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, InstrumentationOptions.All).Create();
         config.Outbox = new InMemoryOutbox(TimeProvider.System);
     })
     .AutoFromAssemblies();

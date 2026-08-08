@@ -113,13 +113,13 @@ public class MySqlPerSchemaNoOpTests : IAsyncLifetime
         // Evident data: PerSchema is the scope under test.
         var runner = new MySqlBoxMigrationRunner(
             new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30),
-            scope: MigrationHistoryScope.PerSchema);
+            scope: MigrationHistoryScope.PerSchema, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         return new MySqlOutboxProvisioner(
             new MySqlBoxDetectionHelper(),
             new MySqlOutboxMigrationCatalog(),
             new MySqlPayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     private async Task EnsureDatabaseExistsAsync(string databaseName)

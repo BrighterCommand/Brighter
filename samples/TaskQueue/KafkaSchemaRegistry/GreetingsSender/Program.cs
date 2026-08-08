@@ -49,13 +49,14 @@ builder.Services.AddBrighter(options =>
     })
     // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
     // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-    .UseScheduler(new InMemorySchedulerFactory())
+    .UseScheduler(new InMemorySchedulerFactory(loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance))
     .AddProducers((configure) =>
     {
         configure.ProducerRegistry = new KafkaProducerRegistryFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
-                    Name = "paramore.brighter.greetingsender", BootStrapServers = ["localhost:9092"]
+                    Name = "paramore.brighter.greetingsender",
+                    BootStrapServers = ["localhost:9092"]
                 },
                 [
                     new KafkaPublication
@@ -66,7 +67,7 @@ builder.Services.AddBrighter(options =>
                         MessageTimeoutMs = 1000,
                         MaxInFlightRequestsPerConnection = 1
                     }
-                ])
+                ], loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
             .Create();
     })
     .AutoFromAssemblies();

@@ -233,10 +233,10 @@ public sealed class SqliteLegacySchemaCausationCompatibilityTests : IDisposable
             _connectionString,
             databaseName: "brightertests",
             outBoxTableName: tableName,
-            binaryMessagePayload: false));
+            binaryMessagePayload: false), logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.Sqlite.SqliteOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 
     private IAmAnInboxSync InboxFor(string tableName)
-        => new SqliteInbox(new RelationalDatabaseConfiguration(_connectionString, inboxTableName: tableName));
+        => new SqliteInbox(new RelationalDatabaseConfiguration(_connectionString, inboxTableName: tableName), logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Inbox.Sqlite.SqliteInbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 
     private static Message CreateMessage()
         => new(

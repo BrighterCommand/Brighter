@@ -63,8 +63,8 @@ public class AsyncCommandProcessorBulkClearOutstandingObservabilityTests
         messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
         var routingKey = new RoutingKey(_topic);
-        InMemoryMessageProducer messageProducer = new(_internalBus, 
-            new Publication
+        InMemoryMessageProducer messageProducer = new(_internalBus,
+        Initializer.TestLoggerFactory, new Publication
             {
                 Source = new Uri("http://localhost"),
                 RequestType = typeof(MyEvent),
@@ -86,7 +86,7 @@ public class AsyncCommandProcessorBulkClearOutstandingObservabilityTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            outbox,
+            Initializer.TestLoggerFactory, outbox,
             maxOutStandingMessages: -1
         );
         
@@ -97,10 +97,10 @@ public class AsyncCommandProcessorBulkClearOutstandingObservabilityTests
             policyRegistry, 
             new ResiliencePipelineRegistry<string>(),
             _mediator,
-            new InMemorySchedulerFactory(),
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
             tracer: tracer, 
-            instrumentationOptions: InstrumentationOptions.All
-        );
+            instrumentationOptions: InstrumentationOptions.All,
+            loggerFactory: Initializer.TestLoggerFactory);
     }
     
     [Fact(Skip = "This test is fragile due to background processing")]

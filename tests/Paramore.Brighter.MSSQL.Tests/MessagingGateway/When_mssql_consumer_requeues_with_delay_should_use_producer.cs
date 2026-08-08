@@ -53,7 +53,7 @@ public class When_mssql_consumer_requeues_with_delay_should_use_producer : IDisp
         _consumer = new MsSqlMessageConsumer(
             testHelper.QueueConfiguration,
             topicName,
-            _scheduler);
+            global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, _scheduler);
 
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_COMMAND),

@@ -38,18 +38,18 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
                 new ResiliencePipelineRegistry<string>(),
-                new InMemorySchedulerFactory());
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
 
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
             var channel = new ChannelAsync(new(ChannelName), _routingKey,
-                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)));
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory));
 
             var messageMapperRegistry = new MessageMapperRegistry(null, _mapperFactory);
             messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
             _messagePump = new ServiceActivator.Proactor(commandProcessor, _ => typeof(MyEvent),
-                messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), channel)
+                messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), channel, loggerFactory: Initializer.TestLoggerFactory)
             {
                 Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000)
             };

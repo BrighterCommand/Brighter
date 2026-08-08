@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
         {
             SpyRequeueCommandProcessor commandProcessor = new();
 
-            _channel = new Channel(new("myChannel"), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)));
+            _channel = new Channel(new("myChannel"), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory));
             
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()),
@@ -54,12 +54,12 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
             
             _messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyCommand), 
-                messageMapperRegistry, null, new InMemoryRequestContextFactory(), _channel)
+                messageMapperRegistry, null, new InMemoryRequestContextFactory(), _channel, loggerFactory: Initializer.TestLoggerFactory)
             {
                 Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = _requeueCount
             };
 
-            var msg = new TransformPipelineBuilder(messageMapperRegistry, null)
+            var msg = new TransformPipelineBuilder(messageMapperRegistry, null, loggerFactory: Initializer.TestLoggerFactory)
                 .BuildWrapPipeline<MyCommand>()
                 .Wrap(new MyCommand(), new RequestContext(), new Publication{Topic = _routingKey});
 

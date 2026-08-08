@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             registry.Register<MyCommand, MyStoredCommandHandler>();
             registry.Register<MyCommandToFail, MyStoredCommandToFailHandler>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyStoredCommandHandler>();
             container.AddTransient<MyStoredCommandToFailHandler>();
             container.AddSingleton(_inbox);
@@ -63,7 +63,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
 
             _contextKey = typeof(MyStoredCommandHandler).FullName;
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
-                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
+                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
 
         }
 

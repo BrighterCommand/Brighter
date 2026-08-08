@@ -38,10 +38,10 @@ public static class OutboxFactory
     public static void MakeDynamoOutbox(IAmazonDynamoDB client)
     {
         var dbTableBuilder = new DynamoDbTableBuilder(client);
-            
+
         var createTableRequest = new DynamoDbTableFactory().GenerateCreateTableRequest<MessageItem>(
             new DynamoDbCreateProvisionedThroughput(
-                new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10},
+                new ProvisionedThroughput { ReadCapacityUnits = 10, WriteCapacityUnits = 10 },
                 new Dictionary<string, ProvisionedThroughput>
                 {
                     {"Outstanding", new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10}},
@@ -56,8 +56,8 @@ public static class OutboxFactory
             dbTableBuilder.EnsureTablesReady([createTableRequest.TableName], TableStatus.ACTIVE).Wait();
         }
     }
-    
-    public static (IAmAnOutbox, Type, Type) MakeEfOutbox<T>(Rdbms rdbms,  RelationalDatabaseConfiguration configuration)
+
+    public static (IAmAnOutbox, Type, Type) MakeEfOutbox<T>(Rdbms rdbms, RelationalDatabaseConfiguration configuration)
         where T : DbContext
     {
         (IAmAnOutbox, Type, Type) outbox = rdbms switch
@@ -74,49 +74,49 @@ public static class OutboxFactory
 
     private static (IAmAnOutbox, Type, Type) MakeDapperPostgresSqlOutbox(RelationalDatabaseConfiguration configuration)
     {
-        return (new PostgreSqlOutbox(configuration), typeof(PostgreSqlConnectionProvider),
+        return (new PostgreSqlOutbox(configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.PostgreSql.PostgreSqlOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)), typeof(PostgreSqlConnectionProvider),
             typeof(PostgreSqlTransactionProvider));
     }
-    
+
     private static (IAmAnOutbox, Type, Type) MakeEfPostgreSqlOutbox<T>(RelationalDatabaseConfiguration configuration)
         where T : DbContext
     {
-        return (new PostgreSqlOutbox(configuration), typeof(PostgreSqlEntityFrameworkTransactionProvider<T>), 
+        return (new PostgreSqlOutbox(configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.PostgreSql.PostgreSqlOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)), typeof(PostgreSqlEntityFrameworkTransactionProvider<T>),
         typeof(PostgreSqlConnectionProvider));
     }
 
     private static (IAmAnOutbox, Type, Type) MakeDapperMsSqlOutbox(RelationalDatabaseConfiguration configuration)
     {
-        return new ValueTuple<IAmAnOutbox, Type, Type>(new MsSqlOutbox(configuration), typeof(MsSqlConnectionProvider),
+        return new ValueTuple<IAmAnOutbox, Type, Type>(new MsSqlOutbox(configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.MsSql.MsSqlOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)), typeof(MsSqlConnectionProvider),
             typeof(MsSqlTransactionProvider));
     }
-    
+
     private static (IAmAnOutbox, Type, Type) MakeEfMsSqlOutbox<T>(RelationalDatabaseConfiguration configuration)
         where T : DbContext
     {
-        return new ValueTuple<IAmAnOutbox, Type, Type>(new MsSqlOutbox(configuration), typeof(MsSqlEntityFrameworkCoreTransactionProvider<T>),  
+        return new ValueTuple<IAmAnOutbox, Type, Type>(new MsSqlOutbox(configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.MsSql.MsSqlOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)), typeof(MsSqlEntityFrameworkCoreTransactionProvider<T>),
             typeof(MsSqlConnectionProvider));
     }
 
     private static (IAmAnOutbox, Type, Type) MakeDapperMySqlOutbox(RelationalDatabaseConfiguration configuration)
     {
-        return (new MySqlOutbox(configuration), typeof(MySqlConnectionProvider), typeof(MySqlTransactionProvider));
+        return (new MySqlOutbox(configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.MySql.MySqlOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)), typeof(MySqlConnectionProvider), typeof(MySqlTransactionProvider));
     }
-    
+
     private static (IAmAnOutbox, Type, Type) MakeEfMySqlOutbox<T>(RelationalDatabaseConfiguration configuration)
         where T : DbContext
     {
-        return (new MySqlOutbox(configuration),typeof(MySqlEntityFrameworkTransactionProvider<T>), typeof(MySqlConnectionProvider));
+        return (new MySqlOutbox(configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.MySql.MySqlOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)), typeof(MySqlEntityFrameworkTransactionProvider<T>), typeof(MySqlConnectionProvider));
     }
 
     private static (IAmAnOutbox, Type, Type) MakeDapperSqliteOutBox(RelationalDatabaseConfiguration configuration)
     {
-        return (new SqliteOutbox(configuration), typeof(SqliteConnectionProvider), typeof(SqliteTransactionProvider));
+        return (new SqliteOutbox(configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.Sqlite.SqliteOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)), typeof(SqliteConnectionProvider), typeof(SqliteTransactionProvider));
     }
-    
+
     private static (IAmAnOutbox, Type, Type) MakeEfSqliteOutBox<T>(RelationalDatabaseConfiguration configuration)
         where T : DbContext
     {
-        return (new SqliteOutbox(configuration), typeof(SqliteEntityFrameworkTransactionProvider<T>), typeof(SqliteConnectionProvider));
+        return (new SqliteOutbox(configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.Sqlite.SqliteOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)), typeof(SqliteEntityFrameworkTransactionProvider<T>), typeof(SqliteConnectionProvider));
     }
 }

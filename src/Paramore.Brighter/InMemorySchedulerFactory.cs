@@ -23,19 +23,20 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter;
 
 /// <summary>
 /// The <see cref="InMemoryScheduler"/> factory
 /// </summary>
-public class InMemorySchedulerFactory : IAmAMessageSchedulerFactory, IAmARequestSchedulerFactory
+public class InMemorySchedulerFactory(ILoggerFactory loggerFactory) : IAmAMessageSchedulerFactory, IAmARequestSchedulerFactory
 {
     /// <summary>
     /// The <see cref="System.TimeProvider"/>.
     /// </summary>
     public TimeProvider TimeProvider { get; set; } = TimeProvider.System;
-    
+
     /// <summary>
     /// Get or create a scheduler id for a message
     /// </summary>
@@ -56,17 +57,17 @@ public class InMemorySchedulerFactory : IAmAMessageSchedulerFactory, IAmARequest
     /// The action be executed on conflict during scheduler message
     /// </summary>
     public OnSchedulerConflict OnConflict { get; set; } = OnSchedulerConflict.Throw;
-    
+
     /// <inheritdoc />
-    public IAmAMessageScheduler Create(IAmACommandProcessor processor) 
-        => new InMemoryScheduler(processor, TimeProvider, GetOrCreateRequestSchedulerId, GetOrCreateMessageSchedulerId, OnConflict);
+    public IAmAMessageScheduler Create(IAmACommandProcessor processor)
+        => new InMemoryScheduler(processor, TimeProvider, GetOrCreateRequestSchedulerId, GetOrCreateMessageSchedulerId, OnConflict, loggerFactory);
 
     /// <inheritdoc />
     public IAmARequestSchedulerSync CreateSync(IAmACommandProcessor processor)
-        => new InMemoryScheduler(processor, TimeProvider, GetOrCreateRequestSchedulerId, GetOrCreateMessageSchedulerId, OnConflict);
+        => new InMemoryScheduler(processor, TimeProvider, GetOrCreateRequestSchedulerId, GetOrCreateMessageSchedulerId, OnConflict, loggerFactory);
 
     /// <inheritdoc />
     public IAmARequestSchedulerAsync CreateAsync(IAmACommandProcessor processor)
-        => new InMemoryScheduler(processor, TimeProvider, GetOrCreateRequestSchedulerId, GetOrCreateMessageSchedulerId, OnConflict);
+        => new InMemoryScheduler(processor, TimeProvider, GetOrCreateRequestSchedulerId, GetOrCreateMessageSchedulerId, OnConflict, loggerFactory);
 }
- 
+

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
@@ -20,7 +20,7 @@ public class AzureServiceBusMessageMemoryTests
             routingKey: new RoutingKey("test-topic"),
             messagePumpType: MessagePumpType.Reactor);
 
-        _creator = new AzureServiceBusMessageCreator(subscription);
+        _creator = new AzureServiceBusMessageCreator(subscription, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

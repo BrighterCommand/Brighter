@@ -49,7 +49,7 @@ public class CommandProcessorSingletonTests
     public void SameProvider_MultipleResolutions_ReturnsSameInstance()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddBrighter();
         var provider = services.BuildServiceProvider();
 
@@ -71,7 +71,7 @@ public class CommandProcessorSingletonTests
     public void SameProvider_DifferentScopes_ReturnsSameInstance()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddBrighter();
         var provider = services.BuildServiceProvider();
 
@@ -106,7 +106,7 @@ public class CommandProcessorSingletonTests
     public async Task SameProvider_ConcurrentResolutions_ReturnsSameInstance()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddBrighter();
         var provider = services.BuildServiceProvider();
         var processors = new ConcurrentBag<IAmACommandProcessor>();
@@ -139,7 +139,7 @@ public class CommandProcessorSingletonTests
     public void SameProvider_ResolvedWithOtherServices_ReturnsSameInstance()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddBrighter();
         services.AddScoped<TestScopedService>();
         var provider = services.BuildServiceProvider();
@@ -173,7 +173,7 @@ public class CommandProcessorSingletonTests
     public void SameProvider_ManySequentialResolutions_ReturnsSameInstance()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddBrighter();
         var provider = services.BuildServiceProvider();
 
@@ -201,7 +201,7 @@ public class CommandProcessorSingletonTests
         var internalBus = new InternalBus();
         var routingKey = new RoutingKey("test.singleton.command");
 
-        var producer = new InMemoryMessageProducer(internalBus, new Publication
+        var producer = new InMemoryMessageProducer(internalBus, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, new Publication
         {
             Topic = routingKey,
             RequestType = typeof(SingletonTestCommand)
@@ -212,7 +212,7 @@ public class CommandProcessorSingletonTests
 
         var outbox = new InMemoryOutbox(timeProvider);
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddBrighter()
             .AddProducers(cfg =>
             {
@@ -246,7 +246,7 @@ public class CommandProcessorSingletonTests
         var internalBus = new InternalBus();
         var routingKey = new RoutingKey("test.func.singleton");
 
-        var producer = new InMemoryMessageProducer(internalBus, new Publication
+        var producer = new InMemoryMessageProducer(internalBus, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, new Publication
         {
             Topic = routingKey,
             RequestType = typeof(SingletonTestCommand)
@@ -257,7 +257,7 @@ public class CommandProcessorSingletonTests
 
         var outbox = new InMemoryOutbox(timeProvider);
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddSingleton(producerRegistry);
         services.AddSingleton(outbox);
 
@@ -298,7 +298,7 @@ public class CommandProcessorSingletonTests
         var internalBus = new InternalBus();
         var routingKey = new RoutingKey("test.concurrent.singleton");
 
-        var producer = new InMemoryMessageProducer(internalBus, new Publication
+        var producer = new InMemoryMessageProducer(internalBus, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, new Publication
         {
             Topic = routingKey,
             RequestType = typeof(SingletonTestCommand)
@@ -309,7 +309,7 @@ public class CommandProcessorSingletonTests
 
         var outbox = new InMemoryOutbox(timeProvider);
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddBrighter()
             .AddProducers(cfg =>
             {
@@ -348,7 +348,7 @@ public class CommandProcessorSingletonTests
     public async Task SameProvider_ConcurrentScopedResolutions_ReturnsSameInstance()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddBrighter();
         var provider = services.BuildServiceProvider();
         var processors = new ConcurrentBag<IAmACommandProcessor>();
@@ -387,7 +387,7 @@ public class CommandProcessorSingletonTests
         // Arrange
         var instantiationCount = 0;
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddBrighter();
 
         // Decorate the command processor factory to count instantiations
@@ -438,7 +438,7 @@ public class CommandProcessorSingletonTests
     public async Task SameProvider_AllResolutions_HaveSameHashCode()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddBrighter();
         var provider = services.BuildServiceProvider();
         var hashCodes = new ConcurrentBag<int>();
@@ -469,7 +469,7 @@ public class CommandProcessorSingletonTests
     public void SameProvider_NestedScopes_ReturnsSameInstance()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddBrighter();
         var provider = services.BuildServiceProvider();
 

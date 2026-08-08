@@ -67,7 +67,7 @@ public class PostgresMessageGatewayProvider
 
     public IAmAChannelSync CreateChannel(PostgresSubscription subscription)
     {
-        var channel = new PostgresChannelFactory(_connection).CreateSyncChannel(subscription);
+        var channel = new PostgresChannelFactory(_connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).CreateSyncChannel(subscription);
 
         if (subscription.DeadLetterRoutingKey != null && subscription.RequeueCount > 0)
         {
@@ -82,7 +82,7 @@ public class PostgresMessageGatewayProvider
         CancellationToken cancellationToken = default
     )
     {
-        var channel = await new PostgresChannelFactory(_connection)
+        var channel = await new PostgresChannelFactory(_connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
             .CreateAsyncChannelAsync(subscription, cancellationToken);
 
         if (subscription.DeadLetterRoutingKey != null && subscription.RequeueCount > 0)
@@ -95,7 +95,7 @@ public class PostgresMessageGatewayProvider
 
     public IAmAMessageProducerSync CreateProducer(PostgresPublication publication)
     {
-        var producers = new PostgresMessageProducerFactory(_connection, [publication]).Create();
+        var producers = new PostgresMessageProducerFactory(_connection, [publication], loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create();
         var producer = producers.First().Value;
         return (IAmAMessageProducerSync)producer;
     }
@@ -105,7 +105,7 @@ public class PostgresMessageGatewayProvider
         CancellationToken cancellationToken = default
     )
     {
-        var producers = await new PostgresMessageProducerFactory(_connection, [publication])
+        var producers = await new PostgresMessageProducerFactory(_connection, [publication], loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
             .CreateAsync();
         var producer = producers.First().Value;
         return (IAmAMessageProducerAsync)producer;
@@ -175,8 +175,8 @@ public class PostgresMessageGatewayProvider
 
         var dlqConsumer = new PostgresMessageConsumer(
             _configuration,
-            dlqSubscription
-        );
+            dlqSubscription,
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         try
         {
@@ -215,8 +215,8 @@ public class PostgresMessageGatewayProvider
 
         var dlqConsumer = new PostgresMessageConsumer(
             _configuration,
-            dlqSubscription
-        );
+            dlqSubscription,
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         try
         {

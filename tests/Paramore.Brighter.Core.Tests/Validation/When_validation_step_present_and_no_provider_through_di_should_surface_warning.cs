@@ -38,7 +38,7 @@ public class ValidatePipelinesProviderRegistrationTests
         // Arrange — a handler whose pipeline declares a validation step ([ValidateRequest]) but no
         // validation provider is registered; ValidatePipelines must compute the (false,false)
         // registrations from the service collection and thread them into the validator.
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         subscriberRegistry.Register<MyValidatedCommand, MyValidatedSyncHandler>();
         services.AddSingleton(subscriberRegistry);

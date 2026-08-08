@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
             registry.RegisterAsync<MyEvent, MyOtherEventHandlerAsync>();
             registry.RegisterAsync<MyEvent, MyThrowingEventHandlerAsync>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyEventHandlerAsync>();
             container.AddTransient<MyOtherEventHandlerAsync>();
             container.AddTransient<MyThrowingEventHandlerAsync>();
@@ -59,7 +59,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
             PipelineBuilder<MyEvent>.ClearPipelineCache();
         }
 

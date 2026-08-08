@@ -53,7 +53,7 @@ public class MessagePumpUnacceptableMessageDeadLetterChannelTests
         _channel = new Channel(
             new (Channel), 
             _routingKey, 
-            new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, deadLetterTopic: _deadLetterKey, ackTimeout: TimeSpan.FromMilliseconds(1000))
+            new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, deadLetterTopic: _deadLetterKey, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory)
         );
             
         var messageMapperRegistry = new MessageMapperRegistry(
@@ -62,7 +62,7 @@ public class MessagePumpUnacceptableMessageDeadLetterChannelTests
         messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
         _messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyEvent),
-            messageMapperRegistry, null, new InMemoryRequestContextFactory(), _channel)
+            messageMapperRegistry, null, new InMemoryRequestContextFactory(), _channel, loggerFactory: Initializer.TestLoggerFactory)
         {
             Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3
         };

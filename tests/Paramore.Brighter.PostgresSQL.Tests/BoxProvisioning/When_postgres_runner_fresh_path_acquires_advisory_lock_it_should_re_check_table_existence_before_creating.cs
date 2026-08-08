@@ -43,7 +43,7 @@ public class PostgreSqlRunnerFreshPathRecheckTests : IAsyncLifetime
     public PostgreSqlRunnerFreshPathRecheckTests()
     {
         _config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        _runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), _config, TimeSpan.FromSeconds(30));
+        _runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), _config, TimeSpan.FromSeconds(30), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

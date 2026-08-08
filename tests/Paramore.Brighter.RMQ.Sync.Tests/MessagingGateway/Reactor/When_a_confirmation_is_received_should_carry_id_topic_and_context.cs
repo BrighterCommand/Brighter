@@ -69,7 +69,7 @@ public class RmqConfirmationCarriesIdTopicAndContextTests : IDisposable
             Exchange = new Exchange("paramore.brighter.exchange")
         };
 
-        _messageProducer = new RmqMessageProducer(rmqConnection);
+        _messageProducer = new RmqMessageProducer(rmqConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _messageProducer.OnMessagePublished += result => _confirmation.TrySetResult(result);
 
         //we need a queue to avoid a discard

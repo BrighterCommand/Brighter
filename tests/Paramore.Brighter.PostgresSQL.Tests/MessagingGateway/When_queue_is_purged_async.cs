@@ -30,10 +30,10 @@ public class PurgeTestAsync : IAsyncDisposable, IDisposable
             
         _producerRegistry = new PostgresProducerRegistryFactory(
                 new PostgresMessagingGatewayConnection(testHelper.Configuration),
-            [new PostgresPublication { Topic = _routingKey } ]
-        ).CreateAsync().GetAwaiter().GetResult();
+            [new PostgresPublication { Topic = _routingKey } ],
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).CreateAsync().GetAwaiter().GetResult();
             
-        _consumer = new PostgresConsumerFactory(new PostgresMessagingGatewayConnection(testHelper.Configuration)).CreateAsync(sub);
+        _consumer = new PostgresConsumerFactory(new PostgresMessagingGatewayConnection(testHelper.Configuration), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).CreateAsync(sub);
     }
 
     [Fact]

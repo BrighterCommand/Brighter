@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             _producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { 
-                    routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication  {Topic = routingKey, RequestType = typeof(MyCommand) })
+                    routingKey, new InMemoryMessageProducer(new InternalBus(), Initializer.TestLoggerFactory, new Publication  {Topic = routingKey, RequestType = typeof(MyCommand) })
                 },
             });
          }
@@ -57,7 +57,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new EmptyMessageTransformerFactoryAsync(),
                 _tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                _outbox)
+                Initializer.TestLoggerFactory, _outbox)
             );               
 
             Assert.IsType<ConfigurationException>(exception); 

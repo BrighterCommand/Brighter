@@ -90,7 +90,7 @@ public class RedisMessageGatewayProvider
     public IAmAChannelSync CreateChannel(RedisSubscription subscription)
     {
         var channel = new ChannelFactory(
-            new RedisMessageConsumerFactory(_configuration)
+            new RedisMessageConsumerFactory(_configuration, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
         ).CreateSyncChannel(subscription);
 
         // Redis requires a receive before send to establish the subscription
@@ -104,8 +104,8 @@ public class RedisMessageGatewayProvider
             _dlqConsumer = new RedisMessageConsumer(
                 _configuration,
                 dlqQueueName,
-                subscription.DeadLetterRoutingKey
-            );
+                subscription.DeadLetterRoutingKey,
+                loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             _dlqConsumer.Receive(TimeSpan.FromMilliseconds(1000));
         }
 
@@ -125,7 +125,7 @@ public class RedisMessageGatewayProvider
     )
     {
         var channel = await new ChannelFactory(
-            new RedisMessageConsumerFactory(_configuration)
+            new RedisMessageConsumerFactory(_configuration, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
         ).CreateAsyncChannelAsync(subscription, cancellationToken);
 
         // Redis async ReceiveAsync does NOT enforce a 1s minimum timeout like
@@ -139,8 +139,8 @@ public class RedisMessageGatewayProvider
             _dlqConsumer = new RedisMessageConsumer(
                 _configuration,
                 dlqQueueName,
-                subscription.DeadLetterRoutingKey
-            );
+                subscription.DeadLetterRoutingKey,
+                loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             _dlqConsumer.Receive(TimeSpan.FromMilliseconds(1000));
         }
 
@@ -153,7 +153,7 @@ public class RedisMessageGatewayProvider
 
     public IAmAMessageProducerSync CreateProducer(RedisMessagePublication publication)
     {
-        return new RedisMessageProducer(_configuration, publication);
+        return new RedisMessageProducer(_configuration, publication, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     public async Task<IAmAMessageProducerAsync> CreateProducerAsync(
@@ -162,7 +162,7 @@ public class RedisMessageGatewayProvider
     )
     {
         await Task.CompletedTask;
-        return new RedisMessageProducer(_configuration, publication);
+        return new RedisMessageProducer(_configuration, publication, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     public RedisMessagePublication CreatePublication(

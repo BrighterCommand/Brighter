@@ -30,10 +30,10 @@ public class RmqMessageConsumerConnectionClosedTests : IDisposable
             Exchange = new Exchange("paramore.brighter.exchange")
         };
 
-        _sender = new RmqMessageProducer(rmqConnection);
+        _sender = new RmqMessageProducer(rmqConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var queueName = new ChannelName(Guid.NewGuid().ToString());
             
-        _receiver = new RmqMessageConsumer(rmqConnection, queueName, _sentMessage.Header.Topic, false, false);
+        _receiver = new RmqMessageConsumer(rmqConnection, queueName, _sentMessage.Header.Topic, false, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, false);
         _badReceiver = new AlreadyClosedRmqMessageConsumer(rmqConnection, queueName, _sentMessage.Header.Topic, false, 1, false);
 
     }

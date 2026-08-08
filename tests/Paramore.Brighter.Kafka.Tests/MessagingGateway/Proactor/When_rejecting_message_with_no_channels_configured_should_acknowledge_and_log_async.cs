@@ -62,7 +62,7 @@ public class KafkaMessageConsumerNoChannelsAsyncTests : IAsyncDisposable
                 Name = "Kafka Producer No Channels Async Test",
                 BootStrapServers = new[] { "localhost:9092" }
             },
-            publication);
+            publication, loggerFactory: Initializer.TestLoggerFactory);
 
         _producer.Init();
     }
@@ -130,7 +130,7 @@ public class KafkaMessageConsumerNoChannelsAsyncTests : IAsyncDisposable
                 {
                     Name = "Kafka Consumer No Channels Async Test",
                     BootStrapServers = new[] { "localhost:9092" }
-                })
+                }, loggerFactory: Initializer.TestLoggerFactory)
             .CreateAsync(new KafkaSubscription<MyCommand>
             (
                 subscriptionName: new SubscriptionName("Paramore.Brighter.Tests"),

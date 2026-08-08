@@ -93,7 +93,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation
             registry.Register<Reuse.ReuseCommand, Reuse.ReuseMapper>();
 
             var transformerFactory = new SimpleMessageTransformerFactory(_ => new Reuse.ReuseTransform());
-            var builder = new TransformPipelineBuilder(registry, transformerFactory);
+            var builder = new TransformPipelineBuilder(registry, transformerFactory, loggerFactory: Initializer.TestLoggerFactory);
 
             // Act — build the same mapper's wrap and unwrap pipelines twice (single-threaded)
             string firstWrap = Trace(builder.BuildWrapPipeline<Reuse.ReuseCommand>()).ToString();
@@ -128,7 +128,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation
                     ? new A.FirstTransform()
                     : (IAmAMessageTransform)new B.SecondTransform());
 
-            return new TransformPipelineBuilder(registry, transformerFactory);
+            return new TransformPipelineBuilder(registry, transformerFactory, loggerFactory: Initializer.TestLoggerFactory);
         }
 
         private static TransformPipelineTracer Trace<TRequest>(WrapPipeline<TRequest> pipeline)

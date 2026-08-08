@@ -58,7 +58,7 @@ public class PostgreSqlRunnerDefaultLockTimeoutTests : IAsyncLifetime
         // Detection-helper ctor is the ONLY one that exposes `lockTimeout` as optional. The
         // backward-compat ctor (PostgreSqlBoxMigrationRunner.cs:76) takes it as required, so it
         // cannot exercise the default path.
-        var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlBoxDetectionHelper(), new PostgreSqlOutboxMigrationCatalog(), config, advisoryLock: fakeLock);
+        var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlBoxDetectionHelper(logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.BoxProvisioning.PostgreSql.PostgreSqlBoxDetectionHelper>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)), new PostgreSqlOutboxMigrationCatalog(), config, advisoryLock: fakeLock, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act

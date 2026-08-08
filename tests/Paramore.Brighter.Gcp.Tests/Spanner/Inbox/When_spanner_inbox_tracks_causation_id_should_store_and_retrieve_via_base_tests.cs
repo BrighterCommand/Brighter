@@ -24,7 +24,7 @@ public class SpannerCausationTrackingInboxTest : CausationTrackingInboxBaseTests
         _configuration = new RelationalDatabaseConfiguration(
             connectionString,
             inboxTableName: $"{Const.TablePrefix}{Uuid.New():N}");
-        _inbox = new SpannerInboxAsync(_configuration);
+        _inbox = new SpannerInboxAsync(_configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Inbox.Spanner.SpannerInboxAsync>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         base.BeforeEachTest();
     }
 

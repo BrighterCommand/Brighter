@@ -49,7 +49,7 @@ public class RmqMessageConsumerQuorumValidationTests
             new RmqMessageConsumer(rmqConnection, queueName, routingKey,
                 isDurable: false, // This should cause the exception
                 highAvailability: false,
-                queueType: QueueType.Quorum));
+                queueType: QueueType.Quorum, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 
         Assert.Contains("Quorum queues require durability to be enabled", exception.Message);
     }
@@ -70,7 +70,7 @@ public class RmqMessageConsumerQuorumValidationTests
             new RmqMessageConsumer(rmqConnection, queueName, routingKey,
                 isDurable: true,
                 highAvailability: true, // This should cause the exception
-                queueType: QueueType.Quorum));
+                queueType: QueueType.Quorum, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 
         Assert.Contains("Quorum queues do not support high availability mirroring", exception.Message);
     }
@@ -91,7 +91,7 @@ public class RmqMessageConsumerQuorumValidationTests
         using var consumer = new RmqMessageConsumer(rmqConnection, queueName, routingKey,
             isDurable: true, // Required for quorum
             highAvailability: false, // Must be false for quorum
-            queueType: QueueType.Quorum);
+            queueType: QueueType.Quorum, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         new QueueFactory(rmqConnection, queueName, new RoutingKeys(routingKey), isDurable: true, queueType: QueueType.Quorum)
             .CreateAsync()
@@ -117,7 +117,7 @@ public class RmqMessageConsumerQuorumValidationTests
         using var consumer = new RmqMessageConsumer(rmqConnection, queueName, routingKey,
             isDurable: false,
             highAvailability: true,
-            queueType: QueueType.Classic);
+            queueType: QueueType.Classic, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         
         var message = await consumer.ReceiveAsync(TimeSpan.FromMilliseconds(100));
         Assert.Equal(MessageType.MT_NONE, message.Single().Header.MessageType);

@@ -52,7 +52,7 @@ public class When_redis_consumer_requeues_async_with_delay_should_use_producer :
         var queueName = new ChannelName($"Requeue-Async-Delay-Queue-{Guid.NewGuid()}");
 
         _scheduler = new SpySchedulerAsync();
-        _consumer = new RedisMessageConsumer(configuration, queueName, topic, _scheduler);
+        _consumer = new RedisMessageConsumer(configuration, queueName, topic, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, _scheduler);
 
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_COMMAND),

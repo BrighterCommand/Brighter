@@ -43,7 +43,7 @@ public class GracefulDrainOnDisposeTests
         var gate = new SemaphoreSlim(0, messageCount);
         var confirmationCount = 0;
 
-        var producer = new InMemoryMessageProducer(bus, instrumentationOptions: InstrumentationOptions.All)
+        var producer = new InMemoryMessageProducer(bus, instrumentationOptions: InstrumentationOptions.All, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
         {
             UseAsyncPublishConfirmation = true
         };

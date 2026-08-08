@@ -35,13 +35,13 @@ public class PostgreSqlReservedKeywordTableNameTests
             _connectionString,
             outBoxTableName: ReservedKeywordTableName);
         _runner = new PostgreSqlBoxMigrationRunner(
-            new PostgreSqlOutboxMigrationCatalog(), _config, TimeSpan.FromSeconds(30));
+            new PostgreSqlOutboxMigrationCatalog(), _config, TimeSpan.FromSeconds(30), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _provisioner = new PostgreSqlOutboxProvisioner(
-            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlBoxDetectionHelper(logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.BoxProvisioning.PostgreSql.PostgreSqlBoxDetectionHelper>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)),
             new PostgreSqlOutboxMigrationCatalog(),
             new PostgreSqlPayloadModeValidator(),
             _config,
-            _runner);
+            _runner, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]
@@ -96,7 +96,7 @@ WHERE ""BoxTableName"" = @BoxTableName AND ""SchemaName"" = 'public'";
         // Act + Assert: runtime DML — write a message via the PG outbox and read it back.
         // Exercises GenerateSqlText override that lowercases-quotes the table name; with the
         // legacy unquoted form this would emit `INSERT INTO Order ...` and fail at parse.
-        var outbox = new PostgreSqlOutbox(_config);
+        var outbox = new PostgreSqlOutbox(_config, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.PostgreSql.PostgreSqlOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("test.topic"), MessageType.MT_COMMAND),
             new MessageBody("hello reserved keyword"));

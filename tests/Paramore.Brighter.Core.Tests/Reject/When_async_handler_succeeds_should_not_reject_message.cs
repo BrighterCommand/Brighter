@@ -48,7 +48,7 @@ namespace Paramore.Brighter.Core.Tests.Reject
                 if (type == typeof(MySucceedingRejectHandlerAsync))
                     return new MySucceedingRejectHandlerAsync();
                 if (type == typeof(RejectMessageOnErrorHandlerAsync<MyCommand>))
-                    return new RejectMessageOnErrorHandlerAsync<MyCommand>();
+                    return new RejectMessageOnErrorHandlerAsync<MyCommand>(logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Reject.Handlers.RejectMessageOnErrorHandlerAsync<global::Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles.MyCommand>>(Initializer.TestLoggerFactory));
                 throw new ArgumentOutOfRangeException(nameof(type), type.Name, null);
             });
 
@@ -60,8 +60,8 @@ namespace Paramore.Brighter.Core.Tests.Reject
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
                 new ResiliencePipelineRegistry<string>(),
-                new InMemorySchedulerFactory()
-            );
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+                loggerFactory: Initializer.TestLoggerFactory);
         }
 
         [Fact]

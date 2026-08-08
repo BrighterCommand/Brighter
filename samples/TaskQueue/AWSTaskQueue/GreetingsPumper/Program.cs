@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon;
@@ -39,8 +39,8 @@ if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var cr
                     typeof(FarewellEvent).FullName.ToValidSNSTopicName(true)),
                 TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
             }
-        ]
-    ).Create();
+        ],
+        loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create();
 
     builder.Services.AddBrighter()
         .AddProducers((configure) =>

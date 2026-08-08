@@ -23,7 +23,7 @@ public class ProactorQuitAsyncDisposalTests
     {
         // Arrange
         var commandProcessor = new SpyCommandProcessor();
-        var consumer = new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000));
+        var consumer = new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory);
         _trackingChannel = new TrackingChannelAsync(
             new ChannelName("test-channel"),
             _routingKey,
@@ -41,8 +41,8 @@ public class ProactorQuitAsyncDisposalTests
             messageMapperRegistry,
             new EmptyMessageTransformerFactoryAsync(),
             new InMemoryRequestContextFactory(),
-            _trackingChannel
-        );
+            _trackingChannel,
+            loggerFactory: Initializer.TestLoggerFactory);
         messagePump.TimeOut = TimeSpan.FromMilliseconds(5000);
 
         // Enqueue a message followed by a quit

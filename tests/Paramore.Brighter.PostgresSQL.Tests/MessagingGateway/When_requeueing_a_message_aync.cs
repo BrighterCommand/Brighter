@@ -43,9 +43,9 @@ public class PostgreSqlMessageConsumerRequeueTestsAsync : IDisposable
         
         _producerRegistry = new PostgresProducerRegistryFactory(
             new PostgresMessagingGatewayConnection(testHelper.Configuration),
-            [new PostgresPublication {Topic = new RoutingKey(_topic)}]
-        ).CreateAsync().Result;
-        _channelFactory = new PostgresChannelFactory(new PostgresMessagingGatewayConnection(testHelper.Configuration));
+            [new PostgresPublication {Topic = new RoutingKey(_topic)}],
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).CreateAsync().Result;
+        _channelFactory = new PostgresChannelFactory(new PostgresMessagingGatewayConnection(testHelper.Configuration), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

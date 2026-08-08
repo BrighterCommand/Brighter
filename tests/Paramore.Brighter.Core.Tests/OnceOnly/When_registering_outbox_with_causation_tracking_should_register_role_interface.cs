@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         public void When_registering_outbox_with_causation_tracking_should_register_role_interface()
         {
             // Arrange — the default outbox (InMemoryOutbox) supports causation tracking
-            var services = new ServiceCollection();
+            var services = new ServiceCollection().AddLogging();
             BrighterBuilder(services).AddProducers(config => { });
             var provider = services.BuildServiceProvider();
 
@@ -61,7 +61,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         public void When_registering_outbox_with_causation_tracking_should_resolve_same_instance()
         {
             // Arrange — the default outbox (InMemoryOutbox) supports causation tracking
-            var services = new ServiceCollection();
+            var services = new ServiceCollection().AddLogging();
             BrighterBuilder(services).AddProducers(config => { });
             var provider = services.BuildServiceProvider();
 
@@ -77,7 +77,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         public void When_registering_outbox_without_causation_tracking_should_not_register_role_interface()
         {
             // Arrange — SpyOutbox does NOT implement IAmACausationTrackingOutbox
-            var services = new ServiceCollection();
+            var services = new ServiceCollection().AddLogging();
             BrighterBuilder(services).AddProducers(config =>
             {
                 config.Outbox = new SpyOutbox { Tracer = new BrighterTracer(TimeProvider.System) };

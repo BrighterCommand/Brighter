@@ -19,6 +19,6 @@ public class DynamoDbLockingTest : DistributedLockingAsyncTest
            new DynamoDbLockingProviderOptions(tableName, _leaseholderGroupId)
            {
                LeaseValidity = TimeSpan.FromSeconds(10)
-           });
+           }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 }

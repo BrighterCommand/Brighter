@@ -66,8 +66,8 @@ static class Program
                                     Topic = new RoutingKey("message-scheduler-topic"),
                                     RequestType = typeof(FireAwsScheduler)
                                 }
-                            ]
-                        ).Create();
+                            ],
+                            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create();
 
                         services.AddBrighter()
                             .AddProducers(configure =>
@@ -125,7 +125,7 @@ static class Program
                 {
                     continue;
                 }
-                
+
                 logger.LogInformation("Pausing for breath...");
                 await Task.Delay(TimeSpan.FromMinutes(2), cancellationToken);
             }

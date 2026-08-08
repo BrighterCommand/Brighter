@@ -44,7 +44,7 @@ public class MessagePumpUnacceptableMessageLimitBreachedAsyncTests
     {
         SpyRequeueCommandProcessor commandProcessor = new();
 
-        var channel = new ChannelAsync(new("MyChannel"), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)), 3);
+        var channel = new ChannelAsync(new("MyChannel"), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory), 3);
             
         var messageMapperRegistry = new MessageMapperRegistry(
             null,
@@ -53,7 +53,7 @@ public class MessagePumpUnacceptableMessageLimitBreachedAsyncTests
             
         _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyEvent), 
             messageMapperRegistry, null, new InMemoryRequestContextFactory(), channel,
-            timeProvider:_timeProvider)
+            timeProvider:_timeProvider, loggerFactory: Initializer.TestLoggerFactory)
         {
             Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3, UnacceptableMessageLimit = 3,
             UnacceptableMessageLimitWindow =  TimeSpan.FromMinutes(1)

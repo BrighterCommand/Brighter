@@ -17,7 +17,7 @@ public class SqliteCausationTrackingInboxTest : CausationTrackingInboxBaseTests
         _configuration = new RelationalDatabaseConfiguration(
             Tests.Configuration.ConnectionString,
             inboxTableName: $"{Tests.Configuration.TablePrefix}{Uuid.New():N}");
-        _inbox = new SqliteInbox(_configuration);
+        _inbox = new SqliteInbox(_configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Inbox.Sqlite.SqliteInbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         base.BeforeEachTest();
     }
 

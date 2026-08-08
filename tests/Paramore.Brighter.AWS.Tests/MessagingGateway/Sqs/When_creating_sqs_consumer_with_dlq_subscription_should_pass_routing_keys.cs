@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -43,7 +43,7 @@ public class SqsMessageConsumerFactoryDlqTests : IDisposable
         var connection = new AWSMessagingGatewayConnection(
             new BasicAWSCredentials("test", "test"),
             RegionEndpoint.EUWest1);
-        _factory = new SqsMessageConsumerFactory(connection);
+        _factory = new SqsMessageConsumerFactory(connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

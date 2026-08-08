@@ -35,28 +35,28 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             _myEvent.Data = 3;
 
             var timeProvider = new FakeTimeProvider();
-            InMemoryMessageProducer commandMessageProducer = new(_bus, new Publication 
-            { 
-                Topic = new RoutingKey(_commandTopic), 
-                RequestType = typeof(MyCommand) 
+            InMemoryMessageProducer commandMessageProducer = new(_bus, Initializer.TestLoggerFactory, new Publication
+            {
+                Topic = new RoutingKey(_commandTopic),
+                RequestType = typeof(MyCommand)
             });
 
-            InMemoryMessageProducer eventMessageProducer = new(_bus, new Publication 
-            { 
-                Topic = new RoutingKey(_eventTopic), 
-                RequestType = typeof(MyEvent) 
+            InMemoryMessageProducer eventMessageProducer = new(_bus, Initializer.TestLoggerFactory, new Publication
+            {
+                Topic = new RoutingKey(_eventTopic),
+                RequestType = typeof(MyEvent)
             });
-            
+
             _message = new Message(
                 new MessageHeader(_myCommand.Id, _commandTopic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
-            
+
             _messageTwo = new Message(
                 new MessageHeader(_myCommandTwo.Id, _commandTopic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommandTwo, JsonSerialisationOptions.Options))
             );
-            
+
             _messageThree = new Message(
                 new MessageHeader(_myEvent.Id, _eventTopic, MessageType.MT_EVENT),
                 new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options))
@@ -68,10 +68,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                     return new MyCommandMessageMapper();
                 else if (type == typeof(MyEventMessageMapper))
                     return new MyEventMessageMapper();
-                
+
                 throw new ConfigurationException($"No command or event mappers registered for {type.Name}");
             }), null);
-            
+
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
@@ -80,22 +80,22 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 { _commandTopic, commandMessageProducer },
                 { _eventTopic, eventMessageProducer}
             });
-            
+
             var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
                 .AddBrighterDefault();
 
             var tracer = new BrighterTracer();
             _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
-            
+
             IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-                producerRegistry, 
+                producerRegistry,
                 resiliencePipelineRegistry,
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                _outbox
+                Initializer.TestLoggerFactory, _outbox
             );
 
             _commandProcessor = new CommandProcessor(
@@ -103,8 +103,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 new DefaultPolicy(),
                 resiliencePipelineRegistry,
                 bus,
-                new InMemorySchedulerFactory()
-            );
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+                loggerFactory: Initializer.TestLoggerFactory);
         }
 
 
@@ -115,9 +115,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             var requests = new List<IRequest> {_myCommand, _myCommandTwo, _myEvent } ;
             _commandProcessor.DepositPost(requests);
             var context = new RequestContext();
-            
+
             //assert
-            
+
             //message should not be posted
             Assert.False(_bus.Stream(_commandTopic).Any());
             Assert.False(_bus.Stream(_eventTopic).Any());

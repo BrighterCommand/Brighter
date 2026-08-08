@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2017 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -53,7 +53,7 @@ builder.Services.AddConsumers(options =>
             highAvailability: true,
             messagePumpType: MessagePumpType.Reactor)
     ];
-    options.DefaultChannelFactory = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection));
+    options.DefaultChannelFactory = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 })
 .AddProducers((configure) =>
 {
@@ -67,11 +67,11 @@ builder.Services.AddConsumers(options =>
                 RequestType = typeof(GreetingReply),
                 MakeChannels = OnMissingChannel.Assume
             }
-        ]).Create();
+        ], loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create();
 })
 // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
 // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-.UseScheduler(new InMemorySchedulerFactory())
+.UseScheduler(new InMemorySchedulerFactory(loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance))
 .AutoFromAssemblies();
 
 builder.Services.AddHostedService<ServiceActivatorHostedService>();

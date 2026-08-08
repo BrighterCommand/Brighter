@@ -45,7 +45,7 @@ public class CommandProcessorSchedulerCommandWithInvalidParamsAsyncTests
 
         messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
-        var producer = new InMemoryMessageProducer(_internalBus, new Publication { Topic = routingKey, RequestType = typeof(MyCommand) });
+        var producer = new InMemoryMessageProducer(_internalBus, Initializer.TestLoggerFactory, new Publication { Topic = routingKey, RequestType = typeof(MyCommand) });
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, producer }, });
         var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
@@ -62,7 +62,7 @@ public class CommandProcessorSchedulerCommandWithInvalidParamsAsyncTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            _outbox
+            Initializer.TestLoggerFactory, _outbox
         );
 
         _commandProcessor = new CommandProcessor(registry,
@@ -71,7 +71,7 @@ public class CommandProcessorSchedulerCommandWithInvalidParamsAsyncTests
             new DefaultPolicy(),
             resiliencePipelineRegistry,
             bus,
-            new InMemorySchedulerFactory { TimeProvider = _timeProvider });
+            new InMemorySchedulerFactory (loggerFactory: Initializer.TestLoggerFactory) { TimeProvider = _timeProvider }, loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<MyCommand>.ClearPipelineCache();
         PipelineBuilder<FireSchedulerRequest>.ClearPipelineCache();
     }

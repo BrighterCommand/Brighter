@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Inbox.Handlers
     /// <typeparam name="T"></typeparam>
     public partial class UseInboxHandlerAsync<T> : RequestHandlerAsync<T> where T : class, IRequest
     {
-        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<UseInboxHandlerAsync<T>>();
+        private readonly ILogger _logger;
 
         // Set once, process-wide, the first time a custom IRequestContext disables Replay, to keep the warning
         // out of the hot path. A benign race may let it log a couple of extra times under concurrent first-hits.
@@ -64,16 +64,18 @@ namespace Paramore.Brighter.Inbox.Handlers
         /// <param name="inbox">The store for commands that pass into the system</param>
         /// <param name="outbox">An optional causation-tracking outbox, used to replay messages when a duplicate is
         /// seen and <see cref="OnceOnlyAction.Replay"/> is configured. Resolved from DI when registered.</param>
-        public UseInboxHandlerAsync(IAmAnInboxAsync inbox, IAmACausationTrackingOutbox? outbox = null)
+        /// <param name="logger">The logger.</param>
+        public UseInboxHandlerAsync(IAmAnInboxAsync inbox, ILogger<UseInboxHandlerAsync<T>> logger, IAmACausationTrackingOutbox? outbox = null)
         {
             _inbox = inbox;
             _outbox = outbox;
+            _logger = logger;
         }
-        
-        
+
+
         public override void InitializeFromAttributeParams(params object?[] initializerList)
         {
-            _onceOnly = (bool?) initializerList[0] ?? false;
+            _onceOnly = (bool?)initializerList[0] ?? false;
             _contextKey = (string?)initializerList[1];
             _onceOnlyAction = (OnceOnlyAction?)initializerList[2] ?? OnceOnlyAction.Throw;
 
@@ -104,7 +106,7 @@ namespace Paramore.Brighter.Inbox.Handlers
 
             if (_onceOnly)
             {
-                Log.CheckingIfCommandHasBeenSeen(s_logger, command.Id.Value);
+                Log.CheckingIfCommandHasBeenSeen(_logger, command.Id.Value);
                 //TODO: We should not use an infinite timeout here - how to configure
                 var exists =
                     await _inbox.ExistsAsync<T>(command.Id.Value, _contextKey, requestContext, -1, cancellationToken)
@@ -117,17 +119,17 @@ namespace Paramore.Brighter.Inbox.Handlers
                     switch (_onceOnlyAction)
                     {
                         case OnceOnlyAction.Throw:
-                            Log.CommandHasBeenSeen(s_logger, command.Id.Value);
+                            Log.CommandHasBeenSeen(_logger, command.Id.Value);
                             WriteInboxEvent(span, command, "UseInboxHandler Duplicate Throw");
                             throw new OnceOnlyException($"A command with id {command.Id} has already been handled");
 
                         case OnceOnlyAction.Warn:
-                            Log.CommandHasBeenSeenWarning(s_logger, command.Id.Value);
+                            Log.CommandHasBeenSeenWarning(_logger, command.Id.Value);
                             WriteInboxEvent(span, command, "UseInboxHandler Duplicate Warn");
                             return command;
 
                         case OnceOnlyAction.Replay:
-                            Log.CommandHasBeenSeenReplayingOutbox(s_logger, command.Id.Value);
+                            Log.CommandHasBeenSeenReplayingOutbox(_logger, command.Id.Value);
                             var (causationId, replayed) = await ReplayCausationAsync(command, requestContext, cancellationToken)
                                 .ConfigureAwait(ContinueOnCapturedContext);
                             WriteReplayEvent(span, command, causationId, replayed);
@@ -136,7 +138,7 @@ namespace Paramore.Brighter.Inbox.Handlers
                 }
             }
 
-            Log.WritingCommandToInbox(s_logger, command.Id.Value);
+            Log.WritingCommandToInbox(_logger, command.Id.Value);
 
             T handledCommand = await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
@@ -169,7 +171,7 @@ namespace Paramore.Brighter.Inbox.Handlers
             if (_onceOnlyAction is OnceOnlyAction.Replay &&
                 Interlocked.CompareExchange(ref s_warnedAboutCustomContext, 1, 0) == 0)
             {
-                Log.CustomContextDisablesReplay(s_logger);
+                Log.CustomContextDisablesReplay(_logger);
             }
 
             return new RequestContext { Span = Activity.Current };

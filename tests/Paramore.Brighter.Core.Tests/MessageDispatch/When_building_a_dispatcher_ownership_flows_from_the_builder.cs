@@ -63,14 +63,15 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             IAmAMessageTransformerFactory syncTransformerFactory,
             IAmAMessageTransformerFactoryAsync asyncTransformerFactory)
         {
-            var channelFactory = new InMemoryChannelFactory(new InternalBus(), TimeProvider.System);
+            var channelFactory = new InMemoryChannelFactory(new InternalBus(), TimeProvider.System, loggerFactory: Initializer.TestLoggerFactory);
             return DispatchBuilder
                 .StartNew()
                 .CommandProcessor(new SpyCommandProcessor(), new InMemoryRequestContextFactory())
                 .MessageMappers(mapperRegistry, mapperRegistry, syncTransformerFactory, asyncTransformerFactory)
                 .ChannelFactory(channelFactory)
                 .Subscriptions(new List<Subscription>())
-                .NoInstrumentation();
+                .NoInstrumentation()
+                .ConfigureLogging(Initializer.TestLoggerFactory);
         }
 
         private sealed class DisposeCountingMapperFactory : IAmAMessageMapperFactory, IDisposable

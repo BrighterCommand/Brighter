@@ -41,7 +41,7 @@ builder.Services.AddBrighter(options =>
     })
     // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
     // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-    .UseScheduler(new InMemorySchedulerFactory())
+    .UseScheduler(new InMemorySchedulerFactory(loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance))
     .AddProducers((configure) =>
     {
         configure.ProducerRegistry = new KafkaProducerRegistryFactory(
@@ -66,7 +66,7 @@ builder.Services.AddBrighter(options =>
                         MessageTimeoutMs = 1000,
                         MaxInFlightRequestsPerConnection = 1
                     }
-                ])
+                ], loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
             .Create();
     })
     //This is the default mapper type, but we are  explicit  for the sample anyway

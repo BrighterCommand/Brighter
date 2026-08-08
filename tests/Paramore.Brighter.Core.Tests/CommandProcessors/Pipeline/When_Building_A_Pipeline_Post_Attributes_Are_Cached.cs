@@ -20,14 +20,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyPreAndPostDecoratedHandler>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyPreAndPostDecoratedHandler>();
             container.AddTransient<MyValidationHandler<MyCommand>>();
             container.AddTransient<MyLoggingHandler<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-            var pipelineBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory);
+            var pipelineBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory, loggerFactory: Initializer.TestLoggerFactory);
 
             pipelineBuilder.Build(new MyCommand(), new RequestContext()).First();
 
@@ -42,14 +42,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyPreAndPostDecoratedHandlerAsync>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyPreAndPostDecoratedHandlerAsync>();
             container.AddTransient<MyValidationHandlerAsync<MyCommand>>();
             container.AddTransient<MyLoggingHandlerAsync<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-            var pipelineBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactoryAsync)handlerFactory);
+            var pipelineBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactoryAsync)handlerFactory, loggerFactory: Initializer.TestLoggerFactory);
 
             pipelineBuilder.BuildAsync(new MyCommand(), new RequestContext(), false).First();
 

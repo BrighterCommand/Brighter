@@ -21,7 +21,7 @@ public class AsyncMessageWrapRequestMissingTransformTests
 
         var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync((_ => null));
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.All);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, Initializer.TestLoggerFactory, InstrumentationOptions.All);
     }
     
     [Fact]

@@ -33,8 +33,8 @@ public class When_mssql_channel_factory_forwards_scheduler_to_consumers
     public void Should_forward_scheduler_to_consumer_factory()
     {
         // Arrange
-        var consumerFactory = new MsSqlMessageConsumerFactory(_configuration);
-        var channelFactory = new ChannelFactory(consumerFactory);
+        var consumerFactory = new MsSqlMessageConsumerFactory(_configuration, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        var channelFactory = new ChannelFactory(consumerFactory, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.MessagingGateway.MsSql.ChannelFactory>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         var scheduler = new StubMessageScheduler();
 
         // Act — set scheduler on the channel factory
@@ -49,8 +49,8 @@ public class When_mssql_channel_factory_forwards_scheduler_to_consumers
     {
         // Arrange — consumer factory has a scheduler from construction
         var scheduler = new StubMessageScheduler();
-        var consumerFactory = new MsSqlMessageConsumerFactory(_configuration, scheduler);
-        var channelFactory = new ChannelFactory(consumerFactory);
+        var consumerFactory = new MsSqlMessageConsumerFactory(_configuration, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, scheduler);
+        var channelFactory = new ChannelFactory(consumerFactory, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.MessagingGateway.MsSql.ChannelFactory>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 
         // Assert — channel factory reads from the consumer factory
         Assert.Same(scheduler, ((IAmAChannelFactoryWithScheduler)channelFactory).Scheduler);

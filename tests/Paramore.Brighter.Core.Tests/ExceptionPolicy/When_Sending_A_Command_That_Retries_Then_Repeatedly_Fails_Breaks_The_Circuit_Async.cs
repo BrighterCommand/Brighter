@@ -26,7 +26,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyMultiplePoliciesFailsWithDivideByZeroHandlerAsync>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddSingleton<MyMultiplePoliciesFailsWithDivideByZeroHandlerAsync>();
             container.AddSingleton<ExceptionPolicyHandlerAsync<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions()
@@ -67,7 +67,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             MyMultiplePoliciesFailsWithDivideByZeroHandlerAsync.ReceivedCommand = false;
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
-                policyRegistry, new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+                policyRegistry, new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         }
 
         [Fact]

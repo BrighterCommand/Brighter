@@ -12,7 +12,7 @@ namespace Paramore.Brighter.Core.Tests.CloudEvents;
 
 public class CloudEventsTransformerTests 
 {
-    private readonly CloudEventsTransformer _transformer = new();
+    private readonly CloudEventsTransformer _transformer = new(loggerFactory: Initializer.TestLoggerFactory);
     private readonly Uri _source = new("http://goparamore.io/CloudEventsTransformerTests");
     private readonly CloudEventsType _type = new(typeof(MyCommand).FullName ?? "MyCommand");
     private readonly Uri _dataSchema = new Uri("http://goparamore.io/CloudEventsTransformerTests/schema");

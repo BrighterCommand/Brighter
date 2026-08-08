@@ -24,14 +24,14 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             var bus = new InternalBus();
 
             ControlBusReceiverBuilder busReceiverBuilder = (ControlBusReceiverBuilder) ControlBusReceiverBuilder
-                .With()
+                .With(Initializer.TestLoggerFactory)
                 .Dispatcher(_dispatcher)
                 .ProducerRegistryFactory(new InMemoryProducerRegistryFactory(
                     bus,
                     [
                         new Publication{Topic = topic, RequestType = typeof(ConfigurationCommand)}
-                    ], InstrumentationOptions.All))
-                .ChannelFactory(new InMemoryChannelFactory(bus, TimeProvider.System));
+                    ], Initializer.TestLoggerFactory, InstrumentationOptions.All))
+                .ChannelFactory(new InMemoryChannelFactory(bus, TimeProvider.System, loggerFactory: Initializer.TestLoggerFactory));
 
             _controlBus = busReceiverBuilder.Build("tests");
 

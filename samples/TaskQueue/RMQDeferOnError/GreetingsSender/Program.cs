@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -65,13 +65,13 @@ var host = Host.CreateDefaultBuilder(args)
                     Topic = new RoutingKey("greeting.event"),
                     RequestType = typeof(GreetingEvent)
                 }
-            ]).Create();
+            ], loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create();
 
         services
             .AddBrighter()
             // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
             // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-            .UseScheduler(new InMemorySchedulerFactory())
+            .UseScheduler(new InMemorySchedulerFactory(loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance))
             .AddProducers((configure) =>
             {
                 configure.ProducerRegistry = producerRegistry;

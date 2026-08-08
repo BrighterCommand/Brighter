@@ -71,13 +71,13 @@ namespace GreetingsSender
                         Topic = new RoutingKey("farewell.event"),
                         RequestType = typeof(FarewellEvent)
                     }
-                ]).Create();
-            
+                ], loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create();
+
             serviceCollection
                 .AddBrighter()
                 // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
                 // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-                .UseScheduler(new InMemorySchedulerFactory())
+                .UseScheduler(new InMemorySchedulerFactory(loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance))
                 .AddProducers((configure) =>
                 {
                     configure.ProducerRegistry = producerRegistry;
@@ -113,7 +113,7 @@ namespace GreetingsSender
                 // topic.Replace("{tenant}", tenantContext.Tenant)
                 return registry.LookupBy(topic).Publication;
             }
-            
+
             return base.Find<TRequest>(registry, context);
         }
     }

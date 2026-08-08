@@ -12,7 +12,7 @@ public class HandlerFactoryReleaseDisposalTests
     public void When_releasing_a_transient_disposable_handler_should_dispose_it_once()
     {
         //arrange
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddTransient<DisposableHandler>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
         var provider = collection.BuildServiceProvider();
@@ -34,7 +34,7 @@ public class HandlerFactoryReleaseDisposalTests
     public void When_releasing_a_scoped_disposable_handler_should_dispose_it_once()
     {
         //arrange
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddScoped<DisposableHandler>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Scoped });
         var provider = collection.BuildServiceProvider();

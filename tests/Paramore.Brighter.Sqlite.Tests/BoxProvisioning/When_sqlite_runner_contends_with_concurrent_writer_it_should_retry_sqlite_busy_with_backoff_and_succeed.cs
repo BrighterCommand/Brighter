@@ -53,7 +53,7 @@ public class SqliteRunnerSqliteBusyContentionTests : IAsyncLifetime
     {
         _connectionString = $"Data Source={_dbPath}";
         _config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        _runner = new SqliteBoxMigrationRunner(new SingleV1Catalog(), _config);
+        _runner = new SqliteBoxMigrationRunner(new SingleV1Catalog(), _config, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

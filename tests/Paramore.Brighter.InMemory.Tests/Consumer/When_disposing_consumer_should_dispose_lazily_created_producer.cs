@@ -42,7 +42,7 @@ public class AsyncInMemoryMessageConsumerDisposeTests
         var bus = new InternalBus();
         var timeProvider = new FakeTimeProvider();
         var routingKey = new RoutingKey("test.topic");
-        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider);
+        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         // Act & Assert - should not throw
         var exception = Record.Exception(() => consumer.Dispose());
@@ -57,7 +57,7 @@ public class AsyncInMemoryMessageConsumerDisposeTests
         var timeProvider = new FakeTimeProvider();
         var routingKey = new RoutingKey("test.topic");
         var scheduler = new SpyScheduler();
-        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider, scheduler: scheduler);
+        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider, scheduler: scheduler, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_EVENT),
@@ -80,7 +80,7 @@ public class AsyncInMemoryMessageConsumerDisposeTests
         var bus = new InternalBus();
         var timeProvider = new FakeTimeProvider();
         var routingKey = new RoutingKey("test.topic");
-        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider);
+        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         // Act & Assert - should not throw
         var exception = await Record.ExceptionAsync(async () => await consumer.DisposeAsync());
@@ -95,7 +95,7 @@ public class AsyncInMemoryMessageConsumerDisposeTests
         var timeProvider = new FakeTimeProvider();
         var routingKey = new RoutingKey("test.topic");
         var scheduler = new SpyScheduler();
-        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider, scheduler: scheduler);
+        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider, scheduler: scheduler, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_EVENT),

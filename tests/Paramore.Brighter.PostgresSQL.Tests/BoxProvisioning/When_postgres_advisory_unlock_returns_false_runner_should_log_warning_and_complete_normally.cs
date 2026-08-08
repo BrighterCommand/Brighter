@@ -61,7 +61,7 @@ public class PostgreSqlAdvisoryUnlockReturnsFalseTests : IAsyncLifetime
         var capturingLogger = new CapturingLogger();
 
         var runner = new PostgreSqlBoxMigrationRunner(
-            new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), fakeLock, capturingLogger);
+            new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, fakeLock, capturingLogger);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act — runner must not throw despite the false release result.

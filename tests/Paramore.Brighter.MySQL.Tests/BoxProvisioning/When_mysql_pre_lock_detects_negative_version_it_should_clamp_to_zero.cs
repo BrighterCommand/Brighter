@@ -67,7 +67,7 @@ public class MySqlPreLockNegativeVersionClampTests
             new MySqlOutboxMigrationCatalog(),
             new NoOpPayloadValidator(),
             config,
-            migrationRunner);
+            migrationRunner, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //Act
         await provisioner.ProvisionAsync();
@@ -91,7 +91,7 @@ public class MySqlPreLockNegativeVersionClampTests
             new MySqlInboxMigrationCatalog(),
             new NoOpPayloadValidator(),
             config,
-            migrationRunner);
+            migrationRunner, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //Act
         await provisioner.ProvisionAsync();
