@@ -68,4 +68,10 @@ public static class Diagnostics
         "Auto-registration suppressed by a manual registration method",
         "Brighter auto-registration is enabled but a manual [BrighterRegistrations] method is present, so the generated BrighterAssemblyRegistrations class was not emitted; remove the manual method or set <BrighterAutoRegistration>false</BrighterAutoRegistration>",
         "Brighter", DiagnosticSeverity.Info, isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor UnsupportedContainingType = new(
+        "BRGEN008",
+        "Brighter registration method must be in a non-nested, non-generic type",
+        "Method '{0}' marked with [BrighterRegistrations] must be declared in a non-nested, non-generic type; move it to a top-level type",
+        "Brighter", DiagnosticSeverity.Error, isEnabledByDefault: true);
 }

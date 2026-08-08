@@ -133,8 +133,18 @@ public static class SemanticModelReader
         if (method.Parameters.Length != 1 || !Same(method.Parameters[0].Type, markers.BrighterBuilder))
             return new DiagnosticInfo(Diagnostics.WrongSignature.Id, location, method.Name);
 
+        if (IsUnsupportedContainingType(method.ContainingType))
+            return new DiagnosticInfo(Diagnostics.UnsupportedContainingType.Id, location, method.Name);
+
         return null;
     }
+
+    // The writer emits the containing type as a single top-level, non-generic partial class, so a
+    // registration method nested inside another type (or in a generic type) would be emitted as a
+    // mismatched partial that never implements the user's method. Reject those placements with
+    // BRGEN008 rather than silently emit broken source.
+    private static bool IsUnsupportedContainingType(INamedTypeSymbol containingType) =>
+        containingType.ContainingType is not null || containingType.IsGenericType;
 
     private static MethodTarget ProjectMethod(IMethodSymbol method)
     {

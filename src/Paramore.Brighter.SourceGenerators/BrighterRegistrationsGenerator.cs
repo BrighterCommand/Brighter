@@ -255,6 +255,7 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
         [Diagnostics.WrongSignature.Id] = Diagnostics.WrongSignature,
         [Diagnostics.GenericMapperOrTransformIgnored.Id] = Diagnostics.GenericMapperOrTransformIgnored,
         [Diagnostics.NestedInOpenGeneric.Id] = Diagnostics.NestedInOpenGeneric,
+        [Diagnostics.UnsupportedContainingType.Id] = Diagnostics.UnsupportedContainingType,
     };
 
     private static DiagnosticDescriptor DescriptorFor(string id) =>

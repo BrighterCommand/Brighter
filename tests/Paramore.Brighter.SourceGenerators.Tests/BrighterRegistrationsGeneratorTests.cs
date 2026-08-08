@@ -603,6 +603,54 @@ public class BrighterRegistrationsGeneratorTests
     }
 
     [Fact]
+    public void NestedContainingType_ReportsBRGEN008_AndEmitsNoRegistration()
+    {
+        // A registration method declared inside another type would be emitted as a top-level partial
+        // of the same simple name — a different type that never implements the user's method. The
+        // generator must surface BRGEN008 rather than emit the mismatched (non-compiling) partial.
+        var result = RunDriver("""
+            using Paramore.Brighter;
+            using Paramore.Brighter.Extensions.DependencyInjection;
+
+            namespace App;
+
+            public partial class Outer
+            {
+                public static partial class Registrations
+                {
+                    [BrighterRegistrations]
+                    public static partial IBrighterBuilder AddFromThisAssembly(IBrighterBuilder builder);
+                }
+            }
+            """);
+
+        Assert.Contains(result.Diagnostics, d => d.Id == "BRGEN008");
+        Assert.DoesNotContain(result.GeneratedSources, gs => gs.HintName.EndsWith("__AddFromThisAssembly.g.cs"));
+    }
+
+    [Fact]
+    public void GenericContainingType_ReportsBRGEN008_AndEmitsNoRegistration()
+    {
+        // A generic containing type can't be reproduced as a matching partial (its type parameters
+        // and constraints aren't restated), so the method is unsupported and must report BRGEN008.
+        var result = RunDriver("""
+            using Paramore.Brighter;
+            using Paramore.Brighter.Extensions.DependencyInjection;
+
+            namespace App;
+
+            public static partial class Registrations<T>
+            {
+                [BrighterRegistrations]
+                public static partial IBrighterBuilder AddFromThisAssembly(IBrighterBuilder builder);
+            }
+            """);
+
+        Assert.Contains(result.Diagnostics, d => d.Id == "BRGEN008");
+        Assert.DoesNotContain(result.GeneratedSources, gs => gs.HintName.EndsWith("__AddFromThisAssembly.g.cs"));
+    }
+
+    [Fact]
     public void GenericMapperSplitAcrossPartials_ReportsSingleBRGEN005()
     {
         // Each base-list-bearing partial declaration reaches ReadClass and emits BRGEN005; the
