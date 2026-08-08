@@ -151,20 +151,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             _deadLetterRoutingKey = deadLetterRoutingKey;
             _invalidMessageRoutingKey = invalidMessageRoutingKey;
-            // LazyThreadSafetyMode.None: message pumps are single-threaded per consumer, so no
-            // thread-safety mode is needed. None does not cache exceptions, allowing the factory
-            // to retry on the next .Value access after a transient failure.
-            if (_deadLetterRoutingKey != null)
-            {
-                _deadLetterProducer = new Lazy<KafkaMessageProducer?>(
-                    () => CreateProducer(_deadLetterRoutingKey, Log.ErrorCreatingDLQ), LazyThreadSafetyMode.None);
-            }
-
-            if (_invalidMessageRoutingKey != null)
-            {
-                _invalidMessageProducer = new Lazy<KafkaMessageProducer?>(
-                    () => CreateProducer(_invalidMessageRoutingKey, Log.ErrorCreatingInvalidMessage), LazyThreadSafetyMode.None);
-            }
+            (_deadLetterProducer, _invalidMessageProducer) = CreateRejectionProducers();
 
             sessionTimeout ??= TimeSpan.FromSeconds(10);
             maxPollInterval ??= TimeSpan.FromSeconds(10);
@@ -227,15 +214,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             timeProvider ??= TimeProvider.System;
             _timeProvider = timeProvider;
             _lastFlushAt = _timeProvider.GetUtcNow().UtcDateTime;
-            _sweeperTimer = timeProvider.CreateTimer(_ =>
-            {
-                if (_isClosed)
-                {
-                    return;
-                }
-
-                SweepOffsets();
-            }, null, _sweepUncommittedInterval, _sweepUncommittedInterval);
+            _sweeperTimer = timeProvider.CreateTimer(
+                _ => SweepOffsetsIfOpen(), null, _sweepUncommittedInterval, _sweepUncommittedInterval);
 
             _consumer = new ConsumerBuilder<string, byte[]>(_consumerConfig)
                 .SetPartitionsAssignedHandler((_, list) =>
@@ -280,6 +260,31 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             TopicFindTimeout = topicFindTimeout.Value;
 
             EnsureTopic();
+        }
+
+        private (Lazy<KafkaMessageProducer?>? DeadLetter, Lazy<KafkaMessageProducer?>? Invalid)
+            CreateRejectionProducers()
+        {
+            // Message pumps are single-threaded per consumer. None also avoids caching transient factory failures.
+            var deadLetterProducer = _deadLetterRoutingKey is null
+                ? null
+                : new Lazy<KafkaMessageProducer?>(
+                    () => CreateProducer(_deadLetterRoutingKey, Log.ErrorCreatingDLQ), LazyThreadSafetyMode.None);
+            var invalidMessageProducer = _invalidMessageRoutingKey is null
+                ? null
+                : new Lazy<KafkaMessageProducer?>(
+                    () => CreateProducer(_invalidMessageRoutingKey, Log.ErrorCreatingInvalidMessage),
+                    LazyThreadSafetyMode.None);
+
+            return (deadLetterProducer, invalidMessageProducer);
+        }
+
+        private void SweepOffsetsIfOpen()
+        {
+            if (_isClosed)
+                return;
+
+            SweepOffsets();
         }
 
         /// <summary>

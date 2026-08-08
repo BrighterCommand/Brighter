@@ -102,6 +102,7 @@ namespace Paramore.Brighter
         /// <param name="messageTransformerFactoryAsync">The factory used to create a transformer pipeline for an async message mapper</param>
         /// <param name="tracer"></param>
         /// <param name="publicationFinder">A publication finder.</param>
+        /// <param name="loggerFactory">The factory used to create instance-scoped loggers.</param>
         /// <param name="outboxCircuitBreaker">Track unhealthy topics and allow for cooldown, should be registered as singleton and shared with Outbox</param>
         /// <param name="outbox">An outbox for transactional messaging, if none is provided, use an InMemoryOutbox</param>
         /// <param name="requestContextFactory"></param>
@@ -150,16 +151,8 @@ namespace Paramore.Brighter
                               throw new ConfigurationException("Missing Resilience Pipeline Registry for External Bus Services");
 
             requestContextFactory ??= new InMemoryRequestContextFactory();
-
-            if (mapperRegistry is null)
-                throw new ConfigurationException(
-                    "A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistry");
-            if (mapperRegistry is not IAmAMessageMapperRegistryAsync mapperRegistryAsync)
-                throw new ConfigurationException(
-                    "A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistryAsync");
-            if (messageTransformerFactory is null || messageTransformerFactoryAsync is null)
-                throw new ConfigurationException(
-                    "A Command Processor with an external bus must have a message transformer factory");
+            var mapperRegistryAsync = ValidateMessagingDependencies(
+                mapperRegistry, messageTransformerFactory, messageTransformerFactoryAsync);
 
             _timeProvider = timeProvider ?? TimeProvider.System;
             _lastOutStandingMessageCheckAt = _timeProvider.GetUtcNow();
@@ -176,12 +169,7 @@ namespace Paramore.Brighter
 
             //default to in-memory; expectation for an in memory box is Message and CommittableTransaction
             outbox ??= new InMemoryOutbox(TimeProvider.System);
-            outbox.Tracer = tracer;
-
-            if (outbox is IAmAnOutboxSync<TMessage, TTransaction> syncOutbox)
-                _outBox = syncOutbox;
-            if (outbox is IAmAnOutboxAsync<TMessage, TTransaction> asyncOutbox)
-                _asyncOutbox = asyncOutbox;
+            (_outBox, _asyncOutbox) = ConfigureOutbox(outbox, tracer);
             _outboxCircuitBreaker = outboxCircuitBreaker;
 
             _outboxTimeout = outboxTimeout;
@@ -193,6 +181,32 @@ namespace Paramore.Brighter
             _publicationFinder = publicationFinder;
 
             ConfigureCallbacks(requestContextFactory.Create());
+        }
+
+        private static (IAmAnOutboxSync<TMessage, TTransaction>? Sync, IAmAnOutboxAsync<TMessage, TTransaction>? Async)
+            ConfigureOutbox(IAmAnOutbox outbox, IAmABrighterTracer? tracer)
+        {
+            outbox.Tracer = tracer;
+            return (outbox as IAmAnOutboxSync<TMessage, TTransaction>,
+                outbox as IAmAnOutboxAsync<TMessage, TTransaction>);
+        }
+
+        private static IAmAMessageMapperRegistryAsync ValidateMessagingDependencies(
+            IAmAMessageMapperRegistry mapperRegistry,
+            IAmAMessageTransformerFactory messageTransformerFactory,
+            IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync)
+        {
+            if (mapperRegistry is null)
+                throw new ConfigurationException(
+                    "A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistry");
+            if (mapperRegistry is not IAmAMessageMapperRegistryAsync mapperRegistryAsync)
+                throw new ConfigurationException(
+                    "A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistryAsync");
+            if (messageTransformerFactory is null || messageTransformerFactoryAsync is null)
+                throw new ConfigurationException(
+                    "A Command Processor with an external bus must have a message transformer factory");
+
+            return mapperRegistryAsync;
         }
 
         /// <summary>

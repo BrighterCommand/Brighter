@@ -66,6 +66,12 @@ namespace Paramore.Brighter.ServiceActivator
     /// </summary>
     public abstract partial class MessagePump
     {
+        protected readonly record struct MessagePumpConfiguration(
+            ILoggerFactory LoggerFactory,
+            IAmABrighterTracer? Tracer,
+            InstrumentationOptions InstrumentationOptions,
+            TimeProvider? TimeProvider);
+
         protected readonly ILogger _logger;
 
         protected const string NoMessageReceivedDescription = "Could not receive message. Note that should return an MT_NONE from an empty queue on timeout";
@@ -148,24 +154,18 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         /// <param name="commandProcessor">Provides a correctly scoped command processor </param>
         /// <param name="requestContextFactory">Provides a request synchronizationHelper</param>
-        /// <param name="tracer">What is the <see cref="BrighterTracer"/> we will use for telemetry</param>
-        /// <param name="channel"></param>
-        /// <param name="instrumentationOptions">When creating a span for <see cref="Brighter.CommandProcessor"/> operations how noisy should the attributes be</param>
-        /// <param name="timeProvider">Allows you to override the time provider, for testing purposes</param>
+        /// <param name="configuration">Logging, tracing, instrumentation, and time configuration for the pump.</param>
         protected MessagePump(
             IAmACommandProcessor commandProcessor,
             IAmARequestContextFactory requestContextFactory,
-            IAmABrighterTracer? tracer,
-            ILoggerFactory loggerFactory,
-            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
-            TimeProvider? timeProvider = null)
+            MessagePumpConfiguration configuration)
         {
             CommandProcessor = commandProcessor;
             RequestContextFactory = requestContextFactory;
-            Tracer = tracer;
-            InstrumentationOptions = instrumentationOptions;
-            PumpTimeProvider = timeProvider ?? TimeProvider.System;
-            _logger = loggerFactory.CreateLogger<MessagePump>();
+            Tracer = configuration.Tracer;
+            InstrumentationOptions = configuration.InstrumentationOptions;
+            PumpTimeProvider = configuration.TimeProvider ?? TimeProvider.System;
+            _logger = configuration.LoggerFactory.CreateLogger<MessagePump>();
         }
 
 

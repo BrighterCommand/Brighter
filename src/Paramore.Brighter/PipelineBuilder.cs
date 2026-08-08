@@ -61,12 +61,10 @@ namespace Paramore.Brighter
             IAmAHandlerFactorySync syncHandlerFactory,
             ILoggerFactory loggerFactory,
             InboxConfiguration? inboxConfiguration = null)
+            : this(loggerFactory, inboxConfiguration)
         {
             _subscriberRegistry = subscriberRegistry;
             _syncHandlerFactory = syncHandlerFactory;
-            _inboxConfiguration = inboxConfiguration;
-            _loggerFactory = loggerFactory;
-            _logger = loggerFactory.CreateLogger<PipelineBuilder<TRequest>>();
         }
 
         /// <summary>
@@ -81,12 +79,10 @@ namespace Paramore.Brighter
             IAmAHandlerFactoryAsync asyncHandlerFactory,
             ILoggerFactory loggerFactory,
             InboxConfiguration? inboxConfiguration = null)
+            : this(loggerFactory, inboxConfiguration)
         {
             _subscriberRegistry = subscriberRegistry;
             _asyncHandlerFactory = asyncHandlerFactory;
-            _inboxConfiguration = inboxConfiguration;
-            _loggerFactory = loggerFactory;
-            _logger = loggerFactory.CreateLogger<PipelineBuilder<TRequest>>();
         }
 
         /// <summary>
@@ -99,8 +95,13 @@ namespace Paramore.Brighter
             IAmASubscriberRegistryInspector subscriberRegistryInspector,
             ILoggerFactory loggerFactory,
             InboxConfiguration? inboxConfiguration = null)
+            : this(loggerFactory, inboxConfiguration)
         {
             _subscriberRegistryInspector = subscriberRegistryInspector;
+        }
+
+        private PipelineBuilder(ILoggerFactory loggerFactory, InboxConfiguration? inboxConfiguration)
+        {
             _inboxConfiguration = inboxConfiguration;
             _loggerFactory = loggerFactory;
             _logger = loggerFactory.CreateLogger<PipelineBuilder<TRequest>>();

@@ -68,7 +68,8 @@ namespace Paramore.Brighter.ServiceActivator
             IAmABrighterTracer? tracer = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
             TimeProvider? timeProvider = null)
-            : base(commandProcessor, requestContextFactory, tracer, loggerFactory, instrumentationOptions, timeProvider)
+            : base(commandProcessor, requestContextFactory,
+                new MessagePumpConfiguration(loggerFactory, tracer, instrumentationOptions, timeProvider))
         {
             _mapRequestType = mapRequestType;
             _transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, messageTransformerFactory, loggerFactory, instrumentationOptions);
