@@ -44,7 +44,9 @@ internal static class RegistrationWriter
         // Write the banner line-by-line so it shares the writer's newline (consistent line endings).
         foreach (var line in GeneratedSource.HeaderLines)
             code.WriteLine(line);
-        code.WriteLine("#nullable enable");
+        // No "#nullable enable": the emitted source carries no nullable annotations, and the
+        // directive is an error (CS8370) below C# 8 — which is the default LangVersion for
+        // netstandard2.0 / net48 projects, and not something a consumer can opt out of.
         code.WriteLineNoTabs(string.Empty);
 
         var hasNamespace = !string.IsNullOrEmpty(model.Target.Namespace);

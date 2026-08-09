@@ -39,7 +39,6 @@ public class BrighterRegistrationsGeneratorTests
             },
         };
         // Post-init output is still emitted; only the per-method registration is skipped.
-        test.TestState.GeneratedSources.Add(AttributeFile());
 
         await test.RunAsync();
     }
@@ -72,7 +71,6 @@ public class BrighterRegistrationsGeneratorTests
 
         var test = MakeTest();
         test.TestState.Sources.Add(userCode);
-        test.TestState.GeneratedSources.Add(AttributeFile());
         test.TestState.GeneratedSources.Add(Registration("""
             builder.Handlers(r =>
             {
@@ -115,7 +113,6 @@ public class BrighterRegistrationsGeneratorTests
 
         var test = MakeTest();
         test.TestState.Sources.Add(userCode);
-        test.TestState.GeneratedSources.Add(AttributeFile());
         test.TestState.GeneratedSources.Add(Registration("""
             builder.MapperRegistry(r =>
             {
@@ -152,7 +149,6 @@ public class BrighterRegistrationsGeneratorTests
 
         var test = MakeTest();
         test.TestState.Sources.Add(userCode);
-        test.TestState.GeneratedSources.Add(AttributeFile());
         test.TestState.GeneratedSources.Add(Registration("""
             builder.AsyncHandlers(r =>
             {
@@ -211,7 +207,6 @@ public class BrighterRegistrationsGeneratorTests
 
         var test = MakeTest();
         test.TestState.Sources.Add(userCode);
-        test.TestState.GeneratedSources.Add(AttributeFile());
         test.TestState.GeneratedSources.Add(Registration("""
             builder.MapperRegistry(r =>
             {
@@ -265,7 +260,6 @@ public class BrighterRegistrationsGeneratorTests
         var test = MakeTest();
         test.TestState.Sources.Add(partA);
         test.TestState.Sources.Add(partB);
-        test.TestState.GeneratedSources.Add(AttributeFile());
         test.TestState.GeneratedSources.Add(Registration("""
             builder.Handlers(r =>
             {
@@ -314,8 +308,60 @@ public class BrighterRegistrationsGeneratorTests
 
         var test = MakeTest();
         test.TestState.Sources.Add(userCode);
-        test.TestState.GeneratedSources.Add(AttributeFile());
         test.TestState.GeneratedSources.Add(Registration("""
+            builder.MapperRegistry(r =>
+            {
+            });
+            """));
+
+        await test.RunAsync();
+    }
+
+    [Fact]
+    public async Task ProtectedInternalNestedHandler_IsRegistered()
+    {
+        // protected internal is (protected OR internal), so the generated holder — which lives in
+        // the same assembly — can name it. Treating it like private silently dropped a handler the
+        // user could see perfectly well from their own code. private protected cannot be named from
+        // an unrelated static class, so it stays out.
+        const string userCode = """
+            using Paramore.Brighter;
+            using Paramore.Brighter.Extensions.DependencyInjection;
+
+            namespace App;
+
+            public class GreetingCommand : Command
+            {
+                public GreetingCommand() : base(System.Guid.NewGuid()) { }
+            }
+
+            public class Outer
+            {
+                protected internal class ProtectedInternalNested : RequestHandler<GreetingCommand>
+                {
+                    public override GreetingCommand Handle(GreetingCommand command) => base.Handle(command);
+                }
+
+                private protected class PrivateProtectedNested : RequestHandler<GreetingCommand>
+                {
+                    public override GreetingCommand Handle(GreetingCommand command) => base.Handle(command);
+                }
+            }
+
+            public static partial class Registrations
+            {
+                [BrighterRegistrations]
+                public static partial IBrighterBuilder AddFromThisAssembly(this IBrighterBuilder builder);
+            }
+            """;
+
+        var test = MakeTest();
+        test.TestState.Sources.Add(userCode);
+        test.TestState.GeneratedSources.Add(Registration("""
+            builder.Handlers(r =>
+            {
+                r.Register<global::App.GreetingCommand, global::App.Outer.ProtectedInternalNested>();
+            });
             builder.MapperRegistry(r =>
             {
             });
@@ -351,7 +397,6 @@ public class BrighterRegistrationsGeneratorTests
 
         var test = MakeTest();
         test.TestState.Sources.Add(userCode);
-        test.TestState.GeneratedSources.Add(AttributeFile());
         test.TestState.GeneratedSources.Add(Registration("""
             builder.MapperRegistry(r =>
             {
@@ -381,7 +426,6 @@ public class BrighterRegistrationsGeneratorTests
 
         var test = MakeTest();
         test.TestState.Sources.Add(userCode);
-        test.TestState.GeneratedSources.Add(AttributeFile());
         test.TestState.ExpectedDiagnostics.Add(
             DiagnosticResult.CompilerError("BRGEN002").WithSpan(9, 37, 9, 56).WithArguments("AddFromThisAssembly"));
         // The C# compiler will also complain that the partial method has no implementation;
@@ -409,7 +453,6 @@ public class BrighterRegistrationsGeneratorTests
 
         var test = MakeTest();
         test.TestState.Sources.Add(userCode);
-        test.TestState.GeneratedSources.Add(AttributeFile());
         test.TestState.ExpectedDiagnostics.Add(
             DiagnosticResult.CompilerError("BRGEN003").WithSpan(9, 32, 9, 51).WithArguments("AddFromThisAssembly"));
         test.CompilerDiagnostics = CompilerDiagnostics.None;
@@ -435,7 +478,6 @@ public class BrighterRegistrationsGeneratorTests
 
         var test = MakeTest();
         test.TestState.Sources.Add(userCode);
-        test.TestState.GeneratedSources.Add(AttributeFile());
         test.TestState.ExpectedDiagnostics.Add(
             DiagnosticResult.CompilerError("BRGEN004").WithSpan(9, 44, 9, 63).WithArguments("AddFromThisAssembly"));
         test.CompilerDiagnostics = CompilerDiagnostics.None;
@@ -461,7 +503,6 @@ public class BrighterRegistrationsGeneratorTests
 
         var test = MakeTest();
         test.TestState.Sources.Add(userCode);
-        test.TestState.GeneratedSources.Add(AttributeFile());
         test.TestState.ExpectedDiagnostics.Add(
             DiagnosticResult.CompilerError("BRGEN001").WithSpan(9, 36, 9, 55).WithArguments("AddFromThisAssembly"));
 
@@ -496,7 +537,6 @@ public class BrighterRegistrationsGeneratorTests
 
         var test = MakeTest();
         test.TestState.Sources.Add(userCode);
-        test.TestState.GeneratedSources.Add(AttributeFile());
         test.TestState.GeneratedSources.Add(Registration("""
             builder.MapperRegistry(r =>
             {
@@ -550,7 +590,6 @@ public class BrighterRegistrationsGeneratorTests
         var test = MakeTest();
         test.TestState.Sources.Add(partA);
         test.TestState.Sources.Add(partB);
-        test.TestState.GeneratedSources.Add(AttributeFile());
         test.TestState.GeneratedSources.Add(Registration("""
             builder.Handlers(r =>
             {
@@ -726,7 +765,6 @@ public class BrighterRegistrationsGeneratorTests
         var test = MakeTest();
         test.TestState.Sources.Add(partA);
         test.TestState.Sources.Add(partB);
-        test.TestState.GeneratedSources.Add(AttributeFile());
         test.TestState.GeneratedSources.Add(Registration("""
             builder.MapperRegistry(r =>
             {
@@ -765,7 +803,6 @@ public class BrighterRegistrationsGeneratorTests
 
         var test = MakeTest();
         test.TestState.Sources.Add(userCode);
-        test.TestState.GeneratedSources.Add(AttributeFile());
         test.TestState.GeneratedSources.Add(Registration("""
             builder.Handlers(r =>
             {
@@ -782,15 +819,19 @@ public class BrighterRegistrationsGeneratorTests
     }
 
     [Fact]
-    public void RegistrationMethodWithoutBrighterReference_ReportsBRGEN009()
+    public void RegistrationMethodWithoutTheDependencyInjectionPackage_ReportsBRGEN009()
     {
-        // The attribute itself is generated by post-init, so it resolves even when Brighter isn't
-        // referenced — the user must get a diagnostic explaining why nothing was generated, not a
-        // bare CS8795 on the unimplemented partial method.
+        // The layered case: a domain library referencing core Paramore.Brighter (so the attribute
+        // resolves and the method compiles) but not the DI package, whose IBrighterBuilder the
+        // generator needs. The user must get a diagnostic explaining why nothing was generated, not
+        // a bare CS8795 on the unimplemented partial method. (Omitting core as well is not a case
+        // the generator has to cover: without it the attribute doesn't exist, and the compiler says
+        // so directly.)
         var references = new[]
         {
             MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
             MetadataReference.CreateFromFile(typeof(System.Linq.Enumerable).Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(Paramore.Brighter.IRequest).Assembly.Location),
         };
         var result = RunDriver(references, new[]
         {
@@ -847,7 +888,7 @@ public class BrighterRegistrationsGeneratorTests
     {
         var sb = new System.Text.StringBuilder();
         sb.Append(GeneratedSource.Header).Append('\n');
-        sb.Append("#nullable enable\n\n");
+        sb.Append('\n');
         sb.Append("namespace App\n{\n");
         sb.Append("    public static partial class Registrations\n    {\n");
         sb.Append("        ").Append(GeneratedSource.GeneratedCodeAttribute).Append('\n');
@@ -863,32 +904,4 @@ public class BrighterRegistrationsGeneratorTests
         sb.Append("        }\n    }\n}\n");
         return sb.ToString();
     }
-
-    private static (System.Type, string, string) AttributeFile() => (
-        typeof(BrighterRegistrationsGenerator),
-        "BrighterRegistrationsAttributes.g.cs",
-        (GeneratedSource.Header + "\n" + """
-        #nullable enable
-        namespace Paramore.Brighter
-        {
-            /// <summary>
-            /// Marks a <c>partial</c> method that the Brighter source generator will implement
-            /// to register handlers and message mappers discovered in the current compilation.
-            /// The method must be <c>static partial</c>, return <see cref="Paramore.Brighter.Extensions.DependencyInjection.IBrighterBuilder"/>,
-            /// and take a single <see cref="Paramore.Brighter.Extensions.DependencyInjection.IBrighterBuilder"/> parameter (extension methods supported).
-            /// </summary>
-            [global::System.AttributeUsage(global::System.AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
-            internal sealed class BrighterRegistrationsAttribute : global::System.Attribute
-            {
-            }
-
-            /// <summary>
-            /// Excludes a handler / mapper / transform type from automatic Brighter registration.
-            /// </summary>
-            [global::System.AttributeUsage(global::System.AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
-            internal sealed class ExcludeFromBrighterRegistrationAttribute : global::System.Attribute
-            {
-            }
-        }
-        """).Replace("\r\n", "\n"));
 }

@@ -56,10 +56,10 @@ internal sealed record RegistrationModel(
             switch (entry.Kind)
             {
                 case DiscoveredKind.SyncHandler:
-                    sync.Add(new HandlerEntry(entry.RequestTypeFullyQualified, entry.TypeFullyQualified, entry.IsOpenGeneric));
+                    sync.Add(new HandlerEntry(entry.RequestTypeFullyQualified, entry.TypeFullyQualified, entry.IsOpenGeneric, entry.RequestAllowsManyHandlers));
                     break;
                 case DiscoveredKind.AsyncHandler:
-                    async.Add(new HandlerEntry(entry.RequestTypeFullyQualified, entry.TypeFullyQualified, entry.IsOpenGeneric));
+                    async.Add(new HandlerEntry(entry.RequestTypeFullyQualified, entry.TypeFullyQualified, entry.IsOpenGeneric, entry.RequestAllowsManyHandlers));
                     break;
                 case DiscoveredKind.Mapper:
                     mappers.Add(new MapperEntry(entry.RequestTypeFullyQualified, entry.TypeFullyQualified));
@@ -81,6 +81,49 @@ internal sealed record RegistrationModel(
             new EquatableArray<MapperEntry>(asyncMappers),
             new EquatableArray<string>(transforms));
     }
+
+    /// <summary>
+    /// True when the model would register at least one thing. False for a compilation that contains
+    /// no Brighter types at all, where the emitted method would be a no-op.
+    /// </summary>
+    public bool HasRegistrations =>
+        Handlers.Count > 0
+        || AsyncHandlers.Count > 0
+        || Mappers.Count > 0
+        || AsyncMappers.Count > 0
+        || Transforms.Count > 0;
+
+    /// <summary>
+    /// Non-event requests this model registers more than one handler for, as (request, handler
+    /// names) pairs. Only an event is dispatched to several handlers; everything else goes through
+    /// <c>Send</c>, which insists on exactly one — so this is always a mistake, but it is only
+    /// detectable at dispatch time today (see the reflection scanner's identical behaviour), which
+    /// is precisely the class of failure this generator exists to move earlier.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Sync and async handlers are counted separately, because <c>Send</c> and <c>SendAsync</c>
+    /// resolve them independently: one sync and one async handler for the same request is a normal,
+    /// working arrangement. Open generics are excluded — they carry no concrete request type.
+    /// </para>
+    /// <para>
+    /// Only duplicates within this compilation are visible. Two handlers for one request contributed
+    /// by different assemblies and combined by the host cannot be seen here; catching those belongs
+    /// at composition time, where the registrations meet.
+    /// </para>
+    /// </remarks>
+    public IEnumerable<(string RequestType, IReadOnlyList<string> HandlerTypes)> DuplicateHandlers() =>
+        DuplicatesIn(Handlers).Concat(DuplicatesIn(AsyncHandlers));
+
+    private static IEnumerable<(string RequestType, IReadOnlyList<string> HandlerTypes)> DuplicatesIn(
+        EquatableArray<HandlerEntry> handlers) =>
+        handlers
+            .Where(static h => h is { IsOpenGeneric: false, RequestAllowsManyHandlers: false })
+            .GroupBy(static h => h.RequestTypeFullyQualified)
+            .Where(static g => g.Select(static h => h.HandlerTypeFullyQualified).Distinct().Count() > 1)
+            .Select(static g => (
+                g.Key,
+                (IReadOnlyList<string>)g.Select(static h => h.HandlerTypeFullyQualified).Distinct().OrderBy(static n => n, System.StringComparer.Ordinal).ToList()));
 }
 
 /// <summary>
@@ -91,7 +134,8 @@ internal sealed record RegistrationModel(
 internal sealed record HandlerEntry(
     string RequestTypeFullyQualified,
     string HandlerTypeFullyQualified,
-    bool IsOpenGeneric);
+    bool IsOpenGeneric,
+    bool RequestAllowsManyHandlers = true);
 
 internal sealed record MapperEntry(
     string RequestTypeFullyQualified,

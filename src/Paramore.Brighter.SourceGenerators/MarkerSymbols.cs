@@ -41,6 +41,13 @@ internal sealed class MarkerSymbols
     public INamedTypeSymbol? MessageTransformAsync { get; private set; }
     public INamedTypeSymbol? ExcludeAttribute { get; private set; }
 
+    /// <summary>
+    /// <c>IEvent</c>. Not part of <see cref="IsValid"/> — it is only used to decide whether
+    /// several handlers for one request type is a mistake (BRGEN012), so an unresolvable
+    /// <c>IEvent</c> costs a diagnostic, not the generation.
+    /// </summary>
+    public INamedTypeSymbol? Event { get; private set; }
+
     public bool IsValid =>
         BrighterBuilder is not null &&
         HandleRequests is not null &&
@@ -70,5 +77,6 @@ internal sealed class MarkerSymbols
         MessageTransform = c.GetTypeByMetadataName("Paramore.Brighter.IAmAMessageTransform"),
         MessageTransformAsync = c.GetTypeByMetadataName("Paramore.Brighter.IAmAMessageTransformAsync"),
         ExcludeAttribute = c.GetTypeByMetadataName("Paramore.Brighter.ExcludeFromBrighterRegistrationAttribute"),
+        Event = c.GetTypeByMetadataName("Paramore.Brighter.IEvent"),
     };
 }

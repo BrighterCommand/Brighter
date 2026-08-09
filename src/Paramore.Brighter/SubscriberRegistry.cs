@@ -41,15 +41,34 @@ namespace Paramore.Brighter
     {
         private readonly Dictionary<Type, List<Func<IRequest?, IRequestContext?, List<Type>>>> _observers = new();
         private readonly Dictionary<Type, HashSet<Type>> _allHandlerTypes = new();
-        
+        private readonly HashSet<(Type RequestType, Type HandlerType)> _directRegistrations = new();
+
         /// <summary>
         /// Adds a type to the registry, with a mapping to a single handler. We will add this to any existing handlers for this type
         /// </summary>
-        /// <remarks>Mainly intended for internal use, prefer to use <see cref="Register{TRequest,TImplementation}"/></remarks>
+        /// <remarks>
+        /// <para>Mainly intended for internal use, prefer to use <see cref="Register{TRequest,TImplementation}"/></para>
+        /// <para>
+        /// Registering the same (request type, handler type) pair more than once is a no-op: registration
+        /// is a set, not a list. Without this, combining two registration mechanisms that both cover a
+        /// handler — say <c>AutoFromAssemblies()</c> alongside a source-generated registration method —
+        /// would register it twice and fail at dispatch with "More than one handler was found", which is
+        /// never what the caller meant. Two <em>different</em> handlers for one command still collide
+        /// there, as they should.
+        /// </para>
+        /// <para>
+        /// Only unconditional registrations are de-duplicated. A handler registered through the routing
+        /// overload is left alone, because its router decides at dispatch time whether the handler
+        /// applies — that is not the same registration.
+        /// </para>
+        /// </remarks>
         /// <param name="requestType">The <see cref="IRequest"/> type that will be sent/published</param>
         /// <param name="handlerType">The <see cref="IHandleRequests"/> type that will handle the request </param>
         public void Add(Type requestType, Type handlerType)
         {
+            if (!_directRegistrations.Add((requestType, handlerType)))
+                return;
+
             if (!_observers.TryGetValue(requestType, out var observer))
                 _observers.Add(requestType, [(request, context) => [handlerType]] );
             else

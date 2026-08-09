@@ -58,11 +58,18 @@ internal enum DiscoveredKind
 /// One discovered registration candidate. Multiple entries may originate from the same class
 /// (e.g., a class implementing both a sync and async handler interface).
 /// </summary>
+/// <param name="RequestAllowsManyHandlers">
+/// True when the request type is an event, so having several handlers is legitimate. Only
+/// meaningful for handler entries, and only used to decide whether several handlers for the same
+/// request type is a mistake — everything that is not an event is dispatched with <c>Send</c>,
+/// which insists on exactly one handler.
+/// </param>
 internal sealed record DiscoveredEntry(
     DiscoveredKind Kind,
     string RequestTypeFullyQualified,
     string TypeFullyQualified,
-    bool IsOpenGeneric);
+    bool IsOpenGeneric,
+    bool RequestAllowsManyHandlers = true);
 
 /// <summary>
 /// Value-equatable snapshot of a Roslyn <see cref="Microsoft.CodeAnalysis.Location"/>. Carried

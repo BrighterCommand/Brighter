@@ -80,4 +80,34 @@ internal static class Diagnostics
         "Brighter is not referenced",
         "Method '{0}' is marked with [BrighterRegistrations] but the compilation does not reference Paramore.Brighter and Paramore.Brighter.Extensions.DependencyInjection, so no registration was generated; add the missing package reference",
         "Brighter", DiagnosticSeverity.Error, isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor AutoRegistrationBrighterNotReferenced = new(
+        "BRGEN010",
+        "Auto-registration is enabled but Brighter is not fully referenced",
+        "Brighter auto-registration is enabled but the compilation does not reference both Paramore.Brighter and Paramore.Brighter.Extensions.DependencyInjection, so no registrations were generated; add a reference to Paramore.Brighter.Extensions.DependencyInjection, declare a [BrighterRegistrations] holder in a project that has it, or set <BrighterAutoRegistration>false</BrighterAutoRegistration>",
+        "Brighter", DiagnosticSeverity.Warning, isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor AutoRegistrationCollision = new(
+        "BRGEN011",
+        "Auto-registration collides with a registration class from another assembly",
+        "Assembly '{0}' already exposes BrighterAssemblyRegistrations to this compilation (via InternalsVisibleTo), so generating it here makes calls to AddFromThisAssembly ambiguous; set <BrighterAutoRegistration>false</BrighterAutoRegistration> in one of the two projects, or replace the auto form with a named [BrighterRegistrations] holder",
+        "Brighter", DiagnosticSeverity.Warning, isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor DuplicateHandler = new(
+        "BRGEN012",
+        "A non-event request has more than one registered handler",
+        "Request '{0}' has {1} registered handlers ({2}); only an event may have more than one handler, so this fails when the request is sent — exclude the unwanted handlers with [ExcludeFromBrighterRegistration], or derive the request from Event if several handlers are intended",
+        "Brighter", DiagnosticSeverity.Warning, isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor InvalidAutoRegistrationValue = new(
+        "BRGEN013",
+        "BrighterAutoRegistration is not a valid boolean",
+        "The BrighterAutoRegistration property is set to '{0}', which is not 'true' or 'false', so auto-registration was treated as disabled; use <BrighterAutoRegistration>true</BrighterAutoRegistration> or <BrighterAutoRegistration>false</BrighterAutoRegistration>",
+        "Brighter", DiagnosticSeverity.Warning, isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor AutoRegistrationNameTaken = new(
+        "BRGEN014",
+        "The auto-registration class name is already declared in this compilation",
+        "This compilation already declares Paramore.Brighter.Extensions.DependencyInjection.BrighterAssemblyRegistrations, so auto-registration was not generated; rename that type, or set <BrighterAutoRegistration>false</BrighterAutoRegistration> and register through a [BrighterRegistrations] holder",
+        "Brighter", DiagnosticSeverity.Warning, isEnabledByDefault: true);
 }

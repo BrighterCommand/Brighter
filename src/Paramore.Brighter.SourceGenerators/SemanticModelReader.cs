@@ -227,9 +227,9 @@ internal static class SemanticModelReader
             case BrighterInterfaceKind.Transform:
                 return type.IsGenericType ? (null, false, true) : (null, true, false);
             case BrighterInterfaceKind.SyncHandler:
-                return (MakeHandlerEntry(DiscoveredKind.SyncHandler, type, requestType!), false, false);
+                return (MakeHandlerEntry(DiscoveredKind.SyncHandler, type, requestType!, markers), false, false);
             case BrighterInterfaceKind.AsyncHandler:
-                return (MakeHandlerEntry(DiscoveredKind.AsyncHandler, type, requestType!), false, false);
+                return (MakeHandlerEntry(DiscoveredKind.AsyncHandler, type, requestType!, markers), false, false);
             case BrighterInterfaceKind.Mapper:
                 return MapperClassification(DiscoveredKind.Mapper, type, requestType!);
             case BrighterInterfaceKind.AsyncMapper:
@@ -261,12 +261,31 @@ internal static class SemanticModelReader
         return BrighterInterfaceKind.None;
     }
 
-    private static DiscoveredEntry MakeHandlerEntry(DiscoveredKind kind, INamedTypeSymbol type, ITypeSymbol requestType)
+    private static DiscoveredEntry MakeHandlerEntry(
+        DiscoveredKind kind, INamedTypeSymbol type, ITypeSymbol requestType, MarkerSymbols markers)
     {
         if (IsOpenGeneric(type))
             return new DiscoveredEntry(kind, string.Empty, UnboundGenericName(type), IsOpenGeneric: true);
-        return new DiscoveredEntry(kind, FullyQualified(requestType), FullyQualified(type), IsOpenGeneric: false);
+        return new DiscoveredEntry(
+            kind,
+            FullyQualified(requestType),
+            FullyQualified(type),
+            IsOpenGeneric: false,
+            RequestAllowsManyHandlers: AllowsManyHandlers(requestType, markers));
     }
+
+    /// <summary>
+    /// Whether several handlers for this request type is legitimate. Only an event is dispatched to
+    /// many handlers; anything else — a command, or a bare <c>IRequest</c> — goes through
+    /// <c>Send</c>, which insists on exactly one. Carried on the entry so the duplicate-handler
+    /// check (BRGEN012) stays a pure function over the Roslyn-free model.
+    /// </summary>
+    /// <remarks>
+    /// If <c>IEvent</c> cannot be resolved we answer true, so an unexpected reference graph costs a
+    /// missed warning rather than a wave of false ones.
+    /// </remarks>
+    private static bool AllowsManyHandlers(ITypeSymbol requestType, MarkerSymbols markers) =>
+        markers.Event is null || requestType.AllInterfaces.Any(i => Same(i, markers.Event));
 
     private static (DiscoveredEntry? Entry, bool IsTransform, bool IsUnsupportedGeneric) MapperClassification(
         DiscoveredKind kind, INamedTypeSymbol type, ITypeSymbol requestType) =>
@@ -287,11 +306,15 @@ internal static class SemanticModelReader
         return IsReachableFromGeneratedCode(type);
     }
 
+    // The generated registration lives in the same assembly, so a type is nameable from it when
+    // every link in its containing chain is at least assembly-visible. `protected internal` is
+    // (protected OR internal), so it qualifies; `private protected` is (protected AND internal) and
+    // a bare `protected` is neither, so both are genuinely out of reach from a static holder.
     private static bool IsReachableFromGeneratedCode(INamedTypeSymbol type)
     {
         for (INamedTypeSymbol? t = type; t is not null; t = t.ContainingType)
         {
-            if (t.DeclaredAccessibility is not (Accessibility.Public or Accessibility.Internal))
+            if (t.DeclaredAccessibility is not (Accessibility.Public or Accessibility.Internal or Accessibility.ProtectedOrInternal))
                 return false;
         }
         return true;

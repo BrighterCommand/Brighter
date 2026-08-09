@@ -19,7 +19,11 @@ Date: 2026-06-04 (amended 2026-07-12: registration artefact reshaped from genera
 method bodies to a `RegistrationCatalog` data type — see Alternative 5 for the original shape and
 why it was superseded. Further amended same day: the zero-config `AddFromThisAssembly()` sugar is
 dropped in favour of a synthesised default holder (Alternative 7), and registration groups plus
-opt-in builder extensions are designed as Phase 2.)
+opt-in builder extensions are designed as Phase 2. Amended 2026-08-09 from exploratory testing of
+the shipped generator against throwaway solutions: marker attributes moved into core rather than
+being emitted, the empty auto form suppressed, handler registration made a set, and five
+silent-failure cases given diagnostics — see the sections of those names. The trimming/AOT claim is
+weakened to "paves the way", having been tested and found not to hold on its own.)
 
 ## Status
 
@@ -160,8 +164,9 @@ public static IBrighterBuilder AddRegistrations(this IBrighterBuilder builder, p
 It applies catalogs through the existing public surface:
 
 - **Handlers** via `builder.Handlers(...)` / `builder.AsyncHandlers(...)` using the existing
-  non-generic `Add(Type, Type)` on the registries — no `MakeGenericMethod`, so the trimming/AOT
-  benefit is preserved. Open-generic handlers use `EnsureHandlerIsRegistered` on
+  non-generic `Add(Type, Type)` on the registries — no `MakeGenericMethod`, so this path adds no
+  new obstacle to trimming (it does not, on its own, remove the existing ones — see Consequences).
+  Open-generic handlers use `EnsureHandlerIsRegistered` on
   `ServiceCollectionSubscriberRegistry` — a coupling that now lives **inside the library**, where
   it can evolve with the registry, instead of being frozen into every consumer's generated code.
 - **Mappers** via `builder.MapperRegistry(...)` (`Add` / `AddAsync`). `AddRegistrations` always
@@ -297,6 +302,51 @@ semantic-model object crossing a pipeline boundary:
 | Service provider | `RegistrationWriter` (generator) | *Doing* the text generation — turning a `RegistrationModel` into the catalog-construction source. Holds no Roslyn references, so it is unit-testable without a `Compilation`. |
 | Coordinator | `BrighterRegistrationsGenerator` (generator) | *Coordinating* the incremental pipeline: wiring the syntax providers, combining streams, and handing models to the writer. |
 
+### Marker attributes live in core, not in generated source
+
+`[BrighterRegistrations]` and `[ExcludeFromBrighterRegistration]` are declared in core
+`Paramore.Brighter`. The generator does not emit them.
+
+The usual generator idiom — emit the attributes as `internal` types via post-initialization output
+— was tried and withdrawn after exploratory testing, because the emitted file is *unconditional*:
+it lands in every compilation the analyzer is loaded into, whether or not anything is generated.
+That produced three failures a consumer could not opt out of:
+
+- The file carried `#nullable enable`, which is **error CS8370 below C# 8** — the default
+  `LangVersion` for `netstandard2.0` and `net48`. Adding the package to such a project broke the
+  build outright, including with `<BrighterAutoRegistration>false</BrighterAutoRegistration>`.
+- Because analyzers flow transitively through a `PackageReference` without `PrivateAssets="all"`,
+  that break reached *downstream* projects that had no Brighter reference of their own, with an
+  error message that never mentioned Brighter.
+- Two assemblies that see each other's internals — a library and its test project — each declared
+  a conflicting copy, giving `CS0436` on every use of the attribute.
+
+Declaring them in core costs nothing: a compilation that can host Brighter types already
+references core, which is where `IHandleRequests<>` lives. Emitted registration source likewise
+carries no `#nullable` directive, since it uses no nullable annotations — so the auto form now
+works at `LangVersion` 7.3, and only the hand-declared holder (extended partial methods) needs
+C# 9.
+
+### Nothing to register means nothing to call
+
+The auto form is suppressed when the compilation contains no Brighter types at all. An empty
+generated `AddFromThisAssembly()` compiles, reads at the call site as though it registered the
+solution's handlers, and registers nothing — the silent-miss failure this ADR exists to remove,
+reintroduced by the mechanism meant to fix it. It is reachable whenever handlers live in a library
+and the host takes the package too, which is the normal layered shape. Suppressing the empty case
+turns that into a compile error at the call site.
+
+### Registration is a set
+
+`SubscriberRegistry.Add(Type, Type)` treats an exact-duplicate `(requestType, handlerType)` pair as
+a no-op. Without it, the two mechanisms this ADR promises are "additive" are not: `.AutoFromAssemblies()`
+alongside a generated registration method registered every shared handler twice and failed at
+*dispatch* with "More than one handler was found" — so the documented migration path (adopt source
+generation, remove scanning later) was a runtime break. Only unconditional registrations are
+de-duplicated; the routing overload is untouched, because a router decides at dispatch time whether
+its handler applies and is therefore not the same registration. Two *different* handlers for one
+command still collide, as they should.
+
 ### Diagnostics
 
 Malformed holder declarations produce errors in the `BRGEN001`–`BRGEN004` range (not `partial`,
@@ -307,10 +357,41 @@ generic* type cannot be named with concrete type arguments, so it is reported as
 (warning) instead of emitting code that would not compile. `BRGEN007` (info) reports the
 suppressed auto form, as above.
 
+Five further diagnostics exist because exploratory testing found the generator failing *silently*
+in each case — which for a feature whose whole claim is "failures move to build time" is the worst
+available behaviour:
+
+- `BRGEN010` (warning): auto-registration is on but the compilation cannot resolve both core
+  Brighter and the DI package. This is the layered case — a domain library referencing only core —
+  and it previously built clean and registered nothing. Suppressed when the compilation also has a
+  `[BrighterRegistrations]` method, valid or not: `BRGEN009` reports the same root cause there and
+  carries a location, and one mistake deserves one diagnostic.
+- `BRGEN011` (warning): another assembly already exposes `BrighterAssemblyRegistrations` to this
+  compilation through `InternalsVisibleTo`, so both copies offer the same extension method and
+  every call site is ambiguous. The bare `CS0121` prints the same signature twice and offers no
+  remedy; the diagnostic names the other assembly and both ways out.
+- `BRGEN012` (warning): a non-event request has more than one registered handler. The scanner has
+  always permitted this and failed at dispatch — including via plain inheritance, where
+  `class B : A` and `A : RequestHandler<Cmd>` both register. The generator knows at build time, so
+  it says so. The rule is "everything except an event", not "commands": a bare `IRequest`
+  implementation is dispatched with `Send` and fails identically, and keying on `ICommand` missed
+  it. Sync and async handlers are counted separately, because `Send` and `SendAsync` resolve them
+  independently. Reported without a source location — carrying one would mean putting a
+  `LocationInfo` on every handler entry and churning the incremental cache on unrelated edits — so
+  the message names the offending handler types in full instead.
+- `BRGEN013` (warning): the `BrighterAutoRegistration` property holds something that is not a
+  boolean. Treating `1` silently as "off" loses every registration in the project to a typo.
+- `BRGEN014` (warning): the compilation's own source already declares
+  `BrighterAssemblyRegistrations` in Brighter's namespace, so emitting the auto form would be a
+  `CS0101` duplicate definition in a file the user cannot edit.
+
 Discovery covers both `class` and `record` declarations: handlers must derive from
-`RequestHandler<T>` (so are always classes), but mappers and transforms implement interfaces only
-and may legitimately be records. A type is reachable when it (and any containing type) is `public`
-**or** `internal` — see the accessibility note under Consequences.
+`RequestHandler<T>` (so are always classes — a record cannot inherit one), but mappers and
+transforms implement interfaces only and may legitimately be records. A type is reachable when it
+(and any containing type) is `public`, `internal` **or** `protected internal` — the last because
+that is (protected *or* internal), so the generated holder, which lives in the same assembly, can
+name it. A bare `protected` or a `private protected` type genuinely cannot be named from a static
+holder and stays out. See the accessibility note under Consequences.
 
 ## Consequences
 
@@ -337,9 +418,11 @@ and may legitimately be records. A type is reachable when it (and any containing
 - **Reduces the destructive variant of `MessageMappingException`.** Reliable compile-time
   registration means fewer messages reach the [ADR 0061](0061-reject_mapping_errors.md) reject path
   because a mapper/transform was missing.
-- **Trimming / AOT friendly and lower startup cost.** Catalogs are `typeof`-based data; the
-  applier uses the registries' existing non-generic `Add(Type, Type)` surface, so no
-  `MakeGenericMethod` is introduced.
+- **A step towards trimming / Native AOT.** Catalogs are `typeof`-based data and the applier uses
+  the registries' existing non-generic `Add(Type, Type)` surface, so no `MakeGenericMethod` is
+  introduced and *discovery* stops depending on reflection over loaded assemblies. This paves the
+  way for AOT; it does not deliver it — see the Negative consequences for what is still in the
+  way.
 - **Works at old LangVersions.** The declared-holder form is a plain `partial class`, usable from
   netstandard2.0/net48 libraries at default LangVersion 7.3.
 - **Broad SDK compatibility.** The generator assembly is built against Roslyn 4.8.0 (the first
@@ -376,9 +459,37 @@ and may legitimately be records. A type is reachable when it (and any containing
 - **Open-generic registration remains coupled to `ServiceCollectionSubscriberRegistry`** — but the
   coupling now lives inside `AddRegistrations` in the same package that owns the registry, so the
   two can only drift apart by a change within one package.
+- **Source generation alone does not make an application AOT- or trim-safe.** Verified by publishing
+  a minimal `PublishAot` app that registers through the generated method: it compiles, links and
+  produces a native binary, then throws on the first `Send` — *"A suitable constructor for type
+  'AotCommandHandler' could not be located"*, because the handler's constructor was trimmed.
+  Removing reflection from discovery was necessary but is nowhere near sufficient. The remaining
+  blockers are outside this change:
+  - The DI registration path registers handler, mapper and transform types by `Type` without
+    `[DynamicallyAccessedMembers(PublicConstructors)]`, so the trimmer has no reason to keep their
+    constructors (`IL2067`/`IL2087` on `ServiceCollectionSubscriberRegistry`,
+    `ServiceCollectionMessageMapperRegistryBuilder`, `ServiceCollectionTransformerRegistry`).
+    Annotating the concrete registry is not enough on its own — generated code calls through
+    `IAmASubscriberRegistry`, so the annotation has to start on the interface in core and flow down.
+    A `netstandard2.0` polyfill of the attribute is needed too, since it is not publicly visible
+    there.
+  - `HandlerFactory` builds handler types with `Type.MakeGenericType` (`IL3050`), and
+    `PipelineBuilder` reflects over handler attributes (`IL2075`).
+  - `EnsureFrameworkHandlersRegistered` — which every generated method calls — registers Brighter's
+    own pipeline handlers by scanning the framework assembly (`Assembly.GetTypes()`, `IL2026`), so a
+    generated registration still performs a reflection scan at startup. It is one small, fixed
+    assembly, so the startup cost is slight, but the dependency is real and the handler set is
+    known: it could be registered explicitly instead.
+  Making Brighter genuinely AOT-capable is tracked separately; this ADR claims only that it removes
+  the discovery-time reflection that would otherwise make that work impossible.
+- **Duplicate handlers are only detected within one compilation.** `BRGEN012` cannot see two
+  handlers for the same request contributed by different assemblies and combined by the host —
+  which is the multi-assembly composition this ADR exists to support. Catching those belongs at
+  composition time, in the applier, where the registrations actually meet.
 - **Handler inheritance can register a request type twice.** For `class B : A` where `A :
   RequestHandler<Cmd>`, both `A` and `B` report `IHandleRequests<Cmd>`, so both are registered. This
-  matches the reflection scanner's behaviour rather than introducing a new asymmetry.
+  matches the reflection scanner's behaviour rather than introducing a new asymmetry — but where the
+  scanner discovers it at dispatch time, the generator reports `BRGEN012` during the build.
 - **Off-interface extensions throw for custom `IBrighterBuilder` implementations.**
   `Transforms(...)`, `EnsureFrameworkHandlersRegistered(...)` (and `AddRegistrations` when it
   lands) downcast to `ServiceCollectionBrighterBuilder` and throw `InvalidOperationException`

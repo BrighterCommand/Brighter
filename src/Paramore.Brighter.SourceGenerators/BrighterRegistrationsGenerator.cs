@@ -27,6 +27,7 @@ using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Text;
 using Paramore.Brighter.SourceGenerators.Model;
 
@@ -61,40 +62,14 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
     private const string AutoClassName = "BrighterAssemblyRegistrations";
     private const string AutoMethodName = "AddFromThisAssembly";
 
-    // Normalised to LF: both operands are raw string literals whose newlines follow this source
-    // file's line endings at compile time, so without this the file could mix CRLF and the hard \n.
-    private static readonly string AttributeSource =
-        (GeneratedSource.Header + "\n" + AttributeBody).Replace("\r\n", "\n");
-
-    private const string AttributeBody = """
-        #nullable enable
-        namespace Paramore.Brighter
-        {
-            /// <summary>
-            /// Marks a <c>partial</c> method that the Brighter source generator will implement
-            /// to register handlers and message mappers discovered in the current compilation.
-            /// The method must be <c>static partial</c>, return <see cref="Paramore.Brighter.Extensions.DependencyInjection.IBrighterBuilder"/>,
-            /// and take a single <see cref="Paramore.Brighter.Extensions.DependencyInjection.IBrighterBuilder"/> parameter (extension methods supported).
-            /// </summary>
-            [global::System.AttributeUsage(global::System.AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
-            internal sealed class BrighterRegistrationsAttribute : global::System.Attribute
-            {
-            }
-
-            /// <summary>
-            /// Excludes a handler / mapper / transform type from automatic Brighter registration.
-            /// </summary>
-            [global::System.AttributeUsage(global::System.AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
-            internal sealed class ExcludeFromBrighterRegistrationAttribute : global::System.Attribute
-            {
-            }
-        }
-        """;
-
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        context.RegisterPostInitializationOutput(static ctx =>
-            ctx.AddSource("BrighterRegistrationsAttributes.g.cs", SourceText.From(AttributeSource, Encoding.UTF8)));
+        // [BrighterRegistrations] / [ExcludeFromBrighterRegistration] are declared in core
+        // Paramore.Brighter, not emitted here. Emitting them would put an identical internal type
+        // in every consuming assembly, which conflicts (CS0436, and CS0121 on the auto-registration
+        // extension method) as soon as two of those assemblies see each other through
+        // InternalsVisibleTo — the ordinary library/test-project pairing. It would also inject a
+        // generated file into every *transitive* consumer of a library that uses the generator.
 
         var methodCandidates = context.SyntaxProvider
             .ForAttributeWithMetadataName(
@@ -127,25 +102,29 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
                 batches.SelectMany(static b => (IEnumerable<DiagnosticInfo>)b.Diagnostics).Distinct()))
             .WithTrackingName(TrackingNames.DiscoveryDiagnostics);
 
+        var collectedCandidates = methodCandidates.Collect();
+
         // True when the compilation hand-writes at least one valid [BrighterRegistrations] method.
         // Used to suppress the auto class so the two paths can't both register (double registration,
         // or an ambiguous AddFromThisAssembly call when the manual method shares the name).
-        var hasManualRegistration = methodCandidates
-            .Collect()
+        var hasManualRegistration = collectedCandidates
             .Select(static (candidates, _) => candidates.Any(static c => c.Method is not null));
 
-        var autoEnabled = context.AnalyzerConfigOptionsProvider
-            .Select(static (provider, _) =>
-                provider.GlobalOptions.TryGetValue(AutoRegistrationProperty, out var v)
-                && bool.TryParse(v, out var b)
-                && b);
+        // True when the compilation *attempted* a manual registration, valid or not. A rejected
+        // attempt still means the user has been told what is wrong, with a location — so the auto
+        // path stays quiet rather than reporting the same missing reference a second time.
+        var attemptedManualRegistration = collectedCandidates
+            .Select(static (candidates, _) => candidates.Length > 0);
+
+        var autoSetting = context.AnalyzerConfigOptionsProvider
+            .Select(static (provider, _) => ReadAutoSetting(provider.GlobalOptions));
 
         // The generator only emits registrations when auto-registration is on or a manual method is
         // present. Gate discovery diagnostics (BRGEN005/006) on that, so a transitive analyzer
         // reference that generates nothing doesn't warn about the consumer's generic /
         // nested-in-open-generic types.
-        var generatorActive = autoEnabled.Combine(hasManualRegistration)
-            .Select(static (pair, _) => pair.Left || pair.Right);
+        var generatorActive = autoSetting.Combine(hasManualRegistration)
+            .Select(static (pair, _) => pair.Left.Enabled || pair.Right);
 
         context.RegisterSourceOutput(discoveryDiagnostics.Combine(generatorActive), static (spc, pair) =>
         {
@@ -172,11 +151,34 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
             if (candidate.Method is null)
                 return;
 
+            // Always emitted, even with nothing to register: the user declared a partial method, and
+            // leaving it unimplemented is a compile error (CS8795). The auto form has no such
+            // obligation and is suppressed when empty — see RegisterAutoRegistration.
             var model = RegistrationModel.From(candidate.Method, entries);
+            ReportDuplicateHandlers(spc, model);
             spc.AddSource(model.Target.HintName, SourceText.From(RegistrationWriter.Write(model), Encoding.UTF8));
         });
 
-        RegisterAutoRegistration(context, discovered, autoEnabled, hasManualRegistration);
+        RegisterAutoRegistration(context, discovered, autoSetting, hasManualRegistration, attemptedManualRegistration);
+    }
+
+    /// <summary>
+    /// The <c>BrighterAutoRegistration</c> MSBuild property as the generator sees it. A value that
+    /// is present but not a boolean is carried through rather than silently treated as "off", so
+    /// the user hears about the typo (BRGEN013) instead of losing all their registrations to it.
+    /// </summary>
+    private sealed record AutoSetting(bool Enabled, string? InvalidValue)
+    {
+        public static readonly AutoSetting Absent = new(false, null);
+    }
+
+    private static AutoSetting ReadAutoSetting(AnalyzerConfigOptions options)
+    {
+        if (!options.TryGetValue(AutoRegistrationProperty, out var value) || string.IsNullOrWhiteSpace(value))
+            return AutoSetting.Absent;
+        if (!bool.TryParse(value, out var enabled))
+            return new AutoSetting(false, value);
+        return new AutoSetting(enabled, null);
     }
 
     /// <summary>
@@ -188,21 +190,38 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
     private static void RegisterAutoRegistration(
         IncrementalGeneratorInitializationContext context,
         IncrementalValueProvider<EquatableArray<DiscoveredEntry>> discovered,
-        IncrementalValueProvider<bool> autoEnabled,
-        IncrementalValueProvider<bool> hasManualRegistration)
+        IncrementalValueProvider<AutoSetting> autoSetting,
+        IncrementalValueProvider<bool> hasManualRegistration,
+        IncrementalValueProvider<bool> attemptedManualRegistration)
     {
-        var brighterAvailable = context.CompilationProvider
-            .Select(static (c, _) => MarkerSymbols.Resolve(c).IsValid);
+        var facts = context.CompilationProvider
+            .Select(static (c, _) => CompilationFacts.For(c));
 
-        var autoInputs = autoEnabled.Combine(brighterAvailable).Combine(discovered).Combine(hasManualRegistration);
+        var manualSignals = hasManualRegistration.Combine(attemptedManualRegistration);
+        var autoInputs = autoSetting.Combine(facts).Combine(discovered).Combine(manualSignals);
 
         context.RegisterSourceOutput(autoInputs, static (spc, pair) =>
         {
-            var (((enabled, available), entries), hasManual) = pair;
-            if (!enabled)
+            var (((setting, compilationFacts), entries), (hasManual, attemptedManual)) = pair;
+
+            if (setting.InvalidValue is not null)
+                spc.ReportDiagnostic(Diagnostic.Create(
+                    Diagnostics.InvalidAutoRegistrationValue, Location.None, setting.InvalidValue));
+
+            if (!setting.Enabled)
                 return;
-            if (!available)
+
+            // Auto-registration was asked for, but discovery needs both core Brighter and the DI
+            // package to resolve its marker interfaces. Say so: the layered case (a domain library
+            // referencing core only) otherwise builds clean and registers nothing. Unless the user
+            // also wrote a [BrighterRegistrations] method — BRGEN009 has already said it there, on
+            // the declaration, and one root cause deserves one diagnostic.
+            if (!compilationFacts.BrighterAvailable)
+            {
+                if (!attemptedManual)
+                    spc.ReportDiagnostic(Diagnostic.Create(Diagnostics.AutoRegistrationBrighterNotReferenced, Location.None));
                 return;
+            }
 
             // A hand-written [BrighterRegistrations] method takes precedence; tell the user why the
             // auto class disappeared rather than leaving them to discover it.
@@ -212,10 +231,84 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
                 return;
             }
 
-            var target = BuildAutoTarget();
-            var model = RegistrationModel.From(target, entries);
+            // The name is spoken for in this compilation's own source; emitting would be CS0101 in
+            // generated code the user cannot edit.
+            if (compilationFacts.AutoClassNameTaken)
+            {
+                spc.ReportDiagnostic(Diagnostic.Create(Diagnostics.AutoRegistrationNameTaken, Location.None));
+                return;
+            }
+
+            var model = RegistrationModel.From(BuildAutoTarget(), entries);
+
+            // Nothing to register: emitting anyway would put an AddFromThisAssembly() on the builder
+            // that compiles, reads as if it registered the solution's handlers, and registers
+            // nothing — the exact silent-miss this generator exists to prevent. Leaving it out turns
+            // that into a compile error at the call site instead.
+            if (!model.HasRegistrations)
+                return;
+
+            if (compilationFacts.CollidingAssembly is not null)
+                spc.ReportDiagnostic(Diagnostic.Create(
+                    Diagnostics.AutoRegistrationCollision, Location.None, compilationFacts.CollidingAssembly));
+
+            ReportDuplicateHandlers(spc, model);
             spc.AddSource(model.Target.HintName, SourceText.From(RegistrationWriter.Write(model), Encoding.UTF8));
         });
+    }
+
+    /// <summary>
+    /// Compilation-derived inputs for the auto path, bundled into one value so the (cheap, but
+    /// per-edit) compilation lookups happen once and downstream stages compare by value.
+    /// </summary>
+    /// <param name="CollidingAssembly">
+    /// The name of a <em>referenced</em> assembly that already exposes
+    /// <c>BrighterAssemblyRegistrations</c> to this compilation, or null. Only an
+    /// <c>InternalsVisibleTo</c> grant can make another assembly's copy visible — the ordinary
+    /// library/test-project pairing — and when it does, both copies offer the same
+    /// <c>AddFromThisAssembly</c> extension and every call site becomes ambiguous (CS0121).
+    /// </param>
+    /// <param name="AutoClassNameTaken">
+    /// True when <em>this</em> compilation's own source already declares that type, which would make
+    /// the generated file a duplicate definition (CS0101).
+    /// </param>
+    private sealed record CompilationFacts(bool BrighterAvailable, string? CollidingAssembly, bool AutoClassNameTaken)
+    {
+        // Nothing generated by RegisterSourceOutput is in the compilation the generator sees, so
+        // every hit below is genuinely somebody's hand-written (or previously compiled) type.
+        public static CompilationFacts For(Compilation compilation)
+        {
+            string? collidingAssembly = null;
+            var nameTaken = false;
+
+            foreach (var type in compilation.GetTypesByMetadataName($"{AutoClassNamespace}.{AutoClassName}"))
+            {
+                if (SymbolEqualityComparer.Default.Equals(type.ContainingAssembly, compilation.Assembly))
+                    nameTaken = true;
+                else if (collidingAssembly is null && compilation.IsSymbolAccessibleWithin(type, compilation.Assembly))
+                    collidingAssembly = type.ContainingAssembly.Name;
+            }
+
+            return new CompilationFacts(MarkerSymbols.Resolve(compilation).IsValid, collidingAssembly, nameTaken);
+        }
+    }
+
+    /// <summary>
+    /// Reports BRGEN012 for every non-event request this model registers two or more handlers for.
+    /// The scanner has always allowed this and failed at dispatch; the generator can see it while
+    /// the build is still running.
+    /// </summary>
+    private static void ReportDuplicateHandlers(SourceProductionContext spc, RegistrationModel model)
+    {
+        foreach (var (requestType, handlerTypes) in model.DuplicateHandlers())
+        {
+            spc.ReportDiagnostic(Diagnostic.Create(
+                Diagnostics.DuplicateHandler,
+                Location.None,
+                requestType,
+                handlerTypes.Count,
+                string.Join(", ", handlerTypes)));
+        }
     }
 
     private static MethodTarget BuildAutoTarget() => new(
@@ -261,6 +354,11 @@ public sealed class BrighterRegistrationsGenerator : IIncrementalGenerator
         [Diagnostics.NestedInOpenGeneric.Id] = Diagnostics.NestedInOpenGeneric,
         [Diagnostics.UnsupportedContainingType.Id] = Diagnostics.UnsupportedContainingType,
         [Diagnostics.BrighterNotReferenced.Id] = Diagnostics.BrighterNotReferenced,
+        [Diagnostics.AutoRegistrationBrighterNotReferenced.Id] = Diagnostics.AutoRegistrationBrighterNotReferenced,
+        [Diagnostics.AutoRegistrationCollision.Id] = Diagnostics.AutoRegistrationCollision,
+        [Diagnostics.DuplicateHandler.Id] = Diagnostics.DuplicateHandler,
+        [Diagnostics.AutoRegistrationNameTaken.Id] = Diagnostics.AutoRegistrationNameTaken,
+        [Diagnostics.InvalidAutoRegistrationValue.Id] = Diagnostics.InvalidAutoRegistrationValue,
     };
 
     private static DiagnosticDescriptor DescriptorFor(string id) =>
