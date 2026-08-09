@@ -110,25 +110,29 @@ sequenceDiagram
 
     Note over CP,Nested: bracket 2 — EXECUTION time,<br/>per subscriber, around its own invocation.<br/>The two twins restore at different moments
     alt synchronous Publish, inside Parallel.ForEach
-        CP->>CP: Suppress()
-        CP->>Sub: Handle
-        Sub->>Nested: Send, Post or Publish on the singleton CommandProcessor
-        Nested->>Nested: reads IsSuppressed, so creates and owns its own scope
-        Sub-->>CP: returns
-        CP->>CP: restore, explicitly
+        loop for each subscriber
+            CP->>CP: Suppress()
+            CP->>Sub: Handle
+            Sub->>Nested: Send, Post or Publish on the singleton CommandProcessor
+            Nested->>Nested: reads IsSuppressed, so creates and owns its own scope
+            Sub-->>CP: returns
+            CP->>CP: restore, explicitly
+        end
     else asynchronous PublishAsync, inside the start loop
-        CP->>CP: Suppress()
-        CP->>Sub: HandleAsync — the invocation only
-        Sub-->>CP: a running Task, added to tasks
-        CP->>CP: restore, explicitly — the caller's flow, not the task's
-        Note over CP,Nested: the task carries the captured ExecutionContext,<br/>so everything nested beneath it stays suppressed
-        Sub->>Nested: Send, Post or Publish, on the branched flow
-        Nested->>Nested: reads IsSuppressed, so creates and owns its own scope
+        loop for each subscriber
+            CP->>CP: Suppress()
+            CP->>Sub: HandleAsync — the invocation only
+            Sub-->>CP: a running Task, added to tasks
+            CP->>CP: restore, explicitly — the caller's flow, not the task's
+            Note over CP,Nested: the task carries the captured ExecutionContext,<br/>so everything nested beneath it stays suppressed
+            Sub->>Nested: Send, Post or Publish, on the branched flow
+            Nested->>Nested: reads IsSuppressed, so creates and owns its own scope
+        end
         CP->>CP: await Task.WhenAll(tasks) — never bracketed
     end
 ```
 
-Two invariants are readable off the diagram, and a third is a rule about placement that the diagram shows the *consequence* of rather than the rule itself. Each is load-bearing.
+Three invariants are readable off the diagram, and the second of them is drawn rather than implied: every bracket sits inside a `loop for each subscriber`, on both twins, and only `await Task.WhenAll(tasks)` falls outside one. Each is load-bearing.
 
 **Neither bracket substitutes for the other.** Bracket 1 alone leaves a nested pipeline free to adopt. Bracket 2 alone is too late — every subscriber's handler has already been resolved from the caller's unsuppressed ambient before any of them runs, which is what AC-11 and AC-12 fail on.
 
@@ -259,7 +263,7 @@ Unchanged, and named so the omission is not read as an oversight: the describe-o
 **4. Bracket 2 — execution time, around that subscriber's own invocation.** The twins differ and must be written differently.
 
 - **Sync `Publish`** — inside the `Parallel.ForEach` body (`:481-497`), around `handleRequests.Handle(@event)` (`:489`), restored on every exit path of the body.
-- **Async `PublishAsync`** — around the **invocation** of `handleRequests.HandleAsync(@event, cancellationToken)` inside the start loop (`:596`), never around `Task.WhenAll` (`:601`). **FR-9(b) permits a second shape — a bracket around the subscriber's own *task* rather than its invocation — and it is not taken**: an async wrapper per subscriber costs an extra state machine and an extra frame on every handler's stack, and reaches the same observable, because the invocation-only bracket is live when the state machine captures its context and every continuation therefore runs suppressed. The bracket is live when the async method is called, so the `ExecutionContext` its state machine captures carries suppression into every continuation; disposing the bracket immediately afterwards restores the **caller's** flow without touching the running task's, because an `AsyncLocal` write in one flow does not propagate back to a flow that has already branched. Bracketing `Task.WhenAll` instead would suppress nothing during the synchronous prefix of each handler and would leave the caller's flow suppressed for the duration of the publish.
+- **Async `PublishAsync`** — around the **invocation** of `handleRequests.HandleAsync(@event, cancellationToken)` inside the start loop (`:596`), never around `Task.WhenAll` (`:601`). **FR-9(b) permits a second shape — a bracket around the subscriber's own *task* rather than its invocation — and it is not taken**: an async wrapper per subscriber costs an extra state machine and an extra frame on every handler's stack, and reaches the same observable, because the invocation-only bracket is live when the state machine captures its context and every continuation therefore runs suppressed. The bracket is live when the async method is called, so the `ExecutionContext` its state machine captures carries suppression into every continuation; disposing the bracket immediately afterwards restores the **caller's** flow without touching the running task's, because an `AsyncLocal` write in one flow does not propagate back to a flow that has already branched. Bracketing `Task.WhenAll` instead would suppress **nothing in any subscriber at any point in its life** — not merely its synchronous prefix — because by then every subscriber's task has branched, and a write made after a flow has branched does not reach it; and it would leave the caller's own flow suppressed for the duration of the await, though not past the publish (step 5a). Alternative 5 states the same from the other end.
 
 This bracket is what AC-47's second branch needs: a subscriber whose own pipeline has no `Scoped` participant takes no pipeline scope and asks nothing, yet a `Post` its handler issues at dispatch time must not adopt.
 
@@ -314,7 +318,7 @@ Stating which is which matters, because a reader who believes the async restores
 
 - **ADR 0039's per-subscriber isolation survives adoption.** A feature that would otherwise have quietly repealed a scoping decision taken three ADRs earlier is bounded by one bit, and the boundary is written where the decision it protects lives.
 - **The unreachable pipelines are reached.** A nested `Send`, `Post` or `Publish` issued from user code inside a subscriber's handler is suppressed without any signature change to `IAmACommandProcessor`, which is the only mechanism available for a pipeline core did not build (ADR 0033, C-5).
-- **Suppression costs nothing when nothing is published, and two `AsyncLocal` writes per subscriber when something is.** `IsSuppressed` is one `AsyncLocal` read per pipeline that takes a pipeline scope, and no bracket is ever established outside a publish. On the **consumer** side that qualifier matters: every `MT_EVENT` message dispatches through `Publish`/`PublishAsync` (`Reactor.cs:406`, `Proactor.cs:130`), so under sustained consumption the two writes per subscriber are on the hot path AC-23 measures. Each is an `AsyncLocal` set, which allocates an `ExecutionContext`; it is bounded by subscribers per message and does not grow with message count, so NFR-5 and NFR-6 hold — but it is not free there.
+- **Suppression costs nothing when nothing is published, and four `AsyncLocal` writes per subscriber when something is** — two brackets, each a set *and* an explicit restore, because this ADR writes both rather than inheriting either from `ExecutionContext` (step 5). `IsSuppressed` is one `AsyncLocal` read per pipeline that takes a pipeline scope, and a read allocates nothing; no bracket is ever established outside a publish. On the **consumer** side that qualifier matters: every `MT_EVENT` message dispatches through `Publish`/`PublishAsync` (`Reactor.cs:406`, `Proactor.cs:130`), so under sustained consumption those four writes per subscriber are on the hot path AC-23 measures. Each is an `AsyncLocal` set, which allocates an `ExecutionContext` — measured on `net10.0`, a full `Suppress()`/`Dispose()` bracket costs **248 bytes**, so a subscriber pays **two brackets, four `ExecutionContext` allocations and roughly 496 bytes** per message. ⚠ **A set allocates even when it writes the value the flag already holds**, so a bracket taken inside another bracket is not free either, and the "one bit" framing must not be read as implying it is. It is bounded by subscribers per message and does not grow with message count, so NFR-5 and NFR-6 hold — but it is not free there.
 - **The failure direction is toward isolation.** A leaked or undisposed bracket produces today's create-and-own behaviour, never unintended sharing of a caller's scope.
 - **A container package Brighter does not ship can honour FR-8** on exactly the same terms as the one it does, because the flag is public and names nothing container-specific (NFR-7).
 - **FR-19's inertness stops being an assumption and becomes an invariant.** C-14 took a pump thread to carry no usable ambient; a `Dispatcher` started from inside a live request falsifies that, and the pump-flow bracket closes it whatever the operator does. The cost is **one bracket per pump thread for the life of the process** — a set and a restore, not per message — so it is invisible to AC-23's measurement, and the same flag serves it as serves the subscribers.
@@ -362,7 +366,7 @@ Stating which is which matters, because a reader who believes the async restores
 
 **4. Reuse `RequestContext` to carry suppression.** `RequestContext.Bag` (`RequestContext.cs:61`) already carries application state across the pipeline, so a subscriber could set a key in its own copy. **Rejected — it cannot reach.** The pipelines suppression must reach are those a subscriber's handler creates by calling `Send`, `Post` or `Publish` on the singleton `CommandProcessor`, and those calls take an *optional* `RequestContext` that user code is under no obligation to pass — where it is omitted, `InitRequestContext` makes a fresh one. Suppression would then hold only for handlers that happened to forward the context, making FR-8 a documentation request rather than an invariant. `PipelineBuilder` also copies the context per subscriber, so the resolution-time bracket would be reasoning about which copy it is writing to. `RequestContext` carries application state along a request; suppression is a property of the flow, and the flow is what `AsyncLocal` names.
 
-**5. One bracket around the whole build loop, and one around the whole dispatch.** Two brackets instead of two per subscriber, and much less code. **Rejected on both halves.** Around the build loop it is *behaviourally* adequate — every subscriber resolves suppressed either way — and it is **rejected outright by FR-9(a)**, which requires suppression to be established around *each subscriber's own iteration* of the build. That settles it; the reasons behind the requirement are what is worth keeping in mind — the bracket's extent stops matching the unit FR-8 is written over, and it is the placement that invites giving the whole loop one pipeline scope, which is ADR 0039 undone. Around the dispatch it is wrong outright on the async path, for one reason and not two: a bracket around `Task.WhenAll` (`CommandProcessor.cs:601`) is established **after every handler's synchronous prefix has already run**, so the resolutions and the dispatch-time `Post`s that prefix issues are unsuppressed — which AC-12's nested-`SendAsync` and resolution-time clauses do detect. What it would *not* do is leave the caller's own flow suppressed after the publish: `PublishAsync` is an `async` method and the runtime restores its caller's `ExecutionContext` regardless (step 5a). The rejection rests on the synchronous-prefix harm alone; the caller-flow harm does not arise on the async path, and AC-12's clauses do not detect it.
+**5. One bracket around the whole build loop, and one around the whole dispatch.** Two brackets instead of two per subscriber, and much less code. **Rejected on both halves.** Around the build loop it is *behaviourally* adequate — every subscriber resolves suppressed either way — and it is **rejected outright by FR-9(a)**, which requires suppression to be established around *each subscriber's own iteration* of the build. That settles it; the reasons behind the requirement are what is worth keeping in mind — the bracket's extent stops matching the unit FR-8 is written over, and it is the placement that invites giving the whole loop one pipeline scope, which is ADR 0039 undone. Around the dispatch it is wrong outright on the async path, for one reason and not two: a bracket around `Task.WhenAll` (`CommandProcessor.cs:601`) is established **after every subscriber's task has already branched from the caller's flow**, and a write made after a flow has branched does not reach it — so that bracket suppresses **no subscriber at any point in its life**, not merely during its synchronous prefix. Every resolution a subscriber makes and every nested `Send`, `Post` or `Publish` it issues is unsuppressed, before its first `await` and after it alike; **probe-confirmed on `net10.0`** — three subscribers started unbracketed and then awaited under one bracket observe `IsSuppressed` as `false` in their synchronous prefix and after every subsequent `await`, while the caller's own flow inside the bracket observes `true`. AC-12's resolution-time and nested-`SendAsync` clauses both detect it. What it would *not* do is leave the caller's own flow suppressed after the publish: `PublishAsync` is an `async` method and the runtime restores its caller's `ExecutionContext` regardless (step 5a). The rejection rests on that harm alone — the whole of each subscriber's life, not its prefix; the caller-flow harm does not arise on the async path, and AC-12's clauses do not detect it. ⚠ **Stating the extent precisely matters for the same reason step 5a's closing paragraph gives**: a reader who takes the harm to be the prefix concludes that suppression established after a task has branched reaches that task once its prefix is over, which is the mechanism backwards.
 
 ## References
 
