@@ -39,7 +39,7 @@ This ADR **supersedes no prior ADR.** It completes the 0070–0072 sequence on t
 
 ### Where this ADR sits
 
-Seven ADRs deliver the parent requirement, one decision each. This is the seventh, and the only one whose whole subject is a single value arriving intact.
+Seven ADRs deliver the parent requirement, one decision each; the requirements constrain observable behaviour only and hand how it is implemented to design (C-13). This is the seventh, and the only one whose whole subject is a single value arriving intact.
 
 | ADR | Decides |
 | --- | --- |
@@ -445,7 +445,7 @@ Unchanged, and named so the omissions are not read as oversights: **`:39`'s `Try
 - ADR 0074 [0074-lifetime-validation-evaluation-site](0074-lifetime-validation-evaluation-site.md) — where the six scope-configuration rules are evaluated
 - ADR 0075 [0075-publish-subscriber-scope-suppression](0075-publish-subscriber-scope-suppression.md) — how a `Publish` subscriber suppresses adoption, for itself and everything nested beneath it
 
-- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-8, FR-14, FR-15, FR-16, FR-17, FR-18, FR-19, FR-20, FR-21, FR-22, FR-23, FR-24.3, FR-25.10, FR-25.11, FR-27; NFR-1, NFR-2, NFR-4, NFR-7, NFR-8; C-2, C-9, C-10, C-12, C-12a, C-15, C-16, C-18; D0b, D2, D3, D4, D5, D13, D14, D18; AC-20, AC-22, AC-24, AC-45, AC-48, AC-50
+- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-8, FR-14, FR-15, FR-16, FR-17, FR-18, FR-19, FR-20, FR-21, FR-22, FR-23, FR-24.3, FR-25.10, FR-25.11, FR-27; NFR-1, NFR-2, NFR-4, NFR-7, NFR-8; C-2, C-9, C-10, C-12, C-12a, C-13, C-15, C-16, C-18; D0b, D2, D3, D4, D5, D13, D14, D18; AC-20, AC-22, AC-24, AC-45, AC-48, AC-50
 - Related ADRs (cited by slug — ADR numbers are not unique in this repo, C-16):
   - `0073-aspnet-core-request-scope-package` [Proposed] — the first caller of this mechanism: the ASP.NET package, and the `AddBrighterRequestScope` extension whose argument this ADR carries to the options object
   - `0072-ambient-scope-adoption-seam` [Proposed] — the seam this option feeds: `IAmAScopeProvider`, `ScopeAffinity`, `ScopeAffinityPolicy`, and the positive `JoinAmbient` test that makes an out-of-range value fail safe

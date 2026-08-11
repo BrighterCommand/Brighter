@@ -39,7 +39,7 @@ This ADR **supersedes no prior ADR.** It is the application-facing end of the 00
 
 ### Where this ADR sits
 
-Seven ADRs deliver the parent requirement, one decision each. This is the fourth, and the only one an application author has to touch anything to use.
+Seven ADRs deliver the parent requirement, one decision each; the requirements constrain observable behaviour only and hand how it is implemented to design (C-13). This is the fourth, and the only one an application author has to touch anything to use.
 
 | ADR | Decides |
 | --- | --- |
@@ -349,7 +349,7 @@ Three things make this the only implementable choice rather than a preference. `
 - ADR 0075 [0075-publish-subscriber-scope-suppression](0075-publish-subscriber-scope-suppression.md) — how a `Publish` subscriber suppresses adoption, for itself and everything nested beneath it
 - ADR 0076 [0076-scope-affinity-option-and-write-through](0076-scope-affinity-option-and-write-through.md) — the affinity option, and how one setting reaches all four registration paths in any order
 
-- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-10, FR-12, FR-15, FR-16, FR-17, FR-18, FR-19, FR-21, FR-22 (its FR-22.4 rule, evaluated by ADR 0074), FR-23, FR-24, FR-25.10, FR-25.11; NFR-1, NFR-2, NFR-7, NFR-8; C-7, C-10, C-11, C-14, C-15; D1, D11, D13, D14, D16, D17; AC-14, AC-15, AC-16, AC-17, AC-18, AC-19, AC-22 (its AC-22.2 clause is NFR-2's mechanical guard), AC-29, AC-34, AC-48, AC-49; OOS-4
+- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-10, FR-12, FR-15, FR-16, FR-17, FR-18, FR-19, FR-21, FR-22 (its FR-22.4 rule, evaluated by ADR 0074), FR-23, FR-24, FR-25.10, FR-25.11; NFR-1, NFR-2, NFR-7, NFR-8; C-7, C-10, C-11, C-13, C-14, C-15; D1, D11, D13, D14, D16, D17; AC-14, AC-15, AC-16, AC-17, AC-18, AC-19, AC-22 (its AC-22.2 clause is NFR-2's mechanical guard), AC-29, AC-34, AC-48, AC-49; OOS-4
 - Related ADRs (cited by slug — ADR numbers are not unique in this repo, C-16):
   - `0076-scope-affinity-option-and-write-through` [Proposed] — the `DefaultScopeAffinity` property this extension's argument ends up on, `ScopeAffinityOverride`, and the write-through that carries it onto all four registration paths in any order
   - `0072-ambient-scope-adoption-seam` [Proposed] — the seam this package feeds: `IAmAScopeProvider`, `ScopeAffinity`, `IAmAServiceProviderScope`, the usability probe, and the plain-`AddSingleton` provider registration model this extension must use

@@ -35,7 +35,7 @@ This ADR **supersedes no prior ADR.** It extends the 0066–0069 sequence and ap
 
 ### Where this ADR sits
 
-Seven ADRs deliver the parent requirement, one decision each. This is the second, and the only one that is substantially structural: it discharges FR-13 for the handler family and FR-7, and is otherwise taken for the sake of the ADRs after it.
+Seven ADRs deliver the parent requirement, one decision each; the requirements constrain observable behaviour only and hand how it is implemented to design (C-13). This is the second, and the only one that is substantially structural: it discharges FR-13 for the handler family and FR-7, and is otherwise taken for the sake of the ADRs after it.
 
 | ADR | Decides |
 | --- | --- |
@@ -415,7 +415,7 @@ A fourth is **AC-51's**, and it is the one an implementation is most likely to f
 - ADR 0075 [0075-publish-subscriber-scope-suppression](0075-publish-subscriber-scope-suppression.md) — how a `Publish` subscriber suppresses adoption, for itself and everything nested beneath it
 - ADR 0076 [0076-scope-affinity-option-and-write-through](0076-scope-affinity-option-and-write-through.md) — the affinity option, and how one setting reaches all four registration paths in any order
 
-- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-6, FR-7, FR-13, NFR-1, NFR-3, NFR-4, NFR-5, NFR-6, NFR-7, NFR-8, C-1, C-2, C-6, D0, D2, D10; AC-7, AC-9, AC-14, AC-24, AC-33, AC-51. Deferred to a sibling and named here only where this ADR routes them: FR-8 (ADR 0075), FR-22 (ADR 0074), FR-24.1 and AC-30 (ADR 0072), FR-25 (the guidance page, declared in ADR 0074), FR-27.1 and AC-46 (ADR 0072 — routed there, but the amendment owed to both is recorded at this end too, on the contract row in *Key Components*)
+- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-6, FR-7, FR-13, NFR-1, NFR-3, NFR-4, NFR-5, NFR-6, NFR-7, NFR-8, C-1, C-2, C-6, C-13, D0, D2, D10; AC-7, AC-9, AC-14, AC-24, AC-33, AC-51. Deferred to a sibling and named here only where this ADR routes them: FR-8 (ADR 0075), FR-22 (ADR 0074), FR-24.1 and AC-30 (ADR 0072), FR-25 (the guidance page, declared in ADR 0074), FR-27.1 and AC-46 (ADR 0072 — routed there, but the amendment owed to both is recorded at this end too, on the contract row in *Key Components*)
 - Related ADRs (cited by slug — ADR numbers are not unique in this repo, C-16):
   - `0070-per-pipeline-di-scope-for-mapper-and-transform-factories` [Proposed] — `IAmAScope`, `CreatePipelineScope()` and the per-pipeline DI scope for transform pipelines; this ADR brings handler pipelines onto it
   - `0067-per-resolution-di-scope-for-transient-factory-instances` [Accepted] — the `Transient` per-resolution DI scope and `IsolateTransientHandlerScope`, preserved here; its `Terms` block defines the configured-lifetime and registration-lifetime axes this ADR uses and does not restate
