@@ -39,7 +39,7 @@ This ADR **supersedes no prior ADR.** It extends the 0066–0069 sequence.
 
 ### Where this ADR sits
 
-Seven ADRs deliver the parent requirement, one decision each. They are meant to be read in order; this is the first.
+Seven ADRs deliver the parent requirement, one decision each; the requirements constrain observable behaviour only and hand how it is implemented to design (C-13). They are meant to be read in order; this is the first.
 
 | ADR | Decides |
 | --- | --- |
@@ -90,7 +90,7 @@ The mapper/transform family cannot, as its interfaces stand. `Create(Type)` carr
 - **NFR-5 / NFR-6 — bounded, cheap.** Zero Brighter-created DI scopes live after the Nth message, and **at most one DI scope begin/release per pipeline**, never one per resolution.
 - **NFR-8 — `IAmAScope` must be documented as distinct from `IAmALifetime`.** `IAmALifetime` (`src/Paramore.Brighter/IAmALifetime.cs`) is `IDisposable` with `Add(IHandleRequests)`/`Add(IHandleRequestsAsync)`: it *tracks handler instances* for a handler pipeline and is implemented by `HandlerLifetimeScope`. It is not a DI scope and is not being replaced.
 - **C-1 — Microsoft's DI scopes do not nest.** A child scope created from a scoped provider is root-parented. This is why the unit has to be the pipeline (D0) and why there is no "scope within a scope" available.
-- **C-3 stands.** On the consumer a transform pipeline's DI scope ends before the handler pipeline's begins (`Proactor.cs:239` then `:241`). A `Scoped` dependency used by an unwrap transform and by the handler is two instances. That is intended and is not fixed here.
+- **C-3 stands.** On the consumer a transform pipeline's DI scope ends before the handler pipeline's begins (`Proactor.cs:239` then `:241`). A `Scoped` dependency used by an unwrap transform and by the handler is two instances. That is intended and is not fixed here — **OOS-9** is its requirements-level record, putting the sharing out of scope and leaving `RequestContext.Bag` as the carrier for state that must cross the boundary. The opted-in producer case is a different one: FR-16(b), which *is* in scope and which ADR 0072 discharges.
 - **D3 — a clean break.** `MapperLifetime.Scoped` stops caching across messages, with no compatibility flag (OOS-8). This is a deliberate behavioural change requiring a release note.
 - **D12 — participation is structural.** For a transform pipeline the mapper factory *and* the transformer factory both participate, **whether or not the mapper declares any transform**.
 
@@ -496,6 +496,8 @@ Two further guards are named elsewhere and not repeated here: the four container
 
 **8. `IAmAScope : IDisposable` only.** Halves the surface. **Rejected** by the settled decision on C-8, and for a concrete reason: the async pipeline releases through `DisposeAsync`, and on the Proactor's single-threaded synchronization context an `IAsyncDisposable`-only mapper released through a blocking synchronous path is a stall at best (see the guidance in `ServiceProviderLifetimeScope`, `:384-388`). `IAmATransformLifetimeAsync` already carries both interfaces for the same reason, and `Microsoft.Bcl.AsyncInterfaces` is already referenced on `netstandard2.0` (`Paramore.Brighter.csproj:24`), so this costs nothing.
 
+**9. Shutdown-hygiene disposal: have the `Dispatcher` dispose the consumer factories.** The alternative suggested on issue #4254, and the one the symptom invites: the factories are constructed once for the singleton `Dispatcher`, so give the `Dispatcher` the job of disposing them when it stops. **Rejected, and recorded as out of scope by OOS-12, which names it and declares it superseded by per-pipeline scoping.** It answers a different question from the one Defect 1 asks. Defect 1 is that a `Scoped` artefact is cached by type for the host's life, so message N+1 sees message N's state; disposing the factories when the host stops leaves every message in between sharing one artefact, which is the whole of the defect. It cannot reach Defect 1b either, since two factories each disposing their own scope is still two scopes. It covers only half the surface — the producer side's factories hang off the singleton `OutboxProducerMediator`, not the `Dispatcher`. And it would change the `Dispatcher`, which C-2 and OOS-5 forbid.
+
 ## References
 
 **Related ADRs — the other six of this set:**
@@ -507,7 +509,7 @@ Two further guards are named elsewhere and not repeated here: the four container
 - ADR 0075 [0075-publish-subscriber-scope-suppression](0075-publish-subscriber-scope-suppression.md) — how a `Publish` subscriber suppresses adoption, for itself and everything nested beneath it
 - ADR 0076 [0076-scope-affinity-option-and-write-through](0076-scope-affinity-option-and-write-through.md) — the affinity option, and how one setting reaches all four registration paths in any order
 
-- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-1 … FR-7, FR-13, FR-16, FR-20, FR-22, FR-24, FR-25, FR-27, NFR-1, NFR-3, NFR-4, NFR-5, NFR-6, NFR-7, NFR-8, C-1, C-2, C-3, C-6, C-8, C-17, C-18, C-19, D0, D3, D4, D7, D10, D12, OOS-7, OOS-8; AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-8, AC-21, AC-23, AC-24, AC-30, AC-33
+- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-1 … FR-7, FR-13, FR-16, FR-20, FR-22, FR-24, FR-25, FR-27, NFR-1, NFR-3, NFR-4, NFR-5, NFR-6, NFR-7, NFR-8, C-1, C-2, C-3, C-6, C-8, C-13, C-17, C-18, C-19, D0, D3, D4, D7, D10, D12, OOS-7, OOS-8, OOS-9, OOS-12; AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-8, AC-21, AC-23, AC-24, AC-30, AC-33
 - Related ADRs (cited by slug — ADR numbers are not unique in this repo, C-16):
   - `0066-release-factory-instances-on-an-opaque-lease` [Accepted] — why `Create` returns a `Lease<T>` carrying an opaque token, and therefore why it carries no pipeline identity of its own
   - `0067-per-resolution-di-scope-for-transient-factory-instances` [Accepted] — `Transient`'s per-resolution DI scope, unchanged here; its `Terms` block defines the configured-lifetime and registration-lifetime axes this ADR uses
