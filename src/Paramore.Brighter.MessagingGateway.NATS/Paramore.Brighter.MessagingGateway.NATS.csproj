@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>NATS and NATS JetStream messaging gateway implementation for Paramore.Brighter Command Processor. Provides decoupled message transport using NATS Core and JetStream with support for subjects, streams, pull consumers and durable consumers.</Description>
+    <Authors>Rafael Andrade</Authors>
+    <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <PackageTags>NATS;JetStream;Message Gateway;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability;Brighter</PackageTags>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj"/>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="NATS.Net"/>
+  </ItemGroup>
+</Project>
