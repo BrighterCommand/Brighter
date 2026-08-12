@@ -60,7 +60,7 @@ The review was written by hand while round 6 was still landing.
 
 | Review item | Filed as | Actually |
 | --- | --- | --- |
-| *"a `Dispatcher` started from inside a live request"* | ADR 0073 | **`0075:286`**, restated `0075:326`, `0075:349` |
+| *"a `Dispatcher` started from inside a live request"* | ADR 0073 | ⚠ **THIS ROW WAS WRONG AND S1's LANDING (`d6502deb5`) CORRECTED IT.** The quoted sentence is at **`0073:209` verbatim** — the review filed it correctly — and `0073:211` is the *"next paragraph"* the item objects to being preceded by it. `0075:286` is a **paraphrase twin**, restated `0075:326`, `0075:349`. Five sites moved, in two ADRs, not three in one |
 | *"This is a re-reading of FR-27.1's own words"* | ADR 0071 | **`0072:104`** |
 | *"Two kinds of flow reach that line already suppressed"* | ADR 0071 | **`0072:112`** |
 | *"Raising those **five** was rejected"* | quoted as five | **`0070:335` now says seven** — a round-6 commit changed the count |
@@ -290,11 +290,12 @@ Report the branch-2 and branch-3 list with every session, **even when it is empt
 | 1 | Rewrite all seven, or rewrite the worst three whole (0072, 0071, 0070) and apply targeted fixes to the rest? | all seven — the house style has to be uniform across a set that is read in order, and 0074 is the second-largest file |
 | 2 | Does approved-and-merged `0060` get D2's column rename? | leave it; note the divergence in the commit message. It is a record, not a live document |
 | 3 | S4 — is *"promote the exception to public"* your decision already, or a call to raise? | it is `design_principles.md:22-28` applied. `:23` puts a type on the boundary if it is used or tested from outside; `:27` prefers a public type with an internal constructor to an internal type. The exception is what a caller catches, so it belongs on the boundary — I read this as settled, not owed |
-| 4 | **S1+S2** — does the pump-flow bracket survive once its stated scenario is a usage error, given `0072:112` already says a consumer pipeline never adopts? | raise as **one** call. It reopens round-6 decisions 5 and 9 (`679ff229f`) and, if the bracket is kept, rewrites its justification at `0075:286`, `:326`, `:349` |
+| 4 | ✅ **ANSWERED — `d6502deb5`.** **S1+S2** — does the pump-flow bracket survive once its stated scenario is a usage error, given `0072:112` already says a consumer pipeline never adopts? | **KEEP the bracket, RE-GROUND its justification.** No mechanical change; the usage error is named as one and is not defended as a configuration. The three grounds that survive: a mixed host asks `JoinAmbient` with nobody choosing it for consumers (one `ConsumersOptions` instance, 0076's residue); a pump inherits its start flow and there is more than one start site, so the guarantee cannot be a property of the start site; NFR-7 — a provider Brighter has never heard of need not key on `HttpContext`. ⚠ **The control plane's `ConfigurationCommandHandler` is NOT a legitimate live-request start** (owner's correction while the call was open) — it is the API of a process that already hosts a `Dispatcher` |
 | 5 | S6 — is the borrowed-scope registration question an ADR fix or a new requirement? | raise as a call. `0072:480` covers only *detection*, not whether resolution works, so nothing in the set answers it — that reads as a requirement, and requirements changes go to the §18.8 true-up, not into an ADR |
 
 **Phase 2 is therefore four calls: S1+S2, S3, S5, S6** — with S4 confirmed against
-`design_principles.md:22-28` rather than argued.
+`design_principles.md:22-28` rather than argued. ✅ **S1+S2 is DONE (`d6502deb5`); three remain — S3,
+S5, S6.**
 
 ## 8. Tracking
 
