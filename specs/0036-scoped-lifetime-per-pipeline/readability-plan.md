@@ -88,7 +88,7 @@ is at **`0071:237` and `0072:238`**. Fix one end only and the set contradicts it
 | *"is not asserted over this property"* — hard to read | R | `0071:234` |
 | *"is not asserted over this property"* — tracking, not a decision → PROMPT.md | M | `0071:234` (same passage, different objection) |
 | *"ignored, not rejected"* — flagged three times | R | `0071:237` **and `0072:238`** (it has a twin) |
-| *"The dictionary survives as the no-handle path"* — speculative | **S3** | `0071:280` |
+| *"The dictionary survives as the no-handle path"* — speculative | **S3** | ✅ **ANSWERED AND LANDED — `bd44be1ed`.** Raised at `0071:280` (anchor exact); **fourteen sites moved, in FOUR ADRs** — 0071 (13), `0072:494`, `0073:287` and 0070 step 7a's ledger count, plus `docs/adr/index.md` |
 | *"AC-33 is that rule's regression guard"* — the cross-reference pattern | R | `0071:295` |
 | *"a re-reading of FR-27.1's own words"* — argument, not decision | R | `0072:104` |
 | *"Two kinds of flow reach that line"* — argument, not assertion | R | `0072:112` |
@@ -291,11 +291,12 @@ Report the branch-2 and branch-3 list with every session, **even when it is empt
 | 2 | Does approved-and-merged `0060` get D2's column rename? | leave it; note the divergence in the commit message. It is a record, not a live document |
 | 3 | S4 — is *"promote the exception to public"* your decision already, or a call to raise? | it is `design_principles.md:22-28` applied. `:23` puts a type on the boundary if it is used or tested from outside; `:27` prefers a public type with an internal constructor to an internal type. The exception is what a caller catches, so it belongs on the boundary — I read this as settled, not owed |
 | 4 | ✅ **ANSWERED — `d6502deb5`.** **S1+S2** — does the pump-flow bracket survive once its stated scenario is a usage error, given `0072:112` already says a consumer pipeline never adopts? | **KEEP the bracket, RE-GROUND its justification.** No mechanical change; the usage error is named as one and is not defended as a configuration. The three grounds that survive: a mixed host asks `JoinAmbient` with nobody choosing it for consumers (one `ConsumersOptions` instance, 0076's residue); a pump inherits its start flow and there is more than one start site, so the guarantee cannot be a property of the start site; NFR-7 — a provider Brighter has never heard of need not key on `HttpContext`. ⚠ **The control plane's `ConfigurationCommandHandler` is NOT a legitimate live-request start** (owner's correction while the call was open) — it is the API of a process that already hosts a `Dispatcher` |
+| 6 | ✅ **ANSWERED — `bd44be1ed`.** **S3** — is the no-handle dictionary path speculative code to drop, given the ADR concedes Brighter's own paths never take it? | **DROP IT**, on the owner's principle: ***tests that exercise non-production paths lack value, and we should re-write to exercise the production path***. `_lifetimeScopes`, `GetOrCreateLifetimeScope` and `ReleaseLifetimeScope` go; a non-`Singleton` `Create` with no usable handle throws `ConfigurationException`; both `Release` overloads keep their signatures and lose their bodies. ⚠ **The item's premise was half wrong and it did not change the answer**: *"if no path calls it"* is true of `src/` and false of `tests/` — six files, 26 facts, 21 on the fallback, and **AC-14 names two and requires them unchanged**. Those 21 become tests of a dead path, so they move; §19.9 row 1 is amended. The principle is recorded repo-wide in `.agent_instructions/testing.md` by `9fcfa2856`, a **separate** commit under the four-bucket rule |
 | 5 | S6 — is the borrowed-scope registration question an ADR fix or a new requirement? | raise as a call. `0072:480` covers only *detection*, not whether resolution works, so nothing in the set answers it — that reads as a requirement, and requirements changes go to the §18.8 true-up, not into an ADR |
 
 **Phase 2 is therefore four calls: S1+S2, S3, S5, S6** — with S4 confirmed against
-`design_principles.md:22-28` rather than argued. ✅ **S1+S2 is DONE (`d6502deb5`); three remain — S3,
-S5, S6.**
+`design_principles.md:22-28` rather than argued. ✅ **S1+S2 is DONE (`d6502deb5`) and S3 is DONE
+(`bd44be1ed`, plus `9fcfa2856` for the principle); two remain — S5, S6.**
 
 ## 8. Tracking
 
