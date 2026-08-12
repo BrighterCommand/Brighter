@@ -71,13 +71,14 @@ nesting level.
 | Heading | Holds |
 | --- | --- |
 | `## Context` | 2–4 sentences in plain language: what exists, what is wrong with it, why that matters. Do not open by naming four interfaces — a reader cannot hold type names before they know the problem |
+| `### Scope` | what the ADR covers, as lists rather than narrative. **Parent requirement** — the link. **In scope** — one bullet per FR/NFR it discharges, each naming the mechanism that makes the requirement true, plus a bullet for any scope no tagged requirement carries. **Out of scope** — one bullet per boundary a reader could reasonably mistake, each naming the ADR that does cover it. Where this ADR contributes to a requirement another ADR discharges, say so on the bullet and name the owner |
 | `### Where this ADR sits` | **only when the ADR is one of a set** — a table mapping each ADR in the set to the one thing it decides, this one bolded and marked *(this one)*, then the single sentence that unifies them |
 | `### {the problem}` | named as a behaviour, not as a structure. Lead with the orienting artefact — a comparison table or a diagram — then the consequences, then the mechanism that produces them |
 | `### The forces` | one bullet per constraint that narrows the solution space, so the Decision's shape is legible before it is stated |
 | `## Decision` | the decision in **one bold sentence**, then one short paragraph on the shape it takes. No signatures, no file paths |
 | `### The mechanism, end to end` | **behaviour**: what happens, in what order. Lead with a sequence diagram, flowchart or decision-ladder table, then read the load-bearing invariants off it |
 | `### Where the pieces live` | **structure**: a flowchart with one subgraph per assembly, showing what is new and which way dependencies point |
-| `### Key Components` | opens with `#### The roles, and what each is responsible for` — a table of Role / Type / Stereotype (**knowing**, **doing**, **deciding**) / Responsibility. Then each significant type with a contract table (Member / Input / Output / Error conditions), then `#### Where each type is touched` (Assembly / Type / Change), closing with what is deliberately **unchanged** |
+| `### Key Components` | opens with `#### The roles, and what each is responsible for` — a table of **Role** / **Type** / **Responsibilities** / **Responsibility classifier** / **Collaborators**. *Role* is one phrase saying what the type does; a type needing more than one phrase has too many responsibilities. *Responsibilities* may be several. *Responsibility classifier* is **knowing**, **doing** or **deciding**, and one type may carry more than one. *Collaborators* are the types it works with to meet them. Then each significant type with a contract table (Member / Input / Output / Error conditions), then `#### Where each type is touched` (Assembly / Type / Change), closing with what is deliberately **unchanged** |
 | `### Technology Choices` | why this mechanism and not the obvious one, each as a bolded question |
 | `### Implementation Approach` | the implementor's section, and the only place `file:line` density belongs. Numbered, in commit order, structural changes separated from behavioural ones per Tidy First |
 | `## Consequences` | `### Positive`, `### Negative`, `### Risks and Mitigations`. An ADR with only positive consequences reads as unreviewed |
@@ -102,11 +103,42 @@ will scroll and the human will stop reading.
 - **Lead each section with the artefact that orients** — a table, a diagram, a contract — then
   write prose that reads the consequences off it. Never make the reader assemble a picture from
   paragraphs and then show them the diagram.
-- **Concentrate the citations.** `file:line` references are load-bearing for the implementor and
-  pure noise inside an argument. At most one per forces or Consequences bullet.
+- **Concentrate the citations — `file:line` and requirement IDs alike.** Both are load-bearing for
+  a reviewer cross-checking coverage and pure noise inside an argument. State the design point in
+  prose, then list the FRs and ACs it satisfies as bullets beneath it. A reader following the
+  design skims the list; a reviewer checking coverage reads only the list. Never thread three
+  requirement IDs through one sentence. At most one `file:line` per forces or Consequences bullet.
+  **Prefer a slightly longer document to a terse one:** a paragraph plus a list is more readable
+  than one dense sentence, and it serves both readers instead of neither.
 - **Name what is unchanged**, so a reviewer does not read an omission as an oversight.
 - **State the unifying rule once, in one sentence**, and repeat that exact sentence in every
   sibling ADR that applies it. If it will not fit in one sentence, it is not yet one decision.
+- **Emphasis is a symptom.** Bold marks the one sentence a section turns on; the Decision's single
+  bold sentence is the model. If a paragraph needs bold to make its point findable, the paragraph
+  is wrong — split it, or lead with the point. A section with bold in every paragraph has
+  emphasis in none of them.
+
+**Sentence construction.** Follow these rules from
+[Simplified Technical English](https://www.asd-europe.org/standards-specifications/simplified-technical-english/),
+so that a non-native reader and a reader in a hurry get the same meaning:
+
+- **One idea per sentence, and no more than about 25 words.** A sentence carrying three
+  cross-references is two sentences and a list.
+- **Active voice with a named actor.** *"The factory disposes the scope"*, not *"the scope is
+  disposed"*.
+- **No ambiguous `this`, `it` or `that`.** Repeat the noun. A reader should never have to search
+  backwards for a referent.
+- **One term per concept, every time.** Do not vary the wording for elegance; vary it only when
+  the thing itself differs.
+- **No noun stacks.** *"the pipeline scope handle release ordering rule"* is a sentence pretending
+  to be a phrase.
+- **State the decision, not the argument that reached it.** *"Raising those five was rejected"*
+  records a deliberation; the ADR records what is true. Rejected options belong in
+  `## Alternatives Considered`, with their reasons.
+
+This is a named subset of the standard, not the full ASD-STE100: the value is in the writing rules,
+and the controlled dictionary would fight this domain's vocabulary (*ambient*, *affinity*,
+*discharge*, *borrow*, *bracket*).
 
 *Writing tone for design documents* below applies to every ADR and is not optional: an ADR that
 records what a participant in the authoring conversation said, rather than what was decided and
@@ -123,6 +155,11 @@ Choose the form by what is being shown:
 | assemblies and packages, and which way dependencies point | `flowchart` with one `subgraph` per assembly |
 | a small branch — three or four outcomes | `flowchart` |
 | a protocol with more than about four decision points | a **decision-ladder table**, not a flowchart |
+| the types a decision introduces, and how they relate — implements, holds, creates | `classDiagram` |
+
+Reach for a diagram sooner than feels necessary. If a paragraph needs three cross-references
+before it makes sense, draw it: a class diagram for how types relate, a sequence diagram for who
+calls whom and in what order.
 
 A flowchart with nine decision nodes renders as an unreadable column with edges spanning its whole
 height. When a protocol branches that much, write it as a numbered table — one row per situation,
@@ -143,7 +180,14 @@ Mermaid traps that pass review and then fail to render:
 
 ### Before an ADR is committed
 
-Run both checks every time — they catch defects that survive a careful read.
+Run these checks every time — they catch defects that survive a careful read.
+
+**Re-read the whole document.** Correcting statements one at a time produces a document that
+contradicts itself: a fix lands, and a sentence three sections away that depended on the old
+wording is now false, redundant, or an argument for something no longer in the ADR. After any
+round of statement-level edits, read the ADR start to finish and fix what the fixes broke. This is
+a separate pass from the edits themselves, and it is where near-duplicate paragraphs, stale
+summaries and orphaned rationale are found.
 
 **Render every mermaid diagram.** Roughly one diagram in six fails on first draft, and a diagram
 that does not render is a broken ADR that looked fine in review. Extract each mermaid block to its
