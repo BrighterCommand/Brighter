@@ -12,7 +12,11 @@
     - Preserve Flexibility
         - Design objects so interior details can be readily changed
     - Objects have roles.
+        - A role is the collection of an object's responsibilities, expressed as one phrase saying what the object does.
+        - If you cannot express it in one phrase, the object has too many responsibilities. Responsibility-driven design restates the single responsibility principle as the **single role principle**.
+        - An object may hold several responsibilities, and they may be of different kinds — knowing, doing and deciding.
         - Common roles are stereotypes: information holder, structurer, service provider, coordinator, controller, interfacer
+        - Name an object's **collaborators** — the objects it works with to meet its responsibilities. Describing a role without them is half the picture, and a responsibility with no collaborator is either self-contained or in the wrong object.
 - Support optionality through interfaces.
     - If an interface describes a role that an implementor provides, use the naming convention IAmA* e.g. `public interface IAmAProducerRegistry { }`
     - Consider if a user might wish to override our implementation of a public class with theirs, for TDD, or extension.
