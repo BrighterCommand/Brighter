@@ -81,15 +81,15 @@ is at **`0071:237` and `0072:238`**. Fix one end only and the set contradicts it
 | *"surfaces its inner disposal failure"* — needs a sequence diagram | R | `0070:348` |
 | argument-as-record, not decision (the *"Raising those … was rejected"* pattern) | R | **9 lines across six ADRs**: `0070:335`, `0070:407`, `0071:365`, `0073:209`, `0073:221`, `0073:244`, `0074:401`, `0076:263`, `0076:345` |
 | move more argument into `## Alternatives Considered` bullets | R | `0070:481` is that section's head |
-| *"FR-13 divides by family rather than by clause"* | R | `0071:30`, and `0070:32`, `0070:34` |
-| *"`Transient` is not only `Scoped`'s poor relation"* — wants a diagram | R | `0071:104` |
-| NFR-4 — what the `ConcurrentDictionary` buys; convention over restriction | R | `0071:108` |
-| *"The member's **shape** is ADR 0070's"* — unreadable | R | `0071:209` |
-| *"is not asserted over this property"* — hard to read | R | `0071:234` |
-| *"is not asserted over this property"* — tracking, not a decision → PROMPT.md | M | `0071:234` (same passage, different objection) |
-| *"ignored, not rejected"* — flagged three times | R | `0071:237` **and `0072:238`** (it has a twin) |
+| *"FR-13 divides by family rather than by clause"* | R | ✅ **`0071:30` CLOSED in `3537c68cd`** — restated in the reviewer's own words. ⚠ **`0070:32` and `0070:34` are STILL OPEN** and belong to 0070's own rewrite |
+| *"`Transient` is not only `Scoped`'s poor relation"* — wants a diagram | R | ✅ **CLOSED, `3537c68cd`** — a `flowchart` with one subgraph per configured lifetime, under a new `#### What a Transient handler pipeline gets` |
+| NFR-4 — what the `ConcurrentDictionary` buys; convention over restriction | R | ✅ **CLOSED, `3537c68cd`** — promoted out of a 224-word forces bullet into its own `#### What replaces the dictionary's atomicity`, as the review asked |
+| *"The member's **shape** is ADR 0070's"* — unreadable | R | ✅ **CLOSED, `3537c68cd`** — split into what transfers from 0070 and what does not |
+| *"is not asserted over this property"* — hard to read | R | ✅ **CLOSED, `3537c68cd`** — contract cell cut to two sentences |
+| *"is not asserted over this property"* — tracking, not a decision → PROMPT.md | M | ✅ **SETTLED BY OWNER RULING, `3537c68cd`** — **SPLIT**, not relocated: deleting it outright would have falsified `0072:161` and orphaned §19.9 row 4's anchors. Design facts stay in the cell; the amendment record moves beneath the table. Both ends in one commit |
+| *"ignored, not rejected"* — flagged three times | R | ✅ **CLOSED AT BOTH ENDS** — `0072:238` in `f30358c5e`, `0071:237` in `3537c68cd`. ⚠ **They are NOT twins and were NOT harmonised**; each now names the other as deciding a different question about a different object |
 | *"The dictionary survives as the no-handle path"* — speculative | **S3** | ✅ **ANSWERED AND LANDED — `bd44be1ed`.** Raised at `0071:280` (anchor exact); **fourteen sites moved, in FOUR ADRs** — 0071 (13), `0072:494`, `0073:287` and 0070 step 7a's ledger count, plus `docs/adr/index.md` |
-| *"AC-33 is that rule's regression guard"* — the cross-reference pattern | R | `0071:295` |
+| *"AC-33 is that rule's regression guard"* — the cross-reference pattern | R | ✅ **CLOSED, `3537c68cd`** — the review's worked example. Now: the rule in prose, then a three-bullet list of criteria, AC-7 included as the one that is *not* the criterion |
 | *"a re-reading of FR-27.1's own words"* — argument, not decision | R | `0072:104` |
 | *"Two kinds of flow reach that line"* — argument, not assertion | R | `0072:112` |
 | `ScopeAffinityPolicy`'s role is unclear | R | `0072:131`, `:167`, `:242`, `:247`, `:249`, `:332`, `:336` (**19 mentions across the set**) |
@@ -143,7 +143,7 @@ row 5.
 | **0** | locate every item against current source; complete the table in section 3 | ✅ **done** |
 | **1** | the ten house-style rules into the two instruction files — **no ADR touched** | 1 |
 | **2** | the substantive calls, one at a time, each landed in its own commit — **four calls, not six**: S1+S2 merged, S4 settled by principle | ~4 |
-| **3** | the rewrite, **one ADR per session**, worst-first: 0072, 0071, 0070, then 0074, 0075, 0076, 0073 | ~7 — ✅ **0072 done, `f30358c5e`**; 6 to go |
+| **3** | the rewrite, **one ADR per session**, worst-first: 0072, 0071, 0070, then 0074, 0075, 0076, 0073 | ~7 — ✅ **0072 done, `f30358c5e`**; ✅ **0071 done, `3537c68cd`**; 5 to go |
 | **4** | design review round 7, grading against the new house style | per §19's shape |
 
 **Why house style first.** The rewrite is graded against `documentation.md`, and so is round 7 —
@@ -310,6 +310,10 @@ Report the branch-2 and branch-3 list with every session, **even when it is empt
 `bd44be1ed` (plus `9fcfa2856` for the principle), S5 `bbb04d688` and S6 `fa937a739` (preceded by the
 `6883f589f` bookkeeping commit). PHASE 2 IS CLOSED.**
 
+✅ **Phase 3, session 2: `0071` is rewritten — `3537c68cd`** — preceded by `a12e93f9a`, the branch-3 correction the owner ruled on (0072's cache-supply decline is ladder row 9, so *"the other two"*). Seven R items closed and the M item settled by an owner ruling: the FR-27.1/AC-46 amendment **splits**, design facts staying in the contract cell and the amendment record moving to a paragraph beneath the table. That reached `0072:161`, so both ends went in the one commit. Two diagrams added — a `flowchart` for how `Transient` scopes resolution (the review's own request) and a `classDiagram` for the type hierarchy. No paragraph now exceeds 200 words, where ten did; inline bold fell 195 → 166 while list-lead bold rose 25 → 59.
+⚠ **The claim inventory earned its keep a second time, and in a new way: FOUR of the six greps came back COMPLETELY clean and the numerals grep still found a real loss** — the reciprocal of `0070:30`'s *"FR-7 is served here, not discharged here… its owning ADR is ADR 0071"*. **A clean run on the other five is not evidence.**
+⚠ **`0070`'s session inherits one item from this one**: the *"FR-13 divides by family rather than by clause"* R row names `0070:32` and `0070:34` as well, and they were deliberately left alone.
+
 ✅ **Phase 3 has begun. `0072` is rewritten — `f30358c5e`** — preceded by a branch-3 correction in
 its own commit, `dd83163e1` (ADR 0075 owns three brackets, not two; it reached 0074 as well). The
 five R items Phase 0 filed against 0072 are closed, D1's `### Scope` heading and D2's column rename
@@ -318,7 +322,7 @@ for the type hierarchy. The claim inventory lost nothing undeliberate: three `FR
 spellings normalised to the parenthesised form the requirements themselves use, and one numeral
 neutralised. ⚠ **The inventory diff caught two REAL losses the writer had missed** — `ConsumersOptions`
 and `AC-14` — **which is the argument for running it rather than trusting a careful read.**
-⚠ **One branch-3 row is OPEN and needs a ruling: `PROMPT.md` §20.6 row 6.**
+✅ **§20.6 row 6 is RULED and CLOSED (`a12e93f9a`); row 7, raised and ruled in session 2, is CLOSED too. No branch-3 row is open.**
 
 ## 8. Tracking
 
