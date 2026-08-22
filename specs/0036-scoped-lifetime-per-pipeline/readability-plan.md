@@ -143,7 +143,7 @@ row 5.
 | **0** | locate every item against current source; complete the table in section 3 | ✅ **done** |
 | **1** | the ten house-style rules into the two instruction files — **no ADR touched** | 1 |
 | **2** | the substantive calls, one at a time, each landed in its own commit — **four calls, not six**: S1+S2 merged, S4 settled by principle | ~4 |
-| **3** | the rewrite, **one ADR per session**, worst-first: 0072, 0071, 0070, then 0074, 0075, 0076, 0073 | ~7 |
+| **3** | the rewrite, **one ADR per session**, worst-first: 0072, 0071, 0070, then 0074, 0075, 0076, 0073 | ~7 — ✅ **0072 done, `f30358c5e`**; 6 to go |
 | **4** | design review round 7, grading against the new house style | per §19's shape |
 
 **Why house style first.** The rewrite is graded against `documentation.md`, and so is round 7 —
@@ -306,8 +306,19 @@ Report the branch-2 and branch-3 list with every session, **even when it is empt
 | 5 | S6 — is the borrowed-scope registration question an ADR fix or a new requirement? | raise as a call. `0072:480` covers only *detection*, not whether resolution works, so nothing in the set answers it — that reads as a requirement, and requirements changes go to the §18.8 true-up, not into an ADR |
 
 **Phase 2 is therefore four calls: S1+S2, S3, S5, S6** — with S4 confirmed against
-`design_principles.md:22-28` rather than argued. ✅ **S1+S2 is DONE (`d6502deb5`), S3 is DONE
-(`bd44be1ed`, plus `9fcfa2856` for the principle) and S5 is DONE (`bbb04d688`); ONE remains — S6.**
+`design_principles.md:22-28` rather than argued. ✅ **ALL FOUR ARE DONE: S1+S2 `d6502deb5`, S3
+`bd44be1ed` (plus `9fcfa2856` for the principle), S5 `bbb04d688` and S6 `fa937a739` (preceded by the
+`6883f589f` bookkeeping commit). PHASE 2 IS CLOSED.**
+
+✅ **Phase 3 has begun. `0072` is rewritten — `f30358c5e`** — preceded by a branch-3 correction in
+its own commit, `dd83163e1` (ADR 0075 owns three brackets, not two; it reached 0074 as well). The
+five R items Phase 0 filed against 0072 are closed, D1's `### Scope` heading and D2's column rename
+are taken, and two diagrams were added — a `sequenceDiagram` for the hand-off and a `classDiagram`
+for the type hierarchy. The claim inventory lost nothing undeliberate: three `FR-16a`/`b`/`c`
+spellings normalised to the parenthesised form the requirements themselves use, and one numeral
+neutralised. ⚠ **The inventory diff caught two REAL losses the writer had missed** — `ConsumersOptions`
+and `AC-14` — **which is the argument for running it rather than trusting a careful read.**
+⚠ **One branch-3 row is OPEN and needs a ruling: `PROMPT.md` §20.6 row 6.**
 
 ## 8. Tracking
 
