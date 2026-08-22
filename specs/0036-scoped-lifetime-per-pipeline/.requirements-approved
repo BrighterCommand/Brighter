@@ -1,4 +1,49 @@
-PENDING: revision 20 (27 FRs / 10 NFRs / 51 ACs / 122 normative bullets) — NOT YET APPROVED.
+PENDING: revision 21 (27 FRs / 10 NFRs / 52 ACs / 123 normative bullets) — NOT YET APPROVED.
+
+Revision 21 was made during the design phase, in response to item S6 of the owner's manual
+readability review of ADRs 0070-0076. It is NEW SCOPE, not alignment, and under the process
+recorded for revision 20 it is carried to the end-of-phase true-up rather than reviewed on its own.
+
+S6 asked whether Brighter's registrations - many of them factory functions - still resolve from an
+ambient scope borrowed from a non-Brighter parent. THEY DO, and ADR 0072 already argued why: every
+registration is Singleton or Transient, Singletons are built in the root scope whatever scope
+asked, and the artefact types are Transient descriptors in the same IServiceCollection the borrowed
+scope's container was built from. That half needed no change.
+
+THE GAP THE QUESTION EXPOSED IS A DIFFERENT ONE, and the owner judged it a real design gap rather
+than a documentation miss: reports of bugs around the flow of a transaction to an Outbox may have
+this as their cause (NOT VERIFIED - the mechanism below is verified; no specific report was
+checked). Every statement in the specification about joining a caller's transaction was NEGATIVE -
+C-4 and OOS-10, both about Publish subscribers - and the positive case a Send handler depends on
+was stated nowhere. Nor was the mechanism that defeats it today: a relational transaction provider
+wraps a DbContext taken by constructor injection, so which transaction it hands out is decided by
+the scope that resolved it, and every non-Singleton handler resolution is made from a scope
+Brighter created rather than the caller's. A handler that deposits to the outbox therefore writes
+on a different connection inside a different transaction from the caller's own writes, and NOTHING
+REPORTS IT - the deposit succeeds and only atomicity is lost.
+
+What it added:
+  - FR-16(c), the normative statement that a Scoped dependency the caller has already resolved is
+    the same instance a handler reached by Send resolves. It is clause (b) extended across the call
+    boundary, not a second mechanism, and is stated separately because it is the clause
+    applications depend on and the only one whose failure is silent.
+  - C-21, recording the mechanism, the silence, and the three ways the fix is bounded: the outbox
+    mediator is a Singleton and never borrows; the container-side transaction-provider resolutions
+    are type discovery only; and DepositPost without an explicit provider still passes null, so
+    adoption does not make an outbox write transactional on its own.
+  - AC-52, which measures atomicity through a ROLLBACK rather than a commit, and carries an
+    AlwaysNew negative control asserting both today's behaviour and its SILENCE - so that an
+    implementation cannot satisfy the criterion by reporting the case instead of fixing it.
+
+No existing FR, NFR, constraint or criterion changes. C-4 and OOS-10 were checked against the new
+clause and are correctly scoped to Publish subscribers, which FR-8 suppresses and which this leaves
+untouched. Counts move from 51 ACs to 52 and from 122 normative bullets to 123 (FR-16 gains clause
+(c)); FRs and NFRs are unchanged at 27/10.
+
+Why it owes a review, and why not yet: it adds a normative clause and a criterion that did not
+exist, so it is more than alignment. Under the process change recorded at revision 20 it is carried
+to the end-of-phase true-up.
+
 
 Revision 20 was made during the design phase, in response to round 5 of the design review, and
 carries design decision 4 of that round. It is NEW SCOPE, not alignment, and so it owes a
