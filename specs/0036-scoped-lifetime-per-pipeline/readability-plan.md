@@ -97,7 +97,7 @@ is at **`0071:237` and `0072:238`**. Fix one end only and the set contradicts it
 | consumer transform/mapper pipelines are never ambient | **S2** | **nowhere — see below.** The nearest statement is `0072:112` |
 | a `Dispatcher` is never started from inside a live request | **S1** | `0075:286`, `:326`, `:349` |
 | *"Why the rules are not `ISpecification<T>` families"* | **S5** | ✅ **ANSWERED AND LANDED — `bbb04d688`.** All seven anchors — `0074:140`, `:249`, `:367`, `:379`, `:388`, `:389`, `:502` — were verified exact and on-subject, the first row in the programme whose anchors had not drifted at all. The answer moved far more than them: **0074 throughout plus `0070:405` and the index** |
-| registration must resolve from a borrowed ambient scope | **S6** | **one line in the set** — `0072:480` |
+| registration must resolve from a borrowed ambient scope | **S6** | ✅ **ANSWERED AND LANDED — `fa937a739`.** `0072:480` was exact, but **"the only line in the set" was WRONG** — `0072:410`, `:416` and `:420` all bear on it and `:416` largely answers it. The answer moved `0072` (two new passages + a Positive bullet + References) **and** `requirements.md` (FR-16(c), C-21, AC-52, revision 21) |
 
 ### ⚠ Phase 0's substantive result: S1 and S2 are one call, not two
 
@@ -116,7 +116,7 @@ That makes the two items halves of one question:
 Raising them separately risks answering one and landing half. They are **one call, S1+S2**, and it
 reopens round-6 decisions 5 and 9 (`679ff229f`).
 
-### S6 has almost no footing in the set
+### S6 has almost no footing in the set — ⚠ **THIS SECTION'S PREMISE WAS FALSIFIED; see §7 row 5**
 
 `0072:480` is the only line that touches it: *"A provider that passes both tests and still cannot
 resolve Brighter's artefacts fails loudly, not quietly … `Create` returns `null`, and the builder's
@@ -125,6 +125,16 @@ claim — it says the failure is loud. The owner's question is a **design** one:
 registered services, many of them factory functions, still resolve from a scope owned by a
 non-Brighter parent? Nothing in the set answers it, which is why it reads as a requirement rather
 than an ADR fix.
+
+⚠ **BOTH SENTENCES ABOVE ARE WRONG AND ARE KEPT FOR THE LESSON.** `0072:480` is *not* the only line
+that touches the item: `0072:416` answers the design question outright — Brighter's registrations
+went into the same `IServiceCollection` the borrowed scope's container was populated from — and
+`0072:410` and `:420` bear on it too. **A Phase 0 row saying "nothing in the set answers this" is a
+hypothesis, and the cheapest way to test it is to go looking for the answer under words the item
+does not use.** The item's own words — *registration*, *factory function*, *borrowed* — appear
+nowhere near `:416`, which discusses **container provenance**. What S6 actually exposed was a
+different gap entirely, in territory the item never named: the **transaction** consequence. See §7
+row 5.
 
 ## 4. The phases, and why in this order
 
