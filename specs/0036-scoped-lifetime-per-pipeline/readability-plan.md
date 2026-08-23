@@ -144,7 +144,7 @@ row 5.
 | **1** | the ten house-style rules into the two instruction files — **no ADR touched** | 1 |
 | **2** | the substantive calls, one at a time, each landed in its own commit — **four calls, not six**: S1+S2 merged, S4 settled by principle | ~4 |
 | **3** | the rewrite, **one ADR per session**, worst-first: 0072, 0071, 0070, then 0074, 0075, 0076, 0073 | ✅ **COMPLETE — 7 of 7.** ✅ **0072 done, `f30358c5e`**; ✅ **0071 done, `3537c68cd`**; ✅ **0070 done, `fb27c81bb`**; ✅ **0074 done, `e3ed130b0`**; ✅ **0075 done, `992537bcc`** (preceded by `0583c5af8`, the X1 sweep); ✅ **0076 done, `cc2b8b216`** (preceded by `9bcbeb6a8`, the branch-3 summary correction); ✅ **0073 done, `e1a15733c`** — the last, and the only session owing **no** commit ahead of it and **no** `index.md` diff |
-| **4** | design review round 7, grading against the new house style | per §19's shape |
+| **4** | design review round 7, grading against the new house style — ⚠ **preceded by D8 (§5a), so the round's fixes cannot undo Phase 3** | per §19's shape |
 
 **Why house style first.** The rewrite is graded against `documentation.md`, and so is round 7 —
 `/spec:review`'s *Structure and Readability* criteria read that file. Writing the rules after the
@@ -261,6 +261,47 @@ is missing:
 It does not touch an ADR. **D2's consequence is a rename in eight ADRs** — our seven plus
 `0060-multi-tenancy-migration-history-scope`, which is approved and merged. The seven take it in
 Phase 3. Whether 0060 is corrected, and under what commit, is an open decision (section 7).
+
+## 5a. D8 — an eleventh rule, added after Phase 1 and ahead of round 7
+
+⚠ **This rule was not in Phase 1. The owner added it when Phase 3 closed**, on the ground that the
+programme protects nothing if round 7's fixes undo it. It is bucket **H** and it landed the way
+D1–D7 did: the instruction file only, no ADR touched.
+
+**Why it is needed now, and not before.** Item 15 of the review says statement-level correction is
+what produced the prose being objected to. Phase 3 fixed the *documents*; it did not fix the
+*method*, and round 7 is the method's next run. Eight reviewers will return on the order of a
+hundred findings, and almost every one of them can be closed by adding a qualifier, a
+cross-reference or a bolded caveat to a sentence that is otherwise fine. Each such fix is small and
+locally correct. A hundred of them is 0072's 498-word `Scope` paragraph again.
+
+**D8 · New subsection `### Correcting an ADR`, between `### ADR readability` and
+`### Diagrams in ADRs`.** Six rules plus a measurement:
+
+> - **Replace, do not append.** A sentence that over-claims is answered by rewriting that sentence,
+>   not by adding the qualifier that makes it true.
+> - **Every qualifier a fix adds is a claim**, and it can contradict a section the fix never looked
+>   at. Prefer the narrow statement to the broad statement plus its exception.
+> - **Correct the source, not only the statement derived from it.**
+> - **A fix that needs bold to be found is in the wrong place.**
+> - **The finding's argument is not the fix.** A rejected reading belongs in
+>   `## Alternatives Considered`, not as a warning inside the prose.
+> - **When a finding can only be closed by making the document worse, stop and say so.**
+>
+> **Measure a batch of corrections, not only a rewrite** — blocks over 150 words, blocks over 200
+> words, and bold runs in prose and at bullet leads, before and after. A batch that raises any of
+> them owes an explanation in its commit message.
+
+**Three of the six are Phase 3's own lessons turned around to face a fix rather than a rewrite.**
+*Every qualifier a fix adds is a claim* is session 7's, where the rewrite's added *"without
+discharging any of them"* contradicted the same ADR's *"that is the whole of NFR-2"* three sections
+away. *Correct the source, not the derived statement* is session 6's, where the frontmatter summary
+and the sentence it compressed were one defect at two distances. *A fix that needs bold* is D5 —
+emphasis is a symptom — applied at the moment the emphasis gets added.
+
+**The measurement is the part that makes it checkable rather than asserted**, in the same way the
+claim inventory made *"no fact changed"* checkable. Phase 3 reported those counts for every session;
+round 7's fix batches now report them too.
 
 ## 6. Phase 3 — the instrument a whole-document rewrite needs
 
