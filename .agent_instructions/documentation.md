@@ -144,6 +144,36 @@ and the controlled dictionary would fight this domain's vocabulary (*ambient*, *
 records what a participant in the authoring conversation said, rather than what was decided and
 why, has failed its only audience.
 
+### Correcting an ADR
+
+Most edits to an ADR are corrections: a reviewer finds a claim that is wrong, over-stated or
+mis-cited, and one sentence has to change. Corrections are also how a readable ADR becomes an
+unreadable one. Each fix is small and locally justified, and what accumulates is a document of
+hedged sentences, bolded caveats and recorded arguments that nobody ever decided to write.
+**A correction must leave the document at least as readable as it found it.** The rules above are
+not suspended because a finding is being closed.
+
+- **Replace, do not append.** A sentence that over-claims is answered by rewriting that sentence,
+  not by adding the qualifier that makes it true. Two sentences where there was one, the second
+  taking back part of the first, is how a paragraph reaches four hundred words.
+- **Every qualifier a fix adds is a claim**, and it can contradict a section the fix never looked
+  at. Prefer the narrow statement to the broad statement plus its exception.
+- **Correct the source, not only the statement derived from it.** A wrong summary usually has a
+  wrong sentence behind it. Fixing the summary alone leaves the generator in place, and the next
+  reader derives the same error again.
+- **A fix that needs bold to be found is in the wrong place.** Move the point to the lead of its
+  section instead of emphasising it where it sits.
+- **The finding's argument is not the fix.** Record what is true. A rejected reading belongs in
+  `## Alternatives Considered` with its reason, not as a warning inside the prose.
+- **When a finding can only be closed by making the document worse, stop and say so.** Keeping a
+  longer, plainer form for one sentence is a legitimate outcome. Record the reason in the commit
+  message rather than absorbing it silently.
+
+**Measure a batch of corrections, not only a rewrite.** Before and after, count the blocks over 150
+words, the blocks over 200 words, and the bold runs — in prose and at bullet leads separately. A
+batch that raises any of them owes an explanation in its commit message. Then run the
+whole-document re-read below: a batch of corrections is the input that check exists for.
+
 ### Diagrams in ADRs
 
 Prefer **mermaid** to ASCII art: it is editable, it renders on GitHub, and it survives reflowing.
