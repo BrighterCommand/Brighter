@@ -387,3 +387,53 @@ and `AC-14` — **which is the argument for running it rather than trusting a ca
 `PROMPT.md` **§20** is the live tracker: phase status, what each session landed, and the running
 branch-2 / branch-3 list. `PROMPT.md`'s resume block points at §20 rather than at §19.7, whose
 `## Context` restructure is now Phase 1's D1 plus Phase 3's per-ADR work.
+
+## 9. Phase 4 — the blind readability baseline round 7 returned
+
+Phase 4 ran as design review round 7 (`09856a630`). D8's amendment 2 gave the set-level reviewer a
+readability-count remit, deliberately **without** sight of Phase 3's figures, on the ground that a
+blind count is worth more than a confirmed one. This is that count, and it is the baseline every
+round-7 fix batch measures against.
+
+| ADR | blocks | >150 words | >200 words | bold in prose | bold at bullet leads | diagrams |
+|---|---:|---:|---:|---:|---:|---:|
+| 0070 | 261 | 3 | 0 | 117 | 78 | 4 |
+| 0071 | 210 | 5 | 0 | 138 | 59 | 5 |
+| 0072 | 227 | 10 | 0 | 95 | 58 | 3 |
+| 0073 | 164 | 2 | 0 | 128 | 53 | 3 |
+| 0074 | 270 | 4 | 1 | 128 | 71 | 4 |
+| 0075 | 180 | 1 | 0 | 138 | 49 | 3 |
+| 0076 | 156 | 2 | 0 | 120 | 32 | 4 |
+| **total** | **1468** | **27** | **1** | **864** | **400** | **26** |
+
+Definitions, so a later batch reproduces the numbers rather than re-inventing them: frontmatter, all
+fenced blocks including their fences, ATX heading lines and table lines are stripped first; a
+**block** is a maximal run of lines bounded by a blank line, split further at every list-item lead,
+so one paragraph is one block and each bullet is its own block with its continuation lines; a **bold
+run** is one non-greedy `\*\*(.+?)\*\*` match; a **bullet lead** is the first bold run of a list-item
+block that begins with `**`, and every other bold run counts as prose. The two bold columns are
+disjoint.
+
+**What the blind count settles.** Phase 3 reported blocks over 200 words falling to zero in every
+ADR it rewrote. An independent count, run by someone who did not know a rewrite had happened, finds
+**one** — `0074`'s Alternative 1, at 207 words. That is the programme's central claim confirmed from
+outside, and the one exception is a single block in the one ADR whose *Alternatives* section grew.
+
+⚠ **The per-ADR reviewers' own counts differ from this table by DEFINITION, not by disagreement, and
+they reconcile exactly.** 0071's reviewer reported 91 mid-prose bold runs against this table's 138;
+the difference is 47 paragraph-opening bolds, which that reviewer separated out and this script
+counts as prose. 0072's two independent counts agree outright. **When two readability counts
+disagree, reconcile the definitions before treating either as wrong** — and prefer the count that
+ships with its script.
+
+⚠ **D8's premise was confirmed by measurement rather than asserted.** Five of the eight blind
+reviewers independently filed mid-prose bold density as a finding, against five different ADRs, blind
+to each other and to this programme's existence. Emphasis density is visible to a reader who has
+never been told to look for it.
+
+⚠ **And the triage bears out the other half.** Of round 7's 95 findings at threshold, **34 are
+over-claims** — a true sentence that says slightly more than it should, which is precisely the
+population that six earlier rounds closed by appending a qualifier. Every one arrived with a
+narrower replacement, and **in every case the replacement is the same length or shorter than what it
+replaces**. That is the test for a round-7 fix batch: *if the batch comes out longer, the fix is
+wrong, not the rule.*
