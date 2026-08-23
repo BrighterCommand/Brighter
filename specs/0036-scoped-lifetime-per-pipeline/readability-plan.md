@@ -437,3 +437,81 @@ population that six earlier rounds closed by appending a qualifier. Every one ar
 narrower replacement, and **in every case the replacement is the same length or shorter than what it
 replaces**. That is the test for a round-7 fix batch: *if the batch comes out longer, the fix is
 wrong, not the rule.*
+
+## 10. Phase 5 — structure in the second half of the Decision
+
+**Ordered by the owner after reading the rewritten ADRs, and queued behind round 7's fixes.**
+
+### The diagnosis, in the owner's words
+
+> On review, I think it is generic. The problem exists in the Decision section, following the
+> Contracts. Up to this point the ADR is well-written, but at this point it just drops into a
+> collection of facts. It needs better structure. Sub-headings, bullet points. Many sentences are
+> "word salad" and could easily express their ideas simply. I think it applies to all the ADRs. We
+> fixed a lot, but this still lacks readability.
+
+⚠ **The owner first named the symptom as vocabulary — *seam*, *load-bearing* — and then set that
+aside on review. Do not spend a session on vocabulary.** The defect is structural and it is located:
+everything up to and including the contract tables reads well; the region after them does not.
+
+### The measurement that confirms it
+
+`####` sub-headings before and after `### Technology Choices`, with bolded paragraph leads in the
+region after:
+
+| ADR | `####` before | `####` after | bolded paragraph leads after |
+|---|---:|---:|---:|
+| 0070 | 5 | **0** | 49 |
+| 0071 | 7 | **0** | 24 |
+| 0072 | 8 | **0** | 38 |
+| 0073 | 7 | **0** | 27 |
+| 0074 | 8 | **0** | 24 |
+| 0075 | 5 | 4 | 37 |
+| 0076 | 8 | **0** | 23 |
+
+**Six of the seven carry zero sub-headings across the whole of `Technology Choices` plus
+`Implementation Approach`**, having had five to eight in the sections before it, and **222 bolded
+paragraph leads between them in that region**.
+
+⚠ **That is the mechanism: bold is doing the job headings should do.** It is **D5** read from the
+other end — *a fix that needs bold is in the wrong place* — and it explains why five of round 7's
+eight blind reviewers independently filed mid-prose bold density. **They were seeing the symptom of
+the missing structure the owner has now named.**
+
+### Why Phase 4's baseline did not catch it
+
+⚠⚠ **The baseline measured the wrong thing for this defect.** §9 counts block length and bold runs,
+and by those numbers the set is in good shape — **one** block over 200 words in 1,468. **Nothing in
+it measures structure**, so a 163-line region of unbroken prose carrying no sub-heading scores
+perfectly clean.
+
+**Phase 5 owes a structural baseline of its own, defined and taken before any Phase 5 edit.**
+Candidates: sub-headings per section; bulleted blocks as a share of all blocks; the longest run of
+consecutive prose blocks with no intervening heading or list. **Add to §9's table; do not replace
+it** — the two measure different failures and a Phase 5 pass should improve both at once.
+
+### The fix shape already exists, written blind
+
+Round 7's **`0072 #8`** (score 60) prescribes exactly this for one ADR: step 2 is a ninety-line
+sub-document with twelve bolded lead-ins, and the fix is to **sub-number it 2a/2b/2c/2d so that eight
+lead-ins become headings and stop being emphasis** — *"No sentence changes and no bold is added."*
+**The owner's finding is that this is generic. Treat `0072 #8` as the worked example for all seven.**
+It lowers the bold count while adding structure, so it moves §9's baseline in the right direction as
+well as the structural one.
+
+**The "word salad" half is a separate pass from the structural one**, and round 7 has a measured
+instance to start from: **`0070 #7`** counts **47 sentences of 40+ words** against the house style's
+~25, the worst at 63 words with two em-dash asides, and supplies a two-sentence replacement that
+adds no words. ⚠ **It scored 56 and sits below threshold — promote it into Phase 5 rather than
+closing it as a Low.**
+
+### Sequence — the owner's, and the reason for it
+
+> I agree that we should probably settle the review issues, as they may degrade the ADRs further,
+> then review the readability again, paying particular attention to the lack of structure in these
+> sections.
+
+**Round 7's fixes first; Phase 5 after.** The reason is the one the whole programme rests on and that
+D8 was written for: **the fixes are what degrade the prose**, so a readability pass taken before they
+land would measure a document that is about to change under it. D8 governs the fix batches in the
+meantime, and every batch still reports its §9 counts.
