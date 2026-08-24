@@ -686,7 +686,7 @@ The name is this ADR's to choose, because it is not one of C-11's working names.
 6. **The wiring.** In `ValidatePipelines()`: register `ValidationMapperRegistry`, keep the existing `TryAddSingleton` returning the core validator, and add one `AddSingleton` returning this ADR's. Nothing else in the extension method moves.
 7. **The documentation this ADR owes.** `docs/guides/lifetimes-and-scoping.md` gains a troubleshooting entry for each of the six messages (FR-25.10). `release_notes.md` gains **two** items in the single entry ADR 0070 step 7a catalogues:
    - C-18's compatibility note, which AC-24 carries;
-   - the behavioural change that an application-supplied `IAmAPipelineValidator` no longer replaces Brighter's validation wholesale, because both hosts now resolve and combine every registered validator. That item is carried by ADR 0070 step 7a's superset rule, not by AC-24, whose four clauses do not reach it.
+   - the behavioural change that an application-supplied `IAmAPipelineValidator` no longer replaces Brighter's validation wholesale, because both hosts now resolve and combine every registered validator. No clause of AC-24 names that break in terms; its general clause — one item per breaking change this work introduces — is what carries it.
 
    Both are argued in this ADR's *Consequences*, under *Negative*, and step 7a carries a one-line pointer to each rather than a second copy.
 

@@ -1,4 +1,67 @@
-PENDING: revision 21 (27 FRs / 10 NFRs / 52 ACs / 123 normative bullets) — NOT YET APPROVED.
+PENDING: revision 22 (27 FRs / 10 NFRs / 52 ACs / 123 normative bullets) — NOT YET APPROVED.
+
+THE PROCESS CHANGED AT REVISION 22, AND THE CHANGE GOVERNS EVERY REVISION FROM HERE. The requirement
+owner, 2026-08-24: "Let's make them atomic changes. We originally deferred for efficiency as we kept
+re-reviewing the requirements mid-ADR edit. Let's just make them atomic commits. At this point I am
+not interested in a stand-alone requirements review, only ensuring it is in line with the work the
+ADRs reveal."
+
+Two rulings. FIRST, every decided requirements change now lands in the SAME COMMIT as the ADR work
+that reveals it - no deferral, no accumulation, and no future-tense "an amendment is owed" left
+standing in an ADR while the criterion it names says something else. SECOND, THERE IS NO END-OF-PHASE
+REQUIREMENTS TRUE-UP AND NO STAND-ALONE REQUIREMENTS REVIEW. This document is not reviewed as a
+document in its own right before approval; the only test it has to pass is "is it in line with what
+the ADRs reveal", which each atomic commit establishes for its own change at the moment it lands.
+Approval is the design phase's, taken once at the end, over the requirements and the ADRs together.
+
+WHAT THAT MEANS FOR REVISIONS 20 AND 21, WHICH THIS FILE RECORDS AS AWAITING THAT TRUE-UP: NOTHING
+FURTHER IS OWED ON EITHER. Their content shipped (revision 21's at fa937a739) and the review they
+were carried to no longer exists. The deferral was not a mistake - it bought efficiency while each
+change was triggering a fresh mid-edit requirements review, and abolishing that review removes the
+cost that made deferral worth paying. The paragraphs below are kept as the record of what each
+revision changed, and their "carried to the end-of-phase true-up" sentences are spent.
+
+
+Revision 22 was made during the design phase and lands round-6 decisions 10 and 14 together with
+their ADR halves in one commit - the first requirements change made under the atomic process above.
+It is NOT new scope: it amends one existing criterion, AC-24, in the two ways the design review
+established were owed, and adds no rule, no constraint and no criterion.
+
+DECISION 10 - AC-24's last clause counted rather than enumerated. It asked for a migration "for each
+of the six FACTORY interfaces whose signature changed", and under this design no set of six answers
+to that description: four of NFR-1's six change by their own signature (the two mapper factories and
+the two transformer factories) and two through the shared base that ADR 0071 puts
+CreatePipelineScope() on, while IAmAHandlerFactory and IAmALifetime break and are not on NFR-1's list
+at all. The clause now names the eight interfaces outright - NFR-1's six together with
+IAmAHandlerFactory and IAmALifetime. The two mapper registries stay outside it, exactly as before,
+and are covered by extension of NFR-1(b) and NFR-1(c) on identical reasoning.
+
+THE OWNER ACCEPTED THE BREAK RATHER THAN NARROWING IT, and that ruling is what replaces the ADRs'
+arithmetic about whether the numeral had a referent: "As there is only one published implementer (MS
+DI), we consider this an acceptable break for anyone who has their own DI implementation." The only
+published implementations of these interfaces are the container-backed ones Brighter ships over
+Microsoft's DI, so an application that hand-rolled its own takes a source and binary break on
+netstandard2.0 and follows the migration the release-note entry states.
+
+DECISION 14 - AC-24's four clauses reached four of the thirteen items in the single release_notes.md
+entry, and its verifier ("one line per Then clause above") inherited the same four-clause reach, so
+nine breaking changes could ship with nothing checking that they were written down. AC-24 gains a
+general clause requiring that entry to contain one item per breaking change the work introduces, and
+its verifier takes one line per item in that entry rather than one line for the clause. The other
+three ACs sharing that verifier line - AC-25, AC-36 and AC-43 - keep one line per Then clause, and
+so do AC-24's own first three clauses, which also govern the guidance page and would otherwise lose
+their checks. Rejected: a new criterion enumerating one Then per break. The entry has grown 4 -> 7
+-> 9 -> 10 -> 11 -> 12 -> 13 across six review rounds and the readability programme, so a hard-coded
+count moves that drift into this document, where it costs more to correct.
+
+No FR, NFR or constraint changes; no other AC changes. Counts unchanged at 27/10/52/123 - an AC
+gaining a Then clause does not move the normative-bullet count, which counts FR and NFR clauses.
+
+Why it needs no review of its own: beyond the process change above, it adds nothing. Both amendments
+were decided in design review round 6 (decisions 10 and 14, ADR halves landed at 0932ed558 and
+a8f8fe518 and deliberately left future-tense until this commit), and this revision states in the
+criterion what those decisions settled.
+
 
 Revision 21 was made during the design phase, in response to item S6 of the owner's manual
 readability review of ADRs 0070-0076. It is NEW SCOPE, not alignment, and under the process
