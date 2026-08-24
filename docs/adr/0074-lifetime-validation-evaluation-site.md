@@ -342,10 +342,13 @@ builder.Services.AddSingleton<IAmAPipelineValidator>(sp => new ScopeConfiguratio
     sp.GetRequiredService<IBrighterOptions>(),
     snapshot,                                     // captured from builder.Services, above the delegate
     ArtefactExclusionSet.Build(
-        pipelineBuilder,
+        new PipelineBuilder<IRequest>(            // this delegate's own, from this delegate's sp
+            sp.GetService<IAmASubscriberRegistryInspector>()
+                ?? (IAmASubscriberRegistryInspector)sp.GetRequiredService<ServiceCollectionSubscriberRegistry>(),
+            ResolveInboxConfiguration(sp)),       // private static in this class (:156)
         sp.GetRequiredService<ValidationMapperRegistry>().Value,
-        publications,
-        subscriptions)));
+        ResolvePublications(sp),                  // private static in this class (:135)
+        ResolveSubscriptions(sp))));              // private static in this class (:144)
 ```
 
 and in each host, where one validator was resolved and run:
@@ -676,7 +679,7 @@ The name is this ADR's to choose, because it is not one of C-11's working names.
 
 5a. **The exclusion set, and the four inputs it needs.** FR-22.3's exclusion is a conjunction over **two** attribute families, and neither half can be read from the descriptor snapshot. Both need the reflection-only describe path, and they need different inputs.
 
-   - The handler half comes from `PipelineBuilder<IRequest>.Describe()` (`PipelineBuilder.cs:151`), an *instance* method on the builder the validation delegate already constructs (`BrighterPipelineValidationExtensions.cs:75`).
+   - The handler half comes from `PipelineBuilder<IRequest>.Describe()` (`PipelineBuilder.cs:151`), an *instance* method, so this validator's registration delegate constructs a builder of its own — the same two statements the core validator's delegate runs (`BrighterPipelineValidationExtensions.cs:73-75`), over its own `sp`. Nothing here can be captured above the delegate as `snapshot` is: `pipelineBuilder`, `publications` and `subscriptions` are locals of *that* delegate and each derives from *its* `sp`. The last two come from `ResolvePublications(sp)` and `ResolveSubscriptions(sp)`, `private static` in the same class (`:135`, `:144`) and so in scope where this validator is registered. Alternative 15 records the shared eleventh holder that was declined.
    - The transform half comes from `TransformPipelineBuilder.DescribeTransforms` (`:270`, `public static`), called with **`includeAsync: true`**.
 
    `includeAsync: true` is load-bearing. The two-argument overload at `:255` defaults it to `false`, under which a transform declared only on an async-resolved mapper never enters the set, and a Brighter-shipped transform reached only that way is warned against as the application's — the precise noise the conjunction exists to prevent.
@@ -804,6 +807,8 @@ The name is this ADR's to choose, because it is not one of C-11's working names.
 **13. Declare keyed registrations out of the rules' subject rather than widening to them.** Every rule would read the unkeyed population only, and a keyed artefact, provider, override or dependency would be stated as unread. **Rejected.** It fixes FR-22.4's false `Error` and buys nothing else: a keyed handler, mapper or transform is one an application registered and one a pipeline resolves, so leaving it unread makes FR-22.3 silent on a population that grows every time a host adopts keyed services. Widening costs each rule one clause naming the population it reads, which the rules needed in any case — the false `Error` existed precisely because no rule said.
 
 **14. Make FR-22.4's message carry the override's affinity only where the descriptor supplies one.** The message row would read "that an affinity override is registered, and its value where the descriptor supplies one", so the rule fires on the delegate-registered path with a message missing one clause. **Rejected in favour of the seventh rule**, which reports the registration shape rather than weakening a message. An `Error` whose text varies by how the host happened to register something is harder to write troubleshooting for than two findings that each say one thing, and the shape is the actionable half in any case: the remedy is to register an instance, not to change the affinity. FR-22.4's message row is therefore unchanged.
+
+**15. An eleventh holder, so that both validators share one `PipelineBuilder<IRequest>`.** `ValidationMapperRegistry`'s shape again, for the describe-only builder rather than the mapper registry. **Rejected**, because the two cases are not alike. A second `MessageMapperRegistry` brings its own mapper factories and its own DI scope, and nothing in the container tracks it (alternative 12); the describe-only constructor (`PipelineBuilder.cs:92-98`) assigns two fields, resolves nothing, and leaves `Dispose()` (`:269-270`) draining an empty list. Neither shape costs a second `Describe()` pass — the exclusion set makes that pass once under both — so a holder would buy nothing and would add an eleventh type to a count *Negative* already records as real surface area.
 
 ## References
 
