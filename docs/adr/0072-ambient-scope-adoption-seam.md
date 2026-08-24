@@ -707,7 +707,7 @@ One site covers every caller, because all five factories reach the borrowed prov
 - ADR 0071 [0071-pipeline-scope-handle-for-handler-pipelines](0071-pipeline-scope-handle-for-handler-pipelines.md) — handler pipelines converge onto the same handle, carried on the object they already pass
 - ADR 0073 [0073-aspnet-core-request-scope-package](0073-aspnet-core-request-scope-package.md) — the ASP.NET Core package, and the one line an application writes to opt in
 - ADR 0074 [0074-lifetime-validation-evaluation-site](0074-lifetime-validation-evaluation-site.md) — where the scope-configuration rules are evaluated
-- ADR 0075 [0075-publish-subscriber-scope-suppression](0075-publish-subscriber-scope-suppression.md) — how a `Publish` subscriber and the consumer pump suppress adoption, for themselves and every pipeline created beneath them
+- ADR 0075 [0075-publish-and-pump-scope-suppression](0075-publish-and-pump-scope-suppression.md) — how a `Publish` subscriber and the consumer pump suppress adoption, for themselves and every pipeline created beneath them
 - ADR 0076 [0076-scope-affinity-option-and-write-through](0076-scope-affinity-option-and-write-through.md) — the affinity option, and how one setting reaches all four registration paths in any order
 
 - Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-1, FR-2, FR-8, FR-10, FR-11, FR-12, FR-13, FR-16/FR-16(a)/**FR-16(c)**, FR-17, FR-21, FR-18, FR-19, FR-22, FR-23, FR-24, FR-25, FR-26, FR-27; NFR-2, NFR-4, NFR-6, NFR-7, NFR-8; C-1, C-2, C-4, C-6, C-7, C-9, C-11, C-12a, C-13, **C-14**, C-15, **C-17**, **C-21**; D0b, D1, D4, D7, D8, D10, D11, D12, D16, D17, D19; AC-1, AC-5, AC-8, AC-10, AC-11, AC-13, AC-14, AC-16, AC-17, **AC-20**, AC-22, AC-26, AC-29, AC-30, AC-31, AC-32, AC-33, AC-34, AC-35, AC-37, AC-38, AC-46, **AC-52**; OOS-1, OOS-3, OOS-4, OOS-7
@@ -719,7 +719,7 @@ One site covers every caller, because all five factories reach the borrowed prov
   - `0066-release-factory-instances-on-an-opaque-lease` [Accepted] — the opaque `Lease<T>`, whose release remains a no-op for `Scoped` and is unaffected by borrowing
   - `0068-deterministic-disposal-finalizer-safety-net` [Accepted] — the disposal rules a borrowed handle's no-op disposal must still satisfy
   - `0069-factory-registry-ownership-and-disposal-cascade` [Accepted] — why `MessageMapperRegistry` speaks for the factories it owns, and therefore why the transform pipeline's single ask travels through it
-  - `0075-publish-subscriber-scope-suppression` [Proposed] — how a `Publish` subscriber suppresses adoption for itself and for the pipelines beneath it. It enters the protocol here at one line, the affinity computation, and adds no outcome to the ladder
+  - `0075-publish-and-pump-scope-suppression` [Proposed] — how a `Publish` subscriber and the consumer pump suppress adoption, for themselves and for the pipelines beneath them. Both enter the protocol here at one line, the affinity computation, and add no outcome to the ladder
   - `0039-scoping-dependencies-inline-with-lifetime-scope` [Proposed] — a DI scope per registered subscriber on `Publish`; ADR 0075 exists to protect it, and it is not reopened (D0c)
   - `0053-pipeline-validation-at-startup` [Accepted] and `0064-validate-pipeline-assembly-and-provider-registration` [Accepted] — the `ValidatePipelines()` machinery FR-24.3's duplicate-provider warning lands in; this ADR fixes the registration model, ADR 0074 decides the site
 - External references:
