@@ -441,6 +441,9 @@ wrong, not the rule.*
 ## 10. Phase 5 — structure in the second half of the Decision
 
 **Ordered by the owner after reading the rewritten ADRs, and queued behind round 7's fixes.**
+⚠ **The remit is wider than this heading: round 7's call 6 added `## Consequences`, `## Risks and
+Mitigations` and `## Alternatives Considered` to it — see *The remit, widened by round 7's call 6*
+below.**
 
 ### The diagnosis, in the owner's words
 
@@ -477,6 +480,41 @@ paragraph leads between them in that region**.
 other end — *a fix that needs bold is in the wrong place* — and it explains why five of round 7's
 eight blind reviewers independently filed mid-prose bold density. **They were seeing the symptom of
 the missing structure the owner has now named.**
+
+### The remit, widened by round 7's call 6
+
+⚠⚠ **Phase 5 covers `## Consequences`, `## Risks and Mitigations` and `## Alternatives Considered`
+as well as `### Technology Choices` and `### Implementation Approach`.** The owner folded three
+round-7 findings into this phase rather than into the fix stream — **`gap C #6` (70), `gap C #7`
+(68) and `0076 #4` (64)** — on the ground that none of them is a factual correction. Nothing in
+them is false; all three are placement and structure, and closing them opens each ADR's prose
+**once** rather than twice.
+
+⚠ **Those three findings therefore stay OPEN through the whole fix stream. That is the accepted cost
+of the call and must not be read later as an oversight.**
+
+- **`gap C #6` — six rejected alternatives are argued in `## Consequences`**, against
+  `documentation.md:135` (*"Rejected options belong in `## Alternatives Considered`, with their
+  reasons"*). Breached six times across four ADRs: `0071` ×2 (`IAsyncDisposable` on `IAmALifetime`;
+  keeping `_lifetimeScopes` as a fallback), `0072` ×1, `0073` ×2 (the two `PackageReference`
+  trades), `0074` ×2. ⚠ **`0071`'s `_lifetimeScopes` deliberation has a transform-side twin filed
+  CORRECTLY as `0070` alternative 13, so the set records one decision in two different sections.**
+  `0076` shows the compliant form — *"so the asymmetry is kept deliberately (alternative 11)"*.
+  **The fix is the same move as `0072 #8`: a bold-led argument paragraph becomes a numbered entry
+  elsewhere, and the pointer left behind is one clause.**
+- **`gap C #7` and `0076 #4` — Risks *Mitigation* cells that argue instead of mitigating.** Measured
+  against a corpus median of ~40 words: **`0076` row 2**, then `0072` row 2 = 126, `0075` = 99/90/89,
+  `0070` row 3 = 82, `0073` row 2 = 81, `0074` row 3 = 73. ⚠ **The two reviewers measured `0076`
+  row 2 differently — 238 (gap C) against 252 (0076's own reviewer) — so recount it at landing
+  rather than quoting either.** The cell ends by conceding what it is: *"identical code exercised
+  four times is an argument, not a test."* Three further cells say their mitigation is not one
+  (`0074` row 3, `0074`'s FR-25.10 row, `0075`'s last row); **where a row has no mitigation the cell
+  should say so and stop.**
+
+**The structural baseline below must cover these three sections too**, not only the two the
+measurement table counts. And **the inventory gap C produced — 70 alternatives across seven ADRs,
+enumerated ADR by ADR in `review-design.md` — is Phase 5's working inventory for the relocations.
+Do not re-derive it.**
 
 ### Why Phase 4's baseline did not catch it
 
