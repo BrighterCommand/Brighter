@@ -66,7 +66,7 @@ Seven ADRs deliver the parent requirement, one decision each; the requirements c
 | 0071 | handler pipelines converge onto the **same handle**, carried on the object they already pass |
 | 0072 | how a pipeline discovers an **ambient** DI scope the host owns |
 | 0073 | the **ASP.NET Core package**, and the one line an application writes to opt in |
-| 0074 | **where** the six scope-configuration rules are evaluated |
+| 0074 | **where** the scope-configuration rules are evaluated |
 | **0075** *(this one)* | how a `Publish` subscriber and the consumer pump **suppress** adoption, for themselves and every pipeline created beneath them |
 | 0076 | the **affinity option**, and how one setting reaches all four registration paths in any order |
 
@@ -534,7 +534,7 @@ What that bracket would *not* do is leave the caller's own flow suppressed after
 - ADR 0071 [0071-pipeline-scope-handle-for-handler-pipelines](0071-pipeline-scope-handle-for-handler-pipelines.md) — handler pipelines converge onto the same handle, carried on the object they already pass
 - ADR 0072 [0072-ambient-scope-adoption-seam](0072-ambient-scope-adoption-seam.md) — how a pipeline discovers an ambient DI scope the host owns
 - ADR 0073 [0073-aspnet-core-request-scope-package](0073-aspnet-core-request-scope-package.md) — the ASP.NET Core package, and the one line an application writes to opt in
-- ADR 0074 [0074-lifetime-validation-evaluation-site](0074-lifetime-validation-evaluation-site.md) — where the six scope-configuration rules are evaluated
+- ADR 0074 [0074-lifetime-validation-evaluation-site](0074-lifetime-validation-evaluation-site.md) — where the scope-configuration rules are evaluated
 - ADR 0076 [0076-scope-affinity-option-and-write-through](0076-scope-affinity-option-and-write-through.md) — the affinity option, and how one setting reaches all four registration paths in any order
 
 - Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-5, FR-8, FR-9, **FR-19** (its mechanism, supplied here and discharged by ADR 0072), FR-24.2, FR-24.4, FR-25 (clause .5), FR-27.1, FR-27.2, FR-27.3, NFR-4, NFR-7, NFR-8, NFR-9 (its `Publish`-subscriber and nested-pipeline rows), C-2, C-4, C-5, C-13, **C-14**, C-16, D0b, D0c, D6, D10, D16, OOS-1, **OOS-2** (its D6 amendment, which is what licenses this ADR's mechanism), OOS-5, OOS-10, OOS-14; AC-10, AC-11, AC-12, AC-13, **AC-20**, AC-22.3, **AC-23**, AC-24, AC-36, AC-39, AC-46, AC-47

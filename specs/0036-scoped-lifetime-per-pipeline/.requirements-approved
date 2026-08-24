@@ -1,4 +1,5 @@
-PENDING: revision 22 (27 FRs / 10 NFRs / 52 ACs / 123 normative bullets) — NOT YET APPROVED.
+PENDING: revision 23 (27 FRs / 10 NFRs / 53 ACs / 124 normative bullets) — NOT YET APPROVED.
+Revision 22 is also pending; nothing further is owed on it beyond the design phase's single approval.
 
 THE PROCESS CHANGED AT REVISION 22, AND THE CHANGE GOVERNS EVERY REVISION FROM HERE. The requirement
 owner, 2026-08-24: "Let's make them atomic changes. We originally deferred for efficiency as we kept
@@ -20,6 +21,66 @@ were carried to no longer exists. The deferral was not a mistake - it bought eff
 change was triggering a fresh mid-edit requirements review, and abolishing that review removes the
 cost that made deferral worth paying. The paragraphs below are kept as the record of what each
 revision changed, and their "carried to the end-of-phase true-up" sentences are spent.
+
+
+Revision 23 was made during the design phase and lands round-7 owner calls 1 and 8 together with
+their ADR halves in one commit (batch S-a) - the second requirements change made under the atomic
+process above. Call 1 is a correction to a mechanism the document stated four times; call 8 adds one
+rule and one criterion.
+
+CALL 1 - "the last descriptor" is not what MS DI resolves. FR-22.4, FR-24.3, FR-17 and C-12 all
+described MS DI's resolution as taking the LAST descriptor for a service type. Probed against the
+pinned Microsoft.Extensions.DependencyInjection 10.0.10, that is false whenever a KEYED descriptor
+exists: GetService<T>() resolves the last UNKEYED descriptor and ignores keyed registrations, and a
+keyed descriptor reads null for ImplementationType while carrying the type on KeyedImplementationType.
+Under the old wording FR-22.4 raised a startup-failing Error against a host with a keyed
+IBrighterOptions registration - a multi-tenant shape ADR 0076 supports by name, and whose write-through
+runs correctly. The owner chose (b) WIDEN THE RULES TO KEYED rather than (a) declare keyed
+registrations out of subject, which is what both reviewers recommended. Every rule now names the
+population it reads. FR-22.4 and FR-24.3 read the UNKEYED population, and the mechanism forces that
+rather than taste choosing it: Brighter's factories resolve IBrighterOptions unkeyed
+(ServiceProviderMapperFactory.cs:44) and ADR 0072 fixes IAmAScopeProvider's registration model as a
+plain unkeyed AddSingleton, so a keyed descriptor for either is never effective. FR-22.3's candidate
+scan reads keyed and unkeyed artefacts alike, and its per-parameter read gains the
+[FromKeyedServices] clause. That clause is load-bearing rather than a refinement, and the probe is
+the reason it is stated: a Singleton artefact taking [FromKeyedServices("k")] on a service type that
+ALSO carries an unkeyed Scoped registration builds cleanly, so a rule reading the unkeyed descriptor
+would report a captive dependency the container never creates.
+
+CALL 8 - the seventh diagnostic, and why the message was not weakened instead. FR-22.4's message row
+requires "the affinity the override carries", and ADR 0074 declares the delegate-registered path
+reachable while stating that such an override cannot be compared and therefore cannot be reported.
+The reviewer's fix was to make the value optional in FR-22.4's message. The owner chose (c) REPORT
+THE REGISTRATION SHAPE ITSELF. FR-17 therefore gains a SECOND rule: where the collection holds an
+affinity-carrying descriptor supplying no ImplementationInstance, validation reports a Warning naming
+the registration shape - which is readable, unlike the value - and the remedy of registering a
+constructed instance, an obligation ADR 0076 already places on every registrar. It is a Warning and
+not an Error because nothing about such a host is broken: the override still takes effect, and what
+is lost is the ability of FR-17's repeat rule to see it. FR-22.4's message row is unchanged.
+
+WHERE THE NEW RULE LIVES, AND WHY IT IS NOT A FIFTH FR-22 RULE. This was a design detail for the
+landing session rather than an owner call. It sits under FR-17 because its subject is the override
+descriptor family FR-17 already reads, the residue it closes is FR-17's own, and the remedy it names
+is an obligation on the registrar - which is FR-17's territory, FR-17 being the requirement that
+demands every call's descriptor stay visible to validation. FR-22 is about unworkable lifetime and
+opt-in CONFIGURATIONS; this rule is about a registration SHAPE. Siting it here also leaves FR-22's
+"Four rules" lead correct and untouched.
+
+SEVEN RULES, SIX CONFIGURATIONS. The count of validation messages moves from six to seven and the
+severity split from three errors and three warnings to three errors and FOUR warnings - in FR-25.10,
+AC-25, AC-43 and AC-44. The count of silent CONFIGURATIONS stays at six, and that is not an
+oversight: the first six rules each describe a host whose behaviour departs from its configuration,
+while the seventh describes a host that behaves exactly as configured and has merely made one of the
+other rules blind. ADR 0074 states the distinction rather than absorbing it.
+
+AN ACCEPTED SILENCE, DECIDED BY THE OWNER RATHER THAN ASSUMED. Widening to keyed descriptors makes a
+keyed IBrighterOptions registration detectable for the first time, so whether to report it was raised
+as a call of its own. The answer was NO NEW RULE: such a host works, ADR 0076 names the keyed
+registration as a supported multi-tenant shape, and a warning would fire against hosts that are
+behaving as intended. ADR 0074's Failure modes table carries it as an enumerated silence.
+
+Counts move from 52 ACs to 53 (AC-53) and from 123 normative bullets to 124 (FR-17 gains its second
+rule). No FR or NFR is added. One new codebase claim, probed and recorded above.
 
 
 Revision 22 was made during the design phase and lands round-6 decisions 10 and 14 together with

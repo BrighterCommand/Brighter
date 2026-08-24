@@ -62,7 +62,7 @@ Seven ADRs deliver the parent requirement, one decision each; the requirements c
 | 0071 | handler pipelines converge onto the **same handle**, carried on the object they already pass |
 | 0072 | how a pipeline discovers an **ambient** DI scope the host owns |
 | **0073** *(this one)* | the **ASP.NET Core package**, and the one line an application writes to opt in |
-| 0074 | **where** the six scope-configuration rules are evaluated |
+| 0074 | **where** the scope-configuration rules are evaluated |
 | 0075 | how a `Publish` subscriber and the consumer pump **suppress** adoption, for themselves and every pipeline created beneath them |
 | 0076 | the **affinity option**, and how one setting reaches all four registration paths in any order |
 
@@ -302,7 +302,7 @@ Two calls are not an error the extension throws on, and a call with no Brighter 
 
 #### What a repeated call resolves to
 
-**Two calls to the extension resolve to the last one, and a conflicting repeat is reported.** `ScopeAffinityOverride` is registered with plain `AddSingleton` for the same two reasons `IAmAScopeProvider` is. MS DI resolves the service type to the **last** descriptor, so the last call's affinity is the effective one. Every call's descriptor stays in the collection, so validation can see that there was more than one.
+**Two calls to the extension resolve to the last one, and a conflicting repeat is reported.** `ScopeAffinityOverride` is registered with plain `AddSingleton` for the same two reasons `IAmAScopeProvider` is. MS DI resolves the service type to the **last unkeyed** descriptor, so the last call's affinity is the effective one. Every call's descriptor stays in the collection, so validation can see that there was more than one.
 
 A `TryAddSingleton` here would satisfy neither reason, and alternative 11 records why. FR-17 requires both halves, and plain `AddSingleton` is the mechanism that supplies them.
 
@@ -428,7 +428,7 @@ So the clause belongs in `tests/Paramore.Brighter.Extensions.AspNetCore.Tests`, 
 
 The precedence rule that makes the first of those beat an application's own *assignment* of `DefaultScopeAffinity` — in any order and on any path, and not reported by validation — is ADR 0076's, and the page states it once.
 
-The one thing it does **not** beat is an application that registers `IBrighterOptions` **itself**, which defeats the write-through in either ordering and loses this extension's argument entirely. That case is not silent: the page's troubleshooting section carries it as one of the six validation messages (FR-25.10). It is ADR 0076's limit and ADR 0074's FR-22.4 rule. Nothing about it is this package's to decide, and nothing this extension could do would avoid it.
+The one thing it does **not** beat is an application that registers `IBrighterOptions` **itself**, which defeats the write-through in either ordering and loses this extension's argument entirely. That case is not silent: the page's troubleshooting section carries it as one of the seven validation messages (FR-25.10). It is ADR 0076's limit and ADR 0074's FR-22.4 rule. Nothing about it is this package's to decide, and nothing this extension could do would avoid it.
 
 **6. What this leaves to the siblings.** **This ADR contributes no entry to ADR 0070 step 7a's release-note ledger.** A new package breaks nothing on upgrade, and its `netstandard2.0` gap is a property of the opt-in rather than a change to existing behaviour; *Consequences* and the guidance page state it instead.
 
@@ -499,7 +499,7 @@ The one thing it does **not** beat is an application that registers `IBrighterOp
 - ADR 0070 [0070-per-pipeline-di-scope-for-mapper-and-transform-factories](0070-per-pipeline-di-scope-for-mapper-and-transform-factories.md) — a transform pipeline takes one DI scope, carried as a parameter
 - ADR 0071 [0071-pipeline-scope-handle-for-handler-pipelines](0071-pipeline-scope-handle-for-handler-pipelines.md) — handler pipelines converge onto the same handle, carried on the object they already pass
 - ADR 0072 [0072-ambient-scope-adoption-seam](0072-ambient-scope-adoption-seam.md) — how a pipeline discovers an ambient DI scope the host owns
-- ADR 0074 [0074-lifetime-validation-evaluation-site](0074-lifetime-validation-evaluation-site.md) — where the six scope-configuration rules are evaluated
+- ADR 0074 [0074-lifetime-validation-evaluation-site](0074-lifetime-validation-evaluation-site.md) — where the scope-configuration rules are evaluated
 - ADR 0075 [0075-publish-subscriber-scope-suppression](0075-publish-subscriber-scope-suppression.md) — how a `Publish` subscriber and the consumer pump suppress adoption, for themselves and every pipeline created beneath them
 - ADR 0076 [0076-scope-affinity-option-and-write-through](0076-scope-affinity-option-and-write-through.md) — the affinity option, and how one setting reaches all four registration paths in any order
 
