@@ -5,7 +5,7 @@ status: Proposed
 author:
   - "Ian Cooper"
 created: 2026-08-02
-summary: "Six scope-configuration rules — FR-22's four, FR-24.3's duplicate-provider rule and FR-17's repeated-opt-in rule — are evaluated in Paramore.Brighter.Extensions.DependencyInjection by a new ScopeConfigurationValidator. It implements the core IAmAPipelineValidator and is registered alongside the core PipelineValidator rather than wrapping it, and both validation hosts now resolve every registered validator and combine the results. It reads the three configured lifetimes and DefaultScopeAffinity from the object IBrighterOptions resolves to at host start, and the ServiceDescriptors from a snapshot taken when ValidatePipelines() is called. No container type is added to core."
+summary: "Seven scope-configuration rules — FR-22's four, FR-24.3's duplicate-provider rule and FR-17's two registration rules — are evaluated in Paramore.Brighter.Extensions.DependencyInjection by a new ScopeConfigurationValidator. It implements the core IAmAPipelineValidator and is registered alongside the core PipelineValidator rather than wrapping it, and both validation hosts now resolve every registered validator and combine the results. It reads the three configured lifetimes and DefaultScopeAffinity from the object IBrighterOptions resolves to at host start, and the ServiceDescriptors from a snapshot taken when ValidatePipelines() is called. No container type is added to core."
 tags:
   - "di"
   - "lifetime"
@@ -31,7 +31,7 @@ No prior record decides **which component evaluates those rules, and how it reac
 
 **Parent requirement**: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md)
 
-This ADR decides one thing: **the six scope-configuration rules are evaluated in the DI package, by a validator registered beside the core one.** Two things are the core of it. It fixes **the evaluation site** for FR-22's four rules, FR-24.3's duplicate-provider rule and FR-17's repeated-opt-in rule. And it fixes **the plumbing that gets those rules their inputs**, which arrive at two deliberately different instants.
+This ADR decides one thing: **the seven scope-configuration rules are evaluated in the DI package, by a validator registered beside the core one.** Two things are the core of it. It fixes **the evaluation site** for FR-22's four rules, FR-24.3's duplicate-provider rule and FR-17's two registration rules. And it fixes **the plumbing that gets those rules their inputs**, which arrive at two deliberately different instants.
 
 **In scope.** Each requirement below is discharged here by the named mechanism.
 
@@ -67,7 +67,7 @@ Seven ADRs deliver the parent requirement, one decision each; the requirements c
 | 0071 | handler pipelines converge onto the **same handle**, carried on the object they already pass |
 | 0072 | how a pipeline discovers an **ambient** DI scope the host owns |
 | 0073 | the **ASP.NET Core package**, and the one line an application writes to opt in |
-| **0074** *(this one)* | **where** the six scope-configuration rules are evaluated |
+| **0074** *(this one)* | **where** the scope-configuration rules are evaluated |
 | 0075 | how a `Publish` subscriber and the consumer pump **suppress** adoption, for themselves and every pipeline created beneath them |
 | 0076 | the **affinity option**, and how one setting reaches all four registration paths in any order |
 
@@ -79,11 +79,11 @@ What the siblings settled is what this ADR reads.
 - **ADR 0076** fixed the opt-in as an affinity property on `IBrighterOptions`, defaulting to today's behaviour. It also fixed the override that carries a registration extension's argument onto whichever options object the four registration paths produce.
 - **ADR 0073** ships the extension that supplies that argument.
 
-Validation is therefore written last in *dependency order* — 0070, 0071, 0072, 0073 and 0076 all come before it — which is a different ordering from the numbering that makes it the fifth. It cannot be written earlier. Three of its six rules read values that exist only once ADR 0076 has put them there — FR-22.1, FR-22.2, and FR-22.3 for one of its two inputs — and three read the registration model that ADRs 0072, 0073 and 0076 fixed. Nothing here changes a lifetime, a scope or a pipeline.
+Validation is therefore written last in *dependency order* — 0070, 0071, 0072, 0073 and 0076 all come before it — which is a different ordering from the numbering that makes it the fifth. It cannot be written earlier. Three of its seven rules read values that exist only once ADR 0076 has put them there — FR-22.1, FR-22.2, and FR-22.3 for one of its two inputs — and four read the registration model that ADRs 0072, 0073 and 0076 fixed. Nothing here changes a lifetime, a scope or a pipeline.
 
 ADR 0067's `Terms` block defines the two axes this ADR turns on, and this ADR does not restate it: Brighter's **configured lifetime** governs the artefact, the container's **registration lifetime** governs that artefact's dependencies, and `IServiceScope`, `ServiceProviderLifetimeScope` and `IAmALifetime` stay distinct. The rules below read both axes and never conflate them. FR-22.1 and FR-22.2 read configured lifetimes only; FR-22.3 reads a configured lifetime on one side and a registration lifetime on the other.
 
-### The six silent configurations, and what each rule reads
+### The silent configurations, and what each rule reads
 
 Four of the six become expressible with this work:
 
@@ -105,10 +105,13 @@ That second pair already works, which is what makes FR-22.2 a **compatibility br
 | **FR-22.2** | discarding any of the three that is `Singleton`, the remainder is not uniform — `Transient` and `Scoped` are mixed. Under either affinity (D8) | **Error** |
 | **FR-22.3** | an artefact whose **configured** lifetime is `Singleton` takes a direct constructor parameter whose **registration** lifetime is `Scoped` — a captive dependency (D9) | **Warning** |
 | **FR-22.4** | an affinity override is registered, and the `IBrighterOptions` descriptor the container will resolve is not one Brighter's own registration produced — so the override was never applied and the opt-in is lost | **Error** |
-| **FR-24.3** | the service collection holds `IAmAScopeProvider` descriptors for more than one distinct implementation type | **Warning** |
-| **FR-17** | the service collection holds affinity-override descriptors carrying more than one distinct `ScopeAffinity` value — the registration extension was called twice with different affinities | **Warning** |
+| **FR-24.3** | the service collection holds unkeyed `IAmAScopeProvider` descriptors for more than one distinct implementation type | **Warning** |
+| **FR-17** *(repeated opt-in)* | the service collection holds affinity-override descriptors carrying more than one distinct `ScopeAffinity` value — the registration extension was called twice with different affinities | **Warning** |
+| **FR-17** *(unreadable override)* | an affinity-override descriptor supplies no `ImplementationInstance`, because it was registered by factory delegate — so the rule above cannot read its value and the repeat it would report goes unreported | **Warning** |
 
-Every message names `docs/guides/lifetimes-and-scoping.md`, and the guidance page carries a troubleshooting entry keyed to each of the six. The criteria are **AC-43** for the literal path and **FR-25.10** for the entries.
+Every message names `docs/guides/lifetimes-and-scoping.md`, and the guidance page carries a troubleshooting entry for each of the seven. The criteria are **AC-43** for the literal path and **FR-25.10** for the entries.
+
+**Seven rules, six configurations, and the difference is worth stating.** The first six rows each describe a host whose behaviour departs from what was configured. The seventh does not: an override registered by factory delegate *is* applied, because ADR 0076's write-through resolves it. What that shape costs is the *reportability* of the row above it — FR-17's repeated-opt-in rule reads affinity values off descriptors without resolving anything, so a delegate-registered override is invisible to it. The seventh rule reports the registration shape itself, which is readable, rather than the value, which is not. ADR 0076 already makes the instance form an obligation on any registrar rather than a preference; this rule is what makes a breach of it visible instead of silent.
 
 Three properties of that set are load-bearing, and each follows from enumerating the set rather than from reading any one row.
 
@@ -130,13 +133,13 @@ The three lifetimes are a joint choice, so `{Scoped, Scoped, Transient}` is not 
 - **The only precedent for reading the container without resolving it does no constructor inspection.** `ServiceCollectionTransformerResolvabilityProbe` is a `HashSet<Type>` and a `Contains` (`:40-56`). It is a precedent for snapshot-and-query-without-resolving, and for nothing else. The constructor and lifetime walk FR-22.3 needs is new.
 - **`ValidatePipelines()` is opt-in, and it snapshots at call time** (`BrighterPipelineValidationExtensions.cs:58`). C-15 makes the residual gaps explicit and accepted.
 - **Both host shapes must fire, and the consumer one is not Brighter's to register.** `AddConsumers` sets `ConsumerOwnsValidation`, which makes `BrighterValidationHostedService.StartAsync` return immediately (`BrighterValidationHostedService.cs:73`). The consumer path therefore runs through `ServiceActivatorHostedService`, which nothing in `src` registers (D14). *Both host shapes, enumerated* walks all six combinations.
-- **Errors and warnings must stay distinguishable.** Three of the six messages are errors and three are warnings, and a warning must never block startup whatever `ThrowOnError` says.
+- **Errors and warnings must stay distinguishable.** Three of the seven messages are errors and four are warnings, and a warning must never block startup whatever `ThrowOnError` says.
 
 ## Decision
 
-**The six rules are evaluated by a second validator that the container package contributes, and both validation hosts resolve every registered validator and combine the results.**
+**The seven rules are evaluated by a second validator that the container package contributes, and both validation hosts resolve every registered validator and combine the results.**
 
-The new validator implements the core validation interface, is registered alongside the core one inside `ValidatePipelines()`, and evaluates only its own six rules. It reads its lifetime and affinity inputs from the object `IBrighterOptions` resolves to at host start, and its registration inputs from a snapshot of the service collection taken at `ValidatePipelines()` call time. No type in `Paramore.Brighter` gains a container concept, and no core rule family is extended.
+The new validator implements the core validation interface, is registered alongside the core one inside `ValidatePipelines()`, and evaluates only its own seven rules. It reads its lifetime and affinity inputs from the object `IBrighterOptions` resolves to at host start, and its registration inputs from a snapshot of the service collection taken at `ValidatePipelines()` call time. No type in `Paramore.Brighter` gains a container concept, and no core rule family is extended.
 
 The seam is a **pull**, and it is the one the set already uses. An assembly that owns a concept contributes the rules for that concept, and nothing else has to know. `Paramore.Brighter.ServiceActivator` already supplies four `ISpecification<Subscription>` rules through the container today. That seam works because `Subscription` is a core type. This ADR's entity types cannot be core types, so the pull moves up one level — from specifications to validators. *Technology Choices* argues why, and cites the shipping example.
 
@@ -166,7 +169,7 @@ sequenceDiagram
     Host->>Core: Validate()
     Core-->>Host: handler, producer and consumer findings
     Host->>Scope: Validate()
-    Scope->>Scope: evaluate all six — FR-22.1, FR-22.2, FR-22.3,<br/>FR-22.4, FR-24.3 and FR-17 — independently
+    Scope->>Scope: evaluate all seven — FR-22.1, FR-22.2, FR-22.3, FR-22.4,<br/>FR-24.3 and FR-17's two — independently
     Scope-->>Host: this ADR's findings
     Host->>Host: Combine(...), then throw on errors under ThrowOnError,<br/>and log warnings always
 
@@ -237,7 +240,7 @@ classDiagram
         +Validate() PipelineValidationResult
     }
     class ScopeConfigurationRules {
-        one specification per rule, six in all
+        one specification per rule, seven in all
     }
     class ScopeConfiguration {
         the affinity and the three configured lifetimes
@@ -292,21 +295,23 @@ classDiagram
 | --- | --- | --- | --- | --- |
 | Container rule evaluation | `ScopeConfigurationValidator` (DI package) | Evaluates the container rule set over its two entity families and returns its own findings. Runs no other validator and owns none | **doing** | `ScopeConfigurationRules`, which it evaluates; the two entity families it evaluates them over; the host that resolves it |
 | Shared validation registry | `ValidationMapperRegistry` (DI package) | Holds the single `MessageMapperRegistry` a validation run uses, so that the core validator and this one cannot build two. Drains that registry, and the mapper factory and DI scope it holds, when the container disposes it | **knowing**, **doing** | `ArtefactExclusionSet`, which takes its `Value`; `PipelineValidator`, which is handed its `Factory`; the container, which disposes it |
-| Host configuration | `ScopeConfiguration` (DI package) | Holds the affinity and the three configured lifetimes as the factories see them. Holds three lists of `DescriptorRecord` — the ambient-source registrations, the affinity-override registrations and the `IBrighterOptions` registrations — each in registration order | **knowing** (information holder) | `DescriptorRecord`, which it is made of; the five rules that read it |
-| Descriptor as the rules can read it | `DescriptorRecord` (DI package) | Pairs a descriptor with its registration position, with its implementation type where one is statically known, and with its `ImplementationInstance` where the descriptor supplies one. Records, on an `IBrighterOptions` entry, whether Brighter's own registration produced that descriptor | **knowing** (information holder) | `ScopeConfiguration`, which lists it; `ContainerRegistrationSnapshot`, which builds it |
+| Host configuration | `ScopeConfiguration` (DI package) | Holds the affinity and the three configured lifetimes as the factories see them. Holds three lists of `DescriptorRecord` — the ambient-source registrations, the affinity-override registrations and the `IBrighterOptions` registrations — each in registration order | **knowing** (information holder) | `DescriptorRecord`, which it is made of; the six rules that read it |
+| Descriptor as the rules can read it | `DescriptorRecord` (DI package) | Pairs a descriptor with its registration position, with its service key where it has one, with its implementation type where one is statically known — from `KeyedImplementationType` on a keyed descriptor and `ImplementationType` otherwise — and with its `ImplementationInstance` where the descriptor supplies one. Records, on an `IBrighterOptions` entry, whether Brighter's own registration produced that descriptor | **knowing** (information holder) | `ScopeConfiguration`, which lists it; `ContainerRegistrationSnapshot`, which builds it |
 | Artefact under test | `ArtefactRegistration` (DI package) | Holds one candidate artefact: its type, its `ArtefactKind`, and the configured lifetime that kind selects | **knowing** | `ArtefactKind`; `ContainerRegistrationSnapshot`, which builds it; FR-22.3's rule, which reads it |
 | Registration snapshot | `ContainerRegistrationSnapshot` (DI package) | Holds the descriptors as they stood when `ValidatePipelines()` was called. Answers three questions without resolving anything, and it is the only role in this table that reads the service collection | **knowing**, **doing** | `builder.Services`, which it snapshots; `DescriptorRecord` and `ArtefactRegistration`, which it yields |
 | Constructor choice | `ArtefactConstructorSelector` (DI package) | Applies D15's rule, and only D15's rule: the public constructor with the most parameters, and on a tie, none | **deciding** | FR-22.3's rule, its only caller; the `Type` it is asked about |
 | Brighter's own artefacts | `ArtefactExclusionSet` (DI package) | Holds the set of artefact types returned by a `RequestHandlerAttribute` or `TransformAttribute` `GetHandlerType()`. Answers one question — is this type one Brighter put in the pipeline itself | **knowing** (information holder) | the reflection-only describe path it is built from; `ValidationMapperRegistry`, whose `Value` it takes; FR-22.3's rule |
-| The rules | `ScopeConfigurationRules` (DI package) | Decides, for each of the six rules, whether one entity satisfies it, and what the finding says when it does not | **deciding** | `ScopeConfigurationValidator`, which evaluates them; the two entity families; `ArtefactConstructorSelector` and `ArtefactExclusionSet` |
+| The rules | `ScopeConfigurationRules` (DI package) | Decides, for each of the seven rules, whether one entity satisfies it, and what the finding says when it does not | **deciding** | `ScopeConfigurationValidator`, which evaluates them; the two entity families; `ArtefactConstructorSelector` and `ArtefactExclusionSet` |
 | Finding | `ValidationError` (core) | Holds a severity, a source and a message. Unchanged | **knowing** | `PipelineValidationResult`, which collects it |
 | Reporting | the two hosted services | Resolve every registered validator, `Combine` the results, then throw on errors under `ThrowOnError` and log warnings always | **doing** | every `IAmAPipelineValidator` the container holds; `PipelineValidationResult.Combine` |
 
-The three questions `ContainerRegistrationSnapshot` answers are worth naming, because together they are everything the rules read from the service collection:
+The three questions `ContainerRegistrationSnapshot` answers are worth naming, because together they are everything the rules read from the service collection. Each states the population it reads over, because Microsoft resolves keyed and unkeyed registrations separately and a question that did not say which it meant would be wrong for one of them:
 
-- **what lifetime is this service type registered with**, taking the last descriptor where there is more than one, which matches Microsoft's resolution (FR-22.3);
-- **what artefacts are registered**, as one `ArtefactRegistration` per `(type, kind)` pair (FR-22.3);
-- **what descriptors exist for this service type, in registration order**, as `DescriptorRecord`s (FR-24.3, FR-17 and FR-22.4).
+- **what lifetime is this service type registered with**, taking the last *unkeyed* descriptor, which is what `GetService<T>()` resolves — or, where the parameter carries `[FromKeyedServices(key)]`, the last descriptor for that `(type, key)` (FR-22.3);
+- **what artefacts are registered**, as one `ArtefactRegistration` per `(type, kind)` pair, over keyed and unkeyed descriptors alike, reading `KeyedImplementationType` where the descriptor is keyed and `ImplementationType` where it is not (FR-22.3);
+- **what descriptors exist for this service type, in registration order**, as `DescriptorRecord`s, each carrying its service key where it has one (FR-24.3, FR-17 and FR-22.4).
+
+**Naming the population is not the same as reading keys everywhere, and the rules divide on it.** FR-22.3's candidate scan reads keyed and unkeyed artefacts alike, because a keyed handler, mapper or transform is one an application registered and one a pipeline will resolve. FR-22.4 and FR-24.3 read the *unkeyed* population only, and the mechanism forces that rather than taste choosing it: Brighter's factories resolve `IBrighterOptions` unkeyed (`ServiceProviderMapperFactory.cs:44`), and ADR 0072 fixes `IAmAScopeProvider`'s registration model as a plain unkeyed `AddSingleton`, so a keyed descriptor for either is never the one Brighter reads. A rule taking "the last descriptor of any kind" would report a defeat against a host whose write-through worked perfectly — the false `Error` that ADR 0076's `ServiceKey` clause already prevents at the registration end, arriving instead at the reporting end.
 
 The third question is what supplies `ScopeConfiguration`'s three descriptor lists. It is one query rather than three because those three rules ask the same questions of a descriptor. It is also why ADR 0076's `BrighterOptionsRegistration` needs no query of its own: 0076 registers it as an instance, so it arrives as the `ImplementationInstance` of a descriptor for its own service type.
 
@@ -320,7 +325,7 @@ The fix is the constructor's accessibility rather than the entities'. The constr
 
 `IAmAPipelineValidator` is registered `TryAddSingleton` today (`BrighterPipelineValidationExtensions.cs:71`), and both hosts consume exactly one instance. `BrighterValidationHostedService` takes it as a constructor parameter (`:60`), and `ServiceActivatorHostedService` resolves it with `GetService<IAmAPipelineValidator>()` (`:50`).
 
-Composition is therefore not free. A plain `AddSingleton` alongside would leave Microsoft's container resolving the last descriptor, and the core validator's findings would silently disappear. **Making the seam a pull is what this ADR pays for, and it is a one-line change in each host.**
+Composition is therefore not free. A plain `AddSingleton` alongside would leave Microsoft's container resolving the last unkeyed descriptor, and the core validator's findings would silently disappear. **Making the seam a pull is what this ADR pays for, and it is a one-line change in each host.**
 
 So `ValidatePipelines()` registers two validators, and each host asks for all of them:
 
@@ -374,7 +379,7 @@ Dropping it is silent. It is `PipelineValidator`'s ninth and last parameter and 
 
 | Member | Input | Output | Error conditions |
 | --- | --- | --- | --- |
-| `ScopeConfigurationValidator.Validate()` | none — every input is held from construction | a `PipelineValidationResult` carrying this ADR's six rules and nothing else. The host combines it with the core validator's | A rule-body exception is converted by `Specification<T>` into a `ValidationSeverity.Error` finding, as it is for every existing rule (`0064-validate-pipeline-assembly-and-provider-registration`). The rules add no bespoke `try`/`catch`. **Thread safety:** every input is captured at construction and never mutated, and at most one validation host calls this per host shape, so a repeated or concurrent call is safe and yields the same result |
+| `ScopeConfigurationValidator.Validate()` | none — every input is held from construction | a `PipelineValidationResult` carrying this ADR's seven rules and nothing else. The host combines it with the core validator's | A rule-body exception is converted by `Specification<T>` into a `ValidationSeverity.Error` finding, as it is for every existing rule (`0064-validate-pipeline-assembly-and-provider-registration`). The rules add no bespoke `try`/`catch`. **Thread safety:** every input is captured at construction and never mutated, and at most one validation host calls this per host shape, so a repeated or concurrent call is safe and yields the same result |
 | `ValidationMapperRegistry.Dispose()` | none | — | Disposes the `MessageMapperRegistry` it built, if it built one. Idempotent, and safe against `PipelineValidator` disposing the same instance, because `MessageMapperRegistry.Dispose()` claims disposal with a single `Interlocked.Exchange` (`MessageMapperRegistry.cs:360-362`) |
 
 That thread-safety property is an invariant of this validator's construction, and it is *not* a discharge of NFR-4. NFR-4 is about beginning and releasing pipeline scopes, and about establishing and clearing ambient suppression, under concurrent pipelines. A start-time validator does neither, and ADR 0076 draws the same distinction for its singleton write. No acceptance criterion asserts a repeated `Validate()`, and none is owed, because nothing calls it twice.
@@ -401,19 +406,20 @@ All four therefore go through ADR 0076's `RegisterBrighterOptions`. That method 
 
 **That is correct, not a defect.** The requirement is that validation reads the configuration the factories honour, including when that is the surprising object. The pre-existing `InvalidCastException` from `AddBrighter` before the `Func` overload of `AddConsumers` (`:89-90`) is C-12's, is untouched here, and already bites `ResolveSubscriptions`.
 
-#### The six rules
+#### The seven rules
 
 Each rule is an `ISpecification<T>` built with the existing `Specification<T>` constructors and evaluated with `ValidationResultCollector<T>`. That is the machinery `0053-pipeline-validation-at-startup` established and `0064-validate-pipeline-assembly-and-provider-registration` extended, instantiated in the DI package over DI-package entity types. There are two entity families.
 
-**Family 1 — `ScopeConfiguration`, exactly one per host.** It carries the affinity, the three configured lifetimes, the `IAmAScopeProvider` registrations, the affinity-override registrations and the `IBrighterOptions` registrations. Five rules evaluate it.
+**Family 1 — `ScopeConfiguration`, exactly one per host.** It carries the affinity, the three configured lifetimes, the `IAmAScopeProvider` registrations, the affinity-override registrations and the `IBrighterOptions` registrations. Six rules evaluate it.
 
 | Rule | Message must contain | `Source` |
 | --- | --- | --- |
 | FR-22.1 | the affinity setting; all three lifetimes **with their values**; that the opt-in has no effect; the guidance page | `"Brighter options"` |
 | FR-22.2 | all three lifetimes with their values; that the mixed pair do not share pipeline-scoped dependencies; the guidance page | `"Brighter options"` |
 | FR-22.4 | the affinity the override carries; that the resolved `IBrighterOptions` was supplied by the application rather than by Brighter, so the override was never applied; the remedy — configure Brighter's options through `AddBrighter`/`AddConsumers` rather than by registering `IBrighterOptions` directly; the guidance page | `"Brighter options registration"` |
-| FR-24.3 | every registered implementation type; which one is effective (the **last** registered, matching Microsoft's resolution); the guidance page | `"Scope provider registration"` |
-| FR-17 | every `ScopeAffinity` value registered; which is effective (the **last**, matching Microsoft's resolution); that the extension is called once and its argument is how an affinity is selected; the guidance page | `"Scope affinity registration"` |
+| FR-24.3 | every registered implementation type; which one is effective (the **last unkeyed** registered, matching Microsoft's resolution); the guidance page | `"Scope provider registration"` |
+| FR-17 *(repeated opt-in)* | every `ScopeAffinity` value registered; which is effective (the **last unkeyed**, matching Microsoft's resolution); that the extension is called once and its argument is how an affinity is selected; the guidance page | `"Scope affinity registration"` |
+| FR-17 *(unreadable override)* | that an affinity override is registered by factory delegate; that its value cannot be read without resolving, so a conflicting repeat carrying it cannot be reported; the remedy — register the override as a constructed instance, which ADR 0076 requires of every registrar; the guidance page | `"Scope affinity registration"` |
 
 **Family 2 — `ArtefactRegistration`, one per candidate artefact.** FR-22.3 evaluates it, and yields one `Warning` per captive parameter. The message names the artefact type, the `Scoped` service it requires, and the guidance page. `Source` is `$"{kind} '{artefactType.Name}'"`.
 
@@ -423,7 +429,9 @@ A descriptor whose `ImplementationType` is statically known contributes that typ
 
 Distinctness is over implementation types, so the *same* implementation type registered twice is not a finding — it is idempotent in effect, and AC-32's second branch pins that. Because Brighter registers no default provider (D11), the ASP.NET extension can never itself create a duplicate. Two application registrations are the only way to reach this rule.
 
-##### FR-17 is the same rule shape over a different distinctness key
+**The distinctness set is over the unkeyed descriptors**, because those are the ones a pipeline's unkeyed resolution of `IAmAScopeProvider` chooses between. A keyed provider registration is never effective, so counting it would report a conflict between one provider that is used and one that cannot be.
+
+##### FR-17's first rule is the same shape over a different distinctness key
 
 The two rules are complementary rather than overlapping. FR-24.3 asks whether two *different providers* were registered; FR-17 asks whether two *different affinities* were.
 
@@ -433,16 +441,22 @@ The values are read from the descriptors' `ImplementationInstance`. ADR 0073's e
 
 **A descriptor from which no `ScopeAffinity` value can be read contributes nothing to the distinctness set.** FR-24.3's registration-position fallback is deliberately not borrowed here. FR-24.3's key is an implementation type, for which a position is a defensible "unknown, treat as distinct". This rule's key is a **value**, and two positions are always distinct, so the fallback would turn the idempotent repeat FR-17 exempts in terms into a `Warning` — which AC-49's third branch falsifies.
 
-The uncomparable path is reachable. `ScopeAffinityOverride` is public in the DI package, and a third-party opt-in package registering it as `AddSingleton(sp => new ScopeAffinityOverride(x))` supplies no instance. The obligation that follows belongs to the registrar rather than to the rule: **an override registered by factory delegate cannot be compared, and therefore cannot be reported.** A package that wants its opt-in to be reportable registers an instance, as ADR 0073's does. Missing an uncomparable descriptor is the better failure, because reporting one as a conflicting affinity would be a finding about something never read.
-
 This rule needs no new input. The descriptors are already in the `ValidatePipelines()`-time snapshot the other container rules read.
+
+##### FR-17's second rule reports the registration shape the first rule cannot read
+
+The uncomparable path is reachable. `ScopeAffinityOverride` is public in the DI package, and a third-party opt-in package registering it as `AddSingleton(sp => new ScopeAffinityOverride(x))` supplies no instance. That override still works — ADR 0076's write-through resolves it — but the rule above cannot see its value, so a conflicting repeat carrying it goes unreported.
+
+**The registration shape is readable where the value is not, so it is what the rule reports.** A delegate-registered descriptor has `ImplementationInstance == null` and `ImplementationFactory != null`, both in the snapshot the rule already holds; no resolution and no comparison is involved. The finding says that an affinity override was registered by factory delegate and that registering it as a constructed instance is what makes an opt-in reportable — which is not this rule's invention but an obligation ADR 0076 already places on every registrar, ADR 0073's extension included.
+
+It reports the shape rather than a defeat, and the severity follows from that. Nothing about this host is broken: the affinity the registrar passed is the affinity the factories read. What is lost is a *diagnostic*, so the finding is a `Warning`, and a host that never registers a second override pays nothing for it beyond the message. It also closes FR-17's residue at the same time, because the rule that could not report an uncomparable descriptor is now accompanied by one that can report why.
 
 ##### FR-22.4 is a rule about registrations, not about values
 
 That is what makes it work in both orderings. Its condition has **two conjuncts**:
 
 - an affinity override is present in the snapshot — the same descriptors FR-17 reads;
-- **and** the `IBrighterOptions` descriptor Microsoft's container will resolve, which is the **last** one for that service type, is not one Brighter's own registration produced.
+- **and** the `IBrighterOptions` descriptor Microsoft's container will resolve for Brighter's factories, which is the **last unkeyed** one for that service type, is not one Brighter's own registration produced.
 
 Three things follow, and an implementation could get any of them wrong while still satisfying the row above.
 
@@ -450,7 +464,7 @@ Three things follow, and an implementation could get any of them wrong while sti
 
 **A record taken when Brighter's own `TryAddSingleton` runs is not sufficient on its own.** Such a record sees the *before* ordering, where an application registration already present makes the `TryAdd` a no-op. In the *after* ordering the `TryAdd` succeeds and Brighter's descriptor is genuinely in the collection — it simply is not the last one, so it never runs. Only the collection distinguishes those two cases, which is why the rule reads the snapshot it already takes for FR-24.3 and FR-17 rather than a flag. AC-50's after-ordering branch is that falsifier.
 
-**What makes a descriptor "Brighter's" is ADR 0076's to say, not this ADR's.** Brighter registers `IBrighterOptions` from exactly one definition — 0076's `RegisterBrighterOptions`, which all four entry points call. That definition records the descriptor it adds as a `BrighterOptionsRegistration` **placed in the service collection**, so the record reaches this rule through the same call-time snapshot as every other container input, and nothing has to be resolved. This rule asks 0076's record whether the last descriptor is the recorded one. It does not attempt to recognise Brighter's registration by inspecting a delegate. The recorded value is absent in the before ordering and present-but-not-last in the after ordering, and both are the same finding.
+**What makes a descriptor "Brighter's" is ADR 0076's to say, not this ADR's.** Brighter registers `IBrighterOptions` from exactly one definition — 0076's `RegisterBrighterOptions`, which all four entry points call. That definition records the descriptor it adds as a `BrighterOptionsRegistration` **placed in the service collection**, so the record reaches this rule through the same call-time snapshot as every other container input, and nothing has to be resolved. This rule asks 0076's record whether the last unkeyed descriptor is the recorded one. It does not attempt to recognise Brighter's registration by inspecting a delegate. The recorded value is absent in the before ordering and present-but-not-last in the after ordering, and both are the same finding.
 
 **Like FR-24.3, this rule reads the snapshot and inherits its precondition:** `ValidatePipelines()` must be called after the registrations it is to see. In the natural fluent form, an application registration made after `AddBrighter` is also after the snapshot, so the rule would see nothing — the same silent loss it exists to break. AC-50's Given carries that constraint, and FR-25.10's guidance must state it, exactly as AC-32 does for the duplicate-provider rule.
 
@@ -459,7 +473,8 @@ Three things follow, and an implementation could get any of them wrong while sti
 Two hosts the rule deliberately leaves silent are worth naming:
 
 - an application that registers `IBrighterOptions` itself and never opts in. The override conjunct is what keeps that host silent, and it is not a hypothetical population — **125 files under `tests/` register `IBrighterOptions` themselves today**;
-- a mixed host in which `IBrighterOptions` has `TryAddSingleton`'s effect on both sides. Whichever side won, it registered through `RegisterBrighterOptions`, so the last descriptor is Brighter's and the override was applied (C-12).
+- a mixed host in which `IBrighterOptions` has `TryAddSingleton`'s effect on both sides. Whichever side won, it registered through `RegisterBrighterOptions`, so the last unkeyed descriptor is Brighter's and the override was applied (C-12);
+- a host that registers `IBrighterOptions` under a service key. ADR 0076's guard tests `ServiceKey is null`, so Brighter still adds its own unkeyed descriptor and the write-through runs; the keyed object is simply never one Brighter's factories read. The *Failure modes* table below carries that as an enumerated silence rather than a rule.
 
 #### Captive-dependency detection: what it reads, and what it cannot see
 
@@ -467,7 +482,7 @@ FR-22.3 runs as a funnel, and each stage answers one question.
 
 ```mermaid
 flowchart TB
-    d["every ServiceDescriptor in the snapshot"] --> k{"does the implementation type<br/>implement a core marker interface?"}
+    d["every ServiceDescriptor in the snapshot,<br/>keyed and unkeyed alike"] --> k{"does the implementation type<br/>implement a core marker interface?"}
     k -- "no" --> skip1["not a candidate"]
     k -- "yes" --> reg["one ArtefactRegistration per type and kind<br/>Handler, Mapper or Transform"]
     reg --> gov{"is the configured lifetime<br/>that kind selects Singleton?"}
@@ -480,7 +495,7 @@ flowchart TB
     parm -- "yes" --> warn["one Warning per captive parameter<br/>de-duplicated by artefact type and dependency type"]
 ```
 
-**Candidates come from the snapshot, not from the describe path.** A descriptor contributes a candidate when its implementation type implements one of the core, container-free marker interfaces:
+**Candidates come from the snapshot, not from the describe path.** A descriptor contributes a candidate when its implementation type implements one of the core, container-free marker interfaces. A keyed descriptor carries that type on `KeyedImplementationType` and reads `null` for `ImplementationType`, so the scan reads whichever of the two is populated — otherwise a keyed artefact is dropped at this first node and is invisible to every rule downstream of it. The marker interfaces:
 
 - `IHandleRequests`/`IHandleRequestsAsync` — the Handler kind;
 - `IAmAMessageMapper`/`IAmAMessageMapperAsync` — the Mapper kind;
@@ -518,7 +533,9 @@ This is deliberately **not** Microsoft's selection. Microsoft's additionally req
 
 The divergence is acceptable because the two selections answer different questions. Microsoft's selector answers *which constructor will I activate*, and it can only answer that for a type it is willing to activate. Brighter's rule answers *what does this type appear to require*, for a type nobody is going to activate — the whole value of the check is that it runs before anything is built. AC-42's final clause makes the divergence explicit and necessary: a mapper with two same-count constructors is not activatable by Microsoft's container at all, and the criterion asserts validation output while forbidding the mapper to be resolved. A rule that reproduced Microsoft's selection could not report on that type, because Microsoft's selection has no answer for it.
 
-**Each parameter's lifetime** is the `ServiceLifetime` of its descriptor in the snapshot. Where the parameter type is a constructed generic with no descriptor of its own, the descriptor for its generic type definition is used. That is the descriptor Microsoft's container would resolve through, so it is a faithful reading of "the parameter's own descriptor" rather than a widening of the rule. Where more than one descriptor exists for a service type, the last is read, matching Microsoft's resolution and FR-24.3's last-wins.
+**Each parameter's lifetime** is the `ServiceLifetime` of its descriptor in the snapshot. Where the parameter type is a constructed generic with no descriptor of its own, the descriptor for its generic type definition is used. That is the descriptor Microsoft's container would resolve through, so it is a faithful reading of "the parameter's own descriptor" rather than a widening of the rule. Where more than one descriptor exists for a service type, the last unkeyed one is read, matching Microsoft's resolution and FR-24.3's last-wins.
+
+**A parameter carrying `[FromKeyedServices(key)]` is read against that key instead**, because that attribute is what decides which descriptor the container will inject. Ignoring it warns wrongly on a host that is correct, and the case is not contrived: a `Singleton` artefact taking `[FromKeyedServices("k")] IDb` resolves the keyed `Singleton` and builds cleanly, while an unkeyed `Scoped` `IDb` registered for the same service type — a perfectly ordinary registration for the rest of the application to use — is what the unkeyed read would find. The rule would then report a captive dependency on a parameter the container never binds that way.
 
 ##### Failure modes, enumerated and accepted
 
@@ -529,6 +546,8 @@ Three rows below can report *wrongly*, and each is marked as such: the snapshot-
 | A registration made **after** `ValidatePipelines()` was called | invisible, and on one branch **wrong**: a mapper registered later is not a candidate at all, and a later `AddScoped<IOrderDbContext>()` makes a real captive dependency invisible — while a later registration that *changes* a service type's effective lifetime makes the snapshot's last-descriptor reading disagree with what the container will resolve, so a warning can be raised about a dependency that is no longer `Scoped`, or withheld about one that now is | C-15, and the reason the guidance is "call `ValidatePipelines()` last" |
 | Open generic artefact type | not inspected — a parameter typed by a type parameter has no descriptor to read | Necessary; no meaningful reading exists |
 | Artefact registered by factory delegate or instance | not a candidate — no statically known implementation type | C-20(ii), explicitly |
+| Artefact registered under a **service key** | a candidate like any other — the scan reads `KeyedImplementationType`, and its parameters are read against the key where `[FromKeyedServices]` names one | Covered, not excluded; this is what widening the rules to keyed descriptors bought |
+| `IBrighterOptions` registered under a **service key** | not reported by any rule. Brighter's factories resolve `IBrighterOptions` unkeyed, and ADR 0076's `ServiceKey` guard leaves Brighter's own unkeyed registration in place, so the host works and the opt-in is applied — the keyed object is simply not the one Brighter reads | Accepted silence. ADR 0076 names the keyed registration as a supported multi-tenant shape, so a warning here would fire against hosts that are working as intended |
 | Parameter with no descriptor, including `IServiceProvider`, `IServiceScopeFactory` and `IEnumerable<T>` | not a finding, per FR-22.3's "what is read for each parameter" | C-20(i)'s divergence from Microsoft's always-resolvable services |
 | Transitive captivity — a `Singleton` artefact taking a `Transient` that itself takes a `Scoped` | not reported | C-20(ii), pinned by AC-42 |
 | Two public constructors of equal parameter count | not inspected | D15, pinned by AC-42 |
@@ -541,14 +560,14 @@ Three rows below can report *wrongly*, and each is marked as such: the snapshot-
 
 #### The result path is the existing one, and it already carries both severities
 
-This was verified rather than assumed, because three of the six messages are warnings.
+This was verified rather than assumed, because four of the seven messages are warnings.
 
 - `ValidationSeverity` has exactly `Error = 0` and `Warning = 1`. No third severity is needed and none is added.
 - `PipelineValidationResult.IsValid` is `Errors.Count == 0` (`:45`), so warnings alone never make a result invalid, and `ThrowIfInvalid()` (`:52`) throws `PipelineValidationException` only when errors are present.
 - `PipelineValidationResult.Combine` (`:64`) merges errors and warnings from several results. It exists and is unused in `src`, and this is the composition it was written for.
 - `ThrowOnError` (`BrighterPipelineValidationOptions.cs:47`, default `true`) gates **errors only**, in both hosts. `BrighterValidationHostedService` throws at `:80` or logs errors at `:84`, and logs every warning at `:90-93` regardless. `ServiceActivatorHostedService` does the same at `:57`/`:61` and `:67-70`.
 
-So FR-22.1, FR-22.2 and FR-22.4 fail startup under `throwOnError: true`, and log at `LogLevel.Error` under `throwOnError: false` (AC-27, AC-28, AC-50). FR-22.3, FR-24.3 and FR-17 log at `LogLevel.Warning` and never block (AC-42, AC-32, AC-49). A parallel result path would have had to reproduce all of that.
+So FR-22.1, FR-22.2 and FR-22.4 fail startup under `throwOnError: true`, and log at `LogLevel.Error` under `throwOnError: false` (AC-27, AC-28, AC-50). FR-22.3, FR-24.3 and FR-17's two rules log at `LogLevel.Warning` and never block (AC-42, AC-32, AC-49, AC-53). A parallel result path would have had to reproduce all of that.
 
 That split is why AC-50 is written in two halves rather than one. A criterion asserting an `Error` cannot also assert what the host does afterwards, because under the default `throwOnError: true` there is no afterwards. AC-27 and AC-28 have the same shape.
 
@@ -640,19 +659,19 @@ The duplication that avoids it is small, and the pieces are already public. `ISp
 
 **Why the name is `ScopeConfigurationValidator`.**
 
-The name is this ADR's to choose, because it is not one of C-11's working names. It is chosen over `LifetimeValidator` because the rule set is wider than lifetimes — three of the six are about registrations — and narrower than validation, the core validator being the other half. All six rules are about how a pipeline is scoped.
+The name is this ADR's to choose, because it is not one of C-11's working names. It is chosen over `LifetimeValidator` because the rule set is wider than lifetimes — four of the seven are about registrations — and narrower than validation, the core validator being the other half. All seven rules are about how a pipeline is scoped.
 
 ### Implementation Approach
 
 1. **No structural change in core.** `PipelineValidator.EvaluateSpecs` (`:152`) is not extracted, not moved and not widened. This ADR changes no **code** in `Paramore.Brighter` at all. The single thing it changes there is one XML doc comment, on the `mapperRegistryFactory` parameter, for the reason step 5a gives. There is therefore no Tidy-First step to sequence ahead of the behavioural one: a comment amendment is neither structural nor behavioural, and it lands with the change that makes it true.
 2. **The snapshot.** Add `ContainerRegistrationSnapshot`, built from `builder.Services` inside `ValidatePipelines()`, beside the existing `ValidationProviderRegistrations` computation (`:64-66`) and the transformer probe (`:68-69`). It answers **three queries**, and between them they are everything read from the collection:
-   - the effective lifetime for a service type — the last descriptor, matching Microsoft's resolution;
-   - the artefact candidates, with their kinds;
-   - the `DescriptorRecord`s for a service type **in registration order**, carrying the implementation type where one is statically known, the registration position where none is, and the `ImplementationInstance` where the descriptor supplies one.
+   - the effective lifetime for a service type — the last **unkeyed** descriptor, matching Microsoft's resolution, or the last descriptor for a `(type, key)` pair where a parameter names one;
+   - the artefact candidates, with their kinds, over keyed and unkeyed descriptors alike;
+   - the `DescriptorRecord`s for a service type **in registration order**, carrying the service key where the descriptor has one, the implementation type where one is statically known, the registration position where none is, and the `ImplementationInstance` where the descriptor supplies one.
 
    The first two serve FR-22.3. The third supplies `ScopeConfiguration`'s three descriptor lists and serves FR-24.3, FR-17 and FR-22.4 — including ADR 0076's `BrighterOptionsRegistration`, which is an instance registration and so arrives as the `ImplementationInstance` of a descriptor for its own service type, rather than through a query of its own.
 3. **The entities and the selector.** Add `ScopeConfiguration`, `DescriptorRecord`, `ArtefactRegistration`, `ArtefactKind` and `ArtefactConstructorSelector`. The selector is testable with a `Type` alone.
-4. **The six rules.** `ScopeConfigurationRules` returns `ISpecification<ScopeConfiguration>` for FR-22.1, FR-22.2, FR-22.4, FR-24.3 and FR-17, and `ISpecification<ArtefactRegistration>` for FR-22.3. Use the collapsed `Specification<T>` constructor where a rule yields more than one finding. Rules do not catch, on `0064-validate-pipeline-assembly-and-provider-registration`'s precedent. They are evaluated as a set with no ordering between them, and more than one may yield a finding on one host.
+4. **The seven rules.** `ScopeConfigurationRules` returns `ISpecification<ScopeConfiguration>` for FR-22.1, FR-22.2, FR-22.4, FR-24.3 and FR-17's two, and `ISpecification<ArtefactRegistration>` for FR-22.3. Use the collapsed `Specification<T>` constructor where a rule yields more than one finding. Rules do not catch, on `0064-validate-pipeline-assembly-and-provider-registration`'s precedent. They are evaluated as a set with no ordering between them, and more than one may yield a finding on one host.
 5. **The validator.** `ScopeConfigurationValidator` evaluates both entity families over core's public `ISpecification<T>`, `Specification<T>` and `ValidationResultCollector<T>`, with its own harvest loop, and returns its own `PipelineValidationResult`. It runs nothing else and disposes nothing.
 
 5a. **The exclusion set, and the four inputs it needs.** FR-22.3's exclusion is a conjunction over **two** attribute families, and neither half can be read from the descriptor snapshot. Both need the reflection-only describe path, and they need different inputs.
@@ -684,13 +703,13 @@ The name is this ADR's to choose, because it is not one of C-11's working names.
 
    `ValidationMapperRegistry` is registered in `ValidatePipelines()`, and it exists for one reason: two validators now need the **same** `MessageMapperRegistry`, and neither may build its own. It wraps a `Lazy<MessageMapperRegistry>?` — null exactly when no `ServiceCollectionMessageMapperRegistryBuilder` was registered — and exposes `Value` for the exclusion set and `Factory` for `PipelineValidator`'s existing `mapperRegistryFactory` parameter, both null over the same condition. It is `IDisposable`, and the container tracks it and drains the registry at shutdown.
 6. **The wiring.** In `ValidatePipelines()`: register `ValidationMapperRegistry`, keep the existing `TryAddSingleton` returning the core validator, and add one `AddSingleton` returning this ADR's. Nothing else in the extension method moves.
-7. **The documentation this ADR owes.** `docs/guides/lifetimes-and-scoping.md` gains a troubleshooting entry for each of the six messages (FR-25.10). `release_notes.md` gains **two** items in the single entry ADR 0070 step 7a catalogues:
+7. **The documentation this ADR owes.** `docs/guides/lifetimes-and-scoping.md` gains a troubleshooting entry for each of the seven messages (FR-25.10). `release_notes.md` gains **two** items in the single entry ADR 0070 step 7a catalogues:
    - C-18's compatibility note, which AC-24 carries;
    - the behavioural change that an application-supplied `IAmAPipelineValidator` no longer replaces Brighter's validation wholesale, because both hosts now resolve and combine every registered validator. No clause of AC-24 names that break in terms; its general clause — one item per breaking change this work introduces — is what carries it.
 
    Both are argued in this ADR's *Consequences*, under *Negative*, and step 7a carries a one-line pointer to each rather than a second copy.
 
-**The guidance page FR-25 requires is a deliverable of this plan, and the table below is the map it is written from.** FR-25 requires a new page at `docs/guides/lifetimes-and-scoping.md` and enumerates eleven things it must contain. NFR-10 makes that page — not the messages — the acceptance bar for the whole opt-in, and AC-43 requires every message these six rules produce to name it. The page is scheduled here because this is the ADR whose errors are unactionable without it. Every clause's substance is already decided by one of the seven ADRs, so the page can be written and reviewed against the record without re-deciding anything.
+**The guidance page FR-25 requires is a deliverable of this plan, and the table below is the map it is written from.** FR-25 requires a new page at `docs/guides/lifetimes-and-scoping.md` and enumerates eleven things it must contain. NFR-10 makes that page — not the messages — the acceptance bar for the whole opt-in, and AC-43 requires every message these seven rules produce to name it. The page is scheduled here because this is the ADR whose errors are unactionable without it. Every clause's substance is already decided by one of the seven ADRs, so the page can be written and reviewed against the record without re-deciding anything.
 
 | FR-25 clause | Where its substance is decided |
 | --- | --- |
@@ -703,8 +722,8 @@ The name is this ADR's to choose, because it is not one of C-11's working names.
 | 7 — no mixing `Transient` with `Scoped`, `Singleton` excluded, enforced only under `ValidatePipelines()` | **this ADR's FR-22.2 rule**, and C-18's compatibility note in **this ADR's** step 7 |
 | 8 — the captive-dependency hazard, and `ValidateScopes` as the complete check | **this ADR's** *Captive-dependency detection: what it reads, and what it cannot see* |
 | 9 — the decision guide | **this ADR's FR-22.2 rule**, from which the passing set is derived — see below — with ADR 0072 for what adopting buys and ADR 0070 for what a per-pipeline scope is |
-| 10 — validation only reaches you if you call it *and* a host runs, plus troubleshooting for the six messages | **this ADR's** *Both host shapes, enumerated* (D14's gap), and its six rule rows |
-| 11 — the extension's affinity argument is the value (D18) | ADR 0076 step 4, with the three gestures themselves in ADR 0073 step 5 — and **this ADR's FR-22.4 rule** for the one thing that defeats it |
+| 10 — validation only reaches you if you call it *and* a host runs, plus troubleshooting for the seven messages | **this ADR's** *Both host shapes, enumerated* (D14's gap), and its seven rule rows |
+| 11 — the extension's affinity argument is the value (D18) | ADR 0076 step 4, with the three gestures themselves in ADR 0073 step 5 — and **this ADR's FR-22.4 rule** for the one thing that defeats it, and **FR-17's unreadable-override rule** for the registration shape that makes a repeat unreportable |
 
 **Clause 9's table of passing configurations is derived, not authored.** FR-22.2's rule is *discard any of the three lifetimes that is `Singleton`, and the remainder must be uniform*. The configurations that pass are therefore exactly `{Transient, Transient, Transient}` and `{Scoped, Scoped, Scoped}`, and either with any subset of members replaced by `Singleton`, less those FR-22.1 then rejects under `JoinAmbient` because nothing remains `Scoped`. The guide states that set with the cost of each. It does not restate the rule, so if the rule ever changes the table follows from it rather than drifting against it.
 
@@ -718,7 +737,7 @@ The name is this ADR's to choose, because it is not one of C-11's working names.
 - **The inputs are the ones the factories honour, on all four registration paths.** Reading the resolved `IBrighterOptions` rather than `IOptions<BrighterOptions>.Value` means validation cannot pass a configuration the factories will ignore, nor fail one they would have honoured. That is the failure mode C-12a describes and AC-45 asserts against.
 - **Nothing is resolved and no application constructor runs.** The captive-dependency rule reads descriptors and reflects over constructors, so a `Singleton` mapper with a `Scoped` dependency is *reported* rather than *thrown* — which is the entire point of detecting it.
 - **The rules are unit-testable without a host.** A `ServiceCollection`, an options object and a `Type` are enough for every clause of AC-42 except the two that assert host startup.
-- **FR-22.1 and FR-22.2 cannot both fire**, so an application never receives those two errors together, prescribing different remedies for the same lifetimes. That mutual exclusion is theirs alone: FR-22.4 is also an `Error` and may accompany either, as *The six silent configurations, and what each rule reads* sets out.
+- **FR-22.1 and FR-22.2 cannot both fire**, so an application never receives those two errors together, prescribing different remedies for the same lifetimes. That mutual exclusion is theirs alone: FR-22.4 is also an `Error` and may accompany either, as *The silent configurations, and what each rule reads* sets out.
 - **The one failure mode that loses the whole opt-in silently now says so.** An application-registered `IBrighterOptions` defeats the write-through on every path and in either ordering. Until FR-22.4, the only symptom was software that opted in, adopted nothing and said nothing — the exact silence the whole rule set exists to break. The pattern is not exotic: 125 files under `tests/` register `IBrighterOptions` themselves.
 
 ### Negative
@@ -730,13 +749,13 @@ The name is this ADR's to choose, because it is not one of C-11's working names.
   - The duplicate-provider and repeated-opt-in rules miss a registration made after `ValidatePipelines()`. A provider registered after it is the one Microsoft's container will actually resolve.
   - **FR-22.4 is exposed worst of the three.** The registration it looks for is an application's own `services.AddSingleton<IBrighterOptions>(...)`, written beside the other `services.Add*` calls and therefore commonly after a fluent `AddBrighter(...).ValidatePipelines()` has already snapshotted. The rule that exists to break a silent loss is then silently lost itself.
   - The captive-dependency rule reads the same snapshot for *both* of its inputs, so a mapper registered later is not a candidate at all, and a later `AddScoped<IOrderDbContext>()` makes a real captive dependency invisible.
-  - Worse, that rule reads the last descriptor for a service type, to match Microsoft's resolution. A later registration that changes a type's effective lifetime can therefore make the snapshot disagree with the built container in either direction — a warning raised about a dependency that is no longer `Scoped`, or withheld about one that now is.
+  - Worse, that rule reads the last unkeyed descriptor for a service type, to match Microsoft's resolution. A later registration that changes a type's effective lifetime can therefore make the snapshot disagree with the built container in either direction — a warning raised about a dependency that is no longer `Scoped`, or withheld about one that now is.
 - **The captive-dependency rule is bounded in four ways, all deliberate.** Two of the four can report *wrongly* — the constructor divergence (C-20(i), which says so in terms) and the mapper gap (C-20(iv), which is latent until Brighter ships a mapper with constructor dependencies) — and two are silent misses. Both wrong-report cases are the ones FR-25.8's guidance text has to prepare a reader for, because a warning naming a Brighter type, or naming a constructor the container never uses, is the one a reader cannot diagnose alone. The four bounds: the rule uses Brighter's constructor selection rather than Microsoft's; it reads direct parameters only, so transitive captivity is not reported; the `Paramore.Brighter.` assembly **prefix** over-excludes, so an application type in an assembly the application named `Paramore.Brighter.Something` is excluded too; and no mapper can be excluded by the mechanism at all, because the mechanism keys off attributes and no mapper is returned by one. AC-42 asserts each as intended, so none can be quietly "improved". The container's own `ValidateScopes` remains the complete check, and FR-25.8 requires the guidance page to say so.
 - **FR-22.4's remedy is a change of registration shape, not a change of value.** An application that registers `IBrighterOptions` itself — to share one options object, or because a test host has always done it that way — cannot satisfy the rule by editing a lifetime. It has to move that configuration into `AddBrighter`/`AddConsumers`, or stop opting in. That is the only remedy there is, because the write-through has nowhere else to land (FR-17), but it is a larger ask than the other two errors make and the message has to be honest about it.
 - **FR-22.4 is the one rule that depends on a sibling's implementation detail.** FR-22.1 and FR-22.2 read values, FR-22.3 reads values and descriptors, and FR-24.3 and FR-17 read descriptors anyone can enumerate. FR-22.4 asks ADR 0076's `RegisterBrighterOptions` a question only it can answer. The coupling is one query and it is stated in both ADRs. But a change to how Brighter registers `IBrighterOptions` that did not go through `RegisterBrighterOptions` would make this rule report a defeat that had not happened — a false `Error` that fails startup, which is the worst direction for a rule to be wrong in.
-- **Registering your own `IAmAPipelineValidator` no longer replaces Brighter's validation.** Today `TryAddSingleton` means an application that registers its own before calling `ValidatePipelines()` gets its own and nothing else. Under a pull the hosts resolve every registered validator, so that application now also receives this ADR's six rules, and may fail startup on a configuration that started cleanly before. The core validator is still suppressed, so the escape hatch is narrowed rather than removed. There is a second-order change too: `GetService<IAmAPipelineValidator>()` now returns whichever descriptor is last rather than the only one, so a test that resolves the interface singly and casts to `PipelineValidator` breaks. Nothing in `src` does. It is a behavioural change, and one of this ADR's two items in ADR 0070 step 7a's single release-note entry, which points here for it.
+- **Registering your own `IAmAPipelineValidator` no longer replaces Brighter's validation.** Today `TryAddSingleton` means an application that registers its own before calling `ValidatePipelines()` gets its own and nothing else. Under a pull the hosts resolve every registered validator, so that application now also receives this ADR's seven rules, and may fail startup on a configuration that started cleanly before. The core validator is still suppressed, so the escape hatch is narrowed rather than removed. There is a second-order change too: `GetService<IAmAPipelineValidator>()` now returns whichever descriptor is last rather than the only one, so a test that resolves the interface singly and casts to `PipelineValidator` breaks. Nothing in `src` does. It is a behavioural change, and one of this ADR's two items in ADR 0070 step 7a's single release-note entry, which points here for it.
 - **A reflection failure in a warning rule can block startup.** `Specification<T>` converts an uncaught rule-body exception into a `ValidationSeverity.Error`, so a `TypeLoadException` while reading a constructor's parameter types would fail a host under `throwOnError: true` on account of a rule whose own severity is `Warning`. This is the behaviour of every existing rule (`0064-validate-pipeline-assembly-and-provider-registration`), and the rules deliberately add no bespoke guard. The exposure is bounded, because the artefact types are already materialised in a `ServiceDescriptor` and therefore already loaded.
-- **Ten new types in the DI package, and none in core.** They are internal apart from the validator, and each corresponds to a responsibility an acceptance criterion tests separately — but it is real surface area for six rules, and the alternative of two or three larger objects would have been defensible. The tenth, `ValidationMapperRegistry`, exists only because two independently registered validators must not build two `MessageMapperRegistry` instances. A decorator would have got that for free, by holding one and passing a factory over it inward.
+- **Ten new types in the DI package, and none in core.** They are internal apart from the validator, and each corresponds to a responsibility an acceptance criterion tests separately — but it is real surface area for seven rules, and the alternative of two or three larger objects would have been defensible. The tenth, `ValidationMapperRegistry`, exists only because two independently registered validators must not build two `MessageMapperRegistry` instances. A decorator would have got that for free, by holding one and passing a factory over it inward.
 - **Startup cost grows with the artefact count, and every validating host pays the fixed part.** The `Describe()` pass for the exclusion set, and the `MessageMapperRegistry` it needs, are built in the scope validator's factory delegate. They therefore happen in every host that calls `ValidatePipelines()`, including the common one that has no `Singleton`-governed artefact at all and where FR-22.3 will find nothing to exclude. Deferring the pass until a `Singleton` candidate is found would avoid that, at the cost of the single-instant property the validator's inputs otherwise have; the fixed cost was taken instead. On top of it there is one constructor walk per `Singleton`-governed artefact and one dictionary lookup per parameter, bounded by registrations and run once, only when validation is enabled — but it forces the load of every artefact's constructor parameter types.
 - **The migration cost, and who pays it.** An application that does not validate pays nothing. An application that validates and has a uniform triple pays nothing. An application that validates and mixes `Transient` with `Scoped` pays a failed startup and a joint lifetime decision it has not had to make before, and `docs/guides/lifetimes-and-scoping.md` is the whole of what it gets to make it with.
 
@@ -752,8 +771,8 @@ The name is this ADR's to choose, because it is not one of C-11's working names.
 | A fifth `IBrighterOptions` registration path is added later and does not go through `RegisterBrighterOptions`, so FR-22.4 reports a defeat that never happened and fails a working host | The write-through has exactly one definition, and ADR 0076's own risk table already guards it for the opposite failure — a path that skips it loses the opt-in silently there, and raises a false `Error` here. The two symptoms are the same defect seen from two ends, and AC-45 enumerates all four paths positively while AC-50 enumerates them negatively |
 | The captive-dependency rule warns against a Brighter type and is turned off wholesale | The exclusion is a mechanism, not a list, and it covers both attribute families. AC-42 pins `ClaimCheckTransformer` (the in-core, dependency-taking case) and a `Paramore.Brighter.Extensions.Tests` transform (the prefix case) |
 | The exclusion is implemented as "assembly prefix" alone, silently excluding application mappers in `Paramore.Brighter.*` assemblies | AC-42's paired same-assembly cases — transform excluded, mapper reported — are the only construction that distinguishes the conjunction from the prefix alone, and they fail an implementation that drops the attribute half |
-| FR-22.2's message tells a user their triple is wrong but not what a right one looks like | The message lists all three values and names the guidance page. AC-43 asserts the literal path in all six messages, and AC-44 walks each of the three lifetime messages to a concrete triple, and each of the three registration messages to a corrective registration action |
-| A duplicate provider is reported but the effective one is not identified, so the remedy is guesswork | The message names the last-registered as effective, matching Microsoft's resolution of the service type, which ADR 0072's plain `AddSingleton` makes both true and observable |
+| FR-22.2's message tells a user their triple is wrong but not what a right one looks like | The message lists all three values and names the guidance page. AC-43 asserts the literal path in all seven messages, and AC-44 walks each of the three lifetime messages to a concrete triple, and each of the four registration messages to a corrective registration action |
+| A duplicate provider is reported but the effective one is not identified, so the remedy is guesswork | The message names the last-registered unkeyed descriptor as effective, matching Microsoft's resolution of the service type, which ADR 0072's plain `AddSingleton` makes both true and observable |
 | The consumer host silently validates nothing | D14 is stated as an accepted gap in this ADR, in FR-25.10's guidance, and in AC-40, which registers `ServiceActivatorHostedService` explicitly rather than assuming it |
 
 ## Alternatives Considered
@@ -782,6 +801,10 @@ The name is this ADR's to choose, because it is not one of C-11's working names.
 
 **12. Let each validator build a `MessageMapperRegistry` of its own.** This would remove `ValidationMapperRegistry`, the tenth new type. **Rejected.** A second `MessageMapperRegistry` brings its own mapper factories and its own DI scope, and nothing in the container tracks it. That hazard is the one thing the decorator shape got for free and this one has to arrange, and `ValidationMapperRegistry` is the whole of the arrangement.
 
+**13. Declare keyed registrations out of the rules' subject rather than widening to them.** Every rule would read the unkeyed population only, and a keyed artefact, provider, override or dependency would be stated as unread. **Rejected.** It fixes FR-22.4's false `Error` and buys nothing else: a keyed handler, mapper or transform is one an application registered and one a pipeline resolves, so leaving it unread makes FR-22.3 silent on a population that grows every time a host adopts keyed services. Widening costs each rule one clause naming the population it reads, which the rules needed in any case — the false `Error` existed precisely because no rule said.
+
+**14. Make FR-22.4's message carry the override's affinity only where the descriptor supplies one.** The message row would read "that an affinity override is registered, and its value where the descriptor supplies one", so the rule fires on the delegate-registered path with a message missing one clause. **Rejected in favour of the seventh rule**, which reports the registration shape rather than weakening a message. An `Error` whose text varies by how the host happened to register something is harder to write troubleshooting for than two findings that each say one thing, and the shape is the actionable half in any case: the remedy is to register an instance, not to change the affinity. FR-22.4's message row is therefore unchanged.
+
 ## References
 
 **Related ADRs — the other six of this set:**
@@ -793,7 +816,7 @@ The name is this ADR's to choose, because it is not one of C-11's working names.
 - ADR 0075 [0075-publish-subscriber-scope-suppression](0075-publish-subscriber-scope-suppression.md) — how a `Publish` subscriber and the consumer pump suppress adoption, for themselves and every pipeline created beneath them
 - ADR 0076 [0076-scope-affinity-option-and-write-through](0076-scope-affinity-option-and-write-through.md) — the affinity option, and how one setting reaches all four registration paths in any order
 
-- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-14, FR-17, FR-20, FR-21, FR-22, FR-13 (as the model FR-17's division follows), FR-24.3, FR-25 (all eleven clauses; the clause-to-ADR map is in *Implementation Approach* step 7); NFR-1, NFR-7, NFR-8, NFR-9, NFR-10; C-4, C-11, C-12, C-12a, C-13, C-15, C-16, C-18, C-20; D5, D8, D9, D11, D14, D15, D18; OOS-13; AC-22, AC-24, AC-25 (the guidance-page criterion, whose per-row citation obligation step 7's truth table carries), AC-27, AC-28, AC-32, AC-40, AC-41, AC-42, AC-43, AC-44, AC-45, AC-49, AC-50. Named here only to be disclaimed: **NFR-4**, which the contract row on `ScopeConfigurationValidator.Validate()` explicitly does *not* claim to discharge
+- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-14, FR-17, FR-20, FR-21, FR-22, FR-13 (as the model FR-17's division follows), FR-24.3, FR-25 (all eleven clauses; the clause-to-ADR map is in *Implementation Approach* step 7); NFR-1, NFR-7, NFR-8, NFR-9, NFR-10; C-4, C-11, C-12, C-12a, C-13, C-15, C-16, C-18, C-20; D5, D8, D9, D11, D14, D15, D18; OOS-13; AC-22, AC-24, AC-25 (the guidance-page criterion, whose per-row citation obligation step 7's truth table carries), AC-27, AC-28, AC-32, AC-40, AC-41, AC-42, AC-43, AC-44, AC-45, AC-49, AC-50, AC-53. Named here only to be disclaimed: **NFR-4**, which the contract row on `ScopeConfigurationValidator.Validate()` explicitly does *not* claim to discharge
 - Related ADRs (cited by slug — ADR numbers are not unique in this repo, C-16):
   - `0053-pipeline-validation-at-startup` [Accepted] — the `ISpecification<T>` rule families, `ValidationResultCollector<T>`, `ValidationError`, and the `throwOnError` semantics this ADR reuses without change
   - `0064-validate-pipeline-assembly-and-provider-registration` [Accepted] — the precedent for a `Warning` rule family, for reading the `IServiceCollection` without resolving it (`IAmATransformerResolvabilityProbe`), for threading new inputs through `ValidatePipelines()`, and for rules that do not catch their own exceptions
