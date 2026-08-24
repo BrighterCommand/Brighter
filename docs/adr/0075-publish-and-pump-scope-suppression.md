@@ -1,6 +1,6 @@
 ---
-id: 0075-publish-subscriber-scope-suppression
-title: "Suppressing ambient scope adoption beneath a Publish subscriber"
+id: 0075-publish-and-pump-scope-suppression
+title: "Suppressing ambient scope adoption for Publish subscribers and the consumer pump"
 status: Proposed
 author:
   - "Ian Cooper"
@@ -13,7 +13,7 @@ tags:
   - "publish"
 ---
 
-# 75. Suppressing ambient scope adoption beneath a `Publish` subscriber
+# 75. Suppressing ambient scope adoption for `Publish` subscribers and the consumer pump
 
 Date: 2026-08-03
 
@@ -103,9 +103,9 @@ Two consequences fall out of the table, and together they fix the whole design.
 
 ## Decision
 
-**A `Publish` subscriber suppresses ambient scope adoption — for its own pipeline and for every pipeline created beneath it — through a public, `AsyncLocal`-backed `AmbientScopeSuppression` flag in core, bracketed twice per subscriber: once around that subscriber's resolution inside the build loop, and once around its own `Handle`/`HandleAsync` invocation, with the restore written explicitly on both.**
+**A `Publish` subscriber and the consumer pump both suppress ambient scope adoption — for their own pipelines and for every pipeline created beneath them — through a public, `AsyncLocal`-backed `AmbientScopeSuppression` flag in core, bracketed three times: once around each subscriber's resolution inside the build loop, once around that subscriber's own `Handle`/`HandleAsync` invocation, and once around the pump's own flow, with the restore written explicitly on each.**
 
-The same flag takes a third bracket, around the consumer pump's own flow. A consumer pipeline then creates and owns its scope because Brighter said so, rather than because a pump thread happened to be started outside a request.
+A consumer pipeline then creates and owns its scope because Brighter said so, rather than because a pump thread happened to be started outside a request.
 
 The flag carries one bit along a logical flow, and one place reads it: the line where a pipeline computes the affinity it will ask the ambient source with. Everything else about adoption belongs to ADR 0072 and is untouched. The two subscriber brackets are lexical and per subscriber, and neither is ever placed around the whole loop. The third is lexical too, and its unit is one pump thread rather than one subscriber.
 

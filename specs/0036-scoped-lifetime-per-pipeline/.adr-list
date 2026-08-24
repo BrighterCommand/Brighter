@@ -3,5 +3,5 @@
 0072-ambient-scope-adoption-seam.md
 0073-aspnet-core-request-scope-package.md
 0074-lifetime-validation-evaluation-site.md
-0075-publish-subscriber-scope-suppression.md
+0075-publish-and-pump-scope-suppression.md
 0076-scope-affinity-option-and-write-through.md
