@@ -151,6 +151,15 @@
     <Project Path="samples/Transforms/MassTransit/MassTransitSide/MassTransitSide.csproj" />
     <Project Path="samples/Transforms/MassTransit/MBrigtherSide/MBrigtherSide.csproj" />
   </Folder>
+  <Folder Name="/samples/Tutorials/">
+    <File Path="samples/Tutorials/README.md" />
+  </Folder>
+  <Folder Name="/samples/Tutorials/02-FirstMessage/">
+    <File Path="samples/Tutorials/02-FirstMessage/README.md" />
+    <Project Path="samples/Tutorials/02-FirstMessage/Greetings/Greetings.csproj" />
+    <Project Path="samples/Tutorials/02-FirstMessage/GreetingsReceiver/GreetingsReceiver.csproj" />
+    <Project Path="samples/Tutorials/02-FirstMessage/GreetingsSender/GreetingsSender.csproj" />
+  </Folder>
   <Folder Name="/samples/Validation/">
     <File Path="samples\Validation\README.md" />
     <Project Path="samples/Validation/DataAnnotationsSample/DataAnnotationsSample.csproj" />
