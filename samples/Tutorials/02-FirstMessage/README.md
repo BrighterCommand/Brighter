@@ -1,8 +1,10 @@
 # 02 — Your First Message Over a Broker
 
-The sample behind rung 2 of the *Get Started* tutorial ladder in the Brighter
-documentation. Every code block on that page is this code, so please keep the two in step:
-if you change a file here, the tutorial page needs the same edit.
+The sample behind rung 2 of the *Get Started* tutorial ladder in the
+[Brighter documentation](https://brightercommand.gitbook.io/paramore-brighter-documentation).
+Every code block on the page *Your First Message Over a Broker* is this code, so please keep
+the two in step: if you change a file here, the tutorial page needs the same edit. CI can
+prove this compiles; nothing can prove the page still matches it.
 
 One event goes from a sender process, over a RabbitMQ exchange, to a receiver process that
 handles it.
@@ -15,7 +17,8 @@ From the repository root:
 docker compose -f docker-compose-rmq.yaml up -d
 ```
 
-Then, in two terminals — the receiver first, because it is the one that declares the queue:
+Then, in two terminals — **the receiver first**, because it is the process that declares the
+queue and the binding:
 
 ```bash
 dotnet run --project samples/Tutorials/02-FirstMessage/GreetingsReceiver
@@ -26,6 +29,27 @@ dotnet run --project samples/Tutorials/02-FirstMessage/GreetingsSender
 ```
 
 The receiver prints `Received: Hello from the sender` and keeps running; Ctrl+C stops it.
+
+**If you ran the sender first, nothing arrives.** The sender declares the exchange, but no
+queue is bound to it yet, so RabbitMQ drops the message — and the publish still succeeds,
+so the sender reports no error. Start the receiver, then run the sender again.
+
+Both halves are visible at <http://localhost:15672> (guest/guest): the
+`paramore.brighter.exchange` exchange, the `greeting.event` queue, and the binding between
+them on routing key `greeting.event`. When you are done:
+
+```bash
+docker compose -f docker-compose-rmq.yaml down
+```
+
+## Why the topic is a bare string in three places
+
+`"greeting.event"` appears in the sender's publication and twice in the receiver's
+subscription, as the channel name and the routing key. A shared constant would be tidier and
+is deliberately not used: the lesson of this rung is that two independently deployed
+processes agree on a name over the wire, and the sender and receiver are the same two
+processes precisely because they *cannot* share code in the general case. Seeing the string
+on both sides is the point.
 
 ## Why this is not `samples/TaskQueue/RMQTaskQueue`
 

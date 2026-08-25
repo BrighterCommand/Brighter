@@ -32,7 +32,12 @@ using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 
 // A subscription is the consuming half of a publication: the queue to read, the routing
-// key bound to it, and how the pump should run.
+// key bound to it, and how the pump should run. This is also the process that declares
+// the queue and its binding, which is why it has to be running before the sender posts.
+//
+// isDurable defaults to false, so the queue does not survive a broker restart. That is a
+// property of the *queue*, and it is a different question from whether a message survives
+// the *sender* crashing — which is what rung 3's durable Outbox is about.
 var subscriptions = new Subscription[]
 {
     new RmqSubscription<GreetingEvent>(

@@ -54,6 +54,9 @@ builder.Services
     .AddProducers(configure => configure.ProducerRegistry = producerRegistry)
     .AutoFromAssemblies();
 
+// The host is built but never run: Post is synchronous, so all we need from it is the
+// container. Disposing it lets the producer finish confirming delivery before we exit.
+// Rung 3 does run the host, because it hosts the Outbox Sweeper.
 using var host = builder.Build();
 
 var commandProcessor = host.Services.GetRequiredService<IAmACommandProcessor>();
