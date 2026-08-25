@@ -55,12 +55,15 @@ builder.Services
     .AutoFromAssemblies();
 
 // The host is built but never run: Post is synchronous, so all we need from it is the
-// container. Disposing it lets the producer finish confirming delivery before we exit.
-// Rung 3 does run the host, because it hosts the Outbox Sweeper.
-using var host = builder.Build();
+// container. Rung 3 does run the host, because it hosts the Outbox Sweeper.
+using (var host = builder.Build())
+{
+    var commandProcessor = host.Services.GetRequiredService<IAmACommandProcessor>();
 
-var commandProcessor = host.Services.GetRequiredService<IAmACommandProcessor>();
-
-commandProcessor.Post(new GreetingEvent("Hello from the sender"));
+    commandProcessor.Post(new GreetingEvent("Hello from the sender"));
+}
+// Publisher confirms are asynchronous: Post returns once the message is on its way, and the
+// broker's acknowledgement arrives later. Disposing the host waits for it, which is why the
+// success message belongs after this brace and not before it.
 
 Console.WriteLine("Published greeting.event");

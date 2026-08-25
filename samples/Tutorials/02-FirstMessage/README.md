@@ -30,9 +30,15 @@ dotnet run --project samples/Tutorials/02-FirstMessage/GreetingsSender
 
 The receiver prints `Received: Hello from the sender` and keeps running; Ctrl+C stops it.
 
-**If you ran the sender first, nothing arrives.** The sender declares the exchange, but no
-queue is bound to it yet, so RabbitMQ drops the message — and the publish still succeeds,
-so the sender reports no error. Start the receiver, then run the sender again.
+**If you ran the sender first on a fresh broker, nothing arrives.** The sender declares the
+exchange, but no queue is bound to it yet, so RabbitMQ drops the message — and the publish
+still succeeds, so the sender reports no error. Start the receiver, then run the sender
+again.
+
+Order only matters that first time. The queue is declared `autoDelete: false`, so once the
+receiver has run, the queue and its binding outlive the receiver process and survive until
+the broker restarts. After that you can run the sender with nothing listening and the
+message waits in the queue for the receiver to come back.
 
 Both halves are visible at <http://localhost:15672> (guest/guest): the
 `paramore.brighter.exchange` exchange, the `greeting.event` queue, and the binding between
