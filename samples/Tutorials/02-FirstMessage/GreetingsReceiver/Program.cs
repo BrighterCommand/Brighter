@@ -33,7 +33,10 @@ using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 
 // A subscription is the consuming half of a publication: the queue to read, the routing
 // key bound to it, and how the pump should run. This is also the process that declares
-// the queue and its binding, which is why it has to be running before the sender posts.
+// the queue and its binding, which is why it has to run first the first time.
+//
+// Naming GreetingEvent here is also what loads the Greetings assembly. AutoFromAssemblies
+// below scans the assemblies loaded so far, so reordering this beneath it is a silent no-op.
 //
 // isDurable defaults to false, so the queue does not survive a broker restart. That is a
 // property of the *queue*, and it is a different question from whether a message survives

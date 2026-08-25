@@ -37,6 +37,9 @@ var rmqConnection = new RmqMessagingGatewayConnection
 };
 
 // A publication tells Brighter where a request type goes: which routing key, on which broker.
+// Naming GreetingEvent here is also what loads the Greetings assembly, which matters below:
+// AutoFromAssemblies scans the assemblies loaded so far, so anything it must find has to have
+// been touched before the call. Reordering this below the registration is a silent no-op.
 var producerRegistry = new RmqProducerRegistryFactory(
     rmqConnection,
     [
@@ -63,7 +66,9 @@ using (var host = builder.Build())
     commandProcessor.Post(new GreetingEvent("Hello from the sender"));
 }
 // Publisher confirms are asynchronous: Post returns once the message is on its way, and the
-// broker's acknowledgement arrives later. Disposing the host waits for it, which is why the
-// success message belongs after this brace and not before it.
-
+// broker's acknowledgement arrives later. Disposing the host waits for it — bounded by
+// RmqPublication.WaitForConfirmsTimeOutInMilliseconds, 500ms by default — which is why this
+// line sits after the brace. Note what it does and does not say: the broker has had its
+// chance to confirm. A nack surfaces as a log line rather than an exception, so this message
+// means "sent", not "accepted".
 Console.WriteLine("Published greeting.event");

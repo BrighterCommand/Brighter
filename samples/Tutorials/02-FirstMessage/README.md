@@ -17,6 +17,11 @@ From the repository root:
 docker compose -f docker-compose-rmq.yaml up -d
 ```
 
+That command returns before RabbitMQ is accepting connections — the compose file has no
+healthcheck — so give the broker a few seconds. It is ready when
+<http://localhost:15672> answers. Starting the apps too early prints connection failures
+until the broker comes up; that is the broker, not the sample.
+
 Then, in two terminals — **the receiver first**, because it is the process that declares the
 queue and the binding:
 
