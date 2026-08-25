@@ -40,7 +40,7 @@ This ADR decides two things: **the opt-in property on `IBrighterOptions`, and th
 - **The write-through half of FR-17 — an opt-in gesture's argument reaches whichever options object a registration path produces, and wins.** The gesture registers an immutable `ScopeAffinityOverride`; `RegisterBrighterOptions` reads that override inside the factory that produces the options object; D18's precedence follows from where the read happens. The guards are **AC-45**, **AC-48** and **AC-50**. **FR-17's registration gesture is ADR 0073's**, and the evaluation site of **FR-17's repeated-call rule is ADR 0074's**.
 - **Untagged scope: the record that tells Brighter's `IBrighterOptions` registration from an application's.** `BrighterOptionsRegistration` names the descriptor this package added. No requirement asks for the type by name. FR-22.4 asks the question it answers, and ADR 0074 evaluates the rule.
 
-It serves FR-16, FR-18, FR-19, FR-20, FR-21, FR-22, FR-23, FR-25.11, NFR-1, NFR-4 and NFR-7. Each of those is discharged elsewhere, by the mechanism that makes it true: FR-16, FR-18, FR-19 and FR-23 by ADR 0072, and FR-20 by ADR 0070.
+It serves FR-16, FR-18, FR-19, FR-20, FR-21, FR-22, FR-23, FR-25.11, NFR-1 and NFR-7. Each of those is discharged elsewhere, by the mechanism that makes it true: FR-16, FR-18, FR-19 and FR-23 by ADR 0072, FR-20 by ADR 0070, FR-22 and FR-25.11 by ADR 0074, and NFR-1's core-purity clause by ADR 0074. **NFR-7** is ADR 0072's, discharged in the shape of the hand-off; what this ADR contributes is that `ScopeAffinityOverride` names only a core type, so a provider package Brighter does not ship registers its override in the same line ADR 0073 does. **NFR-4 is not served here** — *Technology Choices* says why, and the reason is that a start-time write to a singleton is not what NFR-4 governs.
 
 **Contributed to here, discharged elsewhere.** Two requirements are worth separating out, because a reader auditing coverage should land on the mechanism rather than on the option.
 
@@ -178,7 +178,7 @@ flowchart TB
     extn -- "registers" --> ovr
 ```
 
-The dependency direction is fixed, and it is the whole of NFR-2: an opt-in package depends on the DI package, the DI package depends on core, and neither of the lower two ever depends upward.
+The dependency direction is fixed: an opt-in package depends on the DI package, the DI package depends on core, and neither of the lower two ever depends upward. Nothing here gives the DI package an ASP.NET reference, which is NFR-2 — discharged by ADR 0073, whose separate package is the mechanism.
 
 ### Key Components
 
@@ -578,7 +578,7 @@ A variant that registers a marker and rewrites on first resolution is not availa
 - ADR 0074 [0074-lifetime-validation-evaluation-site](0074-lifetime-validation-evaluation-site.md) — where the scope-configuration rules are evaluated
 - ADR 0075 [0075-publish-and-pump-scope-suppression](0075-publish-and-pump-scope-suppression.md) — how a `Publish` subscriber and the consumer pump suppress adoption, for themselves and every pipeline created beneath them
 
-- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-8, FR-14, FR-15, FR-16, FR-17, FR-18, FR-19, FR-20, FR-21, FR-22, FR-23, FR-24.3, FR-25.10, FR-25.11, FR-27; NFR-1, NFR-2, NFR-4, NFR-7, NFR-8; C-2, C-9, C-10, C-12, C-12a, C-13, C-15, C-16, C-18; D0b, D2, D3, D4, D5, D13, D14, D18; AC-20, AC-22, AC-24, AC-45, AC-48, AC-50
+- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-8, FR-14, FR-15, FR-16, FR-17, FR-18, FR-19, FR-20, FR-21, FR-22, FR-23, FR-24.3, FR-25.10, FR-25.11, FR-27; NFR-1, NFR-2, NFR-7, NFR-8; C-2, C-9, C-10, C-12, C-12a, C-13, C-15, C-16, C-18; D0b, D2, D3, D4, D5, D13, D14, D18; AC-20, AC-22, AC-24, AC-45, AC-48, AC-50. Named here only to be disclaimed: **NFR-4**, which *Technology Choices* explicitly does *not* claim to discharge
 - Related ADRs (cited by slug — ADR numbers are not unique in this repo, C-16):
   - `0073-aspnet-core-request-scope-package` [Proposed] — the first caller of this mechanism: the ASP.NET package, and the `AddBrighterRequestScope` extension whose argument this ADR carries to the options object
   - `0072-ambient-scope-adoption-seam` [Proposed] — the seam this option feeds: `IAmAScopeProvider`, `ScopeAffinity`, `ScopeAffinityPolicy`, and the positive `JoinAmbient` test that makes an out-of-range value fail safe

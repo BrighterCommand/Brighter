@@ -36,6 +36,7 @@ This ADR decides **how an ASP.NET Core application offers its request scope to B
 - **FR-15's package-inertness half** — that taking the package reference, and calling nothing, leaves Brighter behaving exactly as it does today. That is FR-15's own stated example, and this package is the only one able to deliver it. ⚠ The half acquires a criterion capable of failing only once AC-14's spy clause sits in a project that takes the reference (step 4a).
 - **The registration half of FR-17** — the gesture, its argument, and the descriptors the gesture leaves behind. The mechanism is `AddBrighterRequestScope`, which registers the ambient source and deposits the affinity under plain `AddSingleton`.
 - **The package itself**, which no tagged requirement carries: the name `Paramore.Brighter.Extensions.AspNetCore`, the `Microsoft.NET.Sdk` choice, the `FrameworkReference` on `Microsoft.AspNetCore.App`, and the `$(BrighterCoreTargetFrameworks)` targets.
+- **NFR-2 — the DI package gains no ASP.NET dependency.** That the ASP.NET ambient lives in a package of its own *is* the mechanism, and it is why this is a package rather than three types in the DI package. Every edge runs downward — ASP.NET package to DI package to core — and none the other way. The guard is **AC-22.2**, which parses the DI package's project file and asserts no reference matching `Microsoft.AspNetCore.*`.
 
 **Out of scope.**
 
@@ -48,7 +49,7 @@ This ADR decides **how an ASP.NET Core application offers its request scope to B
 
 **FR-17 is split three ways**, on the model FR-13 also follows — one requirement divided across the siblings that each make part of it true. The gesture is this ADR's. The write-through that carries the gesture's argument onto whichever options object a registration path produces is ADR 0076's. The site at which FR-17's repeated-call rule is evaluated is ADR 0074's.
 
-It serves FR-10, FR-12, FR-16, FR-18, FR-23, FR-25.11, NFR-2 and NFR-7.
+It serves FR-10, FR-12, FR-16, FR-18 and FR-23, each discharged by ADR 0072, and FR-25.11, discharged by ADR 0074 on the guidance page it declares. It also serves **NFR-7**, whose non-preclusion clause ADR 0072 discharges in the shape of the hand-off; what this package contributes is the demonstration, because it registers its own `IAmAScopeProvider` and its own `ScopeAffinityOverride` in the two lines any other package would use.
 
 This ADR **supersedes no prior ADR.** It is the application-facing end of the 0070–0072 sequence.
 
@@ -68,7 +69,7 @@ Seven ADRs deliver the parent requirement, one decision each; the requirements c
 
 The rule the first two state is **the per-pipeline object carries the DI scope**. This ADR does not touch that object. It decides only where the scope a pipeline may carry comes from, when the host is an ASP.NET Core application.
 
-ADR 0067's `Terms` block defines the two axes used throughout. Brighter's *configured lifetime* governs the artefact, and the container's *registration lifetime* governs the dependencies. That block also keeps `IServiceScope`, `ServiceProviderLifetimeScope` and `IAmALifetime` distinct. This ADR does not restate the block and follows its vocabulary, so "lifetime scope" is not used for anything introduced here. NFR-8 is a documentation obligation about one specific ambiguity, `IAmAScope` against `IAmALifetime`. It is discharged where ADRs 0070 and 0072 document those types, and by FR-25's guidance page. This package declares neither type, so nothing here bears on NFR-8.
+ADR 0067's `Terms` block defines the two axes used throughout. Brighter's *configured lifetime* governs the artefact, and the container's *registration lifetime* governs the dependencies. That block also keeps `IServiceScope`, `ServiceProviderLifetimeScope` and `IAmALifetime` distinct. This ADR does not restate the block and follows its vocabulary, so "lifetime scope" is not used for anything introduced here. NFR-8 is a documentation obligation about one specific ambiguity, `IAmAScope` against `IAmALifetime`. It is discharged by ADR 0070 on `IAmAScope` and ADR 0071 on `IAmALifetime`, and repeated on the guidance page FR-25 requires. This package declares neither type, so nothing here bears on NFR-8.
 
 ### What the application has to write, and what it must not have to
 
@@ -319,7 +320,7 @@ There is still no correct answer to "which of two contradictory opt-ins did you 
 - **AC-19** asserts that a `Warning` **names** this provider's implementation type. That is an assertion about a log message, which a test satisfies with `typeof(HttpContextScopeProvider)` because it can, not because it must.
 - **AC-29** asserts that shape for a **different** provider — one that **captures** a resolution source, in a console host of AC-35's shape — and is not one of this ADR's criteria at all. FR-23's condition does not arise for this package, because the built-in accessor clears itself at end of request and offers no ambient.
 - **AC-18's recorder** reaches neither type. It resolves `IEnumerable<IAmAScopeProvider>` on its first `GetAmbient` call and selects the entry that is not itself, so it delegates through the core interface and never names this one. It builds against an internal provider without difficulty.
-- **NFR-7** is a **non-preclusion** clause: the seam must not preclude a later `AsyncLocal`-backed provider, nor implementations over other containers. What discharges NFR-7 here is that such a package registers its own `IAmAScopeProvider` and its own `ScopeAffinityOverride` in the same two lines (*Consequences*), not that anything of this package's is composed into it.
+- **NFR-7** is a **non-preclusion** clause: the seam must not preclude a later `AsyncLocal`-backed provider, nor implementations over other containers. ADR 0072 discharges it in the shape of the hand-off. What this package adds is the evidence rather than the mechanism — such a provider registers its own `IAmAScopeProvider` and its own `ScopeAffinityOverride` in the same two lines this one uses (*Consequences*), and nothing of this package's is composed into it.
 
 **ADR 0075's public flag is not the parallel it looks like.** That flag must be **read at run time** by a container package Brighter does not ship, or FR-8 is unhonourable. Nothing outside this package reads either type here, ADR 0072's seam seeing only `IAmAServiceProviderScope`.
 
