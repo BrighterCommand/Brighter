@@ -167,14 +167,16 @@ The third bracket runs on a separate flow with no subscriber in it. That flow sh
 ```mermaid
 sequenceDiagram
     participant Start as a start site — the hosted service, or the control plane
-    participant Disp as Dispatcher.Receive
+    participant Disp as Dispatcher
+    participant Cons as Consumer
     participant Perf as Performer.Run
     participant Pump as Reactor or Proactor
     participant Pipe as a pipeline the pump drives
 
-    Start->>Disp: Receive()
-    Disp->>Perf: Run()
-    Note over Perf: Task.Factory.StartNew captures the caller's ExecutionContext,<br/>so the pump inherits whatever flow started the Dispatcher
+    Start->>Disp: Receive() or Open(SubscriptionName)
+    Disp->>Cons: Open()
+    Cons->>Perf: Run()
+    Note over Perf: Task.Factory.StartNew captures the caller's ExecutionContext,<br/>so the pump inherits the flow its start site was running on
     Perf->>Perf: inside the started task — Suppress()
     Perf->>Pump: _messagePump.Run()
     loop for each message
@@ -365,18 +367,18 @@ return Task.Factory.StartNew(
     TaskScheduler.Default);
 ```
 
-**Why the bracket exists at all.** C-14 *assumes* a pump thread carries no usable ambient `HttpContext`, and FR-19's inertness rests on that assumption. The assumption is about the flow a pump is **started on** rather than about the pump. `Dispatcher.Receive()` (`Dispatcher.cs:484`) and `Performer.Run()` (`Performer.cs:62-69`) both start their tasks through `Task.Factory.StartNew`, which captures `ExecutionContext`, so a pump inherits whatever flow started it.
+**Why the bracket exists at all.** C-14 *assumes* a pump thread carries no usable ambient `HttpContext`, and FR-19's inertness rests on that assumption. The assumption is about the flow a pump is **started on** rather than about the pump. `Consumer.Open()` starts every pump through `Performer.Run()` (`Consumer.cs:112`), whose `Task.Factory.StartNew` captures `ExecutionContext` (`Performer.cs:62-69`), so a pump inherits the flow its start site was running on.
 
-Consumers are started from more than one site: the hosted service at startup (`ServiceActivatorHostedService.cs:74`), and the control plane's own API for a process that already hosts a `Dispatcher` (`ConfigurationCommandHandler.cs:73`, `:85`), which runs inside a handler pipeline. **No start site may pass a request scope to a consumer.** Starting a `Dispatcher` from inside a live request is **erroneous use of the library** rather than a configuration this design supports, and the bracket is not a licence for it. The bracket is what stops FR-19 depending on where `Receive()` was called.
+Consumers are started from more than one site: the hosted service at startup (`ServiceActivatorHostedService.cs:74`), and the control plane's own API for a process that already hosts a `Dispatcher` (`ConfigurationCommandHandler.cs:73`, `:85`), which runs inside a handler pipeline. **No start site may pass a request scope to a consumer.** Starting a `Dispatcher` from inside a live request is **erroneous use of the library** rather than a configuration this design supports, and the bracket is not a licence for it. The bracket is what stops FR-19 depending on the flow those start sites were called on.
 
 Were a pump started on such a flow, `IHttpContextAccessor` being `AsyncLocal`-backed, every consumer pipeline it drives would resolve from one request's scope for the life of the process. That is an FR-19 violation in resolution and identity rather than in logging, and FR-23 does not govern it, because the ambient is live rather than stale.
 
 **Two things the bracket buys with no misuse involved.**
 
-- **A mixed host gives the consumer side an affinity nobody chose for consumers**, because one `ConsumersOptions` instance carries both roles' affinity, which *Why configuration cannot do this and a flow property can* below sets out. Unbracketed, that consumer ask carries `JoinAmbient`, reaches ladder row 7 and emits FR-24.2's latched `Warning`, which is what AC-20 asserts today. Bracketed, the ask carries `AlwaysNew`, reaches row 6 and emits nothing.
+- **A mixed host gives the consumer side an affinity nobody chose for consumers**, because both roles read one `IBrighterOptions`, which *Why configuration cannot do this and a flow property can* below sets out. Unbracketed, that consumer ask carries `JoinAmbient`, reaches ladder row 7 and emits FR-24.2's latched `Warning`, which is what AC-20 asserts today. Bracketed, the ask carries `AlwaysNew`, reaches row 6 and emits nothing.
 - **NFR-7 obliges this design not to preclude container packages Brighter has never heard of**, and such a package's ambient source need not key on `HttpContext` at all. So *a pump thread carries no usable ambient* is not a property any provider owes. ADR 0073 owns C-14 and now records that this bracket is what closes it.
 
-**Why configuration cannot do this and a flow property can.** The apparent fix is to have `ScopeAffinityPolicy` compute `AlwaysNew` on the consumer side, and it has nothing to compute that from. In a mixed host on the `Action` overload, `IBrighterOptions` and `IAmConsumerOptions` name **the same `ConsumersOptions` instance**, which is ADR 0076's stated residue. One object carries both roles' affinity and no reader can tell which side is asking. Suppression is not subject to that limit, because suppression is a property of the **flow the pipeline was created on**, and the pump thread's flow is exactly the thing that distinguishes the two sides.
+**Why configuration cannot do this and a flow property can.** The apparent fix is to have `ScopeAffinityPolicy` compute `AlwaysNew` on the consumer side, and it has nothing to compute that from. Brighter's factories read **one `IBrighterOptions` for the whole host**, and nothing on it says which side is asking; in a mixed host that object is whichever side won the `TryAddSingleton` (C-12), so the consumer side reads an affinity chosen for the producer. Suppression is not subject to that limit, because suppression is a property of the **flow the pipeline was created on**, and the pump thread's flow is exactly the thing that distinguishes the two sides.
 
 **Why `Performer` and not the pump.** C-2 and OOS-5 name `Reactor`, `Proactor`, `Dispatcher`, `DispatchBuilder` and `ConsumerFactory` and forbid changing them, and `Run()` is implemented on `Reactor.cs:95` and `Proactor.cs:95`. The pump's own entry point is therefore closed to this work.
 
@@ -425,7 +427,7 @@ Stating which restore is which matters. A reader who believes the async restores
 **7. The documentation this ADR owes.** Two pieces of `docs/guides/lifetimes-and-scoping.md` come from here. ADR 0074 declares the page, holds the clause-to-source map, and names this ADR as the source of both pieces.
 
 - **FR-25.5.** An in-process `Publish` subscriber, and every pipeline nested inside one, cannot join the caller's transaction. That is FR-8 working as specified rather than a defect, and the outbox is the answer (C-4, D6, AC-36).
-- **NFR-9's truth table — the `Publish`-subscriber and nested-pipeline rows.** For each of the three configured lifetimes and both affinities, the source a subscriber's pipeline resolves from is its own scope and never the ambient. The same holds for anything the subscriber's handler creates while it runs.
+- **NFR-9's truth table — the `Publish`-subscriber and nested-pipeline rows.** A subscriber's pipeline never resolves from the ambient, whatever the affinity. Under `Scoped` it resolves from a scope Brighter created for it; under `Transient` from ADR 0067's per-resolution scope; under `Singleton` from the root provider, which sits outside both affinities (ADR 0072). The same holds for anything the subscriber's handler creates while it runs.
 
 Both are written from this ADR's *What a subscriber must stop, and what it cannot reach* table and its two subscriber brackets. Neither re-decides anything.
 
@@ -443,13 +445,13 @@ Both are written from this ADR's *What a subscriber must stop, and what it canno
 
 #### What suppression costs
 
-**Suppression costs nothing when nothing is published.** A publish costs four `AsyncLocal` writes per subscriber: two brackets, each a set *and* an explicit restore, because this ADR writes both rather than inheriting either from `ExecutionContext` (step 5). No bracket is ever established outside a publish. `IsSuppressed` is one `AsyncLocal` read per pipeline that takes a pipeline scope, and a read allocates nothing.
+**On the producer side, suppression costs nothing when nothing is published.** A publish costs four `AsyncLocal` writes per subscriber: two brackets, each a set *and* an explicit restore, because this ADR writes both rather than inheriting either from `ExecutionContext` (step 5). No bracket is established on that side outside a publish. `IsSuppressed` is one `AsyncLocal` read per pipeline that takes a pipeline scope, and a read allocates nothing.
 
-On the **consumer** side the *when nothing is published* qualifier buys little. Every `MT_EVENT` message dispatches through `Publish`/`PublishAsync` (`Reactor.cs:406`, `Proactor.cs:130`), so under sustained consumption those four writes per subscriber sit on the hot path AC-23 measures. Each write is an `AsyncLocal` set, which allocates an `ExecutionContext`. Measured on `net10.0`, a full `Suppress()`/`Dispose()` bracket costs **248 bytes**, so a subscriber pays two brackets, four `ExecutionContext` allocations and roughly **496 bytes** per message.
+On the **consumer** side the *when nothing is published* qualifier buys little. Every `MT_EVENT` message dispatches through `Publish`/`PublishAsync` (`Reactor.cs:406`, `Proactor.cs:130`), so under sustained consumption those four writes per subscriber sit on the consumer hot path. Each write is an `AsyncLocal` set, which allocates an `ExecutionContext`, and that allocation grows with the number of `AsyncLocal` values already live on the flow. Measured on `net10.0`, a full `Suppress()`/`Dispose()` bracket costs **216 bytes** with none live and **248** with one — and a traced host always has at least one, because `Activity.Current` is `AsyncLocal`-backed and Brighter's tracer sets it per message. So a subscriber pays two brackets, four `ExecutionContext` allocations and 432 to 496 bytes per message, and more in a host carrying ambient values of its own.
 
-⚠ **A set allocates even when it writes the value the flag already holds**, so a bracket taken inside another bracket is not free either. The "one bit" framing must not be read as implying that it is. The cost is bounded by subscribers per message and does not grow with message count, so NFR-5 and NFR-6 hold — but it is not free there.
+⚠ **A set allocates even when it writes the value the flag already holds**, so a bracket taken inside another bracket is not free either. The "one bit" framing must not be read as implying that it is. The cost is bounded by subscribers per message and does not grow with message count — but it is not free there.
 
-The pump-flow bracket is priced differently: **one bracket per pump thread for the life of the process**, a set and a restore rather than a cost per message. It is invisible to AC-23's measurement, and the same flag serves it as serves the subscribers.
+The pump-flow bracket is priced differently: **one bracket per pump thread for the life of the process**, a set and a restore rather than a cost per message. The same flag serves it as serves the subscribers.
 
 ### Negative
 
@@ -472,7 +474,7 @@ The change is source-compatible and **binary-breaking** for any assembly compile
 
 #### Three brackets, five places to get wrong
 
-None of the five is redundant, so none covers for a mistake in another. They sit in three files, three assemblies and five shapes:
+None of the five is redundant, so none covers for a mistake in another. They sit in three files, two assemblies and five shapes:
 
 | Bracket | Site | Shape |
 | --- | --- | --- |
@@ -491,6 +493,7 @@ None of the five is redundant, so none covers for a mistake in another. They sit
 | The two subscriber brackets drift apart as the publish paths change | Both are specified against the same unit, one subscriber, and each is pinned by its own criteria. Bracket 1 is pinned by **AC-11**, whose closing note says in terms that AC-11 fails unless FR-9's resolution-time bracket is implemented and that an execution-time bracket alone cannot make it pass. Bracket 2 is pinned by **AC-12**, **AC-39** and **AC-47's second branch**, where the subscriber takes no pipeline scope at all so suppression can only come from the execution-time bracket. A bracket removed from either path fails a test rather than degrading quietly |
 | A third-party container package ignores the flag and adopts anyway | Nothing prevents it, and this ADR says so. The flag is a contract a package honours rather than a gate Brighter enforces — the same trade NFR-7 makes everywhere else in this design |
 | An application takes a bracket of its own and never disposes it | Adoption stops for that flow and the application silently gets today's behaviour. Documented under FR-25, and the direction is toward isolation rather than sharing |
+| A redundant bracket is added — a third one per subscriber, or one per resolution rather than per subscriber — and the added allocation goes unnoticed | Nothing measures it. AC-23 counts pipeline scopes begun and released and cannot observe an allocation, and no requirement bounds this cost: NFR-5 bounds memory attributable to Brighter scopes, NFR-6 bounds scope begin and release per pipeline, and a suppression bracket is neither. A bracket in the wrong *place* fails AC-11, AC-12, AC-39 or AC-47; a redundant one in the right place fails nothing, because every observation of `IsSuppressed` reads the same value either way. Guarded by review only, and this row says so rather than implying otherwise |
 | The pump-flow bracket is dropped, or moved out of `Performer` into the pump, and a consumer pipeline adopts whatever ambient the flow that started the `Dispatcher` carries — for the life of the process | The bracket is the only thing standing between the consumer side and an FR-19 violation in resolution and identity, and moving it into `Reactor` or `Proactor` is closed by C-2 in any case. ⚠ **No acceptance criterion asserts it today.** AC-20 is written over a host whose pump threads carry no `HttpContext`, which is C-14's assumed case rather than the case the bracket guards. The criterion is owed and is carried in the requirements true-up alongside FR-19's and AC-20's own corrections. Until it exists this is guarded by review only, and this row says so rather than implying otherwise |
 
 ## Alternatives Considered
@@ -523,7 +526,7 @@ What that bracket would *not* do is leave the caller's own flow suppressed after
 
 **7. A bracket around each subscriber's own task on the async path, rather than around its invocation.** FR-9(b) permits it. **Rejected on cost for no observable gain.** An async wrapper per subscriber costs an extra state machine and an extra frame on every handler's stack, and it reaches the same observable: the invocation-only bracket is live when the state machine captures its context, so every continuation runs suppressed. Step 4 states the mechanism.
 
-**8. Detect a bracket disposed on the wrong flow.** The contract table's first misuse mode is undetectable as specified, and a flow identity carried alongside the bit would detect it. **Rejected on cost against reach.** An `AsyncLocal<bool>` cannot tell two flows apart, so every bracket would have to carry a flow identity. That cost falls on every subscriber of every publish — the hot path AC-23 measures — to serve a caller error that Brighter's own lexical brackets cannot make. The misuse also fails toward isolation, which is the benign direction.
+**8. Detect a bracket disposed on the wrong flow.** The contract table's first misuse mode is undetectable as specified, and a flow identity carried alongside the bit would detect it. **Rejected on cost against reach.** An `AsyncLocal<bool>` cannot tell two flows apart, so every bracket would have to carry a flow identity. That cost falls on every subscriber of every publish — the consumer hot path — to serve a caller error that Brighter's own lexical brackets cannot make. The misuse also fails toward isolation, which is the benign direction.
 
 **9. An injected suppression role rather than a static holder.** An interface a container hands out, in keeping with the rest of this design. **Rejected because the writers are not resolved from a container.** The role would have to reach `CommandProcessor.Publish`, `CommandProcessor.PublishAsync` and `PipelineBuilder`, none of which is container-resolved, and `Performer`, which is not either. A third-party container package could not read it without Brighter handing the package an instance, which is the coupling NFR-7 exists to avoid. *Key Components* records the shape as a decision rather than an omission.
 
@@ -538,7 +541,7 @@ What that bracket would *not* do is leave the caller's own flow suppressed after
 - ADR 0074 [0074-lifetime-validation-evaluation-site](0074-lifetime-validation-evaluation-site.md) — where the scope-configuration rules are evaluated
 - ADR 0076 [0076-scope-affinity-option-and-write-through](0076-scope-affinity-option-and-write-through.md) — the affinity option, and how one setting reaches all four registration paths in any order
 
-- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-5, FR-8, FR-9, **FR-19** (its mechanism, supplied here and discharged by ADR 0072), FR-24.2, FR-24.4, FR-25 (clause .5), FR-27.1, FR-27.2, FR-27.3, NFR-3, NFR-4, NFR-7, NFR-8, NFR-9 (its `Publish`-subscriber and nested-pipeline rows), C-2, C-4, C-5, C-13, **C-14**, C-16, D0b, D0c, D6, D10, D16, OOS-1, **OOS-2** (its D6 amendment, which is what licenses this ADR's mechanism), OOS-5, OOS-10, OOS-14; AC-10, AC-11, AC-12, AC-13, **AC-20**, AC-22.2 (NFR-3's mechanical guard) and AC-22.3, **AC-23**, AC-24, AC-35, AC-36, AC-39, AC-46, AC-47
+- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-5, FR-8, FR-9, **FR-19** (its mechanism, supplied here and discharged by ADR 0072), FR-24.2, FR-24.4, FR-25 (clause .5), FR-27.1, FR-27.2, FR-27.3, NFR-3, NFR-4, NFR-7, NFR-8, NFR-9 (its `Publish`-subscriber and nested-pipeline rows), C-2, C-4, C-5, C-12, C-13, **C-14**, C-16, D0b, D0c, D6, D10, D16, OOS-1, **OOS-2** (its D6 amendment, which is what licenses this ADR's mechanism), OOS-5, OOS-10, OOS-14; AC-10, AC-11, AC-12, AC-13, **AC-20**, AC-22.2 (NFR-3's mechanical guard) and AC-22.3, **AC-23** (named to record what it does *not* measure — *Risks and Mitigations*), AC-24, AC-35, AC-36, AC-39, AC-46, AC-47
 - Related ADRs (cited by slug — ADR numbers are not unique in this repo, C-16):
   - `0072-ambient-scope-adoption-seam` [Proposed] — how a pipeline discovers and adopts an ambient DI scope. Its affinity computation is the one line this ADR's flag is read at, and its ladder is unchanged by suppression
   - `0070-per-pipeline-di-scope-for-mapper-and-transform-factories` [Proposed] — the transform pipeline takes one DI scope, carried as a parameter; it removed all per-flow state from the design, and *Technology Choices* says why this ADR puts one bit back
