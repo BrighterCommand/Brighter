@@ -1,5 +1,6 @@
-PENDING: revision 23 (27 FRs / 10 NFRs / 53 ACs / 124 normative bullets) — NOT YET APPROVED.
-Revision 22 is also pending; nothing further is owed on it beyond the design phase's single approval.
+PENDING: revision 24 (27 FRs / 10 NFRs / 54 ACs / 124 normative bullets) — NOT YET APPROVED.
+Revisions 22 and 23 are also pending; nothing further is owed on either beyond the design phase's
+single approval.
 
 THE PROCESS CHANGED AT REVISION 22, AND THE CHANGE GOVERNS EVERY REVISION FROM HERE. The requirement
 owner, 2026-08-24: "Let's make them atomic changes. We originally deferred for efficiency as we kept
@@ -22,6 +23,39 @@ change was triggering a fresh mid-edit requirements review, and abolishing that 
 cost that made deferral worth paying. The paragraphs below are kept as the record of what each
 revision changed, and their "carried to the end-of-phase true-up" sentences are spent.
 
+
+Revision 24 was made during the design phase and lands round-7 owner call 7 together with its ADR
+half in one commit (batch S-f) - the third requirements change made under the atomic process above.
+It widens FR-23's population and adds AC-54. The finding (gap B #4) is that a provider offering the
+container's ROOT provider as its resolution source passes all three of the adoption probe's positive
+tests: it is live, it is Microsoft-shaped, and it answers for ScopedArtefactCache. Probed against the
+pinned MEDI 10.0.10 - on a container built WITHOUT ValidateScopes a Scoped service resolves from the
+root and returns one instance for the life of the process, disposed by nothing, so a pipeline that
+borrowed it would defeat FR-1 and FR-2 while nothing complained. Where ValidateScopes is on the same
+resolution throws and the probe's existing exception outcome already declines, so the gap is silent
+on exactly the hosts that have validation off.
+
+The owner's call was to ADD THE REFERENCE TEST rather than leave the case to the ADR's residue prose,
+and the finding's own premise - that the probe cannot cheaply distinguish a root provider - is wrong:
+each container-backed factory is a singleton and is constructed with the root IServiceProvider, so
+one reference comparison per pipeline settles it.
+
+TWO THINGS ABOUT THE SHAPE OF THE AMENDMENT, BOTH DELIBERATE. FIRST, the obligation is stated over
+OBJECT IDENTITY - "the same object as the root provider the container package holds" - and not over
+"the root provider". That is what makes it satisfiable by a conforming implementation, which is the
+defect shape revision 18 fixed for AC-29 and round 7 found again in AC-20. Probed: MS DI injects the
+root ServiceProviderEngineScope into a singleton, and the ServiceProvider object BuildServiceProvider()
+returns is a DIFFERENT object with the same resolutions - so a provider handing back the sp it was
+constructed with is caught, and one handing back IHost.Services is not. The rule does not ask an
+implementation to detect the second; ADR 0072's residue paragraph states it as the third part of what
+adoption does not close, which is what the owner's call required ("do not let the new test delete the
+sentence"). SECOND, this is a population widening and not a new rule, so the normative-bullet count
+stays at 124 - the same accounting revision 18 used when it moved this rule's population.
+
+AC-54 builds its host WITHOUT ValidateScopes on purpose: with validation on, the ambient is declined
+for a different reason and the criterion would not discriminate. It asserts two Sends in two requests
+resolving DIFFERENT Scoped dependencies, which is precisely what borrowing the root would have
+destroyed, plus FR-23's single latched Warning across both calls.
 
 Revision 23 was made during the design phase and lands round-7 owner calls 1 and 8 together with
 their ADR halves in one commit (batch S-a) - the second requirements change made under the atomic
