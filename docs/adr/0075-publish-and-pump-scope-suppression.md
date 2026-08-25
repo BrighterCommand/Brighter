@@ -27,6 +27,24 @@ ADR 0039 (`0039-scoping-dependencies-inline-with-lifetime-scope` — four ADRs c
 
 FR-8 requires subscribers to stay isolated whatever the affinity says. Neither sibling decides *how* a subscriber turns adoption off. The hard part is not the subscriber's own pipeline. It is the pipelines the subscriber's handler creates at dispatch time, which Brighter never sees.
 
+### Terms
+
+This ADR is written throughout in terms of where **brackets** go, so the word is fixed here. A bracket is a `using` block that turns suppression on for exactly the region it encloses and puts it back to whatever it was on the way out:
+
+```csharp
+using (AmbientScopeSuppression.Suppress()) { … }
+```
+
+`Suppress()` captures the flag's current value on the current logical flow, sets it to `true`, and returns an `IDisposable` whose disposal restores the value it captured. *Taking* a bracket is calling `Suppress()`; *the* bracket is that disposable, and by extension the region it covers. A bracket is therefore **two** `AsyncLocal` writes — the set and the restore — rather than one. *Consequences* records what that costs.
+
+Three properties are what make the word carry the argument. Each is specified further down rather than here.
+
+- **Its reach is one logical flow, not one thread.** The flag is `AsyncLocal`-backed, so anything started inside a bracket inherits the suppressed state. That is how a pipeline the subscriber's handler creates through the singleton `CommandProcessor` is reached at all, since no argument path runs to it.
+- **Brackets nest, provided they are disposed innermost-first.** Disposal restores the value that bracket *captured* rather than writing `false`, so an inner bracket leaves an outer one intact. The proviso is the whole subject of *Two misuse modes* under *Key Components*.
+- **Its extent is the unit the requirement is written over.** A bracket around the whole build loop suppresses the same set of resolutions and is still wrong, because its extent is no longer one subscriber's. That is why FR-9(a) rejects it, and why *Technology Choices* and Alternative 5 argue it at length.
+
+Three brackets are named below and the numbering recurs throughout: bracket 1 at resolution time (step 3), bracket 2 at execution time (step 4), and bracket 3 on the consumer pump's own flow (step 4a) — that third one taken once per pump thread for the life of the process rather than once per message.
+
 ### Scope
 
 **Parent requirement**: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md)
