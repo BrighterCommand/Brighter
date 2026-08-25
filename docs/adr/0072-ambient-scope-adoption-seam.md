@@ -44,11 +44,15 @@ This ADR decides two things: the non-core hand-off by which an ambient exposes a
 - **FR-26 — Brighter holds no state that outlives a scope it does not own.** `ScopedArtefactCache` is resolved *from* the borrowed scope rather than held beside it, so the container disposes it with the scope.
 - **FR-27.1 and FR-27.2 — which pipelines take a scope, and with what affinity.** `ScopeAffinityPolicy` applies the rule over the pipeline's whole participating set.
 - **The affinity computation itself, which no tagged requirement carries.** FR-27.2 states the rule over the participating set, but `CreatePipelineScope()` is called on one factory, so some object has to hold the rule for the set. That object is `ScopeAffinityPolicy`.
+- **NFR-7 — the seam is implementable off ASP.NET and off Microsoft's container.** NFR-7 is a non-preclusion clause, and what discharges it is the hand-off's shape: `IAmAScopeProvider` is a one-member role interface, so any assembly implements it without inheriting anything and without a container reference. The guard is **AC-35**, whose provider holds its ambient in an `AsyncLocal` and references no ASP.NET type. ADRs 0073, 0075 and 0076 each keep their own mechanism open on the same terms and name this ADR.
+- **NFR-4 for the borrowed request scope — the one place this design does share state.** Relocating the artefact cache turns something one pipeline owned into something every concurrent pipeline in a request contends for. `ScopedArtefactCache` answers it by inheriting the `ConcurrentDictionary<Type, Lazy<object?>>` publish protocol `ServiceProviderLifetimeScope.cs:163-178` already uses, rather than inventing one. The transform and handler families are ADRs 0070's and 0071's, and suppression is ADR 0075's.
 
 **Contributed to here, discharged elsewhere.**
 
 - **FR-13's disposal-failure clause** belongs to ADR 0070 for transform pipelines and to ADR 0071 for handler pipelines, where AC-33 guards it. FR-13's two clauses divide between those two ADRs; what this ADR adds is the ownership half — who owns, and who must not dispose, a scope the pipeline was handed.
 - **FR-27.3 — suppression as a subscriber property** — is ADR 0075's. It enters the protocol below at one line and adds no outcome to it.
+- **NFR-2 — no ASP.NET dependency in the DI package.** The dependency direction this ADR's hand-off fixes is what makes it achievable, but the requirement is discharged by ADR 0073, which puts the ASP.NET ambient in a package of its own. **AC-22.2** is the guard.
+- **NFR-8 — `IAmAScope` against `IAmALifetime`.** This ADR declares neither type, so nothing here discharges the obligation. It is ADRs 0070's and 0071's, split between the two documentation ends, with ADR 0074's guidance page carrying the same distinction.
 
 **Out of scope.**
 
@@ -77,7 +81,7 @@ The rule the first two state is **the per-pipeline object carries the DI scope**
 
 The two siblings converged both pipeline families onto one member, `CreatePipelineScope()`. That is why adoption is a change in one place: joining an ambient scope is simply what that member returns.
 
-ADR 0067's `Terms` block defines the two axes used throughout — Brighter's *configured lifetime*, which governs the artefact, and the container's *registration lifetime*, which governs the dependencies — and keeps `IServiceScope`, `ServiceProviderLifetimeScope` and `IAmALifetime` distinct from one another. This ADR does not restate it, and does not use "lifetime scope" for anything it introduces. NFR-8 is a documentation obligation about one specific ambiguity, `IAmAScope` against `IAmALifetime`, and it is discharged where this package documents its types.
+ADR 0067's `Terms` block defines the two axes used throughout — Brighter's *configured lifetime*, which governs the artefact, and the container's *registration lifetime*, which governs the dependencies — and keeps `IServiceScope`, `ServiceProviderLifetimeScope` and `IAmALifetime` distinct from one another. This ADR does not restate it, and does not use "lifetime scope" for anything it introduces. NFR-8 is a documentation obligation about one specific ambiguity, `IAmAScope` against `IAmALifetime`, and this ADR declares neither of those two types: it is discharged by ADR 0070 on `IAmAScope` and ADR 0071 on `IAmALifetime`, and repeated on ADR 0074's guidance page.
 
 ### What the two siblings leave open
 

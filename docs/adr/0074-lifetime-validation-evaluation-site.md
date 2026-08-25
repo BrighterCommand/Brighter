@@ -40,12 +40,15 @@ This ADR decides one thing: **the seven scope-configuration rules are evaluated 
 - **FR-17, the evaluation-site half — where the repeated-opt-in rule runs, and what its message says.** The same validator, over the same snapshot. The guard is **AC-49**.
 - **FR-25 — the guidance page.** `docs/guides/lifetimes-and-scoping.md` is declared here, and *Implementation Approach* step 7 maps each of its eleven clauses to the ADR whose substance it states. The page is scheduled here because this is the ADR whose errors are unactionable without it. The guards are **AC-25**, **AC-43** and **AC-44**.
 - **NFR-9 — the truth table.** NFR-9 is discharged by writing the table, and the table is written on the guidance page. This ADR owns it.
-- **NFR-1 — core gains no container type.** The rules live in the DI package, and the harvest loop that runs them is written there too, over core abstractions that are already public. The guard is **AC-22.3**'s source scan.
+- **NFR-1's core-purity clause — core gains no container type.** The rules live in the DI package, and the harvest loop that runs them is written there too, over core abstractions that are already public. The guard is **AC-22.3**'s source scan. NFR-1's withdrawal obligations (a), (b) and (c) belong to the two ADRs that break the interfaces — ADRs 0070 and 0071.
+- **NFR-10 — the guidance page is the acceptance bar, not the message.** NFR-10 requires a reader who hits any FR-22 message to reach a correct configuration from `docs/guides/lifetimes-and-scoping.md` alone. This is the ADR that declares the page and schedules it, and step 7 maps every clause to the ADR whose substance it states. The guards are **AC-43**, which requires every message to name the page, and **AC-44**, whose reviewer walks each of the seven messages through to a concrete correction.
 
 **Contributed to here, discharged elsewhere.**
 
 - **FR-17 is split three ways across the set** — the model FR-13 also follows, one requirement divided across the siblings that each make part of it true. Its registration gesture is **ADR 0073's**, its write-through mechanism and precedence rule are **ADR 0076's**, and its repeated-call rule's evaluation site is this ADR's.
 - **Two families of FR-25 clause come from ADR 0075** — the `Publish`-subscriber rows of the truth table, and FR-25.5's substance. ADR 0075 supplies them without being a second owner of FR-25, and says so in its own `Scope`.
+- **NFR-8 — `IAmAScope` against `IAmALifetime`.** The guidance page repeats the distinction, which is step 7's row 4 and part of **AC-25**. The obligation itself is discharged in the XML documentation on the two types, and that is split between ADRs 0070 and 0071.
+- **NFR-7 — the rules must not privilege Microsoft's container.** Rule inputs are read through the snapshot rather than off a container type, so a validator over another container asks the same questions. The non-preclusion clause is ADR 0072's, which owns the seam's shape.
 
 **Out of scope.**
 
