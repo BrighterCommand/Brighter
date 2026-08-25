@@ -1,6 +1,6 @@
-PENDING: revision 24 (27 FRs / 10 NFRs / 54 ACs / 124 normative bullets) — NOT YET APPROVED.
-Revisions 22 and 23 are also pending; nothing further is owed on either beyond the design phase's
-single approval.
+PENDING: revision 25 (27 FRs / 10 NFRs / 54 ACs / 124 normative bullets) — NOT YET APPROVED.
+Revisions 22, 23 and 24 are also pending; nothing further is owed on any of them beyond the design
+phase's single approval.
 
 THE PROCESS CHANGED AT REVISION 22, AND THE CHANGE GOVERNS EVERY REVISION FROM HERE. The requirement
 owner, 2026-08-24: "Let's make them atomic changes. We originally deferred for efficiency as we kept
@@ -22,6 +22,35 @@ were carried to no longer exists. The deferral was not a mistake - it bought eff
 change was triggering a fresh mid-edit requirements review, and abolishing that review removes the
 cost that made deferral worth paying. The paragraphs below are kept as the record of what each
 revision changed, and their "carried to the end-of-phase true-up" sentences are spent.
+
+
+Revision 25 was made during the design phase and lands the ADR 0074 slice of round 7 together with
+its ADR half in one commit (batch O-0074) - the fourth requirements change made under the atomic
+process above, and the first to arrive from an ordinary slice rather than an owner call. It removes
+a false ground from AC-42's rationale and changes no obligation.
+
+AC-42's last pair - the same Paramore.Brighter.Extensions.Tests assembly, a transform excluded and a
+mapper reported - explained why it is built as two hosts by asserting that "no single triple could
+serve both halves". Gap B #5 falsifies it: {HandlerLifetime = Transient, MapperLifetime = Singleton,
+TransformerLifetime = Singleton} governs a Singleton mapper and a Singleton transform at the same
+time and is FR-22.2-conformant by FR-22's own rule 2 - discard the Singletons, and the remainder
+{Transient} is uniform. {Singleton, Singleton, Singleton} under AlwaysNew serves both as well. The
+true reason the triple moves is narrower and is what the clause now says: the artefact kind selects
+which of the three settings governs it, so moving the Singleton between MapperLifetime and
+TransformerLifetime is what moves the candidate between kinds.
+
+WHAT DELIBERATELY DID NOT CHANGE: the pair's construction. Two hosts, the assembly as the controlled
+variable, the same two outcomes, and the same C-20(iv) asymmetry it exists to pin. A one-host
+construction over {Transient, Singleton, Singleton} is now visibly available and was NOT taken -
+the criterion's content was never at stake, only the reason given for its shape, and rewriting a
+criterion that is correct to take a construction the ADRs do not need is scope this batch has no
+call for. The word "necessarily" went with the false clause, for the same reason.
+
+Why no review round: this is alignment. It adds no rule, no criterion and no scope, and removes a
+statement the design work proved false. Counts unchanged at 27/10/54/124. ADR 0074 carried the same
+claim as a property of its own rule table, which read as derived rather than cited; the ADR
+half of this commit replaces that sentence too, so both ends land together as the atomic process
+requires.
 
 
 Revision 24 was made during the design phase and lands round-7 owner call 7 together with its ADR
