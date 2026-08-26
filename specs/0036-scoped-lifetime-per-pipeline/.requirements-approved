@@ -1,6 +1,6 @@
-PENDING: revision 28 (27 FRs / 10 NFRs / 55 ACs / 124 normative bullets) — NOT YET APPROVED.
-Revisions 22, 23, 24, 25, 26 and 27 are also pending; nothing further is owed on any of them beyond
-the design phase's single approval.
+PENDING: revision 29 (27 FRs / 10 NFRs / 55 ACs / 124 normative bullets) — NOT YET APPROVED.
+Revisions 22, 23, 24, 25, 26, 27 and 28 are also pending; nothing further is owed on any of them
+beyond the design phase's single approval.
 
 THE PROCESS CHANGED AT REVISION 22, AND THE CHANGE GOVERNS EVERY REVISION FROM HERE. The requirement
 owner, 2026-08-24: "Let's make them atomic changes. We originally deferred for efficiency as we kept
@@ -23,6 +23,58 @@ change was triggering a fresh mid-edit requirements review, and abolishing that 
 cost that made deferral worth paying. The paragraphs below are kept as the record of what each
 revision changed, and their "carried to the end-of-phase true-up" sentences are spent.
 
+
+Revision 29 was made during the design phase and lands the split owed to AC-14, together with the
+eight ADR passages that said it was owed (batch REQ-row1). It is section 19.9 row 1 of the plan of
+record - THE LAST OF THAT SECTION'S ROWS. Every atomic requirements batch the design phase owed is
+now landed, and no requirements change is outstanding.
+
+WHAT CHANGED AND WHY - TWO HALVES OF ONE CRITERION, EACH FOR ITS OWN REASON.
+
+FIRST, THE SPY CLAUSE. AC-14 asserted, in one Given, both that the existing Brighter test suite
+passes unchanged and that an IHttpContextAccessor spy records zero accesses. The second assertion
+cannot fail where the first one runs. IHttpContextAccessor lives in
+Microsoft.AspNetCore.Http.Abstractions; no Brighter test project references that assembly, and
+NFR-2 forbids the DI package to acquire it, so a spy registered beside that suite records zero
+whatever the ASP.NET package does. The clause is only about something in a project that TAKES the
+new package's reference and never calls its extension. AC-14 therefore now has two halves in two
+projects: the regression half stays where those tests live, with its exclusions and its named pair
+unchanged in place, and the spy half is a new "And given" branch naming
+tests/Paramore.Brighter.Extensions.AspNetCore.Tests - the reference taken, the extension never
+called, and NO WEB HOST, because that half needs the reference rather than a host.
+
+SECOND, THE "EXPLICITLY NOT EXCLUDED" PAIR. The criterion named two FactoryLifetimeTests tests and
+required them to keep passing UNCHANGED as regression guards for AC-9. They resolve through a
+hand-rolled TestLifetimeScope over a per-lifetime dictionary entry, and the design removes that
+carrier - how a pipeline scope reaches the factories is design work (C-13). They cannot pass
+unchanged, so the designation MIGRATES with them onto the replacement carrier rather than attaching
+to a duplicate: the same two tests, asserting the same within-pipeline handler identity, over what
+replaces the dictionary. Duplicating instead would leave the originals pinning a carrier the design
+removes, which is a guard on a path nothing ships. "Must keep passing unchanged" becomes "in that
+form they must keep passing", and nothing else about the criterion moves.
+
+FLAGGED FOR THE OWNER, because the shape was a judgement and not an instruction. The spy half is
+landed as a BRANCH of AC-14, not as a new criterion. ADR 0073 says the package-inertness half
+"acquires a criterion" and names AC-14's spy clause as that criterion, and the ADRs call this an
+AMENDMENT to AC-14 in all eight passages, so a branch is the reading that follows the source. If the
+owner would rather FR-15's package-inertness half hold a criterion of its own, the branch lifts out
+as a new AC verbatim and the AC count moves 55 -> 56. Nothing else would change.
+
+WHAT WAS DELIBERATELY NOT DONE. The exclusion list, its three named files and its "floor, not a
+closed enumeration" clause are untouched: the split is about where two assertions run, not about
+which tests are in scope. The regression half's When still names the same five verbs. Neither half
+states a lifetime triple, and the "How to read the lifetime configuration in a Given" preamble was
+NOT amended to admit them - AC-14 was already outside that rule before this change, its subject
+being a suite of hosts that each set their own configuration, and fixing a neighbouring sentence
+this amendment does not falsify is scope this batch has no call for.
+
+Why no review round: the stand-alone requirements review was abolished at revision 22 and the test
+is "is it in line with what the ADRs reveal". This is that - ADR 0071 states the migration under
+Negative and in step 6, ADR 0073 states the split in step 4a, and all eight passages saying the
+amendment was owed are re-tensed in the same commit. Counts unchanged at 27/10/55/124 - a branch is
+not a criterion and a redesignation is not a bullet; the section 7 script's divergent 128 is left
+alone per revision 26's note. NO NEW CODEBASE CLAIMS: every fact above was already carried by ADR
+0071 or ADR 0073.
 
 Revision 28 was made during the design phase and lands the FR-27.1 / AC-46 definition that round-6
 decision 17 left owed, together with the five ADR passages that said it was owed (batch REQ-row4).
