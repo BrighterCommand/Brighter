@@ -523,6 +523,11 @@ and by those numbers the set is in good shape — **one** block over 200 words i
 it measures structure**, so a 163-line region of unbroken prose carrying no sub-heading scores
 perfectly clean.
 
+✅ **That baseline is now TAKEN — §11 is it, and it was taken before any Phase 5 edit as this
+paragraph required.** All three candidates below were adopted. ⚠ **§11 also RECONCILES this
+section's own measurement table, whose *bolded paragraph leads* column turns out to be a naive
+`^\*\*` line count taken to two different end boundaries on different rows.**
+
 **Phase 5 owes a structural baseline of its own, defined and taken before any Phase 5 edit.**
 Candidates: sub-headings per section; bulleted blocks as a share of all blocks; the longest run of
 consecutive prose blocks with no intervening heading or list. **Add to §9's table; do not replace
@@ -553,3 +558,135 @@ closing it as a Low.**
 D8 was written for: **the fixes are what degrade the prose**, so a readability pass taken before they
 land would measure a document that is about to change under it. D8 governs the fix batches in the
 meantime, and every batch still reports its §9 counts.
+
+✅ **The gate is discharged.** Round 7's fix stream closed at `a97c0ebdc`: every owner call, every
+per-ADR slice, both cross-ADR batches and every requirements batch is landed, and `R→Ph5` is the only
+group left in the round. **§11's baseline is therefore taken on a set that is not about to change
+under it**, which is the whole point of the sequencing.
+
+## 11. Phase 5 — the structural baseline
+
+**Taken at `a97c0ebdc`, before any Phase 5 edit, as §10 requires.** This is to Phase 5 what §9 is to
+the fix stream: the figures every Phase 5 batch reports its before-and-after against. ⚠ **It ADDS to
+§9; it does not replace it. A Phase 5 batch owes BOTH tables** — the structural one because it is
+what Phase 5 is for, and §9's because a structural pass must not buy headings with length.
+
+### The region
+
+Phase 5's remit, widened by round 7's call 6, is `### Technology Choices`, `### Implementation
+Approach`, `## Consequences` (with its `### Positive`, `### Negative` and `### Risks and
+Mitigations`) and `## Alternatives Considered`. ⚠ **In all seven ADRs those sections are contiguous
+and run from `### Technology Choices` to `## References`** — verified per file, not assumed — so the
+region is that span and needs no per-ADR list. Everything before it is measured too, as the
+**control**, because the diagnosis is a contrast rather than an absolute: the same document reads
+well up to the contract tables and badly after them.
+
+### The instrument, so a later batch reproduces these numbers rather than re-inventing them
+
+Frontmatter is stripped. A **heading line, a table line and a fenced block are structure breaks** —
+they are not prose blocks, and they interrupt a prose run. ⚠ **Counting a diagram or a table as a
+break is the conservative choice: it lowers the longest-run figure, so the instrument under-states
+the defect rather than over-stating it.** A **block** is §9's block — a maximal run of lines bounded
+by a blank line, split further at every list-item lead `^\s*(?:[-*+]|\d+[.)])\s+`, in which an
+alpha-suffixed ordinal (`5a.`) is **not** a lead. A **list block** is one whose first line matches
+that lead; every other block is a **prose block**.
+
+- **`####`** — sub-headings in the region. This is the diagnosis's own metric.
+- **list %** — list blocks as a share of all blocks in the region.
+- **bold lead** — a **prose** block whose text begins with `**`. ⚠ **Disjoint from §9's *bullet
+  lead*, which is a LIST block's first bold run.** This is the column that measures the diagnosed
+  defect most directly: bold doing the job a heading should do.
+- **run** — the longest chain of consecutive prose blocks with no intervening heading, list, table
+  or fence.
+- **span** — the longest heading-free stretch, in source lines, between two consecutive headings.
+
+### The baseline, at `a97c0ebdc`
+
+| ADR | `####` | blocks | prose | list | list % | bold lead | run | span |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| 0070 | **0** | 141 | 77 | 64 | 45% | 49 | 14 | **203** |
+| 0071 | **0** | 88 | 45 | 43 | 48% | 30 | 6 | 82 |
+| 0072 | **0** | 87 | 60 | 27 | 31% | 40 | 13 | 141 |
+| 0073 | **0** | 56 | 36 | 20 | 35% | 27 | **19** | 43 |
+| 0074 | **0** | 98 | 55 | 43 | 43% | 31 | 17 | 65 |
+| 0075 | 4 | 94 | 66 | 28 | 29% | 37 | 10 | 102 |
+| 0076 | **0** | 43 | 29 | 14 | 32% | 22 | 17 | 35 |
+| **total** | **4** | **607** | **368** | **239** | **39%** | **236** | **19**\* | **203**\* |
+
+\*maxima, not sums.
+
+**The control — the same seven ADRs before `### Technology Choices`:** `####` 5 / 7 / 8 / 7 / 8 / 5 /
+8; longest run 5 / 8 / 12 / 5 / 7 / 4 / 7; longest span 63 / 48 / 67 / 64 / 91 / 49 / 83. ⚠ **The
+contrast is the finding: 48 sub-headings before the region and 4 inside it, with the longest
+heading-free span more than doubling.** The owner's *"up to this point the ADR is well-written, but
+at this point it just drops into a collection of facts"* is visible in every column.
+
+### What the instrument found on its first run
+
+⚠⚠ **`0073`'s longest run is nineteen consecutive prose paragraphs, and it is `0072 #8`'s shape
+reproduced in another ADR.** Its `### Implementation Approach` is a numbered procedure — steps 1, 2,
+3, 4, 4a, 5, 6 — carried **entirely in bold paragraph leads with no heading of any kind**. That is
+precisely what `0072 #8` prescribes sub-numbering for, which is independent confirmation that the
+owner is right that the finding is generic. **`0074` (17) and `0076` (17) are the same shape.**
+
+⚠ **`0070` and `0073` are the two ends of the defect and a Phase 5 batch should not treat them
+alike.** `0070` has the worst span (203 lines) and the most bold leads (49) but a modest run (14):
+its prose is broken up by tables and diagrams, so what it lacks is *navigation*. `0073` has the
+shortest span (43) and the longest run (19): its prose is not broken up at all, so what it lacks is
+*breaks*. **Sub-headings fix the first; sub-numbering and lists fix the second.**
+
+⚠ **`0075` is the control case and should be read as one.** It is the only ADR with `####` headings
+in the region (4, from Phase 3), and it has the second-lowest list share. **Its four headings did not
+lower its bold-lead count** (37, third-highest). Headings alone are not sufficient — which is why
+`0072 #8`'s prescription is *"eight lead-ins become headings and stop being emphasis"*, converting
+rather than adding.
+
+### ⚠⚠ §10's own measurement table reconciles, but not to one definition
+
+**§10's *bolded paragraph leads after* column reads 49 / 24 / 38 / 27 / 24 / 37 / 23 = 222 at
+`09856a630`. This instrument reads 50 / 32 / 39 / 27 / 27 / 37 / 22 = 234 on the same commit.** Per
+§9's rule — *reconcile the definitions before treating either as wrong, and prefer the count that
+ships with its script* — both are now explained exactly:
+
+1. **§10's column is a naive `^\*\*` line count**, which at `09856a630` gives 48 / 23 / 38 / 27 / 23 /
+   37 / 22. It therefore **misses bold-led paragraphs that are INDENTED** as continuations inside a
+   list item — nine of them in `0071` alone, four in `0074`, two in `0070`. ⚠ **Those are the defect
+   in its most acute form — a bold lead doing a heading's job while buried one level down — so
+   excluding them under-counts exactly the population Phase 5 exists to remove.**
+2. ⚠⚠ **§10's column used TWO DIFFERENT END BOUNDARIES on different rows.** `0070`, `0071`, `0074`
+   and `0076` were counted through end-of-file, picking up `## References`'s
+   `**Related ADRs — the other six of this set:**` lead; `0072`, `0073` and `0075` stopped at
+   `## References` and did not. That single line is the whole of the +1 on four rows. **`## References`
+   is outside Phase 5's remit, so §11 excludes it on all seven.**
+
+⚠ **This is not a correction to §10's argument, which is untouched: the `####` column — the column
+the diagnosis actually rests on — reproduces EXACTLY (0/0/0/0/0/4/0), first run.** It is a warning to
+the batch that measures a delta: **§10's 222 and §11's 236 are different instruments, and subtracting
+one from the other measures nothing.** Phase 5 measures against §11's table.
+
+### §9's columns at the same commit, so both tables have a Phase 5 start point
+
+⚠ **§9's table stays as recorded — it is the blind baseline at `09856a630` and is not restated.**
+This is where the set stands after the fix stream, and it is the figure a Phase 5 batch reports
+against:
+
+| | blocks | >150 | >200 | bold in prose | bold at bullet leads | diagrams |
+|---|---:|---:|---:|---:|---:|---:|
+| §9 baseline, `09856a630` | 1468 | 27 | 1 | 864 | 400 | 26 |
+| **Phase 5 start, `a97c0ebdc`** | **1496** | **25** | **1** | **881** | **424** | **26** |
+
+⚠ **The fix stream cost 28 blocks and 41 bold runs and bought back two long blocks** — which is what
+§9's *"if the batch comes out longer, the fix is wrong"* test predicts a twenty-three-batch stream
+would do, and it is small. **Both instruments were rebuilt from their written definitions and both
+reproduced their recorded figures exactly on the first run** — §9's 1468/27/1/864/400/26 at
+`09856a630` (D8 rule 25) and 1496/25/1/881/424/26 at HEAD, matching what batch `REQ-free` recorded
+independently. The definitions in `PROMPT-reference.md` §8 and in this section are sufficient; no
+scratchpad needs to survive.
+
+### What a Phase 5 batch owes
+
+**Both tables, before and after, in the commit message** — §11's for the structure it is adding and
+§9's for the length and emphasis it must not buy it with. ⚠ **`0072 #8`'s test is the standard:
+*"No sentence changes and no bold is added."* A batch that raises §9's bold columns while adding
+headings has converted nothing** — it has added structure on top of the emphasis instead of
+replacing it, and the bold-lead column in §11 should fall by roughly what the `####` column rises.
