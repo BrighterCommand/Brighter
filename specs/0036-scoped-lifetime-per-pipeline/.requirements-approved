@@ -1,6 +1,6 @@
-PENDING: revision 25 (27 FRs / 10 NFRs / 54 ACs / 124 normative bullets) — NOT YET APPROVED.
-Revisions 22, 23 and 24 are also pending; nothing further is owed on any of them beyond the design
-phase's single approval.
+PENDING: revision 26 (27 FRs / 10 NFRs / 55 ACs / 124 normative bullets) — NOT YET APPROVED.
+Revisions 22, 23, 24 and 25 are also pending; nothing further is owed on any of them beyond the
+design phase's single approval.
 
 THE PROCESS CHANGED AT REVISION 22, AND THE CHANGE GOVERNS EVERY REVISION FROM HERE. The requirement
 owner, 2026-08-24: "Let's make them atomic changes. We originally deferred for efficiency as we kept
@@ -23,6 +23,53 @@ change was triggering a fresh mid-edit requirements review, and abolishing that 
 cost that made deferral worth paying. The paragraphs below are kept as the record of what each
 revision changed, and their "carried to the end-of-phase true-up" sentences are spent.
 
+
+Revision 26 was made during the design phase and lands the FR-19 / AC-20 / C-14 correction that
+round-6 decision 5 left owed, together with the four ADR passages that said it was owed and the
+two that stated C-14 as a live assumption (batch REQ-row5). It is section 19.9 row 5 of the plan
+of record - the fifth requirements change made under the atomic process above, and the second to
+arrive from something other than a round-7 owner call.
+
+WHAT CHANGED AND WHY. Round-6 decision 5 put a suppression bracket on the consumer pump's own flow,
+so a consumer pipeline's ask carries AlwaysNew however the affinity option is set. FR-24.2 and
+FR-23 are both evaluated on JoinAmbient asks only, so neither condition is reachable on the
+consumer side and a host with a conforming ambient source records nothing there at all. FR-19 said
+"Where an ambient source is registered there are exactly two" log entries and named FR-24.2 as one
+such a host DOES emit; AC-20 asserted the JoinAmbient run "records exactly one". AC-20 was
+therefore UNSATISFIABLE BY A CONFORMING IMPLEMENTATION - the AC-29 defect shape revision 18 fixed,
+found again by round 7 (gap A #3, score 70).
+
+FR-19 now states the one true bound: no permitted difference in log entries either, and the only
+entry a consumer host can record is FR-24.4's, from a NON-conforming provider that returns an
+ambient for an AlwaysNew ask. AC-20 asserts zero in both runs. Its "second run of 100 messages"
+clause went with the latch it pinned, so D19's "where it lands" column loses AC-20 and the
+Acceptance Criteria preamble loses that example. C-14 stops being an assumption and states the
+invariant: the case it assumed away is one the requirements could not make good, because an
+inherited HttpContext is LIVE rather than stale and FR-23 would not govern it. FR-18 loses "a
+consumer running in the same host" from its no-HttpContext enumeration - a case its own Warning
+clause can no longer reach.
+
+NEW: AC-55 (FR-19, C-14), the criterion the invariant was owed. A Dispatcher started from inside a
+live request, ten messages consumed while it is open, every ask carrying AlwaysNew, zero adoptions
+and no entry. ADR 0075's Risks table had recorded that no acceptance criterion asserted the
+pump-flow bracket and that it was guarded by review only; that row now cites AC-55.
+
+FLAGGED FOR THE OWNER, because the instruction was hedged. Round-6 decision 5's row says the
+invariant "MAY deserve its own criterion", while ADR 0075's Risks row says the criterion "is owed".
+AC-55 is written on the second reading. It adds no rule - it pins FR-19's existing inertness over
+the flow that made C-14 necessary - and it is one criterion to strike if the owner prefers the
+first reading. It deliberately does NOT license starting a Dispatcher from inside a request; its
+Note says so, matching ADR 0075's "erroneous use of the library rather than a configuration this
+design supports".
+
+Why no review round: the stand-alone requirements review was abolished at revision 22 and the test
+is "is it in line with what the ADRs reveal". This is that, in both directions: the ADRs revealed
+the defect and the ADR passages saying the amendment was owed are re-tensed in the same commit.
+Counts move from 54 ACs to 55; FRs, NFRs and normative bullets unchanged at 27/10/124. NOTE ON THAT
+LAST FIGURE: the reference script in the plan file's section 7 counts AC lead bullets and now
+reports 128, while the maintained figure has excluded criteria since revision 20 (AC-51 was
+recorded as leaving 122 unchanged, and AC-54 as leaving 124 unchanged). The maintained convention
+is followed here - a criterion does not move the bullet count. NO NEW CODEBASE CLAIMS.
 
 Revision 25 was made during the design phase and lands the ADR 0074 slice of round 7 together with
 its ADR half in one commit (batch O-0074) - the fourth requirements change made under the atomic
