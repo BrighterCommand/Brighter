@@ -53,6 +53,12 @@ matter: Kafka retains what it accepts, and the subscription's `offsetDefault` is
 `AutoOffsetReset.Earliest`, so a receiver started afterwards reads the greetings that are
 already there.
 
+`BootStrapServers` here is a plaintext `localhost:9092` with no credentials, which is right for
+a broker on your own machine and wrong everywhere else. A real cluster wants `SecurityProtocol`
+and SASL credentials set on the `KafkaMessagingGatewayConfiguration` — worth saying because a
+bootstrap list is exactly the block that gets lifted into a service, and unlike rung 2's
+`guest:guest` there is no visible credential here to prompt the question.
+
 If you start the sender within a second or two of the broker, it may log
 `Failed to acquire idempotence PID from broker … Coordinator load in progress: retrying`.
 That is the broker still starting up and the producer doing what it says — retrying. It
@@ -177,6 +183,12 @@ That `LAG 1` is stable — it was still 1 a minute later. The sweeper drains its
 in no particular order and commits them in one call, so the offset that sticks is not
 necessarily the highest one it holds.
 
+**That last part is a Brighter defect, not Kafka semantics, and it is tracked as
+[#4281](https://github.com/BrighterCommand/Brighter/issues/4281).** A group that has handled
+everything ought to reach `LAG 0`. If that issue is fixed, the numbers below shrink and the
+`LAG 1` reading above disappears — the at-least-once lesson does not, because a rebalance can
+always arrive before a commit.
+
 So the rebalance redelivers whatever was uncommitted when it happened, and **when you start the
 second instance changes how much that is.** Measured on Brighter 10.7.0, nine greetings over
 three partitions:
@@ -215,8 +227,8 @@ commandProcessor.Post(new GreetingEvent($"Hello {recipient} #{i}"), context);
 
 The pump also runs as a **Reactor** rather than a Proactor, which is `KafkaSubscription<T>`'s
 own default — note the generic, since the non-generic `KafkaSubscription` defaults to
-`MessagePumpType.Unknown`. That is what makes the single-threaded ordering argument above visible in the code
-instead of asserted about it, and it means the handler is a plain synchronous
+`MessagePumpType.Unknown`. That is what makes the single-threaded ordering argument above
+visible in the code rather than asserted, and it means the handler is a plain synchronous
 `RequestHandler<GreetingEvent>` — the same file as rung 2's, byte for byte.
 
 ## What changed from rung 2

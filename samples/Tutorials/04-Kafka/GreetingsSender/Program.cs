@@ -43,7 +43,7 @@ var kafkaConfiguration = new KafkaMessagingGatewayConfiguration
 // A publication tells Brighter where a request type goes: which topic, on which broker.
 // NumPartitions is the delta from rung 2. A RabbitMQ queue is one ordered stream; a Kafka
 // topic is NumPartitions of them, and that is what gives a consumer group something to
-// share out. MakeChannels.Create means the sender creates the topic if it is missing, with
+// share out. OnMissingChannel.Create means the sender creates the topic if it is missing, with
 // this many partitions.
 //
 // Two defaults are doing quiet work here, and the ordering this rung teaches depends on both:
