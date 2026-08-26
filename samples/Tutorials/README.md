@@ -9,9 +9,9 @@ diff two of them and see exactly what a feature costs.
 |---|---|---|
 | 1 | A command, a handler, no broker | [`samples/CommandProcessor/HelloWorld`](../CommandProcessor/HelloWorld) — reused as-is, which is why there is no `01-` directory here |
 | 2 | One event over a RabbitMQ exchange, two processes | [`02-FirstMessage`](02-FirstMessage) |
+| 3 | A durable Postgres Outbox, one transaction, the Sweeper | [`03-DurableOutbox`](03-DurableOutbox) |
 
-Rungs 3 (a durable Postgres Outbox) and 4 (Kafka) are planned and will land here as separate
-pull requests.
+Rung 4 (Kafka) is planned and will land here as a separate pull request.
 
 These samples are deliberately smaller than the reference samples they derive from. Where a
 sample under `samples/TaskQueue/` shows a feature properly, the tutorial version shows the
