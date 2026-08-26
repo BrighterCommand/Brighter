@@ -160,6 +160,12 @@
     <Project Path="samples/Tutorials/02-FirstMessage/GreetingsReceiver/GreetingsReceiver.csproj" />
     <Project Path="samples/Tutorials/02-FirstMessage/GreetingsSender/GreetingsSender.csproj" />
   </Folder>
+  <Folder Name="/samples/Tutorials/03-DurableOutbox/">
+    <File Path="samples/Tutorials/03-DurableOutbox/README.md" />
+    <Project Path="samples/Tutorials/03-DurableOutbox/Greetings/Greetings.csproj" />
+    <Project Path="samples/Tutorials/03-DurableOutbox/GreetingsReceiver/GreetingsReceiver.csproj" />
+    <Project Path="samples/Tutorials/03-DurableOutbox/GreetingsSender/GreetingsSender.csproj" />
+  </Folder>
   <Folder Name="/samples/Validation/">
     <File Path="samples\Validation\README.md" />
     <Project Path="samples/Validation/DataAnnotationsSample/DataAnnotationsSample.csproj" />
