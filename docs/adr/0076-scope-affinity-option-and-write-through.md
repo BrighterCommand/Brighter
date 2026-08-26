@@ -5,7 +5,7 @@ status: Proposed
 author:
   - "Ian Cooper"
 created: 2026-08-03
-summary: "IBrighterOptions and BrighterOptions gain a ScopeAffinity DefaultScopeAffinity property that defaults to AlwaysNew, so a host that changes nothing keeps today's behaviour. An opt-in extension's affinity argument reaches the resolved IBrighterOptions on all four registration paths, in any registration order. It does not get there by writing to the options object, which does not exist yet at registration time on three of the four paths. The extension registers an immutable ScopeAffinityOverride instead, and Brighter's own IBrighterOptions factory delegate reads that override and applies it from inside. One RegisterBrighterOptions definition holds the write-through, called from BrighterHandlerBuilder — the one method every registration path already funnels through, so a path that omits the write-through cannot be a Brighter host. One thing defeats the mechanism and no version of it can serve that case: an application that registers IBrighterOptions itself, unkeyed, before Brighter to win the TryAdd or after it to win resolution as the last unkeyed descriptor. That limit is reported as an error by ADR 0074's FR-22.4 rule, for which RegisterBrighterOptions records which IBrighterOptions descriptor is Brighter's own."
+summary: "IBrighterOptions and BrighterOptions gain a ScopeAffinity DefaultScopeAffinity property defaulting to AlwaysNew, so a host that changes nothing keeps today's behaviour. The opt-in gesture does not write that property: it deposits an immutable ScopeAffinityOverride in the service collection, which Brighter's own options factory picks up on all four registration paths, in any registration order."
 tags:
   - "di"
   - "lifetime"

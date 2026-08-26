@@ -5,7 +5,7 @@ status: Proposed
 author:
   - "Ian Cooper"
 created: 2026-08-03
-summary: "A Publish subscriber suppresses ambient DI scope adoption for its own pipeline and for every pipeline created beneath it through a public, AsyncLocal-backed AmbientScopeSuppression flag in Paramore.Brighter, bracketed twice per subscriber — once around that subscriber's resolution inside PipelineBuilder's build loop, once around its own Handle/HandleAsync invocation — with the restore written explicitly on both rather than inherited from ExecutionContext, because the pipelines that must be suppressed are ones a subscriber's handler creates through the singleton CommandProcessor and Brighter holds no reference to. The same flag takes a third bracket around the consumer pump's own flow, in Performer.Run, so that a consumer pipeline owns its scope unconditionally rather than because a pump thread happened to be started outside a request."
+summary: "A Publish subscriber and the consumer pump both suppress ambient scope adoption, for their own pipelines and for every pipeline created beneath them. The mechanism is a public, AsyncLocal-backed AmbientScopeSuppression flag in Paramore.Brighter, bracketed three times: around each subscriber's resolution, around that subscriber's own Handle/HandleAsync invocation, and around the pump's own flow in Performer.Run."
 tags:
   - "di"
   - "lifetime"

@@ -5,7 +5,7 @@ status: Proposed
 author:
   - "Ian Cooper"
 created: 2026-08-02
-summary: "A DI scope the host already owns offers its resolution source to Brighter's container package through a one-member role interface declared in that package rather than in core: IAmAServiceProviderScope, an IAmAScope that names the IServiceProvider behind it. A container-backed factory type-tests for that role inside CreatePipelineScope(). It asks the ambient source exactly once, carrying an affinity computed over the pipeline's whole participating set, and then either borrows that resolution source without owning it or creates and owns a scope exactly as it does today."
+summary: "An ambient DI scope offers its resolution source through IAmAServiceProviderScope, a role interface declared in the container package rather than in core. A container-backed factory asks that source once, with an affinity computed over the pipeline's whole participating set, and then either borrows the source without owning it or creates and owns a scope exactly as today."
 tags:
   - "di"
   - "lifetime"
