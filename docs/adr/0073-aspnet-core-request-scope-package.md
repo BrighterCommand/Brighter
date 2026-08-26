@@ -49,13 +49,13 @@ This ADR decides **how an ASP.NET Core application offers its request scope to B
 
 **FR-17 is split three ways**, on the model FR-13 also follows — one requirement divided across the siblings that each make part of it true. The gesture is this ADR's. The write-through that carries the gesture's argument onto whichever options object a registration path produces is ADR 0076's. The site at which FR-17's repeated-call rule is evaluated is ADR 0074's.
 
-It serves FR-10, FR-12, FR-16, FR-18 and FR-23, each discharged by ADR 0072, and FR-25.11, discharged by ADR 0074 on the guidance page it declares; what this ADR contributes there is the three gestures themselves, which step 5 states. It also serves **NFR-7**, whose non-preclusion clause ADR 0072 discharges in the shape of the hand-off; what this package contributes is the demonstration, because it registers its own `IAmAScopeProvider` and its own `ScopeAffinityOverride` in the two lines any other package would use.
+It serves FR-12, FR-16, FR-18 and FR-23, each discharged by ADR 0072; FR-10, whose ambient-source half is ADR 0072's and whose `IAmAScope` half is ADR 0070's; and FR-25.11, discharged by ADR 0074 on the guidance page it declares. What this ADR contributes there is the three gestures themselves, which step 5 states. It also serves **NFR-7**, whose non-preclusion clause ADR 0072 discharges in the shape of the hand-off; what this package contributes is the demonstration, because it registers its own `IAmAScopeProvider` and its own `ScopeAffinityOverride` in the two lines any other package would use.
 
 This ADR **supersedes no prior ADR.** It is the application-facing end of the 0070–0072 sequence.
 
 ### Where this ADR sits
 
-Seven ADRs deliver the parent requirement, one decision each; the requirements constrain observable behaviour only and hand how it is implemented to design (C-13). This is the fourth, and the only one that ships an application-facing registration gesture.
+Seven ADRs deliver the parent requirement; the requirements constrain observable behaviour only and hand how it is implemented to design (C-13). This is the fourth, and the only one that ships an application-facing registration gesture.
 
 | ADR | Decides |
 | --- | --- |

@@ -32,7 +32,7 @@ This ADR decides two things: the non-core hand-off by which an ambient exposes a
 
 **In scope.** Each requirement below is discharged here by the named mechanism.
 
-- **FR-10 — the ambient source is a public seam.** `IAmAScopeProvider` is a core interface with one member, so an implementation may live in any assembly. OOS-3 bounds the obligation: implementations for other containers must be *permitted*, and none ships here.
+- **FR-10's ambient-source half — the ambient source is a public seam.** `IAmAScopeProvider` is a core interface with one member, so an implementation may live in any assembly. OOS-3 bounds the obligation: implementations for other containers must be *permitted*, and none ships here. This ADR declares two of FR-10's three named types, `IAmAScopeProvider` and `ScopeAffinity`; `IAmAScope` is ADR 0070's, on the model FR-13 also follows.
 - **FR-11 — a host with no usable ambient behaves exactly as it does today.** Ladder row 3 covers "no provider registered" (FR-11(a)) and ladder row 8 covers "an ambient this container package cannot use" (FR-11(b)).
 - **FR-12 — Brighter never disposes a scope it borrowed.** Ladder row 10 borrows without owning, and a borrowed `ServiceProviderPipelineScope` disposes nothing. FR-13's borrowed-scope carve-out lands here: FR-13 routes "a borrowed scope is never disposed at all" to FR-12 in terms rather than keeping a clause of its own.
 - **FR-16 — pipelines in one HTTP request share the request scope.** `ScopedArtefactCache` gives FR-16(a): two `Post`s in one request share one mapper (D7). The borrowed scope gives dependency identity across a `Send`'s handler pipeline and a `Post`'s transform pipeline in one request, which is FR-16(b)'s mechanism and AC-34's assertion. FR-16(c) is FR-16(b) extended across the call boundary, and it is what carries a caller's transaction into a handler (C-21, AC-52).
@@ -65,7 +65,7 @@ This ADR supersedes no prior ADR. It extends the 0066–0069 sequence and comple
 
 ### Where this ADR sits
 
-Seven ADRs deliver the parent requirement, one decision each; the requirements constrain observable behaviour only and hand how it is implemented to design (C-13). This is the third; the first two close the defects and build the handle, and this is where the feature starts.
+Seven ADRs deliver the parent requirement; the requirements constrain observable behaviour only and hand how it is implemented to design (C-13). This is the third; the first two close the defects and build the handle, and this is where the feature starts.
 
 | ADR | Decides |
 | --- | --- |
@@ -507,7 +507,7 @@ Discriminating by type rather than by position is what lets `CreatePipelineScope
 
 ### Implementation Approach
 
-**1. The core types.** Add `IAmAScopeProvider` and `ScopeAffinity` to `src/Paramore.Brighter/`, and `AmbientScopeSourceException` beside them. None names a container type; the source-level guard AC-22.3 runs returns nothing new.
+**1. The core types.** Add `IAmAScopeProvider` and `ScopeAffinity` to `src/Paramore.Brighter/`, and `AmbientScopeSourceException` beside them. That confirms the home C-8 assumes for those two seam types, ADR 0070 having confirmed `IAmAScope`'s. None names a container type; the source-level guard AC-22.3 runs returns nothing new.
 
 **1a. Structural, and separate: one spelling for the two `PipelineBuilder` catch filters.** `:248` reads `when(!(e is ConfigurationException))` where `:202` reads `when (e is not ConfigurationException)`. Normalising them changes no behaviour and belongs in its own commit ahead of the behavioural change, per Tidy First. Doing it first also means the clause added below is added twice to the same shape.
 
@@ -717,7 +717,7 @@ One site covers every caller, because all five factories reach the borrowed prov
 - ADR 0075 [0075-publish-and-pump-scope-suppression](0075-publish-and-pump-scope-suppression.md) — how a `Publish` subscriber and the consumer pump suppress adoption, for themselves and every pipeline created beneath them
 - ADR 0076 [0076-scope-affinity-option-and-write-through](0076-scope-affinity-option-and-write-through.md) — the affinity option, and how one setting reaches all four registration paths in any order
 
-- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-1, FR-2, FR-8, FR-10, FR-11, FR-12, FR-13, FR-16/FR-16(a)/**FR-16(c)**, FR-17, FR-21, FR-18, FR-19, FR-22, FR-23, FR-24, FR-25, FR-26, FR-27; NFR-2, NFR-4, NFR-6, NFR-7, NFR-8; C-1, C-2, C-4, C-6, C-7, C-9, C-11, C-12a, C-13, **C-14**, C-15, **C-17**, **C-21**; D0b, D1, D4, D7, D8, D10, D11, D12, D16, D17, D19; AC-1, AC-5, AC-8, AC-10, AC-11, AC-13, AC-14, AC-16, AC-17, **AC-20**, AC-22, AC-26, AC-29, AC-30, AC-31, AC-32, AC-33, AC-34, AC-35, AC-37, AC-38, AC-46, **AC-52**, **AC-54**, **AC-55**; OOS-1, OOS-3, OOS-4, OOS-7
+- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-1, FR-2, FR-8, FR-10, FR-11, FR-12, FR-13, FR-16/FR-16(a)/**FR-16(c)**, FR-17, FR-21, FR-18, FR-19, FR-22, FR-23, FR-24, FR-25, FR-26, FR-27; NFR-2, NFR-4, NFR-6, NFR-7, NFR-8; C-1, C-2, C-4, C-6, C-7, C-8 (the assumed home of its other two seam types), C-9, C-11, C-12a, C-13, **C-14**, C-15, **C-17**, **C-21**; D0b, D1, D4, D7, D8, D10, D11, D12, D16, D17, D19; AC-1, AC-5, AC-8, AC-10, AC-11, AC-13, AC-14, AC-16, AC-17, **AC-20**, AC-22, AC-26, AC-29, AC-30, AC-31, AC-32, AC-33, AC-34, AC-35, AC-37, AC-38, AC-46, **AC-52**, **AC-54**, **AC-55**; OOS-1, OOS-3, OOS-4, OOS-7
 - Related ADRs (cited by slug — ADR numbers are not unique in this repo, C-16):
   - `0070-per-pipeline-di-scope-for-mapper-and-transform-factories` [Proposed] — the transform pipeline takes one DI scope, carried as a parameter; introduces `IAmAScope` and `ServiceProviderPipelineScope`. This ADR keeps its forward-compatibility promises and discharges the one thing it names as outstanding for adoption: artefact identity under a **borrowed** scope, which does not follow from a per-pipeline handle
   - `0071-pipeline-scope-handle-for-handler-pipelines` [Proposed] — handler pipelines converge onto the same handle via `IAmAHandlerFactory.CreatePipelineScope()` and `IAmALifetime.PipelineScope`, which is what lets adoption be one change rather than two

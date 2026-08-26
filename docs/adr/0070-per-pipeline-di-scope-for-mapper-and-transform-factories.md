@@ -34,11 +34,11 @@ This ADR decides one thing: **a transform pipeline takes one DI scope, and the m
 **In scope.** Each requirement below is discharged here by the named mechanism.
 
 - **Defect 1b, and FR-3 with it — the mapper and its transforms share one DI scope.** One `IServiceScope` serves every `Create` the pipeline makes, so a container-`Scoped` dependency injected into a mapper and into its `[UnwrapWith]` transform is one instance. This is the defect that shapes the solution: fixing Defect 1 factory by factory would leave it untouched, which is what **C-19** records. The guard is **AC-3**.
-- **`IAmAScope` — the core scope handle.** A transform pipeline needs something to hold, and every later ADR in this set needs the same something. `IAmAScope` is that type: `IDisposable` and `IAsyncDisposable`, and nothing else. Adding it settles the disposal half of **C-8** and confirms that the seam types live in `Paramore.Brighter`.
+- **FR-10's `IAmAScope` — the core scope handle.** A transform pipeline needs something to hold, and every later ADR in this set needs the same something. `IAmAScope` is that type: `IDisposable` and `IAsyncDisposable`, and nothing else. Adding it settles the disposal half of **C-8** and confirms the `Paramore.Brighter` home C-8 assumes for it. ADR 0072 declares C-8's other two seam types, `IAmAScopeProvider` and `ScopeAffinity`, and confirms theirs, so neither ADR claims the whole of FR-10.
 - **Defect 1, and FR-1 and FR-2 with it — a `Scoped` mapper or transform lives for one pipeline.** The pipeline's handle owns the artefact cache, so message N+1 no longer sees message N's mapper. The guards are **AC-1** for the mapper and **AC-2** for the transform.
 - **FR-4 — the producer behaves as the consumer does.** The scope is created inside the builder and released by the pipeline, so all six build-and-release call sites get it without being edited (step 8). The guard is **AC-4**.
 - **FR-5 — a failed build releases what it created.** The builder owns the handle until a pipeline object exists to take it, and releases it directly when none does (step 4). The guard is **AC-5**.
-- **FR-6 — the scope is released exactly once.** The pipeline's existing release-once drain ends the handle, and the handle's own disposal is idempotent (step 5). The guard is **AC-8**.
+- **FR-6 for the transform family — the scope is released exactly once.** The pipeline's existing release-once drain ends the handle, and the handle's own disposal is idempotent (step 5). The guard is **AC-8**, and ADR 0071 carries the handler half.
 - **FR-13 for the transform family — Brighter disposes every scope it created.** This ADR records the decisions that make FR-13 true for mapper and transform pipelines; ADR 0071 records the decisions that make it true for handler pipelines. Both of FR-13's clauses land here, jointly with FR-6:
   - the **lead clause** — Brighter releases a scope it created when the pipeline completes, and thereby disposes the container-`Scoped` instances resolved from it (step 5);
   - the **disposal-failure clause** — what happens, and at what level it is logged, when releasing an owned transform-pipeline scope throws (step 4a).
@@ -71,7 +71,7 @@ This ADR is written so as not to foreclose any of them. It supersedes no prior A
 
 ### Where this ADR sits
 
-Seven ADRs deliver the parent requirement, one decision each; the requirements constrain observable behaviour only and hand how it is implemented to design (C-13). They are meant to be read in order; this is the first.
+Seven ADRs deliver the parent requirement; the requirements constrain observable behaviour only and hand how it is implemented to design (C-13). They are meant to be read in order; this is the first.
 
 | ADR | Decides |
 | --- | --- |
@@ -701,7 +701,7 @@ The `internal` constructor is also doing useful work in its own right, because i
 - ADR 0075 [0075-publish-and-pump-scope-suppression](0075-publish-and-pump-scope-suppression.md) — how a `Publish` subscriber and the consumer pump suppress adoption, for themselves and every pipeline created beneath them
 - ADR 0076 [0076-scope-affinity-option-and-write-through](0076-scope-affinity-option-and-write-through.md) — the affinity option, and how one setting reaches all four registration paths in any order
 
-- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-1 … FR-7, FR-12, FR-13, FR-16, FR-20, FR-22, FR-23, FR-24, FR-25, FR-27, NFR-1, NFR-3, NFR-4, NFR-5, NFR-6, NFR-7, NFR-8, C-1, C-2, C-3, C-6, C-8, C-13, C-17, C-18, C-19, D0, D3, D4, D7, D10, D12, OOS-5, OOS-7, OOS-8, OOS-9, OOS-12; AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-8, AC-14 (its *Explicitly NOT excluded* pair is this ADR's handler regression guard), AC-21, AC-22 (its AC-22.2 clause is NFR-3's mechanical guard), AC-23, AC-24, AC-25, AC-30, AC-33
+- Requirements: [specs/0036-scoped-lifetime-per-pipeline/requirements.md](../../specs/0036-scoped-lifetime-per-pipeline/requirements.md) — FR-1 … FR-7, FR-10 (its `IAmAScope` half), FR-12, FR-13, FR-16, FR-20, FR-22, FR-23, FR-24, FR-25, FR-27, NFR-1, NFR-3, NFR-4, NFR-5, NFR-6, NFR-7, NFR-8, C-1, C-2, C-3, C-6, C-8, C-13, C-17, C-18, C-19, D0, D3, D4, D7, D10, D12, OOS-5, OOS-7, OOS-8, OOS-9, OOS-12; AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-8, AC-14 (its *Explicitly NOT excluded* pair is this ADR's handler regression guard), AC-21, AC-22 (its AC-22.2 clause is NFR-3's mechanical guard), AC-23, AC-24, AC-25, AC-30, AC-33
 - Related ADRs (cited by slug — ADR numbers are not unique in this repo, C-16):
   - `0066-release-factory-instances-on-an-opaque-lease` [Accepted] — why `Create` returns a `Lease<T>` carrying an opaque token, and therefore why it carries no pipeline identity of its own
   - `0067-per-resolution-di-scope-for-transient-factory-instances` [Accepted] — `Transient`'s per-resolution DI scope, unchanged here; its `Terms` block defines the configured-lifetime and registration-lifetime axes this ADR uses

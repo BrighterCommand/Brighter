@@ -62,7 +62,7 @@ This ADR **supersedes no prior ADR.** It extends the `ValidatePipelines()` machi
 
 ### Where this ADR sits
 
-Seven ADRs deliver the parent requirement, one decision each; the requirements constrain observable behaviour only and hand how it is implemented to design (C-13). This is the fifth, and it exists because the decisions around it made four wrong configurations newly expressible.
+Seven ADRs deliver the parent requirement; the requirements constrain observable behaviour only and hand how it is implemented to design (C-13). This is the fifth, and it exists because the decisions around it made four wrong configurations newly expressible.
 
 | ADR | Decides |
 | --- | --- |

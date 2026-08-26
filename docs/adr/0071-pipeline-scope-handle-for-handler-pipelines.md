@@ -10,7 +10,6 @@ tags:
   - "lifetime"
   - "di"
   - "pipeline"
-  - "handler"
 ---
 
 # 71. Handler pipelines take their DI scope as a pipeline scope handle
@@ -38,7 +37,7 @@ This ADR decides one thing: **a handler pipeline obtains and releases its DI sco
   - the **lead clause** — a scope Brighter created is released when the pipeline completes. It is preserved rather than newly delivered, and is guarded jointly with FR-6;
   - the **disposal-failure clause** — a `PipelineScope` disposal that throws on a pipeline whose handler completed normally is logged at `LogLevel.Error` and swallowed, and the caller's result is returned unchanged (step 2, **AC-33**).
 - **FR-13's disposal-failure rule extended to a handler `Release` that throws** (step 2, **AC-51**). FR-5 and FR-6 forbid a teardown failure masking the caller's own exception, and `using var` gives a throwing `Dispose()` no way to avoid doing so. AC-51 is the criterion written for this extension. AC-7 is not, and step 2 says why.
-- **FR-6 for the handler family — a pipeline scope is released exactly once, on every exit path.** A throwing handler still releases the pipeline scope, exactly once. This ADR strengthens how: the handle is disposed unconditionally and its disposal is idempotent, where today a throwing `Release` can skip the reclamation entirely. **AC-7** is the guard.
+- **FR-6 for the handler family — a pipeline scope is released exactly once, on every exit path.** A throwing handler still releases the pipeline scope, exactly once. This ADR strengthens how: the handle is disposed unconditionally and its disposal is idempotent, where today a throwing `Release` can skip the reclamation entirely. **AC-7** is the guard, and ADR 0070 carries the transform half.
 - **The release ordering rule, which no tagged requirement carries.** Tracked handlers go back to their factory *before* the DI scope they were resolved from is disposed. `HandlerLifetimeScope` owns that order. Step 6's design-owed test is what pins it, because no acceptance criterion can — for the reason step 6 gives.
 - **NFR-5 and NFR-6 for the handler family — bounded and cheap.** One `Send`/`SendAsync` begins and releases one handler pipeline scope and none per resolution, so nothing survives the Nth message. ADR 0070 carries the transform half; the guard is **AC-23**, whose all-`Scoped` triple spans both families.
 - **NFR-4 for the handler family — concurrent pipelines cannot interfere.** Today `TryRemove` is what makes a concurrent double-`Release` dispose exactly once; the replacement buys the same atomicity from confinement, immutability and single-issue disposal, stated as a decision in *The mechanism, end to end*. **AC-8** reaches it over two concurrently live pipeline scopes, though it is tagged FR-6. The transform family is ADR 0070's, the shared request-scoped cache ADR 0072's, and suppression ADR 0075's.
@@ -64,7 +63,7 @@ This ADR supersedes no prior ADR. It extends the 0066–0069 sequence and applie
 
 ### Where this ADR sits
 
-Seven ADRs deliver the parent requirement, one decision each; the requirements constrain observable behaviour only and hand how it is implemented to design (C-13). This is the second, and the only one that is substantially structural: it discharges FR-13 for the handler family and FR-7, and is otherwise taken for the sake of the ADRs after it.
+Seven ADRs deliver the parent requirement; the requirements constrain observable behaviour only and hand how it is implemented to design (C-13). This is the second, and the only one that is substantially structural: it discharges FR-13 for the handler family and FR-7, and is otherwise taken for the sake of the ADRs after it.
 
 | ADR | Decides |
 | --- | --- |
