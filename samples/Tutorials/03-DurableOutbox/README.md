@@ -124,3 +124,10 @@ The reference samples use Dapper, and Dapper is a fine choice. This one uses
 claim of this rung is that your write and Brighter's write share a transaction, and an
 explicit assignment argues that better than an extension method that takes `tx` as its third
 argument.
+
+## Where this sits on the ladder
+
+This rung and [rung 4](../04-Kafka) are each one delta from
+[rung 2](../02-FirstMessage) rather than from each other: this one keeps RabbitMQ and adds
+durability, rung 4 keeps the shape and swaps the transport for Kafka. Neither depends on the
+other, so they can be read in either order.

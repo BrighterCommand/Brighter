@@ -46,6 +46,12 @@ var kafkaConfiguration = new KafkaMessagingGatewayConfiguration
 // share out. MakeChannels.Create means the sender creates the topic if it is missing, with
 // this many partitions.
 //
+// Two defaults are doing quiet work here, and the ordering this rung teaches depends on both:
+// EnableIdempotence is true and MaxInFlightRequestsPerConnection is 1. Without them a retry
+// could reorder messages *within* a partition, and no amount of careful keying would help.
+// Acquiring the idempotence id is also what logs "Failed to acquire idempotence PID ...
+// retrying" if you start the sender before the broker has finished booting.
+//
 // Naming GreetingEvent here is also what loads the Greetings assembly, which matters below:
 // AutoFromAssemblies scans the assemblies loaded so far, so anything it must find has to have
 // been touched before the call. Reordering this below the registration is a silent no-op.
@@ -70,13 +76,18 @@ builder.Services
 // Three recipients, three greetings each, sent round-robin so that the three streams are
 // interleaved on the wire.
 //
-// These three names are not arbitrary. Kafka picks the partition by hashing the key —
-// crc32(key) % 3 here — so you do not get to choose it, and with three keys over three
-// partitions there is only a 2-in-9 chance that they land one apiece. The first three names
-// this sample tried, "alice", "bob" and "carol", all hashed to partition 2, which a single
-// consumer hides completely: it drains all three partitions and everything still arrives in
-// order. These three were checked against the broker.
+// These three names are not arbitrary. Kafka picks the partition by hashing the key, so you
+// do not get to choose it, and with three keys over three partitions there is only a 2-in-9
+// chance that they land one apiece. The first three names this sample tried, "alice", "bob"
+// and "carol", all hashed to the same partition — which a single consumer hides completely,
+// because it drains all three partitions and everything still arrives in order.
+//
+// These three were checked against the broker rather than calculated. The hash is
+// crc32(key) % partition-count for librdkafka, which the Confluent .NET client wraps; the
+// Java client uses murmur2 and would scatter the same three names differently. So the 2/0/1
+// mapping below holds for this client at exactly three partitions and nowhere else.
 string[] recipients = ["alice", "grace", "mia"];
+const int greetingsPerRecipient = 3;
 
 // The host is built but never run: Post is synchronous, so all we need from it is the
 // container. Rung 3 does run the host, because it hosts the Outbox Sweeper.
@@ -84,7 +95,7 @@ using (var host = builder.Build())
 {
     var commandProcessor = host.Services.GetRequiredService<IAmACommandProcessor>();
 
-    for (var i = 1; i <= 3; i++)
+    for (var i = 1; i <= greetingsPerRecipient; i++)
     {
         foreach (var recipient in recipients)
         {
@@ -107,4 +118,4 @@ using (var host = builder.Build())
 // returns, and the broker's acknowledgement arrives on a delivery report later. Disposing the
 // host flushes that queue and waits for the reports, which is why this line sits after the
 // brace rather than inside the loop.
-Console.WriteLine($"Published {recipients.Length * 3} greetings to greeting.event");
+Console.WriteLine($"Published {recipients.Length * greetingsPerRecipient} greetings to greeting.event");

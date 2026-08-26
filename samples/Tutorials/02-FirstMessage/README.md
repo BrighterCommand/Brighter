@@ -70,6 +70,6 @@ those is a concept a reader meeting a broker for the first time has to park, so 
 drops all four and adds nothing. It also has no message mapper: `JsonMessageMapper<T>` is
 Brighter's default, and a tutorial should not write code the framework already supplies.
 
-Rung 3 adds a durable Outbox to this sample; rung 4 swaps the transport for Kafka. Each is
-one readable delta from this one, which is why this is deliberately the smallest thing that
-still crosses a broker.
+[Rung 3](../03-DurableOutbox) adds a durable Outbox to this sample; [rung 4](../04-Kafka)
+swaps the transport for Kafka. Each is one readable delta from this one, which is why this is
+deliberately the smallest thing that still crosses a broker.

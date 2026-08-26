@@ -80,11 +80,22 @@ promise across partitions, so the global send order is gone. Each recipient's th
 are still in sequence, because the partition key sends all of one recipient's greetings to
 one partition, and the Reactor pump is a single thread draining one partition at a time.
 
+One key per partition and a single-threaded pump are not quite the whole guarantee, and it is
+worth knowing what closes the gap: a producer retrying a failed send could otherwise reorder
+messages *within* a partition. `KafkaPublication` defaults to `EnableIdempotence = true` and
+`MaxInFlightRequestsPerConnection = 1`, which is what stops that — and acquiring the
+idempotence id is also what produces the `Failed to acquire idempotence PID` line above if you
+start too early.
+
 ## Why those three names
 
-Kafka chooses the partition by hashing the key — `crc32(key) % 3` for the default
-partitioner — so you do not choose it, you only choose the key. With three keys over three
-partitions there is a 2-in-9 chance they land one apiece.
+Kafka chooses the partition by hashing the key, so you do not choose it, you only choose the
+key. With three keys over three partitions there is a 2-in-9 chance they land one apiece.
+
+The hash is `crc32(key) % partition-count` for **librdkafka**, which the Confluent .NET client
+wraps, with `Partitioner.ConsistentRandom` as `KafkaPublication`'s default. The Java client
+uses murmur2 and would scatter these same names differently, so the mapping below is a fact
+about this client at exactly three partitions — not about Kafka.
 
 The first three names this sample used, `alice`, `bob` and `carol`, all hashed to partition
 **2**. Nothing looked wrong: one consumer holds every partition anyway, so all nine greetings
@@ -164,18 +175,24 @@ greeting.event  2          2               3               1
 
 That `LAG 1` is stable — it was still 1 a minute later. The sweeper drains its stored offsets
 in no particular order and commits them in one call, so the offset that sticks is not
-necessarily the highest.
+necessarily the highest one it holds.
 
-So the rebalance redelivers whatever was uncommitted when it happened:
+So the rebalance redelivers whatever was uncommitted when it happened, and **when you start the
+second instance changes how much that is.** Measured on Brighter 10.7.0, nine greetings over
+three partitions:
 
-| Second instance started | Redelivered (of 9) |
+| Second instance started | Redelivered |
 |---|---|
-| Before the first sweep, within a few seconds | **7** |
-| After the sweep | **3** — one per partition, on two separate runs |
+| Before the first sweep, within a few seconds | most of them — 7 of 9 |
+| After the sweep | a few — typically one per partition, 3 of 9 on two separate runs |
 
-Nothing is ever *lost*: every one of the nine distinct greetings is handled. But some are
-handled twice, and **no timing makes that number zero**. That is what at-least-once means, and
-it is why a handler doing real work — charging a card, sending an email — has to be idempotent.
+Treat those counts as an illustration rather than a promise: they depend on exactly what had
+been committed at the moment of the rebalance. **The part that is not an illustration is that
+nothing makes the number zero.**
+
+Nothing is ever *lost* either — every one of the nine distinct greetings is handled. But some
+are handled twice, and that is what at-least-once means. It is why a handler doing real work,
+charging a card or sending an email, has to be idempotent.
 
 ## Why this is not `samples/TaskQueue/KafkaTaskQueue`
 
@@ -196,8 +213,9 @@ context.Bag[RequestContextBagNames.PartitionKey] = recipient;
 commandProcessor.Post(new GreetingEvent($"Hello {recipient} #{i}"), context);
 ```
 
-The pump also runs as a **Reactor** rather than a Proactor, which is `KafkaSubscription`'s own
-default. That is what makes the single-threaded ordering argument above visible in the code
+The pump also runs as a **Reactor** rather than a Proactor, which is `KafkaSubscription<T>`'s
+own default — note the generic, since the non-generic `KafkaSubscription` defaults to
+`MessagePumpType.Unknown`. That is what makes the single-threaded ordering argument above visible in the code
 instead of asserted about it, and it means the handler is a plain synchronous
 `RequestHandler<GreetingEvent>` — the same file as rung 2's, byte for byte.
 

@@ -43,13 +43,18 @@ var kafkaConfiguration = new KafkaMessagingGatewayConfiguration
 // half each. Two instances with *different* group ids would each get all three and both would
 // see every greeting.
 //
-// messagePumpType is the default and is written out because it is the point of this rung.
+// messagePumpType is KafkaSubscription<T>'s own default — note the generic; the non-generic
+// KafkaSubscription defaults to MessagePumpType.Unknown. It is written out anyway, because it
+// is the point of this rung.
 // A Reactor pump is a single thread per performer, and noOfPerformers defaults to 1 — so one
 // instance is one member with one thread, draining its partitions in turn. That single thread
 // is why per-key ordering holds; it is not that Brighter runs a pump per partition.
 //
 // numOfPartitions matches the publication so that whichever process reaches an empty broker
-// first creates the same three-partition topic.
+// first creates the same three-partition topic. Keep the two in step if you change either:
+// when the topic already exists and does not match, Brighter logs "topic is misconfigured =>
+// NumPartitions should be ..." as a *warning* and carries on, so raising one side alone gives
+// you a puzzling half-working sample rather than an error.
 var subscriptions = new Subscription[]
 {
     new KafkaSubscription<GreetingEvent>(
