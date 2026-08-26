@@ -166,6 +166,12 @@
     <Project Path="samples/Tutorials/03-DurableOutbox/GreetingsReceiver/GreetingsReceiver.csproj" />
     <Project Path="samples/Tutorials/03-DurableOutbox/GreetingsSender/GreetingsSender.csproj" />
   </Folder>
+  <Folder Name="/samples/Tutorials/04-Kafka/">
+    <File Path="samples/Tutorials/04-Kafka/README.md" />
+    <Project Path="samples/Tutorials/04-Kafka/Greetings/Greetings.csproj" />
+    <Project Path="samples/Tutorials/04-Kafka/GreetingsReceiver/GreetingsReceiver.csproj" />
+    <Project Path="samples/Tutorials/04-Kafka/GreetingsSender/GreetingsSender.csproj" />
+  </Folder>
   <Folder Name="/samples/Validation/">
     <File Path="samples\Validation\README.md" />
     <Project Path="samples/Validation/DataAnnotationsSample/DataAnnotationsSample.csproj" />
