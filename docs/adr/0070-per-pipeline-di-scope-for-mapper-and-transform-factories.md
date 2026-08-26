@@ -5,7 +5,7 @@ status: Proposed
 author:
   - "Ian Cooper"
 created: 2026-08-02
-summary: "A transform pipeline takes exactly one DI scope. Whichever participating factory can offer a scope creates it, and that one handle is passed to every Create the pipeline needs, so the mapper and its transforms resolve from the same IServiceScope. The pipeline holds the handle and releases it in its drain, after the leases have gone back to their factories. The handle is IAmAScope, a new core type that is both IDisposable and IAsyncDisposable and that names nothing a container owns. The four mapper and transformer factory interfaces and the two mapper registry interfaces take the scope in their signatures, which is a source and binary breaking change on netstandard2.0 and is taken deliberately. This closes Defect 1, where a Scoped mapper lived for the process, and Defect 1b, where a mapper and its transforms did not share a container-Scoped dependency."
+summary: "A transform pipeline takes one DI scope, created by whichever participating factory can offer one, passed as an argument to every Create that serves the pipeline and released when the pipeline is released. The scope is a new core handle, IAmAScope, and the six factory and registry interfaces that take it break every implementation at compile time and every caller that is not recompiled."
 tags:
   - "lifetime"
   - "di"

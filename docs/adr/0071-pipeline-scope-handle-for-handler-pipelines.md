@@ -5,7 +5,7 @@ status: Proposed
 author:
   - "Ian Cooper"
 created: 2026-08-02
-summary: "Handler pipelines obtain their per-pipeline DI scope as the same IAmAScope handle that ADR 0070 gives transform pipelines, carried on the per-pipeline object the handler factories already receive. IAmAHandlerFactory gains CreatePipelineScope() and IAmALifetime gains a PipelineScope property; no Create or Release signature changes. ServiceProviderHandlerFactory stops keying a DI scope on IAmALifetime in a dictionary and Release stops disposing anything. The dictionary is removed rather than kept as a fallback, so a non-Singleton Create that is handed no usable handle throws ConfigurationException instead of resolving from a scope the factory keeps for itself. The scoping is preserved exactly: one DI scope per handler pipeline, released at the same point as today. HandlerLifetimeScope.Dispose() is repaired to release every tracked handler and dispose the handle even when a factory's Release throws, and it no longer throws at all. Both a handler release failure and a pipeline scope disposal failure are logged at Error and swallowed, so a pipeline is never failed by its own teardown and a throwing handler's own exception always reaches the caller (FR-5, FR-6, FR-7, FR-13, AC-7, AC-33, AC-51)."
+summary: "A handler pipeline's DI scope is the same IAmAScope handle ADR 0070 gives transform pipelines, created by the handler factory and carried on the IAmALifetime the factory already receives. IAmAHandlerFactory gains CreatePipelineScope() and IAmALifetime gains a PipelineScope property; ServiceProviderHandlerFactory's scope dictionary is removed and no Create or Release signature changes."
 tags:
   - "lifetime"
   - "di"

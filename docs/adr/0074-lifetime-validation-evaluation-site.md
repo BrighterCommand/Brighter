@@ -5,7 +5,7 @@ status: Proposed
 author:
   - "Ian Cooper"
 created: 2026-08-02
-summary: "Seven scope-configuration rules — FR-22's four, FR-24.3's duplicate-provider rule and FR-17's two registration rules — are evaluated in Paramore.Brighter.Extensions.DependencyInjection by a new ScopeConfigurationValidator. It implements the core IAmAPipelineValidator and is registered alongside the core PipelineValidator rather than wrapping it, and both validation hosts now resolve every registered validator and combine the results. It reads the three configured lifetimes and DefaultScopeAffinity from the object IBrighterOptions resolves to at host start, and the ServiceDescriptors from a snapshot taken when ValidatePipelines() is called. No container type is added to core."
+summary: "The seven scope-configuration rules are evaluated in Paramore.Brighter.Extensions.DependencyInjection by a new ScopeConfigurationValidator, registered alongside the core PipelineValidator rather than wrapping it. Both validation hosts now resolve every registered validator and combine the results, and no container type is added to core."
 tags:
   - "di"
   - "lifetime"

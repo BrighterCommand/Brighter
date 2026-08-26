@@ -5,7 +5,7 @@ status: Proposed
 author:
   - "Ian Cooper"
 created: 2026-08-02
-summary: "Ships the ASP.NET Core ambient source in a new Paramore.Brighter.Extensions.AspNetCore package targeting net8.0;net9.0;net10.0 through a FrameworkReference, whose whole opt-in surface is one IServiceCollection extension AddBrighterRequestScope(ScopeAffinity affinity = ScopeAffinity.JoinAmbient) — an application calls one method and names no type, though the provider and the scope it hands back are themselves public — and that extension registers an HttpContextScopeProvider offering HttpContext.RequestServices as an IAmAServiceProviderScope and deposits the affinity the application selected — so that taking the package reference runs no Brighter code and registers nothing, calling the extension is the whole of the opt-in, and a host with no current HttpContext falls back to creating its own scope. The FrameworkReference does flow transitively, so the package is for ASP.NET Core hosts rather than a no-op dependency."
+summary: "ASP.NET Core's per-request DI scope is offered to Brighter by a new package, Paramore.Brighter.Extensions.AspNetCore, which takes ASP.NET Core through a FrameworkReference. The package's whole opt-in surface is one IServiceCollection extension, AddBrighterRequestScope; taking the package reference without calling that extension runs no Brighter code and registers nothing."
 tags:
   - "di"
   - "lifetime"
