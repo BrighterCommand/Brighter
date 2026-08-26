@@ -90,8 +90,8 @@ using (var host = builder.Build())
         {
             // The partition key is how you choose a partition, and the partition is the only
             // thing Kafka orders. Keying on the recipient sends every one of alice's greetings
-            // to the same partition, so they arrive in the order they were sent — while bob's
-            // and carol's are free to be handled on other partitions.
+            // to the same partition, so they arrive in the order they were sent — while grace's
+            // and mia's are free to be handled on other partitions.
             //
             // No message mapper is needed for this. JsonMessageMapper<T> is Brighter's
             // registered default for both the sync and the async path, and it already reads
@@ -107,4 +107,4 @@ using (var host = builder.Build())
 // returns, and the broker's acknowledgement arrives on a delivery report later. Disposing the
 // host flushes that queue and waits for the reports, which is why this line sits after the
 // brace rather than inside the loop.
-Console.WriteLine("Published 9 greetings to greeting.event");
+Console.WriteLine($"Published {recipients.Length * 3} greetings to greeting.event");

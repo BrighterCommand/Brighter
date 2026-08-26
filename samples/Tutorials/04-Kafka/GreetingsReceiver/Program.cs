@@ -22,7 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using Greetings;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

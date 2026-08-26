@@ -129,31 +129,53 @@ call, not yours — across two runs of this sample the split came out `[1]` / `[
 
 ## A rebalance redelivers, and that is at-least-once
 
-After the rebalance, three greetings are handled a **second** time — one per partition. Both
-runs above showed exactly three, and the reason is visible in the group's offsets before the
-second instance starts:
+After the rebalance, some greetings are handled a **second** time. **How many depends on when
+you start the second instance**, and that is worth understanding rather than memorising,
+because the mechanism is the whole of Kafka's at-least-once guarantee.
 
-```text
-GROUP            TOPIC           PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG
-greeting.readers greeting.event  0          2               3               1
-greeting.readers greeting.event  1          2               3               1
-greeting.readers greeting.event  2          2               3               1
-```
-
-`commitBatchSize` defaults to **10** and each partition holds **3** messages, so the batch is
-never reached and the last message on each partition is still uncommitted when the partitions
-are revoked. Whoever picks the partition up starts from the committed offset and handles it
-again.
-
-Nothing is *lost* — all nine distinct greetings are handled, and Brighter does commit stored
-offsets for revoked partitions — but three are handled twice. **Kafka delivery here is
-at-least-once, so a handler that does real work has to be idempotent.** Check it for yourself
-with:
+Watch the committed offsets while the first instance runs on its own:
 
 ```bash
 docker exec kafka /opt/kafka/bin/kafka-consumer-groups.sh \
   --bootstrap-server localhost:9092 --describe --group greeting.readers
 ```
+
+**Immediately after all nine greetings are handled, nothing is committed at all:**
+
+```text
+TOPIC           PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG
+greeting.event  0          -               3               -
+greeting.event  1          -               3               -
+greeting.event  2          -               3               -
+```
+
+Handling a message *stores* an offset; it does not commit one. Brighter commits on two paths,
+and neither has run yet. The first is the batch: `commitBatchSize` defaults to **10** and each
+partition holds **3** messages, so it is never reached. The second is a timer —
+`sweepUncommittedOffsetsInterval`, default **30 seconds**.
+
+**Once that sweeper has fired, each partition sits one message short:**
+
+```text
+greeting.event  0          2               3               1
+greeting.event  1          2               3               1
+greeting.event  2          2               3               1
+```
+
+That `LAG 1` is stable — it was still 1 a minute later. The sweeper drains its stored offsets
+in no particular order and commits them in one call, so the offset that sticks is not
+necessarily the highest.
+
+So the rebalance redelivers whatever was uncommitted when it happened:
+
+| Second instance started | Redelivered (of 9) |
+|---|---|
+| Before the first sweep, within a few seconds | **7** |
+| After the sweep | **3** — one per partition, on two separate runs |
+
+Nothing is ever *lost*: every one of the nine distinct greetings is handled. But some are
+handled twice, and **no timing makes that number zero**. That is what at-least-once means, and
+it is why a handler doing real work — charging a card, sending an email — has to be idempotent.
 
 ## Why this is not `samples/TaskQueue/KafkaTaskQueue`
 
