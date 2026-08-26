@@ -58,7 +58,7 @@ This ADR **supersedes no prior ADR.** It completes the 0070–0072 sequence on t
 
 ### Where this ADR sits
 
-Seven ADRs deliver the parent requirement, one decision each; the requirements constrain observable behaviour only and hand how it is implemented to design (C-13). This is the seventh, and the only one whose whole subject is a single value arriving intact.
+Seven ADRs deliver the parent requirement; the requirements constrain observable behaviour only and hand how it is implemented to design (C-13). This is the seventh, and the only one whose whole subject is a single value arriving intact.
 
 | ADR | Decides |
 | --- | --- |

@@ -77,7 +77,7 @@ This ADR **supersedes no prior ADR.** It protects ADR 0039's decision rather tha
 
 ### Where this ADR sits
 
-Seven ADRs deliver the parent requirement, one decision each; the requirements constrain observable behaviour only and hand how it is implemented to design (C-13). This is the sixth, and the only one whose subject is a pipeline Brighter did not build.
+Seven ADRs deliver the parent requirement; the requirements constrain observable behaviour only and hand how it is implemented to design (C-13). This is the sixth, and the only one whose subject is a pipeline Brighter did not build.
 
 | ADR | Decides |
 | --- | --- |
