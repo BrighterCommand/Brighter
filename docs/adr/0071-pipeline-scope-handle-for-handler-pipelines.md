@@ -346,7 +346,7 @@ namespace Paramore.Brighter
 - **The shape, and the create-failure behaviour, transfer unchanged.** A container that cannot create a scope throws, and the caller's existing guard turns that into `ConfigurationException`.
 - **The null rule does not transfer, and applying 0070's rule here is the mistake this paragraph exists to prevent.** A transform factory offers nothing unless its configured lifetime is `Scoped`. A handler factory offers a handle for `Transient` too, because ADR 0067's per-resolution scope rides on the same `ServiceProviderLifetimeScope` object and would regress without one (C-6).
 
-ADR 0070's **second** failure mode is not yet in play. A throw from an ambient source, wrapped in `AmbientScopeSourceException` and let past the builders' `catch` filters unwrapped (FR-24.1, AC-30), arrives only when ADR 0072 makes this member ask for an ambient. This ADR makes no such ask, so the contract below states one error condition. ADR 0072 widens it and amends both `PipelineBuilder` `catch` filters (`:202-205`, `:248-251`); AC-30 is written over a `Send`, which is this family's pipeline.
+ADR 0070's **second** failure mode is not yet in play. A throw from an ambient source, wrapped in `AmbientScopeSourceException` and let past the builders' `catch` filters unwrapped (FR-24.1, AC-30), arrives only when ADR 0072 makes this member ask for an ambient. This ADR makes no such ask, so the contract below states one error condition. ADR 0072 widens it and amends both `PipelineBuilder` `catch` filters (`:202-205`, `:248-251`); AC-30's `Send` branch is written over this family's pipeline.
 
 #### `IAmALifetime` gains the handle (core, public)
 

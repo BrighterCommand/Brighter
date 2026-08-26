@@ -1,5 +1,5 @@
-PENDING: revision 26 (27 FRs / 10 NFRs / 55 ACs / 124 normative bullets) — NOT YET APPROVED.
-Revisions 22, 23, 24 and 25 are also pending; nothing further is owed on any of them beyond the
+PENDING: revision 27 (27 FRs / 10 NFRs / 55 ACs / 124 normative bullets) — NOT YET APPROVED.
+Revisions 22, 23, 24, 25 and 26 are also pending; nothing further is owed on any of them beyond the
 design phase's single approval.
 
 THE PROCESS CHANGED AT REVISION 22, AND THE CHANGE GOVERNS EVERY REVISION FROM HERE. The requirement
@@ -23,6 +23,44 @@ change was triggering a fresh mid-edit requirements review, and abolishing that 
 cost that made deferral worth paying. The paragraphs below are kept as the record of what each
 revision changed, and their "carried to the end-of-phase true-up" sentences are spent.
 
+
+Revision 27 was made during the design phase and lands the Post branch that round-6 decision 11
+left owed to AC-30, together with the four ADR passages written against the old reach (batch
+REQ-row3) - two of which called the branch owed, while two simply stated AC-30 as a Send.
+It is section 19.9 row 3 of the plan of record - the sixth requirements change made under the
+atomic process above, and it also closes round 7's gap A #13, which found the same defect
+independently from the requirements side and scored it 60.
+
+WHAT CHANGED AND WHY. FR-24.1 states its rule over "the caller of Send/Publish/Post"; AC-30's When
+was a Send only. The asymmetry that makes this matter is in source rather than in wording.
+PipelineBuilder's two catch blocks (PipelineBuilder.cs:202, :248) do nothing but wrap the failure
+in a ConfigurationException - no cleanup - so on a Send the criterion's second conjunct, "no
+pipeline scope is leaked", is discharged by the pre-existing PipelineBuilder.Dispose()
+(:269-270) firing from the using var at each dispatch site, and NOT by anything this design adds.
+TransformPipelineBuilder.cs:116 and :157 sit above CleanUpAfterFailedBuild calls (:122, :163), and
+that is the path the ambient-fault clause ADR 0072 adds actually cleans up on. So the one entry
+point AC-30 exercised was the one whose no-leak property this work does not touch.
+
+AC-30 now carries a second branch, in the house "And when ... Then" form the other multi-branch
+criteria use (AC-11, AC-31), over the SAME host and the SAME throwing provider: Post is called,
+the caller observes the same unwrapped InvalidOperationException, and no pipeline scope is leaked.
+Its Given now names both pipelines it reaches, per the "How to read the lifetime configuration in
+a Given" preamble. A one-sentence reason is stated in AC-31's precedent form - without the second
+branch, an implementation that leaked on the transform-pipeline build path would pass.
+
+WHAT WAS DELIBERATELY NOT DONE. No rule moved: FR-24.1 already stated all three verbs, so this is
+alignment of a criterion to a requirement that was always wider than it. The residue - Publish and
+the async twins of both builder families stay uncovered, because identical code at six sites is
+not a criterion - is NOT restated here; it is a coverage judgement and both ADR 0070 and ADR 0072
+continue to state it at their own ends. The reviewer's suggested "lettered branch at the end" was
+not followed either: no acceptance criterion in this document letters its branches, and the house
+form is And when / And given.
+
+Why no review round: the stand-alone requirements review was abolished at revision 22 and the test
+is "is it in line with what the ADRs reveal". This is that, in both directions. Counts unchanged at
+27/10/55/124 - no criterion added, no bullet added, and the section 7 script's divergent 128 is
+left alone per revision 26's note. NO NEW CODEBASE CLAIMS: every source citation above was already
+carried by ADR 0070 or ADR 0072, and each was re-verified against source in this session.
 
 Revision 26 was made during the design phase and lands the FR-19 / AC-20 / C-14 correction that
 round-6 decision 5 left owed, together with the four ADR passages that said it was owed and the
