@@ -1,6 +1,6 @@
-PENDING: revision 27 (27 FRs / 10 NFRs / 55 ACs / 124 normative bullets) — NOT YET APPROVED.
-Revisions 22, 23, 24, 25 and 26 are also pending; nothing further is owed on any of them beyond the
-design phase's single approval.
+PENDING: revision 28 (27 FRs / 10 NFRs / 55 ACs / 124 normative bullets) — NOT YET APPROVED.
+Revisions 22, 23, 24, 25, 26 and 27 are also pending; nothing further is owed on any of them beyond
+the design phase's single approval.
 
 THE PROCESS CHANGED AT REVISION 22, AND THE CHANGE GOVERNS EVERY REVISION FROM HERE. The requirement
 owner, 2026-08-24: "Let's make them atomic changes. We originally deferred for efficiency as we kept
@@ -23,6 +23,46 @@ change was triggering a fresh mid-edit requirements review, and abolishing that 
 cost that made deferral worth paying. The paragraphs below are kept as the record of what each
 revision changed, and their "carried to the end-of-phase true-up" sentences are spent.
 
+
+Revision 28 was made during the design phase and lands the FR-27.1 / AC-46 definition that round-6
+decision 17 left owed, together with the five ADR passages that said it was owed (batch REQ-row4).
+It is section 19.9 row 4 of the plan of record - the seventh requirements change made under the
+atomic process above, and the last of that section's rows apart from row 1 (AC-14's split).
+
+WHAT CHANGED AND WHY. FR-27.1 says a pipeline none of whose participating factories is Scoped
+"takes no pipeline scope and asks nothing", and AC-46's first Then asserts "zero adoption decisions
+and no pipeline scope taken". Both assert the right thing. Neither said what "no pipeline scope
+taken" is MEASURED over, and that omission is what ADR 0071 makes dangerous: it gives a Transient
+handler pipeline a scope object anyway, because ADR 0067's per-resolution isolation has to ride on
+something, so the object is non-null on exactly the host AC-46's first branch describes. An
+implementation reaching for that object to assert the criterion tests the wrong thing and fails a
+conformant design - the same shape as AC-29 and AC-20 before them, a criterion unsatisfiable by an
+implementation that has done nothing wrong.
+
+Both are now defined over the SEAM: no ambient ask and no adoption decision, never the presence or
+absence of a scope object. FR-27.1 states it as a property of the rule, and AC-46's first Then
+names the instrument - the recorder's zero asks IS the "no pipeline scope taken" assertion, which
+follows from FR-27.1's own "asks exactly once" rather than from anything new. Nothing about the
+substance moves: a {Transient, Transient, Transient} host recorded zero adoption decisions before
+the amendment and records zero after it.
+
+WHAT WAS DELIBERATELY NOT DONE. The Terms table's "pipeline scope" row was left as written. It
+defines the term as "the DI scope a pipeline resolves from, whether adopted or created", which is
+true of a Transient pipeline both before and after - such a pipeline resolves from a fresh inner DI
+scope PER RESOLUTION and from no single scope at all, so the row never asserted the thing the wrong
+instrument reads. The collision is between FR-27.1's words and an ADR-level property name, not
+between two requirements, and this document does not name that property (its only two occurrences
+of the string are a rejected interface name at :378 and a factory member in revision 26's own
+history row). Correcting the term would have been redesigning a definition the amendment does not
+reach. AC-47's "took no scope of its own" was checked and stands: it is the same seam reading, and
+it is now backed by the rule instead of resting on it.
+
+Why no review round: the stand-alone requirements review was abolished at revision 22 and the test
+is "is it in line with what the ADRs reveal". This is that - ADR 0071 states the amendment beneath
+its contract table and ADR 0072 states it with the ladder, and both said the requirements carried
+it. Counts unchanged at 27/10/55/124 - no criterion added, no bullet added, and the section 7
+script's divergent 128 is left alone per revision 26's note. NO NEW CODEBASE CLAIMS: the amendment
+cites no source file.
 
 Revision 27 was made during the design phase and lands the Post branch that round-6 decision 11
 left owed to AC-30, together with the four ADR passages written against the old reach (batch
