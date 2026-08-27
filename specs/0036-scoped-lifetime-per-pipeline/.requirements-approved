@@ -2,6 +2,44 @@ PENDING: revision 30 (27 FRs / 10 NFRs / 55 ACs / 124 normative bullets) — NOT
 Revisions 22, 23, 24, 25, 26, 27, 28 and 29 are also pending; nothing further is owed on any of them
 beyond the design phase's single approval.
 
+THE THREE FLAGGED QUESTIONS WERE PUT TO THE OWNER ON 2026-08-27 AND ALL THREE ARE RESOLVED. Every
+one confirms what is already landed, so NO REQUIREMENTS TEXT CHANGED, NO COUNT MOVED, and the
+document stays at revision 30 (27 / 10 / 55 / 124). The three, in the order they were reviewed:
+
+  1. AC-55 STANDS. The two sources differed in force - round-6 decision 5 said the invariant "may
+     deserve its own criterion", ADR 0075's Risks row said it "is owed" - and the owner confirmed
+     the second reading, which is the one revision 26 was written on. The deciding ground: C-14
+     spent four rounds as an ASSUMPTION the requirements could not make good, and revision 26 made
+     it an invariant; an invariant with no criterion over it is the shape that let it go wrong
+     unnoticed. AC-20 does not reach this flow, its pump threads carrying no HttpContext. Striking
+     AC-55 would have returned ADR 0075's Risks row to "guarded by review only".
+
+  2. AC-14's SPY HALF STAYS AN "And given" BRANCH. Not lifted into a criterion of its own, so the
+     count does NOT move to 56. The sources say branch - ADR 0073's "acquires a criterion" is
+     satisfied by a branch OF a criterion, and all eight ADR passages call it an amendment to
+     AC-14 - and so does the house form: "And given" has 30 uses, AC-42 is one criterion built over
+     several hosts, and the "How to read a Warning count in a Then" preamble states in terms that a
+     branch changing the configuration builds its own host. The substantive ground: the two halves
+     JOINTLY EXHAUST "not opted in" (no package at all; package referenced, extension never
+     called), and the closing Note - that the spy is asserted from that project because it can only
+     fail there - is only intelligible with both halves present.
+
+  3. THE gap A #7 DECLINE IS UPHELD. AC-9 keeps its FR-11 tag and its "Why this also discharges
+     FR-11(b)" note, and does NOT acquire the recommended clause requiring the handler's
+     container-Scoped dependency to resolve without InvalidOperationException under a provider built
+     with ValidateScopes = true. Two grounds were already recorded below: the finding's own ground
+     ("nothing in the document asserts (b)") is false, since BOTH of AC-9's Then clauses fail
+     without a real owned IServiceScope; and a sharper instrument is not missing coverage. A THIRD
+     ground was established at the review and is the strongest: ValidateScopes is NOT a neutral
+     hardening flag in this document. AC-54's Given builds its container WITHOUT it deliberately -
+     "the only configuration in which the borrow would otherwise succeed, since scope validation
+     makes the probe's own resolution throw and the ambient is declined for that reason instead" -
+     and FR-22.3's captive-dependency graphs throw under validation by design. A blanket clause on
+     AC-9 would sit against a criterion that requires the opposite, for a stated reason.
+
+NOTHING IS NOW FLAGGED. The two "FLAGGED FOR THE OWNER" paragraphs below are marked RESOLVED in
+place and are kept as the record of what was asked and why.
+
 THE PROCESS CHANGED AT REVISION 22, AND THE CHANGE GOVERNS EVERY REVISION FROM HERE. The requirement
 owner, 2026-08-24: "Let's make them atomic changes. We originally deferred for efficiency as we kept
 re-reviewing the requirements mid-ADR edit. Let's just make them atomic commits. At this point I am
@@ -63,8 +101,10 @@ saying in terms that "Performer is not one of those five named types". The headi
 enumeration, D0b's table cell matches, and a sentence says the constraint is the enumeration rather
 than the broader claim. (7) FR-11(b) - which C-17 makes load-bearing - had no criterion naming it.
 
-WHAT WAS NOT DONE, AND WHY, ON FR-11(b). The finding's stated ground is that "nothing in the document
-asserts (b)", and that ground is FALSE. AC-9 already discriminates: its Given is FR-11's own
+WHAT WAS NOT DONE, AND WHY, ON FR-11(b). ⚠ UPHELD BY THE OWNER ON 2026-08-27, on a third ground
+established at that review: ValidateScopes is not a neutral flag here, and AC-54 builds without it
+deliberately. See the resolution block at the head of this file. The finding's stated ground is that
+"nothing in the document asserts (b)", and that ground is FALSE. AC-9 already discriminates: its Given is FR-11's own
 precondition (not opted in), and an implementation that resolved the handler from the root provider
 would leave a container-Scoped dependency UNDISPOSED when Send returned and would hand the second
 Send the SAME instance - so BOTH of AC-9's Then clauses fail without a real owned IServiceScope. The
@@ -133,7 +173,9 @@ replaces the dictionary. Duplicating instead would leave the originals pinning a
 removes, which is a guard on a path nothing ships. "Must keep passing unchanged" becomes "in that
 form they must keep passing", and nothing else about the criterion moves.
 
-FLAGGED FOR THE OWNER, because the shape was a judgement and not an instruction. The spy half is
+FLAGGED FOR THE OWNER - RESOLVED 2026-08-27: THE OWNER CONFIRMED THE BRANCH. Nothing changes and
+the count stays at 55; see the resolution block at the head of this file. The original flag read:
+because the shape was a judgement and not an instruction. The spy half is
 landed as a BRANCH of AC-14, not as a new criterion. ADR 0073 says the package-inertness half
 "acquires a criterion" and names AC-14's spy clause as that criterion, and the ADRs call this an
 AMENDMENT to AC-14 in all eight passages, so a branch is the reading that follows the source. If the
@@ -264,7 +306,9 @@ live request, ten messages consumed while it is open, every ask carrying AlwaysN
 and no entry. ADR 0075's Risks table had recorded that no acceptance criterion asserted the
 pump-flow bracket and that it was guarded by review only; that row now cites AC-55.
 
-FLAGGED FOR THE OWNER, because the instruction was hedged. Round-6 decision 5's row says the
+FLAGGED FOR THE OWNER - RESOLVED 2026-08-27: THE OWNER CONFIRMED AC-55. It stands as written and
+the count stays at 55; see the resolution block at the head of this file. The original flag read:
+because the instruction was hedged. Round-6 decision 5's row says the
 invariant "MAY deserve its own criterion", while ADR 0075's Risks row says the criterion "is owed".
 AC-55 is written on the second reading. It adds no rule - it pins FR-19's existing inertness over
 the flow that made C-14 necessary - and it is one criterion to strike if the owner prefers the
