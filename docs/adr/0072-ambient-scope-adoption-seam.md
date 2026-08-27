@@ -1,7 +1,7 @@
 ---
 id: 0072-ambient-scope-adoption-seam
 title: "Adopting an ambient DI scope — the resolution-source hand-off"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-08-02
@@ -18,7 +18,7 @@ Date: 2026-08-02
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 

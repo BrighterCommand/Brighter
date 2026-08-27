@@ -1,7 +1,7 @@
 ---
 id: 0071-pipeline-scope-handle-for-handler-pipelines
 title: "Handler pipelines take their DI scope as a pipeline scope handle"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-08-02
@@ -18,7 +18,7 @@ Date: 2026-08-02
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 

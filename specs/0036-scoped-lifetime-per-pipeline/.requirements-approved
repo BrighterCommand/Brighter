@@ -1,6 +1,20 @@
-PENDING: revision 30 (27 FRs / 10 NFRs / 55 ACs / 124 normative bullets) — NOT YET APPROVED.
-Revisions 22, 23, 24, 25, 26, 27, 28 and 29 are also pending; nothing further is owed on any of them
-beyond the design phase's single approval.
+APPROVED: revision 30 (27 FRs / 10 NFRs / 55 ACs / 124 normative bullets), 2026-08-27.
+
+The owner approved the DESIGN PHASE as a whole on 2026-08-27 — "Approved — the ADRs and requirements
+both" — which is the single approval §21.6's process reserved for the end of the phase, taken over
+the requirements and the seven ADRs TOGETHER. Revisions 22, 23, 24, 25, 26, 27, 28 and 29 were
+carried to this approval and are approved with it; NOTHING FURTHER IS OWED ON ANY OF THEM. Revision
+21 (FR-16(c), C-21, AC-52) was likewise pending and is approved here too.
+
+The seven ADRs went to status Accepted in the same commit — 0070, 0071, 0072, 0073, 0074, 0075 and
+0076 — and docs/adr/index.md was regenerated from their frontmatter. Each of the seven records that
+it "supersedes no prior ADR", so nothing was superseded or deprecated; ADR 0033's CommandProcessor
+singleton and ADR 0039's per-subscriber scope stand untouched, which is D0c and OOS-6.
+
+WHAT APPROVAL DOES NOT MEAN. It does not settle the three shape questions again — they were resolved
+on their own terms before approval (see the resolution block below) and none of them changed the
+document. It does not license implementation to depart from a criterion: the ACs are the contract
+the tasks phase is written against.
 
 THE THREE FLAGGED QUESTIONS WERE PUT TO THE OWNER ON 2026-08-27 AND ALL THREE ARE RESOLVED. Every
 one confirms what is already landed, so NO REQUIREMENTS TEXT CHANGED, NO COUNT MOVED, and the
