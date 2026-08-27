@@ -1,7 +1,7 @@
 ---
 id: 0075-publish-and-pump-scope-suppression
 title: "Suppressing ambient scope adoption for Publish subscribers and the consumer pump"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-08-03
@@ -19,7 +19,7 @@ Date: 2026-08-03
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 

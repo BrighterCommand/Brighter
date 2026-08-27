@@ -1,7 +1,7 @@
 ---
 id: 0070-per-pipeline-di-scope-for-mapper-and-transform-factories
 title: "Per-pipeline DI scope shared by the mapper and transform factories"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-08-02
@@ -19,7 +19,7 @@ Date: 2026-08-02
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 

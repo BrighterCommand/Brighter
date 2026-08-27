@@ -1,7 +1,7 @@
 ---
 id: 0073-aspnet-core-request-scope-package
 title: "ASP.NET Core's request scope as Brighter's ambient scope — a package of its own, and one line to opt in"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-08-02
@@ -19,7 +19,7 @@ Date: 2026-08-02
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 

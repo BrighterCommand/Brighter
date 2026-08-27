@@ -1,7 +1,7 @@
 ---
 id: 0076-scope-affinity-option-and-write-through
 title: "The affinity option, and how one setting reaches all four registration paths in any order"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-08-03
@@ -19,7 +19,7 @@ Date: 2026-08-03
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 

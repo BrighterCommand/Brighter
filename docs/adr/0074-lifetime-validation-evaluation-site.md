@@ -1,7 +1,7 @@
 ---
 id: 0074-lifetime-validation-evaluation-site
 title: "Where the scope-configuration rules are evaluated"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-08-02
@@ -19,7 +19,7 @@ Date: 2026-08-02
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
