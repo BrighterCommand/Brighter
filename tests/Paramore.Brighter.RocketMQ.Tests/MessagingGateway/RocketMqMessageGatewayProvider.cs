@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -47,8 +47,8 @@ public class RocketMqMessageGatewayProvider
         ["When_a_message_consumer_reads_multiple_messages_should_receive_all_messages"] = "gen_r_multi_msg",
         ["When_multiple_threads_try_to_post_a_message_at_the_same_time_should_not_throw_exception"] = "gen_r_multi_thread",
         ["When_sending_a_message_should_propagate_activity_context"] = "gen_r_activity",
-        ["When_requeing_a_failed_message_should_receive_message_again"] = "gen_r_requeue",
-        ["When_requeing_a_failed_message_with_delay_should_receive_message_again"] = "gen_r_requeue_delay",
+        ["When_requeuing_a_failed_message_should_receive_message_again"] = "gen_r_requeue",
+        ["When_requeuing_a_failed_message_with_delay_should_receive_message_again"] = "gen_r_requeue_delay",
         ["When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue"] = "gen_r_dlq",
         ["When_reading_a_delayed_message_via_the_messaging_gateway_should_delay_delivery"] = "gen_r_delayed_msg",
         ["When_posting_a_message_with_partition_key_via_the_messaging_gateway_should_be_received"] = "gen_r_partition_key",
@@ -58,8 +58,8 @@ public class RocketMqMessageGatewayProvider
         ["When_a_message_consumer_reads_multiple_messages_should_receive_all_messages_async"] = "gen_p_multi_msg",
         ["When_multiple_threads_try_to_post_a_message_at_the_same_time_should_not_throw_exception_async"] = "gen_p_multi_thread",
         ["When_sending_a_message_should_propagate_activity_context_async"] = "gen_p_activity",
-        ["When_requeing_a_failed_message_should_receive_message_again_async"] = "gen_p_requeue",
-        ["When_requeing_a_failed_message_with_delay_should_receive_message_again_async"] = "gen_p_requeue_delay",
+        ["When_requeuing_a_failed_message_should_receive_message_again_async"] = "gen_p_requeue",
+        ["When_requeuing_a_failed_message_with_delay_should_receive_message_again_async"] = "gen_p_requeue_delay",
         ["When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue_async"] = "gen_p_dlq",
         ["When_reading_a_delayed_message_via_the_messaging_gateway_should_delay_delivery_async"] = "gen_p_delayed_msg",
         ["When_posting_a_message_with_partition_key_via_the_messaging_gateway_should_be_received_async"] = "gen_p_partition_key",

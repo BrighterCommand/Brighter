@@ -139,7 +139,7 @@
     <PackageVersion Include="Quartz.Extensions.DependencyInjection" Version="3.18.1" />
     <PackageVersion Include="Quartz.Extensions.Hosting" Version="3.18.1" />
     <PackageVersion Include="RabbitMQ.Client" Version="7.2.1" />
-    <PackageVersion Include="RocketMQ.Client" Version="5.1.0" />
+    <PackageVersion Include="RocketMQ.Client" Version="5.2.1" />
     <PackageVersion Include="Serilog" Version="4.3.1" />
     <PackageVersion Include="Serilog.Extensions.Hosting" Version="10.0.0" />
     <PackageVersion Include="Serilog.Extensions.Logging" Version="10.0.0" />

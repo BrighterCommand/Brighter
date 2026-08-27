@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Net.Mime;
@@ -33,9 +33,18 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RocketMessageConsumer>();
 
-    private readonly RocketMessagingGatewayConnection? _connection = connection;
-    private readonly RoutingKey? _deadLetterRoutingKey = deadLetterRoutingKey;
-    private readonly RoutingKey? _invalidMessageRoutingKey = invalidMessageRoutingKey;
+    /// <summary>
+    /// The routing key of the dead letter queue topic, when configured.
+    /// Rejected messages are forwarded to this topic.
+    /// </summary>
+    public RoutingKey? DeadLetterRoutingKey { get; } = deadLetterRoutingKey;
+
+    /// <summary>
+    /// The routing key of the invalid message topic, when configured.
+    /// Messages rejected as <see cref="RejectionReason.Unacceptable"/> are forwarded to this topic.
+    /// </summary>
+    public RoutingKey? InvalidMessageRoutingKey { get; } = invalidMessageRoutingKey;
+
     // Thread-safe: message pumps are single-threaded per consumer, so null-coalescing
     // assignment in GetProducerForRouteAsync() cannot race.
     private RocketMqMessageProducer? _deadLetterProducer;
@@ -100,14 +109,18 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
     /// <inheritdoc />
     public void Nack(Message message)
     {
-        // No-op for RocketMQ: invisibility timeout will expire and message will become available for redelivery
+        BrighterAsyncContext.Run(() => NackAsync(message));
     }
 
     /// <inheritdoc />
-    public Task NackAsync(Message message, CancellationToken cancellationToken = default)
+    public async Task NackAsync(Message message, CancellationToken cancellationToken = default)
     {
-        // No-op for RocketMQ: invisibility timeout will expire and message will become available for redelivery
-        return Task.CompletedTask;
+        if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var handler) || handler is not MessageView view)
+        {
+            return;
+        }
+
+        await consumer.ChangeInvisibleDuration(view, TimeSpan.Zero);
     }
 
     /// <inheritdoc />
@@ -125,7 +138,7 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
 
         Log.RejectingMessage(s_logger, message.Id.Value);
 
-        if (_deadLetterRoutingKey == null && _invalidMessageRoutingKey == null)
+        if (DeadLetterRoutingKey == null && InvalidMessageRoutingKey == null)
         {
             if (reason != null)
                 Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value, reason.RejectionReason.ToString());
@@ -213,28 +226,28 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
 
     private async Task<RocketMqMessageProducer?> GetProducerForRouteAsync(RoutingKey routingKey)
     {
-        if (routingKey == _invalidMessageRoutingKey)
-            return _invalidMessageProducer ??= await CreateProducerAsync(_invalidMessageRoutingKey);
-        if (routingKey == _deadLetterRoutingKey)
-            return _deadLetterProducer ??= await CreateProducerAsync(_deadLetterRoutingKey);
+        if (routingKey == InvalidMessageRoutingKey)
+            return _invalidMessageProducer ??= await CreateProducerAsync(InvalidMessageRoutingKey);
+        if (routingKey == DeadLetterRoutingKey)
+            return _deadLetterProducer ??= await CreateProducerAsync(DeadLetterRoutingKey);
         return null;
     }
 
     private async Task<RocketMqMessageProducer?> CreateProducerAsync(RoutingKey? routingKey)
     {
-        if (routingKey == null || _connection == null)
+        if (routingKey == null || connection == null)
             return null;
 
         try
         {
             var rocketProducer = await new Producer.Builder()
-                .SetClientConfig(_connection.ClientConfig)
-                .SetMaxAttempts(_connection.MaxAttempts)
+                .SetClientConfig(connection.ClientConfig)
+                .SetMaxAttempts(connection.MaxAttempts)
                 .SetTopics(routingKey.Value)
                 .Build();
 
             return new RocketMqMessageProducer(
-                _connection,
+                connection,
                 rocketProducer,
                 new RocketMqPublication { Topic = routingKey });
         }
@@ -261,22 +274,14 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
     private (RoutingKey? routingKey, bool foundProducer, bool isFallingBackToDlq) DetermineRejectionRoute(
         RejectionReason rejectionReason)
     {
-        switch (rejectionReason)
+        return rejectionReason switch 
         {
-            case RejectionReason.Unacceptable:
-                if (_invalidMessageRoutingKey != null)
-                    return (_invalidMessageRoutingKey, true, false);
-                if (_deadLetterRoutingKey != null)
-                    return (_deadLetterRoutingKey, true, true);
-                return (null, false, false);
-
-            case RejectionReason.DeliveryError:
-            case RejectionReason.None:
-            default:
-                if (_deadLetterRoutingKey != null)
-                    return (_deadLetterRoutingKey, true, false);
-                return (null, false, false);
-        }
+            RejectionReason.Unacceptable when InvalidMessageRoutingKey != null => (InvalidMessageRoutingKey, true, false),
+            RejectionReason.Unacceptable when DeadLetterRoutingKey  != null => (DeadLetterRoutingKey, true, true),
+            RejectionReason.Unacceptable =>  (null, false, false),
+            _ when DeadLetterRoutingKey != null =>(DeadLetterRoutingKey, true, false),
+            _ => (null, false, false)
+        };
     }
 
     private static Message CreateMessage(MessageView message)
