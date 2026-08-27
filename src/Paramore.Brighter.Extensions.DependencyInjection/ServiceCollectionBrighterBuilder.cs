@@ -235,7 +235,38 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             return this;
         }
+
+        /// <summary>
+        /// Register transforms with the built-in transformer registry.
+        /// </summary>
+        /// <param name="registerTransforms">A callback to register transforms</param>
+        /// <returns>This builder, allows chaining calls</returns>
+        public IBrighterBuilder Transforms(Action<ServiceCollectionTransformerRegistry> registerTransforms)
+        {
+            if (registerTransforms == null)
+                throw new ArgumentNullException(nameof(registerTransforms));
+
+            registerTransforms(_transformerRegistry);
+
+            return this;
+        }
         
+        /// <summary>
+        /// Register Brighter's own pipeline handlers (for example the exception policy, request
+        /// logging, fallback and timeout handlers and their async variants) with the ServiceCollection.
+        /// The assembly-scanning registration paths do this implicitly by appending the framework
+        /// assembly to the scan set; callers that register handlers explicitly (for example generated
+        /// code) call this once so attributes such as [UsePolicy] or [RequestLogging] can resolve
+        /// their handlers at runtime.
+        /// </summary>
+        /// <returns>This builder, allows chaining calls</returns>
+        public IBrighterBuilder EnsureFrameworkHandlersRegistered()
+        {
+            RegisterHandlersFromAssembly(typeof(IHandleRequests<>), [], typeof(IHandleRequests<>).Assembly, null);
+            RegisterHandlersFromAssembly(typeof(IHandleRequestsAsync<>), [], typeof(IHandleRequestsAsync<>).Assembly, null);
+            return this;
+        }
+
         private void RegisterHandlersFromAssembly(Type interfaceType, IEnumerable<Assembly> assemblies, Assembly assembly, IEnumerable<Type>? excludeDynamicHandlerTypes)
         {
             assemblies = assemblies.Concat([assembly]);
