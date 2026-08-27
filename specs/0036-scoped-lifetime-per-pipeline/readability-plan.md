@@ -599,6 +599,15 @@ that lead; every other block is a **prose block**.
 - **run** — the longest chain of consecutive prose blocks with no intervening heading, list, table
   or fence.
 - **span** — the longest heading-free stretch, in source lines, between two consecutive headings.
+  ⚠⚠ **Two boundary conventions this column needs and the paragraph above did not
+  state, added after `Ph5-0073` had to derive them and `Ph5-0074` reproduced the whole
+  table with them: (a) the region INCLUDES its terminating `## References` heading as a
+  span boundary, so the last heading-free stretch is bounded — it is a `##`, so it adds
+  to no other column; (b) a span is the lines STRICTLY BETWEEN two consecutive headings
+  (`b - a - 1`). Without (a) `0076` reads 14 against the 35 recorded below; without (b)
+  every row sits exactly one high.** ⚠ **`Ph5-0072` reported span as first-run exact, so
+  it made the same two choices and did not write them down. Length is not the safeguard —
+  this definition already ran a whole section. Stating the BOUNDARY CONVENTIONS is.**
 
 ### The baseline, at `a97c0ebdc`
 
@@ -634,6 +643,20 @@ alike.** `0070` has the worst span (203 lines) and the most bold leads (49) but 
 its prose is broken up by tables and diagrams, so what it lacks is *navigation*. `0073` has the
 shortest span (43) and the longest run (19): its prose is not broken up at all, so what it lacks is
 *breaks*. **Sub-headings fix the first; sub-numbering and lists fix the second.**
+
+⚠⚠ **CORRECTION, ADDED AFTER `Ph5-0073` AND CONFIRMED BY `Ph5-0074`: THE PARAGRAPH ABOVE
+READS `0073`'s RUN OF 19 AND `0070`'s OF 14 AS COMPARABLE DIAGNOSES AND THEY ARE NOT.**
+`## Alternatives Considered`'s `**N. Title.**` form is unanimous across all seven ADRs,
+so converting it in one is a set-level change and is out of scope; its entries are
+CONSECUTIVE PROSE BLOCKS, and they therefore set a **floor** under the `run` column that
+no per-ADR batch can go below. Measured at `7c21a0dcc`: **`0070`'s run of 14 IS its
+Alternatives section (14 entries), so that row's `run` can never move at all**, and the
+same holds for **`0076`'s 17**. `0073`'s 19 was real and fell to 11, all of it residual
+Alternatives; `0074`'s 17 sat in `### Technology Choices` and fell to its floor of 16.
+⚠ **So for `0070` and `0076` the honest structural targets are `####`, bold lead and
+SPAN — never run — and the set's run-max sits at 17 for the rest of the phase whatever
+any batch does. A structural metric reported without its floor reads a pass as a
+failure.**
 
 ⚠ **`0075` is the control case and should be read as one.** It is the only ADR with `####` headings
 in the region (4, from Phase 3), and it has the second-lowest list share. **Its four headings did not
