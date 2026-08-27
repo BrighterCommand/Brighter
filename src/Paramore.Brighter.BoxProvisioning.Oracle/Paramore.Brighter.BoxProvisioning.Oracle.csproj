@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Oracle Database box provisioning for Paramore.Brighter. Provides automatic creation and migration of inbox and outbox tables in Oracle at application startup.</Description>
+    <Authors>Rafael Andrade</Authors>
+    <TargetFrameworks>$(BrighterMongoTargetFrameworks)</TargetFrameworks>
+    <PackageTags>Oracle;Oracle Database;Database;Outbox;Inbox;Provisioning;Migration;Command;Event;Command Processor;Messaging;Brighter</PackageTags>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter.BoxProvisioning\Paramore.Brighter.BoxProvisioning.csproj"/>
+    <ProjectReference Include="..\Paramore.Brighter.Inbox.Oracle\Paramore.Brighter.Inbox.Oracle.csproj"/>
+    <ProjectReference Include="..\Paramore.Brighter.Oracle\Paramore.Brighter.Oracle.csproj"/>
+    <ProjectReference Include="..\Paramore.Brighter.Outbox.Oracle\Paramore.Brighter.Outbox.Oracle.csproj"/>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj"/>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0' OR '$(TargetFramework)' == 'net9.0' OR '$(TargetFramework)' == 'net8.0'">
+    <PackageReference Include="Oracle.ManagedDataAccess.Core"/>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
+    <PackageReference Include="Oracle.ManagedDataAccess"/>
+  </ItemGroup>
+
+</Project>
