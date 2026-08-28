@@ -6,7 +6,18 @@ The seven ADRs do not implement in ADR-number order, because they state their ow
 
 Inside each phase the ADR's own numbered steps keep their order. Every behavioural task uses the mandatory `/test-first` template with its approval gate; structural tasks use `/tidy-first` and must not share a commit with behavioural change. Each task carries a `Depends on` line (requirement 7) placed immediately before its `References` line.
 
-⚠ **One task is one approval gate, but not always one test fact.** Several acceptance criteria state their `Then` over more than one host — a different registration order, a different affinity, a control host that must produce *no* finding. `/test-first` writes and gates **one** test, so any task whose `Test should verify` spans more than one host carries an explicit **`Facts:`** line saying how many `[Fact]`s it needs and which file they live in. The rule for those tasks: **the ⛔ gate is taken once, on the first fact**; the remaining facts land in the *same* red-green cycle and the *same* file unless the task names a second file. A task with no `Facts:` line is a single fact. Do not treat a multi-fact task as done when the first fact passes — the negative and control branches are usually the last ones written and are the ones that make the criterion falsifiable.
+⚠ **One task is one approval gate, but not always one test fact.** Several acceptance criteria state their `Then` over more than one arrangement — a different registration order, a different affinity, the other sync/async twin, a control host that must produce *no* finding. `/test-first` writes and gates **one** test, so any task needing more than one `[Fact]` carries an explicit **`Facts:`** line saying how many it needs and which file they live in.
+
+⚠ **The trigger is mechanical, and it is not "more than one host".** Twice — in review rounds 1 and 2 — this rule was swept by working a list of named tasks rather than by applying it, and both times it left tasks behind, including tasks that arrange no host at all. **A task needs a `Facts:` line whenever its `Test should verify` cannot be written as a single `[Fact]`.** That is any of:
+
+- **a second host** — a different triple, affinity, registration order or entry point;
+- **the other twin** — sync and async are two runs, never one (this spec's signature failure mode);
+- **a second act on the same host** — a `Send` branch and a `Post` branch, `throwOnError` true and false, `Dispose()` and `DisposeAsync()`;
+- **a distinct arrangement** — an input that throws beside one that does not, a control that must produce *no* finding, a positive control built from a deliberately broken host, a parameter swept over two values.
+
+⚠ **The counter-case, so the rule is not over-applied**: several assertions over **one** run are still **one** fact, even when the prose says "both". *"Two `Send` calls recording **exactly one** `Warning` between them"* (T4.5, T4.7, T6.7) is a single aggregate assertion and cannot be split without destroying it. Sequential acts in one narrative — message N then N+1, a second `Post` proving a failure is not latched — are one fact too.
+
+The rule for multi-fact tasks: **the ⛔ gate is taken once, on the first fact**; the remaining facts land in the *same* red-green cycle and the *same* file unless the task names a second file. A task with no `Facts:` line is a single fact. Do not treat a multi-fact task as done when the first fact passes — the negative and control branches are usually the last ones written and are the ones that make the criterion falsifiable.
 
 Counts and `file:line` anchors below were re-derived against the working tree; where a re-derivation differs from an ADR the task says so inline.
 
@@ -29,6 +40,7 @@ Counts and `file:line` anchors below were re-derived against the working tree; w
   - **USE COMMAND**: `/test-first the solution's project files and core source declare no container or ASP.NET types`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Architecture"
   - Test file: `When_the_solution_is_built_it_should_declare_no_container_types_in_core.cs` (class `DependencyBoundaryTests`)
+  - **Facts**: **3**, all in this one file — AC-22's three clauses, which read three different things (the built assembly's public surface, three `.csproj` files as XML, and core's `*.cs` source) and cannot share one `[Fact]`. ⚠ **Clause 3 is the load-bearing one and is written last**: the task says so itself — `Microsoft.Extensions.DependencyInjection` is already on core's compile closure transitively, so a green on clause 2 would pass a change that put container types in core's source. Gate once, on the first fact
   - Test should verify:
     - no public interface in the `Paramore.Brighter` assembly declares a member whose signature mentions `IServiceProvider` (AC-22 clause 1)
     - parsing `Paramore.Brighter.csproj`, `Paramore.Brighter.Extensions.DependencyInjection.csproj` and `Paramore.Brighter.ServiceActivator.csproj` as XML: core has no **direct** `PackageReference`/`ProjectReference` matching `Microsoft.Extensions.DependencyInjection*`; the DI package has none matching `Microsoft.AspNetCore.*`; `Paramore.Brighter.ServiceActivator` has exactly one `ProjectReference` (to `Paramore.Brighter`) and no `PackageReference` (AC-22 clause 2) — re-derived: that project has exactly one `ProjectReference` at HEAD
@@ -94,6 +106,7 @@ Counts and `file:line` anchors below were re-derived against the working tree; w
   - **USE COMMAND**: `/test-first a Scoped unwrap transform is constructed once per transform pipeline on both the sync and async builders`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_consuming_two_messages_a_scoped_transform_should_not_be_reused.cs`
+  - **Facts**: **2**, both in this one file — the sync twin over `TransformPipelineBuilder` (Reactor), and the async twin over `TransformPipelineBuilderAsync` (Proactor). ⚠ The task's own text says **a single-twin test does not discharge AC-2**; the two builders are separate types, so this is two runs and never one. Gate once, on the first fact
   - Test should verify:
     - lifetime triple `{Scoped, Scoped, Scoped}`; an unwrap transform registered `AddScoped`
     - two messages construct two distinct transform instances and the first is disposed before the second is constructed
@@ -187,6 +200,7 @@ Counts and `file:line` anchors below were re-derived against the working tree; w
   - **USE COMMAND**: `/test-first disposing an IAmAScope twice is a no-op and leaves a concurrently live pipeline's scope usable`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_pipeline_scope_is_disposed_twice_it_should_not_throw_or_affect_another_pipeline.cs`
+  - **Facts**: **2**, both in this one file — X's scope disposed a second time through `Dispose()`, and ⚠ **separately** through `DisposeAsync()`. `IAmAScope` is `IDisposable` **and** `IAsyncDisposable` (T1.1), so the two paths are different members and a green on one proves nothing about the other. Y's scope staying live and usable is asserted in **both** facts, not in a third. Gate once, on the first fact
   - Test should verify:
     - lifetime triple `{Scoped, Scoped, Scoped}` — so both pipelines take a pipeline scope (FR-27.1); two concurrently live pipelines X and Y, each holding a Brighter-created `IAmAScope`; X's scope already disposed
     - invoking `Dispose()` a second time on X's scope raises no exception — **and separately** `DisposeAsync()` a second time, in either order
@@ -216,6 +230,7 @@ Counts and `file:line` anchors below were re-derived against the working tree; w
   - **USE COMMAND**: `/test-first a container backed mapper factory called directly with no pipeline scope resolves a fresh Scoped artefact each time`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_scoped_factory_create_is_called_outside_a_pipeline_it_should_resolve_fresh.cs`
+  - **Facts**: **4**, all in this one file — one per container-backed factory, because the task's closing clause (*"the same holds on the transformer factories and on both async twins"*) names the whole family: `ServiceProviderMapperFactory`, `ServiceProviderMapperFactoryAsync`, `ServiceProviderTransformerFactory` and `ServiceProviderTransformerFactoryAsync`. ⚠ These are the same four types T1.5 gives the `Scoped`-only scope offer; a fix applied to one and not its twin is this spec's signature failure mode. Gate once, on the first fact
   - Test should verify:
     - `MapperLifetime = Scoped` (stated with the full triple `{Scoped, Scoped, Scoped}`); two direct `factory.Create(type)` calls with the defaulted `null` scope return **two different instances**
     - reclamation happens where the caller releases, not at process exit — the factory-wide `_lifetimeScope` built in the constructor (`ServiceProviderMapperFactory.cs:46`) no longer serves `Scoped`
@@ -387,6 +402,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **USE COMMAND**: `/test-first constructing an AmbientScopeSourceException with a null inner exception throws ArgumentNullException`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CommandProcessors/Pipeline"
   - Test file: `When_an_ambient_scope_source_exception_is_constructed_with_no_inner_it_should_throw.cs`
+  - **Facts**: **2**, both in this one file — the null argument, which must **throw** `ArgumentNullException`; and a non-null one, whose `InnerException` must be the exception passed. One fact throws and one does not, so they cannot share a `[Fact]`. Gate once, on the first fact
   - Test should verify:
     - `new AmbientScopeSourceException(null!)` throws `ArgumentNullException`
     - a constructed instance's `InnerException` is the exception passed and is never null
@@ -400,6 +416,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **USE COMMAND**: `/test-first AmbientScopeSuppression reports false outside a bracket, true inside one, restores the captured value on dispose and nests correctly`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CommandProcessors/Pipeline"
   - Test file: `When_suppression_brackets_are_nested_they_should_restore_the_captured_value.cs`
+  - **Facts**: **4**, all in this one file — a reader outside any bracket; a lexically nested pair restoring the **captured** value on dispose; a bracket disposed **twice**; and ⚠ the **flow-branch** fact, where a bracket is taken on one flow and read on a branched one. The last is a different arrangement from the other three — it has to branch the flow before asserting — and it is the one that pins `AsyncLocal<bool>` semantics rather than a plain field. Gate once, on the first fact
   - Test should verify:
     - `IsSuppressed` is `false` for a reader outside any bracket, and never throws
     - inside `Suppress()` it is `true`; on dispose the **captured** value is restored, so lexically nested brackets nest correctly
@@ -467,6 +484,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **USE COMMAND**: `/test-first a scope provider whose GetAmbient throws surfaces that exception unwrapped from both Send and Post with no leaked scope`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_the_ambient_query_throws_the_caller_should_see_it_unwrapped.cs`
+  - **Facts**: **2**, both in this one file and **both in the same host** — the `Send`, whose handler pipeline consults the ambient source; and the `Post`, whose transform pipeline does. ⚠ The task states why the second is not redundant: **the two verbs build different pipelines whose builders differ in what they clean up**, so without it an implementation that leaked the pipeline scope on the transform-build path would pass. Gate once, on the first fact
   - Test should verify:
     - lifetime triple `{Scoped, Scoped, Scoped}` — so **both** the `Send`'s handler pipeline and the `Post`'s transform pipeline consult the ambient source (FR-27.1) — and an `IAmAScopeProvider` whose `GetAmbient` throws `InvalidOperationException`
     - `Send`: the caller observes that `InvalidOperationException` **unwrapped** (not a `ConfigurationException`), and no pipeline scope is leaked
@@ -589,6 +607,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **USE COMMAND**: `/test-first an ambient disposed while a pipeline is still resolving from it surfaces a ConfigurationException naming the provider type`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_borrowed_ambient_is_disposed_mid_pipeline_it_should_surface_a_configuration_error.cs`
+  - **Facts**: **2**, both in this one file — the `Send`, which sees the `ConfigurationException` **thrown directly**, and the `Post`, which sees it as the **inner** exception of the transform builder's own `ConfigurationException`. ⚠ The two differ because `PipelineBuilder`'s filters exclude `ConfigurationException` and the transform builder's four catches carry no filter — the same fault, two shapes at the caller, so one fact cannot assert both. Gate once, on the first fact
   - Test should verify:
     - lifetime triple `{Scoped, Scoped, Scoped}`, affinity `JoinAmbient`, an ambient that passes the probe and is then disposed by its owner before a later `Create`
     - the caller sees a `ConfigurationException` whose message names *the ambient offered by `<provider implementation type>` was disposed while a pipeline was resolving from it*, carrying the `ObjectDisposedException` as its **inner** exception
@@ -607,6 +626,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **USE COMMAND**: `/test-first a Scoped artefact resolution that throws is not remembered and a later resolution of the same type resolves again`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_scoped_artefact_resolution_throws_the_cache_should_not_retain_the_fault.cs`
+  - **Facts**: **3**, all in this one file — the faulted-then-successful resolution on the **owned** path; the same on the **borrowed** path (the task's *"one protocol, not two"* is the assertion, and it is only falsifiable if both are run); and ⚠ the **concurrency** fact — concurrent first-resolvers producing one instance with the losers seeing the winner's (NFR-4), which carries the losing-waiter clause that its removal must not delete a **healthy** `Lazy` published in between. The third needs a different arrangement from the first two. Gate once, on the first fact
   - Test should verify:
     - lifetime triple `{Scoped, Scoped, Scoped}`; a resolution that throws on first call and succeeds on the next
     - the exception propagates to **every** waiter on the first resolution, and a later resolution of the same type **in the same scope** resolves again rather than rethrowing a remembered failure
@@ -660,6 +680,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **USE COMMAND**: `/test-first a Post issued from inside a Publish subscriber does not adopt the ambient and a Send after the publish does`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_subscriber_issues_a_nested_pipeline_it_should_not_adopt_the_ambient.cs`
+  - **Facts**: **2**, both in this one file — the **sync** twin over `Publish` (`Parallel.ForEach`, `CommandProcessor.cs:481`) and the **async** twin over `PublishAsync` (start loop `:591-599`, awaited at `:601`). ⚠ The two dispatch through genuinely different mechanisms, so a green on one says nothing about the other; each fact carries both the nested-pipeline clauses and the post-publish clauses that actually fail on a leak. Gate once, on the first fact
   - Test should verify:
     - the `AsyncLocal`-backed test provider of T4.4 with an ambient established on the caller's flow; affinity option `JoinAmbient`; lifetime triple `{Scoped, Scoped, Scoped}`
     - a nested `Send` and a nested `Post` issued from **inside** a subscriber's `Handle`/`HandleAsync` resolve instances that are **not** the ambient's — on **both** twins, sync `Publish` (`Parallel.ForEach`, `CommandProcessor.cs:481`) and `PublishAsync` (start loop `:591-599`, awaited at `:601`)
@@ -725,6 +746,12 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - A `Microsoft.NET.Sdk.Web`-hosted `WebApplicationFactory` fixture, targeting `$(BrighterTestTargetFrameworks)` — re-derived at `tests/Directory.Build.props:4`: `net9.0;net10.0`
   - ⚠ Add a `Directory.Packages.props` entry for `Microsoft.AspNetCore.Mvc.Testing` (re-derived: **no such entry today**). Step 1's "no `Directory.Packages.props` entry" claim is true of the **src package only**
   - Add to `Brighter.slnx`
+  - ⚠ **The `ProjectReference`s, each owed to a task sited here.** The 22 criteria this project hosts need more than the ASP.NET reference, and no other task supplies them — `T6.20:1008`'s *"T6.21 already sits here with the same consumer packages"* is only true once this bullet is honoured. Re-derived at HEAD: all five `src/` projects below exist, and `tests/Paramore.Brighter.Extensions.Tests/Paramore.Brighter.Extensions.Tests.csproj:26-30` carries exactly this set for the same ground:
+    - `Paramore.Brighter.Extensions.AspNetCore` (T6.1's new package) — every task calling `AddBrighterRequestScope(...)`, and T6.22's spy half, which takes the reference and deliberately never calls it
+    - `Paramore.Brighter.Extensions.DependencyInjection` — `AddBrighter` in every fixture here (and the AspNetCore package already references it, so this is explicit rather than transitive)
+    - `Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection` and `Paramore.Brighter.ServiceActivator.Extensions.Hosting` — the consumer hosts: **T6.9, T6.20, T6.21 and T7.6**, each of which registers `ServiceActivatorHostedService` explicitly because `AddConsumers` does not (C-15, D14)
+    - `Paramore.Brighter.Outbox.Sqlite` and `Paramore.Brighter.Sqlite.EntityFrameworkCore` — **T6.19** alone, which needs a `Scoped` `DbContext` registered by `AddDbContext`, a relational outbox and a transaction provider over it
+  - ⚠ These are `ProjectReference`s to existing projects, so they add **no** `Directory.Packages.props` entry and change nothing about NFR-2: none of the five references `Microsoft.AspNetCore.*`, and T1.2's `DependencyBoundaryTests` — already this task's `Done when` — is what proves it
   - The project has **two roles**: it hosts the criteria that need a running ASP.NET Core host with a controller action; and in **T6.22's spy fixture alone** it **references the src package and deliberately never calls the extension**, which is the only arrangement in which AC-14's spy clause is about anything. That second role wants the *reference*, not a host
   - ⚠ **Size it for twenty-two, not for eight.** ADR 0073 step 4a's *"eight"* is that ADR's count of the criteria **it** cites — AC-15, AC-16, AC-17, AC-18, AC-19, AC-34, AC-48, AC-49 — and step 4c hands the distribution question to task breakdown in terms: *"Which fixtures the project holds, and how those criteria are distributed across them, is task-breakdown work and is not decided here."* Re-derived against this task list: **21 test tasks are sited wholly here — T6.3 through T6.21, plus T7.6 and T7.8 — and half of T6.22, 22 in all.** T7.6 (AC-50) and T6.20 (AC-20) are here because both call `AddBrighterRequestScope(...)` and `Paramore.Brighter.Extensions.Tests` holds no reference to the package; T7.6 additionally needs a controller action
   - **Depends on**: T6.1
@@ -810,6 +837,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **USE COMMAND**: `/test-first HttpContextScopeProvider returns null on an AlwaysNew ask without touching IHttpContextAccessor`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_the_ask_carries_always_new_the_provider_should_not_consult_the_accessor.cs`
+  - **Facts**: **2**, both in this one file — ⚠ the **`AlwaysNew`** ask, which must return `null` with the spy recording **zero accesses**, and the **`JoinAmbient`** ask, which must return an `HttpRequestScope` over `HttpContext.RequestServices`. ⚠ **The first is a negative fact** — the zero-access count *is* the assertion, and it is one of the spec's deliberately negative criteria (AC-46). The second is the control that stops a provider which simply never consults the accessor from passing. Gate once, on the first fact
   - Test should verify:
     - an `IHttpContextAccessor` **spy** counting accesses, and a live `HttpContext`
     - `GetAmbient(ScopeAffinity.AlwaysNew)` returns `null` and the spy records **zero accesses**
@@ -942,6 +970,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **USE COMMAND**: `/test-first a nested Post adopts under a Send but not under a Publish subscriber whose own pipeline takes no scope`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_a_subscriber_takes_no_pipeline_scope_it_should_still_suppress_the_ambient.cs`
+  - **Facts**: **2**, both in this one file and in the same host — the `Send`, whose nested `Post` **must** resolve `R` (the parent handler pipeline is `Transient`, takes no pipeline scope and, not being a subscriber, suppresses nothing); and the `Publish`, whose nested `Post` must resolve an instance that is **not** `R`. ⚠ **The two outcomes are opposite, and that contrast is the criterion** — a fact asserting only the `Publish` half would pass an implementation that suppressed everywhere. Gate once, on the first fact
   - Test should verify:
     - an opted-in ASP.NET host with `{HandlerLifetime = Transient, MapperLifetime = Scoped, TransformerLifetime = Scoped}` and ⚠ **`ValidatePipelines()` not called** (FR-22.2 would reject this triple; the AC pins the seam rule, C-15); request-scope `IMarker` instance `R` injected into the mapper; a `Send` handler and a `Publish` subscriber that each issue the same `Post`
     - `Send`: the nested `Post`'s mapper resolves **`R`** — the parent handler pipeline is `Transient`, so it takes no pipeline scope (FR-27.1) and, not being a subscriber, suppresses nothing (FR-27.3)
@@ -957,6 +986,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **USE COMMAND**: `/test-first Brighter held per scope associations are unreachable after a request completes and their peak count tracks concurrency not throughput`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_serving_many_requests_borrowed_scope_state_should_not_accumulate.cs`
+  - **Facts**: **4**, all in this one file — clause 1's reachability run; ⚠ clause 2's **positive control, which is a second host** deliberately built with the per-scope association made process-lifetime and which must report `IsAlive == true`; and clause 3's steady-state measurement at **C = 1** and at **C = 8**, which are two runs of 10,000 requests each. ⚠ **Clause 2 is what makes clause 1 falsifiable** — without it, a harness whose `WeakReference` always died would pass. Gate once, on the first fact
   - Test should verify:
     - an opted-in ASP.NET host (lifetime triple `{Scoped, Scoped, Scoped}`) whose controller action performs two `Post`s and one `Send`
     - **clause 1 — reachability**: a `WeakReference` (not tracking resurrection) to the mapper instance used by request 1 has `IsAlive == false` after 10,000 further requests and `GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();`
@@ -1037,6 +1067,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - Test location: "tests/Paramore.Brighter.Extensions.Tests" **and** "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_no_scope_provider_is_registered_the_existing_suite_should_pass.cs` (in `Paramore.Brighter.Extensions.Tests`) **and** `When_the_package_is_referenced_but_the_extension_is_not_called_the_accessor_should_not_be_touched.cs` (in `Paramore.Brighter.Extensions.AspNetCore.Tests`)
   - ⚠ **This is one acceptance criterion living in two test projects, and that shape is deliberate. Do not merge the halves and do not split the criterion into two tasks.**
+  - **Facts**: **2**, and ⚠ **this is the one task in the document whose facts live in two different files, in two different projects** — half 1's regression run in `Paramore.Brighter.Extensions.Tests`, and half 2's spy fact in `Paramore.Brighter.Extensions.AspNetCore.Tests`. That is the Overview's *"unless the task names a second file"* case, and it is the only one. ⚠ **Half 2 is a negative fact** — the spy's **zero accesses** *is* the assertion — so a green on half 1 discharges nothing of AC-14's second half. Gate once, on half 1. **Two facts, two files, still one criterion and one task**
   - Test should verify:
     - **half 1 (regression, `Paramore.Brighter.Extensions.Tests`)** — an application configured exactly as before this change: **no `IAmAScopeProvider` registered** and the affinity option left at its default. The existing Brighter test suite for `Send`, `Publish`, `Post`, `DepositPost` and consumption passes
     - the **named exclusions**, which are a floor and not a closed enumeration — in `tests/Paramore.Brighter.Extensions.Tests/`, all three re-derived as present at HEAD: `When_releasing_a_scoped_mapper_it_should_stay_usable_for_later_resolutions.cs`, `When_two_threads_first_resolve_a_scoped_mapper_concurrently_it_should_not_leak_a_scope.cs`, `When_disposing_a_factory_holding_a_scoped_async_disposable_only_mapper_should_dispose_it.cs`
@@ -1053,7 +1084,9 @@ This phase declares types and moves a registration. It has **no acceptance crite
 
 ## Phase 7 — ADR 0074: lifetime validation, and the FR-25 guidance page
 
-⚠ ADR 0074 step 1 states there is **no Tidy-First step to sequence ahead of this ADR** — *"a comment amendment is neither structural nor behavioural"*. Do not invent one. The `PipelineValidator` XML-comment amendment lands inside T7.5.
+⚠ **ADR 0074 changes no code in `Paramore.Brighter`, so no Tidy-First step is owed IN CORE.** Its step 1 says so in terms — *"a comment amendment is neither structural nor behavioural"* — and the scope of that claim is core, not the phase. So the `PipelineValidator` XML-comment amendment lands inside **T7.5** rather than in a commit of its own, and no core-only tidy task is to be invented for it.
+
+Two Tidy-First steps **are** owed in the DI package, and both are sequenced ahead of T7.1 for reasons each states: **T7.0a** lands the validation entities and the registration snapshot inert, and **T7.0b** widens the two validation hosts to many validators while there is still only one. Neither touches core.
 
 - [ ] **STRUCTURAL: T7.0a — land the validation entities and the registration snapshot, inert**
   - **USE COMMAND**: `/tidy-first add the ContainerRegistrationSnapshot and the five scope-configuration entity types to the DI package with no rule and no caller`
@@ -1062,13 +1095,13 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - `ScopeConfiguration` and `ArtefactRegistration` are **records** rather than parameter lists, and `ArtefactConstructorSelector` is its own object — ADR 0074's *Technology Choices* argues both
   - **Nothing calls any of it in this commit.** No rule, no validator, no wiring in `ValidatePipelines()`
   - ⚠ **Why this is separated out.** ADR 0074's *Positive* section states that **"the rules are unit-testable without a host — a `ServiceCollection`, an options object and a `Type` are enough"**. Without this split, T7.1's single AC-27 test would drive eight new types plus the wiring in one red-green cycle, and the scaffolding for six rules that have no test yet would ship inside it
-  - ⚠ **`ArtefactConstructorSelector` lands here as a shell** — the type and its signature, **no rule body**. D15's selection rule (the public constructor with the most parameters; where two public constructors have the same parameter count, the type is not inspected) is **behaviour, and lands in T7.5**, driven by AC-42's two constructor-selection clauses. Landing the rule here would put unexercised logic in a `/tidy-first` commit, which the TDD mandate forbids; the type is separated out only so that T7.5 does not also have to create the file. It is **testable with a `Type` alone**, which is why T7.5's clauses can guard it without a host
+  - ⚠ **`ArtefactConstructorSelector` lands here as a shell** — the type and its signature, **no rule body**. D15's selection rule (the public constructor with the most parameters; where two public constructors have the same parameter count, the type is not inspected) is **behaviour, and lands in T7.5**, driven by AC-42's two constructor-selection clauses. ⚠ **The distinction is not "logic versus no logic"** — the snapshot's three queries above are more code than D15's rule, and they land here. It is that **D15 is a named design decision with an acceptance criterion driving it**: AC-42's two constructor-selection clauses exist to exercise that rule, so the rule belongs in the red-green cycle those clauses own, and writing it before them would be speculative implementation. The snapshot's queries are descriptor reads with **no criterion of their own and no caller** — nothing could gate them here, and T7.1's single AC-27 test is what first exercises them. The type is separated out only so that T7.5 does not also have to create the file. The rule is **testable with a `Type` alone**, which is why T7.5's two constructor-selection clauses can guard it **without running an application constructor**
   - This is a **structural change** — it must NOT share a commit with behavioural change (Tidy First)
   - **Depends on**: T6.22 (Phase 6 complete), T3.6
   - **References**: FR-22.1, FR-22.2, FR-22.3, FR-22.4, D15, C-20; ADR 0074 steps 2, 3
 
 - [ ] **STRUCTURAL: T7.0b — widen both validation hosts to many validators, while there is still only one**
-  - **USE COMMAND**: `/tidy-first widen the two validation hosted services and the seven test resolution sites from one IAmAPipelineValidator to many`
+  - **USE COMMAND**: `/tidy-first widen the two validation hosted services and the twelve affected test sites from one IAmAPipelineValidator to many`
   - Files: `src/Paramore.Brighter.Extensions.DependencyInjection/BrighterValidationHostedService.cs` — the field (`:47`), the constructor parameter (`:60`) and `StartAsync` (`:71`, validating at `:76`); `src/Paramore.Brighter.ServiceActivator.Extensions.Hosting/ServiceActivatorHostedService.cs` (`:50-54`). All four anchors re-derived at HEAD ✓
   - Change the field and constructor parameter to `IEnumerable<IAmAPipelineValidator>`, with `StartAsync` calling `PipelineValidationResult.Combine` over each `Validate()` **before** the existing throw-and-log block, which does not change. Change `ServiceActivatorHostedService` from `GetService` to `GetServices` and its `!= null` guard to an empty-sequence one; its throw-and-log block does not change either
   - ⚠ **An empty sequence must behave exactly as today's `null` did** — validate nothing, throw nothing. That is what keeps a host which never called `ValidatePipelines()` unaffected
@@ -1079,10 +1112,24 @@ This phase declares types and moves a registration. It has **no acceptance crite
     - `tests/Paramore.Brighter.Core.Tests/Validation/When_throw_on_error_true_with_transform_and_provider_triggers_should_not_block.cs:72`
     - `tests/Paramore.Brighter.Core.Tests/Validation/When_publication_wrap_transform_unresolvable_through_di_should_surface_warning.cs:64`
     - `tests/Paramore.Brighter.Extensions.Tests/When_validate_pipelines_with_consumers_should_receive_subscriptions.cs:60`
+  - ⚠⚠ **And migrate the five CONSTRUCTION sites, which the grep above cannot find.** The change at `:60` is to a **constructor parameter**, so every site that calls the constructor breaks too — a different set from the resolution sites, and the reason to run a second discovery command rather than trust the first total:
+
+    ```sh
+    grep -rn "new BrighterValidationHostedService" tests/ --include="*.cs"
+    ```
+
+    Re-derived at HEAD — **5 sites across 4 files**, plus the two `BuildService` helper signatures that pass the argument through:
+    - `tests/Paramore.Brighter.Core.Tests/Validation/When_both_validate_and_describe_registered_should_describe_once.cs:51`
+    - `tests/Paramore.Brighter.Core.Tests/Validation/When_validation_hosted_service_starts_without_consumers_should_validate.cs:50`, and its helper signature at `:41`
+    - `tests/Paramore.Brighter.Core.Tests/Validation/When_throw_on_error_false_should_log_errors_not_throw.cs:48`, and its helper signature at `:42`
+    - `tests/Paramore.Brighter.Core.Tests/Validation/When_validation_hosted_service_has_warnings_should_log_them.cs:49` **and** `:71` — two sites in one file
+
+    **The total for this task is therefore seven resolution sites plus five construction sites, across nine files.** The two lists stay separate because only the resolution sites carry the silent-runtime hazard below — a construction site fails to **compile**, which is loud
+  - ⚠ **`ServiceActivatorHostedService`'s constructor is deliberately NOT in scope, and its call sites must not be migrated.** It does not take the validator as a constructor parameter — it resolves it inside `StartAsync` (`:50`), and its constructor is `(logger, dispatcher, provider, options)`, untouched here. Re-derived at HEAD: its **11** construction sites across 4 files in `Paramore.Brighter.Extensions.Tests` all build `provider` from a real `ServiceCollection`/`BuildServiceProvider`, some registering the validator with `AddSingleton<IAmAPipelineValidator>` and two registering none, so `GetService` → `GetServices` preserves their behaviour exactly — including the two that register none, which is the case the empty-sequence rule above exists to protect. Named here so a later reader does not read the omission as an oversight
   - ⚠⚠ **Why this must land before T7.1, not after.** T7.1 adds a second `AddSingleton<IAmAPipelineValidator>` beside the existing `TryAddSingleton` at `BrighterPipelineValidationExtensions.cs:71`. From that commit the **last unkeyed descriptor wins**, so each of the seven sites silently resolves the *new* lifetime validator and then asserts the **core** validator's findings against it. That is a **green-to-red at runtime with no compile error to catch it** — unlike T2.3's migration, which the compiler forces. Landing the widening first makes T7.1's second registration purely additive
   - **Behaviour-preserving, and provably so**: while exactly one validator is registered, `GetServices` yields one and `Combine` over one result returns that result. `PipelineValidationResult.Combine(params PipelineValidationResult[])` already exists and is `public` (`src/Paramore.Brighter/Validation/PipelineValidationResult.cs:64`), so **nothing is added to core** and AC-22 clause 3 (T1.2) returns nothing new
-  - Be release-noted: an application-supplied `IAmAPipelineValidator` no longer replaces Brighter's validation wholesale, and both hosts now combine every registered validator (T7.14)
-  - **Done when**: the solution builds and the full existing suite is green with **no registration added** — the seven migrated sites included
+  - Be release-noted **on both halves** — behavioural: an application-supplied `IAmAPipelineValidator` no longer replaces Brighter's validation wholesale, and both hosts now combine every registered validator; **source and binary**: `BrighterValidationHostedService`'s public constructor takes `IEnumerable<IAmAPipelineValidator>` in place of `IAmAPipelineValidator`, which is why five sites in this repository break (T7.14 item 12)
+  - **Done when**: the solution builds and the full existing suite is green with **no registration added** — all twelve migrated sites included, the five construction sites among them
   - This is a **structural change** — it must NOT share a commit with behavioural change (Tidy First)
   - **Depends on**: T7.0a
   - **References**: FR-22.1, AC-24 (general clause); ADR 0074 step 5b
@@ -1330,7 +1377,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
     9. *Behavioural, ADR 0072* — the `Scoped` artefact cache stops publishing a faulted `Lazy`, on the owned path as well as the borrowed one, so it reaches a host that never opts in (issue #4260's `Scoped` half; the `Singleton` cache is unchanged) (T4.9)
     10. *Binary, ADR 0075* — `PipelineBuilder<TRequest>`'s two public dispatch constructors gain a defaulted `bool isolateSubscribers` (T5.1)
     11. *Source and binary, ADR 0076* — `IBrighterOptions` gains `DefaultScopeAffinity`, breaking a hand-rolled implementation (T3.4)
-    12. *Behavioural, ADR 0074* — both validation hosted services resolve every registered `IAmAPipelineValidator` and combine the results, so an application that registers its own no longer replaces Brighter's validation wholesale; `GetService<IAmAPipelineValidator>()` now returns whichever descriptor is last (T7.0b)
+    12. *Behavioural **and** source and binary, ADR 0074* — both validation hosted services resolve every registered `IAmAPipelineValidator` and combine the results, so an application that registers its own no longer replaces Brighter's validation wholesale; `GetService<IAmAPipelineValidator>()` now returns whichever descriptor is last. ⚠ **The source and binary half**: `BrighterValidationHostedService`'s public constructor takes `IEnumerable<IAmAPipelineValidator>` in place of `IAmAPipelineValidator`, so any caller constructing it directly must migrate. ⚠ Name **only** that type — `ServiceActivatorHostedService` resolves its validator inside `StartAsync` and its constructor is unchanged (T7.0b)
     13. *Compatibility, ADR 0074* — C-18's note: an application that calls `ValidatePipelines()` and mixes `Transient` with `Scoped` across the three lifetimes now fails to start (T7.3)
   - AC-24's four named clauses must be satisfied in terms: the `MapperLifetime.Scoped` break and its migration; C-18's compatibility note; the joint consequence for adopters (`{Scoped, Scoped, Transient}` is not a valid destination); and, for each of `IAmAMessageMapperFactory`, `IAmAMessageMapperFactoryAsync`, `IAmAMessageTransformerFactory`, `IAmAMessageTransformerFactoryAsync`, `IAmAHandlerFactorySync`, `IAmAHandlerFactoryAsync`, `IAmAHandlerFactory` and `IAmALifetime`, **what changed and how a hand-rolled implementation is migrated** — a source and binary breaking change on `netstandard2.0`, where no default interface member can absorb it
   - Both `release_notes.md` and `docs/guides/lifetimes-and-scoping.md` must state the first three of those clauses (AC-24 requires both files)
@@ -1359,27 +1406,28 @@ This phase declares types and moves a registration. It has **no acceptance crite
 | FR-2 | T1.6 (AC-2) |
 | FR-3 | T1.7 (AC-3) |
 | FR-4 | T1.8 (AC-4) |
-| FR-5 | T1.9 (AC-5), T1.10 (AC-6), T2.6 (AC-51), T6.18 (AC-38) |
-| FR-6 | T1.12 (AC-8), T2.4 (AC-7), T2.6 (AC-51) |
+| FR-5 | T1.4 (structural, the `CleanUpQuietly` guard), T1.9 (AC-5), T1.10 (AC-6), T2.2 (design-owed), T2.6 (AC-51), T6.18 (AC-38) |
+| FR-6 | T1.12 (AC-8), T2.2 (design-owed), T2.4 (AC-7), T2.6 (AC-51) |
 | FR-7 | T2.3 (AC-9) |
-| FR-8 | T2.5 (AC-10), T5.2 (AC-13), T5.3, T6.13 (AC-11), T6.14 (AC-12), T6.15 (AC-39), T6.16 (AC-47) |
-| FR-9 (a) | T5.1, T5.2 (AC-13), T6.13 (AC-11), T6.14 (AC-12) |
-| FR-9 (b) | T5.3, T6.14 (AC-12), T6.15 (AC-39), T6.16 (AC-47) |
+| FR-8 | T2.5 (AC-10), T3.3 (the suppression carrier both clauses are built on), T5.2 (AC-13), T5.3, T6.13 (AC-11), T6.14 (AC-12), T6.15 (AC-39), T6.16 (AC-47) |
+| FR-9 (a) | T3.3 (the carrier), T5.1, T5.2 (AC-13), T6.13 (AC-11), T6.14 (AC-12) |
+| FR-9 (b) | T3.3 (the carrier), T5.3, T6.14 (AC-12), T6.15 (AC-39), T6.16 (AC-47) |
 | FR-10 | T3.1, T4.3 (AC-46), T5.2 (AC-13), T6.8, T6.13 (AC-11) |
 | FR-11 (a) | T6.22 (AC-14) |
 | FR-11 (b) | T2.3 (AC-9) |
 | FR-12 | T4.4 (AC-35), T4.8 (the post-probe window), T6.4 (AC-16), T6.18 (AC-38) |
-| FR-13 | T1.11 (design-owed, transform), T2.7 (AC-33), T2.6 (AC-51), T6.7 (AC-19) |
+| FR-13 | T1.10 (AC-6), T1.11 (design-owed, transform), T2.2 (design-owed), T2.7 (AC-33), T2.6 (AC-51), T6.7 (AC-19) |
 | FR-14 | T3.4, T3.6, T6.3 (AC-15), T6.5 (AC-17), T6.9 (AC-45), T7.6 (AC-50) |
 | FR-15 | T3.4, T6.10 (AC-18), T6.19 (AC-52 negative control), T6.22 (AC-14) |
 | FR-16 (a) | T4.4, T6.5 (AC-17), T4.9 |
 | FR-16 (b) | T6.6 (AC-34) |
 | FR-16 (c) | T6.19 (AC-52) |
-| FR-17 | T3.5, T3.6, T6.3 (AC-15), T6.9 (AC-45), T6.10 (AC-18), T6.11 (AC-48), T7.6 (AC-50, the one exception), T7.8 (AC-49), T7.9 (AC-53), T7.10 (AC-43) |
+| FR-17 | T3.5, T3.6, T6.1 (the package itself), T6.3 (AC-15), T6.9 (AC-45), T6.10 (AC-18), T6.11 (AC-48), T7.6 (AC-50, the one exception), T7.8 (AC-49), T7.9 (AC-53), T7.10 (AC-43) |
 | FR-18 | T6.7 (AC-19), T4.5 (AC-31) |
 | FR-19 | T1.13 (AC-21), T5.4, T6.20 (AC-20), T6.21 (AC-55) |
 | FR-20 | T7.4 (AC-41), T7.14 (AC-24), T7.13 |
 | FR-21 | T6.12 (AC-26) |
+| FR-22 (as a whole) | T7.10 (AC-43) — ⚠ AC-43 cites **bare `FR-22`** in its own parenthetical (`requirements.md:743`) because its seven hosts span FR-22.1–FR-22.4 together. A task quoting an AC's citation is quoting it verbatim; this row is what makes the bare form resolve, and the sub-clause rows below are unaffected |
 | FR-22.1 | T7.0a (scaffolding), T7.0b (scaffolding), T7.1 (AC-27), T7.2 (AC-40) |
 | FR-22.2 | T7.0a (scaffolding), T7.3 (AC-28), T7.4 (AC-41) |
 | FR-22.3 | T7.0a (scaffolding), T7.5 (AC-42) |
@@ -1389,6 +1437,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
 | FR-24.2 | T4.2a (scaffolding), T4.5 (AC-31), T6.7 (AC-19) |
 | FR-24.3 | T4.4 (registration model), T6.10 (AC-18), T7.7 (AC-32), T7.10 (AC-43) |
 | FR-24.4 | T4.2a (scaffolding), T6.13 (AC-11) |
+| FR-25 (as a whole) | T7.8 (AC-49), T7.10 (AC-43) — ⚠ both ACs cite **bare `FR-25`** (`requirements.md:799`, `:743`), because what they assert is the obligation that a message *names the page* (`docs/guides/lifetimes-and-scoping.md`), not any one of its eleven clauses. The clauses themselves are the rows below, and neither task discharges one |
 | FR-25.1 | T5.5 |
 | FR-25.2 | T5.5 |
 | FR-25.3 | T5.5, T7.15 (citation re-verification) |
@@ -1526,13 +1575,13 @@ This phase declares types and moves a registration. It has **no acceptance crite
 | 0073 | 4c | T6.2 (`Microsoft.AspNetCore.Mvc.Testing` entry) |
 | 0073 | 5 | T7.13 (FR-25.11's three gestures) |
 | 0073 | 6 | No code — hand-off; contributes **no** release-note item |
-| 0074 | 1 | Explicitly **no Tidy-First task**, per the ADR. The XML-comment amendment lands inside T7.5 |
+| 0074 | 1 | Explicitly **no Tidy-First task in core**, per the ADR — the XML-comment amendment lands inside T7.5. ⚠ Two Tidy-First tasks *are* owed in the **DI package**, T7.0a and T7.0b; the ADR's claim is scoped to `Paramore.Brighter` |
 | 0074 | 2 | **T7.0a** (`ContainerRegistrationSnapshot` and its three queries, landed inert) |
 | 0074 | 3 | **T7.0a** (the five entity types, and the constructor selector as a **shell**, landed inert), T7.5 (the selector's **rule body**, driven by AC-42) |
 | 0074 | 4 | T7.1, T7.3, T7.4, T7.5, T7.6, T7.7, T7.8, T7.9 |
 | 0074 | 5 | T7.1 |
 | 0074 | 5a | T7.5 (exclusion set, `includeAsync: true`, the comment amendment) |
-| 0074 | 5b | **T7.0b** (both hosted services widened to `IEnumerable`, and the seven test resolution sites migrated, ahead of T7.1's second registration), T7.2 (AC-40, that the error still surfaces through the consumer host), T7.5 (`ValidationMapperRegistry`) |
+| 0074 | 5b | **T7.0b** (both hosted services widened to `IEnumerable`, and all twelve affected test sites migrated — seven resolution plus five construction — ahead of T7.1's second registration), T7.2 (AC-40, that the error still surfaces through the consumer host), T7.5 (`ValidationMapperRegistry`) |
 | 0074 | 6 | T7.1 |
 | 0074 | 7 | T7.12 (troubleshooting), T7.14 (its two release-note items) |
 | 0075 | 1 | T3.3 |
