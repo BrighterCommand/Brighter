@@ -324,6 +324,7 @@ Counts and `file:line` anchors below were re-derived against the working tree; w
   - **USE COMMAND**: `/test-first a handler factory Release that throws is logged at Error and never replaces the handler's own exception`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_handler_factory_release_throws_it_should_be_logged_and_not_reach_the_caller.cs`
+  - **Facts**: **4**, all in this one file — the handler that completes normally; ⚠ the handler whose `Handle` throws; the three tracked handlers whose first release throws; and the second `Send`. ⚠ The second is the one ADR 0071 step 6 names as *"the one an implementation is most likely to fail"* — a green on the first fact proves nothing about it. Gate once, on the first fact
   - Test should verify:
     - lifetime triple `{Scoped, Scoped, Scoped}`, **not opted in**; a handler factory whose `Release` throws `InvalidOperationException`
     - branch 1 — the handler **completes normally**: the caller observes normal completion and the handler's result unchanged, and a capturing `ILoggerProvider` for `Paramore.Brighter.*` records the release failure at `LogLevel.Error`
@@ -472,6 +473,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
     - ⚠ `Post` **in the same host**: the same exception, unwrapped, and no scope leaked. **Without this second branch an implementation that leaked the pipeline scope on the transform-pipeline build path would pass**, because the two verbs build different pipelines whose builders differ in what they clean up
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
+    - ⚠ **land the minimal ask this test needs.** No earlier task provides one: Phase 3 only *declares* `IAmAScopeProvider` (T3.1) and pins its courier's contract (T3.2); nothing resolves a provider or calls `GetAmbient`, so without this the test cannot go red for the stated reason. Resolve `_scopeProvider` **once, in the constructor** in each of the five container-backed factories — from the root `IServiceProvider` each already receives, which `ServiceProviderHandlerFactory` already holds (`:36`) and the other four gain — and make an **unconditional** `GetAmbient` call inside `CreatePipelineScope()`. ⚠ Unconditional **only until T4.3**, which puts the affinity computation and the ladder in front of it. Nothing existing moves: with no provider registered the field is null and the ask is unreachable, which is why every Phase 1–3 test stays green
     - wrap a throw from the ask in `AmbientScopeSourceException` inside `CreatePipelineScope()`, and add a clause **ahead of** each existing wrapping `catch` at all **six** sites — `PipelineBuilder.cs:202` and `:248`, `TransformPipelineBuilder.cs:116` and `:157`, and the same two lines in `TransformPipelineBuilderAsync` (all re-derived ✓) — rethrowing the inner exception through `ExceptionDispatchInfo.Capture(...).Throw()`
     - differ per family before rethrowing: the four transform-builder clauses call `CleanUpQuietly` (T1.4's named method); `PipelineBuilder`'s two call **nothing**, because those catches run no cleanup. What discharges the `Send` branch's *no scope leaked* conjunct is `PipelineBuilder.Dispose()` (`:269-270`) firing from the `using var builder` at each of `CommandProcessor`'s four dispatch sites, which this ADR does not disturb
     - leave the general clause's behaviour for every other failure untouched (AC-5 must keep passing), and add the new type to both `PipelineBuilder` filters' exclusions
@@ -493,6 +495,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **USE COMMAND**: `/test-first a recording scope provider sees zero asks for an all Transient host and one AlwaysNew ask for a mixed Scoped and Transient transform pipeline`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_no_participating_factory_is_scoped_the_ambient_source_should_not_be_asked.cs`
+  - **Facts**: **2**, both in this one file — the all-`Transient` host executing a `Send`, a `Publish` with three subscribers and a `Post`; and the `{Transient, Scoped, Transient}` host executing one `Post` from within an ambient. ⚠ The first is a **negative** fact — the recorder's zero asks *is* the assertion — so a green on the second discharges nothing. Gate once, on the first fact
   - Test should verify:
     - the recording `IAmAScopeProvider` (implemented in a test assembly with **no reference to `Microsoft.Extensions.DependencyInjection`**, recording every `GetAmbient(ScopeAffinity)` call and the affinity it carried), the affinity option `JoinAmbient`, and `ValidatePipelines()` **not** called — the second configuration is an FR-22.2 violation and this AC pins what the seam does when validation was never run (C-15)
     - ⚠ **the negative branch**: a host with `{Transient, Transient, Transient}` executing one `Send`, one `Publish` with three subscribers and one `Post` records **zero** adoption decisions and no pipeline scope taken. **The recorder's zero asks *is* the second assertion** — it must **not** be asserted over any scope object the implementation hands the pipeline, because a `Transient` handler pipeline holds a handle for ADR 0067's per-resolution isolation and `lifetime.PipelineScope is null` would be testing the wrong thing and would fail
@@ -505,7 +508,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
     - ⚠ **the affinity computation is not a ladder row.** It sits between rows 3 and 5, ahead of the ask (the `AmbientScopeSuppression.IsSuppressed` read is **ADR 0075's edit and lands in T5.2**, not here)
     - the ladder's other rows belong to other tasks and must not be implemented here: **row 4** (the source throws) is T4.2's, **row 7** (`JoinAmbient`, nothing came back) T4.5's, **rows 8 and 9** (foreign role type; failed probe) T4.6's and T4.7's, and **row 10** (BORROWED) T4.4's
     - test for `JoinAmbient` **positively**, never for `AlwaysNew` with everything else treated as adoption, so an out-of-range cast enum value degrades to `AlwaysNew` (ADR 0076 places that obligation here)
-    - keep each factory's `_scopeProvider` resolved **once, in the constructor**, from the root `IServiceProvider` it already receives, and keep that root provider as a field — `ServiceProviderHandlerFactory` already holds it (`:36`); the other four gain one
+    - ⚠ **not** re-introduce the `_scopeProvider` field or the root-provider field — **T4.2** already resolved both, once in each factory's constructor. What this task does is **replace T4.2's unconditional ask** with the affinity computation and the ladder in front of it; the two fields stay exactly as T4.2 left them
   - **Depends on**: T4.2a (which lands `AmbientScopeDiagnostics`, without which row 5 cannot warn)
   - **References**: AC-46 (FR-27.1, FR-27.2, D12, D16); ADR 0072 steps 2, 3
 
@@ -533,6 +536,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **USE COMMAND**: `/test-first a scope provider returning null on a JoinAmbient ask behaves as the unregistered case and warns exactly once`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_the_ambient_query_returns_null_it_should_be_treated_as_no_ambient.cs`
+  - **Facts**: **2**, both in this one file — the `JoinAmbient` host, whose two `Send` calls record **exactly one** `Warning` between them; and ⚠ the **second host of the same shape** under `AlwaysNew`, which records **no `Warning` at all**. The second is what stops an implementation warning on every `AlwaysNew` ask from passing. Gate once, on the first fact
   - Test should verify:
     - lifetime triple `{Scoped, Scoped, Scoped}`, the affinity option **`JoinAmbient`**, and an `IAmAScopeProvider` whose `GetAmbient` returns `null`
     - two `Send` calls both succeed with behaviour identical to the unregistered case (FR-11), and a capturing `ILoggerProvider` records **exactly one** `LogLevel.Warning` naming the **no ambient offered** condition and the provider's implementation type
@@ -721,7 +725,8 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - A `Microsoft.NET.Sdk.Web`-hosted `WebApplicationFactory` fixture, targeting `$(BrighterTestTargetFrameworks)` — re-derived at `tests/Directory.Build.props:4`: `net9.0;net10.0`
   - ⚠ Add a `Directory.Packages.props` entry for `Microsoft.AspNetCore.Mvc.Testing` (re-derived: **no such entry today**). Step 1's "no `Directory.Packages.props` entry" claim is true of the **src package only**
   - Add to `Brighter.slnx`
-  - The project has **two roles**: it hosts the eight criteria that need a running ASP.NET Core host with a controller action (AC-15, AC-16, AC-17, AC-18, AC-19, AC-34, AC-48, AC-49); and it **references the src package and deliberately never calls the extension**, which is the only arrangement in which AC-14's spy clause is about anything. That second role wants the *reference*, not a host, so the eight stay eight
+  - The project has **two roles**: it hosts the criteria that need a running ASP.NET Core host with a controller action; and in **T6.22's spy fixture alone** it **references the src package and deliberately never calls the extension**, which is the only arrangement in which AC-14's spy clause is about anything. That second role wants the *reference*, not a host
+  - ⚠ **Size it for twenty-two, not for eight.** ADR 0073 step 4a's *"eight"* is that ADR's count of the criteria **it** cites — AC-15, AC-16, AC-17, AC-18, AC-19, AC-34, AC-48, AC-49 — and step 4c hands the distribution question to task breakdown in terms: *"Which fixtures the project holds, and how those criteria are distributed across them, is task-breakdown work and is not decided here."* Re-derived against this task list: **21 test tasks are sited wholly here — T6.3 through T6.21, plus T7.6 and T7.8 — and half of T6.22, 22 in all.** T7.6 (AC-50) and T6.20 (AC-20) are here because both call `AddBrighterRequestScope(...)` and `Paramore.Brighter.Extensions.Tests` holds no reference to the package; T7.6 additionally needs a controller action
   - **Depends on**: T6.1
   - **References**: AC-15, AC-16, AC-17, AC-18, AC-19, AC-34, AC-48, AC-49, AC-14 (spy half); ADR 0073 steps 4a, 4c
 
@@ -837,6 +842,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **USE COMMAND**: `/test-first the affinity passed to the registration extension decides adoption whichever value the application assigned and whatever the registration order`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_the_extension_carries_an_affinity_argument_it_should_decide_adoption.cs`
+  - **Facts**: **4**, all in this one file — branch 1's host; branch 2's host; and branch 3, which is ⚠ **each of those two hosts built again** with the extension call moved before `AddBrighter`/`AddConsumers` — **two** further host builds, not one. Gate once, on the first fact
   - Test should verify:
     - an ASP.NET host with lifetime triple `{Scoped, Scoped, Scoped}` whose **own** `AddBrighter(Action<BrighterOptions>)` delegate sets `DefaultScopeAffinity = JoinAmbient`, which then calls the extension passing `ScopeAffinity.AlwaysNew` — the starting value is deliberately **not** the property's default — and which then registers a recording `IAmAScopeProvider` that **wraps and delegates to** the ASP.NET provider. The recorder is registered **last**, so under FR-24.3 it is the single effective provider; ⚠ **`ValidatePipelines()` is not called**, so no duplicate-implementation-type warning arises and AC-43's six single-finding hosts are unaffected
     - branch 1: `Send` from a controller — the handler's `Scoped` dependency is **not** the controller's instance and is disposed when `Send` returns, and the recorder shows **exactly one** decision for that pipeline carrying **`AlwaysNew`**
@@ -854,6 +860,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **USE COMMAND**: `/test-first the extension's affinity argument overrides an affinity the application assigned, in both directions and in both registration orders, with no validation finding`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_the_application_assigns_an_affinity_and_calls_the_extension_the_argument_should_win.cs`
+  - **Facts**: **3**, all in this one file — the host with the extension called **after** `AddBrighter`; the same with it called **before**; and the **mirror**. ⚠ Per AC-48 the mirror is a **single** configuration and is *not* repeated in both orderings, and the *no validation finding* clause is an assertion over the first two rather than a fourth fact. Gate once, on the first fact
   - Test should verify:
     - an ASP.NET host with lifetime triple `{Scoped, Scoped, Scoped}` setting `DefaultScopeAffinity = AlwaysNew` in its own `AddBrighter(Action<BrighterOptions>)` delegate **and** calling `AddBrighterRequestScope()` with no argument: the resolved `IBrighterOptions` carries **`JoinAmbient`** and the handler resolves the controller's own `Scoped` instance
     - the same with the extension call placed **before** `AddBrighter` as well as after it
@@ -885,6 +892,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **USE COMMAND**: `/test-first Publish subscribers in an opted in host never resolve the request's instance and an affinity ignoring provider is warned about once per container`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_publishing_from_an_opted_in_controller_the_subscribers_should_not_adopt.cs`
+  - **Facts**: **3**, all in this one file — branch 1's opted-in application; branch 2's hand-rolled affinity-ignoring provider; and ⚠ branch 3's **second host of the same shape**, which is **the only case in the document that pins independent latching** — a single shared latch, or one keyed on provider type alone, records one entry and fails it. Gate once, on the first fact
   - Test should verify:
     - branch 1: an opted-in ASP.NET application, lifetime triple `{Scoped, Scoped, Scoped}`, a request scope containing `IUnitOfWork` instance `R`, two subscribers for `OrderPlaced` each taking `IUnitOfWork`. After `PublishAsync(orderPlaced)` from a controller action: **neither** subscriber resolved `R`, the two resolved **two distinct** instances, both were disposed when the publish completed, and **`R` was not disposed**
     - branch 2: the same application except its ambient source is a **hand-rolled** `IAmAScopeProvider` reading the same request ambient — registered as the **only** `IAmAScopeProvider` descriptor, in place of the ASP.NET one, with the affinity option `JoinAmbient` so **no extension call is involved** — which **violates FR-10** by returning that ambient for *every* ask including `AlwaysNew` ones, with a capturing `ILoggerProvider` for `Paramore.Brighter.*`. The outcome is unchanged, **and exactly one `LogLevel.Warning`** names the **ambient offered for an `AlwaysNew` ask and ignored** condition and that provider's implementation type; a second `PublishAsync` in the same host records **no further** entry
@@ -979,6 +987,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **USE COMMAND**: `/test-first an opted in handler's DepositPost shares the controller's DbContext and transaction and rolls back with it`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_a_handler_deposits_in_an_opted_in_request_the_outbox_write_should_join_the_caller_transaction.cs`
+  - **Facts**: **3**, all in this one file — the committing run; ⚠ the **rollback** re-run, which is what makes this a test of *atomicity* rather than of ordering; and ⚠ the **negative control** under `AlwaysNew`, which asserts today's behaviour and must pass **before** any of this specification is implemented. Gate once, on the first fact
   - Test should verify:
     - an opted-in ASP.NET host (lifetime triple `{Scoped, Scoped, Scoped}`) with a `Scoped` `DbContext` registered `AddDbContext`, a relational outbox, and a `Send` handler injecting both that `DbContext` and a transaction provider over it
     - a controller action resolves the `DbContext`, opens a transaction, writes an entity, calls `Send(command)` whose handler calls `DepositPost(event, provider)`, then commits: the handler's `DbContext` is **reference-equal** to the controller's; the outbox row and the entity are visible to one another inside the transaction before the commit; after the commit both are present
@@ -993,8 +1002,10 @@ This phase declares types and moves a registration. It has **no acceptance crite
 
 - [ ] **TEST + IMPLEMENT: T6.20 — the affinity flag is inert on the consumer side**
   - **USE COMMAND**: `/test-first a mixed producer and consumer host consumes a hundred messages identically under both affinity settings and records no ambient warnings`
-  - Test location: "tests/Paramore.Brighter.Extensions.Tests"
+  - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_a_mixed_host_consumes_messages_the_affinity_flag_should_be_inert.cs`
+  - **Facts**: **2**, both in this one file — the `AlwaysNew` run and the `JoinAmbient` run, 100 messages each. ⚠ Both are largely **negative**: each asserts **zero** `Warning` entries naming any of FR-24's three conditions, and the two runs must be identical in resolution, identity and disposal. Gate once, on the first fact
+  - ⚠ **Why this project.** The host calls `AddBrighterRequestScope(...)`, so it needs the new package's reference, and `Paramore.Brighter.Extensions.Tests` does not have one. Siting it here rather than adding that reference is deliberate: it keeps **T6.2**'s *"the only arrangement"* and **T6.22**'s *"no other Brighter test project references `Microsoft.AspNetCore.Http.Abstractions`"* true, both of which a reference from `Extensions.Tests` would falsify. This task needs **no controller and no web host** — only the extension and a consumer — and T6.21 already sits here with the same consumer packages
   - Test should verify:
     - ⚠ a mixed host calling `AddBrighter(...)` **before `AddConsumers(Action<ConsumersOptions>)` — the `Action` overload specifically**, because per C-12 the `Func<IServiceProvider, ConsumersOptions>` overload throws `InvalidCastException` in this ordering — so the producer's options object is the registered `IBrighterOptions`
     - the ASP.NET provider registered by calling `AddBrighterRequestScope(...)` with the affinity supplied **as that extension's argument**, never assigned on the options object; lifetime triple `{Scoped, Scoped, Scoped}`; run once passing `AlwaysNew` and once passing `JoinAmbient`
@@ -1051,15 +1062,36 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - `ScopeConfiguration` and `ArtefactRegistration` are **records** rather than parameter lists, and `ArtefactConstructorSelector` is its own object — ADR 0074's *Technology Choices* argues both
   - **Nothing calls any of it in this commit.** No rule, no validator, no wiring in `ValidatePipelines()`
   - ⚠ **Why this is separated out.** ADR 0074's *Positive* section states that **"the rules are unit-testable without a host — a `ServiceCollection`, an options object and a `Type` are enough"**. Without this split, T7.1's single AC-27 test would drive eight new types plus the wiring in one red-green cycle, and the scaffolding for six rules that have no test yet would ship inside it
-  - `ArtefactConstructorSelector` is **testable with a `Type` alone**, so its own selection rule (the public constructor with the most parameters; where two public constructors have the same parameter count, the type is not inspected — D15) is exercised by T7.5's AC-42 clauses rather than left unguarded
+  - ⚠ **`ArtefactConstructorSelector` lands here as a shell** — the type and its signature, **no rule body**. D15's selection rule (the public constructor with the most parameters; where two public constructors have the same parameter count, the type is not inspected) is **behaviour, and lands in T7.5**, driven by AC-42's two constructor-selection clauses. Landing the rule here would put unexercised logic in a `/tidy-first` commit, which the TDD mandate forbids; the type is separated out only so that T7.5 does not also have to create the file. It is **testable with a `Type` alone**, which is why T7.5's clauses can guard it without a host
   - This is a **structural change** — it must NOT share a commit with behavioural change (Tidy First)
   - **Depends on**: T6.22 (Phase 6 complete), T3.6
   - **References**: FR-22.1, FR-22.2, FR-22.3, FR-22.4, D15, C-20; ADR 0074 steps 2, 3
+
+- [ ] **STRUCTURAL: T7.0b — widen both validation hosts to many validators, while there is still only one**
+  - **USE COMMAND**: `/tidy-first widen the two validation hosted services and the seven test resolution sites from one IAmAPipelineValidator to many`
+  - Files: `src/Paramore.Brighter.Extensions.DependencyInjection/BrighterValidationHostedService.cs` — the field (`:47`), the constructor parameter (`:60`) and `StartAsync` (`:71`, validating at `:76`); `src/Paramore.Brighter.ServiceActivator.Extensions.Hosting/ServiceActivatorHostedService.cs` (`:50-54`). All four anchors re-derived at HEAD ✓
+  - Change the field and constructor parameter to `IEnumerable<IAmAPipelineValidator>`, with `StartAsync` calling `PipelineValidationResult.Combine` over each `Validate()` **before** the existing throw-and-log block, which does not change. Change `ServiceActivatorHostedService` from `GetService` to `GetServices` and its `!= null` guard to an empty-sequence one; its throw-and-log block does not change either
+  - ⚠ **An empty sequence must behave exactly as today's `null` did** — validate nothing, throw nothing. That is what keeps a host which never called `ValidatePipelines()` unaffected
+  - ⚠ **Migrate the seven resolution sites in the existing suite in the same commit**, from `GetRequiredService<IAmAPipelineValidator>()` to `GetServices<IAmAPipelineValidator>()` combined through `PipelineValidationResult.Combine`. Re-derived at HEAD — **7 sites across 6 files**, and the discovery command is `grep -rn "GetRequiredService<IAmAPipelineValidator>\|GetService<IAmAPipelineValidator>" tests/ --include="*.cs"`:
+    - `tests/Paramore.Brighter.Core.Tests/Validation/When_validator_resolved_from_di_should_validate_through_full_path.cs:50`
+    - `tests/Paramore.Brighter.Core.Tests/Validation/When_validation_step_present_and_no_provider_through_di_should_surface_warning.cs:52`
+    - `tests/Paramore.Brighter.Core.Tests/Validation/When_validate_pipelines_with_producers_should_receive_publications.cs:57` **and** `:88` — two sites in one file
+    - `tests/Paramore.Brighter.Core.Tests/Validation/When_throw_on_error_true_with_transform_and_provider_triggers_should_not_block.cs:72`
+    - `tests/Paramore.Brighter.Core.Tests/Validation/When_publication_wrap_transform_unresolvable_through_di_should_surface_warning.cs:64`
+    - `tests/Paramore.Brighter.Extensions.Tests/When_validate_pipelines_with_consumers_should_receive_subscriptions.cs:60`
+  - ⚠⚠ **Why this must land before T7.1, not after.** T7.1 adds a second `AddSingleton<IAmAPipelineValidator>` beside the existing `TryAddSingleton` at `BrighterPipelineValidationExtensions.cs:71`. From that commit the **last unkeyed descriptor wins**, so each of the seven sites silently resolves the *new* lifetime validator and then asserts the **core** validator's findings against it. That is a **green-to-red at runtime with no compile error to catch it** — unlike T2.3's migration, which the compiler forces. Landing the widening first makes T7.1's second registration purely additive
+  - **Behaviour-preserving, and provably so**: while exactly one validator is registered, `GetServices` yields one and `Combine` over one result returns that result. `PipelineValidationResult.Combine(params PipelineValidationResult[])` already exists and is `public` (`src/Paramore.Brighter/Validation/PipelineValidationResult.cs:64`), so **nothing is added to core** and AC-22 clause 3 (T1.2) returns nothing new
+  - Be release-noted: an application-supplied `IAmAPipelineValidator` no longer replaces Brighter's validation wholesale, and both hosts now combine every registered validator (T7.14)
+  - **Done when**: the solution builds and the full existing suite is green with **no registration added** — the seven migrated sites included
+  - This is a **structural change** — it must NOT share a commit with behavioural change (Tidy First)
+  - **Depends on**: T7.0a
+  - **References**: FR-22.1, AC-24 (general clause); ADR 0074 step 5b
 
 - [ ] **TEST + IMPLEMENT: T7.1 — a wholly inert opt-in is an error, in a producer host**
   - **USE COMMAND**: `/test-first a producer host that opts in with all three lifetimes Transient fails validation with a message naming the affinity and all three lifetimes`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_the_opt_in_is_inert_validation_should_report_an_error.cs`
+  - **Facts**: **2**, both in this one file — the host with `throwOnError: true`, which must fail startup; and the same with `throwOnError: false`, which must **succeed** and log the identical message at `LogLevel.Error`. Gate once, on the first fact
   - Test should verify:
     - a **producer-only** host (`AddBrighter` alone, so `BrighterValidationHostedService` owns validation) with the affinity option `JoinAmbient`, triple `{Transient, Transient, Transient}` left at the defaults, and `ValidatePipelines()` called **last** with `throwOnError: true`
     - startup fails with `PipelineValidationException` whose message names the affinity setting, lists **all three** lifetimes and their values, states the opt-in has no effect, and contains the literal string `docs/guides/lifetimes-and-scoping.md`
@@ -1069,9 +1101,9 @@ This phase declares types and moves a registration. It has **no acceptance crite
     - ⚠ **not** add the entities or the snapshot — **T7.0a** landed `ContainerRegistrationSnapshot`, `ScopeConfiguration`, `DescriptorRecord`, `ArtefactRegistration`, `ArtefactKind` and `ArtefactConstructorSelector` inert. This task adds only what AC-27 forces
     - add `ScopeConfigurationRules` carrying **the FR-22.1 specification alone** (step 4). The other six rules arrive with their own criteria in T7.3–T7.9; do not stub them
     - add `ScopeConfigurationValidator` (**public**, `internal` constructor because C# forbids a public constructor whose parameter types are less accessible), evaluating over core's public `ISpecification<T>`, `Specification<T>` and `ValidationResultCollector<T>` with **its own harvest loop** — `PipelineValidator.EvaluateSpecs` (`:152`) is **not** extracted, moved or widened, because there is no `InternalsVisibleTo` anywhere and lifting it would put permanent public API on core's `netstandard2.0` surface (step 5)
-    - wire it in `ValidatePipelines()`: keep the existing `TryAddSingleton` returning the core validator at `:71` and add one `AddSingleton` returning this one (step 6)
+    - wire it in `ValidatePipelines()`: keep the existing `TryAddSingleton` returning the core validator at `:71` and add one `AddSingleton` returning this one (step 6). ⚠ This registration is **additive only because T7.0b already landed** — both hosted services now resolve `IEnumerable<IAmAPipelineValidator>` and combine, and the seven direct resolution sites in the existing suite were migrated with them. Without that, the second descriptor would win resolution and silently displace the core validator
     - read the three lifetimes and the affinity from the object **`IBrighterOptions` resolves to**, with the override already applied — not from `IOptions<BrighterOptions>.Value`, which is a different object on three of the four paths
-  - **Depends on**: T7.0a, T6.22 (Phase 6 complete), T3.6
+  - **Depends on**: T7.0b (without which this task's own registration breaks the existing suite), T7.0a, T6.22 (Phase 6 complete), T3.6
   - **References**: AC-27 (FR-22.1, D5); ADR 0074 steps 2, 3, 4, 5, 6
 
 - [ ] **TEST + IMPLEMENT: T7.2 — the same error fires in a consumer host**
@@ -1085,17 +1117,15 @@ This phase declares types and moves a registration. It has **no acceptance crite
     - startup still fails with `PipelineValidationException` carrying the same message — surfaced by `ServiceActivatorHostedService`, not `BrighterValidationHostedService`
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
-    - change `BrighterValidationHostedService`'s field and constructor parameter (`:47`, `:60`) to `IEnumerable<IAmAPipelineValidator>`, with `StartAsync` (`:71`, validating at `:76`) calling `PipelineValidationResult.Combine` over each `Validate()` **before** the existing throw-and-log block, which does not change
-    - change `ServiceActivatorHostedService` (`:50-54`) from `GetService` to `GetServices` and its `!= null` guard to an empty-sequence one; its throw-and-log block does not change either
-    - ⚠ make an **empty sequence behave exactly as today's `null` did** — validate nothing, throw nothing — which is what keeps the change safe in a host that never called `ValidatePipelines()`
-    - be release-noted: an application-supplied `IAmAPipelineValidator` no longer replaces Brighter's validation wholesale (T7.14)
-  - **Depends on**: T7.1
+    - ⚠ **need nothing new.** **T7.0b** widened both hosted services to `IEnumerable<IAmAPipelineValidator>` and made them combine; **T7.1** registered the lifetime validator beside the core one. What this criterion adds is the proof that the error still reaches the caller when the **consumer** host owns validation — surfaced by `ServiceActivatorHostedService`, not `BrighterValidationHostedService`. If it fails, the fault is in T7.0b's widening or T7.1's registration, not here
+  - **Depends on**: T7.1, T7.0b
   - **References**: AC-40 (FR-22.1, C-12, C-15, D14), AC-24 (general clause); ADR 0074 step 5b
 
 - [ ] **TEST + IMPLEMENT: T7.3 — mixing `Transient` and `Scoped` is an error under either affinity setting**
   - **USE COMMAND**: `/test-first a host mixing Transient and Scoped across the three lifetimes fails validation under both affinity settings`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_transient_and_scoped_are_mixed_validation_should_report_an_error.cs`
+  - **Facts**: **3**, all in this one file — the `JoinAmbient` run and the `AlwaysNew` run, which must **both** fail because the error is not conditional on affinity; and the `throwOnError: false` run, which must succeed and log. Gate once, on the first fact
   - Test should verify:
     - a producer-only host with `{HandlerLifetime = Scoped, MapperLifetime = Transient, TransformerLifetime = Scoped}` and `ValidatePipelines()` called last with `throwOnError: true`, run once with affinity `JoinAmbient` and once with `AlwaysNew`
     - **both** runs fail with `PipelineValidationException` whose message lists all three lifetimes with their values, states the mixed pair do not share pipeline-scoped dependencies, and contains `docs/guides/lifetimes-and-scoping.md` — **the error is not conditional on affinity**
@@ -1111,6 +1141,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **USE COMMAND**: `/test-first Singleton lifetimes are discarded before the consistency rule compares the remainder`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_lifetime_is_singleton_it_should_be_discarded_from_the_consistency_rule.cs`
+  - **Facts**: **5**, all in this one file — the four triples that must raise **nothing** (`{Scoped, Singleton, Scoped}`, `{Singleton, Singleton, Singleton}`, `{Transient, Singleton, Transient}`, `{Transient, Transient, Transient}`), and the fifth `{Scoped, Singleton, Transient}` that **must** fail. ⚠ Four of the five are negative; only the fifth proves the rule still fires. Gate once, on the first fact
   - Test should verify:
     - a producer-only host with `ValidatePipelines()` called last with `throwOnError: true`, over four triples: `{Scoped, Singleton, Scoped}`, `{Singleton, Singleton, Singleton}`, `{Transient, Singleton, Transient}` and `{Transient, Transient, Transient}` — **none** raises the consistency error
     - a fifth triple `{Scoped, Singleton, Transient}` — startup **does** fail with the consistency error, because discarding `Singleton` leaves `{Scoped, Transient}`
@@ -1125,7 +1156,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **USE COMMAND**: `/test-first a Singleton mapper requiring a Scoped service is reported as one warning and the four bounds of the detection contract are pinned`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_singleton_artefact_requires_a_scoped_service_validation_should_warn.cs`
-  - **Facts**: **9**, all in this one file — the nine mapper/transform/host configurations AC-42 enumerates, including the **two that assert no warning for different reasons** (the `Paramore.Brighter.*` prefix exclusion, and the mapper case that pins C-20(iv)'s deliberate asymmetry). Gate once, on the first fact
+  - **Facts**: **9**, all in this one file — the nine mapper/transform/host configurations AC-42 enumerates. ⚠ Re-derived: **six of the nine assert *no* warning** and only three assert one, so a green on the first fact proves very little. ⚠ Note in particular the **pair sharing the `Paramore.Brighter.Extensions.Tests` assembly and differing in outcome** — the prefix-excluded *transform* asserts **no** warning, while the C-20(iv) *mapper* in that same assembly asserts **one**. Same assembly, opposite outcome. Gate once, on the first fact
   - Test should verify:
     - a producer-only host with `{Transient, Singleton, Transient}` — FR-22.2-conformant because `Singleton` is discarded and the remainder is uniform — and `ValidatePipelines()` called last with `throwOnError: true`
     - a mapper whose **single** constructor requires `IOrderDbContext` registered `AddScoped`: startup **succeeds** (a warning, not an error) and **exactly one** warning names both the mapper type and `IOrderDbContext`, and contains `docs/guides/lifetimes-and-scoping.md`
@@ -1139,7 +1170,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
     - a mapper with two public constructors of the **same** parameter count, one taking `IOrderDbContext` and one not: **no** warning. ⚠ That mapper is **not activatable by MS DI at all**, so the test asserts **validation output only and must not resolve the mapper**
   - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
   - Implementation should:
-    - add `ArtefactConstructorSelector` as its own object implementing **only** D15's rule (widest, tie → none, no public constructor or parameterless → nothing inspected)
+    - ⚠ **not** create `ArtefactConstructorSelector` — **T7.0a** landed the type and its signature as a shell. **Fill in its rule body**, implementing **only** D15's rule (widest, tie → none, no public constructor or parameterless → nothing inspected), which is what AC-42's two constructor-selection clauses drive
     - add `ArtefactExclusionSet.Build(pipelineBuilder, registry, publications, subscriptions)`. The **handler half** comes from `PipelineBuilder<IRequest>.Describe()` (`PipelineBuilder.cs:151`), an *instance* method, so the registration delegate constructs a builder of its own over its own `sp`, exactly as `BrighterPipelineValidationExtensions.cs:73-75` does; the **transform half** from `TransformPipelineBuilder.DescribeTransforms` (`:270`) called with ⚠ **`includeAsync: true`** — the two-argument overload at `:255` defaults it to `false`, under which a transform declared only on an async-resolved mapper is warned against as the application's
     - ⚠ walk **only the transform half** over request types. `Describe()` is parameterless and enumerates the subscriber registry itself (`:146-162`); an implementation that walks the handler half over publications and subscriptions produces an empty transform half in a host whose `ResolvePublications` returns `null` (`:135-142`), and then warns against the very transform the `Paramore.Brighter.Extensions.Tests` clause asserts no warning for
     - add `ValidationMapperRegistry` (registered in `ValidatePipelines()`), wrapping a `Lazy<MessageMapperRegistry>?` — null exactly when no `ServiceCollectionMessageMapperRegistryBuilder` was registered — exposing `Value` for the exclusion set and `Factory` for `PipelineValidator`'s existing `mapperRegistryFactory`, both null over the same condition. It is `IDisposable` and the container drains it. Double disposal is safe because `MessageMapperRegistry.Dispose()` claims with a single `Interlocked.Exchange` (`:360-362`)
@@ -1151,8 +1182,9 @@ This phase declares types and moves a registration. It has **no acceptance crite
 
 - [ ] **TEST + IMPLEMENT: T7.6 — an opt-in defeated by an application's own `IBrighterOptions` registration is reported, not silent**
   - **USE COMMAND**: `/test-first a host whose own IBrighterOptions registration defeats the opt-in is reported as one error on every path and in either ordering`
-  - Test location: "tests/Paramore.Brighter.Extensions.Tests"
+  - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_the_application_registers_its_own_brighter_options_the_defeated_opt_in_should_be_reported.cs`
+  - ⚠ **Why this project and not `Extensions.Tests`.** AC-50's *Given* is **an ASP.NET host**, its *When* is **a controller action calls `Send`**, and two of its *Then* clauses turn on the controller's own `Scoped` instance — the base host asserts the handler does **not** resolve it, the control host asserts it **does**. Neither is expressible without a controller. Every one of the nine facts also calls `AddBrighterRequestScope()`, so all nine need the package reference regardless; splitting the criterion would not avoid that and would break a criterion the ACs treat as one
   - **Facts**: **9**, all in this one file — the base host (`throwOnError: false`); the same with `throwOnError: true`; the application registration placed *after* `AddBrighter`; the extension passed `AlwaysNew` over a pre-registered `AlwaysNew`; the extension placed *before* `AddBrighter`; one host on **each of the other three entry points**; and the **control host**. ⚠ The last is the one that makes the other eight mean anything — it must produce **no** finding. Gate once, on the first fact
   - Test should verify:
     - a host registering its own options object **before** Brighter — `services.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = Scoped, MapperLifetime = Scoped, TransformerLifetime = Scoped })`, an FR-22.2-conformant triple so no lifetime rule fires — then `AddBrighter(Action<BrighterOptions>)` whose delegate sets no lifetime, and `AddBrighterRequestScope()` with no argument; `ValidatePipelines()` called **last** with ⚠ **`throwOnError: false`**, so startup proceeds and the runtime clauses are reachable
@@ -1171,13 +1203,14 @@ This phase declares types and moves a registration. It has **no acceptance crite
     - answer the second conjunct by asking ADR 0076's `BrighterOptionsRegistration` (T3.5), which arrives as the `ImplementationInstance` of a descriptor for its own service type and so needs no query of its own. **Do not attempt to recognise Brighter's registration by inspecting a delegate**
     - read the **unkeyed** population only: Brighter's factories resolve `IBrighterOptions` unkeyed, so a rule taking "the last descriptor of any kind" would raise a false `Error` against a host that registered a keyed `IBrighterOptions` for its own purposes
     - note the two hosts the rule deliberately leaves silent: an application that registers `IBrighterOptions` and never opts in (re-derived at HEAD: **125 files under `tests/` register `IBrighterOptions` themselves**, none of which opts in), and a mixed host where whichever side won registered through `RegisterBrighterOptions`
-  - **Depends on**: T7.5, T3.5
+  - **Depends on**: T7.5, T3.5, T6.2 (the test project and its ASP.NET host)
   - **References**: AC-50 (FR-22.4, FR-17, FR-14, C-12, C-15, D14, D18); ADR 0074 step 4, ADR 0076 step 2
 
 - [ ] **TEST + IMPLEMENT: T7.7 — duplicate scope providers: the last registration wins, and the duplicate is reported**
   - **USE COMMAND**: `/test-first two distinct scope providers produce one warning naming both and the pipeline resolves through the last registered one`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_two_distinct_scope_providers_are_registered_validation_should_report_the_duplicate.cs`
+  - **Facts**: **2**, both in this one file — the host registering two **distinct** provider implementations, and ⚠ the control registering the **same** implementation type twice, which must produce **no** warning. Without the control, an implementation warning on any two descriptors passes. Gate once, on the first fact
   - Test should verify:
     - two **distinct** `IAmAScopeProvider` implementations, each registered with a plain `services.AddSingleton<IAmAScopeProvider, T>()` in a **stated order** (FR-24.3 forbids `TryAdd` here precisely so both descriptors exist), `ValidatePipelines()` called **after both registrations** (C-15's snapshot semantics), and lifetime triple `{Scoped, Scoped, Scoped}`
     - validation reports **exactly one** warning naming **both** provider types, identifying the **last**-registered one as effective, and containing `docs/guides/lifetimes-and-scoping.md`
@@ -1195,6 +1228,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **USE COMMAND**: `/test-first calling the registration extension twice with different affinities takes the last call's value and reports one warning naming both`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_the_registration_extension_is_called_twice_the_last_call_should_win_and_be_reported.cs`
+  - **Facts**: **3**, all in this one file — the host calling the extension `AlwaysNew` then `JoinAmbient`; the second host in the **reversed** order, which pins *last call wins* rather than *most permissive wins*; and ⚠ the third host calling it twice with the **same** affinity, which must report **no** finding. Gate once, on the first fact
   - Test should verify:
     - an ASP.NET host, lifetime triple `{Scoped, Scoped, Scoped}`, calling the extension **twice** — first `ScopeAffinity.AlwaysNew`, then `ScopeAffinity.JoinAmbient` — with `ValidatePipelines()` called **after both calls**
     - the resolved `IBrighterOptions` carries **`JoinAmbient`** and the handler resolves the controller's own `Scoped` instance, so the affinity and the provider agree on which call won
@@ -1214,6 +1248,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **USE COMMAND**: `/test-first an affinity override registered by factory delegate produces a warning about the registration shape while still taking effect`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_an_affinity_override_is_registered_by_factory_delegate_validation_should_report_the_shape.cs`
+  - **Facts**: **3**, all in this one file — the factory-delegate host, which must **succeed** under `throwOnError: true` and report one `Warning`; the second host registering **two** overrides, where FR-17's repeated-opt-in `Warning` must **not** appear alongside it; and ⚠ the third host registering its override as a **constructed instance**, which must report **no** finding at all. Gate once, on the first fact
   - Test should verify:
     - a host with an FR-22.2-conformant `{Scoped, Scoped, Scoped}` triple registering an affinity override **by factory delegate** — `AddSingleton(sp => new ScopeAffinityOverride(x))`, the shape a third-party opt-in package can write since the type is public in the DI package — with `ValidatePipelines()` called last and ⚠ **`throwOnError: true` (the default, which a warning must not trip)**
     - startup **succeeds**, and **exactly one** `Warning` states that an affinity override is registered by factory delegate, that its value cannot be read without resolving, that the remedy is to register it as a constructed instance, and contains `docs/guides/lifetimes-and-scoping.md`
@@ -1268,7 +1303,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **References**: AC-25 (troubleshooting clause), AC-43, AC-44, FR-25.10, NFR-10, C-15, D14; ADR 0074 (clause-to-source map, clause 10; *Both host shapes, enumerated*)
 
 - [ ] **DOC: T7.13 — guidance page part 4: the transaction consequence, the breaks and migration, the captive-dependency hazard, and the extension's three gestures**
-  - No test beyond AC-36's read and AC-44's walk
+  - No test beyond AC-36's read and AC-44's walk. **Verified by**: **T7.15**'s reviewer walk
   - File: `docs/guides/lifetimes-and-scoping.md`
   - Content:
     - **FR-25.5 (AC-36)** — that in-process `Publish` subscribers, **and pipelines nested inside them**, cannot join a transaction the caller opened, and that **the outbox is the answer**. Substance is ADR 0075's, from its subscriber brackets; nothing is re-decided
@@ -1295,7 +1330,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
     9. *Behavioural, ADR 0072* — the `Scoped` artefact cache stops publishing a faulted `Lazy`, on the owned path as well as the borrowed one, so it reaches a host that never opts in (issue #4260's `Scoped` half; the `Singleton` cache is unchanged) (T4.9)
     10. *Binary, ADR 0075* — `PipelineBuilder<TRequest>`'s two public dispatch constructors gain a defaulted `bool isolateSubscribers` (T5.1)
     11. *Source and binary, ADR 0076* — `IBrighterOptions` gains `DefaultScopeAffinity`, breaking a hand-rolled implementation (T3.4)
-    12. *Behavioural, ADR 0074* — both validation hosted services resolve every registered `IAmAPipelineValidator` and combine the results, so an application that registers its own no longer replaces Brighter's validation wholesale; `GetService<IAmAPipelineValidator>()` now returns whichever descriptor is last (T7.2)
+    12. *Behavioural, ADR 0074* — both validation hosted services resolve every registered `IAmAPipelineValidator` and combine the results, so an application that registers its own no longer replaces Brighter's validation wholesale; `GetService<IAmAPipelineValidator>()` now returns whichever descriptor is last (T7.0b)
     13. *Compatibility, ADR 0074* — C-18's note: an application that calls `ValidatePipelines()` and mixes `Transient` with `Scoped` across the three lifetimes now fails to start (T7.3)
   - AC-24's four named clauses must be satisfied in terms: the `MapperLifetime.Scoped` break and its migration; C-18's compatibility note; the joint consequence for adopters (`{Scoped, Scoped, Transient}` is not a valid destination); and, for each of `IAmAMessageMapperFactory`, `IAmAMessageMapperFactoryAsync`, `IAmAMessageTransformerFactory`, `IAmAMessageTransformerFactoryAsync`, `IAmAHandlerFactorySync`, `IAmAHandlerFactoryAsync`, `IAmAHandlerFactory` and `IAmALifetime`, **what changed and how a hand-rolled implementation is migrated** — a source and binary breaking change on `netstandard2.0`, where no default interface member can absorb it
   - Both `release_notes.md` and `docs/guides/lifetimes-and-scoping.md` must state the first three of those clauses (AC-24 requires both files)
@@ -1328,32 +1363,32 @@ This phase declares types and moves a registration. It has **no acceptance crite
 | FR-6 | T1.12 (AC-8), T2.4 (AC-7), T2.6 (AC-51) |
 | FR-7 | T2.3 (AC-9) |
 | FR-8 | T2.5 (AC-10), T5.2 (AC-13), T5.3, T6.13 (AC-11), T6.14 (AC-12), T6.15 (AC-39), T6.16 (AC-47) |
-| FR-9 (a) | T5.2 (AC-13), T6.13 (AC-11), T6.14 (AC-12) |
+| FR-9 (a) | T5.1, T5.2 (AC-13), T6.13 (AC-11), T6.14 (AC-12) |
 | FR-9 (b) | T5.3, T6.14 (AC-12), T6.15 (AC-39), T6.16 (AC-47) |
 | FR-10 | T3.1, T4.3 (AC-46), T5.2 (AC-13), T6.8, T6.13 (AC-11) |
 | FR-11 (a) | T6.22 (AC-14) |
 | FR-11 (b) | T2.3 (AC-9) |
-| FR-12 | T4.4 (AC-35), T6.4 (AC-16), T6.18 (AC-38) |
+| FR-12 | T4.4 (AC-35), T4.8 (the post-probe window), T6.4 (AC-16), T6.18 (AC-38) |
 | FR-13 | T1.11 (design-owed, transform), T2.7 (AC-33), T2.6 (AC-51), T6.7 (AC-19) |
-| FR-14 | T3.4, T6.3 (AC-15), T6.5 (AC-17), T6.9 (AC-45), T7.6 (AC-50) |
+| FR-14 | T3.4, T3.6, T6.3 (AC-15), T6.5 (AC-17), T6.9 (AC-45), T7.6 (AC-50) |
 | FR-15 | T3.4, T6.10 (AC-18), T6.19 (AC-52 negative control), T6.22 (AC-14) |
-| FR-16 (a) | T6.5 (AC-17), T4.9 |
+| FR-16 (a) | T4.4, T6.5 (AC-17), T4.9 |
 | FR-16 (b) | T6.6 (AC-34) |
 | FR-16 (c) | T6.19 (AC-52) |
-| FR-17 | T3.6, T6.3 (AC-15), T6.9 (AC-45), T6.10 (AC-18), T6.11 (AC-48), T7.8 (AC-49), T7.9 (AC-53), T7.10 (AC-43) |
+| FR-17 | T3.5, T3.6, T6.3 (AC-15), T6.9 (AC-45), T6.10 (AC-18), T6.11 (AC-48), T7.6 (AC-50, the one exception), T7.8 (AC-49), T7.9 (AC-53), T7.10 (AC-43) |
 | FR-18 | T6.7 (AC-19), T4.5 (AC-31) |
 | FR-19 | T1.13 (AC-21), T5.4, T6.20 (AC-20), T6.21 (AC-55) |
-| FR-20 | T7.14 (AC-24), T7.13 |
+| FR-20 | T7.4 (AC-41), T7.14 (AC-24), T7.13 |
 | FR-21 | T6.12 (AC-26) |
-| FR-22.1 | T7.1 (AC-27), T7.2 (AC-40) |
-| FR-22.2 | T7.3 (AC-28), T7.4 (AC-41) |
-| FR-22.3 | T7.5 (AC-42) |
-| FR-22.4 | T7.6 (AC-50) |
-| FR-23 | T4.6 (AC-29), T4.7 (AC-54), T4.8 (design-owed) |
+| FR-22.1 | T7.0a (scaffolding), T7.0b (scaffolding), T7.1 (AC-27), T7.2 (AC-40) |
+| FR-22.2 | T7.0a (scaffolding), T7.3 (AC-28), T7.4 (AC-41) |
+| FR-22.3 | T7.0a (scaffolding), T7.5 (AC-42) |
+| FR-22.4 | T3.5, T7.0a (scaffolding), T7.6 (AC-50) |
+| FR-23 | T4.2a (scaffolding), T4.6 (AC-29), T4.7 (AC-54), T4.8 (design-owed) |
 | FR-24.1 | T3.2, T4.2 (AC-30) |
-| FR-24.2 | T4.5 (AC-31), T6.7 (AC-19) |
-| FR-24.3 | T4.4 (registration model), T7.7 (AC-32) |
-| FR-24.4 | T6.13 (AC-11) |
+| FR-24.2 | T4.2a (scaffolding), T4.5 (AC-31), T6.7 (AC-19) |
+| FR-24.3 | T4.4 (registration model), T6.10 (AC-18), T7.7 (AC-32), T7.10 (AC-43) |
+| FR-24.4 | T4.2a (scaffolding), T6.13 (AC-11) |
 | FR-25.1 | T5.5 |
 | FR-25.2 | T5.5 |
 | FR-25.3 | T5.5, T7.15 (citation re-verification) |
@@ -1493,11 +1528,11 @@ This phase declares types and moves a registration. It has **no acceptance crite
 | 0073 | 6 | No code — hand-off; contributes **no** release-note item |
 | 0074 | 1 | Explicitly **no Tidy-First task**, per the ADR. The XML-comment amendment lands inside T7.5 |
 | 0074 | 2 | **T7.0a** (`ContainerRegistrationSnapshot` and its three queries, landed inert) |
-| 0074 | 3 | **T7.0a** (the five entity types and the constructor selector, landed inert), T7.5 (the selector's rule exercised by AC-42) |
+| 0074 | 3 | **T7.0a** (the five entity types, and the constructor selector as a **shell**, landed inert), T7.5 (the selector's **rule body**, driven by AC-42) |
 | 0074 | 4 | T7.1, T7.3, T7.4, T7.5, T7.6, T7.7, T7.8, T7.9 |
 | 0074 | 5 | T7.1 |
 | 0074 | 5a | T7.5 (exclusion set, `includeAsync: true`, the comment amendment) |
-| 0074 | 5b | T7.2 (both hosted services), T7.5 (`ValidationMapperRegistry`) |
+| 0074 | 5b | **T7.0b** (both hosted services widened to `IEnumerable`, and the seven test resolution sites migrated, ahead of T7.1's second registration), T7.2 (AC-40, that the error still surfaces through the consumer host), T7.5 (`ValidationMapperRegistry`) |
 | 0074 | 6 | T7.1 |
 | 0074 | 7 | T7.12 (troubleshooting), T7.14 (its two release-note items) |
 | 0075 | 1 | T3.3 |
@@ -1526,7 +1561,7 @@ Nothing is left without a task. Four coverage notes are recorded honestly rather
 
 ### Scope creep
 
-None. Every task traces to an AC, to a named FR/NFR clause, or to an ADR step. The six tasks with no AC are each named as **design-owed** or **scaffolding** by an ADR, and each carries its FR/NFR trace:
+None. Every task traces to an AC, to a named FR/NFR clause, or to an ADR step. Re-derived: **eleven** `TEST + IMPLEMENT` tasks carry no acceptance criterion **of their own** — the remaining 51 carry the 55 ACs between them. Each of the eleven is named as **design-owed** or **scaffolding** by an ADR, and each carries its FR/NFR trace. ⚠ Five of them (`T1.14`, `T3.6`, `T4.9`, `T5.3`, `T5.4`) *mention* an AC on their `References` line as a **cross-reference** — "AC-24 (general clause)", "AC-45 completes it at T6.9", "AC-20, AC-55 discharge it at Phase 6" — which is not the same as carrying one, and a grep for `AC-` will miscount them:
 
 - T1.11 — FR-13's transform-side disposal clause (ADR 0070 step 9a names it *design-owed*)
 - T1.14 — FR-1 on its last surviving path (ADR 0070 step 9, release-noted)
