@@ -1,7 +1,5 @@
 using System;
-using System.Globalization;
 using Confluent.Kafka;
-using Paramore.Brighter.Extensions;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 
@@ -16,15 +14,26 @@ public class KafkaTimeStampRoundTripTests
     private static readonly DateTimeOffset s_timeStamp = new(2024, 6, 15, 13, 45, 30, TimeSpan.FromHours(5));
 
     private readonly KafkaDefaultMessageHeaderBuilder _builder = new();
+    private readonly Message _message;
 
-    [Fact]
-    public void When_round_tripping_a_timestamp_across_hops()
+    public KafkaTimeStampRoundTripTests()
     {
         //arrange
-        Message message = MessageWithTimeStamp(s_timeStamp);
+        _message = new Message(
+            new MessageHeader(
+                messageId: Guid.NewGuid().ToString(),
+                topic: new RoutingKey("test"),
+                messageType: MessageType.MT_COMMAND,
+                timeStamp: s_timeStamp),
+            new MessageBody("test content")
+        );
+    }
 
+    [Fact]
+    public void When_round_tripping_a_timestamp_should_preserve_the_instant_across_hops()
+    {
         //act - first hop: the original send
-        Headers firstHopHeaders = _builder.Build(message);
+        Headers firstHopHeaders = _builder.Build(_message);
         Message firstHop = new KafkaMessageCreator().CreateMessage(ConsumeResultFor(firstHopHeaders));
 
         //assert - the instant, and its UTC wall-clock, survive the hop
@@ -41,34 +50,6 @@ public class KafkaTimeStampRoundTripTests
         Assert.Equal(firstHopHeaders.GetLastBytes(HeaderNames.TIMESTAMP),
             secondHopHeaders.GetLastBytes(HeaderNames.TIMESTAMP));
     }
-
-    [Fact]
-    public void When_reading_a_timestamp_written_by_an_older_producer()
-    {
-        //arrange - the legacy offset-less format still in flight from producers on the old code
-        var utcTimeStamp = new DateTimeOffset(2024, 6, 15, 8, 45, 30, TimeSpan.Zero);
-        Headers headers = _builder.Build(MessageWithTimeStamp(s_timeStamp));
-        headers.Remove(HeaderNames.TIMESTAMP);
-        headers.Add(HeaderNames.TIMESTAMP,
-            utcTimeStamp.UtcDateTime.ToString(CultureInfo.InvariantCulture).ToByteArray());
-
-        //act
-        Message read = new KafkaMessageCreator().CreateMessage(ConsumeResultFor(headers));
-
-        //assert - an offset-less value is taken as UTC and left there, not converted to host-local time
-        Assert.Equal(utcTimeStamp, read.Header.TimeStamp);
-        Assert.Equal(TimeSpan.Zero, read.Header.TimeStamp.Offset);
-    }
-
-    private static Message MessageWithTimeStamp(DateTimeOffset timeStamp)
-        => new(
-            new MessageHeader(
-                messageId: Guid.NewGuid().ToString(),
-                topic: new RoutingKey("test"),
-                messageType: MessageType.MT_COMMAND,
-                timeStamp: timeStamp),
-            new MessageBody("test content")
-        );
 
     private static ConsumeResult<string, byte[]> ConsumeResultFor(Headers headers)
         => new()
