@@ -1,9 +1,10 @@
 #region Licence
+
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
+of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
@@ -12,7 +13,7 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -27,27 +28,19 @@ using System;
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// Tracks the handler instances that a handler pipeline has created.
+    /// A handle to the DI scope a transform pipeline takes for its lifetime.
     /// </summary>
     /// <remarks>
-    /// <see cref="HandlerLifetimeScope"/> is the default implementation.
+    /// One <see cref="IAmAScope"/> is created per pipeline by whichever participating factory can offer
+    /// one, and disposed when the pipeline is released. Every mapper and transform in the pipeline
+    /// resolves from the same scope, so a container-registered <c>Scoped</c> dependency shared by a
+    /// mapper and its transforms is one instance for that pipeline.
     /// <para>
-    /// Distinct from <see cref="IAmAScope"/>, which is a DI scope handle shared by the mapper and
-    /// transform factories that serve a single transform pipeline.
+    /// Distinct from <see cref="IAmALifetime"/>, which tracks the handler instances a handler pipeline
+    /// has created and carries no DI scope of its own.
     /// </para>
     /// </remarks>
-    public interface IAmALifetime : IDisposable
+    public interface IAmAScope : IDisposable, IAsyncDisposable
     {
-        /// <summary>
-        /// Adds the specified instance.
-        /// </summary>
-        /// <param name="instance">The instance.</param>
-        void Add(IHandleRequests instance);
-
-        /// <summary>
-        /// Adds the specified instance of an async handler.
-        /// </summary>
-        /// <param name="instance">The instance.</param>
-        void Add(IHandleRequestsAsync instance);
     }
 }
