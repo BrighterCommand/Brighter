@@ -74,7 +74,7 @@ Counts and `file:line` anchors below were re-derived against the working tree; w
   - **Depends on**: T1.1
   - **References**: NFR-1(b), NFR-1(c), C-19; ADR 0070 step 2
 
-- [ ] **STRUCTURAL: T1.4 — lift the inline failed-build cleanup guard to a private `CleanUpQuietly` on both transform builders**
+- [x] **STRUCTURAL: T1.4 — lift the inline failed-build cleanup guard to a private `CleanUpQuietly` on both transform builders**
   - **USE COMMAND**: `/tidy-first extract the inline failed-build cleanup guard in TransformPipelineBuilder and TransformPipelineBuilderAsync to a private CleanUpQuietly method`
   - Files: `src/Paramore.Brighter/TransformPipelineBuilder.cs` (`:116-125` wrap, `:157-166` unwrap — re-derived, both `catch (Exception e)` at `:116` and `:157`), `src/Paramore.Brighter/TransformPipelineBuilderAsync.cs` (the same two lines, re-derived: `catch (Exception e)` at `:116` and `:157`)
   - `CleanUpQuietly` calls `CleanUpAfterFailedBuild` and logs a cleanup failure rather than letting it mask the error the caller needs. Behaviour is unchanged; it is lifted here because ADR 0072 step 1b adds a second clause that needs the identical cleanup as a **named** method
