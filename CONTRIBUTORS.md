@@ -1,6 +1,10 @@
 Brighter contributors (sorted alphabeticaly)
 ============================================l
 
+**[Abhishek](https://github.com/Abhishek84313)**
+  * Kafka message timestamp UTC round-tripping fix
+  * Test generator rejection, dead letter and delay conformance design
+
 **[Vicenç García Altés](https://github.com/vgaltes)**
   * Various fixes 
 
