@@ -27,7 +27,7 @@ Counts and `file:line` anchors below were re-derived against the working tree; w
 
 ## Phase 1 — ADR 0070: per-pipeline DI scope for the mapper and transform factories
 
-- [ ] **STRUCTURAL: T1.1 — add `IAmAScope` to core, with the NFR-8 disambiguation on it and on `IAmALifetime`**
+- [x] **STRUCTURAL: T1.1 — add `IAmAScope` to core, with the NFR-8 disambiguation on it and on `IAmALifetime`**
   - **USE COMMAND**: `/tidy-first add the IAmAScope pipeline scope handle to Paramore.Brighter with XML documentation distinguishing it from IAmALifetime`
   - Files: `src/Paramore.Brighter/IAmAScope.cs` (new); `src/Paramore.Brighter/IAmALifetime.cs` (XML documentation only)
   - `public interface IAmAScope : IDisposable, IAsyncDisposable` with no members; `Microsoft.Bcl.AsyncInterfaces` is already conditioned on `netstandard2.0` at `src/Paramore.Brighter/Paramore.Brighter.csproj:24`, so no new dependency
@@ -36,7 +36,7 @@ Counts and `file:line` anchors below were re-derived against the working tree; w
   - **Depends on**: nothing
   - **References**: NFR-8, C-8; ADR 0070 step 1
 
-- [ ] **TEST + IMPLEMENT: T1.2 — Core declares no container types and no package creeps into core, the DI package or the ServiceActivator**
+- [x] **TEST + IMPLEMENT: T1.2 — Core declares no container types and no package creeps into core, the DI package or the ServiceActivator**
   - **USE COMMAND**: `/test-first the solution's project files and core source declare no container or ASP.NET types`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Architecture"
   - Test file: `When_the_solution_is_built_it_should_declare_no_container_types_in_core.cs` (class `DependencyBoundaryTests`)
@@ -52,7 +52,7 @@ Counts and `file:line` anchors below were re-derived against the working tree; w
   - **Depends on**: T1.1
   - **References**: AC-22 (NFR-1, NFR-2, NFR-3)
 
-- [ ] **STRUCTURAL: T1.3 — the six mapper/transform interfaces gain `CreatePipelineScope()` and the scope parameter, and every implementation in the repository moves with them**
+- [x] **STRUCTURAL: T1.3 — the six mapper/transform interfaces gain `CreatePipelineScope()` and the scope parameter, and every implementation in the repository moves with them**
   - **USE COMMAND**: `/tidy-first add CreatePipelineScope and the IAmAScope parameter to the four mapper and transformer factory interfaces and the two mapper registries, moving every implementation in one change`
   - Files:
     - core interfaces: `IAmAMessageMapperFactory`, `IAmAMessageMapperFactoryAsync`, `IAmAMessageTransformerFactory`, `IAmAMessageTransformerFactoryAsync` (`CreatePipelineScope()`; `IAmAScope? scope = null` on `Create`); `IAmAMessageMapperRegistry`, `IAmAMessageMapperRegistryAsync` (`CreatePipelineScope()`; scope on `Get<T>`/`GetAsync<T>`)
