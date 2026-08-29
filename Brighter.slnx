@@ -214,6 +214,11 @@
     <Project Path="samples/WebAPI/WebAPI_EFCore/SalutationAnalytics/SalutationAnalytics.csproj" />
     <Project Path="samples/WebAPI/WebAPI_EFCore/SalutationApp/SalutationApp.csproj" />
   </Folder>
+  <Folder Name="/samples/WebAPI/WebAPI_mTLS_TestHarness/">
+    <File Path="samples/WebAPI/WebAPI_mTLS_TestHarness/README.md" />
+    <File Path="samples/WebAPI/WebAPI_mTLS_TestHarness/tests.http" />
+    <Project Path="samples/WebAPI/WebAPI_mTLS_TestHarness/TodoApi/TodoApi.csproj" />
+  </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
     <File Path="Directory.Build.props" />
