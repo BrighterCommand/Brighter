@@ -36,7 +36,7 @@ Brighter contributors (sorted alphabeticaly)
 **[A Craven](https://github.com/acraven)**
   * Various fixes
 
-**[@MikeFreeman](https://github.com/MikeFreeman-Flagstone)**
+**[MikeFreeman](https://github.com/MikeFreeman-Flagstone)**
  * Archiver Fixes
 
 **[Abhishek Gajavilli](https://github.com/Abhishek84313)**
@@ -181,7 +181,7 @@ Brighter contributors (sorted alphabeticaly)
   * Clean up the ILog constructor
   * Clean up the CancellationToken
 
-**[Jakub Syty](https://github.com/jakoss)
+**[Jakub Syty](https://github.com/jakoss)**
   * Various Fixes
   * MongoDb EF Integration 
 
