@@ -23,13 +23,48 @@ Accepted
 
 ## Context
 
-**Scope**: which component disposes the mapper registry and the mapper/transform factories, so the per-resolution scopes of ADR 0067 are actually reclaimed.
+**Scope**: which component disposes the mapper registry and the mapper/transform factories, so the per-resolution DI scopes of ADR 0067 are actually reclaimed.
 
-A per-resolution scope that a caller fails to release is drained only when its factory is disposed (ADR 0067). For an IoC-backed factory nothing else can reach those factories to dispose them, so an owner must — and must do so exactly once, without disposing a factory or registry that another owner is still using.
+A per-resolution DI scope that a caller fails to release is drained only when its factory is disposed (ADR 0067). For an IoC-backed factory nothing else can reach those factories to dispose them, so an owner must — and must do so exactly once, without disposing a factory or registry that another owner is still using.
+
+### Where this ADR sits
+
+Four ADRs came out of the #4252 lifetime work, one decision each, and they are meant to be read in order:
+
+| ADR | Decides |
+| --- | --- |
+| 0066 | what a factory returns, so that `Release` can name the resolution it is releasing |
+| 0067 | that a `Transient` resolution gets its own DI scope, tracked by scope identity and released idempotently |
+| 0068 | that disposal is deterministic on the explicit path and best-effort in the finalizer |
+| **0069** *(this one)* | who owns, and therefore who disposes, the registry and the factories |
+
+ADRs 0070–0074 then build on all four: they give a *pipeline* its own DI scope, and let it join one the host already owns. The ownership rule stated here is why the *registry* is the object that speaks for the factories it holds.
 
 ## Decision
 
 Disposal follows ownership: **the component that created a disposable disposes it, and disposal cascades from the owner down.**
+
+### The mechanism, end to end
+
+Ownership is declared, not inferred, and it defaults to *not* owning. The cascade only runs as far as the flags say it may:
+
+```mermaid
+flowchart TB
+    di["the DI composition — news up a registry and<br/>transform factories solely for one root"] -- "passes true" --> roots
+    manual["manual wiring and the control bus — a registry<br/>routinely shared between a bus and a Dispatcher"] -- "leaves the flags at their false default" --> roots
+
+    roots["OutboxProducerMediator (producer)<br/>Dispatcher (consumer)<br/>both IDisposable, both take ownsRegistry and ownsTransformerFactories"]
+
+    roots -- "only for a flag it was told it owns" --> reg["MessageMapperRegistry"]
+    roots -- "only for a flag it was told it owns" --> tf["the two transform factories"]
+
+    reg -- "always: it created them" --> mf["the sync and async mapper factories,<br/>disposed in a try/finally so a fault draining one<br/>cannot orphan the scopes retained by the other"]
+
+    mf --> scopes["the per-resolution DI scopes of ADR 0067,<br/>reclaimed at the latest when their factory is disposed"]
+    tf --> scopes
+
+    noncre["pipeline validation and diagnostics — take a Func that<br/>builds a registry, never a registry instance"] -- "own and dispose only what they<br/>themselves built" --> scopes
+```
 
 ### The registry owns its factories
 
@@ -50,7 +85,7 @@ Components that receive a registry they did not create do not dispose it. The pi
 
 ### Positive
 
-- Every per-resolution scope is reclaimed at the latest when its owning root is disposed, bounding retention to the host lifetime; in the DI path each root gets its own registry and factories, so disposal is airtight.
+- Every per-resolution DI scope is reclaimed at the latest when its owning root is disposed, bounding retention to the host lifetime; in the DI path each root gets its own registry and factories, so disposal is airtight.
 
 ### Negative
 

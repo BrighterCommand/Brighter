@@ -12,13 +12,24 @@
     - Preserve Flexibility
         - Design objects so interior details can be readily changed
     - Objects have roles.
+        - A role is the collection of an object's responsibilities, expressed as one phrase saying what the object does.
+        - If you cannot express it in one phrase, the object has too many responsibilities. Responsibility-driven design restates the single responsibility principle as the **single role principle**.
+        - An object may hold several responsibilities, and they may be of different kinds — knowing, doing and deciding.
         - Common roles are stereotypes: information holder, structurer, service provider, coordinator, controller, interfacer
+        - Name an object's **collaborators** — the objects it works with to meet its responsibilities. Describing a role without them is half the picture, and a responsibility with no collaborator is either self-contained or in the wrong object.
 - Support optionality through interfaces.
     - If an interface describes a role that an implementor provides, use the naming convention IAmA* e.g. `public interface IAmAProducerRegistry { }`
     - Consider if a user might wish to override our implementation of a public class with theirs, for TDD, or extension.
     - If so, provide an interface for them to override.
     - It is acceptable in that case to use an interface, even if we have one implementation.
     - For internal classes, only provide an interface if there is optionality.
+- Decide visibility by what belongs on the package boundary.
+    - A type is `public` if it belongs on its package's boundary — to be **used** from outside the assembly, or to be **tested** from outside it.
+    - A type is `internal` only when nothing outside its own assembly has a consumer for it. That is the exception, not the default: the great majority of types in `src/` are public.
+    - Our test projects are separate assemblies, so a type that needs a test of its own is on the boundary by that fact alone.
+    - **Never use `InternalsVisibleTo` to reach across packages.** There is no such attribute anywhere in this solution and none should be added: it hides a boundary type instead of admitting it is one. If a type must be reached from another assembly, make it public; if it genuinely must not be, do not write a test that needs to name it.
+    - Where the type belongs on the boundary but its construction does not, prefer a `public` type with an `internal` constructor over making the whole type `internal`.
+    - Making a type public is a decision to support it. Say in XML documentation what it is for, and where it is public for our own reach rather than for an application's use, say that in `<remarks>`.
 - Avoid primitive obsession.
     - Where a primitive (string, int, bool, double, float etc.) could be replaced with a more expressive type, use a class, struct or record.
     - Only use int for numeric values that have no domain meaning; only use string for string values that have no domain meaning.

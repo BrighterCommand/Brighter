@@ -22,7 +22,20 @@ Accepted
 
 ## Context
 
-**Scope**: how the transform pipeline, the transform lifetime scope and the DI lifetime scope release the mapper/transform resolutions they own.
+**Scope**: how `TransformPipeline`/`TransformPipelineAsync`, `TransformLifetimeScope`/`TransformLifetimeScopeAsync` and `ServiceProviderLifetimeScope` release the mapper/transform resolutions they own. "Scope" below means a DI scope (Microsoft's `IServiceScope`); the `*LifetimeScope` types are the helpers that own them, not scopes themselves (see *Terms* in ADR 0067).
+
+### Where this ADR sits
+
+Four ADRs came out of the #4252 lifetime work, one decision each, and they are meant to be read in order:
+
+| ADR | Decides |
+| --- | --- |
+| 0066 | what a factory returns, so that `Release` can name the resolution it is releasing |
+| 0067 | that a `Transient` resolution gets its own DI scope, tracked by scope identity and released idempotently |
+| **0068** *(this one)* | that disposal is deterministic on the explicit path and best-effort in the finalizer |
+| 0069 | who owns, and therefore who disposes, the registry and the factories |
+
+ADRs 0070–0074 then build on all four: they give a *pipeline* its own DI scope, and let it join one the host already owns. The rule stated here is the one the pipeline scope's release has to satisfy.
 
 Closing the per-message scope leak (ADR 0067) moved the release of a mapper/transform from something that used to happen incidentally to something a caller must do at a well-defined point. Two forces then apply at once:
 
@@ -32,6 +45,25 @@ Closing the per-message scope leak (ADR 0067) moved the release of a mapper/tran
 ## Decision
 
 Disposal is **deterministic on the explicit path and best-effort on the finalizer**, with the finalizer as a safety net only.
+
+### The mechanism, end to end
+
+The same drain runs on both paths. What differs is what happens when a release throws: the explicit path reports every failure, the finalizer swallows every failure, and neither may leave the remainder unreleased.
+
+```mermaid
+flowchart TB
+    d(["something must release its tracked resolutions"]) --> how{"explicit Dispose,<br/>or the finalizer?"}
+
+    how -- "explicit — deterministic" --> e1["claim the release-once guard, Interlocked.Exchange"]
+    e1 --> e2["for each tracked object: REMOVE it first, then release it<br/>inside a per-item try/catch, collecting failures rather than stopping"]
+    e2 --> e3["throw one AggregateException carrying every failure"]
+    e3 --> e4["GC.SuppressFinalize in a finally, so a throwing release<br/>still de-registers the object from finalization"]
+
+    how -- "finalizer — best-effort" --> f1["run the same synchronous drain, inside a catch-all"]
+    f1 --> f2["release what it can and swallow everything, including the<br/>AggregateException above: a finalizer must never throw"]
+
+    e2 -. "remove-before-release is what reconciles the two:<br/>a finalizer retry re-runs over the shortened list" .-> f1
+```
 
 ### Explicit dispose drains everything and surfaces failures together
 
