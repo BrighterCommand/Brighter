@@ -38,6 +38,9 @@ Brighter contributors (sorted alphabeticaly)
 
 **[@MikeFreeman](https://github.com/MikeFreeman-Flagstone)**
  * Archiver Fixes
+
+**[Abhishek Gajavilli](https://github.com/Abhishek84313)
+  * Various fixes
   
 **[Bob Gregory](https://github.com/BobFromHuddle)**
   * Various fixes
