@@ -248,15 +248,19 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (headers.TryGetLastBytesIgnoreCase(HeaderNames.TIMESTAMP, out var lastHeader))
             {
-                //Additional testing for a non unixtimestamp string
-                if (DateTime.TryParse(lastHeader!.FromByteArray(), DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal, out DateTime timestamp))
+                //Additional testing for a non unixtimestamp string. Parse offset-aware: we write RFC 3339, so
+                //the offset is on the wire and is honoured. AssumeUniversal covers the legacy offset-less
+                //format still in flight from older producers, and AdjustToUniversal keeps the result anchored
+                //to UTC instead of re-stamping it with the host offset - which drifted the instant per hop.
+                if (DateTimeOffset.TryParse(lastHeader!.FromByteArray(), DateTimeFormatInfo.InvariantInfo,
+                        DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out DateTimeOffset timestamp))
                 {
                     return new HeaderResult<DateTimeOffset>(timestamp, true);
                 }
 
                 try
                 {
-                    return new HeaderResult<DateTimeOffset>(DateTimeOffset.FromUnixTimeMilliseconds(BitConverter.ToInt64(lastHeader!, 0)).DateTime, true);
+                    return new HeaderResult<DateTimeOffset>(DateTimeOffset.FromUnixTimeMilliseconds(BitConverter.ToInt64(lastHeader!, 0)), true);
                 }
                 catch (Exception)
                 {
