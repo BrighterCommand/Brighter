@@ -119,8 +119,7 @@ namespace Paramore.Brighter
                 //release them here rather than leak them. Cleanup may throw (Release/Dispose surface
                 //exceptions), so guard it: a disposal failure must not mask the configuration error
                 //the caller needs to see.
-                try { CleanUpAfterFailedBuild(pipeline, transformLeases, messageMapperLease); }
-                catch (Exception cleanupException) { Log.FailedToCleanUpAfterFailedBuild(s_logger, cleanupException); }
+                CleanUpQuietly(pipeline, transformLeases, messageMapperLease);
                 throw new ConfigurationException("Error building wrap pipeline for outgoing message, see inner exception for details", e);
             }
         }
@@ -160,8 +159,7 @@ namespace Paramore.Brighter
                 //release them here rather than leak them. Cleanup may throw (Release/Dispose surface
                 //exceptions), so guard it: a disposal failure must not mask the configuration error
                 //the caller needs to see.
-                try { CleanUpAfterFailedBuild(pipeline, transformLeases, messageMapperLease); }
-                catch (Exception cleanupException) { Log.FailedToCleanUpAfterFailedBuild(s_logger, cleanupException); }
+                CleanUpQuietly(pipeline, transformLeases, messageMapperLease);
                 throw new ConfigurationException("Error building unwrap pipeline for outgoing message, see inner exception for details", e);
             }
         }
@@ -242,6 +240,18 @@ namespace Paramore.Brighter
 
             if (transformLeases is not null) ReleaseTransforms(transformLeases);
             if (messageMapperLease is not null) _mapperRegistryAsync.Release(messageMapperLease);
+        }
+
+        //Cleanup may throw (Release/Dispose surface exceptions), so this guards it: a disposal failure
+        //must not mask the configuration error the caller of a failed build needs to see.
+        private void CleanUpQuietly<TRequest>(
+            TransformPipelineAsync<TRequest>? pipeline,
+            IEnumerable<Lease<IAmAMessageTransformAsync>>? transformLeases,
+            Lease<IAmAMessageMapperAsync<TRequest>>? messageMapperLease)
+            where TRequest : class, IRequest
+        {
+            try { CleanUpAfterFailedBuild(pipeline, transformLeases, messageMapperLease); }
+            catch (Exception cleanupException) { Log.FailedToCleanUpAfterFailedBuild(s_logger, cleanupException); }
         }
 
         public static void ClearPipelineCache()
