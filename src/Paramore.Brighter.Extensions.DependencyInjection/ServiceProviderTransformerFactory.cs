@@ -47,12 +47,19 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         }
 
         /// <summary>
+        /// Offers no pipeline scope yet; the container-backed pipeline scope offer lands with the
+        /// <c>Scoped</c> lifetime behaviour.
+        /// </summary>
+        public IAmAScope? CreatePipelineScope() => null;
+
+        /// <summary>
         /// Creates a specific transformer on demand.
         /// Lifetime is determined by <see cref="IBrighterOptions.TransformerLifetime"/>.
         /// </summary>
         /// <param name="transformerType">The type of transformer to create</param>
+        /// <param name="scope">Ignored for now; see <see cref="CreatePipelineScope"/>.</param>
         /// <returns>The created transformer instance</returns>
-        public Lease<IAmAMessageTransform>? Create(Type transformerType)
+        public Lease<IAmAMessageTransform>? Create(Type transformerType, IAmAScope? scope = null)
         {
             var transform = _lifetimeScope.GetOrCreate<IAmAMessageTransform>(transformerType, out var releaseToken);
             return transform is null ? null : new Lease<IAmAMessageTransform>(transform, releaseToken);

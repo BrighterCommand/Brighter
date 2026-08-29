@@ -48,12 +48,19 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         }
 
         /// <summary>
+        /// Offers no pipeline scope yet; the container-backed pipeline scope offer lands with the
+        /// <c>Scoped</c> lifetime behaviour.
+        /// </summary>
+        public IAmAScope? CreatePipelineScope() => null;
+
+        /// <summary>
         /// Create an instance of the async message mapper type from the .NET IoC container.
         /// Lifetime is determined by <see cref="IBrighterOptions.MapperLifetime"/>.
         /// </summary>
         /// <param name="messageMapperType">The type of mapper to instantiate</param>
+        /// <param name="scope">Ignored for now; see <see cref="CreatePipelineScope"/>.</param>
         /// <returns>The created mapper instance</returns>
-        public Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType)
+        public Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType, IAmAScope? scope = null)
         {
             var mapper = _lifetimeScope.GetOrCreate<IAmAMessageMapperAsync>(messageMapperType, out var releaseToken);
             return mapper is null ? null : new Lease<IAmAMessageMapperAsync>(mapper, releaseToken);

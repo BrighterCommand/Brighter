@@ -251,7 +251,9 @@ public class UnwrapTransformResolvableTests
     {
         public bool Disposed { get; private set; }
 
-        public Lease<IAmAMessageMapper>? Create(System.Type messageMapperType) => null;
+        public IAmAScope? CreatePipelineScope() => null;
+
+        public Lease<IAmAMessageMapper>? Create(System.Type messageMapperType, IAmAScope? scope = null) => null;
 
         public void Release(Lease<IAmAMessageMapper>? lease) { }
 
