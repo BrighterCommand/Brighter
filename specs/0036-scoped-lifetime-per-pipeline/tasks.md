@@ -102,7 +102,7 @@ Counts and `file:line` anchors below were re-derived against the working tree; w
   - **Depends on**: T1.3, T1.4
   - **References**: AC-1 (FR-1, NFR-5); ADR 0070 steps 3, 5, 6, 8
 
-- [ ] **TEST + IMPLEMENT: T1.6 — a `Scoped` transform is one instance per transform pipeline, on both builders**
+- [x] **TEST + IMPLEMENT: T1.6 — a `Scoped` transform is one instance per transform pipeline, on both builders**
   - **USE COMMAND**: `/test-first a Scoped unwrap transform is constructed once per transform pipeline on both the sync and async builders`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_consuming_two_messages_a_scoped_transform_should_not_be_reused.cs`
