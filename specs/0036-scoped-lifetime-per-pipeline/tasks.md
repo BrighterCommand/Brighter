@@ -178,7 +178,7 @@ Counts and `file:line` anchors below were re-derived against the working tree; w
   - **Depends on**: T1.9
   - **References**: AC-6 (FR-5, FR-13); ADR 0070 steps 4a, 4b, 6
 
-- [ ] **TEST + IMPLEMENT: T1.11 — design-owed: a completed transform pipeline whose owned scope disposal throws returns its result unchanged**
+- [x] **TEST + IMPLEMENT: T1.11 — design-owed: a completed transform pipeline whose owned scope disposal throws returns its result unchanged**
   - **USE COMMAND**: `/test-first a Post whose transform pipeline completes and whose pipeline scope disposal throws returns unchanged and logs one Error`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_completed_transform_pipeline_scope_disposal_throws_the_post_should_still_succeed.cs`
