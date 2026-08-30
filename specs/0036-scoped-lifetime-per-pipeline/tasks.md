@@ -118,7 +118,7 @@ Counts and `file:line` anchors below were re-derived against the working tree; w
   - **Depends on**: T1.5
   - **References**: AC-2 (FR-2); ADR 0070 steps 3, 6
 
-- [ ] **TEST + IMPLEMENT: T1.7 — within one transform pipeline the mapper and its transforms share one `Scoped` dependency (Defect 1b)**
+- [x] **TEST + IMPLEMENT: T1.7 — within one transform pipeline the mapper and its transforms share one `Scoped` dependency (Defect 1b)**
   - **USE COMMAND**: `/test-first a container Scoped dependency injected into a mapper and its unwrap transform is one instance for the pipeline`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_mapping_a_message_the_mapper_and_its_transform_should_share_one_scoped_dependency.cs`
