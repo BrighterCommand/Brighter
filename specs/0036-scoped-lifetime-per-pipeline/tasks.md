@@ -132,7 +132,7 @@ Counts and `file:line` anchors below were re-derived against the working tree; w
   - **Depends on**: T1.6
   - **References**: AC-3 (FR-3, C-19); ADR 0070 steps 3, 6, 7
 
-- [ ] **TEST + IMPLEMENT: T1.8 — producer transform pipelines scope per `Post`/`DepositPost`**
+- [x] **TEST + IMPLEMENT: T1.8 — producer transform pipelines scope per `Post`/`DepositPost`**
   - **USE COMMAND**: `/test-first two Post calls from a console host resolve two distinct Scoped mapper instances, the first disposed before the second is constructed`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_posting_twice_from_a_console_host_each_post_should_get_its_own_scoped_mapper.cs`
