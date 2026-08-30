@@ -101,7 +101,7 @@ namespace Paramore.Brighter
                 scope = CreatePipelineScope();
                 messageMapperLease = FindMessageMapper<TRequest>(scope);
 
-                transformLeases = BuildTransformPipeline<TRequest>(FindWrapTransforms(messageMapperLease.Instance));
+                transformLeases = BuildTransformPipeline<TRequest>(FindWrapTransforms(messageMapperLease.Instance), scope);
 
                 pipeline = new WrapPipeline<TRequest>(messageMapperLease, _messageTransformerFactory, transformLeases, _instrumentationOptions, _mapperRegistry, scope);
 
@@ -143,7 +143,7 @@ namespace Paramore.Brighter
                 scope = CreatePipelineScope();
                 messageMapperLease = FindMessageMapper<TRequest>(scope);
 
-                transformLeases = BuildTransformPipeline<TRequest>(FindUnwrapTransforms(messageMapperLease.Instance));
+                transformLeases = BuildTransformPipeline<TRequest>(FindUnwrapTransforms(messageMapperLease.Instance), scope);
 
                 pipeline = new UnwrapPipeline<TRequest>(transformLeases, _messageTransformerFactory, messageMapperLease, _mapperRegistry, scope);
 
@@ -173,7 +173,7 @@ namespace Paramore.Brighter
             //answers "is there a pipeline?", so there is nothing to release and no probe to leak
             => _mapperRegistry.ResolveMapperInfo(typeof(TRequest)).MapperType is not null;
 
-        private IEnumerable<Lease<IAmAMessageTransform>> BuildTransformPipeline<TRequest>(IEnumerable<TransformAttribute> transformAttributes)
+        private IEnumerable<Lease<IAmAMessageTransform>> BuildTransformPipeline<TRequest>(IEnumerable<TransformAttribute> transformAttributes, IAmAScope? scope)
             where TRequest : class, IRequest
         {
             var transforms = new List<Lease<IAmAMessageTransform>>();
@@ -192,7 +192,7 @@ namespace Paramore.Brighter
             {
                 transformAttributes.Each((attribute) =>
                 {
-                    var transformerLease = new TransformerFactory<TRequest>(attribute, _messageTransformerFactory).CreateMessageTransformer();
+                    var transformerLease = new TransformerFactory<TRequest>(attribute, _messageTransformerFactory).CreateMessageTransformer(scope);
                     transforms.Add(transformerLease);
                 });
             }
