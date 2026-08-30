@@ -25,14 +25,23 @@ THE SOFTWARE. */
 namespace Paramore.Brighter.Extensions.Tests.TestDoubles;
 
 /// <summary>
-/// A <c>Scoped</c>-registered dependency whose <see cref="PoisonedDependency"/> implementation throws
-/// from <see cref="System.IDisposable.Dispose"/>, so a container that resolved it before some other
-/// constructor parameter failed still tracks it for disposal — and disposing the pipeline scope that
-/// resolved it then throws too. Injected into <see cref="PoisonedScopeMapper"/> alongside
-/// <see cref="IUnregisteredDependency"/>, and into <see cref="PoisonedScopeCompletingMapper"/> on its
-/// own, where the pipeline completes and the scope's disposal failure surfaces on a successful
-/// <c>Post</c> instead.
+/// A mapper for <see cref="PoisonedScopeCompletingCommand"/> whose constructor resolves
+/// <see cref="IPoisonedDependency"/> successfully — so the pipeline scope tracks it for disposal — and
+/// whose <see cref="MapToMessage"/> carries no <c>[WrapWith]</c> transform, so the wrap pipeline always
+/// builds and completes. Disposing the pipeline afterwards disposes the scope, which then throws from
+/// <see cref="IPoisonedDependency"/>'s own <c>Dispose()</c> — unlike <see cref="PoisonedScopeMapper"/>,
+/// where the pipeline never finishes building in the first place.
 /// </summary>
-public interface IPoisonedDependency
+public sealed class PoisonedScopeCompletingMapper : IAmAMessageMapper<PoisonedScopeCompletingCommand>
 {
+    public PoisonedScopeCompletingMapper(IPoisonedDependency poisoned)
+    {
+    }
+
+    public IRequestContext? Context { get; set; }
+
+    public Message MapToMessage(PoisonedScopeCompletingCommand request, Publication publication) =>
+        new(new MessageHeader(request.Id, new RoutingKey("test"), MessageType.MT_COMMAND), new MessageBody("test"));
+
+    public PoisonedScopeCompletingCommand MapToRequest(Message message) => new();
 }

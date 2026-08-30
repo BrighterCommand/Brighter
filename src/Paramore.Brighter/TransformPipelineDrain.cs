@@ -53,7 +53,8 @@ namespace Paramore.Brighter
         /// <param name="disposeScope">Disposes the transform lifetime scope (a no-op when there is none).</param>
         /// <param name="releaseMapper">Releases the mapper lease back to its registry.</param>
         /// <param name="releaseScope">Releases the pipeline's own DI scope (a no-op when there is none).</param>
-        internal static void Drain(Action disposeScope, Action releaseMapper, Action releaseScope)
+        /// <param name="requestType">The pipeline's request type name, named in a scope-release failure's log entry.</param>
+        internal static void Drain(Action disposeScope, Action releaseMapper, Action releaseScope, string requestType)
         {
             try
             {
@@ -90,8 +91,15 @@ namespace Paramore.Brighter
             finally
             {
                 //leases go back to their factories first, then the pipeline's own DI scope is released, so a
-                //factory that still needs its Release to run is not resolving against a dead scope
-                releaseScope();
+                //factory that still needs its Release to run is not resolving against a dead scope. Caught
+                //and logged here, rather than left to the caller's own cleanup guard, so a scope-release
+                //failure after a *completed* pipeline gets its own Error record and does not join steps 1/2's
+                //AggregateException composition above
+                try { releaseScope(); }
+                catch (Exception scopeReleaseException)
+                {
+                    Log.FailedToDisposePipelineScope(s_logger, requestType, scopeReleaseException);
+                }
             }
         }
 
@@ -103,8 +111,10 @@ namespace Paramore.Brighter
         /// <param name="disposeScopeAsync">Disposes the transform lifetime scope (a no-op when there is none).</param>
         /// <param name="releaseMapperAsync">Releases the mapper lease back to its registry.</param>
         /// <param name="releaseScopeAsync">Releases the pipeline's own DI scope (a no-op when there is none).</param>
+        /// <param name="requestType">The pipeline's request type name, named in a scope-release failure's log entry.</param>
         internal static async ValueTask DrainAsync(
-            Func<ValueTask> disposeScopeAsync, Func<ValueTask> releaseMapperAsync, Func<ValueTask> releaseScopeAsync)
+            Func<ValueTask> disposeScopeAsync, Func<ValueTask> releaseMapperAsync, Func<ValueTask> releaseScopeAsync,
+            string requestType)
         {
             try
             {
@@ -141,8 +151,13 @@ namespace Paramore.Brighter
             finally
             {
                 //leases go back to their factories first, then the pipeline's own DI scope is released, so a
-                //factory that still needs its Release to run is not resolving against a dead scope
-                await releaseScopeAsync().ConfigureAwait(false);
+                //factory that still needs its Release to run is not resolving against a dead scope. Caught
+                //and logged here for the same reason as Drain's synchronous finally above
+                try { await releaseScopeAsync().ConfigureAwait(false); }
+                catch (Exception scopeReleaseException)
+                {
+                    Log.FailedToDisposePipelineScope(s_logger, requestType, scopeReleaseException);
+                }
             }
         }
 

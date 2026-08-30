@@ -22,17 +22,17 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+
 namespace Paramore.Brighter.Extensions.Tests.TestDoubles;
 
 /// <summary>
-/// A <c>Scoped</c>-registered dependency whose <see cref="PoisonedDependency"/> implementation throws
-/// from <see cref="System.IDisposable.Dispose"/>, so a container that resolved it before some other
-/// constructor parameter failed still tracks it for disposal — and disposing the pipeline scope that
-/// resolved it then throws too. Injected into <see cref="PoisonedScopeMapper"/> alongside
-/// <see cref="IUnregisteredDependency"/>, and into <see cref="PoisonedScopeCompletingMapper"/> on its
-/// own, where the pipeline completes and the scope's disposal failure surfaces on a successful
-/// <c>Post</c> instead.
+/// A minimal command with no payload of its own, mapped only by <see cref="PoisonedScopeCompletingMapper"/>.
+/// Kept distinct from <see cref="PoisonedScopeCommand"/> and the other <c>TestDoubles</c> commands
+/// because assembly-scanning mapper registration rejects two public mappers for the same request type
+/// anywhere in the test assembly.
 /// </summary>
-public interface IPoisonedDependency
+public sealed class PoisonedScopeCompletingCommand : Command
 {
+    public PoisonedScopeCompletingCommand() : base(Guid.NewGuid()) { }
 }

@@ -89,7 +89,8 @@ namespace Paramore.Brighter
                     {
                         if (_pipelineScope is not null)
                             await _pipelineScope.DisposeAsync().ConfigureAwait(false);
-                    }).ConfigureAwait(false);
+                    },
+                    requestType: typeof(TRequest).Name).ConfigureAwait(false);
             }
             finally
             {
@@ -123,7 +124,8 @@ namespace Paramore.Brighter
             TransformPipelineDrain.Drain(
                 disposeScope: () => InstanceScope?.Dispose(),
                 releaseMapper: () => _mapperRegistry?.Release(MapperLease),
-                releaseScope: () => _pipelineScope?.Dispose());
+                releaseScope: () => _pipelineScope?.Dispose(),
+                requestType: typeof(TRequest).Name);
         }
     }
 }

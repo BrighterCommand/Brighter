@@ -72,7 +72,8 @@ namespace Paramore.Brighter
             TransformPipelineDrain.Drain(
                 disposeScope: () => InstanceScope?.Dispose(),
                 releaseMapper: () => _mapperRegistry?.Release(MapperLease),
-                releaseScope: () => _pipelineScope?.Dispose());
+                releaseScope: () => _pipelineScope?.Dispose(),
+                requestType: typeof(TRequest).Name);
         }
     }
 }
