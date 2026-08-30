@@ -145,7 +145,7 @@ Counts and `file:line` anchors below were re-derived against the working tree; w
   - **Depends on**: T1.7
   - **References**: AC-4 (FR-4); ADR 0070 step 8
 
-- [ ] **TEST + IMPLEMENT: T1.9 — a failed transform-pipeline build releases the owned pipeline scope and preserves the configuration error**
+- [x] **TEST + IMPLEMENT: T1.9 — a failed transform-pipeline build releases the owned pipeline scope and preserves the configuration error**
   - **USE COMMAND**: `/test-first a thousand failing Post attempts leak no Brighter-created scopes and each still throws ConfigurationException carrying the original resolution failure`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_pipeline_build_fails_repeatedly_it_should_leak_no_scopes.cs`
