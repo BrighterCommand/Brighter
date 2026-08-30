@@ -196,7 +196,7 @@ Counts and `file:line` anchors below were re-derived against the working tree; w
   - **Depends on**: T1.10
   - **References**: FR-13 (disposal clause, transform side); ADR 0070 steps 5, 9a (verification table, *design-owed test* row)
 
-- [ ] **TEST + IMPLEMENT: T1.12 — disposing a Brighter-created pipeline scope twice is a no-op and does not affect a concurrently live pipeline**
+- [x] **TEST + IMPLEMENT: T1.12 — disposing a Brighter-created pipeline scope twice is a no-op and does not affect a concurrently live pipeline**
   - **USE COMMAND**: `/test-first disposing an IAmAScope twice is a no-op and leaves a concurrently live pipeline's scope usable`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_pipeline_scope_is_disposed_twice_it_should_not_throw_or_affect_another_pipeline.cs`
