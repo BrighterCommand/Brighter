@@ -25,6 +25,8 @@ THE SOFTWARE. */
 using System;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter
 {
@@ -35,8 +37,13 @@ namespace Paramore.Brighter
     /// helper holds that ordering and error-composition in one place so the sync and async pipelines cannot
     /// drift apart; each caller supplies only the concrete scope-dispose and mapper-release actions.
     /// </summary>
-    internal static class TransformPipelineDrain
+    internal static partial class TransformPipelineDrain
     {
+        //TransformPipelineDrain is static, so it cannot be a generic argument to ApplicationLogging.CreateLogger<T>();
+        //this is the same category a generic call would have produced
+        private static readonly ILogger s_logger = ApplicationLogging.LoggerFactory.CreateLogger(typeof(TransformPipelineDrain));
+
+
         /// <summary>
         /// Runs the drain synchronously: dispose the transform scope, then release the mapper, holding any
         /// scope failure so the mapper release still runs and neither error masks the other; the pipeline's
@@ -137,6 +144,12 @@ namespace Paramore.Brighter
                 //factory that still needs its Release to run is not resolving against a dead scope
                 await releaseScopeAsync().ConfigureAwait(false);
             }
+        }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Error, "Failed to dispose the pipeline scope for {RequestType} after the transform pipeline completed; the pipeline's result is unaffected.")]
+            public static partial void FailedToDisposePipelineScope(ILogger logger, string requestType, Exception exception);
         }
     }
 }

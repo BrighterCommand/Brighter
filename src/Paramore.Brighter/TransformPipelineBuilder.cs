@@ -253,7 +253,13 @@ namespace Paramore.Brighter
             }
             finally
             {
-                scope?.Dispose();
+                //logged and swallowed here, rather than left to the outer CleanUpQuietly guard, so this
+                //event writes exactly one Error record and not also a Warning for the same failure
+                try { scope?.Dispose(); }
+                catch (Exception disposalException)
+                {
+                    Log.FailedToDisposePipelineScopeAfterFailedBuild(s_logger, typeof(TRequest).Name, disposalException);
+                }
             }
         }
 
@@ -439,6 +445,9 @@ namespace Paramore.Brighter
 
             [LoggerMessage(LogLevel.Warning, "Failed to release resources while cleaning up after a failed pipeline build; the build error is preserved and rethrown. A repeated failure here points at a mapper/transform Release or Dispose that throws.")]
             public static partial void FailedToCleanUpAfterFailedBuild(ILogger logger, Exception exception);
+
+            [LoggerMessage(LogLevel.Error, "Failed to dispose the pipeline scope while cleaning up a failed build for {RequestType}; the build error is preserved and rethrown. The pipeline never existed, so no artefact resolved through the scope survives it.")]
+            public static partial void FailedToDisposePipelineScopeAfterFailedBuild(ILogger logger, string requestType, Exception exception);
 
             [LoggerMessage(LogLevel.Warning, "Failed to release a transform while cleaning up a partially-built pipeline; releasing the remaining transforms. A repeated failure here points at a transform Release or Dispose that throws.")]
             public static partial void FailedToReleaseTransform(ILogger logger, Exception exception);

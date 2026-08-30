@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     /// for singleton, scoped, and transient object creation. This class extracts the common
     /// lifetime management pattern used across handler, mapper, and transformer factories.
     /// </summary>
-    internal sealed partial class ServiceProviderLifetimeScope : IDisposable
+    internal sealed partial class ServiceProviderLifetimeScope : IDisposable, IAsyncDisposable
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<ServiceProviderLifetimeScope>();
 
@@ -457,7 +457,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         }
 
         /// <summary>
-        /// Disposes of the scope, cleaning up any service scopes and cached instances.
+        /// Disposes of the scope, cleaning up any service scopes and cached instances. Terminal teardown:
+        /// a disposal failure is logged and swallowed so one factory shutting down cannot be stopped by a
+        /// mapper/transform/handler <c>Dispose</c> that throws. A pipeline scope does not use this path —
+        /// see <see cref="DisposeSurfacing"/>.
         /// </summary>
         public void Dispose()
         {
@@ -500,6 +503,94 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 _scopedInstances.Clear();
             }
             // Note: Don't clear singleton instances as they may be shared
+        }
+
+        /// <summary>
+        /// Disposes of the scope asynchronously, mirroring <see cref="Dispose"/> through
+        /// <see cref="DisposeScopeAsync"/> so an <see cref="IAsyncDisposable"/> mapper/transform/handler is
+        /// awaited rather than blocked on. Terminal teardown, with the same swallow-and-log behaviour as
+        /// <see cref="Dispose"/>. A pipeline scope does not use this path — see
+        /// <see cref="DisposeSurfacingAsync"/>.
+        /// </summary>
+        public async ValueTask DisposeAsync()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+
+            try
+            {
+                foreach (var scope in _outstandingScopes.Keys)
+                {
+                    if (!_outstandingScopes.TryRemove(scope, out _))
+                        continue;
+                    try { await DisposeScopeAsync(scope).ConfigureAwait(false); }
+                    catch (Exception e) { Log.FailedToDisposeScope(s_logger, e); }
+                }
+            }
+            finally
+            {
+                var rootScope = Interlocked.Exchange(ref _scope, null);
+                if (rootScope != null)
+                {
+                    try { await DisposeScopeAsync(rootScope).ConfigureAwait(false); }
+                    catch (Exception e) { Log.FailedToDisposeScope(s_logger, e); }
+                }
+                _scopedInstances.Clear();
+            }
+        }
+
+        /// <summary>
+        /// Disposes of the scope exactly as <see cref="Dispose"/> does, except a disposal failure is
+        /// rethrown to the caller instead of being logged and swallowed. Used only by
+        /// <see cref="ServiceProviderPipelineScope"/>, whose one pipeline of work — not a factory's
+        /// terminal teardown — must let a failure surface so it can be reported at <c>Error</c> rather
+        /// than inheriting this type's <c>Warning</c>-and-swallow.
+        /// </summary>
+        public void DisposeSurfacing()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+
+            try
+            {
+                foreach (var scope in _outstandingScopes.Keys)
+                {
+                    if (!_outstandingScopes.TryRemove(scope, out _))
+                        continue;
+                    DisposeScope(scope);
+                }
+            }
+            finally
+            {
+                var rootScope = Interlocked.Exchange(ref _scope, null);
+                if (rootScope != null)
+                    DisposeScope(rootScope);
+                _scopedInstances.Clear();
+            }
+        }
+
+        /// <summary>
+        /// The async counterpart of <see cref="DisposeSurfacing"/>: disposes through
+        /// <see cref="DisposeScopeAsync"/>, letting a disposal failure surface to the caller.
+        /// </summary>
+        public async ValueTask DisposeSurfacingAsync()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+
+            try
+            {
+                foreach (var scope in _outstandingScopes.Keys)
+                {
+                    if (!_outstandingScopes.TryRemove(scope, out _))
+                        continue;
+                    await DisposeScopeAsync(scope).ConfigureAwait(false);
+                }
+            }
+            finally
+            {
+                var rootScope = Interlocked.Exchange(ref _scope, null);
+                if (rootScope != null)
+                    await DisposeScopeAsync(rootScope).ConfigureAwait(false);
+                _scopedInstances.Clear();
+            }
         }
 
         /// <summary>

@@ -45,21 +45,25 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         internal ServiceProviderLifetimeScope LifetimeScope { get; } = lifetimeScope;
 
         /// <summary>
-        /// Disposes the pipeline's DI scope, releasing everything resolved through it.
+        /// Disposes the pipeline's DI scope, releasing everything resolved through it. Disposes through
+        /// <see cref="ServiceProviderLifetimeScope.DisposeSurfacing"/> so a disposal failure reaches the
+        /// caller rather than being logged and swallowed as factory-teardown would.
         /// </summary>
         public void Dispose()
         {
             if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
-            LifetimeScope.Dispose();
+            LifetimeScope.DisposeSurfacing();
         }
 
         /// <summary>
-        /// Disposes the pipeline's DI scope asynchronously.
+        /// Disposes the pipeline's DI scope asynchronously, through
+        /// <see cref="ServiceProviderLifetimeScope.DisposeSurfacingAsync"/> for the same reason as
+        /// <see cref="Dispose"/>.
         /// </summary>
         public ValueTask DisposeAsync()
         {
-            Dispose();
-            return default;
+            if (Interlocked.Exchange(ref _disposed, 1) != 0) return default;
+            return LifetimeScope.DisposeSurfacingAsync();
         }
     }
 }
