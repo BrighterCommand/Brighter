@@ -34,6 +34,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     /// </summary>
     public class ServiceProviderMapperFactoryAsync : IAmAMessageMapperFactoryAsync, IDisposable
     {
+        private readonly IServiceProvider _serviceProvider;
         private readonly ServiceProviderLifetimeScope _lifetimeScope;
 
         /// <summary>
@@ -42,26 +43,41 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="serviceProvider">The .NET IoC container</param>
         public ServiceProviderMapperFactoryAsync(IServiceProvider serviceProvider)
         {
+            _serviceProvider = serviceProvider;
             var options = (IBrighterOptions?)serviceProvider.GetService(typeof(IBrighterOptions));
             var lifetime = options?.MapperLifetime ?? ServiceLifetime.Singleton;
             _lifetimeScope = new ServiceProviderLifetimeScope(serviceProvider, lifetime);
         }
 
         /// <summary>
-        /// Offers no pipeline scope yet; the container-backed pipeline scope offer lands with the
-        /// <c>Scoped</c> lifetime behaviour.
+        /// Offers a pipeline scope when this factory's configured lifetime is <c>Scoped</c>, so the
+        /// pipeline's mapper (and, once offered by the transformer factory too, its transforms) resolve
+        /// from one DI scope per pipeline rather than a factory-wide one. Any other lifetime offers none.
         /// </summary>
-        public IAmAScope? CreatePipelineScope() => null;
+        public IAmAScope? CreatePipelineScope() =>
+            _lifetimeScope.Lifetime == ServiceLifetime.Scoped
+                ? new ServiceProviderPipelineScope(new ServiceProviderLifetimeScope(_serviceProvider, ServiceLifetime.Scoped))
+                : null;
 
         /// <summary>
         /// Create an instance of the async message mapper type from the .NET IoC container.
         /// Lifetime is determined by <see cref="IBrighterOptions.MapperLifetime"/>.
         /// </summary>
         /// <param name="messageMapperType">The type of mapper to instantiate</param>
-        /// <param name="scope">Ignored for now; see <see cref="CreatePipelineScope"/>.</param>
+        /// <param name="scope">
+        /// The pipeline scope this factory offered via <see cref="CreatePipelineScope"/>. Resolved through
+        /// when supplied and this factory's lifetime is <c>Scoped</c>; otherwise resolution falls back to
+        /// this factory's own lifetime scope.
+        /// </param>
         /// <returns>The created mapper instance</returns>
         public Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType, IAmAScope? scope = null)
         {
+            if (scope is ServiceProviderPipelineScope pipelineScope && _lifetimeScope.Lifetime == ServiceLifetime.Scoped)
+            {
+                var scopedMapper = pipelineScope.LifetimeScope.GetOrCreate<IAmAMessageMapperAsync>(messageMapperType, out var scopedReleaseToken);
+                return scopedMapper is null ? null : new Lease<IAmAMessageMapperAsync>(scopedMapper, scopedReleaseToken);
+            }
+
             var mapper = _lifetimeScope.GetOrCreate<IAmAMessageMapperAsync>(messageMapperType, out var releaseToken);
             return mapper is null ? null : new Lease<IAmAMessageMapperAsync>(mapper, releaseToken);
         }

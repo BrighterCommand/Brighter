@@ -95,13 +95,15 @@ namespace Paramore.Brighter
             Lease<IAmAMessageMapper<TRequest>>? messageMapperLease = null;
             IEnumerable<Lease<IAmAMessageTransform>>? transformLeases = null;
             WrapPipeline<TRequest>? pipeline = null;
+            IAmAScope? scope = null;
             try
             {
-                messageMapperLease = FindMessageMapper<TRequest>();
+                scope = CreatePipelineScope();
+                messageMapperLease = FindMessageMapper<TRequest>(scope);
 
                 transformLeases = BuildTransformPipeline<TRequest>(FindWrapTransforms(messageMapperLease.Instance));
 
-                pipeline = new WrapPipeline<TRequest>(messageMapperLease, _messageTransformerFactory, transformLeases, _instrumentationOptions, _mapperRegistry);
+                pipeline = new WrapPipeline<TRequest>(messageMapperLease, _messageTransformerFactory, transformLeases, _instrumentationOptions, _mapperRegistry, scope);
 
                 Log.NewWrapPipelineCreated(s_logger, typeof(TRequest).Name, TraceWrapPipeline(pipeline));
 
@@ -135,13 +137,15 @@ namespace Paramore.Brighter
             Lease<IAmAMessageMapper<TRequest>>? messageMapperLease = null;
             IEnumerable<Lease<IAmAMessageTransform>>? transformLeases = null;
             UnwrapPipeline<TRequest>? pipeline = null;
+            IAmAScope? scope = null;
             try
             {
-                messageMapperLease = FindMessageMapper<TRequest>();
+                scope = CreatePipelineScope();
+                messageMapperLease = FindMessageMapper<TRequest>(scope);
 
                 transformLeases = BuildTransformPipeline<TRequest>(FindUnwrapTransforms(messageMapperLease.Instance));
 
-                pipeline = new UnwrapPipeline<TRequest>(transformLeases, _messageTransformerFactory, messageMapperLease, _mapperRegistry);
+                pipeline = new UnwrapPipeline<TRequest>(transformLeases, _messageTransformerFactory, messageMapperLease, _mapperRegistry, scope);
 
                 Log.NewUnwrapPipelineCreated(s_logger, typeof(TRequest).Name, TraceUnwrapPipeline(pipeline));
 
@@ -337,12 +341,18 @@ namespace Paramore.Brighter
             s_unWrapTransformsMemento.Clear();
         }
 
-        private Lease<IAmAMessageMapper<TRequest>> FindMessageMapper<TRequest>() where TRequest : class, IRequest
+        private Lease<IAmAMessageMapper<TRequest>> FindMessageMapper<TRequest>(IAmAScope? scope) where TRequest : class, IRequest
         {
-            var messageMapperLease = _mapperRegistry.Get<TRequest>();
+            var messageMapperLease = _mapperRegistry.Get<TRequest>(scope);
             if (messageMapperLease == null) throw new InvalidOperationException(string.Format("Could not find mapper for {0}. Hint: did you set MessagePumpType.Reactor on the subscription to match the mapper type?", typeof(TRequest).Name));
             return messageMapperLease;
         }
+
+        //asks the mapper registry first — the mapper is the mandatory half of a transform pipeline — then
+        //the transformer factory, which is allowed to be null (the v9 compatibility path), and returns the
+        //first non-null handle offered, or null if neither offers one
+        private IAmAScope? CreatePipelineScope() =>
+            _mapperRegistry.CreatePipelineScope() ?? _messageTransformerFactory?.CreatePipelineScope();
 
         private WrapWithAttribute[] FindWrapTransforms<T>(IAmAMessageMapper<T> messageMapper) where T : class, IRequest
         {

@@ -33,6 +33,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     /// </summary>
     public class ServiceProviderTransformerFactory : IAmAMessageTransformerFactory, IDisposable
     {
+        private readonly IServiceProvider _serviceProvider;
         private readonly ServiceProviderLifetimeScope _lifetimeScope;
 
         /// <summary>
@@ -41,26 +42,41 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="serviceProvider">The IoC container we use to satisfy requests for transforms</param>
         public ServiceProviderTransformerFactory(IServiceProvider serviceProvider)
         {
+            _serviceProvider = serviceProvider;
             var options = (IBrighterOptions?)serviceProvider.GetService(typeof(IBrighterOptions));
             var lifetime = options?.TransformerLifetime ?? ServiceLifetime.Singleton;
             _lifetimeScope = new ServiceProviderLifetimeScope(serviceProvider, lifetime);
         }
 
         /// <summary>
-        /// Offers no pipeline scope yet; the container-backed pipeline scope offer lands with the
-        /// <c>Scoped</c> lifetime behaviour.
+        /// Offers a pipeline scope when this factory's configured lifetime is <c>Scoped</c>, so the
+        /// pipeline's transforms (and, once offered by the mapper factory too, its mapper) resolve from
+        /// one DI scope per pipeline rather than a factory-wide one. Any other lifetime offers none.
         /// </summary>
-        public IAmAScope? CreatePipelineScope() => null;
+        public IAmAScope? CreatePipelineScope() =>
+            _lifetimeScope.Lifetime == ServiceLifetime.Scoped
+                ? new ServiceProviderPipelineScope(new ServiceProviderLifetimeScope(_serviceProvider, ServiceLifetime.Scoped))
+                : null;
 
         /// <summary>
         /// Creates a specific transformer on demand.
         /// Lifetime is determined by <see cref="IBrighterOptions.TransformerLifetime"/>.
         /// </summary>
         /// <param name="transformerType">The type of transformer to create</param>
-        /// <param name="scope">Ignored for now; see <see cref="CreatePipelineScope"/>.</param>
+        /// <param name="scope">
+        /// The pipeline scope this factory offered via <see cref="CreatePipelineScope"/>. Resolved through
+        /// when supplied and this factory's lifetime is <c>Scoped</c>; otherwise resolution falls back to
+        /// this factory's own lifetime scope.
+        /// </param>
         /// <returns>The created transformer instance</returns>
         public Lease<IAmAMessageTransform>? Create(Type transformerType, IAmAScope? scope = null)
         {
+            if (scope is ServiceProviderPipelineScope pipelineScope && _lifetimeScope.Lifetime == ServiceLifetime.Scoped)
+            {
+                var scopedTransform = pipelineScope.LifetimeScope.GetOrCreate<IAmAMessageTransform>(transformerType, out var scopedReleaseToken);
+                return scopedTransform is null ? null : new Lease<IAmAMessageTransform>(scopedTransform, scopedReleaseToken);
+            }
+
             var transform = _lifetimeScope.GetOrCreate<IAmAMessageTransform>(transformerType, out var releaseToken);
             return transform is null ? null : new Lease<IAmAMessageTransform>(transform, releaseToken);
         }
