@@ -160,7 +160,7 @@ Counts and `file:line` anchors below were re-derived against the working tree; w
   - **Depends on**: T1.8
   - **References**: AC-5 (FR-5, NFR-5); ADR 0070 step 4
 
-- [ ] **TEST + IMPLEMENT: T1.10 — a pipeline-scope release failure on a failed build is logged at `Error` and does not mask the configuration error**
+- [x] **TEST + IMPLEMENT: T1.10 — a pipeline-scope release failure on a failed build is logged at `Error` and does not mask the configuration error**
   - **USE COMMAND**: `/test-first a failing build whose pipeline scope disposal also throws still surfaces the ConfigurationException and logs the disposal failure at Error`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_failed_build_scope_release_throws_it_should_log_at_error_and_not_mask_the_build_failure.cs`
