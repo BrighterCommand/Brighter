@@ -82,7 +82,7 @@ Counts and `file:line` anchors below were re-derived against the working tree; w
   - **Depends on**: T1.3
   - **References**: FR-5; ADR 0070 step 3 (as required by ADR 0072 step 1b)
 
-- [ ] **TEST + IMPLEMENT: T1.5 — a `Scoped` mapper is one instance per transform pipeline, not one per process**
+- [x] **TEST + IMPLEMENT: T1.5 — a `Scoped` mapper is one instance per transform pipeline, not one per process**
   - **USE COMMAND**: `/test-first a Scoped mapper is constructed once per transform pipeline and disposed before the next pipeline's instance is constructed`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_consuming_two_messages_a_scoped_mapper_should_not_be_reused.cs`
