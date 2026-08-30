@@ -1,9 +1,7 @@
 using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
@@ -14,10 +12,10 @@ public class ScopedMapperPerPipelineTests
     public void When_consuming_two_messages_a_scoped_mapper_should_not_be_reused()
     {
         //arrange — an FR-22.2-conformant lifetime triple: all three Scoped
-        TrackingMapper.Events.Clear();
         TransformPipelineBuilder.ClearPipelineCache();
 
-        var scopeTracker = BuildScopeTracker(out var trackingProvider);
+        var recorder = new ConstructionOrderRecorder();
+        var scopeTracker = BuildScopeTracker(recorder, out var trackingProvider);
         using var mapperFactory = new ServiceProviderMapperFactory(trackingProvider);
         var mapperRegistry = new MessageMapperRegistry(mapperFactory, null);
         mapperRegistry.Register<MinimalCommand, TrackingMapper>();
@@ -35,13 +33,14 @@ public class ScopedMapperPerPipelineTests
 
         //assert — two distinct mapper instances, the first disposed strictly before the second was
         //constructed (the ordering, not merely the distinctness), and no Brighter-created scope left live
-        Assert.Equal(new[] { "Constructed:1", "Disposed:1", "Constructed:2", "Disposed:2" }, TrackingMapper.Events);
+        Assert.Equal(new[] { "Constructed:1", "Disposed:1", "Constructed:2", "Disposed:2" }, recorder.Events);
         Assert.Equal(0, scopeTracker.OutstandingCount);
     }
 
-    private static ScopeTracker BuildScopeTracker(out IServiceProvider trackingProvider)
+    private static ScopeTracker BuildScopeTracker(ConstructionOrderRecorder recorder, out IServiceProvider trackingProvider)
     {
         var collection = new ServiceCollection();
+        collection.AddSingleton(recorder);
         collection.AddScoped<TrackingMapper>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions
         {
@@ -61,15 +60,19 @@ public class ScopedMapperPerPipelineTests
         public MinimalCommand() : base(Guid.NewGuid()) { }
     }
 
-    //records construction/disposal identity and order, so the test can assert one instance per
-    //pipeline and that the first is torn down before the next is built — not merely that they differ
+    //records construction/disposal identity and order via the injected recorder, so the test can
+    //assert one instance per pipeline and that the first is torn down before the next is built —
+    //not merely that they differ
     private sealed class TrackingMapper : IAmAMessageMapper<MinimalCommand>, IDisposable
     {
-        public static readonly List<string> Events = new();
-        private static int s_nextId;
-        private readonly int _id = Interlocked.Increment(ref s_nextId);
+        private readonly ConstructionOrderRecorder _recorder;
+        private readonly int _id;
 
-        public TrackingMapper() => Events.Add($"Constructed:{_id}");
+        public TrackingMapper(ConstructionOrderRecorder recorder)
+        {
+            _recorder = recorder;
+            _id = recorder.RecordConstruction();
+        }
 
         public IRequestContext? Context { get; set; }
 
@@ -78,52 +81,6 @@ public class ScopedMapperPerPipelineTests
 
         public MinimalCommand MapToRequest(Message message) => new();
 
-        public void Dispose() => Events.Add($"Disposed:{_id}");
-    }
-
-    // Wraps the real IServiceScopeFactory and counts every scope creation/disposal, so the test can
-    // assert no Brighter-created scope is left live once both pipelines have been disposed (NFR-5)
-    private sealed class ScopeTracker(IServiceScopeFactory inner) : IServiceScopeFactory
-    {
-        private int _createdCount;
-        private int _disposedCount;
-
-        public int OutstandingCount => Volatile.Read(ref _createdCount) - Volatile.Read(ref _disposedCount);
-
-        public IServiceScope CreateScope()
-        {
-            Interlocked.Increment(ref _createdCount);
-            return new TrackingScope(inner.CreateScope(), () => Interlocked.Increment(ref _disposedCount));
-        }
-
-        private sealed class TrackingScope(IServiceScope inner, Action onDispose) : IServiceScope, IAsyncDisposable
-        {
-            private int _disposed;
-
-            public IServiceProvider ServiceProvider => inner.ServiceProvider;
-
-            public void Dispose()
-            {
-                if (Interlocked.Exchange(ref _disposed, 1) == 0) onDispose();
-                inner.Dispose();
-            }
-
-            //Production on net8+ disposes an IAsyncDisposable scope through DisposeAsync, so count the
-            //disposal in whichever shape the caller uses.
-            public async ValueTask DisposeAsync()
-            {
-                if (Interlocked.Exchange(ref _disposed, 1) == 0) onDispose();
-                if (inner is IAsyncDisposable asyncInner)
-                    await asyncInner.DisposeAsync().ConfigureAwait(false);
-                else
-                    inner.Dispose();
-            }
-        }
-    }
-
-    private sealed class TrackingServiceProvider(IServiceProvider inner, ScopeTracker scopeTracker) : IServiceProvider
-    {
-        public object? GetService(Type serviceType) =>
-            serviceType == typeof(IServiceScopeFactory) ? scopeTracker : inner.GetService(serviceType);
+        public void Dispose() => _recorder.RecordDisposal(_id);
     }
 }
