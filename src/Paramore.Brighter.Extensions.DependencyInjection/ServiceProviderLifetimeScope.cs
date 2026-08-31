@@ -247,10 +247,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// scope is disposed, so a fresh instance per call accumulates in it until then. That is exactly the
         /// #4252 leak when the scope is app-lifetime — which is why the mapper/transformer factories always
         /// isolate and never reach here. The only caller that sets <c>isolateTransientScopes = false</c> is
-        /// <see cref="ServiceProviderHandlerFactory"/>, whose transient lifetime scope is created per
-        /// <c>IAmALifetime</c> (one request pipeline) and disposed when that pipeline completes
-        /// (<c>ReleaseLifetimeScope</c>), so accumulation is bounded to a single pipeline — the pre-#4254
-        /// behaviour, which never leaked. Do not enable this flag on any long-lived lifetime scope.
+        /// <see cref="ServiceProviderHandlerFactory"/>, whose per-pipeline scope is offered via
+        /// <c>CreatePipelineScope</c> and disposed when that pipeline completes (<c>HandlerLifetimeScope.Dispose</c>),
+        /// so accumulation is bounded to a single pipeline — the pre-#4254 behaviour, which never leaked. Do
+        /// not enable this flag on any long-lived lifetime scope.
         /// </remarks>
         private T? GetTransientShared<T>(Type objectType) where T : class
         {

@@ -46,7 +46,7 @@ public class FactoryErrorHandlingTests
 
         var provider = services.BuildServiceProvider();
         var factory = new ServiceProviderHandlerFactory(provider);
-        var lifetime = new TestLifetimeScope();
+        var lifetime = new TestLifetimeScope(factory.CreatePipelineScope());
 
         // Act
         var handler = ((IAmAHandlerFactorySync)factory).Create(typeof(UnregisteredHandler), lifetime);
@@ -56,7 +56,7 @@ public class FactoryErrorHandlingTests
     }
 
     [Fact]
-    public void Factory_NullLifetime_HandlesGracefullyForTransient()
+    public void Factory_NullLifetime_ThrowsConfigurationExceptionForTransient()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -69,19 +69,9 @@ public class FactoryErrorHandlingTests
         var provider = services.BuildServiceProvider();
         var factory = new ServiceProviderHandlerFactory(provider);
 
-        // Act & Assert - For Transient, null lifetime should either work or throw ArgumentNullException
-        try
-        {
-            var handler = ((IAmAHandlerFactorySync)factory).Create(typeof(SimpleHandler), null!);
-            // If it doesn't throw, it should return a valid handler
-            Assert.NotNull(handler);
-        }
-        catch (ArgumentNullException)
-        {
-            // Acceptable - throwing ArgumentNullException for null lifetime
-            Assert.True(true);
-        }
-        // Note: NullReferenceException would indicate a bug - null should be validated explicitly
+        // Act & Assert - Transient now requires a pipeline scope handle too (C-6, see
+        // ServiceProviderHandlerFactory.CreatePipelineScope), so a null lifetime carries none
+        Assert.Throws<ConfigurationException>(() => ((IAmAHandlerFactorySync)factory).Create(typeof(SimpleHandler), null!));
     }
 
     [Fact]
@@ -96,7 +86,7 @@ public class FactoryErrorHandlingTests
 
         var provider = services.BuildServiceProvider();
         var factory = new ServiceProviderHandlerFactory(provider);
-        var lifetime = new TestLifetimeScope();
+        var lifetime = new TestLifetimeScope(factory.CreatePipelineScope());
 
         // Act - Pass a non-handler type (string is not a handler)
         var result = ((IAmAHandlerFactorySync)factory).Create(typeof(string), lifetime);
@@ -117,7 +107,7 @@ public class FactoryErrorHandlingTests
 
         // Act - Factory should handle missing options gracefully
         var factory = new ServiceProviderHandlerFactory(provider);
-        var lifetime = new TestLifetimeScope();
+        var lifetime = new TestLifetimeScope(factory.CreatePipelineScope());
         var handler = ((IAmAHandlerFactorySync)factory).Create(typeof(SimpleHandler), lifetime);
 
         // Assert - Should use default Transient lifetime and work
@@ -141,9 +131,10 @@ public class FactoryErrorHandlingTests
 
     private class TestLifetimeScope : IAmALifetime
     {
-        public IAmAScope? PipelineScope => null;
+        public TestLifetimeScope(IAmAScope? pipelineScope = null) => PipelineScope = pipelineScope;
+        public IAmAScope? PipelineScope { get; }
         public void Add(IHandleRequests instance) { }
         public void Add(IHandleRequestsAsync instance) { }
-        public void Dispose() { }
+        public void Dispose() => PipelineScope?.Dispose();
     }
 }

@@ -45,7 +45,7 @@ public class FactoryLifetimeTests
 
         var provider = services.BuildServiceProvider();
         var factory = new ServiceProviderHandlerFactory(provider);
-        var lifetime = new TestLifetimeScope();
+        var lifetime = new TestLifetimeScope(factory.CreatePipelineScope());
 
         // Act
         var handler1 = ((IAmAHandlerFactorySync)factory).Create(typeof(TestHandler), lifetime);
@@ -68,8 +68,8 @@ public class FactoryLifetimeTests
 
         var provider = services.BuildServiceProvider();
         var factory = new ServiceProviderHandlerFactory(provider);
-        var lifetime1 = new TestLifetimeScope();
-        var lifetime2 = new TestLifetimeScope();
+        var lifetime1 = new TestLifetimeScope(factory.CreatePipelineScope());
+        var lifetime2 = new TestLifetimeScope(factory.CreatePipelineScope());
 
         // Act
         var handler1 = ((IAmAHandlerFactorySync)factory).Create(typeof(TestHandler), lifetime1);
@@ -92,7 +92,7 @@ public class FactoryLifetimeTests
 
         var provider = services.BuildServiceProvider();
         var factory = new ServiceProviderHandlerFactory(provider);
-        var lifetime = new TestLifetimeScope();
+        var lifetime = new TestLifetimeScope(factory.CreatePipelineScope());
 
         // Act
         var handler1 = ((IAmAHandlerFactorySync)factory).Create(typeof(TestHandler), lifetime);
@@ -163,7 +163,7 @@ public class FactoryLifetimeTests
 
         var provider = services.BuildServiceProvider();
         var factory = new ServiceProviderHandlerFactory(provider);
-        var lifetime = new TestLifetimeScope();
+        var lifetime = new TestLifetimeScope(factory.CreatePipelineScope());
 
         // Act
         var handler1 = ((IAmAHandlerFactoryAsync)factory).Create(typeof(TestAsyncHandler), lifetime);
@@ -186,8 +186,8 @@ public class FactoryLifetimeTests
 
         var provider = services.BuildServiceProvider();
         var factory = new ServiceProviderHandlerFactory(provider);
-        var lifetime1 = new TestLifetimeScope();
-        var lifetime2 = new TestLifetimeScope();
+        var lifetime1 = new TestLifetimeScope(factory.CreatePipelineScope());
+        var lifetime2 = new TestLifetimeScope(factory.CreatePipelineScope());
 
         // Act
         var handler1 = ((IAmAHandlerFactoryAsync)factory).Create(typeof(TestAsyncHandler), lifetime1);
@@ -210,7 +210,7 @@ public class FactoryLifetimeTests
 
         var provider = services.BuildServiceProvider();
         var factory = new ServiceProviderHandlerFactory(provider);
-        var lifetime = new TestLifetimeScope();
+        var lifetime = new TestLifetimeScope(factory.CreatePipelineScope());
 
         // Act
         var handler1 = ((IAmAHandlerFactoryAsync)factory).Create(typeof(TestAsyncHandler), lifetime);
@@ -234,7 +234,7 @@ public class FactoryLifetimeTests
 
         var provider = services.BuildServiceProvider();
         var factory = new ServiceProviderHandlerFactory(provider);
-        var lifetime = new TestLifetimeScope();
+        var lifetime = new TestLifetimeScope(factory.CreatePipelineScope());
 
         // Act
         var handler = (HandlerWithDependency)((IAmAHandlerFactorySync)factory).Create(typeof(HandlerWithDependency), lifetime)!;
@@ -245,7 +245,7 @@ public class FactoryLifetimeTests
     }
 
     [Fact]
-    public void Factory_Release_ClearsHandlerFromCache()
+    public void Factory_Release_DoesNotClearHandlerFromCache()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -257,16 +257,16 @@ public class FactoryLifetimeTests
 
         var provider = services.BuildServiceProvider();
         var factory = new ServiceProviderHandlerFactory(provider);
-        var lifetime = new TestLifetimeScope();
+        var lifetime = new TestLifetimeScope(factory.CreatePipelineScope());
 
-        // Act - Create handler, then release, then create again
+        // Act - Create handler, then release, then create again: Release is now a no-op — it is the
+        // pipeline scope itself (not an individual Release call) that owns the cache and its disposal
         var handler1 = ((IAmAHandlerFactorySync)factory).Create(typeof(TestHandler), lifetime);
         ((IAmAHandlerFactorySync)factory).Release(handler1, lifetime);
         var handler2 = ((IAmAHandlerFactorySync)factory).Create(typeof(TestHandler), lifetime);
 
-        // Assert - After release, we should get a new handler instance
-        Assert.NotNull(handler2);
-        Assert.NotSame(handler1, handler2);
+        // Assert - Release did not clear the scope's cache; the same instance is still returned
+        Assert.Same(handler1, handler2);
     }
 
     [Fact]
@@ -282,7 +282,7 @@ public class FactoryLifetimeTests
 
         var provider = services.BuildServiceProvider();
         var factory = new ServiceProviderHandlerFactory(provider);
-        var lifetime = new TestLifetimeScope();
+        var lifetime = new TestLifetimeScope(factory.CreatePipelineScope());
 
         // Act
         var handler = (DisposableTestHandler)((IAmAHandlerFactorySync)factory).Create(typeof(DisposableTestHandler), lifetime)!;
@@ -310,10 +310,11 @@ public class FactoryLifetimeTests
 
     private class TestLifetimeScope : IAmALifetime
     {
-        public IAmAScope? PipelineScope => null;
+        public TestLifetimeScope(IAmAScope? pipelineScope = null) => PipelineScope = pipelineScope;
+        public IAmAScope? PipelineScope { get; }
         public void Add(IHandleRequests instance) { }
         public void Add(IHandleRequestsAsync instance) { }
-        public void Dispose() { }
+        public void Dispose() => PipelineScope?.Dispose();
     }
 
     private interface IDependencyService { }

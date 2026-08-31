@@ -569,9 +569,9 @@ namespace Paramore.Brighter
             if(_syncHandlerFactory is null)
                 throw new NullReferenceException("HandlerFactorySync is null");
 
-            var scope = new HandlerLifetimeScope(_syncHandlerFactory);
+            var scope = new HandlerLifetimeScope(_syncHandlerFactory, _syncHandlerFactory.CreatePipelineScope());
             _instanceScopes.Add(scope);
-            
+
             return scope;
         }
 
@@ -579,10 +579,10 @@ namespace Paramore.Brighter
         {
             if(_asyncHandlerFactory is null)
                 throw new NullReferenceException("AsyncHandlerFactory is null");
-            
-            var scope = new HandlerLifetimeScope(_asyncHandlerFactory);
+
+            var scope = new HandlerLifetimeScope(_asyncHandlerFactory, _asyncHandlerFactory.CreatePipelineScope());
             _instanceScopes.Add(scope);
-            
+
             return scope;
         }
 

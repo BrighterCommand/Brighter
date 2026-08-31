@@ -30,7 +30,7 @@ public class HandlerLifetimeCallChainScopeTests
         var provider = collection.BuildServiceProvider();
 
         var factory = new ServiceProviderHandlerFactory(provider);
-        var lifetime = new TestLifetimeScope();
+        var lifetime = new TestLifetimeScope(factory.CreatePipelineScope());
 
         //act — two different handlers resolved through the same lifetime (one call chain)
         var first = (FirstHandler)((IAmAHandlerFactorySync)factory).Create(typeof(FirstHandler), lifetime)!;
@@ -52,7 +52,7 @@ public class HandlerLifetimeCallChainScopeTests
         var provider = collection.BuildServiceProvider();
 
         var factory = new ServiceProviderHandlerFactory(provider);
-        var lifetime = new TestLifetimeScope();
+        var lifetime = new TestLifetimeScope(factory.CreatePipelineScope());
 
         //act — two different handlers resolved through the same lifetime (one call chain)
         var first = (FirstHandler)((IAmAHandlerFactorySync)factory).Create(typeof(FirstHandler), lifetime)!;
@@ -79,7 +79,7 @@ public class HandlerLifetimeCallChainScopeTests
         var provider = collection.BuildServiceProvider();
 
         var factory = new ServiceProviderHandlerFactory(provider);
-        var lifetime = new TestLifetimeScope();
+        var lifetime = new TestLifetimeScope(factory.CreatePipelineScope());
 
         //act — two different handlers resolved through the same lifetime (one call chain)
         var first = (FirstHandler)((IAmAHandlerFactorySync)factory).Create(typeof(FirstHandler), lifetime)!;
@@ -111,17 +111,20 @@ public class HandlerLifetimeCallChainScopeTests
         var trackingProvider = new TrackingServiceProvider(rootProvider, tracker);
 
         var factory = new ServiceProviderHandlerFactory(trackingProvider);
-        var lifetime = new TestLifetimeScope();
+        var lifetime = new TestLifetimeScope(factory.CreatePipelineScope());
 
         var first = (FirstHandler)((IAmAHandlerFactorySync)factory).Create(typeof(FirstHandler), lifetime)!;
         var second = (SecondHandler)((IAmAHandlerFactorySync)factory).Create(typeof(SecondHandler), lifetime)!;
 
-        //act — release the pipeline the way HandlerLifetimeScope.Dispose() does at end of message
+        //act — release the pipeline the way HandlerLifetimeScope.Dispose() does at end of message: release
+        //each handler (now a no-op — Release no longer owns disposal) then dispose the pipeline scope handle
         ((IAmAHandlerFactorySync)factory).Release(first, lifetime);
         ((IAmAHandlerFactorySync)factory).Release(second, lifetime);
+        lifetime.Dispose();
 
         //assert — a scope was created (isolate=true makes one per handler, isolate=false shares one), and
-        //release disposed every one of them, so the opt-out is a lifetime change and not a leak
+        //disposing the pipeline scope handle disposed every one of them, so the opt-out is a lifetime
+        //change and not a leak
         Assert.True(tracker.CreatedCount > 0);
         Assert.Equal(tracker.CreatedCount, tracker.DisposedCount);
     }
@@ -133,10 +136,11 @@ public class HandlerLifetimeCallChainScopeTests
 
     private sealed class TestLifetimeScope : IAmALifetime
     {
-        public IAmAScope? PipelineScope => null;
+        public TestLifetimeScope(IAmAScope? pipelineScope = null) => PipelineScope = pipelineScope;
+        public IAmAScope? PipelineScope { get; }
         public void Add(IHandleRequests instance) { }
         public void Add(IHandleRequestsAsync instance) { }
-        public void Dispose() { }
+        public void Dispose() => PipelineScope?.Dispose();
     }
 
     private sealed class ScopedDependency
