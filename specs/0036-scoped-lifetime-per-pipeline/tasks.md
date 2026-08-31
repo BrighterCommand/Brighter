@@ -307,7 +307,7 @@ Counts and `file:line` anchors below were re-derived against the working tree; w
   - **Depends on**: T2.2
   - **References**: AC-9 (FR-7, FR-11); ADR 0071 steps 3, 4, 6 (migration), amending AC-14
 
-- [ ] **TEST + IMPLEMENT: T2.4 — a throwing handler still releases the pipeline scope, exactly once**
+- [x] **TEST + IMPLEMENT: T2.4 — a throwing handler still releases the pipeline scope, exactly once**
   - **USE COMMAND**: `/test-first a handler that throws still has its Scoped dependency disposed exactly once and the exception reaches the caller unchanged`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_handler_throws_the_pipeline_scope_should_still_be_released_once.cs`
