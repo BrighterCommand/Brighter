@@ -247,7 +247,7 @@ Counts and `file:line` anchors below were re-derived against the working tree; w
 
 ## Phase 2 — ADR 0071: handler pipelines onto the same handle
 
-- [ ] **STRUCTURAL: T2.1 — `IAmAHandlerFactory` gains `CreatePipelineScope()`, `IAmALifetime` gains `PipelineScope`, and every implementation moves with them**
+- [x] **STRUCTURAL: T2.1 — `IAmAHandlerFactory` gains `CreatePipelineScope()`, `IAmALifetime` gains `PipelineScope`, and every implementation moves with them**
   - **USE COMMAND**: `/tidy-first add CreatePipelineScope to IAmAHandlerFactory and PipelineScope to IAmALifetime, moving every implementation in one change`
   - Files:
     - core: `IAmAHandlerFactory` (`:7`, today a bare marker), `IAmALifetime` (`:34`)
