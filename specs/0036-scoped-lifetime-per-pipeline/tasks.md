@@ -211,7 +211,7 @@ Counts and `file:line` anchors below were re-derived against the working tree; w
   - **Depends on**: T1.11
   - **References**: AC-8 (FR-6); ADR 0070 steps 6, 5 (`IAmAScope` idempotence)
 
-- [ ] **TEST + IMPLEMENT: T1.13 — on the consumer, the transform pipeline's scope ends before the handler pipeline begins**
+- [x] **TEST + IMPLEMENT: T1.13 — on the consumer, the transform pipeline's scope ends before the handler pipeline begins**
   - **USE COMMAND**: `/test-first on the consumer an unwrap transform and the handler do not share a Scoped dependency and the transform's is disposed before Handle is entered`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_consuming_a_message_the_transform_scope_should_end_before_the_handler_pipeline_begins.cs`
