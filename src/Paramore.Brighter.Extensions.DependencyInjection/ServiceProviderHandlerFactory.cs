@@ -52,6 +52,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             _singletonScope = new ServiceProviderLifetimeScope(serviceProvider, ServiceLifetime.Singleton);
         }
 
+        public IAmAScope? CreatePipelineScope() => null;
+
         /// <summary>
         /// Creates an instance of the request handler
         /// Lifetime is set during registration

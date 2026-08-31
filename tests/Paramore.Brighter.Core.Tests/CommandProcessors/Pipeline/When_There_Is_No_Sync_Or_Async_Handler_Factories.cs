@@ -53,5 +53,8 @@ public class CommandProcessorNoHandlerFactoriesTests
         Assert.NotNull(_exception);
         Assert.Contains("No HandlerFactory has been set - either an instance of IAmAHandlerFactorySync or IAmAHandlerFactoryAsync needs to be set", _exception.Message);
     }
-    sealed class DummyHandlerFactory : IAmAHandlerFactory;
+    sealed class DummyHandlerFactory : IAmAHandlerFactory
+    {
+        public IAmAScope? CreatePipelineScope() => null;
+    }
 }

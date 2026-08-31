@@ -2,6 +2,8 @@
 
 internal class QuickHandlerFactoryAsync(Func<IHandleRequestsAsync> handlerAction) : IAmAHandlerFactoryAsync
 {
+    public IAmAScope? CreatePipelineScope() => null;
+
     public IHandleRequestsAsync Create(Type handlerType, IAmALifetime lifetime)
     {
         return handlerAction();

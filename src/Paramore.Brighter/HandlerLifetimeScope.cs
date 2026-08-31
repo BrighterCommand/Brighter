@@ -55,6 +55,8 @@ namespace Paramore.Brighter
 
         public int TrackedItemCount => _trackedObjects.Count + _trackedAsyncObjects.Count;
 
+        public IAmAScope? PipelineScope => null;
+
         public void Add(IHandleRequests instance)
         {
             if (_handlerFactorySync == null)

@@ -11,6 +11,8 @@ public class QuickHandlerFactoryAsync : IAmAHandlerFactoryAsync
         _handlerFactory = handlerFactory;
     }
 
+    public IAmAScope? CreatePipelineScope() => null;
+
     public IHandleRequestsAsync Create(Type handlerType, IAmALifetime lifetime)
     {
         return _handlerFactory();

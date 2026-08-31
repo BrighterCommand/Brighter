@@ -204,6 +204,7 @@ public class FactoryThreadSafetyTests
 
     private class TestLifetimeScope : IAmALifetime
     {
+        public IAmAScope? PipelineScope => null;
         public void Add(IHandleRequests instance) { }
         public void Add(IHandleRequestsAsync instance) { }
         public void Dispose() { }

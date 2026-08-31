@@ -28,16 +28,18 @@ using System;
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// A handle to the DI scope a transform pipeline takes for its lifetime.
+    /// A handle to the DI scope a transform pipeline, or a handler pipeline, takes for its lifetime.
     /// </summary>
     /// <remarks>
     /// One <see cref="IAmAScope"/> is created per pipeline by whichever participating factory can offer
     /// one, and disposed when the pipeline is released. Every mapper and transform in the pipeline
     /// resolves from the same scope, so a container-registered <c>Scoped</c> dependency shared by a
-    /// mapper and its transforms is one instance for that pipeline.
+    /// mapper and its transforms is one instance for that pipeline. A handler pipeline's own handle is
+    /// carried on its <see cref="IAmALifetime"/> instead, so every handler and decorator it resolves
+    /// shares it in the same way.
     /// <para>
     /// Distinct from <see cref="IAmALifetime"/>, which tracks the handler instances a handler pipeline
-    /// has created and carries no DI scope of its own.
+    /// has created; a lifetime scope holds a handle, it does not become one.
     /// </para>
     /// </remarks>
     public interface IAmAScope : IDisposable, IAsyncDisposable

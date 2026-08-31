@@ -32,12 +32,21 @@ namespace Paramore.Brighter
     /// <remarks>
     /// <see cref="HandlerLifetimeScope"/> is the default implementation.
     /// <para>
-    /// Distinct from <see cref="IAmAScope"/>, which is a DI scope handle shared by the mapper and
-    /// transform factories that serve a single transform pipeline.
+    /// Also carries the handler pipeline's own <see cref="IAmAScope"/> handle, on <see cref="PipelineScope"/>.
+    /// This interface holds that handle; it does not become one, and its own job remains tracking the
+    /// handler instances the pipeline has created so they can be released.
     /// </para>
     /// </remarks>
     public interface IAmALifetime : IDisposable
     {
+        /// <summary>
+        /// The DI scope this handler pipeline resolves from, or null when it has none. Released when
+        /// this lifetime scope is released; whether releasing it disposes anything is the handle's own
+        /// business. Distinct from this interface's own job, which is tracking handler instances so they
+        /// can be released.
+        /// </summary>
+        IAmAScope? PipelineScope { get; }
+
         /// <summary>
         /// Adds the specified instance.
         /// </summary>
