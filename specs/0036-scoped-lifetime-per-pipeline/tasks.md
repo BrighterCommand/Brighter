@@ -268,7 +268,7 @@ Counts and `file:line` anchors below were re-derived against the working tree; w
   - **Depends on**: T1.14 (Phase 1 complete)
   - **References**: NFR-1(b), NFR-8; ADR 0071 step 1
 
-- [ ] **TEST + IMPLEMENT: T2.2 — design-owed: `HandlerLifetimeScope` releases every tracked handler, then disposes the handle, and never throws**
+- [x] **TEST + IMPLEMENT: T2.2 — design-owed: `HandlerLifetimeScope` releases every tracked handler, then disposes the handle, and never throws**
   - **USE COMMAND**: `/test-first a handler release that throws still releases the remaining handlers, still disposes the pipeline scope last, and Dispose returns normally`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CommandProcessors/Pipeline"
   - Test file: `When_a_handler_release_throws_the_scope_should_still_release_the_rest.cs`
