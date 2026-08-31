@@ -288,7 +288,7 @@ Counts and `file:line` anchors below were re-derived against the working tree; w
   - **Depends on**: T2.1, T1.10
   - **References**: FR-5, FR-6, FR-13; ADR 0071 steps 2, 6 (first required test)
 
-- [ ] **TEST + IMPLEMENT: T2.3 — a handler pipeline scope is torn down at the end of `Send`, and a real owned `IServiceScope` was created for it**
+- [x] **TEST + IMPLEMENT: T2.3 — a handler pipeline scope is torn down at the end of `Send`, and a real owned `IServiceScope` was created for it**
   - **USE COMMAND**: `/test-first a Send disposes the handler's Scoped dependency by the time it returns and a second Send resolves a different instance`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_send_returns_the_handler_pipeline_scope_should_be_torn_down.cs`
