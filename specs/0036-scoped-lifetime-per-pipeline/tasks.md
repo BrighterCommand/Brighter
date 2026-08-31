@@ -226,7 +226,7 @@ Counts and `file:line` anchors below were re-derived against the working tree; w
   - **Depends on**: T1.12
   - **References**: AC-21 (C-3, FR-19); ADR 0070 step 9a
 
-- [ ] **TEST + IMPLEMENT: T1.14 — design-owed: a direct `Create(type)` with no scope resolves fresh under `Scoped` and caches nothing**
+- [x] **TEST + IMPLEMENT: T1.14 — design-owed: a direct `Create(type)` with no scope resolves fresh under `Scoped` and caches nothing**
   - **USE COMMAND**: `/test-first a container backed mapper factory called directly with no pipeline scope resolves a fresh Scoped artefact each time`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_scoped_factory_create_is_called_outside_a_pipeline_it_should_resolve_fresh.cs`
