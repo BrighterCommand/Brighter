@@ -20,6 +20,8 @@ Date: 2026-08-02
 
 Accepted
 
+Amended 2026-08-31: `HandlerLifetimeScope` is `public`, not `internal`. See *Decision → `HandlerLifetimeScope` — the ordering lives here* below.
+
 ## Context
 
 A handler pipeline already gets a DI scope of its own, so that a handler and its decorators resolve together and their dependencies are disposed when the pipeline ends. Brighter's core does not hold that scope. Core holds a per-pipeline tracking object, the handler factory keeps the scope in a dictionary keyed on that object, and releasing a handler is what disposes it. ADR 0070 has just given transform pipelines the same guarantee by a different route, so the codebase now holds two mechanisms for one idea. Every later ADR in this set would then have to build on this family's route a second time.
@@ -396,9 +398,11 @@ None of Brighter's own paths can reach it. `PipelineBuilder` constructs the `Han
 
 The two responsibilities stay legible, and NFR-8's distinction survives: `IAmALifetime` *tracks handlers*; `IAmAScope` *is a DI scope*. The lifetime scope holds one, it does not become one. The XML documentation on both says so.
 
-#### `HandlerLifetimeScope` — the ordering lives here (core, internal)
+#### `HandlerLifetimeScope` — the ordering lives here (core, public — amended 2026-08-31, was `internal`)
 
 `HandlerLifetimeScope` (`:33`) takes the handle in its constructor, exposes it as `PipelineScope`, and in `Dispose()` releases every tracked handler first and disposes the handle second.
+
+**Amendment (2026-08-31, discovered writing step 6's mirror test).** This section originally specified `HandlerLifetimeScope` as staying `internal`, on the reasoning that nothing outside `Paramore.Brighter` needs to construct one. That reasoning did not account for the regression test step 6 itself requires: the transform family's mirror (`TransformLifetimeScopePartialReleaseTests`) constructs `TransformLifetimeScope` directly, and that class is `public` for exactly that reason. `HandlerLifetimeScope`'s ordering rule — release every tracked handler, then dispose the handle, unconditionally, never throwing — cannot be pinned any other way: `PipelineBuilder` is the only production caller, it does not pass a handle into the constructor until step 3, and the repository has no `InternalsVisibleTo` anywhere (a deliberate absence this amendment preserves, rather than adding a first one). Making the type `public`, matching `TransformLifetimeScope`, lets `tests/Paramore.Brighter.Core.Tests` construct it directly with a recording `IAmAHandlerFactorySync` and a recording `IAmAScope`, exactly as the transform test does. Nothing else about the type's contract, its constructors, or its members changes — only its accessibility modifier.
 
 That ordering rule is the same rule in shape as ADR 0070's, where it lands as `TransformPipelineDrain`'s new third step: artefacts go back to their factory before the DI scope they were resolved from dies, so a factory whose `Release` still has work to do is not left resolving against a dead scope. **The mechanism underneath it is not the same, and the difference decides how the rule can be guarded.**
 
@@ -415,7 +419,7 @@ Neither family enforces the ordering today, because until ADR 0070 neither pipel
 | --- | --- | --- |
 | `Paramore.Brighter` | `IAmAHandlerFactory` (`:7`) | gains `IAmAScope? CreatePipelineScope()` |
 | `Paramore.Brighter` | `IAmALifetime` (`:34`) | gains `IAmAScope? PipelineScope { get; }` |
-| `Paramore.Brighter` | `HandlerLifetimeScope` (`:33`, `internal`) | takes and exposes the handle; disposes it after releasing tracked handlers |
+| `Paramore.Brighter` | `HandlerLifetimeScope` (`:33`, `public` — amended 2026-08-31, was `internal`) | takes and exposes the handle; disposes it after releasing tracked handlers |
 | `Paramore.Brighter` | `HandlerLifetimeScope.Log` (`:95`) | gains `FailedToReleaseHandler` and `FailedToDisposePipelineScope`, both at `LogLevel.Error`. **The two members carry different criteria and the pairing is not interchangeable**: AC-51's Given is a throwing `Release` (FR-5, FR-6), AC-33's a throwing `PipelineScope` disposal (FR-13). The four existing `Debug` members are unchanged. **The second depends on ADR 0070 step 4b** — without the surfacing disposal path that ADR adds, `ServiceProviderLifetimeScope.Dispose()` catches the failure and writes `FailedToDisposeScope` at `Warning` (`:462-501`, `:522`), and this member never fires |
 | `Paramore.Brighter` | `PipelineBuilder<TRequest>` | `GetSyncInstanceScope()` (`:567`) and `GetAsyncInstanceScope()` (`:578`) ask the factory and pass the result to the `HandlerLifetimeScope` constructor. Nothing else **in this ADR** — two siblings edit the same class: ADR 0072 amends both `catch` filters (`:202-205`, `:248-251`) and ADR 0075 adds a defaulted `bool isolateSubscribers` to the two dispatch constructors (`:59`, `:76`) with a bracket inside both build-loop bodies (`:187-198`, `:232-244`) |
 | `Paramore.Brighter` | `SimpleHandlerFactorySync` (`:33`), `SimpleHandlerFactoryAsync` (`:33`) | `CreatePipelineScope()` returns `null` |
@@ -492,7 +496,7 @@ Add the two members, then **move every implementation in the repository in the s
 
 #### 2. `HandlerLifetimeScope`
 
-The constructor takes `IAmAScope? pipelineScope` after the factory arguments, and the three existing constructors forward it. `Dispose()` is rewritten to the hold-and-compose shape ADR 0068 requires, and the fault tolerance runs **handler to handler**, not merely between the releases and the disposal:
+The class becomes `public` (amended 2026-08-31; *`HandlerLifetimeScope` — the ordering lives here*, above, states the reason). The constructor takes `IAmAScope? pipelineScope` after the factory arguments, and the three existing constructors forward it. `Dispose()` is rewritten to the hold-and-compose shape ADR 0068 requires, and the fault tolerance runs **handler to handler**, not merely between the releases and the disposal:
 
 - release every tracked sync handler, then every tracked async handler, catching per item and recording the failure for logging rather than letting it abort the loop. Today a throw from the first tracked handler skips every remaining `Release` *and* both `Clear()` calls (`HandlerLifetimeScope.cs:74-93`, no `try`/`catch` anywhere);
 - clear both tracking lists unconditionally, so the scope does not outlive its disposal holding references;
