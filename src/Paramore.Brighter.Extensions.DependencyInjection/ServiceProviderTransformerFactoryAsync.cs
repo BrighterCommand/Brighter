@@ -78,6 +78,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 return scopedTransform is null ? null : new Lease<IAmAMessageTransformAsync>(scopedTransform, scopedReleaseToken);
             }
 
+            if (_lifetimeScope.Lifetime == ServiceLifetime.Scoped)
+            {
+                var freshTransform = _lifetimeScope.GetOrCreateIsolated<IAmAMessageTransformAsync>(transformerType, out var freshReleaseToken);
+                return freshTransform is null ? null : new Lease<IAmAMessageTransformAsync>(freshTransform, freshReleaseToken);
+            }
+
             var transform = _lifetimeScope.GetOrCreate<IAmAMessageTransformAsync>(transformerType, out var releaseToken);
             return transform is null ? null : new Lease<IAmAMessageTransformAsync>(transform, releaseToken);
         }

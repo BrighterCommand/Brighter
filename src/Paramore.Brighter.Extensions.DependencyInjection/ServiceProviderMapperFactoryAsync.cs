@@ -78,6 +78,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 return scopedMapper is null ? null : new Lease<IAmAMessageMapperAsync>(scopedMapper, scopedReleaseToken);
             }
 
+            if (_lifetimeScope.Lifetime == ServiceLifetime.Scoped)
+            {
+                var freshMapper = _lifetimeScope.GetOrCreateIsolated<IAmAMessageMapperAsync>(messageMapperType, out var freshReleaseToken);
+                return freshMapper is null ? null : new Lease<IAmAMessageMapperAsync>(freshMapper, freshReleaseToken);
+            }
+
             var mapper = _lifetimeScope.GetOrCreate<IAmAMessageMapperAsync>(messageMapperType, out var releaseToken);
             return mapper is null ? null : new Lease<IAmAMessageMapperAsync>(mapper, releaseToken);
         }

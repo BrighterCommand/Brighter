@@ -110,6 +110,30 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public T? GetOrCreate<T>(Type objectType) where T : class => GetOrCreate<T>(objectType, out _);
 
         /// <summary>
+        /// Resolves a fresh instance in its own per-resolution <see cref="IServiceScope"/>, tracked and
+        /// reclaimed only when the caller releases via <see cref="Release"/>/<see cref="ReleaseAsync"/>
+        /// (or drained when this lifetime scope itself is disposed) — regardless of this scope's own
+        /// configured <see cref="Lifetime"/>.
+        /// </summary>
+        /// <remarks>
+        /// Used by a container-backed factory's <c>Create</c> when called with no pipeline scope. A
+        /// factory-wide <see cref="ServiceProviderLifetimeScope"/> configured <c>Scoped</c> must not serve
+        /// a cross-call cache in that case — caching a <c>Scoped</c> artefact by type is only correct
+        /// within one pipeline's own <see cref="ServiceProviderLifetimeScope"/>, offered via
+        /// <c>CreatePipelineScope</c>.
+        /// </remarks>
+        /// <typeparam name="T">The interface type to cast the result to</typeparam>
+        /// <param name="objectType">The concrete type to create</param>
+        /// <param name="releaseToken">The resolution's own <see cref="IServiceScope"/> (as <see cref="object"/>); pass it to <see cref="Release"/>/<see cref="ReleaseAsync"/> to drain exactly that scope</param>
+        /// <returns>The created instance, or null if not registered</returns>
+        /// <exception cref="ObjectDisposedException">Thrown when this scope has already been disposed</exception>
+        public T? GetOrCreateIsolated<T>(Type objectType, out object? releaseToken) where T : class
+        {
+            ThrowIfDisposed();
+            return GetTransient<T>(objectType, out releaseToken);
+        }
+
+        /// <summary>
         /// Creates or retrieves an object of the specified type according to the configured lifetime, and
         /// returns an opaque <paramref name="releaseToken"/> identifying this resolution.
         /// </summary>
