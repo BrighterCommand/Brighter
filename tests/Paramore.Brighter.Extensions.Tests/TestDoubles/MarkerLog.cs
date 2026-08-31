@@ -36,6 +36,8 @@ public sealed class MarkerLog
 {
     private readonly List<IMarker> _mapperMarkers = new();
     private readonly List<IMarker> _transformMarkers = new();
+    private readonly List<IMarker> _handlerMarkers = new();
+    private readonly List<bool> _transformDisposedAtHandlerEntry = new();
 
     /// <summary>
     /// The <see cref="IMarker"/> each <see cref="MarkerMapper"/> construction recorded, in order.
@@ -54,6 +56,24 @@ public sealed class MarkerLog
     }
 
     /// <summary>
+    /// The <see cref="IMarker"/> each handler's <c>Handle</c>/<c>HandleAsync</c> entry recorded, in
+    /// order.
+    /// </summary>
+    public IReadOnlyList<IMarker> HandlerMarkers
+    {
+        get { lock (_handlerMarkers) return _handlerMarkers.ToArray(); }
+    }
+
+    /// <summary>
+    /// For each handler entry recorded, whether the most recently-recorded <see cref="MarkerTransform"/>
+    /// marker was already disposed at that moment, in the same order as <see cref="HandlerMarkers"/>.
+    /// </summary>
+    public IReadOnlyList<bool> TransformDisposedAtHandlerEntry
+    {
+        get { lock (_transformDisposedAtHandlerEntry) return _transformDisposedAtHandlerEntry.ToArray(); }
+    }
+
+    /// <summary>
     /// Records the <see cref="IMarker"/> a <see cref="MarkerMapper"/> was constructed with.
     /// </summary>
     public void RecordMapper(IMarker marker)
@@ -67,5 +87,15 @@ public sealed class MarkerLog
     public void RecordTransform(IMarker marker)
     {
         lock (_transformMarkers) _transformMarkers.Add(marker);
+    }
+
+    /// <summary>
+    /// Records the <see cref="IMarker"/> a handler resolved on entry to <c>Handle</c>/<c>HandleAsync</c>,
+    /// together with whether the most recently-recorded transform marker was disposed at that point.
+    /// </summary>
+    public void RecordHandler(IMarker marker, bool transformDisposedAtEntry)
+    {
+        lock (_handlerMarkers) _handlerMarkers.Add(marker);
+        lock (_transformDisposedAtHandlerEntry) _transformDisposedAtHandlerEntry.Add(transformDisposedAtEntry);
     }
 }

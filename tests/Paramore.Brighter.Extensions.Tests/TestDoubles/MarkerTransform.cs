@@ -22,14 +22,19 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace Paramore.Brighter.Extensions.Tests.TestDoubles;
 
 /// <summary>
 /// An unwrap transform that records the <see cref="IMarker"/> it was constructed with via an
 /// injected <see cref="MarkerLog"/>, so a test can assert it shares one <see cref="IMarker"/> instance
-/// with the <see cref="MarkerMapper"/> of the same pipeline.
+/// with the <see cref="MarkerMapper"/> of the same pipeline. Implements both
+/// <see cref="IAmAMessageTransform"/> and <see cref="IAmAMessageTransformAsync"/> so the same double
+/// serves both the sync/Reactor and async/Proactor transform pipeline builders.
 /// </summary>
-public sealed class MarkerTransform : IAmAMessageTransform
+public sealed class MarkerTransform : IAmAMessageTransform, IAmAMessageTransformAsync
 {
     public MarkerTransform(IMarker marker, MarkerLog log)
     {
@@ -53,4 +58,10 @@ public sealed class MarkerTransform : IAmAMessageTransform
     public Message Wrap(Message message, Publication publication) => message;
 
     public Message Unwrap(Message message) => message;
+
+    public Task<Message> WrapAsync(Message message, Publication publication, CancellationToken cancellationToken) =>
+        Task.FromResult(message);
+
+    public Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken) =>
+        Task.FromResult(message);
 }
