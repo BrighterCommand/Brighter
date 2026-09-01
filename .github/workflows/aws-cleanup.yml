@@ -15,7 +15,9 @@ permissions:
 jobs:
   cleanup:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # A backlog of leaked resources runs to tens of thousands; the sweep deletes in parallel
+    # but still needs room to work through a large one.
+    timeout-minutes: 30
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -43,7 +45,7 @@ jobs:
           echo "Total FIFO topics: $FIFO_COUNT"
           echo ""
           echo "=== SQS Queues ==="
-          QUEUE_COUNT=$(aws sqs list-queues --query 'QueueUrls | length(@)' --output text 2>/dev/null || echo "0")
+          QUEUE_COUNT=$(aws sqs list-queues --page-size 1000 --query 'QueueUrls[*]' --output text 2>/dev/null | tr '\t' '\n' | grep -c . || echo "0")
           echo "Total queues: $QUEUE_COUNT"
           echo ""
           echo "=== Sample topic names (first 20) ==="
