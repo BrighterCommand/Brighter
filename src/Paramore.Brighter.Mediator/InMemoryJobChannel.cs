@@ -28,7 +28,6 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Mediator;
 
@@ -41,7 +40,7 @@ public enum FullChannelStrategy
     /// Wait for space to become available in the channel.
     /// </summary>
     Wait,
-    
+
     /// <summary>
     /// Drop the oldest item in the channel to make space.
     /// </summary>
@@ -55,17 +54,20 @@ public enum FullChannelStrategy
 public class InMemoryJobChannel<TData> : IAmAJobChannel<TData>
 {
     private readonly Channel<Job<TData>> _channel;
-    
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<InMemoryJobChannel<TData>>();
+
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="InMemoryJobChannel{TData}"/> class.
     /// </summary>
     /// <param name="boundedCapacity">The maximum number of jobs the channel can hold.</param>
     /// <param name="fullChannelStrategy">The strategy to use when the channel is full.</param>
+    /// <param name="loggerFactory">The factory used to create the logger for this channel.</param>
     /// <exception cref="System.ArgumentOutOfRangeException">Thrown when the bounded capacity is less than or equal to 0.</exception>
-    public InMemoryJobChannel(int boundedCapacity = 100, FullChannelStrategy fullChannelStrategy = FullChannelStrategy.Wait)
+    public InMemoryJobChannel(ILoggerFactory loggerFactory, int boundedCapacity = 100, FullChannelStrategy fullChannelStrategy = FullChannelStrategy.Wait)
     {
+        _logger = loggerFactory.CreateLogger<InMemoryJobChannel<TData>>();
+
         if (boundedCapacity <= 0)
             throw new System.ArgumentOutOfRangeException(nameof(boundedCapacity), "Bounded capacity must be greater than 0");
 
@@ -86,10 +88,10 @@ public class InMemoryJobChannel<TData> : IAmAJobChannel<TData>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A task that represents the asynchronous dequeue operation. The task result contains the dequeued job.</returns>
     public async Task<Job<TData>?> DequeueJobAsync(CancellationToken cancellationToken = default(CancellationToken))
-    {                              
+    {
         Job<TData>? item = null;
         while (await _channel.Reader.WaitToReadAsync(cancellationToken))
-            while (_channel.Reader.TryRead(out item)) 
+            while (_channel.Reader.TryRead(out item))
                 return item;
 
         return item;
@@ -114,7 +116,7 @@ public class InMemoryJobChannel<TData> : IAmAJobChannel<TData>
     {
         return _channel.Reader.Completion.IsCompleted;
     }
-    
+
     /// <summary>
     /// This is mainly useful for help with testing, to stop the channel
     /// </summary>

@@ -31,7 +31,7 @@ public class TransformPipelineFailedBuildReleaseThrowTests
             new SimpleMessageMapperFactory(_ => new MyThreeWrapTransformMessageMapper()),
             null);
         mapperRegistry.Register<MyTransformableCommand, MyThreeWrapTransformMessageMapper>();
-        var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, transformerFactory);
+        var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, transformerFactory, loggerFactory: Initializer.TestLoggerFactory);
 
         //act
         var exception = Catch.Exception(() => pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>());
@@ -62,7 +62,7 @@ public class TransformPipelineFailedBuildReleaseThrowTests
             new SimpleMessageMapperFactory(_ => new MyExplicitUnwrapWrapMessageMapper()),
             null);
         mapperRegistry.Register<MyTransformableCommand, MyExplicitUnwrapWrapMessageMapper>();
-        var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, transformerFactory);
+        var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, transformerFactory, loggerFactory: Initializer.TestLoggerFactory);
 
         //act
         var exception = Catch.Exception(() => pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>());
@@ -170,7 +170,7 @@ public class AsyncTransformPipelineFailedBuildReleaseThrowTests
             null,
             new SimpleMessageMapperFactoryAsync(_ => new MyThreeWrapTransformMessageMapperAsync()));
         mapperRegistry.RegisterAsync<MyTransformableCommand, MyThreeWrapTransformMessageMapperAsync>();
-        var pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactory, InstrumentationOptions.All);
+        var pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactory, Initializer.TestLoggerFactory, InstrumentationOptions.All);
 
         //act
         var exception = Catch.Exception(() => pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>());
@@ -194,7 +194,7 @@ public class AsyncTransformPipelineFailedBuildReleaseThrowTests
             null,
             new SimpleMessageMapperFactoryAsync(_ => new MyExplicitUnwrapWrapMessageMapperAsync()));
         mapperRegistry.RegisterAsync<MyTransformableCommand, MyExplicitUnwrapWrapMessageMapperAsync>();
-        var pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactory, InstrumentationOptions.All);
+        var pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactory, Initializer.TestLoggerFactory, InstrumentationOptions.All);
 
         //act
         var exception = Catch.Exception(() => pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>());

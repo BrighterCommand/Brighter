@@ -37,7 +37,7 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
                 }
-            ]).Create();
+            ], loggerFactory: Initializer.TestLoggerFactory).Create();
     }
 
     //[Fact(Skip = "As it has to wait for the messages to flush, only tends to run well in debug")]
@@ -156,7 +156,7 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
     private IAmAMessageConsumerAsync CreateConsumer(string groupId)
     {
         return new KafkaMessageConsumerFactory(
-                new KafkaMessagingGatewayConfiguration { Name = "Kafka Consumer Test", BootStrapServers = new[] { "localhost:9092" } })
+                new KafkaMessagingGatewayConfiguration { Name = "Kafka Consumer Test", BootStrapServers = new[] { "localhost:9092" } }, loggerFactory: Initializer.TestLoggerFactory)
             .CreateAsync(new KafkaSubscription<MyCommand>
             (
                 subscriptionName: new SubscriptionName("Paramore.Brighter.Tests"),

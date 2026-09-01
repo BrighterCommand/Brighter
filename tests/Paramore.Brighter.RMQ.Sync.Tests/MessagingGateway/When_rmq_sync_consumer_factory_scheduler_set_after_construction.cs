@@ -38,7 +38,7 @@ public class When_rmq_sync_consumer_factory_scheduler_set_after_construction
     public void Should_expose_scheduler_set_after_construction()
     {
         // Arrange — factory constructed without a scheduler
-        var factory = new RmqMessageConsumerFactory(_connection);
+        var factory = new RmqMessageConsumerFactory(_connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var scheduler = new StubMessageScheduler();
 
         // Act — set scheduler after construction
@@ -53,7 +53,7 @@ public class When_rmq_sync_consumer_factory_scheduler_set_after_construction
     {
         // Arrange — factory constructed with a scheduler via constructor
         var scheduler = new StubMessageScheduler();
-        var factory = new RmqMessageConsumerFactory(_connection, scheduler);
+        var factory = new RmqMessageConsumerFactory(_connection, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, scheduler);
 
         // Assert — scheduler property reflects the constructor value
         Assert.Same(scheduler, factory.Scheduler);
@@ -64,7 +64,7 @@ public class When_rmq_sync_consumer_factory_scheduler_set_after_construction
     {
         // Arrange — factory constructed with one scheduler
         var originalScheduler = new StubMessageScheduler();
-        var factory = new RmqMessageConsumerFactory(_connection, originalScheduler);
+        var factory = new RmqMessageConsumerFactory(_connection, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, originalScheduler);
 
         // Act — override with a different scheduler
         var overrideScheduler = new StubMessageScheduler();

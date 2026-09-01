@@ -92,7 +92,7 @@ namespace Paramore.Brighter.Validation.FluentValidation.Tests.TestDoubles
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
                 new ResiliencePipelineRegistry<string>(),
-                new InMemorySchedulerFactory());
+                new InMemorySchedulerFactory(loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
             return new CommandProcessorHarness(commandProcessor, receipt);
         }

@@ -35,9 +35,9 @@ namespace GreetingsSender
                     {
                         Topic = new RoutingKey("greeting.Asyncevent"),
                     }
-                ]
-            ).Create();
-            
+                ],
+                loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create();
+
             serviceCollection.AddBrighter()
                 .AddProducers((config) =>
                 {
@@ -61,12 +61,12 @@ namespace GreetingsSender
                 Console.WriteLine("Sending....");
                 var distroGreeting = new GreetingEvent("Paul - Distributed");
                 commandProcessor.DepositPost(distroGreeting);
-                
+
                 commandProcessor.Post(new GreetingEvent("Paul"));
                 commandProcessor.Post(new GreetingAsyncEvent("Paul - Async"));
 
                 commandProcessor.ClearOutbox([distroGreeting.Id.Value]);
-                
+
                 Console.WriteLine("Press q to Quit or any other key to continue");
 
                 var keyPress = Console.ReadKey();

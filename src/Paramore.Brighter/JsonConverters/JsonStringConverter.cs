@@ -19,7 +19,7 @@ namespace Paramore.Brighter.JsonConverters
             }           
         }
 
-        public override void Write(Utf8JsonWriter writer, string value, JsonSerializerOptions options)
+        public override void Write(Utf8JsonWriter writer, string? value, JsonSerializerOptions options)
         {
             // For performance, lift up the writer implementation.
             if (value == null)

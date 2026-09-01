@@ -15,7 +15,7 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.Transformers;
 
 [Trait("Category", "AWS")]
-public class LargeMessagePayloadWrapTests : IAsyncDisposable 
+public class LargeMessagePayloadWrapTests : IAsyncDisposable
 {
     private string? _id;
     private WrapPipelineAsync<MyLargeCommand>? _transformPipeline;
@@ -31,14 +31,14 @@ public class LargeMessagePayloadWrapTests : IAsyncDisposable
     {
         //arrange
         TransformPipelineBuilderAsync.ClearPipelineCache();
-            
+
         var mapperRegistry =
             new MessageMapperRegistry(null, new SimpleMessageMapperFactoryAsync(
                 _ => new MyLargeCommandMessageMapperAsync())
             );
-           
+
         mapperRegistry.RegisterAsync<MyLargeCommand, MyLargeCommandMessageMapperAsync>();
-            
+
         _myCommand = new MyLargeCommand(6000);
 
         var factory = new AWSClientFactory(GatewayFactory.CreateFactory());
@@ -57,15 +57,15 @@ public class LargeMessagePayloadWrapTests : IAsyncDisposable
             BucketAddressTemplate = CredentialsChain.GetBucketAddressTemplate(),
             ACLs = S3CannedACL.Private,
             Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
-        });
-            
+        }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+
         _luggageStore.EnsureStoreExists();
 
         var transformerFactoryAsync = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
         _publication = new Publication { Topic = new RoutingKey("MyLargeCommand"), RequestType = typeof(MyLargeCommand) };
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync, InstrumentationOptions.All);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, InstrumentationOptions.All);
     }
 
     [Fact]
@@ -80,18 +80,18 @@ public class LargeMessagePayloadWrapTests : IAsyncDisposable
         Assert.NotNull(message.Header.DataRef);
         _id = (string)message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK];
         Assert.Equal($"Claim Check {_id}", message.Body.Value);
-            
+
         Assert.True(await _luggageStore.HasClaimAsync(_id));
     }
 
     public async ValueTask DisposeAsync()
     {
-         //We have to empty objects from a bucket before deleting it
-         if (_id != null)
-         {
-             await _luggageStore.DeleteAsync(_id);
-         }
+        //We have to empty objects from a bucket before deleting it
+        if (_id != null)
+        {
+            await _luggageStore.DeleteAsync(_id);
+        }
 
-         await _client.DeleteBucketAsync(_bucketName);
+        await _client.DeleteBucketAsync(_bucketName);
     }
 }

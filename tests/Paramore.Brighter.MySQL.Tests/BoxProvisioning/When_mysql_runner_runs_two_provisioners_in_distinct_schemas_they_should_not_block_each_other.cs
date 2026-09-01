@@ -67,13 +67,13 @@ public class MySqlRunnerDistinctSchemaNonBlockingTests : IAsyncLifetime
             new MySqlOutboxMigrationCatalog(),
             new MySqlPayloadModeValidator(),
             configA,
-            new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), configA, TimeSpan.FromSeconds(30), holdingLock));
+            new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), configA, TimeSpan.FromSeconds(30), global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, holdingLock), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var provisionerB = new MySqlOutboxProvisioner(
             new MySqlBoxDetectionHelper(),
             new MySqlOutboxMigrationCatalog(),
             new MySqlPayloadModeValidator(),
             configB,
-            new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), configB, TimeSpan.FromSeconds(1)));
+            new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), configB, TimeSpan.FromSeconds(1), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //Act
         var taskA = Task.Run(() => provisionerA.ProvisionAsync());

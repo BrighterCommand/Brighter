@@ -10,6 +10,6 @@ public class MsSqlLockingTest : RelationalDatabaseDistributedLockingAsyncTest
     protected override IDistributedLock CreateDistributedLock()
     {
         Tests.Configuration.EnsureDatabaseExists(Configuration.ConnectionString);
-        return new MsSqlLockingProvider(new MsSqlConnectionProvider(Configuration));
+        return new MsSqlLockingProvider(new MsSqlConnectionProvider(Configuration), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 }

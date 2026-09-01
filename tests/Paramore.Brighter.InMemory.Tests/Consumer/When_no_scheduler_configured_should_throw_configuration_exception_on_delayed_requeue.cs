@@ -52,7 +52,7 @@ public class AsyncInMemoryConsumerMissingSchedulerTests
         _consumer = new InMemoryMessageConsumer(
             _routingKey,
             _bus,
-            _timeProvider);
+            _timeProvider, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),

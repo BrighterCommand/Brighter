@@ -37,7 +37,7 @@ string asbEndpoint = "Endpoint=sb://localhost;SharedAccessKeyName=RootManageShar
 
 var asbConnection = new ServiceBusConnectionStringClientProvider(asbEndpoint);
 
-var outboxConfig = new RelationalDatabaseConfiguration(dbConnString, 
+var outboxConfig = new RelationalDatabaseConfiguration(dbConnString,
     databaseName: "BrighterTests", outBoxTableName: "BrighterOutbox");
 
 var producerRegistry = new AzureServiceBusProducerRegistryFactory(
@@ -46,8 +46,8 @@ var producerRegistry = new AzureServiceBusProducerRegistryFactory(
             new() { Topic = new RoutingKey("greeting.event"), MakeChannels = OnMissingChannel.Assume},
             new() { Topic = new RoutingKey("greeting.addGreetingCommand"), MakeChannels = OnMissingChannel.Assume },
             new() { Topic = new RoutingKey("greeting.Asyncevent"), MakeChannels = OnMissingChannel.Assume }
-        ]
-    )
+        ],
+        loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
     .Create();
 
 builder.Services
@@ -64,7 +64,7 @@ builder.Services
     .AddProducers((configure) =>
     {
         configure.ProducerRegistry = producerRegistry;
-        configure.Outbox = new MsSqlOutbox(outboxConfig);
+        configure.Outbox = new MsSqlOutbox(outboxConfig, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.MsSql.MsSqlOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         configure.TransactionProvider = typeof(MsSqlEntityFrameworkCoreTransactionProvider<GreetingsDataContext>);
     });
 

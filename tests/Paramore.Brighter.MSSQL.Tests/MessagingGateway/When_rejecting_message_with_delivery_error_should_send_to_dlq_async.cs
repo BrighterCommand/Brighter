@@ -54,11 +54,11 @@ public class MsSqlMessageConsumerDeliveryErrorDlqAsyncTests : IAsyncDisposable
             deadLetterRoutingKey: dlqTopic,
             messagePumpType: MessagePumpType.Proactor);
 
-        _producer = new MsSqlMessageProducer(testHelper.QueueConfiguration);
+        _producer = new MsSqlMessageProducer(testHelper.QueueConfiguration, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
-        _consumer = (MsSqlMessageConsumer)new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration).Create(sub);
+        _consumer = (MsSqlMessageConsumer)new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create(sub);
 
-        _dlqConsumer = new MsSqlMessageConsumer(testHelper.QueueConfiguration, dlqTopic);
+        _dlqConsumer = new MsSqlMessageConsumer(testHelper.QueueConfiguration, dlqTopic, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_COMMAND),

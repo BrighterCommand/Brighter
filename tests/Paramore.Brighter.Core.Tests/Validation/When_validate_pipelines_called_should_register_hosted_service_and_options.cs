@@ -37,7 +37,7 @@ public class ValidatePipelinesHostedServiceRegistrationTests
     public void When_validate_pipelines_called_should_register_hosted_service()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         var mapperRegistry = new ServiceCollectionMessageMapperRegistryBuilder(services);
         var builder = new ServiceCollectionBrighterBuilder(services, subscriberRegistry, mapperRegistry);
@@ -55,7 +55,7 @@ public class ValidatePipelinesHostedServiceRegistrationTests
     public void When_validate_pipelines_called_should_register_options_with_consumer_owns_false()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         var mapperRegistry = new ServiceCollectionMessageMapperRegistryBuilder(services);
         var builder = new ServiceCollectionBrighterBuilder(services, subscriberRegistry, mapperRegistry);

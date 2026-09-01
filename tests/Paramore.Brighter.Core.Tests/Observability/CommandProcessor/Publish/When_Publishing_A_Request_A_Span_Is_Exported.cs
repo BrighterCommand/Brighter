@@ -66,10 +66,10 @@ public class CommandProcessorPublishObservabilityTests
             new InMemoryRequestContextFactory(),
             policyRegistry,
             new ResiliencePipelineRegistry<string>(),
-            new InMemorySchedulerFactory(),
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
             tracer: tracer, 
-            instrumentationOptions: InstrumentationOptions.All
-        );
+            instrumentationOptions: InstrumentationOptions.All,
+            loggerFactory: Initializer.TestLoggerFactory);
     }
 
     [Fact]

@@ -71,6 +71,7 @@ public class MsSqlBoxMigrationRunnerLoggingTests : IAsyncLifetime
         var capturingLogger = new StructuredCapturingLogger();
         var runner = new MsSqlBoxMigrationRunner(
             new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30),
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance,
             logger: capturingLogger,
             scope: MigrationHistoryScope.PerSchema);
         var provisioner = new MsSqlOutboxProvisioner(
@@ -78,7 +79,7 @@ public class MsSqlBoxMigrationRunnerLoggingTests : IAsyncLifetime
             new MsSqlOutboxMigrationCatalog(),
             new MsSqlPayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //Act
         await provisioner.ProvisionAsync();
@@ -123,13 +124,13 @@ public class MsSqlBoxMigrationRunnerLoggingTests : IAsyncLifetime
             schemaName: _schemaName);
         var globalRunner = new MsSqlBoxMigrationRunner(
             new MsSqlOutboxMigrationCatalog(), globalConfig, TimeSpan.FromSeconds(30),
-            scope: MigrationHistoryScope.Global);
+            scope: MigrationHistoryScope.Global, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var globalProvisioner = new MsSqlOutboxProvisioner(
             new MsSqlBoxDetectionHelper(),
             new MsSqlOutboxMigrationCatalog(),
             new MsSqlPayloadModeValidator(),
             globalConfig,
-            globalRunner);
+            globalRunner, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         await globalProvisioner.ProvisionAsync();
 
         // Sanity-check the arranged precondition so a regression in the Global path can't masquerade
@@ -154,6 +155,7 @@ public class MsSqlBoxMigrationRunnerLoggingTests : IAsyncLifetime
             schemaName: _schemaName);
         var perSchemaRunner = new MsSqlBoxMigrationRunner(
             new MsSqlOutboxMigrationCatalog(), perSchemaConfig, TimeSpan.FromSeconds(30),
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance,
             logger: capturingLogger,
             tracer: tracer,
             scope: MigrationHistoryScope.PerSchema);
@@ -162,7 +164,7 @@ public class MsSqlBoxMigrationRunnerLoggingTests : IAsyncLifetime
             new MsSqlOutboxMigrationCatalog(),
             new MsSqlPayloadModeValidator(),
             perSchemaConfig,
-            perSchemaRunner);
+            perSchemaRunner, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //Act
         await perSchemaProvisioner.ProvisionAsync();

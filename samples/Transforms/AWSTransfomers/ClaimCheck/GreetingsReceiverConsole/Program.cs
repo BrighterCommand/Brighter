@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -62,7 +62,7 @@ if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var cr
     builder.Services.AddConsumers(options =>
     {
         options.Subscriptions = subscriptions;
-        options.DefaultChannelFactory = new ChannelFactory(awsConnection);
+        options.DefaultChannelFactory = new ChannelFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     })
     .UseExternalLuggageStore(provider => new S3LuggageStore(new S3LuggageOptions(
         new AWSS3Connection(credentials, RegionEndpoint.EUWest1),
@@ -70,7 +70,7 @@ if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var cr
     {
         HttpClientFactory = provider.GetService<IHttpClientFactory>(),
         Strategy = StorageStrategy.Validate
-    }))
+    }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance))
     .AutoFromAssemblies();
 
     //We need this for the check as to whether an S3 bucket exists

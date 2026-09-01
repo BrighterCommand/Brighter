@@ -13,7 +13,7 @@ public class SqliteTextInboxTest : RelationalDatabaseInboxTests
 
     protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration)
     {
-        return new SqliteInbox(configuration);
+        return new SqliteInbox(configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Inbox.Sqlite.SqliteInbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
     }
 
     protected override void CreateInboxTable(RelationalDatabaseConfiguration configuration)

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,6 +25,7 @@ using System;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.BoxProvisioning.Spanner;
@@ -48,6 +49,7 @@ public static class SpannerBoxProvisioningExtensions
             {
                 var detectionHelper = sp.GetRequiredService<SpannerBoxDetectionHelper>();
                 var runner = new SpannerBoxMigrationRunner(detectionHelper, configuration,
+                    sp.GetRequiredService<ILoggerFactory>(),
                     tracer: sp.GetService<IAmABrighterTracer>());
                 return new SpannerOutboxProvisioner(
                     detectionHelper,
@@ -83,6 +85,7 @@ public static class SpannerBoxProvisioningExtensions
                     binaryMessagePayload: binaryMessagePayload);
                 var detectionHelper = sp.GetRequiredService<SpannerBoxDetectionHelper>();
                 var runner = new SpannerBoxMigrationRunner(detectionHelper, dbConfig,
+                    sp.GetRequiredService<ILoggerFactory>(),
                     tracer: sp.GetService<IAmABrighterTracer>());
                 return new SpannerOutboxProvisioner(
                     detectionHelper,
@@ -108,6 +111,7 @@ public static class SpannerBoxProvisioningExtensions
             {
                 var detectionHelper = sp.GetRequiredService<SpannerBoxDetectionHelper>();
                 var runner = new SpannerBoxMigrationRunner(detectionHelper, configuration,
+                    sp.GetRequiredService<ILoggerFactory>(),
                     tracer: sp.GetService<IAmABrighterTracer>());
                 return new SpannerInboxProvisioner(
                     detectionHelper,
@@ -143,6 +147,7 @@ public static class SpannerBoxProvisioningExtensions
                     binaryMessagePayload: binaryMessagePayload);
                 var detectionHelper = sp.GetRequiredService<SpannerBoxDetectionHelper>();
                 var runner = new SpannerBoxMigrationRunner(detectionHelper, dbConfig,
+                    sp.GetRequiredService<ILoggerFactory>(),
                     tracer: sp.GetService<IAmABrighterTracer>());
                 return new SpannerInboxProvisioner(
                     detectionHelper,

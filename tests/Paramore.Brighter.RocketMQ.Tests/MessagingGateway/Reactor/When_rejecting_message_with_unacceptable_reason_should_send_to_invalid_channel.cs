@@ -68,7 +68,7 @@ public class RocketMqUnacceptableInvalidChannelTests : IDisposable
             invalidMessageRoutingKey: invalidTopic,
             messagePumpType: MessagePumpType.Reactor);
 
-        var consumerFactory = new RocketMessageConsumerFactory(connection);
+        var consumerFactory = new RocketMessageConsumerFactory(connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _consumer = consumerFactory.Create(sourceSub);
 
         // Invalid message topic consumer (to verify forwarded messages)

@@ -38,8 +38,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             var otherEventsType = new CloudEventsType("io.goparamore.brighter.myothercommand");
             
             var messageProducer = new InMemoryMessageProducer(
-                _internalBus, 
-                new Publication
+                _internalBus,
+                Initializer.TestLoggerFactory, new Publication
                 {
                     Topic = routingKey, 
                     Type = cloudEventsType, 
@@ -49,8 +49,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             
             //This producer is for a different command type, but the same topic
             var otherMessageProducer = new InMemoryMessageProducer(
-                _internalBus, 
-                new Publication
+                _internalBus,
+                Initializer.TestLoggerFactory, new Publication
                 {
                     Topic = routingKey, 
                     Type = otherEventsType,
@@ -97,7 +97,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                _outbox
+                Initializer.TestLoggerFactory, _outbox
             );
 
             _commandProcessor = new CommandProcessor(
@@ -105,8 +105,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new DefaultPolicy(),
                 resiliencePipeline,
                 bus,
-                new InMemorySchedulerFactory()
-            );
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+                loggerFactory: Initializer.TestLoggerFactory);
         }
 
         [Fact]

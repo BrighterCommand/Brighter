@@ -26,7 +26,7 @@ public class When_spanner_outbox_provisioner_finds_existing_table_without_histor
         var config = new RelationalDatabaseConfiguration(
             _connectionString,
             outBoxTableName: _tableName);
-        var runner = new SpannerBoxMigrationRunner(config);
+        var runner = new SpannerBoxMigrationRunner(config, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _provisioner = new SpannerOutboxProvisioner(
             new SpannerBoxDetectionHelper(),
             new SpannerPayloadModeValidator(),

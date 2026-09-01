@@ -60,7 +60,7 @@ public class RmqSyncConsumerDelayTests : IDisposable
             new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_COMMAND),
             new MessageBody("test content for sync delay requeue"));
 
-        _sendProducer = new RmqMessageProducer(rmqConnection);
+        _sendProducer = new RmqMessageProducer(rmqConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         var subscription = new RmqSubscription(
             subscriptionName: new SubscriptionName("rmq-sync-delay-producer-test"),
@@ -69,7 +69,7 @@ public class RmqSyncConsumerDelayTests : IDisposable
             requestType: typeof(MyCommand),
             messagePumpType: MessagePumpType.Reactor);
 
-        _channel = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection))
+        _channel = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance))
             .CreateSyncChannel(subscription);
 
         new QueueFactory(rmqConnection, queueName, new RoutingKeys(topic))
@@ -133,7 +133,7 @@ public class RmqSyncConsumerDelayTests : IDisposable
             rmqConnection,
             new ChannelName(Guid.NewGuid().ToString()),
             new RoutingKey(Guid.NewGuid().ToString()),
-            isDurable: false);
+            isDurable: false, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         // Act & Assert - should not throw
         var exception = Record.Exception(() => consumer.Dispose());

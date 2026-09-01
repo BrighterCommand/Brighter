@@ -55,12 +55,12 @@ public class PostgresMessageConsumerNoChannelsConfiguredTests : IDisposable
 
         var producerRegistry = new PostgresProducerRegistryFactory(
             connection,
-            [new PostgresPublication { Topic = _topic }]
-        ).Create();
+            [new PostgresPublication { Topic = _topic }],
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create();
 
         _producer = (IAmAMessageProducerSync)producerRegistry.LookupBy(_topic);
 
-        var consumerFactory = new PostgresConsumerFactory(connection);
+        var consumerFactory = new PostgresConsumerFactory(connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _consumer = consumerFactory.Create(sub);
     }
 

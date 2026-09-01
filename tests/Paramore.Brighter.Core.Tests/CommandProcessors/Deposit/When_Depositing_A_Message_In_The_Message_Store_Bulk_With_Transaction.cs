@@ -31,16 +31,16 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             _myCommand.Value = "Hello World";
 
             var timeProvider = new FakeTimeProvider();
-            InMemoryMessageProducer commandMessageProducer = new(_bus, new Publication 
-            { 
-                Topic = new RoutingKey(_commandTopic), 
-                RequestType = typeof(MyCommand) 
+            InMemoryMessageProducer commandMessageProducer = new(_bus, Initializer.TestLoggerFactory, new Publication
+            {
+                Topic = new RoutingKey(_commandTopic),
+                RequestType = typeof(MyCommand)
             });
 
-            InMemoryMessageProducer eventMessageProducer = new(_bus, new Publication 
-            { 
-                Topic = new RoutingKey(_eventTopic), 
-                RequestType = typeof(MyEvent) 
+            InMemoryMessageProducer eventMessageProducer = new(_bus, Initializer.TestLoggerFactory, new Publication
+            {
+                Topic = new RoutingKey(_eventTopic),
+                RequestType = typeof(MyEvent)
             });
 
             _messages.Add(new Message(
@@ -62,10 +62,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                     return new MyCommandMessageMapper();
                 else if (type == typeof(MyEventMessageMapper))
                     return new MyEventMessageMapper();
-                
+
                 throw new ConfigurationException($"No command or event mappers registered for {type.Name}");
             }), null);
-            
+
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
@@ -74,32 +74,32 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 { _commandTopic, commandMessageProducer },
                 { _eventTopic, eventMessageProducer}
             });
-            
+
             var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
                 .AddBrighterDefault();
 
             var tracer = new BrighterTracer();
             _spyOutbox = new SpyOutbox() {Tracer = tracer};
-            
+
             IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, SpyTransaction>(
-                producerRegistry, 
+                producerRegistry,
                 resiliencePipelineRegistry,
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                _spyOutbox
+                Initializer.TestLoggerFactory, _spyOutbox
             );
 
-            var scheduler = new InMemorySchedulerFactory();
+            var scheduler = new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory);
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new DefaultPolicy(),
                 resiliencePipelineRegistry,
                 bus,
                 scheduler,
-                typeof(SpyTransaction)
+                Initializer.TestLoggerFactory, typeof(SpyTransaction)
             );
         }
 

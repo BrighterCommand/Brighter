@@ -46,7 +46,7 @@ namespace Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures
 
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                [RoutingKey] = new InMemoryMessageProducer(InternalBus, new Publication { Topic = RoutingKey, RequestType = typeof(MyEvent) })
+                [RoutingKey] = new InMemoryMessageProducer(InternalBus, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, new Publication { Topic = RoutingKey, RequestType = typeof(MyEvent) })
             });
 
             var messageMapperRegistry = GetMapperRegistery();
@@ -62,7 +62,7 @@ namespace Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures
                 new EmptyMessageTransformerFactoryAsync(),
                 trace,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                Outbox
+                global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, Outbox
             );
 
             _serviceCollection.AddSingleton(sp =>
@@ -90,7 +90,7 @@ namespace Paramore.Brighter.TickerQ.Tests.TestDoubles.Fixtures
                policyRegistry,
                new ResiliencePipelineRegistry<string>(),
                outboxBus,
-               scheduler);
+               scheduler, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             });
 
 

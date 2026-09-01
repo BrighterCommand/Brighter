@@ -10,7 +10,8 @@ public class RedisMessageConsumerTimeoutOnGetClient(
     RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration,
     ChannelName queueName,
     RoutingKey topic)
-    : RedisMessageConsumer(redisMessagingGatewayConfiguration, queueName, topic)
+    : RedisMessageConsumer(redisMessagingGatewayConfiguration, queueName, topic,
+        global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
 {
     private const string PoolTimeoutError =
         "Redis Timeout expired. The timeout period elapsed prior to obtaining a subscription from the pool. This may have occurred because all pooled connections were in use.";

@@ -27,7 +27,7 @@ public class When_mqtt_channel_factory_creates_channel_should_use_consumer_facto
             ClientID = "test-client"
         };
 
-        _consumerFactory = new MqttMessageConsumerFactory(configuration);
+        _consumerFactory = new MqttMessageConsumerFactory(configuration, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _channelFactory = new ChannelFactory(_consumerFactory);
     }
 

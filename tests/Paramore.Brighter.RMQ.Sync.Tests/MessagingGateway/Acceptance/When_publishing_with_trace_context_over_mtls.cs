@@ -108,7 +108,7 @@ public class RmqMutualTlsObservabilityTests : IDisposable
             new MessageBody("Test message with trace context over mTLS")
         );
 
-        var messageProducer = new RmqMessageProducer(connection)
+        var messageProducer = new RmqMessageProducer(connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
         {
             Span = _parentActivity
         };
@@ -167,7 +167,7 @@ public class RmqMutualTlsObservabilityTests : IDisposable
             new MessageBody("Test message with full trace context over mTLS")
         );
 
-        var messageProducer = new RmqMessageProducer(connection)
+        var messageProducer = new RmqMessageProducer(connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
         {
             Span = _parentActivity
         };
@@ -236,7 +236,7 @@ public class RmqMutualTlsObservabilityTests : IDisposable
             new MessageBody("Test BrighterTracer instrumentation over mTLS")
         );
 
-        var messageProducer = new RmqMessageProducer(connection)
+        var messageProducer = new RmqMessageProducer(connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
         {
             Span = _parentActivity
         };
@@ -304,7 +304,7 @@ public class RmqMutualTlsObservabilityTests : IDisposable
             new MessageBody("Test CloudEvents trace context over mTLS")
         );
 
-        var messageProducer = new RmqMessageProducer(connection)
+        var messageProducer = new RmqMessageProducer(connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
         {
             Span = _parentActivity
         };
@@ -374,7 +374,7 @@ public class RmqMutualTlsObservabilityTests : IDisposable
             new MessageBody("Test trace context with certificate from file path")
         );
 
-        var messageProducer = new RmqMessageProducer(connection)
+        var messageProducer = new RmqMessageProducer(connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
         {
             Span = _parentActivity
         };

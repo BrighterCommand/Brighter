@@ -1,6 +1,7 @@
 ﻿using Google.Api.Gax.Grpc;
 using Google.Cloud.PubSub.V1;
 using Grpc.Core;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
@@ -11,10 +12,10 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 /// on the Pub/Sub service.
 /// </summary>
 /// <param name="connection">The connection details for the Google Cloud Pub/Sub gateway.</param>
-public class GcpPubSubChannelFactory(GcpMessagingGatewayConnection connection)
+public class GcpPubSubChannelFactory(GcpMessagingGatewayConnection connection, ILoggerFactory loggerFactory)
     : GcpPubSubMessageGateway(connection), IAmAChannelFactory
 {
-    private readonly GcpPubSubConsumerFactory _consumerFactory = new(connection);
+    private readonly GcpPubSubConsumerFactory _consumerFactory = new(connection, loggerFactory);
 
     /// <summary>
     /// Creates a synchronous <see cref="IAmAChannelSync"/> for the given subscription.

@@ -50,7 +50,7 @@ public class RmqMessageConsumerChannelFailureTests : IDisposable
             Exchange = new Exchange("paramore.brighter.exchange")
         };
 
-        _sender = new RmqMessageProducer(rmqConnection);
+        _sender = new RmqMessageProducer(rmqConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var queueName = new ChannelName(Guid.NewGuid().ToString());
             
         _badReceiver = new NotSupportedRmqMessageConsumer(rmqConnection,queueName, sentMessage.Header.Topic, false, 1, false);

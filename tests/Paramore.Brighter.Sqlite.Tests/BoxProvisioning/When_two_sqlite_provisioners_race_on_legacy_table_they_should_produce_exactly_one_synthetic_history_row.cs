@@ -57,13 +57,13 @@ public class LegacyTableRaceTests : IAsyncLifetime
             new SqliteOutboxMigrationCatalog(),
             new SqlitePayloadModeValidator(),
             config,
-            new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config));
+            new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var provisionerB = new SqliteOutboxProvisioner(
             new SqliteBoxDetectionHelper(),
             new SqliteOutboxMigrationCatalog(),
             new SqlitePayloadModeValidator(),
             config,
-            new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config));
+            new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //Act — race two provisioners against the same legacy table.
         await Task.WhenAll(provisionerA.ProvisionAsync(), provisionerB.ProvisionAsync());
@@ -105,13 +105,13 @@ public class LegacyTableRaceTests : IAsyncLifetime
             new SqliteInboxMigrationCatalog(),
             new SqlitePayloadModeValidator(),
             config,
-            new SqliteBoxMigrationRunner(new SqliteInboxMigrationCatalog(), config));
+            new SqliteBoxMigrationRunner(new SqliteInboxMigrationCatalog(), config, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var provisionerB = new SqliteInboxProvisioner(
             new SqliteBoxDetectionHelper(),
             new SqliteInboxMigrationCatalog(),
             new SqlitePayloadModeValidator(),
             config,
-            new SqliteBoxMigrationRunner(new SqliteInboxMigrationCatalog(), config));
+            new SqliteBoxMigrationRunner(new SqliteInboxMigrationCatalog(), config, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //Act — race two provisioners against the same legacy table.
         await Task.WhenAll(provisionerA.ProvisionAsync(), provisionerB.ProvisionAsync());

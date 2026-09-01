@@ -42,7 +42,7 @@ public class LargeMessagePayloadAsyncWrapTests : IAsyncDisposable
 
         _publication = new Publication { Topic = new RoutingKey("MyLargeCommand"), RequestType = typeof(MyLargeCommand) };
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync, InstrumentationOptions.All);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync, Initializer.TestLoggerFactory, InstrumentationOptions.All);
     }
 
     [Fact]

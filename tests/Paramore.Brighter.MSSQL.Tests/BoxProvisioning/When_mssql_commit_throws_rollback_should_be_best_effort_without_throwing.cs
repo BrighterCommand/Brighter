@@ -161,7 +161,9 @@ file sealed class CommitThrowingMsSqlBoxMigrationRunner : MsSqlBoxMigrationRunne
         TimeSpan lockTimeout,
         ILogger logger,
         Exception commitFailure)
-        : base(catalog, configuration, lockTimeout, advisoryLock: null, logger: logger)
+        : base(catalog, configuration, lockTimeout,
+            global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance,
+            advisoryLock: null, logger: logger)
     {
         _commitFailure = commitFailure;
     }

@@ -37,19 +37,25 @@ using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4.Extensions;
 using Paramore.Brighter.Tasks;
 using InvalidOperationException = System.InvalidOperationException;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 
-public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
+public class AwsMessagingGateway
 {
-    protected static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AwsMessagingGateway>();
+    protected readonly ILogger _logger;
 
-    private readonly AWSClientFactory _awsClientFactory = new(awsConnection);
-    protected readonly AWSMessagingGatewayConnection AwsConnection = awsConnection;
+    private readonly AWSClientFactory _awsClientFactory;
+    protected readonly AWSMessagingGatewayConnection AwsConnection;
+
+    public AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection, ILoggerFactory loggerFactory)
+    {
+        _logger = loggerFactory.CreateLogger<AwsMessagingGateway>();
+        _awsClientFactory = new AWSClientFactory(awsConnection);
+        AwsConnection = awsConnection;
+    }
 
     /// <summary>
     /// The Channel Address
@@ -87,16 +93,16 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         ChannelQueueUrl = makeChannel switch
         {
             //on validate or assume, turn a routing key into a queueUrl
-            OnMissingChannel.Assume or OnMissingChannel.Validate => 
+            OnMissingChannel.Assume or OnMissingChannel.Validate =>
                 await ValidateQueueAsync(queue, findQueueBy, sqsAttributes.Type, makeChannel, cancellationToken),
-            OnMissingChannel.Create => 
+            OnMissingChannel.Create =>
                 await CreateQueueAsync(queue, sqsAttributes, cancellationToken),
             _ => ChannelQueueUrl
         };
 
         return ChannelQueueUrl;
     }
-    
+
     protected RoutingKey EnsureSubscription(
         bool isFifo,
         string queueUrl,
@@ -106,7 +112,7 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         SqsAttributes? sqsAttributes,
         OnMissingChannel makeChannels = OnMissingChannel.Create)
     => BrighterAsyncContext.Run(() => EnsureSubscriptionAsync(isFifo, queueUrl, routingKey, findTopicBy, snsAttributes, sqsAttributes, makeChannels));
-    
+
 
     protected async Task<RoutingKey> EnsureSubscriptionAsync(
         bool isFifo,
@@ -149,7 +155,7 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         ChannelTopicArn = makeTopic switch
         {
             //on validate or assume, turn a routing key into a topicARN
-            OnMissingChannel.Assume or OnMissingChannel.Validate => 
+            OnMissingChannel.Assume or OnMissingChannel.Validate =>
                 await ValidateTopicAsync(topic, topicFindBy, type, cancellationToken),
             OnMissingChannel.Create =>
                 await CreateTopicAsync(topic, attributes),
@@ -158,7 +164,7 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
 
         return ChannelTopicArn;
     }
-    
+
     private async Task CheckQueueSubscribedAsync(
         string queueUrl,
         SqsAttributes? sqsAttributes,
@@ -200,11 +206,11 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
     private async Task<string> CreateTopicAsync(RoutingKey topic, SnsAttributes? snsAttributes)
     {
         snsAttributes ??= SnsAttributes.Empty;
-        
+
         using var snsClient = _awsClientFactory.CreateSnsClient();
 
         var topicName = topic.Value;
-        
+
         if (snsAttributes.Type == SqsType.Fifo)
         {
             topicName = topic.ToValidSNSTopicName(true);
@@ -314,7 +320,8 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
 
         CreateCommonQueueAttributes(sqsAttributes, isDLQ, attributes);
 
-        if (sqsAttributes.Type != SqsType.Fifo) return attributes;
+        if (sqsAttributes.Type != SqsType.Fifo)
+            return attributes;
 
         CreateFifoQueueAttributes(sqsAttributes, attributes);
 
@@ -330,8 +337,8 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         }
 
         if (sqsAttributes.DeduplicationScope == null || sqsAttributes.FifoThroughputLimit == null)
-            return ;
-     
+            return;
+
         attributes.Add(QueueAttributeName.FifoThroughputLimit, Convert.ToString(sqsAttributes.FifoThroughputLimit.Value.AsString()));
         attributes.Add(QueueAttributeName.DeduplicationScope, sqsAttributes.DeduplicationScope switch
         {
@@ -346,7 +353,7 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         {
             var policy = new
             {
-                maxReceiveCount = sqsAttributes.RedrivePolicy.MaxReceiveCount, 
+                maxReceiveCount = sqsAttributes.RedrivePolicy.MaxReceiveCount,
                 deadLetterTargetArn = ChannelDeadLetterQueueArn
             };
 
@@ -404,8 +411,9 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         if (!string.IsNullOrEmpty(snsAttributes.Policy))
             attributes.Add("Policy", snsAttributes.Policy);
 
-        if (snsAttributes.Type != SqsType.Fifo) return attributes;
-        
+        if (snsAttributes.Type != SqsType.Fifo)
+            return attributes;
+
         attributes.Add("FifoTopic", "true");
         if (snsAttributes.ContentBasedDeduplication)
         {

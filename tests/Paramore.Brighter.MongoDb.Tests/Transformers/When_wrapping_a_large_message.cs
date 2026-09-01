@@ -41,7 +41,7 @@ public class LargeMessagePayloadWrapTests : IDisposable
 
         _publication = new Publication { Topic = new RoutingKey("MyLargeCommand"), RequestType = typeof(MyLargeCommand) };
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, transformerFactoryAsync);
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, transformerFactoryAsync, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

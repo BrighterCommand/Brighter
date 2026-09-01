@@ -11,7 +11,7 @@ public class ServiceProviderTransformerFactoryLeakTests
     public void When_releasing_a_transient_transformer_the_factory_should_not_retain_it()
     {
         //arrange
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddTransient<DisposeCountingTransform>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions { TransformerLifetime = ServiceLifetime.Transient });
         var provider = collection.BuildServiceProvider();

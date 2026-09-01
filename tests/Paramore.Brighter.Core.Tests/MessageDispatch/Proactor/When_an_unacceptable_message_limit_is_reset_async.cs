@@ -27,14 +27,14 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
         public MessagePumpUnacceptableMessageLimitResetTestsAsync()
         {
             _bus = new InternalBus();
-            
+
             _channel = new ChannelAsync(
                 new(Channel),
-                _routingKey, 
-                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)), 
+                _routingKey,
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory),
                 10
                 );
-            
+
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.RegisterAsync<MyAdvanceTimerEvent, MyAdvanceTimerEventHandlerAsync>();
 
@@ -44,8 +44,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             );
 
             var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>();
-            resiliencePipelineRegistry.AddBrighterDefault();            
-            
+            resiliencePipelineRegistry.AddBrighterDefault();
+
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => throw new NotImplementedException() ),
                 new SimpleMessageMapperFactoryAsync(_ => new MyAdvanceTimerEventMessageMapperAsync()));
@@ -57,39 +57,39 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
                 resiliencePipelineRegistry,
-                new InMemorySchedulerFactory()
-            );
-            
-            _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyAdvanceTimerEvent), 
-                messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), _channel, 
-                timeProvider:_timeProvider)
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+                loggerFactory: Initializer.TestLoggerFactory);
+
+            _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyAdvanceTimerEvent),
+                messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), _channel,
+                timeProvider:_timeProvider, loggerFactory: Initializer.TestLoggerFactory)
             {
-                Channel = _channel, 
-                TimeOut = TimeSpan.FromMilliseconds(5000), 
-                RequeueCount = 3, 
-                UnacceptableMessageLimit = 3, 
+                Channel = _channel,
+                TimeOut = TimeSpan.FromMilliseconds(5000),
+                RequeueCount = 3,
+                UnacceptableMessageLimit = 3,
                 UnacceptableMessageLimitWindow = TimeSpan.FromMinutes(1)
             };
 
             _unacceptableMessage1 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE),
                 new MessageBody("")
             );
             _unacceptableMessage2 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE),
                 new MessageBody("")
             );
             _unacceptableMessage3 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE),
                 new MessageBody("")
             );
             _unacceptableMessage4 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE),
                 new MessageBody("")
             );
 
             _timeAdvanceMessage = new MyAdvanceTimerEventMessageMapper().MapToMessage(
-                new MyAdvanceTimerEvent(2), 
+                new MyAdvanceTimerEvent(2),
                 new Publication<MyAdvanceTimerEvent>
                 {
                     Topic = _routingKey
@@ -102,20 +102,20 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
         {
             _channel.Enqueue(_unacceptableMessage1);
             _channel.Enqueue(_unacceptableMessage2);
-            
+
             //force the time forward, whilst in the message loop
             _channel.Enqueue(_timeAdvanceMessage);
-            
+
             //will trigger reset of unacceptable message count as window has passed
             _channel.Enqueue(_unacceptableMessage3);
             _channel.Enqueue(_unacceptableMessage4);
 
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-           
+
             _channel.Stop(_routingKey);
-            
+
             await Task.WhenAll(task);
-            
+
             Assert.Empty(_bus.Stream(_routingKey));
 
             Assert.Equal(MessagePumpStatus.MP_STOPPED, _messagePump.Status);

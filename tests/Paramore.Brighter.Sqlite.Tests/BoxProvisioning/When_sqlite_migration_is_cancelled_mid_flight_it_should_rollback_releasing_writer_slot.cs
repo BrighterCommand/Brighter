@@ -92,7 +92,7 @@ public class MigrationCancellationRollbackTests : IAsyncLifetime
         // BeginAsync issues BEGIN IMMEDIATE on the same database completes the migration
         // normally; the 5s lock timeout would expire and surface as SQLITE_BUSY (wrapped as
         // MigrationLockDeadlockException) if the writer slot were still held.
-        var freshRunner = new SqliteBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(5));
+        var freshRunner = new SqliteBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(5), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         await freshRunner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, staleHint, CancellationToken.None);
 
@@ -134,7 +134,8 @@ file sealed class CancellingSqliteBoxMigrationRunner : SqliteBoxMigrationRunner
     public CancellingSqliteBoxMigrationRunner(
         IAmABoxMigrationCatalog catalog,
         IAmARelationalDatabaseConfiguration configuration)
-        : base(catalog, configuration)
+        : base(catalog, configuration,
+            global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
     {
     }
 

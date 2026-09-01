@@ -103,7 +103,7 @@ public class BrokerStyleAsyncConfirmationTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer: null,
             new FindPublicationByPublicationTopicOrRequestType(),
-            outbox,
+            Initializer.TestLoggerFactory, outbox,
             new InMemoryOutboxCircuitBreaker());
     }
 }

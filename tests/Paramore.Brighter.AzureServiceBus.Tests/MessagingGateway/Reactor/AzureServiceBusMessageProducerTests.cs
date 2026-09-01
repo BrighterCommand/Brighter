@@ -23,19 +23,19 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Reactor
             _nameSpaceManagerWrapper = new FakeAdministrationClient();
             _topicClient = new FakeServiceBusSenderWrapper();
             _topicClientProvider = new FakeServiceBusSenderProvider(_topicClient);
-            
+
 
             _producer = new AzureServiceBusTopicMessageProducer(
-                _nameSpaceManagerWrapper, 
-                _topicClientProvider, 
-                new AzureServiceBusPublication{MakeChannels = OnMissingChannel.Create}
-            );
-            
+                _nameSpaceManagerWrapper,
+                _topicClientProvider,
+                new AzureServiceBusPublication { MakeChannels = OnMissingChannel.Create },
+                loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+
             _queueProducer = new AzureServiceBusQueueMessageProducer(
-                _nameSpaceManagerWrapper, 
-                _topicClientProvider, 
-                new AzureServiceBusPublication{MakeChannels = OnMissingChannel.Create}
-            );
+                _nameSpaceManagerWrapper,
+                _topicClientProvider,
+                new AzureServiceBusPublication { MakeChannels = OnMissingChannel.Create },
+                loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         }
 
         [Fact]
@@ -45,12 +45,12 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Reactor
 
             _nameSpaceManagerWrapper.ResetState();
             _nameSpaceManagerWrapper.Topics.Add("topic", []);
-            
+
             _producer.Send(new Message(
-                new MessageHeader(Id.Random(), new RoutingKey("topic"), MessageType.MT_EVENT), 
+                new MessageHeader(Id.Random(), new RoutingKey("topic"), MessageType.MT_EVENT),
                 new MessageBody(messageBody, new ContentType(MediaTypeNames.Application.Json)))
             );
-            
+
             ServiceBusMessage sentMessage = _topicClient.SentMessages.First();
 
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
@@ -70,12 +70,12 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Reactor
             _nameSpaceManagerWrapper.Queues.Add("topic");
 
             var producer = useQueues ? _queueProducer : _producer;
-            
+
             producer.Send(new Message(
-                new MessageHeader(Id.Random(),  new RoutingKey("topic"), MessageType.MT_COMMAND), 
+                new MessageHeader(Id.Random(), new RoutingKey("topic"), MessageType.MT_COMMAND),
                 new MessageBody(messageBody, new ContentType(MediaTypeNames.Application.Json)))
             );
-            
+
             ServiceBusMessage sentMessage = _topicClient.SentMessages.First();
 
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
@@ -93,11 +93,11 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Reactor
             _nameSpaceManagerWrapper.ResetState();
 
             var producer = useQueues ? _queueProducer : _producer;
-            
+
             producer.Send(new Message(
-                new MessageHeader(Id.Random(), new RoutingKey("topic"), MessageType.MT_NONE), 
+                new MessageHeader(Id.Random(), new RoutingKey("topic"), MessageType.MT_NONE),
                 new MessageBody(messageBody, new ContentType(MediaTypeNames.Application.Json))));
-            
+
             ServiceBusMessage sentMessage = _topicClient.SentMessages.First();
 
             Assert.Equal(1, _nameSpaceManagerWrapper.CreateCount);
@@ -118,9 +118,9 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Reactor
             try
             {
                 var producer = useQueues ? _queueProducer : _producer;
-                
+
                 producer.Send(new Message(
-                    new MessageHeader(Id.Random(), new RoutingKey("topic"), MessageType.MT_NONE), 
+                    new MessageHeader(Id.Random(), new RoutingKey("topic"), MessageType.MT_NONE),
                     new MessageBody("Message", new ContentType(MediaTypeNames.Application.Json))));
             }
             catch (Exception)
@@ -144,12 +144,12 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Reactor
             _nameSpaceManagerWrapper.Queues.Add("topic");
 
             var producer = useQueues ? _queueProducer : _producer;
-            
+
             producer.SendWithDelay(
                 new Message(
                     new MessageHeader(Id.Random(), new RoutingKey("topic"), MessageType.MT_EVENT),
                     new MessageBody(messageBody, new ContentType(MediaTypeNames.Application.Json))), TimeSpan.FromSeconds(1));
-            
+
             ServiceBusMessage sentMessage = _topicClient.SentMessages.First();
 
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
@@ -175,7 +175,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Reactor
             producer.SendWithDelay(new Message(
                 new MessageHeader(Id.Random(), new RoutingKey("topic"), MessageType.MT_COMMAND),
                 new MessageBody(messageBody, new ContentType(MediaTypeNames.Application.Json))), TimeSpan.FromSeconds(1));
-            
+
             ServiceBusMessage sentMessage = _topicClient.SentMessages.First();
 
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
@@ -199,11 +199,11 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Reactor
             producer.SendWithDelay(new Message(
                 new MessageHeader(Id.Random(), new RoutingKey("topic"), MessageType.MT_NONE),
                 new MessageBody(messageBody, new ContentType(MediaTypeNames.Application.Json))), TimeSpan.FromSeconds(1));
-            
+
             ServiceBusMessage sentMessage = _topicClient.SentMessages.First();
 
             Assert.Equal(1, _nameSpaceManagerWrapper.CreateCount);
-            
+
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
             Assert.Equal(1, _topicClient.ClosedCount);
         }
@@ -221,18 +221,18 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Reactor
             if (topicExists)
             {
                 _nameSpaceManagerWrapper.Topics.Add("topic", []);
-                _nameSpaceManagerWrapper.Queues.Add("topic");    
+                _nameSpaceManagerWrapper.Queues.Add("topic");
             }
 
             var producer = useQueues ? _queueProducer : _producer;
 
             var routingKey = new RoutingKey("topic");
-            
+
             producer.SendWithDelay(new Message(
-                new MessageHeader(Id.Random(), routingKey, MessageType.MT_NONE), 
+                new MessageHeader(Id.Random(), routingKey, MessageType.MT_NONE),
                 new MessageBody(messageBody, new ContentType(MediaTypeNames.Application.Json))), TimeSpan.FromSeconds(1));
             producer.SendWithDelay(new Message(
-                new MessageHeader(Id.Random(), routingKey, MessageType.MT_NONE), 
+                new MessageHeader(Id.Random(), routingKey, MessageType.MT_NONE),
                 new MessageBody(messageBody, new ContentType(MediaTypeNames.Application.Json))), TimeSpan.FromSeconds(1));
 
             if (topicExists == false)
@@ -251,10 +251,10 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Reactor
             _nameSpaceManagerWrapper.ExistsException = new Exception();
 
             var producer = useQueues ? _queueProducer : _producer;
-            
+
             await Assert.ThrowsAsync<Exception>(() => producer.SendWithDelayAsync(
                 new Message(
-                    new MessageHeader(Id.Random(), new RoutingKey("topic"), MessageType.MT_NONE), 
+                    new MessageHeader(Id.Random(), new RoutingKey("topic"), MessageType.MT_NONE),
                     new MessageBody(messageBody, new ContentType(MediaTypeNames.Application.Json))), TimeSpan.FromSeconds(1))
             );
             Assert.Equal(1, _nameSpaceManagerWrapper.ResetCount);
@@ -275,9 +275,9 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Reactor
             _topicClientProvider.SingleThrowGetException = new Exception();
 
             var producer = useQueues ? _queueProducer : _producer;
-            
+
             producer.SendWithDelay(new Message(
-               new MessageHeader(Id.Random(), new RoutingKey("topic"), MessageType.MT_NONE), 
+               new MessageHeader(Id.Random(), new RoutingKey("topic"), MessageType.MT_NONE),
                new MessageBody(messageBody, new ContentType(MediaTypeNames.Application.Json)))
            );
 
@@ -290,14 +290,14 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Reactor
             var messageBody = Encoding.UTF8.GetBytes("A message body");
 
             var producerValidate = new AzureServiceBusTopicMessageProducer(
-                _nameSpaceManagerWrapper, 
-                _topicClientProvider, 
-                new AzureServiceBusPublication{MakeChannels = OnMissingChannel.Validate})
+                _nameSpaceManagerWrapper,
+                _topicClientProvider,
+                new AzureServiceBusPublication { MakeChannels = OnMissingChannel.Validate }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
             ;
 
             await Assert.ThrowsAsync<ChannelFailureException>(() => producerValidate.SendAsync(
                 new Message(
-                    new MessageHeader(Id.Random(), new RoutingKey("topic"), MessageType.MT_NONE), 
+                    new MessageHeader(Id.Random(), new RoutingKey("topic"), MessageType.MT_NONE),
                     new MessageBody(messageBody, new ContentType(MediaTypeNames.Application.Json))))
             );
         }

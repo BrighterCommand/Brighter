@@ -20,7 +20,7 @@ public class TransformLifetimeScopePartialReleaseTests
         var after = new CountingTransform();
         factory.ThrowFor(throwing);
 
-        var scope = new TransformLifetimeScope(factory);
+        var scope = new TransformLifetimeScope(factory, loggerFactory: Initializer.TestLoggerFactory);
         scope.Add(Lease<IAmAMessageTransform>.Untracked(before));
         scope.Add(Lease<IAmAMessageTransform>.Untracked(throwing));
         scope.Add(Lease<IAmAMessageTransform>.Untracked(after));
@@ -54,7 +54,7 @@ public class TransformLifetimeScopePartialReleaseTests
         var after = new CountingTransformAsync();
         factory.ThrowFor(throwing);
 
-        var scope = new TransformLifetimeScopeAsync(factory);
+        var scope = new TransformLifetimeScopeAsync(factory, loggerFactory: Initializer.TestLoggerFactory);
         scope.Add(Lease<IAmAMessageTransformAsync>.Untracked(before));
         scope.Add(Lease<IAmAMessageTransformAsync>.Untracked(throwing));
         scope.Add(Lease<IAmAMessageTransformAsync>.Untracked(after));

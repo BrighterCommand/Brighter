@@ -60,8 +60,8 @@ public class AsyncCommandProcessorClearObservabilityTests
         messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
         var type = new CloudEventsType("io.goparamore.brighter.myevent");
-        _messageProducer = new InMemoryMessageProducer(_internalBus, 
-            new Publication
+        _messageProducer = new InMemoryMessageProducer(_internalBus,
+        Initializer.TestLoggerFactory, new Publication
             {
                 Source = new Uri("http://localhost"),
                 RequestType = typeof(MyEvent),
@@ -82,7 +82,7 @@ public class AsyncCommandProcessorClearObservabilityTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            outbox,
+            Initializer.TestLoggerFactory, outbox,
             maxOutStandingMessages: -1
         );
         
@@ -93,10 +93,10 @@ public class AsyncCommandProcessorClearObservabilityTests
             policyRegistry, 
             new ResiliencePipelineRegistry<string>(),
             bus,
-            new InMemorySchedulerFactory(),
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
             tracer: tracer, 
-            instrumentationOptions: InstrumentationOptions.All
-        );
+            instrumentationOptions: InstrumentationOptions.All,
+            loggerFactory: Initializer.TestLoggerFactory);
     }
     
     [Fact]

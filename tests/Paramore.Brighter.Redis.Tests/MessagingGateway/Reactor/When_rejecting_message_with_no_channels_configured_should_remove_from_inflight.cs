@@ -46,10 +46,10 @@ public class RedisMessageConsumerNoChannelsRejectTests : IDisposable
         var queueName = new ChannelName($"no-channels-test-{Guid.NewGuid()}");
 
         _messageProducer = new RedisMessageProducer(configuration,
-            new RedisMessagePublication { Topic = topic });
+            new RedisMessagePublication { Topic = topic }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         // No deadLetterRoutingKey, no invalidMessageRoutingKey
-        _consumer = new RedisMessageConsumer(configuration, queueName, topic);
+        _consumer = new RedisMessageConsumer(configuration, queueName, topic, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_COMMAND),

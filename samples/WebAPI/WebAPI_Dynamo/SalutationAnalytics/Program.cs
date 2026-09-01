@@ -80,18 +80,18 @@ static void ConfigureBrighter(
         Exchange = new Exchange("paramore.brighter.exchange")
     };
 
-    var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
+    var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
     var transport = hostContext.Configuration[MessagingGlobals.BRIGHTER_TRANSPORT];
     if (string.IsNullOrWhiteSpace(transport))
         throw new InvalidOperationException("Transport is not set");
-        
+
     MessagingTransport messagingTransport =
         ConfigureTransport.TransportType(transport);
 
     ConfigureTransport.AddSchemaRegistryMaybe(services, messagingTransport);
-            
-    var producerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport); 
+
+    var producerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport);
 
     services.AddConsumers(options =>
         {

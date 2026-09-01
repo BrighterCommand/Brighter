@@ -26,7 +26,7 @@ public class InMemoryConsumerReceiveTests
         var bus = new InternalBus();
         bus.Enqueue(expectedMessage);
 
-        var consumer = new InMemoryMessageConsumer(routingKey, bus, new FakeTimeProvider(), ackTimeout: TimeSpan.FromMilliseconds(1000));
+        var consumer = new InMemoryMessageConsumer(routingKey, bus, new FakeTimeProvider(), ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         
         //act
         var receivedMessage = consumer.Receive().Single();

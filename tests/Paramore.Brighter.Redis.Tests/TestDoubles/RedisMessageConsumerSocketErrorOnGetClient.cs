@@ -10,7 +10,8 @@ public class RedisMessageConsumerSocketErrorOnGetClient(
     RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration,
     ChannelName queueName,
     RoutingKey topic)
-    : RedisMessageConsumer(redisMessagingGatewayConfiguration, queueName, topic)
+    : RedisMessageConsumer(redisMessagingGatewayConfiguration, queueName, topic,
+        global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
 {
     private const string SocketException =
         "localhost:6379";

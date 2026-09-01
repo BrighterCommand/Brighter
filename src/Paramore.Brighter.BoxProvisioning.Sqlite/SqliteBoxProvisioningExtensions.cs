@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,6 +25,7 @@ using System;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.BoxProvisioning.Sqlite;
@@ -58,14 +59,16 @@ public static class SqliteBoxProvisioningExtensions
             {
                 var catalog = sp.GetRequiredService<SqliteOutboxMigrationCatalog>();
                 var runner = new SqliteBoxMigrationRunner(
-                    catalog, configuration, options.MigrationLockTimeout, enableWalMode,
+                    catalog, configuration, options.MigrationLockTimeout,
+                    sp.GetRequiredService<ILoggerFactory>(), enableWalMode,
                     tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new SqliteOutboxProvisioner(
                     sp.GetRequiredService<SqliteBoxDetectionHelper>(),
                     catalog,
                     sp.GetRequiredService<SqlitePayloadModeValidator>(),
                     configuration,
-                    runner);
+                    runner,
+                    sp.GetRequiredService<ILoggerFactory>());
             });
         });
         return options;
@@ -102,14 +105,16 @@ public static class SqliteBoxProvisioningExtensions
                     binaryMessagePayload: binaryMessagePayload);
                 var catalog = sp.GetRequiredService<SqliteOutboxMigrationCatalog>();
                 var runner = new SqliteBoxMigrationRunner(
-                    catalog, dbConfig, options.MigrationLockTimeout, enableWalMode,
+                    catalog, dbConfig, options.MigrationLockTimeout,
+                    sp.GetRequiredService<ILoggerFactory>(), enableWalMode,
                     tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new SqliteOutboxProvisioner(
                     sp.GetRequiredService<SqliteBoxDetectionHelper>(),
                     catalog,
                     sp.GetRequiredService<SqlitePayloadModeValidator>(),
                     dbConfig,
-                    runner);
+                    runner,
+                    sp.GetRequiredService<ILoggerFactory>());
             });
         });
         return options;
@@ -136,14 +141,16 @@ public static class SqliteBoxProvisioningExtensions
             {
                 var catalog = sp.GetRequiredService<SqliteInboxMigrationCatalog>();
                 var runner = new SqliteBoxMigrationRunner(
-                    catalog, configuration, options.MigrationLockTimeout, enableWalMode,
+                    catalog, configuration, options.MigrationLockTimeout,
+                    sp.GetRequiredService<ILoggerFactory>(), enableWalMode,
                     tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new SqliteInboxProvisioner(
                     sp.GetRequiredService<SqliteBoxDetectionHelper>(),
                     catalog,
                     sp.GetRequiredService<SqlitePayloadModeValidator>(),
                     configuration,
-                    runner);
+                    runner,
+                    sp.GetRequiredService<ILoggerFactory>());
             });
         });
         return options;
@@ -180,14 +187,16 @@ public static class SqliteBoxProvisioningExtensions
                     binaryMessagePayload: binaryMessagePayload);
                 var catalog = sp.GetRequiredService<SqliteInboxMigrationCatalog>();
                 var runner = new SqliteBoxMigrationRunner(
-                    catalog, dbConfig, options.MigrationLockTimeout, enableWalMode,
+                    catalog, dbConfig, options.MigrationLockTimeout,
+                    sp.GetRequiredService<ILoggerFactory>(), enableWalMode,
                     tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new SqliteInboxProvisioner(
                     sp.GetRequiredService<SqliteBoxDetectionHelper>(),
                     catalog,
                     sp.GetRequiredService<SqlitePayloadModeValidator>(),
                     dbConfig,
-                    runner);
+                    runner,
+                    sp.GetRequiredService<ILoggerFactory>());
             });
         });
         return options;

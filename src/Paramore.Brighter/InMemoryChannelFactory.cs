@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter
 {
@@ -36,6 +37,7 @@ namespace Paramore.Brighter
         private readonly InternalBus _internalBus;
         private readonly TimeProvider _timeProvider;
         private readonly TimeSpan? _ackTimeout;
+        private readonly ILoggerFactory _loggerFactory;
         /// <summary>
         /// Gets or sets the message scheduler for delayed requeue support.
         /// </summary>
@@ -46,12 +48,14 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="internalBus">The internal bus for message routing.</param>
         /// <param name="timeProvider">The time provider for managing time-related operations.</param>
+        /// <param name="loggerFactory">The factory used to create loggers.</param>
         /// <param name="ackTimeout">Optional acknowledgment timeout.</param>
         /// <param name="scheduler">Optional scheduler for delayed requeue operations.</param>
-        public InMemoryChannelFactory(InternalBus internalBus, TimeProvider timeProvider, TimeSpan? ackTimeout = null, IAmAMessageScheduler? scheduler = null)
+        public InMemoryChannelFactory(InternalBus internalBus, TimeProvider timeProvider, ILoggerFactory loggerFactory, TimeSpan? ackTimeout = null, IAmAMessageScheduler? scheduler = null)
         {
             _internalBus = internalBus;
             _timeProvider = timeProvider;
+            _loggerFactory = loggerFactory;
             _ackTimeout = ackTimeout;
             Scheduler = scheduler;
         }
@@ -64,19 +68,20 @@ namespace Paramore.Brighter
         public IAmAChannelSync CreateSyncChannel(Subscription subscription)
         {
             var deadLetterSupport = subscription as IUseBrighterDeadLetterSupport;
-            var deadLetterKey = deadLetterSupport?.DeadLetterRoutingKey; 
-            
+            var deadLetterKey = deadLetterSupport?.DeadLetterRoutingKey;
+
             var invalidMessageSupport = subscription as IUseBrighterInvalidMessageSupport;
             var invalidMessageKey = invalidMessageSupport?.InvalidMessageRoutingKey;
-            
+
             return new Channel(
                 subscription.ChannelName,
                 subscription.RoutingKey,
                 new InMemoryMessageConsumer(
-                    subscription.RoutingKey, 
-                    _internalBus, 
+                    subscription.RoutingKey,
+                    _internalBus,
                     _timeProvider,
-                    deadLetterKey,  
+                    _loggerFactory,
+                    deadLetterKey,
                     invalidMessageKey,
                     ackTimeout: _ackTimeout,
                     scheduler: Scheduler),
@@ -104,6 +109,7 @@ namespace Paramore.Brighter
                     subscription.RoutingKey,
                     _internalBus,
                     _timeProvider,
+                    _loggerFactory,
                     deadLetterKey,
                     invalidMessageKey,
                     ackTimeout: _ackTimeout,
@@ -133,6 +139,7 @@ namespace Paramore.Brighter
                     subscription.RoutingKey,
                     _internalBus,
                     _timeProvider,
+                    _loggerFactory,
                     deadLetterKey,
                     invalidMessageKey,
                     ackTimeout: _ackTimeout,

@@ -29,7 +29,7 @@ public class MediatorParallelSplitFlowTests
         var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyCommandHandlerAsync(commandProcessor));
 
         commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
-            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
+            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<MyCommand>.ClearPipelineCache();    
         
         var workflowData= new WorkflowTestData();
@@ -48,32 +48,32 @@ public class MediatorParallelSplitFlowTests
                     new FireAndForgetAsync<MyCommand, WorkflowTestData>((d) => 
                         new MyCommand { Value = (d.Bag["MyOtherValue"] as string)! }),
                     () => { _secondBranchFinished = true; },
-                    null
-                );
+                    null,
+                    loggerFactory: Initializer.TestLoggerFactory);
         
                 var firstBranch = new Sequential<WorkflowTestData>(
                     "Test of Job One",
                     new FireAndForgetAsync<MyCommand, WorkflowTestData>((d) => 
                         new MyCommand { Value = (d.Bag["MyValue"] as string)! }),
                     () => {  _firstBranchFinished = true;  }, 
-                    null
-                );
+                    null,
+                    loggerFactory: Initializer.TestLoggerFactory);
                 
                 return [firstBranch, secondBranch];
-            }
-        );
+            },
+            loggerFactory: Initializer.TestLoggerFactory);
         
         _job.InitSteps(parallelSplit);
         
-        InMemoryStateStoreAsync store = new();
-        _channel = new InMemoryJobChannel<WorkflowTestData>();
+        InMemoryStateStoreAsync store = new(loggerFactory: Initializer.TestLoggerFactory);
+        _channel = new InMemoryJobChannel<WorkflowTestData>(loggerFactory: Initializer.TestLoggerFactory);
 
         _scheduler = new Scheduler<WorkflowTestData>(
             _channel,
             store
         );
 
-        _runner = new Runner<WorkflowTestData>(_channel, store, commandProcessor, _scheduler);
+        _runner = new Runner<WorkflowTestData>(_channel, store, commandProcessor, _scheduler, loggerFactory: Initializer.TestLoggerFactory);
     }
     
     [Fact]

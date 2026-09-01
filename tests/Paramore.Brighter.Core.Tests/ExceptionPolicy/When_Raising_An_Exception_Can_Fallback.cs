@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             registry.Register<MyCommand, MyFailsWithFallbackDivideByZeroHandler>();
             var policyRegistry = new PolicyRegistry();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddSingleton<MyFailsWithFallbackDivideByZeroHandler>();
             container.AddSingleton<FallbackPolicyHandler<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             
             MyFailsWithFallbackDivideByZeroHandler.ReceivedCommand = false;
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry,  new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry,  new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         }
 
         [Fact]

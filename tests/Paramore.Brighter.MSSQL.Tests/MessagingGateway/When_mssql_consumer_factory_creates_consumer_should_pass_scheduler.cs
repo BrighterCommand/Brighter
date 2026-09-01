@@ -46,7 +46,7 @@ public class When_mssql_consumer_factory_creates_consumer_should_pass_scheduler
     {
         // Arrange — factory constructed with a scheduler
         var scheduler = new StubMessageScheduler();
-        var factory = new MsSqlMessageConsumerFactory(_configuration, scheduler);
+        var factory = new MsSqlMessageConsumerFactory(_configuration, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, scheduler);
 
         // Act
         var consumer = factory.Create(_subscription);
@@ -61,7 +61,7 @@ public class When_mssql_consumer_factory_creates_consumer_should_pass_scheduler
     {
         // Arrange — factory constructed with a scheduler
         var scheduler = new StubMessageScheduler();
-        var factory = new MsSqlMessageConsumerFactory(_configuration, scheduler);
+        var factory = new MsSqlMessageConsumerFactory(_configuration, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, scheduler);
 
         // Act
         var consumer = factory.CreateAsync(_subscription);
@@ -75,7 +75,7 @@ public class When_mssql_consumer_factory_creates_consumer_should_pass_scheduler
     public void Should_create_consumer_without_scheduler_for_backward_compat()
     {
         // Arrange — factory constructed without a scheduler (backward compat)
-        var factory = new MsSqlMessageConsumerFactory(_configuration);
+        var factory = new MsSqlMessageConsumerFactory(_configuration, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         // Act
         var consumer = factory.Create(_subscription);

@@ -13,13 +13,13 @@ public class S3LuggageUploadMissingParametersTests
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly string _bucketName;
-    
+
     public S3LuggageUploadMissingParametersTests()
     {
         var services = new ServiceCollection();
         services.AddHttpClient();
         var provider = services.BuildServiceProvider();
-        
+
         _httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
         _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
     }
@@ -28,7 +28,7 @@ public class S3LuggageUploadMissingParametersTests
     public void When_creating_luggagestore_missing_client()
     {
         //arrange
-        var exception = Catch.Exception(() => new S3LuggageStore(new S3LuggageOptions(null!,  null!)));
+        var exception = Catch.Exception(() => new S3LuggageStore(new S3LuggageOptions(null!, null!), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 
         Assert.NotNull(exception);
         Assert.IsType<ArgumentNullException>(exception);
@@ -40,38 +40,38 @@ public class S3LuggageUploadMissingParametersTests
     public void When_creating_luggagestore_missing_bucketName(string? bucketName)
     {
         //arrange
-        var exception = Catch.Exception(() => new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(),  bucketName!)));
+        var exception = Catch.Exception(() => new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), bucketName!), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 
         Assert.NotNull(exception);
         Assert.IsType<ArgumentNullException>(exception);
     }
-    
+
     [Fact]
     public async Task When_creating_luggagestore_bad_bucketName()
     {
         //arrange
-        var exception = Catch.Exception(() => new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), "A" )));
+        var exception = Catch.Exception(() => new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), "A"), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 
         Assert.NotNull(exception);
         Assert.IsType<ArgumentException>(exception);
     }
-    
+
     [Fact]
     public async Task When_creating_luggagestore_missing_httpClient()
     {
         //arrange
         var exception = await Catch.ExceptionAsync(async () =>
         {
-            var store = new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), _bucketName));
+            var store = new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), _bucketName), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             await store.EnsureStoreExistsAsync();
         });
 
         Assert.NotNull(exception);
         Assert.IsType<ConfigurationException>(exception);
     }
-    
+
     [Fact]
-    public async Task When_creating_luggagestore_missing_ACL() 
+    public async Task When_creating_luggagestore_missing_ACL()
     {
         //arrange
         var exception = await Catch.ExceptionAsync(async () =>
@@ -79,11 +79,11 @@ public class S3LuggageUploadMissingParametersTests
             var store = new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), _bucketName)
             {
                 HttpClientFactory = _httpClientFactory,
-                BucketAddressTemplate = CredentialsChain.GetBucketAddressTemplate() 
-            });
+                BucketAddressTemplate = CredentialsChain.GetBucketAddressTemplate()
+            }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             await store.EnsureStoreExistsAsync();
         });
-    
+
         Assert.NotNull(exception);
         Assert.IsType<ConfigurationException>(exception);
     }

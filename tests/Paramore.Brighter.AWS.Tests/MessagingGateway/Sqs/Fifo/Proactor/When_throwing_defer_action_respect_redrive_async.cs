@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Mime;
@@ -44,7 +44,7 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
             type: SqsType.Fifo,
             redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName)!, 2),
             tags: new Dictionary<string, string> { { "Environment", "Test" } });
-        
+
         _subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(subscriptionName),
             channelName: channelName,
@@ -67,13 +67,13 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
 
         _sender = new SqsMessageProducer(
             _awsConnection,
-            new SqsPublication( channelName: channelName, queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create)
+            new SqsPublication(channelName: channelName, queueAttributes: queueAttributes, makeChannels: OnMissingChannel.Create)
             {
                 RequestType = typeof(MyDeferredCommand),
-            }
-        );
+            },
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
-        _channelFactory = new ChannelFactory(_awsConnection);
+        _channelFactory = new ChannelFactory(_awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _channel = _channelFactory.CreateAsyncChannel(_subscription);
 
         IHandleRequestsAsync<MyDeferredCommand> handler = new MyDeferredCommandHandlerAsync();
@@ -87,8 +87,8 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
             requestContextFactory: new InMemoryRequestContextFactory(),
             policyRegistry: new PolicyRegistry(),
             resilienceResiliencePipelineRegistry: new ResiliencePipelineRegistry<string>(),
-            requestSchedulerFactory: new InMemorySchedulerFactory()
-        );
+            requestSchedulerFactory: new InMemorySchedulerFactory(loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance),
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         var messageMapperRegistry = new MessageMapperRegistry(
             null,
@@ -96,11 +96,11 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
         );
         messageMapperRegistry.RegisterAsync<MyDeferredCommand, MyDeferredCommandMessageMapperAsync>();
 
-        _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyDeferredCommand), 
-            messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), _channel)
+        _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyDeferredCommand),
+            messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), _channel, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
         {
-            Channel = _channel, 
-            TimeOut = TimeSpan.FromMilliseconds(5000), 
+            Channel = _channel,
+            TimeOut = TimeSpan.FromMilliseconds(5000),
             RequeueCount = 3
         };
     }

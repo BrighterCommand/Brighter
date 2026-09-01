@@ -29,7 +29,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Mediator;
 
@@ -41,15 +40,16 @@ public class InMemoryStateStoreAsync : IAmAStateStoreAsync
     private readonly ConcurrentDictionary<string, Job?> _jobs = new();
     private readonly TimeProvider _timeProvider;
     private DateTimeOffset _sinceTime;
-    
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<InMemoryStateStoreAsync>();
+
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Represents an in-memory store for jobs.
     /// </summary>
-    public InMemoryStateStoreAsync(TimeProvider? timeProvider = null)
+    public InMemoryStateStoreAsync(ILoggerFactory loggerFactory, TimeProvider? timeProvider = null)
     {
-        _timeProvider = timeProvider ??  TimeProvider.System;
+        _timeProvider = timeProvider ?? TimeProvider.System;
+        _logger = loggerFactory.CreateLogger<InMemoryStateStoreAsync>();
     }
 
     /// <summary>
@@ -63,9 +63,10 @@ public class InMemoryStateStoreAsync : IAmAStateStoreAsync
         var dueJobs = _jobs.Values
             .Where(job =>
             {
-                if (job is null || !job.IsScheduled)  return false;
+                if (job is null || !job.IsScheduled)
+                    return false;
                 _sinceTime = _timeProvider.GetUtcNow().Subtract(jobAge);
-                return  job.DueTime > _sinceTime;
+                return job.DueTime > _sinceTime;
             })
             .ToList();
 
@@ -90,7 +91,7 @@ public class InMemoryStateStoreAsync : IAmAStateStoreAsync
         tcs.SetResult(job);
         return tcs.Task;
     }
-    
+
     /// <summary>
     /// Saves the job asynchronously.
     /// </summary>
@@ -100,9 +101,11 @@ public class InMemoryStateStoreAsync : IAmAStateStoreAsync
     /// <returns>A task that represents the asynchronous save operation.</returns>
     public Task SaveJobAsync<TData>(Job<TData>? job, CancellationToken cancellationToken = default(CancellationToken))
     {
-        if (cancellationToken.IsCancellationRequested) return Task.FromCanceled(cancellationToken);
+        if (cancellationToken.IsCancellationRequested)
+            return Task.FromCanceled(cancellationToken);
 
-        if (job is null) return Task.CompletedTask;
+        if (job is null)
+            return Task.CompletedTask;
 
         try
         {
@@ -111,7 +114,7 @@ public class InMemoryStateStoreAsync : IAmAStateStoreAsync
         }
         catch (Exception e)
         {
-            s_logger.LogError($"Error saving job {job.Id} to in-memory store: {e.Message}"); 
+            _logger.LogError($"Error saving job {job.Id} to in-memory store: {e.Message}");
             return Task.FromException(e);
         }
     }

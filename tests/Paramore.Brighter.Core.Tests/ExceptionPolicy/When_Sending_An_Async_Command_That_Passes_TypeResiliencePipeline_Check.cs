@@ -24,7 +24,7 @@ public class CommandProcessorWithExceptionTypeResiliencePipelineNothingThrowAsyn
         var registry = new SubscriberRegistry();
         registry.RegisterAsync<MyCommand, MyDoesNotFailTypeResiliencePipelineHandlerAsync>();
 
-        var container = new ServiceCollection();
+        var container = new ServiceCollection().AddLogging();
         container.AddTransient<MyDoesNotFailTypeResiliencePipelineHandlerAsync>();
         container.AddTransient<ResilienceExceptionPolicyHandlerAsync<MyCommand>>();
         container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
@@ -46,7 +46,7 @@ public class CommandProcessorWithExceptionTypeResiliencePipelineNothingThrowAsyn
 
         MyDoesNotFailTypeResiliencePipelineHandlerAsync.ReceivedCommand = false;
 
-        _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), resiliencePipelineRegistry, new InMemorySchedulerFactory());
+        _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), resiliencePipelineRegistry, new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
     }
 
     [Fact]

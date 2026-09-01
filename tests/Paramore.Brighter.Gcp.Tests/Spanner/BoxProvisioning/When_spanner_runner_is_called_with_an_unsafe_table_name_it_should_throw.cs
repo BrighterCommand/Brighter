@@ -53,7 +53,7 @@ public class SpannerRunnerUnsafeIdentifierTests
     {
         //Arrange
         var config = new RelationalDatabaseConfiguration("Data Source=ignored;");
-        var runner = new SpannerBoxMigrationRunner(config);
+        var runner = new SpannerBoxMigrationRunner(config, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var tableState = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act + Assert
@@ -70,7 +70,7 @@ public class SpannerRunnerUnsafeIdentifierTests
     {
         //Arrange
         var config = new RelationalDatabaseConfiguration("Data Source=ignored;");
-        var runner = new SpannerBoxMigrationRunner(config);
+        var runner = new SpannerBoxMigrationRunner(config, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var tableState = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act + Assert

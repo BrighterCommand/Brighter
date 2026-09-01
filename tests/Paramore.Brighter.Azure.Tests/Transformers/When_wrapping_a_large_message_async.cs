@@ -28,9 +28,9 @@ public class LargeMessagePayloadAsyncWrapTests : IDisposable
         var mapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()),
             null);
-        mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();    
-            
-        _publication = new Publication{ Topic = new RoutingKey("transform.event") };
+        mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();
+
+        _publication = new Publication { Topic = new RoutingKey("transform.event") };
         _myCommand = new MyLargeCommand(6000);
 
         var bucketName = $"brightertestbucket-{Guid.NewGuid()}";
@@ -43,16 +43,16 @@ public class LargeMessagePayloadAsyncWrapTests : IDisposable
             ContainerUri = bucketUrl,
             Credential = new AzureCliCredential()
         });
-        
+
         var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.All);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, InstrumentationOptions.All);
     }
-    
+
     [Test]
     public async Task When_wrapping_a_large_message_async()
     {
         await _luggageStore.EnsureStoreExistsAsync();
-        
+
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyLargeCommand>();
         var message = await _transformPipeline.WrapAsync(_myCommand, new RequestContext(), _publication);
@@ -61,13 +61,13 @@ public class LargeMessagePayloadAsyncWrapTests : IDisposable
         Assert.That(message.Header.DataRef, Is.Not.Null);
         Assert.That(message.Header.Bag.ContainsKey(ClaimCheckTransformer.CLAIM_CHECK));
         Assert.That(message.Header.DataRef, Is.EqualTo((string)message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK]));
-        
+
         _id = (string)message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK];
         Assert.Equals($"Claim Check {_id}", message.Body.Value);
 
         Assert.That(await _luggageStore.HasClaimAsync(_id, CancellationToken.None));
     }
-    
+
     public void Dispose()
     {
         _client.Delete();

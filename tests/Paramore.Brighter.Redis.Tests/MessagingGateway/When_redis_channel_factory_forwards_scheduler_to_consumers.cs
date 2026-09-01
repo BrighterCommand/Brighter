@@ -37,7 +37,7 @@ public class When_redis_channel_factory_forwards_scheduler_to_consumers
     public void Should_forward_scheduler_to_consumer_factory()
     {
         // Arrange
-        var consumerFactory = new RedisMessageConsumerFactory(_configuration);
+        var consumerFactory = new RedisMessageConsumerFactory(_configuration, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var channelFactory = new ChannelFactory(consumerFactory);
         var scheduler = new StubMessageScheduler();
 
@@ -53,7 +53,7 @@ public class When_redis_channel_factory_forwards_scheduler_to_consumers
     {
         // Arrange — consumer factory has a scheduler from construction
         var scheduler = new StubMessageScheduler();
-        var consumerFactory = new RedisMessageConsumerFactory(_configuration, scheduler);
+        var consumerFactory = new RedisMessageConsumerFactory(_configuration, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, scheduler);
         var channelFactory = new ChannelFactory(consumerFactory);
 
         // Assert — channel factory reads from the consumer factory

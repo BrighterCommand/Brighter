@@ -181,10 +181,10 @@ public class AsyncCommandProcessorSendObservabilityTests
             new InMemoryRequestContextFactory(),
             policyRegistry,
             new ResiliencePipelineRegistry<string>(),
-            new InMemorySchedulerFactory(),
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
             tracer: tracer, 
-            instrumentationOptions: options
-        );
+            instrumentationOptions: options,
+            loggerFactory: Initializer.TestLoggerFactory);
     }
     
 }

@@ -25,7 +25,7 @@ public class When_a_fatal_producer_error_is_followed_by_a_non_fatal_should_still
                 // Keep flush-on-dispose fast: the pre-fix (red) path enqueues a message that can never
                 // be delivered without a broker, and Dispose flushes it. A short timeout bounds that wait.
                 MessageTimeoutMs = 500
-            });
+            }, loggerFactory: Initializer.TestLoggerFactory);
         _producer.Init();
     }
 

@@ -54,7 +54,7 @@ public class QuartzSchedulerMessageAsyncTests
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            [_routingKey] = new InMemoryMessageProducer(_internalBus, new Publication { Topic = _routingKey, RequestType = typeof(MyEvent) } )
+            [_routingKey] = new InMemoryMessageProducer(_internalBus, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, new Publication { Topic = _routingKey, RequestType = typeof(MyEvent) } )
         });
 
         var messageMapperRegistry = new MessageMapperRegistry(
@@ -74,7 +74,7 @@ public class QuartzSchedulerMessageAsyncTests
             new EmptyMessageTransformerFactoryAsync(),
             trace,
             new FindPublicationByPublicationTopicOrRequestType(),
-            _outbox
+            global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, _outbox
         );
 
         var schedulerFactory = SchedulerBuilder.Create(new NameValueCollection())
@@ -94,8 +94,8 @@ public class QuartzSchedulerMessageAsyncTests
             policyRegistry,
             new ResiliencePipelineRegistry<string>(),
             outboxBus,
-            _scheduler
-        );
+            _scheduler,
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         BrighterResolver.Processor = _processor;
     }

@@ -59,7 +59,7 @@ public class MqttMessageConsumerRejectNoChannelsTests : IDisposable
             TopicPrefix = SOURCE_TOPIC_PREFIX,
             ClientID = "BrighterTests-NoChannels-Producer"
         };
-        var publisher = new MqttMessagePublisher(producerConfig);
+        var publisher = new MqttMessagePublisher(producerConfig, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _sourceProducer = new MqttMessageProducer(publisher, new Publication());
 
         //Arrange — source consumer with NO DLQ or invalid message routing keys
@@ -70,7 +70,7 @@ public class MqttMessageConsumerRejectNoChannelsTests : IDisposable
             TopicPrefix = SOURCE_TOPIC_PREFIX,
             ClientID = "BrighterTests-NoChannels-Consumer"
         };
-        _sourceConsumer = new MqttMessageConsumer(consumerConfig);
+        _sourceConsumer = new MqttMessageConsumer(consumerConfig, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

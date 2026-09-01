@@ -14,7 +14,7 @@ public class CommandProcessorNoHandlerFactoriesTests
     [Fact]
     public void When_There_Are_No_Command_Handlers_Async()
     {
-        var container = new ServiceCollection();
+        var container = new ServiceCollection().AddLogging();
         container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
 
         _exception = Catch.Exception(() => new CommandProcessor(
@@ -23,7 +23,7 @@ public class CommandProcessorNoHandlerFactoriesTests
             new InMemoryRequestContextFactory(),
             new PolicyRegistry(),
             new ResiliencePipelineRegistry<string>(),
-            new InMemorySchedulerFactory()));
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory));
 
         Assert.IsType<ArgumentException>(_exception);
 
@@ -35,7 +35,7 @@ public class CommandProcessorNoHandlerFactoriesTests
     [Fact]
     public void When_using_IAmAHandlerFactory()
     {
-        var container = new ServiceCollection();
+        var container = new ServiceCollection().AddLogging();
         container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
 
         _exception = Catch.Exception(() => new CommandProcessor(
@@ -44,7 +44,7 @@ public class CommandProcessorNoHandlerFactoriesTests
             new InMemoryRequestContextFactory(),
             new PolicyRegistry(),
             new ResiliencePipelineRegistry<string>(),
-            new InMemorySchedulerFactory()));
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory));
 
         //_should_fail_because_no_handler_factories_have_been_set
         Assert.IsType<ArgumentException>(_exception);

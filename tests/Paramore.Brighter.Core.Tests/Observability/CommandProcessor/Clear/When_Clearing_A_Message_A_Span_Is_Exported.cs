@@ -234,7 +234,7 @@ public class CommandProcessorClearObservabilityTests
         
         var messageProducer = new InMemoryMessageProducer(
             _internalBus,
-            new Publication
+            Initializer.TestLoggerFactory, new Publication
             {
                 Source = publicationSource, RequestType = typeof(MyEvent), Topic = _routingKey, Type = _publicationType,
             },
@@ -270,7 +270,7 @@ public class CommandProcessorClearObservabilityTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            outbox,
+            Initializer.TestLoggerFactory, outbox,
             maxOutStandingMessages: -1,
             instrumentationOptions: instrumentationOptions
         );
@@ -282,9 +282,9 @@ public class CommandProcessorClearObservabilityTests
             policyRegistry, 
             new ResiliencePipelineRegistry<string>(),
             bus,
-            new InMemorySchedulerFactory(),
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
             tracer: tracer,
-            instrumentationOptions: instrumentationOptions
-        );
+            instrumentationOptions: instrumentationOptions,
+            loggerFactory: Initializer.TestLoggerFactory);
     }
 }

@@ -63,7 +63,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         {
             //Arrange — first time the command is seen, so it is added to the inbox
             using var span = new Activity("pipeline").Start();
-            var handler = new UseInboxHandler<MyCommand>(_inbox);
+            var handler = new UseInboxHandler<MyCommand>(_inbox, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Inbox.Handlers.UseInboxHandler<global::Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles.MyCommand>>(Initializer.TestLoggerFactory));
             handler.InitializeFromAttributeParams(true, ContextKey, OnceOnlyAction.Throw);
             handler.Context = new RequestContext { Span = span };
 
@@ -82,7 +82,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         {
             //Arrange — first time the command is seen
             using var span = new Activity("pipeline").Start();
-            var handler = new UseInboxHandlerAsync<MyCommand>(_inbox);
+            var handler = new UseInboxHandlerAsync<MyCommand>(_inbox, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Inbox.Handlers.UseInboxHandlerAsync<global::Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles.MyCommand>>(Initializer.TestLoggerFactory));
             handler.InitializeFromAttributeParams(true, ContextKey, OnceOnlyAction.Throw);
             handler.Context = new RequestContext { Span = span };
 
@@ -100,7 +100,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             //Arrange — the command has already been seen and the action is Throw
             SeedAsAlreadySeen();
             using var span = new Activity("pipeline").Start();
-            var handler = new UseInboxHandler<MyCommand>(_inbox);
+            var handler = new UseInboxHandler<MyCommand>(_inbox, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Inbox.Handlers.UseInboxHandler<global::Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles.MyCommand>>(Initializer.TestLoggerFactory));
             handler.InitializeFromAttributeParams(true, ContextKey, OnceOnlyAction.Throw);
             handler.Context = new RequestContext { Span = span };
 
@@ -120,7 +120,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             //Arrange
             SeedAsAlreadySeen();
             using var span = new Activity("pipeline").Start();
-            var handler = new UseInboxHandlerAsync<MyCommand>(_inbox);
+            var handler = new UseInboxHandlerAsync<MyCommand>(_inbox, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Inbox.Handlers.UseInboxHandlerAsync<global::Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles.MyCommand>>(Initializer.TestLoggerFactory));
             handler.InitializeFromAttributeParams(true, ContextKey, OnceOnlyAction.Throw);
             handler.Context = new RequestContext { Span = span };
 
@@ -138,7 +138,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             //Arrange — the command has already been seen and the action is Warn
             SeedAsAlreadySeen();
             using var span = new Activity("pipeline").Start();
-            var handler = new UseInboxHandler<MyCommand>(_inbox);
+            var handler = new UseInboxHandler<MyCommand>(_inbox, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Inbox.Handlers.UseInboxHandler<global::Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles.MyCommand>>(Initializer.TestLoggerFactory));
             handler.InitializeFromAttributeParams(true, ContextKey, OnceOnlyAction.Warn);
             handler.Context = new RequestContext { Span = span };
 
@@ -158,7 +158,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             //Arrange
             SeedAsAlreadySeen();
             using var span = new Activity("pipeline").Start();
-            var handler = new UseInboxHandlerAsync<MyCommand>(_inbox);
+            var handler = new UseInboxHandlerAsync<MyCommand>(_inbox, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Inbox.Handlers.UseInboxHandlerAsync<global::Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles.MyCommand>>(Initializer.TestLoggerFactory));
             handler.InitializeFromAttributeParams(true, ContextKey, OnceOnlyAction.Warn);
             handler.Context = new RequestContext { Span = span };
 
@@ -175,7 +175,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         {
             //Arrange — a context whose instrumentation does not include the Brighter flag
             using var span = new Activity("pipeline").Start();
-            var handler = new UseInboxHandler<MyCommand>(_inbox);
+            var handler = new UseInboxHandler<MyCommand>(_inbox, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Inbox.Handlers.UseInboxHandler<global::Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles.MyCommand>>(Initializer.TestLoggerFactory));
             handler.InitializeFromAttributeParams(true, ContextKey, OnceOnlyAction.Throw);
             handler.Context = new RequestContext
             {
@@ -193,7 +193,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         public void When_handling_command_with_no_span_should_not_throw_and_still_add()
         {
             //Arrange — no span on the context
-            var handler = new UseInboxHandler<MyCommand>(_inbox);
+            var handler = new UseInboxHandler<MyCommand>(_inbox, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Inbox.Handlers.UseInboxHandler<global::Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles.MyCommand>>(Initializer.TestLoggerFactory));
             handler.InitializeFromAttributeParams(true, ContextKey, OnceOnlyAction.Throw);
             var context = new RequestContext();
             handler.Context = context;

@@ -48,7 +48,7 @@ namespace Paramore.Brighter.Core.Tests.Defer
                 if (type == typeof(MyFailingDeferHandler))
                     return new MyFailingDeferHandler();
                 if (type == typeof(DeferMessageOnErrorHandler<MyCommand>))
-                    return new DeferMessageOnErrorHandler<MyCommand>();
+                    return new DeferMessageOnErrorHandler<MyCommand>(logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Defer.Handlers.DeferMessageOnErrorHandler<global::Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles.MyCommand>>(Initializer.TestLoggerFactory));
                 throw new ArgumentOutOfRangeException(nameof(type), type.Name, null);
             });
 
@@ -60,8 +60,8 @@ namespace Paramore.Brighter.Core.Tests.Defer
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
                 new ResiliencePipelineRegistry<string>(),
-                new InMemorySchedulerFactory()
-            );
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+                loggerFactory: Initializer.TestLoggerFactory);
         }
 
         [Fact]

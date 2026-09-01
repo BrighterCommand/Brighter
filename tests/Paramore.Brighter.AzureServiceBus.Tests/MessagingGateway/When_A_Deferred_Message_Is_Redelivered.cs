@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -29,7 +29,7 @@ public class When_A_Deferred_Message_Is_Redelivered
             routingKey: new RoutingKey("test-topic"),
             messagePumpType: MessagePumpType.Reactor);
 
-        _creator = new AzureServiceBusMessageCreator(subscription);
+        _creator = new AzureServiceBusMessageCreator(subscription, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

@@ -15,7 +15,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
           var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MySimpleTransform()));
 
          //act
-         var exception = Catch.Exception(() => new TransformPipelineBuilder(null, messageTransformerFactory));
+         var exception = Catch.Exception(() => new TransformPipelineBuilder(null, messageTransformerFactory, loggerFactory: Initializer.TestLoggerFactory));
          
          //assert
          Assert.NotNull(exception);

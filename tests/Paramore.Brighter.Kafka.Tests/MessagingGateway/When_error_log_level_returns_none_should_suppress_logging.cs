@@ -28,8 +28,8 @@ public class When_error_log_level_returns_none_should_suppress_logging : IDispos
             numPartitions: 1,
             replicationFactor: 1,
             makeChannels: OnMissingChannel.Assume,
-            errorLogLevel: error => error.Code == ErrorCode.Local_TimedOut ? LogLevel.None : LogLevel.Warning
-        );
+            errorLogLevel: error => error.Code == ErrorCode.Local_TimedOut ? LogLevel.None : LogLevel.Warning,
+            loggerFactory: Initializer.TestLoggerFactory);
     }
 
     [Fact]

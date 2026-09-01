@@ -55,7 +55,7 @@ public class KafkaHeaderToBrighterTests
         };
 
         //act
-        var readMessage = new KafkaMessageCreator().CreateMessage(result);
+        var readMessage = new KafkaMessageCreator(logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.MessagingGateway.Kafka.KafkaMessageCreator>(Initializer.TestLoggerFactory)).CreateMessage(result);
 
         //assert
         Assert.Equal(message.Id, readMessage.Id);
