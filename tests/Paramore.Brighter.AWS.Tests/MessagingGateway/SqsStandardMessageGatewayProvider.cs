@@ -14,20 +14,22 @@ public class SqsStandardMessageGatewayProvider
       SqsStandard.Reactor.IAmAMessageGatewayReactorProvider
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
+    private readonly AwsTestResourceReaper _reaper;
 
     public SqsStandardMessageGatewayProvider()
     {
         _awsConnection = GatewayFactory.CreateFactory();
+        _reaper = new AwsTestResourceReaper(_awsConnection);
     }
 
     public RoutingKey GetOrCreateRoutingKey([CallerMemberName] string? testName = null)
     {
-        return new RoutingKey($"sqs-std-{Uuid.New():N}");
+        return new RoutingKey(_reaper.TrackQueue($"sqs-std-{Uuid.New():N}"));
     }
 
     public ChannelName GetOrCreateChannelName([CallerMemberName] string? testName = null)
     {
-        return new ChannelName($"sqs-std-ch-{Uuid.New():N}");
+        return new ChannelName(_reaper.TrackQueue($"sqs-std-ch-{Uuid.New():N}"));
     }
 
     public SqsPublication CreatePublication(RoutingKey routingKey, OnMissingChannel makeChannels = OnMissingChannel.Create)
@@ -51,7 +53,7 @@ public class SqsStandardMessageGatewayProvider
 
         if (setupDeadLetterQueue)
         {
-            var deadLetterChannelName = new ChannelName($"{channelName}-dlq");
+            var deadLetterChannelName = new ChannelName(_reaper.TrackQueue($"{channelName}-dlq"));
             return new SqsSubscription<MyCommand>(
                 subscriptionName: new SubscriptionName(channelName),
                 channelName: channelName,
@@ -89,6 +91,8 @@ public class SqsStandardMessageGatewayProvider
         }
 
         producer?.Dispose();
+
+        _reaper.Reap();
     }
 
     public async Task CleanUpAsync(
@@ -106,6 +110,8 @@ public class SqsStandardMessageGatewayProvider
         {
             await producer.DisposeAsync();
         }
+
+        await _reaper.ReapAsync();
     }
 
     public IAmAChannelSync CreateChannel(SqsSubscription subscription)

@@ -14,20 +14,22 @@ public class SnsFifoMessageGatewayProvider
       SnsFifo.Reactor.IAmAMessageGatewayReactorProvider
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
+    private readonly AwsTestResourceReaper _reaper;
 
     public SnsFifoMessageGatewayProvider()
     {
         _awsConnection = GatewayFactory.CreateFactory();
+        _reaper = new AwsTestResourceReaper(_awsConnection);
     }
 
     public RoutingKey GetOrCreateRoutingKey([CallerMemberName] string? testName = null)
     {
-        return new RoutingKey($"sns-fifo-{Uuid.New():N}.fifo");
+        return new RoutingKey(_reaper.TrackTopic($"sns-fifo-{Uuid.New():N}.fifo"));
     }
 
     public ChannelName GetOrCreateChannelName([CallerMemberName] string? testName = null)
     {
-        return new ChannelName($"sns-fifo-ch-{Uuid.New():N}.fifo");
+        return new ChannelName(_reaper.TrackQueue($"sns-fifo-ch-{Uuid.New():N}.fifo"));
     }
 
     public SnsPublication CreatePublication(RoutingKey routingKey, OnMissingChannel makeChannels = OnMissingChannel.Create)
@@ -48,7 +50,7 @@ public class SnsFifoMessageGatewayProvider
     {
         if (setupDeadLetterQueue)
         {
-            var deadLetterChannelName = new ChannelName($"{channelName.Value.Replace(".fifo", "")}-dlq.fifo");
+            var deadLetterChannelName = new ChannelName(_reaper.TrackQueue($"{channelName.Value.Replace(".fifo", "")}-dlq.fifo"));
             return new SqsSubscription<MyCommand>(
                 subscriptionName: new SubscriptionName(channelName),
                 channelName: channelName,
@@ -90,6 +92,8 @@ public class SnsFifoMessageGatewayProvider
         }
 
         producer?.Dispose();
+
+        _reaper.Reap();
     }
 
     public async Task CleanUpAsync(
@@ -107,6 +111,8 @@ public class SnsFifoMessageGatewayProvider
         {
             await producer.DisposeAsync();
         }
+
+        await _reaper.ReapAsync();
     }
 
     public IAmAChannelSync CreateChannel(SqsSubscription subscription)

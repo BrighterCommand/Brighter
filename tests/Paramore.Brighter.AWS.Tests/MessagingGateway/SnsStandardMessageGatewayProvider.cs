@@ -14,20 +14,22 @@ public class SnsStandardMessageGatewayProvider
       SnsStandard.Reactor.IAmAMessageGatewayReactorProvider
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
+    private readonly AwsTestResourceReaper _reaper;
 
     public SnsStandardMessageGatewayProvider()
     {
         _awsConnection = GatewayFactory.CreateFactory();
+        _reaper = new AwsTestResourceReaper(_awsConnection);
     }
 
     public RoutingKey GetOrCreateRoutingKey([CallerMemberName] string? testName = null)
     {
-        return new RoutingKey($"sns-std-{Uuid.New():N}");
+        return new RoutingKey(_reaper.TrackTopic($"sns-std-{Uuid.New():N}"));
     }
 
     public ChannelName GetOrCreateChannelName([CallerMemberName] string? testName = null)
     {
-        return new ChannelName($"sns-std-ch-{Uuid.New():N}");
+        return new ChannelName(_reaper.TrackQueue($"sns-std-ch-{Uuid.New():N}"));
     }
 
     public SnsPublication CreatePublication(RoutingKey routingKey, OnMissingChannel makeChannels = OnMissingChannel.Create)
@@ -47,7 +49,7 @@ public class SnsStandardMessageGatewayProvider
     {
         if (setupDeadLetterQueue)
         {
-            var deadLetterChannelName = new ChannelName($"{channelName}-dlq");
+            var deadLetterChannelName = new ChannelName(_reaper.TrackQueue($"{channelName}-dlq"));
             return new SqsSubscription<MyCommand>(
                 subscriptionName: new SubscriptionName(channelName),
                 channelName: channelName,
@@ -85,6 +87,8 @@ public class SnsStandardMessageGatewayProvider
         }
 
         producer?.Dispose();
+
+        _reaper.Reap();
     }
 
     public async Task CleanUpAsync(
@@ -102,6 +106,8 @@ public class SnsStandardMessageGatewayProvider
         {
             await producer.DisposeAsync();
         }
+
+        await _reaper.ReapAsync();
     }
 
     public IAmAChannelSync CreateChannel(SqsSubscription subscription)
