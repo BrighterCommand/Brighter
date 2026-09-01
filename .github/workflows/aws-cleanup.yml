@@ -36,16 +36,16 @@ jobs:
       - name: Diagnose - count existing resources
         run: |
           echo "=== SNS Topics ==="
-          TOPIC_COUNT=$(aws sns list-topics --query 'Topics | length(@)' --output text)
+          TOPIC_COUNT=$(aws sns list-topics --query 'Topics[*].TopicArn' --output text | tr '\t' '\n' | grep -c . || true)
           echo "Total topics: $TOPIC_COUNT"
           echo ""
           echo "=== FIFO Topics ==="
           aws sns list-topics --query 'Topics[?ends_with(TopicArn, `.fifo`)].TopicArn' --output text | tr '\t' '\n' | head -50
-          FIFO_COUNT=$(aws sns list-topics --query 'Topics[?ends_with(TopicArn, `.fifo`)] | length(@)' --output text)
+          FIFO_COUNT=$(aws sns list-topics --query 'Topics[?ends_with(TopicArn, `.fifo`)].TopicArn' --output text | tr '\t' '\n' | grep -c . || true)
           echo "Total FIFO topics: $FIFO_COUNT"
           echo ""
           echo "=== SQS Queues ==="
-          QUEUE_COUNT=$(aws sqs list-queues --page-size 1000 --query 'QueueUrls[*]' --output text 2>/dev/null | tr '\t' '\n' | grep -c . || echo "0")
+          QUEUE_COUNT=$(aws sqs list-queues --page-size 1000 --query 'QueueUrls[*]' --output text 2>/dev/null | tr '\t' '\n' | grep -c . || true)
           echo "Total queues: $QUEUE_COUNT"
           echo ""
           echo "=== Sample topic names (first 20) ==="

@@ -72,6 +72,27 @@ assert_contains() {
     fi
 }
 
+# Retries the check until it holds or the deadline passes. A delete is eventually
+# consistent -- SNS will answer get-topic-attributes for a deleted topic for a short while, and
+# SQS documents a queue as visible for up to sixty seconds -- so reading once proves nothing.
+assert_eventually_contains() {
+    local check="$1" needle="$2" message="$3"
+    local deadline=$((SECONDS + 90)) output=""
+
+    while true; do
+        output=$(eval "$check" 2>&1 || true)
+        if echo "$output" | grep -qE "$needle"; then
+            break
+        fi
+        if (( SECONDS >= deadline )); then
+            break
+        fi
+        sleep 3
+    done
+
+    assert_contains "$output" "$needle" "$message"
+}
+
 assert_not_empty() {
     local value="$1" message="$2"
     if [[ -n "$value" ]]; then
@@ -81,6 +102,12 @@ assert_not_empty() {
         echo "  FAIL: $message (value was empty)"
         FAIL=$((FAIL + 1))
     fi
+}
+
+# The GUIDs in the convention names only have to be 32 hex characters. uuidgen ships with
+# every platform the AWS CLI runs on, which openssl does not.
+hex_id() {
+    uuidgen | tr -d '-' | tr '[:upper:]' '[:lower:]'
 }
 
 # --- Setup: create tagged and untagged resources ---
@@ -122,27 +149,27 @@ echo "  Created untagged topic: $UNTAGGED_TOPIC"
 # untagged -- this is what the real leaked resources look like, and what the tag query misses.
 # The GUID is generated here rather than reused so that each run exercises the pattern, not a
 # literal name.
-CONVENTION_QUEUE="sqs-std-$(openssl rand -hex 16)"
+CONVENTION_QUEUE="sqs-std-$(hex_id)"
 CONVENTION_QUEUE_URL=$(aws sqs create-queue \
     --queue-name "$CONVENTION_QUEUE" \
     --query 'QueueUrl' --output text)
 echo "  Created convention-named queue: $CONVENTION_QUEUE"
 
 # FIFO variants specifically: these are the bulk of what leaks in practice.
-CONVENTION_FIFO_QUEUE="sqs-fifo-$(openssl rand -hex 16).fifo"
+CONVENTION_FIFO_QUEUE="sqs-fifo-$(hex_id).fifo"
 CONVENTION_FIFO_QUEUE_URL=$(aws sqs create-queue \
     --queue-name "$CONVENTION_FIFO_QUEUE" \
     --attributes FifoQueue=true \
     --query 'QueueUrl' --output text)
 echo "  Created convention-named FIFO queue: $CONVENTION_FIFO_QUEUE"
 
-CONVENTION_TOPIC="sns-std-$(openssl rand -hex 16)"
+CONVENTION_TOPIC="sns-std-$(hex_id)"
 CONVENTION_TOPIC_ARN=$(aws sns create-topic \
     --name "$CONVENTION_TOPIC" \
     --query 'TopicArn' --output text)
 echo "  Created convention-named topic: $CONVENTION_TOPIC"
 
-CONVENTION_FIFO_TOPIC="sns-fifo-$(openssl rand -hex 16).fifo"
+CONVENTION_FIFO_TOPIC="sns-fifo-$(hex_id).fifo"
 CONVENTION_FIFO_TOPIC_ARN=$(aws sns create-topic \
     --name "$CONVENTION_FIFO_TOPIC" \
     --attributes FifoTopic=true \
@@ -287,17 +314,21 @@ assert_not_empty "$UNTAGGED_GROUP_CHECK" "untagged schedule group was NOT delete
 echo ""
 echo "=== Test 8: convention-named untagged resources were deleted ==="
 
-CONVENTION_QUEUE_CHECK=$(aws sqs get-queue-url --queue-name "$CONVENTION_QUEUE" 2>&1 || true)
-assert_contains "$CONVENTION_QUEUE_CHECK" "NonExistentQueue|does not exist" "convention-named queue was deleted"
+assert_eventually_contains \
+    "aws sqs get-queue-url --queue-name \"$CONVENTION_QUEUE\"" \
+    "NonExistentQueue|does not exist" "convention-named queue was deleted"
 
-CONVENTION_FIFO_QUEUE_CHECK=$(aws sqs get-queue-url --queue-name "$CONVENTION_FIFO_QUEUE" 2>&1 || true)
-assert_contains "$CONVENTION_FIFO_QUEUE_CHECK" "NonExistentQueue|does not exist" "convention-named FIFO queue was deleted"
+assert_eventually_contains \
+    "aws sqs get-queue-url --queue-name \"$CONVENTION_FIFO_QUEUE\"" \
+    "NonExistentQueue|does not exist" "convention-named FIFO queue was deleted"
 
-CONVENTION_TOPIC_CHECK=$(aws sns get-topic-attributes --topic-arn "$CONVENTION_TOPIC_ARN" 2>&1 || true)
-assert_contains "$CONVENTION_TOPIC_CHECK" "NotFound|not found|Not Found" "convention-named topic was deleted"
+assert_eventually_contains \
+    "aws sns get-topic-attributes --topic-arn \"$CONVENTION_TOPIC_ARN\"" \
+    "NotFound|not found|Not Found" "convention-named topic was deleted"
 
-CONVENTION_FIFO_TOPIC_CHECK=$(aws sns get-topic-attributes --topic-arn "$CONVENTION_FIFO_TOPIC_ARN" 2>&1 || true)
-assert_contains "$CONVENTION_FIFO_TOPIC_CHECK" "NotFound|not found|Not Found" "convention-named FIFO topic was deleted"
+assert_eventually_contains \
+    "aws sns get-topic-attributes --topic-arn \"$CONVENTION_FIFO_TOPIC_ARN\"" \
+    "NotFound|not found|Not Found" "convention-named FIFO topic was deleted"
 
 # Teardown is handled by the EXIT trap defined at the top of the script.
 
