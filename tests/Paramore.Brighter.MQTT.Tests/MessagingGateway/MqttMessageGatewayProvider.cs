@@ -44,6 +44,12 @@ public class MqttMessageGatewayProvider
     private MqttMessageConsumer? _dlqConsumer;
     private MqttMessageConsumer? _invalidConsumer;
 
+    // Shared harness scheduler for FR-2 (delayed requeue) and FR-9 (delayed send).
+    // MQTT has no native delayed delivery; the gateway delegates to the scheduler seam.
+    private MqttHarnessMessageScheduler? _scheduler;
+    private MqttHarnessMessageScheduler Scheduler =>
+        _scheduler ??= new MqttHarnessMessageScheduler(HOSTNAME, PORT);
+
     // MQTT uses the base Publication type — there is no transport-specific publication class.
     public Publication CreatePublication(
         RoutingKey routingKey,
@@ -63,7 +69,7 @@ public class MqttMessageGatewayProvider
     public IAmAChannelSync CreateChannel(MqttSubscription subscription)
     {
         var consumerConfig = BuildConsumerConfig(subscription.RoutingKey.Value);
-        var factory = new MqttMessageConsumerFactory(consumerConfig);
+        var factory = new MqttMessageConsumerFactory(consumerConfig, Scheduler);
         var channel = new ChannelFactory(factory).CreateSyncChannel(subscription);
 
         if (subscription.DeadLetterRoutingKey != null)
@@ -90,7 +96,7 @@ public class MqttMessageGatewayProvider
         CancellationToken cancellationToken = default)
     {
         var consumerConfig = BuildConsumerConfig(subscription.RoutingKey.Value);
-        var factory = new MqttMessageConsumerFactory(consumerConfig);
+        var factory = new MqttMessageConsumerFactory(consumerConfig, Scheduler);
         var channel = await new ChannelFactory(factory).CreateAsyncChannelAsync(subscription, cancellationToken);
 
         if (subscription.DeadLetterRoutingKey != null)
@@ -116,7 +122,7 @@ public class MqttMessageGatewayProvider
         var topicPrefix = publication.Topic?.Value ?? string.Empty;
         var producerConfig = BuildProducerConfig(topicPrefix);
         var publisher = new MqttMessagePublisher(producerConfig);
-        return new MqttMessageProducer(publisher, publication);
+        return new MqttMessageProducer(publisher, publication) { Scheduler = Scheduler };
     }
 
     public async Task<IAmAMessageProducerAsync> CreateProducerAsync(
@@ -127,7 +133,7 @@ public class MqttMessageGatewayProvider
         var topicPrefix = publication.Topic?.Value ?? string.Empty;
         var producerConfig = BuildProducerConfig(topicPrefix);
         var publisher = new MqttMessagePublisher(producerConfig);
-        return new MqttMessageProducer(publisher, publication);
+        return new MqttMessageProducer(publisher, publication) { Scheduler = Scheduler };
     }
 
     public MqttSubscription CreateSubscription(
@@ -137,6 +143,12 @@ public class MqttMessageGatewayProvider
         RoutingKey? deadLetterRoutingKey = null,
         RoutingKey? invalidMessageRoutingKey = null)
     {
+        // bufferSize = 5: the Channel wrapper drains all messages that have accumulated
+        // between polls in one Receive call. The multi-message canonical test sends 4 messages;
+        // a buffer of 5 prevents the Channel from throwing "too many items to enqueue".
+        // Channel.maxQueueLength is capped at 10 by the framework, so 5 is a safe mid-range value.
+        const int bufferSize = 5;
+
         if (deadLetterRoutingKey != null)
         {
             return new MqttSubscription<MyCommand>(
@@ -147,7 +159,8 @@ public class MqttMessageGatewayProvider
                 makeChannels: makeChannel,
                 deadLetterRoutingKey: deadLetterRoutingKey,
                 invalidMessageRoutingKey: invalidMessageRoutingKey,
-                requeueCount: 3
+                requeueCount: 3,
+                bufferSize: bufferSize
             );
         }
 
@@ -157,7 +170,8 @@ public class MqttMessageGatewayProvider
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: makeChannel,
-            invalidMessageRoutingKey: invalidMessageRoutingKey
+            invalidMessageRoutingKey: invalidMessageRoutingKey,
+            bufferSize: bufferSize
         );
     }
 
@@ -177,6 +191,8 @@ public class MqttMessageGatewayProvider
         _dlqConsumer = null;
         try { _invalidConsumer?.Dispose(); } catch { /* best effort */ }
         _invalidConsumer = null;
+        try { _scheduler?.Dispose(); } catch { /* best effort */ }
+        _scheduler = null;
     }
 
     public async Task CleanUpAsync(
@@ -206,6 +222,9 @@ public class MqttMessageGatewayProvider
             try { await _invalidConsumer.DisposeAsync(); } catch { /* best effort */ }
             _invalidConsumer = null;
         }
+
+        try { _scheduler?.Dispose(); } catch { /* best effort */ }
+        _scheduler = null;
     }
 
     // Polls the pre-subscribed DLQ consumer with a bounded retry ceiling (NFR-2, AC-20, AC-25).

@@ -664,7 +664,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.MQTT.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && dotnet build tests/Paramore.Brighter.MQTT.Tests`
   - **References**: requirements FR-20(1),(2), AC-23, FR-13 mapping (`MQTT`→`MQTT`); ADR 0066 "provider implementations FR-20 adds"; ADR `0043-mqtt-dlq-brighter-managed`.
 
-- [ ] **Onboard MQTT: run against a broker and record the ledger (FR-20 step 3)**
+- [x] **Onboard MQTT: run against a broker and record the ledger (FR-20 step 3)**
   - **Behavior**: Bring up the MQTT broker and run MQTT's generated canonical suite against it (not merely compile). Replace MQTT's placeholder ledger row with per-configuration rows; record `Pass`/`Fixed` where both variants pass against the broker, or flag-and-move-on to signed-off `Deferred` (with Skip markers) where infra/behaviour blocks. `Pass` requires the suite to actually run.
   - **Test file**: `tests/Paramore.Brighter.MQTT.Tests/MessagingGateway/Generated/Reactor/*.cs` (generated canonical suite)
   - **Test should verify**:

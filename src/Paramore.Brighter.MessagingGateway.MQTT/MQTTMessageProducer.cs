@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.MQTT
@@ -129,6 +130,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
             ArgumentNullException.ThrowIfNull(message);
 
+            BrighterTracer.WriteProducerEvent(Span, "mqtt", message, InstrumentationOptions.All);
             _mqttMessagePublisher.PublishMessage(message);
         }
 
@@ -161,6 +163,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
             ArgumentNullException.ThrowIfNull(message);
 
+            BrighterTracer.WriteProducerEvent(Span, "mqtt", message, InstrumentationOptions.All);
             await _mqttMessagePublisher.PublishMessageAsync(message, cancellationToken);
         }
     }

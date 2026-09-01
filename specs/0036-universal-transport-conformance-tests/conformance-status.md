@@ -193,6 +193,31 @@ cell remains `Unknown`.
     assertion compares the source topic via the preserved `originalTopic` bag entry for dead-lettered
     messages. **Reference-env fix**: `docker-compose-rocketmq.yaml` broker/proxy heap raised
     (`-Xmx128m`/`-Xmx64m` → `2g`/`1g`) so the broker sustains the suite instead of degrading under load.
+- `MQTT / MqttMessagingGateway` — **10 `Fixed (#4240)` + FR-16 `Deferred -> #4240`**, both variants,
+  on a live Mosquitto broker. **Evidence run with every cell un-skipped** (the state that earned the FR-16
+  deferral): Reactor **14 pass / 2 fail (FR-16)** + Proactor **16 pass / 2 fail (FR-16)** for the generated
+  canonical suite. **Final certified state, FR-16 now carrying its Deferred Skip**: the scoped
+  `~MessagingGateway` suite is **55 pass / 4 skip / 0 fail** (the 4 skips = FR-16's two arms × both
+  variants); all pre-existing non-generated tests pass. Every passing cell is
+  `Fixed` (not `Pass`) because of required `src` fixes: (1) `MQTTMessageConsumer.Receive` was an
+  immediate no-wait return when the internal queue was empty — it now polls in 10 ms increments until a
+  message arrives or the timeout elapses, matching the contract other transports implement; (2)
+  `MQTTMessageProducer.SendWithDelay` did not call `BrighterTracer.WriteProducerEvent`, so the producer
+  span was never propagated to `message.Header.TraceParent` — the call was added, matching the Redis /
+  Kafka producer pattern. Harness additions (test-project only): `MqttHarnessMessageScheduler` for
+  delayed-requeue (FR-2) and delayed-send (FR-9), same wall-clock timer + republish pattern as
+  Redis/RMQ/MSSQL; subscription `BufferSize = 5` so the Channel wrapper can buffer the 4 messages from
+  the multi-message test without overflowing its internal queue (Channel's hard cap is 10); scheduler
+  wired into `CreateProducer` (FR-9) and into the consumer factory (FR-2).
+  - **⛔ FR-16 (Nack → redelivery) `Deferred -> #4240`** — MQTT is pub/sub with no acknowledgment
+    concept. `MqttMessageConsumer.Nack` is a documented no-op. Messages are received from an in-memory
+    `ConcurrentQueue<Message>` populated by the `ApplicationMessageReceivedAsync` event handler; once
+    dequeued on `Receive`, the message is gone. MQTT QoS 1 delivers to connected subscribers exactly once
+    with no broker-side requeue path. Both arms of FR-16 (`When_nacking_a_message_it_should_be_redelivered`
+    and `When_nacking_first_of_two_messages_should_redeliver_nacked_then_receive_second`) observe `MT_NONE`
+    after nack on a 30 s ceiling — same root cause as Redis (destructive BLPOP) and MSSQL (row deleted on
+    read). Three deferral preconditions met: evidence recorded (live Mosquitto broker, both variants),
+    fix is not localized (requires a redelivery buffer or QoS-level redesign in `src`), maintainer sign-off.
 
 ## Conformance Matrix
 
@@ -219,5 +244,5 @@ cell remains `Unknown`.
 | RMQ.Async / Quorum | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | RocketMQ / RocketMQMessagingGateway | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) |
 | AzureServiceBus / (not yet declared) | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
-| MQTT / (not yet declared) | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
+| MQTT / MqttMessagingGateway | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) |
 | RMQ.Sync / (not yet declared) | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |

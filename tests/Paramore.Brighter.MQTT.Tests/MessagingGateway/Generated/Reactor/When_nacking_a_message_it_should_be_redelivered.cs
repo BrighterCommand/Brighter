@@ -37,7 +37,7 @@ public class WhenNackingAMessageItShouldBeRedelivered : IDisposable
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #NNNN — Nack redelivers not yet conformant for MQTT / (not yet declared) (maintainer sign-off)")]
+    [Fact(Skip = "Deferred: #4240 — Nack redelivers not yet conformant for MQTT / MqttMessagingGateway (maintainer sign-off)")]
     public void When_nacking_a_message_it_should_be_redelivered()
     {
         // Arrange
@@ -76,7 +76,7 @@ public class WhenNackingAMessageItShouldBeRedelivered : IDisposable
         _messageAssertion.Assert(message, redelivered);
     }
 
-    [Fact(Skip = "Deferred: #NNNN — Nack redelivers not yet conformant for MQTT / (not yet declared) (maintainer sign-off)")]
+    [Fact(Skip = "Deferred: #4240 — Nack redelivers not yet conformant for MQTT / MqttMessagingGateway (maintainer sign-off)")]
     public void When_nacking_first_of_two_messages_should_redeliver_nacked_then_receive_second()
     {
         // Arrange — two queued messages: M1 is nacked and redelivered; M2 is not blocked (FR-16, AC-17)

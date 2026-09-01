@@ -6,7 +6,7 @@
     "MessageGatewayProvider": "Paramore.Brighter.MQTT.Tests.MessagingGateway.MqttMessageGatewayProvider",
     "Category": "MQTT",
     "CollectionName": "MqttMessagingGateway",
-    "LedgerKey": "MQTT / (not yet declared)",
+    "LedgerKey": "MQTT / MqttMessagingGateway",
     "HasSupportToPublishConfirmation": false,
     "HasSupportToValidateBrokerExistence": false,
     "HasSupportToValidateInfrastructure": false,
