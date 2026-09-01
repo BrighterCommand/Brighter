@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Amazon;
 using Amazon.SecurityToken.Model;
 using Amazon.SimpleNotificationService;
 using Amazon.SQS;
@@ -31,7 +32,8 @@ public class AwsTestResourceReaper
     private readonly AWSMessagingGatewayConnection _connection;
     private readonly List<string> _topics = [];
     private readonly List<string> _queues = [];
-    private string? _topicArnPrefix;
+    private string? _accountId;
+    private bool _identityUnavailable;
 
     public AwsTestResourceReaper(AWSMessagingGatewayConnection connection)
     {
@@ -191,15 +193,17 @@ public class AwsTestResourceReaper
     /// <remarks>
     /// <see cref="AmazonSimpleNotificationServiceClient.FindTopicAsync"/> pages through every
     /// topic in the account on each call, which turns teardown across a full test run into a
-    /// quadratic scan. The account and partition are fixed for the run, so we resolve them once
-    /// and compose ARNs directly, falling back to a search if the identity lookup is unavailable.
+    /// quadratic scan. Only the account id has to be looked up — the region carries its own
+    /// partition — so we ask STS once and compose ARNs the same way
+    /// <see cref="ValidateTopicByArnConvention"/> does, falling back to a search if that lookup
+    /// is unavailable.
     /// </remarks>
     private async Task<string?> ResolveTopicArnAsync(
         IAmazonSimpleNotificationService snsClient,
         string topicName,
         CancellationToken cancellationToken)
     {
-        if (_topicArnPrefix is null)
+        if (_accountId is null && !_identityUnavailable)
         {
             try
             {
@@ -207,16 +211,29 @@ public class AwsTestResourceReaper
                 var identity = await stsClient.GetCallerIdentityAsync(
                     new GetCallerIdentityRequest(), cancellationToken);
 
-                // arn:<partition>:iam::<account>:user/<name>
-                var partition = identity.Arn.Split(':')[1];
-                _topicArnPrefix = $"arn:{partition}:sns:{_connection.Region.SystemName}:{identity.Account}:";
+                _accountId = identity.Account;
             }
             catch (Exception)
             {
-                return (await snsClient.FindTopicAsync(topicName))?.TopicArn;
+                // Asked once. Retrying per topic would add a failing call to each of the
+                // searches the lookup exists to avoid.
+                _identityUnavailable = true;
             }
         }
 
-        return _topicArnPrefix + topicName;
+        if (_accountId is null)
+        {
+            // FindTopicAsync has no cancellable overload in this SDK.
+            return (await snsClient.FindTopicAsync(topicName))?.TopicArn;
+        }
+
+        return new Arn
+        {
+            Partition = _connection.Region.PartitionName,
+            Service = "sns",
+            Region = _connection.Region.SystemName,
+            AccountId = _accountId,
+            Resource = topicName
+        }.ToString();
     }
 }
