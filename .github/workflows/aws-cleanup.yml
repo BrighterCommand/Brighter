@@ -23,6 +23,10 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: eu-west-1
       AWS_DEFAULT_OUTPUT: json
+      # The name sweep matches most of what the AWS suites create, so the six-hourly run could
+      # delete queues out from under a job that is still running. It leaves recent ones alone;
+      # the run triggered by CI completing has nothing in flight to protect and sweeps the lot.
+      CLEANUP_MIN_AGE_SECONDS: ${{ github.event_name == 'schedule' && '3600' || '0' }}
 
     steps:
       - uses: actions/checkout@v7

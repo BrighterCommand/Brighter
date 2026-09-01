@@ -9,6 +9,11 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLEANUP_SCRIPT="$SCRIPT_DIR/clean_failed_tests_aws_assets.sh"
 
+# The fixtures below are created seconds before the sweep runs, so the age guard that protects a
+# live CI run from the scheduled sweep would skip every one of them. Turn it off here: what is
+# under test is which resources the sweep matches, not when it declines to act on them.
+export CLEANUP_MIN_AGE_SECONDS=0
+
 # --- Cleanup trap: ensure test resources are removed regardless of outcome ---
 TAGGED_QUEUE_URL=""
 UNTAGGED_QUEUE_URL=""

@@ -14,7 +14,8 @@
 #   ./clean_failed_tests_aws_assets.sh --dry-run   # list without deleting
 #
 # Environment:
-#   CLEANUP_PARALLELISM  concurrent deletions in the name sweep (default 16)
+#   CLEANUP_PARALLELISM     concurrent deletions in the name sweep (default 16)
+#   CLEANUP_MIN_AGE_SECONDS  queues younger than this are left alone (default 3600; 0 disables)
 
 # Intentionally omitting -e: individual deletion failures are soft errors handled inline.
 set -uo pipefail
@@ -249,6 +250,12 @@ echo "Scanning for untagged test resources by naming convention ..."
 # AWS API call at a time does not get through that inside the cleanup workflow's timeout.
 PARALLELISM="${CLEANUP_PARALLELISM:-16}"
 
+# The sweep also runs on a six-hourly schedule, which can land while an AWS test job is in
+# flight -- and the generated-test pattern matches most of what that job creates. A queue young
+# enough to belong to a running job is left alone; it will be swept next time if it does turn
+# out to be a leak. SNS reports no creation time, so topics cannot be guarded the same way.
+MIN_AGE_SECONDS="${CLEANUP_MIN_AGE_SECONDS:-3600}"
+
 # Clean untagged SNS topics.
 # SNS list-topics returns a NextToken, so the CLI's default auto-pagination sees every topic.
 ALL_TOPICS=$(aws sns list-topics --query 'Topics[*].TopicArn' --output text 2>/dev/null || echo "")
@@ -291,6 +298,37 @@ for queue_url in $ALL_QUEUES; do
         MATCHED_QUEUES+=("$queue_url")
     fi
 done
+
+# Drop the ones that are too young to be certain about. CreatedTimestamp costs a call per
+# queue, so the lookups run at the same parallelism as the deletions.
+if [[ ${#MATCHED_QUEUES[@]} -gt 0 && "$MIN_AGE_SECONDS" -gt 0 ]]; then
+    NOW=$(date +%s)
+    OLD_ENOUGH=()
+    while IFS= read -r queue_url; do
+        [[ -n "$queue_url" ]] && OLD_ENOUGH+=("$queue_url")
+    done < <(printf '%s\n' "${MATCHED_QUEUES[@]}" \
+        | xargs -P "$PARALLELISM" -I {} sh -c '
+            created=$(aws sqs get-queue-attributes --queue-url "$1" \
+                --attribute-names CreatedTimestamp \
+                --query "Attributes.CreatedTimestamp" --output text 2>/dev/null || echo "")
+            case "$created" in
+                ""|None)
+                    # Age unknown -- most likely already gone. Leave it to the delete to find out.
+                    echo "$1"
+                    ;;
+                *)
+                    if [ $(( $2 - created )) -ge "$3" ]; then
+                        echo "$1"
+                    fi
+                    ;;
+            esac' _ {} "$NOW" "$MIN_AGE_SECONDS")
+
+    SKIPPED_QUEUES=$(( ${#MATCHED_QUEUES[@]} - ${#OLD_ENOUGH[@]} ))
+    if [[ $SKIPPED_QUEUES -gt 0 ]]; then
+        echo "  Skipped $SKIPPED_QUEUES queue(s) created in the last $(( MIN_AGE_SECONDS / 60 )) minute(s); a test run may still be using them"
+    fi
+    MATCHED_QUEUES=(${OLD_ENOUGH[@]+"${OLD_ENOUGH[@]}"})
+fi
 
 if [[ ${#MATCHED_QUEUES[@]} -gt 0 ]]; then
     if $DRY_RUN; then
