@@ -27,9 +27,14 @@ public class SqsFifoMessageGatewayProvider
         return new RoutingKey(_reaper.TrackQueue($"sqs-fifo-{Uuid.New():N}.fifo"));
     }
 
+    /// <remarks>
+    /// Not tracked for reaping: CreateSubscription replaces this name with the publication's
+    /// queue, so no queue by this name is ever created. The queue that is created is the one
+    /// <see cref="GetOrCreateRoutingKey"/> tracked.
+    /// </remarks>
     public ChannelName GetOrCreateChannelName([CallerMemberName] string? testName = null)
     {
-        return new ChannelName(_reaper.TrackQueue($"sqs-fifo-ch-{Uuid.New():N}.fifo"));
+        return new ChannelName($"sqs-fifo-ch-{Uuid.New():N}.fifo");
     }
 
     public SqsPublication CreatePublication(RoutingKey routingKey, OnMissingChannel makeChannels = OnMissingChannel.Create)
