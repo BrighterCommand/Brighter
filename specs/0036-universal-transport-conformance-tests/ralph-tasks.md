@@ -651,7 +651,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.Gcp.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && dotnet test tests/Paramore.Brighter.Gcp.Tests --filter "FullyQualifiedName~MessagingGateway.StreamOrdering." && grep -qE 'GCP / StreamOrdering[[:space:]]*\|' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! ( grep -E 'GCP / StreamOrdering[[:space:]]*\|' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown )`
   - **References**: ADR 0067 step 5 + "known FR-2 non-conformances"; ADR 0066 "Why there is no scheduler member"; requirements FR-2, AC-2, FR-13, FR-21.
 
-- [ ] **Onboard MQTT: config + both providers (FR-20 step 1-2)**
+- [x] **Onboard MQTT: config + both providers (FR-20 step 1-2)**
   - **Behavior**: Add MQTT's generator wiring so the canonical templates generate for it: a `test-configuration.json` declaring its gateway configuration(s), and a `*MessageGatewayProvider.cs` implementing BOTH `IAmAMessageGatewayReactorProvider` and `IAmAMessageGatewayProactorProvider` against the post-FR-1 surface (routing-key params, `GetMessageFromInvalidChannel[Async]`, `RejectionMetadataKeys` from MQTT's own key strings, `string.Empty` where unstamped). It never carries `bool setupDeadLetterQueue`. MQTT compiles and generates. (Broker execution is the next task.)
   - **Test file**: `tests/Paramore.Brighter.MQTT.Tests/MessagingGateway/Generated/Reactor/IAmAMessageGatewayReactorProvider.cs` (regenerated artifact; verification is compilation + generation)
   - **Test should verify**:

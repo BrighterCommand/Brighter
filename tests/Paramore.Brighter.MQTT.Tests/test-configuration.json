@@ -1,0 +1,15 @@
+{
+  "Namespace": "Paramore.Brighter.MQTT.Tests",
+  "MessagingGateway": {
+    "Publication": "Paramore.Brighter.Publication",
+    "Subscription": "Paramore.Brighter.MessagingGateway.MQTT.MqttSubscription",
+    "MessageGatewayProvider": "Paramore.Brighter.MQTT.Tests.MessagingGateway.MqttMessageGatewayProvider",
+    "Category": "MQTT",
+    "CollectionName": "MqttMessagingGateway",
+    "LedgerKey": "MQTT / (not yet declared)",
+    "HasSupportToPublishConfirmation": false,
+    "HasSupportToValidateBrokerExistence": false,
+    "HasSupportToValidateInfrastructure": false,
+    "ReceiveMessageTimeoutInMilliseconds": 5000
+  }
+}

@@ -61,9 +61,9 @@ public class GeneratingEverywhereShouldEmitSkippedCanonicalSuiteTests
             ["When_requeuing_a_failed_message_should_be_redelivered"]                                  = "FR-22",
         };
 
-    // The exact count of wired gateway configurations declared across the nine wired
+    // The exact count of wired gateway configurations declared across the ten wired
     // test projects (FR-13). This is a regression guard: a new wiring changes the count.
-    private const int EXPECTED_WIRED_CONFIGURATION_COUNT = 20;
+    private const int EXPECTED_WIRED_CONFIGURATION_COUNT = 21;
 
     private readonly string _repoRoot;
     private readonly IReadOnlyList<string> _reactorGeneratedDirs;
