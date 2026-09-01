@@ -59,33 +59,80 @@ public class AwsTestResourceReaper
     }
 
     /// <summary>
+    /// The topic names tracked but not yet reaped. Empty once <see cref="ReapAsync"/> has run.
+    /// </summary>
+    public IReadOnlyCollection<string> PendingTopics => _topics;
+
+    /// <summary>
+    /// The queue names tracked but not yet reaped. Empty once <see cref="ReapAsync"/> has run.
+    /// </summary>
+    public IReadOnlyCollection<string> PendingQueues => _queues;
+
+    /// <summary>
     /// Deletes every tracked topic and queue. Failures are swallowed: teardown runs after a
     /// test that may already have failed, and must not replace that failure with its own.
     /// </summary>
+    /// <remarks>
+    /// Reaping is a single attempt. The tracked names are dropped whether or not the delete
+    /// reached AWS, so a second call is a no-op rather than a retry; anything left behind by a
+    /// failed sweep is the account sweep's problem, not teardown's.
+    /// </remarks>
     public async Task ReapAsync(CancellationToken cancellationToken = default)
     {
-        // Topics first. Deleting a topic takes its subscriptions with it, which would otherwise
-        // be left pointing at queues we are about to delete.
-        if (_topics.Count > 0)
+        try
+        {
+            // Topics first. Deleting a topic takes its subscriptions with it, which would
+            // otherwise be left pointing at queues we are about to delete.
+            await ReapTopicsAsync(cancellationToken);
+            await ReapQueuesAsync(cancellationToken);
+        }
+        finally
+        {
+            _topics.Clear();
+            _queues.Clear();
+        }
+    }
+
+    private async Task ReapTopicsAsync(CancellationToken cancellationToken)
+    {
+        if (_topics.Count == 0)
+        {
+            return;
+        }
+
+        try
         {
             using var snsClient = new AWSClientFactory(_connection).CreateSnsClient();
             foreach (var topic in _topics)
             {
                 await DeleteTopicAsync(snsClient, topic, cancellationToken);
             }
+        }
+        catch (Exception)
+        {
+            // Swallowed by design; see ReapAsync. Creating the client can fail as readily as
+            // the deletes it is created for.
+        }
+    }
 
-            _topics.Clear();
+    private async Task ReapQueuesAsync(CancellationToken cancellationToken)
+    {
+        if (_queues.Count == 0)
+        {
+            return;
         }
 
-        if (_queues.Count > 0)
+        try
         {
             using var sqsClient = new AWSClientFactory(_connection).CreateSqsClient();
             foreach (var queue in _queues)
             {
                 await DeleteQueueAsync(sqsClient, queue, cancellationToken);
             }
-
-            _queues.Clear();
+        }
+        catch (Exception)
+        {
+            // Swallowed by design; see ReapAsync.
         }
     }
 

@@ -85,15 +85,23 @@ public class SnsFifoMessageGatewayProvider
         IAmAChannelSync? channel,
         IEnumerable<Message> messages)
     {
-        if (channel != null)
+        try
         {
-            channel.Purge();
-            channel.Dispose();
+            if (channel != null)
+            {
+                channel.Purge();
+                channel.Dispose();
+            }
+
+            producer?.Dispose();
         }
-
-        producer?.Dispose();
-
-        _reaper.Reap();
+        finally
+        {
+            // Purge and Dispose reach AWS and can fail — PurgeQueue alone is throttled to one
+            // call per queue a minute — and a teardown that throws before it reaps is how the
+            // topics and queues leaked in the first place.
+            _reaper.Reap();
+        }
     }
 
     public async Task CleanUpAsync(
@@ -101,18 +109,24 @@ public class SnsFifoMessageGatewayProvider
         IAmAChannelAsync? channel,
         IEnumerable<Message> messages)
     {
-        if (channel != null)
+        try
         {
-            await channel.PurgeAsync();
-            channel.Dispose();
-        }
+            if (channel != null)
+            {
+                await channel.PurgeAsync();
+                channel.Dispose();
+            }
 
-        if (producer != null)
+            if (producer != null)
+            {
+                await producer.DisposeAsync();
+            }
+        }
+        finally
         {
-            await producer.DisposeAsync();
+            // See CleanUp: the reap has to survive a teardown that throws.
+            await _reaper.ReapAsync();
         }
-
-        await _reaper.ReapAsync();
     }
 
     public IAmAChannelSync CreateChannel(SqsSubscription subscription)
