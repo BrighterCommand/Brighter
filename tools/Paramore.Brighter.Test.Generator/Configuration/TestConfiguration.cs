@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -76,4 +76,17 @@ public class TestConfiguration
     /// Use this when testing multiple gateway implementations (e.g., RabbitMQ, AWS SNS/SQS, Azure Service Bus).
     /// </summary>
     public Dictionary<string, MessagingGatewayConfiguration>? MessagingGateways { get; set; }
+
+    /// <summary>
+    /// Gets or sets the inbox configuration for generating inbox tests.
+    /// Use this for a single inbox implementation, or use <see cref="Inboxes"/> for multiple implementations.
+    /// </summary>
+    public InboxConfiguration? Inbox { get; set; }
+
+    /// <summary>
+    /// Gets or sets a dictionary of named inbox configurations for generating multiple inbox tests.
+    /// The key is used as the prefix for generated test class names if the configuration doesn't specify one.
+    /// Use this when testing multiple inbox implementations (e.g., Text, Binary).
+    /// </summary>
+    public Dictionary<string, InboxConfiguration>? Inboxes { get; set; }
 }
