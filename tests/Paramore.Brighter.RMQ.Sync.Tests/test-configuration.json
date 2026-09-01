@@ -1,0 +1,15 @@
+{
+  "Namespace": "Paramore.Brighter.RMQ.Sync.Tests",
+  "MessagingGateway": {
+    "Publication": "Paramore.Brighter.MessagingGateway.RMQ.Sync.RmqPublication",
+    "Subscription": "Paramore.Brighter.MessagingGateway.RMQ.Sync.RmqSubscription",
+    "MessageGatewayProvider": "Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.RmqSyncMessageGatewayProvider",
+    "Category": "RMQ",
+    "CollectionName": "RmqSyncMessagingGateway",
+    "LedgerKey": "RMQ.Sync / (not yet declared)",
+    "HasSupportToPublishConfirmation": true,
+    "HasSupportToValidateBrokerExistence": true,
+    "HasSupportToValidateInfrastructure": true,
+    "ReceiveMessageTimeoutInMilliseconds": 4000
+  }
+}

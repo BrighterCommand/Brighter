@@ -676,7 +676,7 @@
   - **RALPH-VERIFY** (the placeholder row is gone and every replacement MQTT row has no `Unknown`): `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.MQTT.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && { docker compose -f docker-compose-mqtt.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.MQTT.Tests --filter "FullyQualifiedName~MessagingGateway" && ! grep -q 'MQTT / (not yet declared)' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! grep -- 'MQTT /' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown`
   - **References**: requirements FR-20(3), AC-23 (must run, not just compile), FR-21; ADR 0067 step 5, "Infra reality".
 
-- [ ] **Onboard RMQ.Sync: config + both providers (FR-20 step 1-2)**
+- [x] **Onboard RMQ.Sync: config + both providers (FR-20 step 1-2)**
   - **Behavior**: Add RMQ.Sync's generator wiring: a `test-configuration.json` declaring its gateway configuration(s) and a `*MessageGatewayProvider.cs` implementing BOTH provider interfaces against the post-FR-1 surface (never `bool setupDeadLetterQueue`). RMQ.Sync compiles and generates. (Broker execution is the next task.)
   - **Test file**: `tests/Paramore.Brighter.RMQ.Sync.Tests/MessagingGateway/Generated/Reactor/IAmAMessageGatewayReactorProvider.cs` (regenerated artifact; verification is compilation + generation)
   - **Test should verify**:
