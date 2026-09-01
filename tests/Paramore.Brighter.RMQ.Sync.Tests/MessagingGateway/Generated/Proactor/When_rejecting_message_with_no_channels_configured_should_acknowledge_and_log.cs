@@ -11,7 +11,7 @@ using Xunit;
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "RMQ")]
-[Collection("RmqSyncMessagingGateway")]
+[Collection("RMQ")]
 public class WhenRejectingMessageWithNoChannelsConfiguredShouldAcknowledgeAndLogAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -41,7 +41,7 @@ public class WhenRejectingMessageWithNoChannelsConfiguredShouldAcknowledgeAndLog
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #NNNN — no channels configured: acknowledge and log not yet conformant for RMQ.Sync / (not yet declared) (maintainer sign-off)")]
+    [Fact]
     public async Task When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log_async()
     {
         // Arrange — neither DLQ nor invalid channel configured (FR-7, AC-7, FR-1(2))

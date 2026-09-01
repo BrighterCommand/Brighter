@@ -10,7 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "RMQ")]
-[Collection("RmqSyncMessagingGateway")]
+[Collection("RMQ")]
 public class WhenPostingAMessageButNoBrokerCreatedShouldThrowExceptionAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;

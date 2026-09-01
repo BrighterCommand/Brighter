@@ -11,7 +11,7 @@ using Xunit;
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "RMQ")]
-[Collection("RmqSyncMessagingGateway")]
+[Collection("RMQ")]
 public class WhenRequeuingAFailedMessageWithDelayShouldRedeliverAfterDelayAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -30,7 +30,7 @@ public class WhenRequeuingAFailedMessageWithDelayShouldRedeliverAfterDelayAsync 
     {
         _messageGatewayProvider = new Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.RmqSyncMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
-        _messageAssertion = new DefaultMessageAssertion();
+        _messageAssertion = new RmqMessageAssertion();
     }
 
     public Task InitializeAsync()
@@ -43,7 +43,7 @@ public class WhenRequeuingAFailedMessageWithDelayShouldRedeliverAfterDelayAsync 
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #NNNN — requeue with delay not yet conformant for RMQ.Sync / (not yet declared) (maintainer sign-off)")]
+    [Fact]
     public async Task When_requeuing_a_failed_message_with_delay_should_redeliver_after_delay_async()
     {
         // Arrange

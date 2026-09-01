@@ -13,7 +13,7 @@ using Paramore.Brighter.Extensions;
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "RMQ")]
-[Collection("RmqSyncMessagingGateway")]
+[Collection("RMQ")]
 public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -32,7 +32,7 @@ public class WhenConfirmingPostingAMessageShouldReceivePublishConfirmationAsync 
     {
         _messageGatewayProvider = new Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.RmqSyncMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
-        _messageAssertion = new DefaultMessageAssertion();
+        _messageAssertion = new RmqMessageAssertion();
     }
 
     public Task InitializeAsync()

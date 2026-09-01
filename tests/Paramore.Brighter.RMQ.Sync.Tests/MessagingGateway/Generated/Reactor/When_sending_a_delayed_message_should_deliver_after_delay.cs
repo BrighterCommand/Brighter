@@ -10,7 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "RMQ")]
-[Collection("RmqSyncMessagingGateway")]
+[Collection("RMQ")]
 public class WhenSendingADelayedMessageShouldDeliverAfterDelay : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -29,7 +29,7 @@ public class WhenSendingADelayedMessageShouldDeliverAfterDelay : IDisposable
     {
         _messageGatewayProvider = new Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.RmqSyncMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
-        _messageAssertion = new DefaultMessageAssertion();
+        _messageAssertion = new RmqMessageAssertion();
     }
 
     public void Dispose()
@@ -37,7 +37,7 @@ public class WhenSendingADelayedMessageShouldDeliverAfterDelay : IDisposable
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #NNNN — delayed send not yet conformant for RMQ.Sync / (not yet declared) (maintainer sign-off)")]
+    [Fact]
     public void When_sending_a_delayed_message_should_deliver_after_delay()
     {
         // Arrange

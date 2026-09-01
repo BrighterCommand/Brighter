@@ -11,7 +11,7 @@ using Xunit;
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "RMQ")]
-[Collection("RmqSyncMessagingGateway")]
+[Collection("RMQ")]
 public class WhenRejectingMessageWithDeliveryErrorShouldSendToDlqAsync : IAsyncLifetime
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
@@ -41,7 +41,7 @@ public class WhenRejectingMessageWithDeliveryErrorShouldSendToDlqAsync : IAsyncL
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #NNNN — reject with delivery error to DLQ not yet conformant for RMQ.Sync / (not yet declared) (maintainer sign-off)")]
+    [Fact]
     public async Task When_rejecting_message_with_delivery_error_should_send_to_dlq_async()
     {
         // Arrange

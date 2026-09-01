@@ -10,7 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "RMQ")]
-[Collection("RmqSyncMessagingGateway")]
+[Collection("RMQ")]
 public class WhenNackingAMessageItShouldBeRedelivered : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -29,7 +29,7 @@ public class WhenNackingAMessageItShouldBeRedelivered : IDisposable
     {
         _messageGatewayProvider = new Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.RmqSyncMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
-        _messageAssertion = new DefaultMessageAssertion();
+        _messageAssertion = new RmqMessageAssertion();
     }
 
     public void Dispose()
@@ -37,7 +37,7 @@ public class WhenNackingAMessageItShouldBeRedelivered : IDisposable
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #NNNN — Nack redelivers not yet conformant for RMQ.Sync / (not yet declared) (maintainer sign-off)")]
+    [Fact]
     public void When_nacking_a_message_it_should_be_redelivered()
     {
         // Arrange
@@ -76,7 +76,7 @@ public class WhenNackingAMessageItShouldBeRedelivered : IDisposable
         _messageAssertion.Assert(message, redelivered);
     }
 
-    [Fact(Skip = "Deferred: #NNNN — Nack redelivers not yet conformant for RMQ.Sync / (not yet declared) (maintainer sign-off)")]
+    [Fact]
     public void When_nacking_first_of_two_messages_should_redeliver_nacked_then_receive_second()
     {
         // Arrange — two queued messages: M1 is nacked and redelivered; M2 is not blocked (FR-16, AC-17)

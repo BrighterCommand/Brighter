@@ -10,7 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "RMQ")]
-[Collection("RmqSyncMessagingGateway")]
+[Collection("RMQ")]
 public class WhenRejectingMessageShouldIncludeMetadata : IDisposable
 {
     private const string REJECTION_DESCRIPTION = "Test rejection with metadata";
@@ -37,7 +37,7 @@ public class WhenRejectingMessageShouldIncludeMetadata : IDisposable
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #NNNN — rejection metadata stamping not yet conformant for RMQ.Sync / (not yet declared) (maintainer sign-off)")]
+    [Fact]
     public void When_rejecting_message_should_include_metadata()
     {
         // Arrange

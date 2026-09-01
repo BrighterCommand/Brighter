@@ -218,6 +218,42 @@ cell remains `Unknown`.
     after nack on a 30 s ceiling — same root cause as Redis (destructive BLPOP) and MSSQL (row deleted on
     read). Three deferral preconditions met: evidence recorded (live Mosquitto broker, both variants),
     fix is not localized (requires a redelivery buffer or QoS-level redesign in `src`), maintainer sign-off.
+- `RMQ.Sync / RmqSyncMessagingGateway` — **10 `Fixed (#4240)` + FR-5 `Deferred -> #4240`**, both
+  variants, on a live RabbitMQ 4.2 broker with management + delay plugin image (Reactor + Proactor each
+  **19 pass / 1 skip / 0 fail** in the canonical generated suite). Every passing cell is `Fixed` (not
+  `Pass`) because of a required `src` fix: `RmqMessageProducer.DisposeAsync()` created a
+  `TaskCompletionSource` that was never completed and returned `new ValueTask(tcs.Task)` — so `await
+  producer.DisposeAsync()` hung indefinitely; it now returns `ValueTask.CompletedTask`. **Delay
+  (FR-2/FR-9) `Fixed` via a wired `RmqSyncHarnessMessageScheduler`** — the harness presents a plain
+  (non-delay) exchange so `DelaySupported == false` and the scheduler seam is exercised (wall-clock
+  timer re-publishes the same message object, preserving the original ID via the
+  `OriginalMessageIdHeaderName` bag entry, asserted by `RmqMessageAssertion`). **Reject → DLQ
+  (FR-4/6/17) and metadata (FR-8) `Fixed` via native DLX under the FR-8 relaxation** — `BasicReject`
+  dead-letters to the configured DLX; `RejectionMetadataKeys` is empty → routing only asserted (same
+  mechanism as RMQ.Async). **FR-15 (explicit zero-delay requeue) `Fixed`** — `RequeueMessage`
+  republishes with a new AMQP message ID (original stored in `OriginalMessageIdHeaderName`); asserted
+  correctly by `RmqMessageAssertion`. **FR-16/22 `Fixed`** natively. **⛔ FR-5 (a *separate* invalid
+  channel) `Deferred -> #4240`** — same architectural src gap as RMQ.Async: an unacceptable rejection
+  calls `BasicReject` which dead-letters to the DLX, not a distinct invalid channel; the real invalid
+  read hook observes `MT_NONE` (evidence from live 4.2 broker, both variants); the residual is a
+  substantial src change to `src/…RMQ.Sync` (three deferral preconditions met).
+  - **Test-isolation fix (harness, required):** the generated suite originally declared its own xUnit
+    collection (`RmqSyncMessagingGateway`) while the hand-written broker tests use `RMQ`. **xUnit runs
+    distinct collections in PARALLEL**, so the two suites hit the same broker concurrently and two tests
+    failed only in the combined run (the generated FR-8 Proactor arm, and the pre-existing hand-written
+    `RmqMessageProducerRequeuingMessageTests.When_posting_a_message_via_the_messaging_gateway`) while
+    both passed in isolation. `CollectionName` is now `RMQ`, serialising generated + hand-written against
+    the one broker. ⚠️ **RMQ.Async has the same latent split** (`Classic`/`Quorum` vs `RMQ`) but was
+    certified on a configuration-scoped filter (`~MessagingGateway.Quorum.`) that never ran the
+    hand-written tests alongside, so it never surfaced.
+  - **⚠️ Scoped-suite caveat — 9 pre-existing mTLS failures are NOT from this work.** The full
+    `~MessagingGateway` filter is **78 pass / 3 skip / 9 fail**; all 9 failures are
+    `RmqMutualTls{Acceptance,Observability,QuorumObservability}Tests`, which need a TLS-configured broker
+    (certs, port 5671) that `docker-compose-rmq.yaml` does not provide — they fail in <1 ms.
+    **Verified pre-existing**: a baseline run at commit `b1a5027d0` (before any RMQ.Sync onboarding) fails
+    with the identical 9 mTLS tests. After the collection fix there are **zero non-mTLS failures**. The
+    conformance conclusion rests on the generated canonical suite, which is fully green apart from the
+    FR-5 Deferred skips.
 
 ## Conformance Matrix
 
@@ -245,4 +281,4 @@ cell remains `Unknown`.
 | RocketMQ / RocketMQMessagingGateway | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) |
 | AzureServiceBus / (not yet declared) | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
 | MQTT / MqttMessagingGateway | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) |
-| RMQ.Sync / (not yet declared) | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
+| RMQ.Sync / RmqSyncMessagingGateway | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) |

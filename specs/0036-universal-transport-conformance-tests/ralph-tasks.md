@@ -688,7 +688,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.RMQ.Sync.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && dotnet build tests/Paramore.Brighter.RMQ.Sync.Tests`
   - **References**: requirements FR-20(1),(2), AC-23, FR-13 mapping (`RMQ.Sync`→`RMQ.Sync`); ADR 0066 "provider implementations FR-20 adds".
 
-- [ ] **Onboard RMQ.Sync: run against a broker and record the ledger (FR-20 step 3)**
+- [x] **Onboard RMQ.Sync: run against a broker and record the ledger (FR-20 step 3)**
   - **Behavior**: Bring up the RabbitMQ broker and run RMQ.Sync's generated canonical suite against it. Replace RMQ.Sync's placeholder ledger row with per-configuration rows; record `Pass`/`Fixed` (both variants, ran against broker) or flag-and-move-on to signed-off `Deferred`.
   - **Test file**: `tests/Paramore.Brighter.RMQ.Sync.Tests/MessagingGateway/Generated/Reactor/*.cs` (generated canonical suite)
   - **Test should verify**:

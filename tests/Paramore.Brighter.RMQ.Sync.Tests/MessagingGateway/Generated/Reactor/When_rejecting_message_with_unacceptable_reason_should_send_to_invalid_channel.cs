@@ -10,7 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "RMQ")]
-[Collection("RmqSyncMessagingGateway")]
+[Collection("RMQ")]
 public class WhenRejectingMessageWithUnacceptableReasonShouldSendToInvalidChannel : IDisposable
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
@@ -35,7 +35,7 @@ public class WhenRejectingMessageWithUnacceptableReasonShouldSendToInvalidChanne
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #NNNN — reject with unacceptable reason to invalid channel not yet conformant for RMQ.Sync / (not yet declared) (maintainer sign-off)")]
+    [Fact(Skip = "Deferred: #4240 — reject with unacceptable reason to invalid channel not yet conformant for RMQ.Sync / RmqSyncMessagingGateway (maintainer sign-off)")]
     public void When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel()
     {
         // Arrange

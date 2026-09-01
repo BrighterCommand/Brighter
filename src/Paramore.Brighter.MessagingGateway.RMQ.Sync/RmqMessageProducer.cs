@@ -208,12 +208,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             GC.SuppressFinalize(this);
         }
         
-        public  ValueTask DisposeAsync()
+        public ValueTask DisposeAsync()
         {
-            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             Dispose(true);
             GC.SuppressFinalize(this);
-            return new ValueTask(tcs.Task);
+            return ValueTask.CompletedTask;
         }
 
         protected override void Dispose(bool disposing)
