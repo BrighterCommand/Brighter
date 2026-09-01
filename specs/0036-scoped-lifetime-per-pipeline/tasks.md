@@ -321,7 +321,7 @@ Counts and `file:line` anchors below were re-derived against the working tree; w
   - **Depends on**: T2.3
   - **References**: AC-7 (FR-6); ADR 0071 step 2
 
-- [ ] **TEST + IMPLEMENT: T2.5 — each `Publish` subscriber gets a distinct scope, all released at end of publish**
+- [x] **TEST + IMPLEMENT: T2.5 — each `Publish` subscriber gets a distinct scope, all released at end of publish**
   - **USE COMMAND**: `/test-first a PublishAsync to three subscribers resolves three distinct Scoped IUnitOfWork instances all disposed by the time it returns`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_publishing_to_three_subscribers_each_should_get_its_own_scope.cs`
