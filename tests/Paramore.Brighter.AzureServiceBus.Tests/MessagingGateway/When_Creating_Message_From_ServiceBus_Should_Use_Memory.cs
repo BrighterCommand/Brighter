@@ -10,7 +10,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
 public class AzureServiceBusMessageMemoryTests
 {
-    private readonly AzureServiceBusMesssageCreator _creator;
+    private readonly AzureServiceBusMessageCreator _creator;
 
     public AzureServiceBusMessageMemoryTests()
     {
@@ -20,7 +20,7 @@ public class AzureServiceBusMessageMemoryTests
             routingKey: new RoutingKey("test-topic"),
             messagePumpType: MessagePumpType.Reactor);
 
-        _creator = new AzureServiceBusMesssageCreator(subscription);
+        _creator = new AzureServiceBusMessageCreator(subscription);
     }
 
     [Fact]

@@ -59,13 +59,15 @@ namespace Paramore.Brighter.Core.Tests.Confirmation.TestDoubles
         }
 
         public Activity? CreateSpan(MessagePumpSpanOperation operation, Message message, MessagingSystem messagingSystem,
-            InstrumentationOptions options = InstrumentationOptions.All) => null;
+            InstrumentationOptions options = InstrumentationOptions.All, string? serializedHeader = null) => null;
 
         public Activity? CreateReceiveSpan(RoutingKey topic, MessagingSystem messagingSystem,
             InstrumentationOptions options = InstrumentationOptions.All) => null;
 
-        public void EnrichReceiveSpan(Activity? span, Message message,
-            InstrumentationOptions options = InstrumentationOptions.All) { }
+        public string? EnrichReceiveSpan(Activity? span, Message message,
+            InstrumentationOptions options = InstrumentationOptions.All) => null;
+
+        public void PropagateConsumerContext(Message message) { }
 
         public Activity? CreateSpan<TRequest>(CommandProcessorSpanOperation operation, TRequest request,
             Activity? parentActivity = null, ActivityLink[]? links = null,

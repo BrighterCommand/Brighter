@@ -1,0 +1,60 @@
+{
+  "Namespace": "Paramore.Brighter.AWS.Tests",
+  "MessageAssertion": "AwsMessageAssertion",
+  "MessagingGateways": {
+    "SnsStandard": {
+      "Publication": "Paramore.Brighter.MessagingGateway.AWSSQS.SnsPublication",
+      "Subscription": "Paramore.Brighter.MessagingGateway.AWSSQS.SqsSubscription",
+      "MessageGatewayProvider": "Paramore.Brighter.AWS.Tests.MessagingGateway.SnsStandardMessageGatewayProvider",
+      "Category": "Sns",
+      "CollectionName": "SnsStandard",
+      "HasSupportToPublishConfirmation": false,
+      "HasSupportToDeadLetterQueue": true,
+      "HasSupportToDelayedMessages": false,
+      "HasSupportToValidateBrokerExistence": true,
+      "HasSupportToRequeue": true,
+      "ReceiveMessageTimeoutInMilliseconds": 4000
+    },
+    "SnsFifo": {
+      "Publication": "Paramore.Brighter.MessagingGateway.AWSSQS.SnsPublication",
+      "Subscription": "Paramore.Brighter.MessagingGateway.AWSSQS.SqsSubscription",
+      "MessageGatewayProvider": "Paramore.Brighter.AWS.Tests.MessagingGateway.SnsFifoMessageGatewayProvider",
+      "MessageBuilder": "FifoMessageBuilder",
+      "Category": "Sns",
+      "CollectionName": "SnsFifo",
+      "HasSupportToPublishConfirmation": false,
+      "HasSupportToDeadLetterQueue": true,
+      "HasSupportToDelayedMessages": false,
+      "HasSupportToValidateBrokerExistence": true,
+      "HasSupportToRequeue": true,
+      "ReceiveMessageTimeoutInMilliseconds": 4000
+    },
+    "SqsStandard": {
+      "Publication": "Paramore.Brighter.MessagingGateway.AWSSQS.SqsPublication",
+      "Subscription": "Paramore.Brighter.MessagingGateway.AWSSQS.SqsSubscription",
+      "MessageGatewayProvider": "Paramore.Brighter.AWS.Tests.MessagingGateway.SqsStandardMessageGatewayProvider",
+      "Category": "Sqs",
+      "CollectionName": "SqsStandard",
+      "HasSupportToPublishConfirmation": false,
+      "HasSupportToDeadLetterQueue": true,
+      "HasSupportToDelayedMessages": true,
+      "HasSupportToValidateBrokerExistence": true,
+      "HasSupportToRequeue": true,
+      "ReceiveMessageTimeoutInMilliseconds": 4000
+    },
+    "SqsFifo": {
+      "Publication": "Paramore.Brighter.MessagingGateway.AWSSQS.SqsPublication",
+      "Subscription": "Paramore.Brighter.MessagingGateway.AWSSQS.SqsSubscription",
+      "MessageGatewayProvider": "Paramore.Brighter.AWS.Tests.MessagingGateway.SqsFifoMessageGatewayProvider",
+      "MessageBuilder": "FifoMessageBuilder",
+      "Category": "Sqs",
+      "CollectionName": "SqsFifo",
+      "HasSupportToPublishConfirmation": false,
+      "HasSupportToDeadLetterQueue": true,
+      "HasSupportToDelayedMessages": false,
+      "HasSupportToValidateBrokerExistence": true,
+      "HasSupportToRequeue": true,
+      "ReceiveMessageTimeoutInMilliseconds": 4000
+    }
+  }
+}

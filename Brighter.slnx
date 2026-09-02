@@ -151,6 +151,27 @@
     <Project Path="samples/Transforms/MassTransit/MassTransitSide/MassTransitSide.csproj" />
     <Project Path="samples/Transforms/MassTransit/MBrigtherSide/MBrigtherSide.csproj" />
   </Folder>
+  <Folder Name="/samples/Tutorials/">
+    <File Path="samples/Tutorials/README.md" />
+  </Folder>
+  <Folder Name="/samples/Tutorials/02-FirstMessage/">
+    <File Path="samples/Tutorials/02-FirstMessage/README.md" />
+    <Project Path="samples/Tutorials/02-FirstMessage/Greetings/Greetings.csproj" />
+    <Project Path="samples/Tutorials/02-FirstMessage/GreetingsReceiver/GreetingsReceiver.csproj" />
+    <Project Path="samples/Tutorials/02-FirstMessage/GreetingsSender/GreetingsSender.csproj" />
+  </Folder>
+  <Folder Name="/samples/Tutorials/03-DurableOutbox/">
+    <File Path="samples/Tutorials/03-DurableOutbox/README.md" />
+    <Project Path="samples/Tutorials/03-DurableOutbox/Greetings/Greetings.csproj" />
+    <Project Path="samples/Tutorials/03-DurableOutbox/GreetingsReceiver/GreetingsReceiver.csproj" />
+    <Project Path="samples/Tutorials/03-DurableOutbox/GreetingsSender/GreetingsSender.csproj" />
+  </Folder>
+  <Folder Name="/samples/Tutorials/04-Kafka/">
+    <File Path="samples/Tutorials/04-Kafka/README.md" />
+    <Project Path="samples/Tutorials/04-Kafka/Greetings/Greetings.csproj" />
+    <Project Path="samples/Tutorials/04-Kafka/GreetingsReceiver/GreetingsReceiver.csproj" />
+    <Project Path="samples/Tutorials/04-Kafka/GreetingsSender/GreetingsSender.csproj" />
+  </Folder>
   <Folder Name="/samples/Validation/">
     <File Path="samples\Validation\README.md" />
     <Project Path="samples/Validation/DataAnnotationsSample/DataAnnotationsSample.csproj" />
@@ -193,6 +214,11 @@
     <Project Path="samples/WebAPI/WebAPI_EFCore/SalutationAnalytics/SalutationAnalytics.csproj" />
     <Project Path="samples/WebAPI/WebAPI_EFCore/SalutationApp/SalutationApp.csproj" />
   </Folder>
+  <Folder Name="/samples/WebAPI/WebAPI_mTLS_TestHarness/">
+    <File Path="samples/WebAPI/WebAPI_mTLS_TestHarness/README.md" />
+    <File Path="samples/WebAPI/WebAPI_mTLS_TestHarness/tests.http" />
+    <Project Path="samples/WebAPI/WebAPI_mTLS_TestHarness/TodoApi/TodoApi.csproj" />
+  </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
     <File Path="Directory.Build.props" />
@@ -228,7 +254,7 @@
     <Project Path="tests/Paramore.Brighter.Redis.Tests/Paramore.Brighter.Redis.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj" />
-    <Project Path="tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.Sqlite.Tests/Paramore.Brighter.Sqlite.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.Test.Generator.Tests/Paramore.Brighter.Test.Generator.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.Testing.Tests/Paramore.Brighter.Testing.Tests.csproj" />

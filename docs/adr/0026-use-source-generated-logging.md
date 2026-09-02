@@ -1,3 +1,17 @@
+---
+id: 0026-use-source-generated-logging
+title: "Use Source Generated Logging"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2025-04-08
+summary: "Adopts source-generated logging (LoggerMessage attribute) throughout the Brighter src folder, replacing string-templated logging for improved performance and type safety, with a direct 1-to-1 migration approach assisted by LLMs."
+tags:
+  - "logging"
+  - "observability"
+  - "performance"
+---
+
 # 26. Use Source Generated Logging
 
 Date: 2025-04-08

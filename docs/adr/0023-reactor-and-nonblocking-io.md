@@ -1,3 +1,18 @@
+---
+id: 0023-reactor-and-nonblocking-io
+title: "Reactor and Nonblocking IO, Proactor and Blocking IO"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2019-08-01
+summary: "Brighter explicitly supports both the Reactor (blocking I/O, single-threaded pump) and Proactor (non-blocking I/O, yields between Performers) concurrency models across all transports, renames message pump classes to Reactor/Proactor, and adopts an internal fork of AsyncEx's AsyncContext as BrighterSynchronizationContext to run continuations on the message pump thread."
+tags:
+  - "reactor"
+  - "async"
+  - "message-pump"
+  - "concurrency"
+---
+
 # 23. Reactor and Nonblocking IO, Proactor and Blocking IO
 
 Date: 2019-08-01

@@ -34,10 +34,11 @@ using System.Linq;
 
 namespace Paramore.Brighter.MongoDB.Tests.Outbox.Sync;
 
+[Trait("Category", "MongoDB")]
 public class WhenRetrievingANonExistentMessageItShouldReturnEmptyMessage : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;
-    private readonly IAmAMessageFactory _messageFactory;
+    private readonly IAmAMessageBuilder _messageBuilder;
     private List<Message> _createdMessages = [];
 
     public WhenRetrievingANonExistentMessageItShouldReturnEmptyMessage()
@@ -45,7 +46,7 @@ public class WhenRetrievingANonExistentMessageItShouldReturnEmptyMessage : IDisp
         _outboxProvider = new Paramore.Brighter.MongoDb.Tests.Outbox.MongoDbOutboxProvider();
         _outboxProvider.CreateStore();
 
-        _messageFactory = new DefaultMessageFactory();
+        _messageBuilder = new DefaultMessageBuilder();
     }
 
     [Fact]

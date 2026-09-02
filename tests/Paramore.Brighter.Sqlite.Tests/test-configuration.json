@@ -3,11 +3,15 @@
   "Outboxes": {
     "Text": {
       "Transaction": "System.Data.Common.DbTransaction",
-      "OutboxProvider": "SqliteTextOutboxProvider"
+      "OutboxProvider": "SqliteTextOutboxProvider",
+      "Category": "Sqlite",
+      "CollectionName": "SqliteTextOutbox"
     },
     "Binary": {
       "Transaction": "System.Data.Common.DbTransaction",
-      "OutboxProvider": "SqliteBinaryOutboxProvider"
+      "OutboxProvider": "SqliteBinaryOutboxProvider",
+      "Category": "Sqlite",
+      "CollectionName": "SqliteBinaryOutbox"
     }
   }
 }

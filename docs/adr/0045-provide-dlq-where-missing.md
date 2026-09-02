@@ -1,3 +1,18 @@
+---
+id: 0045-provide-dlq-where-missing
+title: "Provide a Dead Letter Channel Where Native Support is Missing"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2025-11-25
+summary: "Adds a Brighter-managed dead letter channel for transports lacking native DLQ support via a new RejectMessageAction exception and IAmAMessageProducer direct publishing, and an InvalidMessageAction for deserialization failures routed to a configurable invalid message channel."
+tags:
+  - "dead-letter-queue"
+  - "messaging"
+  - "error-handling"
+  - "transports"
+---
+
 # 45. Provide a Dead Letter Channel Where Native Support is Missing
 
 Date: 2025-11-25

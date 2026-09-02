@@ -31,6 +31,16 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         Task DeadLetterAsync(string lockToken);
 
         /// <summary>
+        /// Send a message to the Dead Letter Queue, recording the reason and description in the
+        /// broker's native dead-letter fields so they are visible to operators triaging the DLQ.
+        /// </summary>
+        /// <param name="lockToken">The Lock Token the message was provided with.</param>
+        /// <param name="reason">The reason the message was dead-lettered (Azure Service Bus caps this at 4096 characters).</param>
+        /// <param name="description">A fuller description of why the message was dead-lettered (Azure Service Bus caps this at 4096 characters).</param>
+        /// <returns></returns>
+        Task DeadLetterAsync(string lockToken, string reason, string? description);
+
+        /// <summary>
         /// Abandons a message, releasing the lock so the message is available for redelivery.
         /// </summary>
         /// <param name="lockToken">The Lock Token the message was provided with.</param>

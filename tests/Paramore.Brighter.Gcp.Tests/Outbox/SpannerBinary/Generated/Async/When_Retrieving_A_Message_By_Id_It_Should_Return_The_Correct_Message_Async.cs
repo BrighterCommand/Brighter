@@ -36,17 +36,15 @@ using System.Threading.Tasks;
 namespace Paramore.Brighter.Gcp.Tests.Outbox.SpannerBinary.Async;
 
 [Trait("Category", "Spanner")]
+[Collection("SpannerBinaryOutbox")]
 public class WhenRetrievingAMessageByIdItShouldReturnTheCorrectMessageAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;
-    private readonly IAmAMessageFactory _messageFactory;
     private List<Message> _createdMessages = [];
 
     public WhenRetrievingAMessageByIdItShouldReturnTheCorrectMessageAsync()
     {
         _outboxProvider = new SpannerBinaryOutboxProvider();
-
-        _messageFactory = new DefaultMessageFactory();
     }
 
     public async Task InitializeAsync()
@@ -64,9 +62,9 @@ public class WhenRetrievingAMessageByIdItShouldReturnTheCorrectMessageAsync : IA
     {
         // Arrange
         var context = new RequestContext();
-        var earliest = _messageFactory.Create();
-        var dispatched = _messageFactory.Create();
-        var undispatched = _messageFactory.Create();
+        var earliest = new DefaultMessageBuilder().Build();
+        var dispatched = new DefaultMessageBuilder().Build();
+        var undispatched = new DefaultMessageBuilder().Build();
 
         _createdMessages.Add(earliest);
         _createdMessages.Add(dispatched);

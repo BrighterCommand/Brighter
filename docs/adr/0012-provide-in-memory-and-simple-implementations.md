@@ -1,4 +1,19 @@
-﻿# 12. Provide In-Memory and Simple Implementations
+---
+id: 0012-provide-in-memory-and-simple-implementations
+title: "Provide In-Memory and Simple Implementations"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2019-08-01
+summary: "Decides to provide officially supported in-memory and simple implementations of Brighter's core abstractions (producers, consumers, outboxes, inboxes, factories) for use in end-user testing, replacing ad-hoc test doubles with well-tested, reusable helpers."
+tags:
+  - "testing"
+  - "inbox"
+  - "outbox"
+  - "architecture"
+---
+
+# 12. Provide In-Memory and Simple Implementations
 
 Date: 2019-08-01
 

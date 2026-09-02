@@ -155,7 +155,8 @@ public class BrighterTracer : IAmABrighterTracer
        MessagePumpSpanOperation operation,
        Message message,
        MessagingSystem messagingSystem,
-       InstrumentationOptions options = InstrumentationOptions.All
+       InstrumentationOptions options = InstrumentationOptions.All,
+       string? serializedHeader = null
     )
     {
         var spanName = $"{message.Header.Topic} {operation.ToSpanName()}";
@@ -188,7 +189,9 @@ public class BrighterTracer : IAmABrighterTracer
             tags.Add(BrighterSemanticConventions.MessageId, message.Id.Value);
             tags.Add(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
             tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Memory.Length);
-            tags.Add(BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options));
+            //reuse the header the receive span already serialized; serialize here only when there was no receive span
+            tags.Add(BrighterSemanticConventions.MessageHeaders,
+                serializedHeader ?? JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options));
             tags.Add(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value);
             tags.Add(BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName());
         }
@@ -207,16 +210,22 @@ public class BrighterTracer : IAmABrighterTracer
 
         if (activity == null)
             return Activity.Current;
-        
-        activity.TraceStateString = traceState;
-        
-        if (!string.IsNullOrEmpty(message.Header.CorrelationId))
-            message.Header.Baggage.Add("correlationId", message.Header.CorrelationId.Value);
-        OpenTelemetry.Baggage.SetBaggage(message.Header.Baggage);
-        
-        Activity.Current = activity;
 
-        return activity;
+        try
+        {
+            activity.TraceStateString = traceState;
+
+            Activity.Current = activity;
+
+            return activity;
+        }
+        catch (Exception ex)
+        {
+            //the activity is already started; end it here so a throw during enrichment cannot leak it past the caller
+            activity.SetStatus(ActivityStatusCode.Error, ex.Message);
+            EndSpan(activity);
+            throw;
+        }
     }
 
     /// <summary>
@@ -265,12 +274,12 @@ public class BrighterTracer : IAmABrighterTracer
     /// <param name="span">The receive span to enrich; no-op if null</param>
     /// <param name="message">The <see cref="Message"/> that was received</param>
     /// <param name="options">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go</param>
-    public void EnrichReceiveSpan(
+    public string? EnrichReceiveSpan(
         Activity? span,
         Message message,
         InstrumentationOptions options = InstrumentationOptions.All)
     {
-        if (span is null) return;
+        if (span is null) return null;
 
         if (options.HasFlag(InstrumentationOptions.RequestInformation))
         {
@@ -283,24 +292,41 @@ public class BrighterTracer : IAmABrighterTracer
             span.AddTag(BrighterSemanticConventions.CeSubject, message.Header.Subject);
         }
 
+        string? serializedHeader = null;
+
         if (options.HasFlag(InstrumentationOptions.Messaging))
         {
             span.AddTag(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value);
             span.AddTag(BrighterSemanticConventions.MessageId, message.Id.Value);
             span.AddTag(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
             span.AddTag(BrighterSemanticConventions.MessageBodySize, message.Body.Memory.Length);
-            span.AddTag(BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options));
+            //returned so the process span can reuse it instead of serializing the header again
+            serializedHeader = JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options);
+            span.AddTag(BrighterSemanticConventions.MessageHeaders, serializedHeader);
             span.AddTag(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value);
         }
 
         if (options.HasFlag(InstrumentationOptions.RequestBody))
             span.AddTag(BrighterSemanticConventions.MessageBody, message.Body.Value);
 
-        // Propagate the producer's tracestate and baggage onto the consumer side. Done here (not in CreateReceiveSpan) because
-        // these values come from the message and aren't known until the broker call returns. Mirrors what CreateSpan(Process, ...)
-        // already does for serviceable messages — needed here so MT_UNACCEPTABLE rejections still carry the producer trace context.
+        // not set in CreateReceiveSpan because the tracestate comes from the message, unknown until the broker call returns
         if (!string.IsNullOrEmpty(message.Header.TraceState?.Value))
             span.TraceStateString = message.Header.TraceState!.Value;
+
+        return serializedHeader;
+    }
+
+    /// <summary>
+    /// Propagates the producer's baggage onto the consumer side for a received message: lifts the message's
+    /// <see cref="MessageHeader.CorrelationId"/> into its <see cref="MessageHeader.Baggage"/> and sets it as the ambient
+    /// OpenTelemetry baggage for the current execution context. Called by the pump for a received message, gated on a
+    /// receive span existing (sampled in, instrumentation enabled), mirroring the historic span-scoped propagation.
+    /// </summary>
+    /// <param name="message">The <see cref="Message"/> that was received</param>
+    public void PropagateConsumerContext(Message message)
+    {
+        //the pump calls this before its own null-message check, so guard against a broker that returned no message
+        if (message is null) return;
 
         if (!string.IsNullOrEmpty(message.Header.CorrelationId))
             message.Header.Baggage.Add("correlationId", message.Header.CorrelationId.Value);

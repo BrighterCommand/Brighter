@@ -1,3 +1,17 @@
+---
+id: 0016-use-configuration-as-code-not-by-convention
+title: "Use Configuration As Code, Not Configuration By Convention"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2024-07-17
+summary: "Establishes that Brighter uses configuration-as-code rather than convention-over-configuration, requiring explicit interface and generic declarations rather than naming conventions or implicit defaults, optimizing for code ownership over initial authorship."
+tags:
+  - "configuration"
+  - "architecture"
+  - "api-design"
+---
+
 # 16. Use Configuration As Code, Not Configuration By Convention
 
 Date: 2024-07-17

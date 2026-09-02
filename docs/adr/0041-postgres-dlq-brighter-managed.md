@@ -1,3 +1,18 @@
+---
+id: 0041-postgres-dlq-brighter-managed
+title: "PostgreSQL Dead Letter Queue — Brighter-Managed"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-02-20
+summary: "Adds Brighter-managed DLQ support to the PostgreSQL transport using a two-step reject flow (forward to DLQ then delete the source message from the queue table) via lazily-created PostgresMessageProducer instances, consistent with the established cross-transport DLQ pattern."
+tags:
+  - "dead-letter-queue"
+  - "postgres"
+  - "messaging"
+  - "error-handling"
+---
+
 # 41. PostgreSQL Dead Letter Queue — Brighter-Managed
 
 Date: 2026-02-20

@@ -8,31 +8,33 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CloudEvents;
 
 /// <summary>
-/// Demonstrates the V9 → V10 migration issue for Subject (PR #4132).
-/// In V9, users put Subject in the Bag and the Bag preserved PascalCase keys.
-/// In V10, the Bag serialization applies camelCase to dictionary keys, so "Subject" becomes "subject",
-/// causing downstream consumers (e.g. Python Lambdas reading SNS notifications) to fail with KeyError.
-/// The fix is to use MessageHeader.Subject instead of the Bag, which feeds the native SNS Subject field.
+/// Covers the V9 → V10 migration for Subject (PR #4132), and the root-cause fix for #4151 / #4054.
+/// In V9, users put Subject in the Bag and the Bag preserved PascalCase keys. V10 briefly applied the
+/// camelCase naming policy to dictionary keys, so "Subject" became "subject" and downstream consumers
+/// (e.g. Python Lambdas reading SNS notifications) failed with KeyError. Bag keys are arbitrary user
+/// identifiers, not C# property names, so the naming policy is no longer applied to them and the key
+/// now round-trips verbatim. Using MessageHeader.Subject (which feeds the native SNS Subject field)
+/// remains the recommended pattern.
 /// </summary>
 public class When_migrating_subject_from_bag_to_header
 {
     [Fact]
-    public void When_subject_is_in_bag_serialization_converts_to_camelCase()
+    public void When_subject_is_in_bag_serialization_preserves_the_key_verbatim()
     {
-        //Arrange - V9 pattern: user puts Subject in the Bag with PascalCase key
+        //Arrange - V9 pattern: user puts Subject in the Bag with a PascalCase key
         var message = new Message(
             new MessageHeader(Id.Random(), new RoutingKey("Test.Topic"), MessageType.MT_EVENT),
             new MessageBody("{\"orderId\": 123}"));
 
         message.Header.Bag.Add("Subject", "OrderAccepted");
 
-        //Act - serialize the Bag as V10 does (using JsonSerialisationOptions with CamelCase policy)
+        //Act - serialize the Bag through Brighter's options
         var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
 
-        //Assert - the key is now camelCase, so a consumer looking for "Subject" won't find it
+        //Assert - the key survives verbatim, so a consumer looking for "Subject" still finds it
         using var doc = JsonDocument.Parse(bagJson);
-        Assert.True(doc.RootElement.TryGetProperty("subject", out _), "Bag key should be serialized as camelCase 'subject'");
-        Assert.False(doc.RootElement.TryGetProperty("Subject", out _), "Bag key 'Subject' should not survive serialization as PascalCase");
+        Assert.True(doc.RootElement.TryGetProperty("Subject", out _), "Bag key 'Subject' should survive serialization verbatim");
+        Assert.False(doc.RootElement.TryGetProperty("subject", out _), "Bag key should not be rewritten to camelCase 'subject'");
     }
 
     [Fact]

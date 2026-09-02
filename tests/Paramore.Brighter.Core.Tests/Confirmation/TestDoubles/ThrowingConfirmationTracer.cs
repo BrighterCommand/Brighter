@@ -30,11 +30,11 @@ using Paramore.Brighter.Observability;
 namespace Paramore.Brighter.Core.Tests.Confirmation.TestDoubles
 {
     /// <summary>
-    /// A tracer test double that throws from <see cref="CreateConfirmationSpan"/> to exercise the
-    /// confirmation callback's error-isolation path (NFR-4 / AC-14). Every other member is an inert
-    /// no-op: the confirmation failure path under test only invokes the confirmation span.
+    /// A tracer test double that throws while starting or ending a confirmation span to exercise
+    /// the confirmation callback's error-isolation path (NFR-4 / AC-14). Every other member is an
+    /// inert no-op.
     /// </summary>
-    internal sealed class ThrowingConfirmationTracer : IAmABrighterTracer
+    internal sealed class ThrowingConfirmationTracer(bool throwOnEndSpan = false) : IAmABrighterTracer
     {
         public ActivitySource ActivitySource { get; } = new("Paramore.Brighter.Tests.Throwing");
 
@@ -44,16 +44,23 @@ namespace Paramore.Brighter.Core.Tests.Confirmation.TestDoubles
             bool success,
             ActivityLink[]? links = null,
             InstrumentationOptions options = InstrumentationOptions.All)
-            => throw new InvalidOperationException("Observability failure injected by the test");
+        {
+            if (!throwOnEndSpan)
+                throw new InvalidOperationException("Observability failure injected by the test");
+
+            return null;
+        }
 
         public Activity? CreateSpan(MessagePumpSpanOperation operation, Message message, MessagingSystem messagingSystem,
-            InstrumentationOptions options = InstrumentationOptions.All) => null;
+            InstrumentationOptions options = InstrumentationOptions.All, string? serializedHeader = null) => null;
 
         public Activity? CreateReceiveSpan(RoutingKey topic, MessagingSystem messagingSystem,
             InstrumentationOptions options = InstrumentationOptions.All) => null;
 
-        public void EnrichReceiveSpan(Activity? span, Message message,
-            InstrumentationOptions options = InstrumentationOptions.All) { }
+        public string? EnrichReceiveSpan(Activity? span, Message message,
+            InstrumentationOptions options = InstrumentationOptions.All) => null;
+
+        public void PropagateConsumerContext(Message message) { }
 
         public Activity? CreateSpan<TRequest>(CommandProcessorSpanOperation operation, TRequest request,
             Activity? parentActivity = null, ActivityLink[]? links = null,
@@ -84,7 +91,11 @@ namespace Paramore.Brighter.Core.Tests.Confirmation.TestDoubles
         public Activity? CreateProducerSpan(Publication publication, Message? message, Activity? parentActivity,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All) => null;
 
-        public void EndSpan(Activity? span) { }
+        public void EndSpan(Activity? span)
+        {
+            if (throwOnEndSpan)
+                throw new InvalidOperationException("Observability failure injected by the test");
+        }
 
         public void EndSpans(ConcurrentDictionary<string, Activity> handlerSpans) { }
 

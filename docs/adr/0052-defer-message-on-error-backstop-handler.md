@@ -1,3 +1,18 @@
+---
+id: 0052-defer-message-on-error-backstop-handler
+title: "Defer Message On Error Backstop Handler"
+status: Accepted
+author:
+  - "Brighter Team"
+created: 2026-02-23
+summary: "Adds `DeferMessageOnErrorAttribute` and handler pair (sync and async) that wraps the pipeline in a try/catch and throws `DeferMessageAction` with a configurable per-handler delay, completing the set of three declarative backstop attributes and extending the message pump to read the delay from the exception."
+tags:
+  - "pipeline"
+  - "middleware"
+  - "error-handling"
+  - "resilience"
+---
+
 # 52. Defer Message On Error Backstop Handler
 
 Date: 2026-02-23

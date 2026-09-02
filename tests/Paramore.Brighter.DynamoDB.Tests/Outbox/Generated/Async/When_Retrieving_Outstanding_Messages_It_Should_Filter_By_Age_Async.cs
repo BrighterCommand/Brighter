@@ -10,17 +10,16 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.DynamoDB.Tests.Outbox.Async;
 
+[Trait("Category", "DynamoDB")]
+[Collection("DynamoDBOutbox")]
 public class WhenRetrievingOutstandingMessagesItShouldFilterByAgeAsync : IAsyncLifetime
 {
     private readonly IAmAnOutboxProviderAsync _outboxProvider;
-    private readonly IAmAMessageFactory _messageFactory;
     private List<Message> _createdMessages = [];
 
     public WhenRetrievingOutstandingMessagesItShouldFilterByAgeAsync()
     {
         _outboxProvider = new Paramore.Brighter.DynamoDB.Tests.Outbox.DynamoDBOutboxProvider();
-
-        _messageFactory = new DefaultMessageFactory();
     }
 
     public async Task InitializeAsync()
@@ -38,9 +37,9 @@ public class WhenRetrievingOutstandingMessagesItShouldFilterByAgeAsync : IAsyncL
     {
         // Arrange
         var context = new RequestContext();
-        var earliest = _messageFactory.Create();
-        var dispatched = _messageFactory.Create();
-        var undispatched = _messageFactory.Create();
+        var earliest = new DefaultMessageBuilder().Build();
+        var dispatched = new DefaultMessageBuilder().Build();
+        var undispatched = new DefaultMessageBuilder().Build();
 
         _createdMessages.Add(earliest);
         _createdMessages.Add(dispatched);

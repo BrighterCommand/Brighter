@@ -1,10 +1,25 @@
+---
+id: 0044-instance-based-mediator-for-testability
+title: "Instance-Based Mediator for Testability"
+status: Proposed
+author:
+  - "Brighter Team"
+created: 2025-12-23
+summary: "Converts the static OutboxProducerMediator singleton to an instance field in CommandProcessor, enforcing singleton semantics via DI registration to enable parallel test execution with isolated mediator instances per test."
+tags:
+  - "mediator"
+  - "di"
+  - "testing"
+  - "architecture"
+---
+
 # 44. Instance-Based Mediator for Testability
 
 Date: 2025-12-23
 
 ## Status
 
-Proposal
+Proposed
 
 ## Context
 
