@@ -45,6 +45,23 @@ delete_schedules_in_group() {
     done
 }
 
+# Helper: convert an ISO-8601 timestamp to a Unix epoch second (cross-platform).
+iso_to_epoch() {
+    local ts="$1"
+    local result
+    # GNU date (Linux / GitHub Actions)
+    result=$(date -d "$ts" +%s 2>/dev/null) && { echo "$result"; return; }
+    # Python fallback (macOS / BSD)
+    result=$(python3 -c "import sys,datetime; ts=sys.argv[1].replace('Z','+00:00'); print(int(datetime.datetime.fromisoformat(ts).timestamp()))" "$ts" 2>/dev/null) && { echo "$result"; return; }
+    echo ""
+}
+
+# --- Age guard: resources younger than this are left alone ---
+# Applied in both the tag sweep and the name sweep so that an in-flight CI job's
+# resources are never deleted.  SNS has no creation-time API so topics are excluded.
+MIN_AGE_SECONDS="${CLEANUP_MIN_AGE_SECONDS:-3600}"
+NOW=$(date +%s)
+
 # --- Discover tagged resources via Resource Groups Tagging API ---
 # Note: AWS CLI v2 auto-paginates by default. The --query/--output flags are applied
 # after all pages are aggregated, so this handles >100 resources without manual pagination.
@@ -151,6 +168,15 @@ if [[ ${#QUEUES[@]} -gt 0 ]]; then
         else
             QUEUE_URL=$(aws sqs get-queue-url --queue-name "$QUEUE_NAME" --query 'QueueUrl' --output text 2>&1 || echo "")
             if [[ -n "$QUEUE_URL" && "$QUEUE_URL" != *"NonExistentQueue"* ]]; then
+                if [[ "$MIN_AGE_SECONDS" -gt 0 ]]; then
+                    CREATED=$(aws sqs get-queue-attributes --queue-url "$QUEUE_URL" \
+                        --attribute-names CreatedTimestamp \
+                        --query "Attributes.CreatedTimestamp" --output text 2>/dev/null || echo "")
+                    if [[ -n "$CREATED" && "$CREATED" != "None" && $(( NOW - CREATED )) -lt "$MIN_AGE_SECONDS" ]]; then
+                        echo "  Skipping tagged queue (too young, $(( NOW - CREATED ))s old): $QUEUE_NAME"
+                        continue
+                    fi
+                fi
                 echo "  Deleting queue: $QUEUE_NAME ($QUEUE_URL)"
                 aws sqs delete-queue --queue-url "$QUEUE_URL" 2>&1 || echo "    WARNING: failed to delete queue $QUEUE_NAME"
             else
@@ -171,6 +197,18 @@ if [[ ${#SCHEDULE_GROUPS[@]} -gt 0 ]]; then
             echo "  Cleaning schedules in default group (group itself cannot be deleted)"
             delete_schedules_in_group "$GROUP_NAME"
             continue
+        fi
+
+        if [[ "$MIN_AGE_SECONDS" -gt 0 ]]; then
+            CREATED_DATE=$(aws scheduler get-schedule-group --name "$GROUP_NAME" \
+                --query 'CreationDate' --output text 2>/dev/null || echo "")
+            if [[ -n "$CREATED_DATE" && "$CREATED_DATE" != "None" ]]; then
+                CREATED_TS=$(iso_to_epoch "$CREATED_DATE")
+                if [[ -n "$CREATED_TS" && $(( NOW - CREATED_TS )) -lt "$MIN_AGE_SECONDS" ]]; then
+                    echo "  Skipping tagged schedule group (too young): $GROUP_NAME"
+                    continue
+                fi
+            fi
         fi
 
         echo "  Processing schedule group: $GROUP_NAME"
@@ -204,6 +242,18 @@ if [[ -n "$BRIGHTER_GROUPS" && "$BRIGHTER_GROUPS" != "None" ]]; then
         # Skip if already processed above
         if [[ ${#SCHEDULE_GROUPS[@]} -gt 0 ]] && printf '%s\n' "${SCHEDULE_GROUPS[@]}" | grep -qF "$arn"; then
             continue
+        fi
+
+        if [[ "$MIN_AGE_SECONDS" -gt 0 ]]; then
+            CREATED_DATE=$(aws scheduler get-schedule-group --name "$GROUP_NAME" \
+                --query 'CreationDate' --output text 2>/dev/null || echo "")
+            if [[ -n "$CREATED_DATE" && "$CREATED_DATE" != "None" ]]; then
+                CREATED_TS=$(iso_to_epoch "$CREATED_DATE")
+                if [[ -n "$CREATED_TS" && $(( NOW - CREATED_TS )) -lt "$MIN_AGE_SECONDS" ]]; then
+                    echo "  Skipping Brighter schedule group (too young): $GROUP_NAME"
+                    continue
+                fi
+            fi
         fi
 
         echo "  Processing Brighter schedule group: $GROUP_NAME"
@@ -253,15 +303,18 @@ echo "Scanning for untagged test resources by naming convention ..."
 # AWS API call at a time does not get through that inside the cleanup workflow's timeout.
 PARALLELISM="${CLEANUP_PARALLELISM:-16}"
 
-# The sweep also runs on a six-hourly schedule, which can land while an AWS test job is in
-# flight -- and the generated-test pattern matches most of what that job creates. A queue young
-# enough to belong to a running job is left alone; it will be swept next time if it does turn
-# out to be a leak. SNS reports no creation time, so topics cannot be guarded the same way.
-MIN_AGE_SECONDS="${CLEANUP_MIN_AGE_SECONDS:-3600}"
+# MIN_AGE_SECONDS and NOW are defined near the top of the file so the tag sweep can share them.
 
 # Clean untagged SNS topics.
 # SNS list-topics returns a NextToken, so the CLI's default auto-pagination sees every topic.
-ALL_TOPICS=$(aws sns list-topics --query 'Topics[*].TopicArn' --output text 2>/dev/null || echo "")
+ALL_TOPICS=$(aws sns list-topics --query 'Topics[*].TopicArn' --output text 2>&1)
+SNS_LIST_EXIT=$?
+if [[ $SNS_LIST_EXIT -ne 0 ]]; then
+    echo "ERROR: Failed to list SNS topics (exit code $SNS_LIST_EXIT)."
+    echo "  Ensure the caller has sns:ListTopics permission."
+    echo "  Response: $ALL_TOPICS"
+    exit 1
+fi
 MATCHED_TOPICS=()
 for topic_arn in $ALL_TOPICS; do
     [[ -z "$topic_arn" || "$topic_arn" == "None" ]] && continue
@@ -293,7 +346,14 @@ echo "  Found ${#MATCHED_TOPICS[@]} untagged test topic(s)"
 # Clean untagged SQS queues.
 # --page-size is required: without it SQS returns at most 1000 queues and no NextToken, so the
 # CLI has nothing to paginate on and the rest are silently invisible.
-ALL_QUEUES=$(aws sqs list-queues --page-size 1000 --query 'QueueUrls[*]' --output text 2>/dev/null || echo "")
+ALL_QUEUES=$(aws sqs list-queues --page-size 1000 --query 'QueueUrls[*]' --output text 2>&1)
+SQS_LIST_EXIT=$?
+if [[ $SQS_LIST_EXIT -ne 0 ]]; then
+    echo "ERROR: Failed to list SQS queues (exit code $SQS_LIST_EXIT)."
+    echo "  Ensure the caller has sqs:ListQueues permission."
+    echo "  Response: $ALL_QUEUES"
+    exit 1
+fi
 MATCHED_QUEUES=()
 for queue_url in $ALL_QUEUES; do
     [[ -z "$queue_url" || "$queue_url" == "None" ]] && continue
@@ -305,7 +365,6 @@ done
 # Drop the ones that are too young to be certain about. CreatedTimestamp costs a call per
 # queue, so the lookups run at the same parallelism as the deletions.
 if [[ ${#MATCHED_QUEUES[@]} -gt 0 && "$MIN_AGE_SECONDS" -gt 0 ]]; then
-    NOW=$(date +%s)
     OLD_ENOUGH=()
     while IFS= read -r queue_url; do
         [[ -n "$queue_url" ]] && OLD_ENOUGH+=("$queue_url")
@@ -316,8 +375,7 @@ if [[ ${#MATCHED_QUEUES[@]} -gt 0 && "$MIN_AGE_SECONDS" -gt 0 ]]; then
                 --query "Attributes.CreatedTimestamp" --output text 2>/dev/null || echo "")
             case "$created" in
                 ""|None)
-                    # Age unknown -- most likely already gone. Leave it to the delete to find out.
-                    echo "$1"
+                    # Age unknown — skip rather than risk deleting a resource a live run may be using.
                     ;;
                 *)
                     if [ $(( $2 - created )) -ge "$3" ]; then
