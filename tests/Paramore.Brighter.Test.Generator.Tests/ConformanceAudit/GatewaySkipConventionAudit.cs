@@ -68,6 +68,29 @@ public static class GatewaySkipConventionAudit
         var filesScanned = 0;
         var conformingSkipsFound = 0;
 
+        foreach (var file in EnumerateGatewayArtifacts(repoRoot))
+        {
+            filesScanned++;
+            foreach (var (lineNumber, value) in ExtractSkipValues(file))
+            {
+                if (IsConformingSkipValue(value))
+                    conformingSkipsFound++;
+                else
+                    violations.Add(new SkipViolation(file, lineNumber, value));
+            }
+        }
+
+        return new ScanResult(filesScanned, conformingSkipsFound, violations);
+    }
+
+    /// <summary>
+    /// Enumerates every in-tree messaging-gateway artifact the conformance audits scan: the
+    /// gateway templates and every generated copy. This is the single definition of that scope —
+    /// <see cref="LedgerSkipCrossCheckAudit"/> walks the same set through this method, so a change
+    /// to the artifact layout cannot silently desync the two audits.
+    /// </summary>
+    public static IEnumerable<string> EnumerateGatewayArtifacts(string repoRoot)
+    {
         // ── Templates ─────────────────────────────────────────────────────────
         var templateRoot = Path.Combine(
             repoRoot, "tools", "Paramore.Brighter.Test.Generator",
@@ -77,38 +100,33 @@ public static class GatewaySkipConventionAudit
         {
             foreach (var file in Directory.EnumerateFiles(
                          templateRoot, "*.cs.liquid", SearchOption.AllDirectories))
-            {
-                filesScanned++;
-                ScanFile(file, violations, ref conformingSkipsFound);
-            }
+                yield return file;
         }
 
         // ── Generated copies ──────────────────────────────────────────────────
         var testsRoot = Path.Combine(repoRoot, "tests");
-        if (Directory.Exists(testsRoot))
+        if (!Directory.Exists(testsRoot))
+            yield break;
+
+        foreach (var testProject in Directory.EnumerateDirectories(
+                     testsRoot, "Paramore.Brighter.*.Tests"))
         {
-            foreach (var testProject in Directory.EnumerateDirectories(
-                         testsRoot, "Paramore.Brighter.*.Tests"))
+            foreach (var generatedDir in Directory.EnumerateDirectories(
+                         testProject, "Generated", SearchOption.AllDirectories))
             {
-                foreach (var generatedDir in Directory.EnumerateDirectories(
-                             testProject, "Generated", SearchOption.AllDirectories))
-                {
-                    foreach (var file in Directory.EnumerateFiles(
-                                 generatedDir, "*.cs", SearchOption.AllDirectories))
-                    {
-                        filesScanned++;
-                        ScanFile(file, violations, ref conformingSkipsFound);
-                    }
-                }
+                foreach (var file in Directory.EnumerateFiles(
+                             generatedDir, "*.cs", SearchOption.AllDirectories))
+                    yield return file;
             }
         }
-
-        return new ScanResult(filesScanned, conformingSkipsFound, violations);
     }
 
-    // ── Private helpers ───────────────────────────────────────────────────────
-
-    private static void ScanFile(string filePath, List<SkipViolation> violations, ref int conformingSkipsFound)
+    /// <summary>
+    /// Yields every real Skip value in <paramref name="filePath"/> as a 1-based line number and
+    /// its literal value. The Liquid <c>{{ Skip }}</c> placeholder is template syntax rendered at
+    /// generation time, not a value, so it is not yielded.
+    /// </summary>
+    public static IEnumerable<(int LineNumber, string Value)> ExtractSkipValues(string filePath)
     {
         var lines = File.ReadAllLines(filePath);
         for (var i = 0; i < lines.Length; i++)
@@ -118,15 +136,10 @@ public static class GatewaySkipConventionAudit
                 continue;
 
             var value = match.Groups[1].Value;
-
-            // Liquid {{ Skip }} is template syntax rendered at generation time — not a real value.
             if (value == LIQUID_SKIP_PLACEHOLDER)
                 continue;
 
-            if (IsConformingSkipValue(value))
-                conformingSkipsFound++;
-            else
-                violations.Add(new SkipViolation(filePath, i + 1, value));
+            yield return (i + 1, value);
         }
     }
 }

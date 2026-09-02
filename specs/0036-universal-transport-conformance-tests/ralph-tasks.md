@@ -803,7 +803,7 @@
   - **RALPH-VERIFY**: `dotnet test tests/Paramore.Brighter.Test.Generator.Tests --filter "FullyQualifiedName~ConformanceAudit"`
   - **References**: requirements FR-13, AC-13 ("no silent skip"); ADR 0067 "The greppable linked-issue Skip convention", "The CI audit check", step 7.
 
-- [ ] **Cross-check Skip markers against the conformance ledger**
+- [x] **Cross-check Skip markers against the conformance ledger**
   - **Behavior**: Extend the audit to cross-check the in-tree trail: every `Skip = "Deferred: #NNNN …"` maps to a ledger row marked `Deferred -> #NNNN`, and every `Deferred` ledger row carries an issue link and a recorded sign-off entry. A `Skip` without a ledger row, or a `Deferred` row missing its issue link or sign-off, fails audit. The build does not query the tracker for issue open/closed state or re-verify sign-off provenance (that is the maintainer review gate's job).
   - **Test file**: `tests/Paramore.Brighter.Test.Generator.Tests/ConformanceAudit/When_a_skip_has_no_matching_deferred_ledger_row_should_fail_audit.cs`
   - **Test should verify**:
