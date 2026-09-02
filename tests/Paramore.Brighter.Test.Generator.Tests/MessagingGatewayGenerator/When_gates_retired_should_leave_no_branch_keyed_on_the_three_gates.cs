@@ -17,6 +17,10 @@ namespace Paramore.Brighter.Test.Generator.Tests.MessagingGatewayGenerator;
 ///   2. The three retained gates (<c>confirming_posting</c>, <c>no_broker_created</c>,
 ///      <c>assume_channel</c>/<c>validate_channel</c>) still skip their templates when their
 ///      flags are false — proving the retained branches survived the cleanup.
+///   3. A canonical template whose NAME contains the legacy substrings is still generated — the
+///      substring-matching hazard guard (ADR 0066). Carried over from the retired
+///      When_gate_flags_are_false_should_skip_only_legacy_templates, which this test replaced;
+///      it is the one assertion that file made which nothing else covers.
 /// </summary>
 public class WhenGatesRetiredShouldLeaveNoBranchKeyedOnTheThreeGates : IDisposable
 {
@@ -127,6 +131,62 @@ public class WhenGatesRetiredShouldLeaveNoBranchKeyedOnTheThreeGates : IDisposab
             File.Exists(Path.Combine(reactorOutput,
                 "When_infrastructure_missing_and_validate_channel_should_throw_exception.cs")),
             "validate_channel template must remain gated by HasSupportToValidateInfrastructure");
+    }
+
+    /// <summary>
+    /// The legacy gating mechanism matched a closed list of template names. If anyone ever
+    /// reintroduces gating by SUBSTRING instead, a canonical template whose name happens to contain
+    /// "requeuing" and "with_delay" — as the real FR-2 template
+    /// (When_requeuing_a_failed_message_with_delay_should_redeliver_after_delay) does — would be
+    /// silently gated off. This plants such a template and proves it is emitted.
+    /// </summary>
+    [Fact]
+    public async Task When_a_canonical_template_name_contains_legacy_substrings_should_still_be_generated()
+    {
+        // Arrange — plant a canonical template whose name contains both "requeuing" and "with_delay"
+        // but which is NOT one of the four legacy names (ADR 0066 step A, "hypothetical canonical")
+        var plantedTemplate = Path.Combine(
+            AppContext.BaseDirectory, "Templates", "MessagingGateway", "Reactor",
+            "When_requeuing_a_canonical_message_with_delay_should_confirm_redelivery.cs.liquid");
+        File.WriteAllText(plantedTemplate, "// canonical template placeholder");
+
+        var configuration = new TestConfiguration
+        {
+            Namespace = "MyApp.Tests",
+            DestinationFolder = _testDirectory,
+            MessageBuilder = "TestMessageBuilder",
+            MessageAssertion = "TestMessageAssertion",
+            MessagingGateway = new MessagingGatewayConfiguration
+            {
+                Prefix = "Test",
+                Namespace = "MyApp.Tests",
+                MessageGatewayProvider = "TestProvider",
+                Publication = "Publication",
+                Subscription = "Subscription",
+                HasSupportToPublishConfirmation = false,
+                HasSupportToValidateBrokerExistence = false,
+                HasSupportToValidateInfrastructure = false,
+            }
+        };
+        var generator = new Generators.MessagingGatewayGenerator(_logger);
+        var reactorOutput = Path.Combine(_testDirectory, "MessagingGateway", "Test", "Generated", "Reactor");
+
+        try
+        {
+            // Act
+            await generator.GenerateAsync(configuration);
+
+            // Assert — nothing gated it: substring matching must never determine gate applicability
+            Assert.True(
+                File.Exists(Path.Combine(reactorOutput,
+                    "When_requeuing_a_canonical_message_with_delay_should_confirm_redelivery.cs")),
+                "Canonical template containing 'requeuing' and 'with_delay' must not be gated — " +
+                "substring matching must never determine gate applicability");
+        }
+        finally
+        {
+            File.Delete(plantedTemplate);
+        }
     }
 
     public void Dispose()
