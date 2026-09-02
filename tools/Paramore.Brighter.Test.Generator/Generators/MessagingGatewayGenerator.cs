@@ -52,37 +52,6 @@ public class MessagingGatewayGenerator(
     // Canonical-template base name → conformance-ledger FR column (FR-21 / ADR 0067).
     // Only templates whose names appear here receive the ledger-driven Deferred Skip.
     // This list is authoritative: a template absent from it is treated as non-canonical.
-    private static readonly Dictionary<string, string> CANONICAL_TEMPLATE_FR_COLUMNS = new()
-    {
-        ["When_requeuing_a_failed_message_should_be_redelivered"]                          = "FR-22",
-        ["When_requeuing_a_failed_message_with_delay_should_redeliver_after_delay"]        = "FR-2",
-        ["When_requeuing_a_failed_message_with_zero_delay_should_redeliver_immediately"]   = "FR-15",
-        ["When_rejecting_message_with_delivery_error_should_send_to_dlq"]                  = "FR-4",
-        ["When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel"] = "FR-5",
-        ["When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq"] = "FR-6",
-        ["When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log"]  = "FR-7",
-        ["When_rejecting_message_with_unknown_reason_should_send_to_dlq"]                  = "FR-17",
-        ["When_rejecting_message_should_include_metadata"]                                  = "FR-8",
-        ["When_sending_a_delayed_message_should_deliver_after_delay"]                      = "FR-9",
-        ["When_nacking_a_message_it_should_be_redelivered"]                                = "FR-16",
-    };
-
-    // Human-readable behaviour label for each FR column, used in the Skip string.
-    private static readonly Dictionary<string, string> FR_COLUMN_BEHAVIOURS = new()
-    {
-        ["FR-2"]  = "requeue with delay",
-        ["FR-4"]  = "reject with delivery error to DLQ",
-        ["FR-5"]  = "reject with unacceptable reason to invalid channel",
-        ["FR-6"]  = "fallback: unacceptable, DLQ-only",
-        ["FR-7"]  = "no channels configured: acknowledge and log",
-        ["FR-8"]  = "rejection metadata stamping",
-        ["FR-9"]  = "delayed send",
-        ["FR-15"] = "explicit zero-delay requeue",
-        ["FR-16"] = "Nack redelivers",
-        ["FR-17"] = "reject with None reason to DLQ",
-        ["FR-22"] = "canonical plain requeue",
-    };
-
     // Resolved once per GenerateAsync(TestConfiguration) call.
     private IAmAConformanceLedger? _ledger;
 
@@ -259,7 +228,7 @@ public class MessagingGatewayGenerator(
     /// <summary>
     /// Sets the <see cref="MessagingGatewayConfiguration.Skip"/> property on the model before
     /// each Reactor/Proactor template render. For canonical templates whose base name is in
-    /// <see cref="CANONICAL_TEMPLATE_FR_COLUMNS"/> and whose configuration declares a
+    /// <see cref="CanonicalBehaviours.TEMPLATE_FR_COLUMNS"/> and whose configuration declares a
     /// <see cref="MessagingGatewayConfiguration.LedgerKey"/>, the ledger determines whether a
     /// Deferred Skip string is emitted. For all other templates the property is set to the empty
     /// string (not null) so that `{% if Skip != empty %}` evaluates to false in the template.
@@ -270,12 +239,13 @@ public class MessagingGatewayGenerator(
 
         var baseName = Path.GetFileName(templateFileName).Replace(".cs.liquid", "");
 
-        if (CANONICAL_TEMPLATE_FR_COLUMNS.TryGetValue(baseName, out var frColumn)
+        var frColumn = CanonicalBehaviours.FrColumnFor(baseName);
+
+        if (frColumn != null
             && !string.IsNullOrEmpty(config.LedgerKey)
             && _ledger != null)
         {
-            var behaviourName = FR_COLUMN_BEHAVIOURS.GetValueOrDefault(frColumn, frColumn);
-            config.Skip = _ledger.GetSkip(config.LedgerKey, frColumn, behaviourName);
+            config.Skip = _ledger.GetSkip(config.LedgerKey, frColumn, CanonicalBehaviours.BehaviourFor(frColumn));
         }
         else
         {

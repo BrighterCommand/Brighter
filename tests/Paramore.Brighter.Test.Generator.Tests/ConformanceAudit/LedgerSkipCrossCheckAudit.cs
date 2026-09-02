@@ -1,7 +1,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Text.RegularExpressions;
+using Paramore.Brighter.Test.Generator;
+using Paramore.Brighter.Test.Generator.Configuration;
 
 namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 
@@ -29,6 +32,36 @@ public sealed record CrossCheckResult(
     int DeferredCellsFound,
     int DistinctSkipIssueNumbers,
     IReadOnlyList<LedgerCrossCheckViolation> Violations);
+
+/// <summary>
+/// A generated test whose Skip disagrees with its own (LedgerKey × FR column) ledger cell.
+/// </summary>
+/// <param name="FilePath">The generated test file.</param>
+/// <param name="LedgerKey">The configuration row the file belongs to, e.g. "AWS / SqsFifo".</param>
+/// <param name="FrColumn">The behaviour column the file is judged against, e.g. "FR-16".</param>
+/// <param name="ExpectedSkip">What the generator would emit for that cell ("" means no Skip).</param>
+/// <param name="ActualSkip">What the file actually carries ("" means no Skip).</param>
+public sealed record CellAgreementViolation(
+    string FilePath,
+    string LedgerKey,
+    string FrColumn,
+    string ExpectedSkip,
+    string ActualSkip);
+
+/// <summary>
+/// The aggregate result of a cell-agreement run.
+/// </summary>
+/// <param name="LedgerKeysResolved">Configurations whose Generated directory was found on disk.</param>
+/// <param name="FilesChecked">Canonical generated test files compared against a ledger cell.</param>
+/// <param name="ExpectedSkipCount">Files whose cell required a Skip (Deferred).</param>
+/// <param name="ExpectedNoSkipCount">Files whose cell required no Skip (Pass/Fixed).</param>
+/// <param name="Violations">Every file that disagreed with its cell.</param>
+public sealed record CellAgreementResult(
+    int LedgerKeysResolved,
+    int FilesChecked,
+    int ExpectedSkipCount,
+    int ExpectedNoSkipCount,
+    IReadOnlyList<CellAgreementViolation> Violations);
 
 /// <summary>
 /// Read-only, network-free cross-check audit between in-tree Deferred Skip markers and the
@@ -219,5 +252,123 @@ public static class LedgerSkipCrossCheckAudit
         }
 
         return numbers;
+    }
+
+    /// <summary>
+    /// Checks every canonical generated test against ITS OWN ledger cell — the exact
+    /// (LedgerKey × FR column) intersection — in both directions: a cell that defers must have a
+    /// Skip, a cell that passes must not, and a Skip that exists must be character-for-character
+    /// what the generator would emit for that cell.
+    ///
+    /// The expected value comes from <see cref="ConformanceLedger.GetSkip"/> — the generator's own
+    /// emitter — so this cannot drift from what generation produces. It makes the audit a
+    /// regeneration-drift detector for Skip attributes: a cell flipped without re-running
+    /// ./generate-test.sh fails here.
+    /// </summary>
+    public static CellAgreementResult CheckCellAgreement(string repoRoot, string ledgerPath)
+    {
+        var violations         = new List<CellAgreementViolation>();
+        var ledger             = new ConformanceLedger(ledgerPath);
+        var ledgerKeysResolved = 0;
+        var filesChecked       = 0;
+        var expectedSkip       = 0;
+        var expectedNoSkip     = 0;
+
+        foreach (var (generatedDir, ledgerKey) in EnumerateGeneratedDirectories(repoRoot))
+        {
+            ledgerKeysResolved++;
+
+            foreach (var file in Directory.EnumerateFiles(generatedDir, "*.cs", SearchOption.AllDirectories))
+            {
+                var frColumn = CanonicalBehaviours.FrColumnFor(Path.GetFileNameWithoutExtension(file));
+                if (frColumn == null)
+                    continue; // not a canonical behaviour — never ledger-gated
+
+                var expected = ledger.GetSkip(ledgerKey, frColumn, CanonicalBehaviours.BehaviourFor(frColumn));
+
+                // A generated file carries the same Skip on every fact it declares (Reactor files
+                // declare two). Collapse to the distinct values so a file whose facts disagree with
+                // each other — one skipped, one not — is reported rather than judged on its first.
+                var distinctSkips = GatewaySkipConventionAudit.ExtractSkipValues(file)
+                                                              .Select(s => s.Value)
+                                                              .Distinct()
+                                                              .ToArray();
+                var actual = distinctSkips.Length switch
+                {
+                    0 => string.Empty,
+                    1 => distinctSkips[0],
+                    _ => string.Join(" / ", distinctSkips)
+                };
+
+                filesChecked++;
+                if (expected.Length == 0) expectedNoSkip++; else expectedSkip++;
+
+                if (expected != actual)
+                    violations.Add(new CellAgreementViolation(file, ledgerKey, frColumn, expected, actual));
+            }
+        }
+
+        return new CellAgreementResult(
+            ledgerKeysResolved, filesChecked, expectedSkip, expectedNoSkip, violations);
+    }
+
+    /// <summary>
+    /// Yields each generated-test directory paired with the LedgerKey of the configuration that
+    /// produced it, by reading every test project's test-configuration.json.
+    ///
+    /// This mirrors the generator's output-path convention
+    /// (<c>MessagingGateway/{prefix}/Generated</c>, where prefix is the gateway's declared Prefix
+    /// or, for a multi-gateway configuration, its key). The live-tree fact asserts a non-zero
+    /// resolved count, so if that convention ever changes this fails loudly rather than silently
+    /// checking nothing.
+    /// </summary>
+    private static IEnumerable<(string GeneratedDir, string LedgerKey)> EnumerateGeneratedDirectories(string repoRoot)
+    {
+        var testsRoot = Path.Combine(repoRoot, "tests");
+        if (!Directory.Exists(testsRoot))
+            yield break;
+
+        foreach (var projectDir in Directory.EnumerateDirectories(testsRoot, "Paramore.Brighter.*.Tests"))
+        {
+            var configPath = Path.Combine(projectDir, "test-configuration.json");
+            if (!File.Exists(configPath))
+                continue;
+
+            TestConfiguration? configuration;
+            try
+            {
+                configuration = JsonSerializer.Deserialize<TestConfiguration>(File.ReadAllText(configPath));
+            }
+            catch (JsonException)
+            {
+                continue; // a malformed configuration is the generator's problem to report, not ours
+            }
+
+            if (configuration == null)
+                continue;
+
+            foreach (var (prefix, gateway) in EnumerateGateways(configuration))
+            {
+                if (string.IsNullOrEmpty(gateway.LedgerKey))
+                    continue; // no ledger row declared — nothing to check against
+
+                var generatedDir = Path.Combine(projectDir, "MessagingGateway", prefix, "Generated");
+                if (Directory.Exists(generatedDir))
+                    yield return (generatedDir, gateway.LedgerKey);
+            }
+        }
+    }
+
+    private static IEnumerable<(string Prefix, MessagingGatewayConfiguration Gateway)> EnumerateGateways(
+        TestConfiguration configuration)
+    {
+        if (configuration.MessagingGateway != null)
+            yield return (configuration.MessagingGateway.Prefix, configuration.MessagingGateway);
+
+        if (configuration.MessagingGateways == null)
+            yield break;
+
+        foreach (var (key, gateway) in configuration.MessagingGateways)
+            yield return (string.IsNullOrEmpty(gateway.Prefix) ? key : gateway.Prefix, gateway);
     }
 }
