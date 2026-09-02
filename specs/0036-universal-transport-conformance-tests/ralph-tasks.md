@@ -763,7 +763,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && ! grep -nE "HasSupportToDelayedMessages|HasSupportToDeadLetterQueue|HasSupportToRequeue" tools/Paramore.Brighter.Test.Generator/Configuration/MessagingGatewayConfiguration.cs`
   - **References**: requirements FR-10(4), AC-10(c); ADR 0066 "Key Components" (config loses three properties).
 
-- [ ] **Remove the three gate keys from every test-configuration.json (FR-11 — LAST)**
+- [x] **Remove the three gate keys from every test-configuration.json (FR-11 — LAST)**
   - **Behavior**: Remove `HasSupportToDelayedMessages`, `HasSupportToDeadLetterQueue`, and `HasSupportToRequeue` from every `tests/Paramore.Brighter.*.Tests/test-configuration.json` (including the mis-declared PostgreSQL, AWS/AWS.V4 and Kafka values). This is the final step — done AFTER the legacy templates and their copies are gone — because removing a key before its template is deleted would ungate the legacy template (AC-11 is ordered). Then a full regenerate + solution build confirms nothing references the removed keys.
   - **Test file**: `specs/…`/config artifacts (verification is grep + full regenerate build; no new xUnit test)
   - **Test should verify**:

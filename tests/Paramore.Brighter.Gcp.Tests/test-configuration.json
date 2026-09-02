@@ -9,10 +9,7 @@
       "CollectionName": "Pull",
       "LedgerKey": "GCP / Pull",
       "HasSupportToPublishConfirmation": false,
-      "HasSupportToDeadLetterQueue": false,
-      "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": true,
-      "HasSupportToRequeue": true,
       "ReceiveMessageTimeoutInMilliseconds": 5000
     },
     "PullOrdering": {
@@ -24,10 +21,7 @@
       "CollectionName": "PullOrdering",
       "LedgerKey": "GCP / PullOrdering",
       "HasSupportToPublishConfirmation": false,
-      "HasSupportToDeadLetterQueue": false,
-      "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": true,
-      "HasSupportToRequeue": true,
       "ReceiveMessageTimeoutInMilliseconds": 5000
     },
     "Stream": {
@@ -38,10 +32,7 @@
       "CollectionName": "Stream",
       "LedgerKey": "GCP / Stream",
       "HasSupportToPublishConfirmation": false,
-      "HasSupportToDeadLetterQueue": false,
-      "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": true,
-      "HasSupportToRequeue": true,
       "ReceiveMessageTimeoutInMilliseconds": 5000
     },
     "StreamOrdering": {
@@ -53,10 +44,7 @@
       "CollectionName": "StreamOrdering",
       "LedgerKey": "GCP / StreamOrdering",
       "HasSupportToPublishConfirmation": false,
-      "HasSupportToDeadLetterQueue": false,
-      "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": true,
-      "HasSupportToRequeue": true,
       "ReceiveMessageTimeoutInMilliseconds": 5000
     }
   },

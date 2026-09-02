@@ -10,10 +10,7 @@
       "CollectionName": "Kafka",
       "LedgerKey": "Kafka / Classic",
       "HasSupportToPublishConfirmation": true,
-      "HasSupportToDeadLetterQueue": false,
-      "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": false,
-      "HasSupportToRequeue": false,
       "ReceiveMessageTimeoutInMilliseconds": 15000
     },
     "Consumer": {
@@ -24,11 +21,8 @@
       "CollectionName": "Kafka",
       "LedgerKey": "Kafka / Consumer",
       "HasSupportToPublishConfirmation": true,
-      "HasSupportToDeadLetterQueue": false,
-      "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": false,
       "HasSupportToValidateInfrastructure": false,
-      "HasSupportToRequeue": false,
       "ReceiveMessageTimeoutInMilliseconds": 15000
     },
     "PartitionKey": {
@@ -40,10 +34,7 @@
       "CollectionName": "Kafka",
       "LedgerKey": "Kafka / PartitionKey",
       "HasSupportToPublishConfirmation": true,
-      "HasSupportToDeadLetterQueue": false,
-      "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": false,
-      "HasSupportToRequeue": false,
       "ReceiveMessageTimeoutInMilliseconds": 15000
     }
   }

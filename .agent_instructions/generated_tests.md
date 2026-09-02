@@ -213,8 +213,6 @@ To disable transaction tests for providers that don't support them (e.g. MongoDB
     "MessageGatewayProvider": "Paramore.Brighter.Redis.Tests.MessagingGateway.RedisMessageGatewayProvider",
     "Category": "Redis",
     "CollectionName": "RedisMessagingGateway",
-    "HasSupportToDeadLetterQueue": true,
-    "HasSupportToRequeue": true,
     "HasSupportToValidateInfrastructure": false
   }
 }
@@ -240,10 +238,7 @@ This generates tests into:
       "CollectionName": "Classic",
       "ReceiveMessageTimeoutInMilliseconds": 4000,
       "HasSupportToPublishConfirmation": true,
-      "HasSupportToDeadLetterQueue": true,
-      "HasSupportToDelayedMessages": false,
-      "HasSupportToValidateBrokerExistence": true,
-      "HasSupportToRequeue": true
+      "HasSupportToValidateBrokerExistence": true
     },
     "Quorum": {
       "Publication": "Paramore.Brighter.MessagingGateway.RMQ.Async.RmqPublication",
@@ -253,10 +248,7 @@ This generates tests into:
       "CollectionName": "Quorum",
       "ReceiveMessageTimeoutInMilliseconds": 4000,
       "HasSupportToPublishConfirmation": true,
-      "HasSupportToDeadLetterQueue": true,
-      "HasSupportToDelayedMessages": false,
-      "HasSupportToValidateBrokerExistence": true,
-      "HasSupportToRequeue": true
+      "HasSupportToValidateBrokerExistence": true
     }
   }
 }
@@ -280,10 +272,7 @@ Feature flags control which test templates are generated. When a flag is `false`
 | Flag | Default | Skips templates containing | Use case |
 |---|---|---|---|
 | `HasSupportToPublishConfirmation` | `false` | `confirming_posting` | Transport doesn't support publisher confirms |
-| `HasSupportToDelayedMessages` | `false` | `delayed_message`, `with_delay` | No delayed/scheduled message support |
-| `HasSupportToDeadLetterQueue` | `false` | `dead_letter_queue` | No dead letter queue support |
 | `HasSupportToValidateBrokerExistence` | `false` | `no_broker_created` | Transport can't validate broker existence |
-| `HasSupportToRequeue` | `false` | `requeuing` | Transport doesn't support message requeue |
 | `HasSupportToValidateInfrastructure` | **`true`** | `assume_channel`, `validate_channel` | Transport can't validate infrastructure existence |
 
 ### Messaging Gateway Provider Pattern
@@ -430,7 +419,7 @@ If you change a template pattern that also exists in these base classes, update 
 
 ### Important: Generator Does Not Delete Stale Files
 
-The generator only creates or overwrites files — it **never deletes** existing generated files. If you change a feature flag from `true` to `false` (e.g. disabling `HasSupportToDelayedMessages`), you must **manually delete** the previously-generated test files that are no longer wanted. Otherwise stale tests will remain and may fail.
+The generator only creates or overwrites files — it **never deletes** existing generated files. If you change a feature flag from `true` to `false` (e.g. disabling `HasSupportToPublishConfirmation`), you must **manually delete** the previously-generated test files that are no longer wanted. Otherwise stale tests will remain and may fail.
 
 Similarly, if you rename or remove a template, the old generated files remain on disk. Always check for stale files after template changes.
 

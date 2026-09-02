@@ -10,9 +10,6 @@
     "LedgerKey": "RocketMQ / RocketMQMessagingGateway",
     "DelayBetweenReceiveMessageInMilliseconds": 5000,
     "HasSupportToPublishConfirmation": false,
-    "HasSupportToDeadLetterQueue": true,
-    "HasSupportToDelayedMessages": true,
-    "HasSupportToValidateBrokerExistence": false,
-    "HasSupportToRequeue": true
+    "HasSupportToValidateBrokerExistence": false
   }
 }

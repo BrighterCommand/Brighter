@@ -10,10 +10,7 @@
       "CollectionName": "SnsStandard",
       "LedgerKey": "AWS / SnsStandard",
       "HasSupportToPublishConfirmation": false,
-      "HasSupportToDeadLetterQueue": true,
-      "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": true,
-      "HasSupportToRequeue": true,
       "ReceiveMessageTimeoutInMilliseconds": 4000
     },
     "SnsFifo": {
@@ -25,10 +22,7 @@
       "CollectionName": "SnsFifo",
       "LedgerKey": "AWS / SnsFifo",
       "HasSupportToPublishConfirmation": false,
-      "HasSupportToDeadLetterQueue": true,
-      "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": true,
-      "HasSupportToRequeue": true,
       "ReceiveMessageTimeoutInMilliseconds": 4000
     },
     "SqsStandard": {
@@ -39,10 +33,7 @@
       "CollectionName": "SqsStandard",
       "LedgerKey": "AWS / SqsStandard",
       "HasSupportToPublishConfirmation": false,
-      "HasSupportToDeadLetterQueue": true,
-      "HasSupportToDelayedMessages": true,
       "HasSupportToValidateBrokerExistence": true,
-      "HasSupportToRequeue": true,
       "ReceiveMessageTimeoutInMilliseconds": 4000
     },
     "SqsFifo": {
@@ -54,10 +45,7 @@
       "CollectionName": "SqsFifo",
       "LedgerKey": "AWS / SqsFifo",
       "HasSupportToPublishConfirmation": false,
-      "HasSupportToDeadLetterQueue": true,
-      "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": true,
-      "HasSupportToRequeue": true,
       "ReceiveMessageTimeoutInMilliseconds": 4000
     }
   }

@@ -21,9 +21,6 @@
     "Category": "PostgresSql",
     "CollectionName": "PostgresMessagingGateway",
     "LedgerKey": "PostgresSQL / PostgresMessagingGateway",
-    "HasSupportToPublishConfirmation": false,
-    "HasSupportToDeadLetterQueue": false,
-    "HasSupportToDelayedMessages": false,
-    "HasSupportToRequeue": true
+    "HasSupportToPublishConfirmation": false
   }
 }
