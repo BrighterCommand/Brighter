@@ -700,7 +700,7 @@
   - **RALPH-VERIFY** (the placeholder row is gone and every replacement RMQ.Sync row has no `Unknown`): `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.RMQ.Sync.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && { docker compose -f docker-compose-rmq.yaml up -d || true; } && dotnet test tests/Paramore.Brighter.RMQ.Sync.Tests --filter "FullyQualifiedName~MessagingGateway" && ! grep -q 'RMQ.Sync / (not yet declared)' specs/0036-universal-transport-conformance-tests/conformance-status.md && ! grep -- 'RMQ.Sync /' specs/0036-universal-transport-conformance-tests/conformance-status.md | grep -q Unknown`
   - **References**: requirements FR-20(3), AC-23, FR-21; ADR 0067 step 5, "Infra reality".
 
-- [ ] **Onboard AzureServiceBus: config + both providers (FR-20 step 1-2)**
+- [x] **Onboard AzureServiceBus: config + both providers (FR-20 step 1-2)**
   - **Behavior**: Add AzureServiceBus's generator wiring: a `test-configuration.json` declaring its gateway configuration(s) and a `*MessageGatewayProvider.cs` implementing BOTH provider interfaces against the post-FR-1 surface (never `bool setupDeadLetterQueue`; `RejectionMetadataKeys` from ASB's own key strings). Use the correct test project `tests/Paramore.Brighter.AzureServiceBus.Tests` — NOT `tests/Paramore.Brighter.Azure.Tests`. ASB compiles and generates. (Broker execution is the next task.)
   - **Test file**: `tests/Paramore.Brighter.AzureServiceBus.Tests/MessagingGateway/Generated/Reactor/IAmAMessageGatewayReactorProvider.cs` (regenerated artifact; verification is compilation + generation)
   - **Test should verify**:

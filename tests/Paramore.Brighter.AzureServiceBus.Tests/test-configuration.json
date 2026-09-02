@@ -1,0 +1,15 @@
+{
+  "Namespace": "Paramore.Brighter.AzureServiceBus.Tests",
+  "MessagingGateway": {
+    "Publication": "Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusPublication",
+    "Subscription": "Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusSubscription",
+    "MessageGatewayProvider": "Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.AzureServiceBusMessageGatewayProvider",
+    "Category": "AzureServiceBus",
+    "CollectionName": "AzureServiceBus",
+    "LedgerKey": "AzureServiceBus / (not yet declared)",
+    "HasSupportToPublishConfirmation": false,
+    "HasSupportToValidateBrokerExistence": true,
+    "HasSupportToValidateInfrastructure": true,
+    "ReceiveMessageTimeoutInMilliseconds": 5000
+  }
+}
