@@ -248,7 +248,7 @@ that exercise *delayed* requeue, with those two exempt.
 ## Deferred: Phase 2 Kafka reference — both rows Deferred -> #4240 (infra block)
 
 **Recorded 2026-07-22, Phase 2 (ralph task 28).** The Kafka reference task ran the generated
-canonical suite for `Kafka / Standard` and `Kafka / PartitionKey` (both variants) against a local
+canonical suite for `Kafka / Classic` and `Kafka / PartitionKey` (both variants) against a local
 single-broker Kafka via `docker compose`. It did **not** produce a reliable full-green gate, so
 both rows are `Deferred -> #4240 (sign-off: @maintainer)` across all 11 columns — flag-and-move-on
 per ADR 0067 "CI-infrastructure inability is a first-class deferral ground" and spec ruling 0a
@@ -510,3 +510,47 @@ The last two are **test fixtures asserting the placeholder behaviour** — exact
 already carves out for `ConformanceAudit`, but they live under `CanonicalTemplates/` and so are not excluded.
 Widen the exclusion (or target the grep at deferred cells and generated Skip markers only), or the task cannot
 pass. Because no issues need raising, task 60 is safe to run **unattended**.
+
+## Resolved: Kafka / Consumer — a 24th configuration arrived from master mid-rollout (2026-09-02)
+
+**Context.** Merging `origin/master` into the feature branch brought in PR #4233 (KIP-848 support), which
+(a) renamed the Kafka gateway configuration key `Standard` -> `Classic` (and
+`KafkaMessageGatewayProvider` -> `KafkaClassicMessageGatewayProvider`), and (b) added a **new** `Consumer`
+configuration using the KIP-848 consumer group protocol. Because the canonical conformance templates had
+already landed on this branch, the new configuration immediately generated all 11 canonical tests — and the
+generator tests require every wired configuration to declare a `LedgerKey`, so three of the 190 generator
+tests failed until the ledger caught up. This is the first time the target set grew *from upstream* rather
+than from this spec's own onboarding tasks.
+
+**Decisions.**
+
+1. **The ledger row follows the config name.** `Kafka / Standard` is renamed `Kafka / Classic` throughout
+   (ledger row, `LedgerKey`, ralph-tasks row list and RALPH-VERIFY, the 11 generator-test `LEDGER_KEY`
+   constants, manual test plan, doc comments). Same configuration, same certified 11/11 `Pass`; only the
+   name moves. Leaving the ledger on the old name would have left it disagreeing with the config key that
+   `master` chose.
+2. **`Kafka / Consumer` is certified, not deferred.** AC-23-style infra deferral was available but not
+   warranted: the reference broker (`apache/kafka:4.0.2`, used by both `docker-compose-kafka.yaml` and
+   `ci.yml`) supports the protocol, so the row was earned from a green run rather than inherited from
+   `Kafka / Classic`. Scoped suite `~MessagingGateway.Consumer.` = **34 pass / 0 skip / 0 fail**, both
+   variants, all eleven columns `Pass`. Harness-only, no `src` change — hence `Pass`, not `Fixed`.
+3. **The onboarding was a port, not new work.** `KafkaConsumerMessageGatewayProvider` as it arrived from
+   `master` was a near-clone of the *pre-conformance* Classic provider — it did not implement the extended
+   provider interface, which is the whole reason the merged tree failed to build. The resolved Classic
+   provider was ported across, preserving the one behavioural difference
+   (`GroupProtocol = new ConsumerGroupProtocol()`). Same "diff the resolved provider against the untouched
+   one and port only the behavioural delta" pattern used for `RMQ.Async / Quorum`.
+4. **The protocol was verified to be genuinely in play.** A librdkafka downgrade to the classic protocol
+   would have produced a second row certifying `Kafka / Classic` behaviour under a different name — an
+   invisible false `Pass`. Checked explicitly: the broker advertises `ConsumerGroupHeartbeat(68)` /
+   `ConsumerGroupDescribe(69)` as usable, and polling `kafka-consumer-groups.sh --list --type` during a
+   Consumer-configuration run observes groups of type **`Consumer`**, not `Classic`.
+
+**Consequences.** `EXPECTED_WIRED_CONFIGURATION_COUNT` 23 -> **24**; the ralph-tasks ledger-row assertion
+lists 24 rows including `Kafka / Consumer`. The ledger still has **ZERO `Unknown`**, so the Phase 5
+terminal-cleanup gate stays open. Generator suite **190/190**; `dotnet build Brighter.slnx` green.
+
+**Guardrail for the rest of the rollout.** The target set is not closed. A configuration added upstream is
+a *conformance onboarding*, not a merge conflict to paper over: give it a `LedgerKey`, port the provider,
+certify it, and bump the configuration count — and where a new configuration is a variant of a certified
+one, prove the variant is actually exercised before letting it inherit the sibling's result.

@@ -35,6 +35,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ServiceLifetime _handlerLifetime;
+        private readonly bool _isolateTransientHandlerScope;
         private readonly ServiceProviderLifetimeScope _singletonScope;
         private readonly ConcurrentDictionary<IAmALifetime, ServiceProviderLifetimeScope> _lifetimeScopes = new();
 
@@ -47,6 +48,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             _serviceProvider = serviceProvider;
             var options = (IBrighterOptions?)serviceProvider.GetService(typeof(IBrighterOptions));
             _handlerLifetime = options?.HandlerLifetime ?? ServiceLifetime.Transient;
+            _isolateTransientHandlerScope = options?.IsolateTransientHandlerScope ?? true;
             _singletonScope = new ServiceProviderLifetimeScope(serviceProvider, ServiceLifetime.Singleton);
         }
 
@@ -89,14 +91,17 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <summary>
         /// Release the request handler - actual behavior depends on lifetime, we only dispose if we are transient
         /// </summary>
+        /// <remarks>
+        /// A singleton belongs to the container, so releasing it is a no-op. Otherwise the handler was
+        /// resolved from a <see cref="ServiceProviderLifetimeScope"/>, and disposing that scope is what
+        /// disposes the handler — exactly once. Disposing the handler here as well would dispose it a
+        /// second time when the scope is drained.
+        /// </remarks>
         /// <param name="handler"></param>
         /// <param name="lifetime">The brighter Handler lifetime</param>
         public void Release(IHandleRequests handler, IAmALifetime lifetime)
         {
             if (_handlerLifetime == ServiceLifetime.Singleton) return;
-
-            if (handler is IDisposable disposal)
-                disposal.Dispose();
 
             ReleaseLifetimeScope(lifetime);
         }
@@ -104,14 +109,17 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <summary>
         /// Release the request handler - actual behavior depends on lifetime, we only dispose if we are transient
         /// </summary>
+        /// <remarks>
+        /// A singleton belongs to the container, so releasing it is a no-op. Otherwise the handler was
+        /// resolved from a <see cref="ServiceProviderLifetimeScope"/>, and disposing that scope is what
+        /// disposes the handler — exactly once. Disposing the handler here as well would dispose it a
+        /// second time when the scope is drained.
+        /// </remarks>
         /// <param name="handler"></param>
         /// <param name="lifetime">The brighter Handler lifetime</param>
         public void Release(IHandleRequestsAsync? handler, IAmALifetime lifetime)
         {
             if (_handlerLifetime == ServiceLifetime.Singleton) return;
-
-            if (handler is IDisposable disposal)
-                disposal.Dispose();
 
             ReleaseLifetimeScope(lifetime);
         }
@@ -119,7 +127,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private ServiceProviderLifetimeScope GetOrCreateLifetimeScope(IAmALifetime lifetime, ServiceLifetime serviceLifetime)
         {
             return _lifetimeScopes.GetOrAdd(lifetime, _ =>
-                new ServiceProviderLifetimeScope(_serviceProvider, serviceLifetime));
+                new ServiceProviderLifetimeScope(_serviceProvider, serviceLifetime, _isolateTransientHandlerScope));
         }
 
         private void ReleaseLifetimeScope(IAmALifetime lifetime)

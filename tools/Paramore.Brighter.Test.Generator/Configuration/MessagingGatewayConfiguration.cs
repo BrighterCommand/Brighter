@@ -122,7 +122,7 @@ public class MessagingGatewayConfiguration
 
     /// <summary>
     /// Gets or sets the conformance-ledger row key for this configuration,
-    /// e.g. "Kafka / Standard" or "RMQ.Async / Classic" (FR-21 / ADR 0067).
+    /// e.g. "Kafka / Classic" or "RMQ.Async / Classic" (FR-21 / ADR 0067).
     /// When null the ledger-driven Skip mechanism is skipped for this configuration.
     /// </summary>
     public string? LedgerKey { get; set; }

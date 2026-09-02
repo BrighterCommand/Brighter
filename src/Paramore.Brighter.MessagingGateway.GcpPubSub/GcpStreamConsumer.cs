@@ -46,7 +46,7 @@ public class GcpStreamConsumer(SubscriberClient client)
         var decrement = Interlocked.Decrement(ref _handlers);
         if (decrement == 0)
         {
-            await client.StopAsync(CancellationToken.None);
+            await client.StopAsync(new SubscriberClient.ShutdownOptions() {Mode = SubscriberClient.ShutdownMode.WaitForProcessing}, CancellationToken.None);
             await client.DisposeAsync();
         }
     }

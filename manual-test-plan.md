@@ -13,7 +13,7 @@ Kafka DLQ ADR `0046`.
 
 ## 0. TL;DR — what we already found
 
-Running the generated canonical suite for `Kafka / Standard` + `Kafka / PartitionKey` (both
+Running the generated canonical suite for `Kafka / Classic` + `Kafka / PartitionKey` (both
 Reactor and Proactor) against a local single-broker Kafka produced three distinct failure classes.
 Root causes were read from the actual errors/stack-traces, not inferred from test names:
 
@@ -127,7 +127,7 @@ Temporarily flip **both** Kafka rows to all-`Pass`, then regenerate so every can
 
 1. Edit `specs/0036-universal-transport-conformance-tests/conformance-status.md`; set the two rows:
    ```
-   | Kafka / Standard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
+   | Kafka / Classic | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
    | Kafka / PartitionKey | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
    ```
 2. Regenerate (§2 command). Confirm the Skip is gone:

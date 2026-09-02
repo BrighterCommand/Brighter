@@ -26,6 +26,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using Paramore.Brighter.FeatureSwitch;
+using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
 
@@ -123,7 +124,17 @@ namespace Paramore.Brighter
                     _spans.AddOrUpdate(System.Threading.Thread.CurrentThread.ManagedThreadId, value, (key, oldValue) => value);
             }
         }
-        
+
+        /// <summary>
+        /// Gets or sets the <see cref="InstrumentationOptions"/> that were configured for the pipeline that created this context.
+        /// </summary>
+        /// <remarks>
+        /// This is the same value the <see cref="CommandProcessor"/> used when it created the <see cref="Span"/>, so middleware
+        /// handlers can gate their own telemetry on it (for example on <see cref="InstrumentationOptions.Brighter"/>) without
+        /// taking a dependency on how the processor was configured. Defaults to <see cref="InstrumentationOptions.All"/>.
+        /// </remarks>
+        public InstrumentationOptions InstrumentationOptions { get; set; } = InstrumentationOptions.All;
+
         /// <summary>
         /// Create a new instance of the Request Context
         /// </summary>
@@ -137,7 +148,8 @@ namespace Paramore.Brighter
 #pragma warning restore CS0618 // Type or member is obsolete
                 ResiliencePipeline = ResiliencePipeline,
                 FeatureSwitches = FeatureSwitches,
-                OriginatingMessage = OriginatingMessage
+                OriginatingMessage = OriginatingMessage,
+                InstrumentationOptions = InstrumentationOptions
             };
     }
 }

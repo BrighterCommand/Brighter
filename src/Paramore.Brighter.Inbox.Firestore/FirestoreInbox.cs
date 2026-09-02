@@ -28,7 +28,7 @@ namespace Paramore.Brighter.Inbox.Firestore;
 /// The inbox stores a record for each processed message, typically including the message ID
 /// and a context key (e.g., the handler's name) to uniquely identify the processing event.
 /// </remarks>
-public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
+public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync, IAmACausationTrackingInbox
 {
     private readonly IAmAFirestoreConnectionProvider _connectionProvider;
     private readonly FirestoreConfiguration _configuration;
@@ -98,7 +98,7 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
                 {
                     new Write
                     {
-                        Update = ToDocument(contextKey, command),
+                        Update = ToDocument(contextKey, command, ReadCausationId(requestContext)),
                         CurrentDocument = new Precondition { Exists = false }
                     }
                 }
@@ -304,7 +304,7 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
                 {
                     new Write
                     {
-                        Update = ToDocument(contextKey, command),
+                        Update = ToDocument(contextKey, command, ReadCausationId(requestContext)),
                         CurrentDocument = new Precondition { Exists = false }
                     }
                 }
@@ -494,7 +494,101 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
     /// <inheritdoc />
     public bool ContinueOnCapturedContext { get; set; }
 
-    private Document ToDocument<T>(string contextKey, T request)
+    /// <inheritdoc />
+    public bool SupportsCausationTracking() => true;
+
+    /// <inheritdoc />
+    public Task<bool> SupportsCausationTrackingAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult(true);
+
+    /// <inheritdoc />
+    public string? GetCausationId(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1)
+    {
+        var request = new RunQueryRequest
+        {
+            Parent = $"{_configuration.DatabasePath}/documents",
+            StructuredQuery = BuildIdContextQuery(id, contextKey)
+        };
+
+        var client = _connectionProvider.GetFirestoreClient();
+        using var response = client.RunQuery(request);
+        var stream = response.GetResponseStream();
+
+        return BrighterAsyncContext.Run(async () =>
+        {
+            if (await stream.MoveNextAsync()
+                && stream.Current is { Document: not null })
+            {
+                return ReadCausationField(stream.Current.Document);
+            }
+
+            return null;
+        });
+    }
+
+    /// <inheritdoc />
+    public async Task<string?> GetCausationIdAsync(string id, string contextKey, RequestContext? requestContext,
+        int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default)
+    {
+        var request = new RunQueryRequest
+        {
+            Parent = $"{_configuration.DatabasePath}/documents",
+            StructuredQuery = BuildIdContextQuery(id, contextKey)
+        };
+
+        var client = await _connectionProvider
+            .GetFirestoreClientAsync(cancellationToken)
+            .ConfigureAwait(ContinueOnCapturedContext);
+
+        using var response = client.RunQuery(request);
+        var stream = response.GetResponseStream();
+        if (await stream.MoveNextAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext)
+            && stream.Current is { Document: not null })
+        {
+            return ReadCausationField(stream.Current.Document);
+        }
+
+        return null;
+    }
+
+    private StructuredQuery BuildIdContextQuery(string id, string contextKey)
+    {
+        return new StructuredQuery
+        {
+            From = { new StructuredQuery.Types.CollectionSelector { CollectionId = _inboxCollection.Name } },
+            Where = new StructuredQuery.Types.Filter
+            {
+                CompositeFilter = new StructuredQuery.Types.CompositeFilter
+                {
+                    Op = StructuredQuery.Types.CompositeFilter.Types.Operator.And,
+                    Filters =
+                    {
+                        new StructuredQuery.Types.Filter
+                        {
+                            FieldFilter = new StructuredQuery.Types.FieldFilter
+                            {
+                                Field = new StructuredQuery.Types.FieldReference { FieldPath = "Id" },
+                                Op = StructuredQuery.Types.FieldFilter.Types.Operator.Equal,
+                                Value = new Value { StringValue = id }
+                            }
+                        },
+                        new StructuredQuery.Types.Filter
+                        {
+                            FieldFilter = new StructuredQuery.Types.FieldFilter
+                            {
+                                Field = new StructuredQuery.Types.FieldReference { FieldPath = "ContextKey" },
+                                Op = StructuredQuery.Types.FieldFilter.Types.Operator.Equal,
+                                Value = new Value { StringValue = contextKey }
+                            }
+                        },
+                    }
+                }
+            },
+            Limit = 1
+        };
+    }
+
+    private Document ToDocument<T>(string contextKey, T request, string? causationId)
         where T : class, IRequest
     {
         Value ttl;
@@ -506,9 +600,13 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
         {
             ttl = new Value { NullValue = NullValue.NullValue };
         }
-        
-        return new Document 
-        { 
+
+        var causation = causationId is null
+            ? new Value { NullValue = NullValue.NullValue }
+            : new Value { StringValue = causationId };
+
+        return new Document
+        {
             Name = _configuration.GetDocumentName(_inboxCollection.Name, request.Id),
             Fields =
             {
@@ -517,10 +615,24 @@ public class FirestoreInbox : IAmAnInboxSync, IAmAnInboxAsync
                 ["ContextKey"] = new Value { StringValue = contextKey },
                 ["Timestamp"] = new Value { TimestampValue = Timestamp.FromDateTimeOffset(_configuration.TimeProvider.GetUtcNow()) },
                 ["Type"] = new Value { StringValue = typeof(T).FullName },
+                ["CausationId"] = causation,
                 ["Ttl"] = ttl
             }
         };
     }
+
+    // Reads the causation id from the request context bag, if present
+    private static string? ReadCausationId(RequestContext? requestContext)
+        => requestContext?.Bag.TryGetValue(RequestContextBagNames.CausationId, out var value) == true
+            ? value as string
+            : null;
+
+    // Reads the causation id field from a stored document, null when absent or stored as null
+    private static string? ReadCausationField(Document document)
+        => document.Fields.TryGetValue("CausationId", out var value)
+           && value.ValueTypeCase == Value.ValueTypeOneofCase.StringValue
+            ? value.StringValue
+            : null;
 
     private T ToRequest<T>(Document document)
         where T : class, IRequest

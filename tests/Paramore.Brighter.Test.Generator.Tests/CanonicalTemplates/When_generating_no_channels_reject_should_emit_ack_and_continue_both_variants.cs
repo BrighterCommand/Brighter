@@ -24,7 +24,7 @@ public class WhenGeneratingNoChannelsRejectShouldEmitAckAndContinueBothVariants 
     private const string TEMPLATE_NAME =
         "When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log";
 
-    private const string LEDGER_KEY = "Kafka / Standard";
+    private const string LEDGER_KEY = "Kafka / Classic";
     private const string FR_COLUMN = "FR-7";
 
     private readonly string _testDirectory;

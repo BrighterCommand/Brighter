@@ -293,6 +293,33 @@ cell remains `Unknown`.
     `BrighterTestsASBNameSpace`) against a real namespace, or stand up the Service Bus emulator, flip the
     cells, and regenerate. No code change is expected to be needed to *run* — only to fix whatever the
     run then reveals.
+- `Kafka / Classic` — **row renamed from `Kafka / Standard`.** Upstream `master` renamed the Kafka
+  gateway configuration key `Standard` -> `Classic` (KIP-848 work, PR #4233) and renamed
+  `KafkaMessageGatewayProvider` -> `KafkaClassicMessageGatewayProvider`. The row is the same
+  configuration and the same certified result (11/11 `Pass`); only the name follows the config.
+- `Kafka / Consumer` — **ALL ELEVEN cells `Pass`**, both variants, on the reference Kafka broker
+  (`apache/kafka:4.0.2`, the image `docker-compose-kafka.yaml` and `ci.yml` both use). Scoped suite
+  `~MessagingGateway.Consumer.` = **34 pass / 0 skip / 0 fail**. This configuration arrived from upstream
+  `master` (KIP-848 consumer group protocol, PR #4233) after the conformance templates had already landed,
+  so it needed onboarding rather than fixing. **Harness-only — no `src` change**, hence `Pass` not `Fixed`:
+  `KafkaConsumerMessageGatewayProvider` was a near-clone of the pre-conformance Classic provider, so the
+  resolved Classic provider was ported across verbatim (DLQ + invalid routing keys, the real invalid-channel
+  read hook, `RejectionMetadataKeys`, the wired `KafkaHarnessMessageScheduler`), keeping only the one
+  behavioural difference: `GroupProtocol = new ConsumerGroupProtocol()` on the subscription. The row
+  therefore mirrors `Kafka / Classic` exactly, which is the expected outcome — the two configurations share
+  `KafkaMessageConsumer`/`KafkaMessageProducer` and differ only in group coordination.
+  - **The new group protocol is genuinely exercised, not silently downgraded.** The broker advertises
+    `ConsumerGroupHeartbeat(68)` / `ConsumerGroupDescribe(69)` as usable, and polling
+    `kafka-consumer-groups.sh --list --type` during a Consumer-configuration run observes groups of type
+    **`Consumer`** (KIP-848), not `Classic`. This was checked explicitly because a librdkafka fallback to
+    the classic protocol would have certified Classic behaviour twice under a second row.
+  - `CollectionName` is `Kafka` for all three Kafka configurations, so the generated suites and the
+    hand-written broker tests serialise against the one broker (the xUnit cross-collection parallelism
+    trap recorded under `RMQ.Sync`).
+  - Full `Paramore.Brighter.Kafka.Tests` project: **188 pass / 0 fail** with both `kafka` and
+    `schema-registry` up. ⚠️ Running `kafka` alone fails the two hand-written
+    `KafkaMessageProducerHeaderBytesSendTests` arms on `Connection refused (localhost:8081)` — they need
+    the schema registry; that is infra, not conformance.
 
 ## Conformance Matrix
 
@@ -310,7 +337,8 @@ cell remains `Unknown`.
 | GCP / PullOrdering | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Pass | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass |
 | GCP / Stream | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) |
 | GCP / StreamOrdering | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) |
-| Kafka / Standard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
+| Kafka / Classic | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
+| Kafka / Consumer | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | Kafka / PartitionKey | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | MSSQL / MSSQLMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass |
 | PostgresSQL / PostgresMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |

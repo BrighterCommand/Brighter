@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using Paramore.Brighter;
 
 namespace Paramore.Brighter.Kafka.Tests;
@@ -36,24 +37,31 @@ public class KafkaMessageAssertion : IAmAMessageAssertion
     /// <inheritdoc />
     public void Assert(Message expected, Message actual)
     {
-       Xunit.Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
-       Xunit.Assert.Equal(expected.Header.ContentType?.MediaType, actual.Header.ContentType?.MediaType);
-       Xunit.Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
-       Xunit.Assert.Equal(expected.Header.DataSchema, actual.Header.DataSchema);
-       Xunit.Assert.Equal(expected.Header.MessageId, actual.Header.MessageId);
-       Xunit.Assert.Equal(expected.Header.PartitionKey, actual.Header.PartitionKey);
-       Xunit.Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
-       Xunit.Assert.Equal(expected.Header.Subject, actual.Header.Subject);
-       Xunit.Assert.Equal(expected.Header.SpecVersion, actual.Header.SpecVersion);
-       Xunit.Assert.Equal(expected.Header.Source, actual.Header.Source);
-       Xunit.Assert.Equal(expected.Header.Topic, actual.Header.Topic);
-       Xunit.Assert.Equal(expected.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"), actual.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"));
-       Xunit.Assert.Equal(expected.Header.Type, actual.Header.Type);
-       Xunit.Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
-       Xunit.Assert.Equal(System.TimeSpan.Zero, actual.Header.Delayed);
-       Xunit.Assert.Equal(expected.Body.Value, actual.Body.Value);
-       Xunit.Assert.Equal(expected.Header.TraceParent, actual.Header.TraceParent);
-       Xunit.Assert.Equal(expected.Header.TraceState, actual.Header.TraceState);
-       Xunit.Assert.Equal(expected.Header.Baggage, actual.Header.Baggage);
+        Xunit.Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
+        Xunit.Assert.Equal(expected.Header.ContentType?.MediaType, actual.Header.ContentType?.MediaType);
+        Xunit.Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
+        Xunit.Assert.Equal(expected.Header.DataSchema, actual.Header.DataSchema);
+        Xunit.Assert.Equal(expected.Header.MessageId, actual.Header.MessageId);
+        Xunit.Assert.Equal(expected.Header.PartitionKey, actual.Header.PartitionKey);
+        Xunit.Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
+        Xunit.Assert.Equal(expected.Header.Subject, actual.Header.Subject);
+        Xunit.Assert.Equal(expected.Header.SpecVersion, actual.Header.SpecVersion);
+        Xunit.Assert.Equal(expected.Header.Source, actual.Header.Source);
+        Xunit.Assert.Equal(expected.Header.Topic, actual.Header.Topic);
+        Xunit.Assert.Equal(NormalizeToUtcSecond(expected.Header.TimeStamp),
+            NormalizeToUtcSecond(actual.Header.TimeStamp));
+        Xunit.Assert.Equal(expected.Header.Type, actual.Header.Type);
+        Xunit.Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
+        Xunit.Assert.Equal(System.TimeSpan.Zero, actual.Header.Delayed);
+        Xunit.Assert.Equal(expected.Body.Value, actual.Body.Value);
+        Xunit.Assert.Equal(expected.Header.TraceParent, actual.Header.TraceParent);
+        Xunit.Assert.Equal(expected.Header.TraceState, actual.Header.TraceState);
+        Xunit.Assert.Equal(expected.Header.Baggage, actual.Header.Baggage);
+    }
+
+    private static DateTimeOffset NormalizeToUtcSecond(DateTimeOffset value)
+    {
+        var utc = value.ToUniversalTime();
+        return new DateTimeOffset(utc.Year, utc.Month, utc.Day, utc.Hour, utc.Minute, utc.Second, TimeSpan.Zero);
     }
 }

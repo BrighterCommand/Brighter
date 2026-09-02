@@ -27,7 +27,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
     private const string TEMPLATE_NAME =
         "When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel";
 
-    private const string LEDGER_KEY = "Kafka / Standard";
+    private const string LEDGER_KEY = "Kafka / Classic";
     private const string FR_COLUMN = "FR-5";
 
     private readonly string _testDirectory;

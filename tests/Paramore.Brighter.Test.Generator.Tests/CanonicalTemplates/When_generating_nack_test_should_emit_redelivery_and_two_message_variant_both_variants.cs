@@ -23,7 +23,7 @@ namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothVariants : IDisposable
 {
     private const string TEMPLATE_NAME = "When_nacking_a_message_it_should_be_redelivered";
-    private const string LEDGER_KEY = "Kafka / Standard";
+    private const string LEDGER_KEY = "Kafka / Classic";
     private const string FR_COLUMN = "FR-16";
 
     private readonly string _testDirectory;

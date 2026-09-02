@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -96,7 +96,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -114,7 +114,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -132,7 +132,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -150,7 +150,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -182,7 +182,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -207,7 +207,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
       - name: Setup dotnet 
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -237,7 +237,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -265,7 +265,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -283,29 +283,31 @@ jobs:
       CONFLUENT_SASL_USERNAME: ${{ secrets.CONFLUENT_SASL_USERNAME }}
 
     services:
-      zookeeper:
-        image: confluentinc/cp-zookeeper:latest
-        ports: 
-          - 2181:2181
-        env:
-         ZOOKEEPER_CLIENT_PORT: 2181
-         ZOOKEEPER_TICK_TIME: 2000
-         ALLOW_ANONYMOUS_LOGIN: yes
       kafka:
-        image: confluentinc/cp-enterprise-kafka:latest
+        image: apache/kafka:4.0.2
         ports:
           - 9092:9092
         env:
-          KAFKA_BROKER_ID: 1
-          KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+          # 1. KRaft Specific Configurations
+          KAFKA_NODE_ID: 1
+          KAFKA_PROCESS_ROLES: broker,controller
+          KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
+          CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk' # Required by Docker to format KRaft storage
+          
+          # 2. Updated Listeners to include the KRaft Controller
+          KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092,CONTROLLER://0.0.0.0:29093
           KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
-          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-          KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
+          KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+          
+          # 3. Your Existing Configurations
           KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
           KAFKA_DELETE_TOPIC_ENABLE: "true"
+          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+          KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+          KAFKA_CONFLUENT_SCHEMA_REGISTRY_URL: http://schema-registry:8081
       schema-registry:
-        image: confluentinc/cp-schema-registry:latest
+        image: confluentinc/cp-schema-registry:8.0.6
         ports:
           - 8081:8081
         env:
@@ -338,7 +340,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v7
     - name: Setup dotnet
-      uses: actions/setup-dotnet@v5
+      uses: actions/setup-dotnet@v6
       with:
         dotnet-version: |
           9.0.x
@@ -369,7 +371,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet 
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -395,7 +397,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet 
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -423,7 +425,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet 
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -454,7 +456,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet 
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -490,7 +492,7 @@ jobs:
           filter: tree:0
           show-progress: false
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -522,7 +524,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet 
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -556,7 +558,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -582,7 +584,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet 
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -604,7 +606,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -636,7 +638,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -671,7 +673,7 @@ jobs:
           version: '>= 363.0.0'
       
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             10.0.x
@@ -734,7 +736,7 @@ jobs:
 #          echo "RocketMQ should be ready now"
 #          
 #      - name: Setup dotnet
-#        uses: actions/setup-dotnet@v5
+#        uses: actions/setup-dotnet@v6
 #        with:
 #          dotnet-version: |
 #            8.0.x

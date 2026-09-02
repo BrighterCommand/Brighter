@@ -63,7 +63,7 @@ public class GeneratingEverywhereShouldEmitSkippedCanonicalSuiteTests
 
     // The exact count of wired gateway configurations declared across the ten wired
     // test projects (FR-13). This is a regression guard: a new wiring changes the count.
-    private const int EXPECTED_WIRED_CONFIGURATION_COUNT = 23;
+    private const int EXPECTED_WIRED_CONFIGURATION_COUNT = 24;
 
     private readonly string _repoRoot;
     private readonly IReadOnlyList<string> _reactorGeneratedDirs;

@@ -72,22 +72,25 @@ public static class BrighterPipelineValidationExtensions
         {
             var subscriberRegistry = sp.GetService<IAmASubscriberRegistryInspector>()
                 ?? (IAmASubscriberRegistryInspector)sp.GetRequiredService<ServiceCollectionSubscriberRegistry>();
-            var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry);
+            var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry, ResolveInboxConfiguration(sp));
 
             var publications = ResolvePublications(sp);
             var subscriptions = ResolveSubscriptions(sp);
             var consumerSpecs = sp.GetServices<ISpecification<Subscription>>();
             var consumerSpecList = consumerSpecs.Any() ? consumerSpecs : null;
 
+            var inbox = ResolveInboxConfiguration(sp)?.Inbox;
+            var outbox = sp.GetService<IAmAnOutboxProducerMediator>()?.Outbox;
+            
             var mapperRegistryBuilder = sp.GetService<ServiceCollectionMessageMapperRegistryBuilder>();
-            var mapperRegistry = mapperRegistryBuilder != null
-                ? ServiceCollectionExtensions.MessageMapperRegistry(sp)
+            Func<MessageMapperRegistry>? mapperRegistryFactory = mapperRegistryBuilder != null
+                ? () => ServiceCollectionExtensions.MessageMapperRegistry(sp)
                 : null;
             var transformerProbe = sp.GetService<IAmATransformerResolvabilityProbe>();
 
             return new PipelineValidator(
-                pipelineBuilder, publications, subscriptions, consumerSpecList,
-                providerRegistrations, mapperRegistry, transformerProbe);
+                pipelineBuilder, publications, subscriptions, consumerSpecList, inbox, outbox,
+                providerRegistrations, mapperRegistryFactory, transformerProbe);
         });
 
         builder.Services.AddSingleton<IHostedService, BrighterValidationHostedService>();
@@ -110,17 +113,17 @@ public static class BrighterPipelineValidationExtensions
         {
             var subscriberRegistry = sp.GetService<IAmASubscriberRegistryInspector>()
                 ?? (IAmASubscriberRegistryInspector)sp.GetRequiredService<ServiceCollectionSubscriberRegistry>();
-            var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry);
+            var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry, ResolveInboxConfiguration(sp));
             var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger<PipelineDiagnosticWriter>();
 
             var publications = ResolvePublications(sp);
             var subscriptions = ResolveSubscriptions(sp);
             var mapperRegistryBuilder = sp.GetService<ServiceCollectionMessageMapperRegistryBuilder>();
-            var mapperRegistry = mapperRegistryBuilder != null
-                ? ServiceCollectionExtensions.MessageMapperRegistry(sp)
+            Func<MessageMapperRegistry>? mapperRegistryFactory = mapperRegistryBuilder != null
+                ? () => ServiceCollectionExtensions.MessageMapperRegistry(sp)
                 : null;
 
-            return new PipelineDiagnosticWriter(logger, pipelineBuilder, mapperRegistry, publications, subscriptions);
+            return new PipelineDiagnosticWriter(logger, pipelineBuilder, mapperRegistryFactory, publications, subscriptions);
         });
 
         builder.Services.AddSingleton<IHostedService, BrighterDiagnosticHostedService>();
@@ -144,4 +147,12 @@ public static class BrighterPipelineValidationExtensions
         var subscriptions = consumerOptions?.Subscriptions?.ToList();
         return subscriptions is { Count: > 0 } ? subscriptions : null;
     }
+
+    /// <summary>
+    /// Resolves the global <see cref="InboxConfiguration"/> the runtime pipeline would use, so the
+    /// describe/validate paths inject the same global inbox attribute as <c>Build()</c> and do not drift.
+    /// Returns null when no consumer options are registered (matching the runtime, which receives null too).
+    /// </summary>
+    private static InboxConfiguration? ResolveInboxConfiguration(IServiceProvider sp)
+        => sp.GetService<IAmConsumerOptions>()?.InboxConfiguration;
 }

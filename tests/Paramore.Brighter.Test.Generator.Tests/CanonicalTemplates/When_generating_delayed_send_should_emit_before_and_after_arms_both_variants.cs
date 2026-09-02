@@ -27,7 +27,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
     private const string TEMPLATE_NAME =
         "When_sending_a_delayed_message_should_deliver_after_delay";
 
-    private const string LEDGER_KEY = "Kafka / Standard";
+    private const string LEDGER_KEY = "Kafka / Classic";
     private const string FR_COLUMN = "FR-9";
 
     private readonly string _testDirectory;

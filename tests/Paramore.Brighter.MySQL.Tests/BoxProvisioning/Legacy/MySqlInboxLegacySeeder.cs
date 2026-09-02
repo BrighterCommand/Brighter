@@ -32,10 +32,11 @@ namespace Paramore.Brighter.MySQL.Tests.BoxProvisioning.Legacy;
 /// schema rather than a migration UpScript round-trip.
 /// </summary>
 /// <remarks>
-/// Inbox archaeology is short — V1 (baseline) and V2 (added <c>ContextKey</c>) — so a single
-/// <see cref="SeedAtV1"/> entry point is sufficient for MySQL. Column types match the live
-/// <c>MySqlInboxBuilder</c> DDL minus the <c>ContextKey</c> column. The MySQL inbox uses
-/// <c>CommandId</c> as the primary key (no synthetic <c>Id</c> column, unlike MSSQL).
+/// Inbox archaeology is short — V1 (baseline) and V2 (added <c>ContextKey</c>) — so the two
+/// entry points <see cref="SeedAtV1"/> / <see cref="SeedAtV2"/> are sufficient for MySQL.
+/// Column types match the live <c>MySqlInboxBuilder</c> DDL minus the <c>CausationId</c> column.
+/// The MySQL inbox uses <c>CommandId</c> as the primary key (no synthetic <c>Id</c> column,
+/// unlike MSSQL).
 /// </remarks>
 internal static class MySqlInboxLegacySeeder
 {
@@ -50,6 +51,21 @@ internal static class MySqlInboxLegacySeeder
         ) ENGINE = InnoDB;
         """;
 
+    // V2 adds ContextKey (787c31c52) but is still pre-CausationId (V3). This is the schema a
+    // user has after upgrading Brighter past the ContextKey era but before the Replay feature
+    // migration — the realistic "no CausationId column" inbox the backward-compat fix must tolerate.
+    private const string V2Ddl = """
+        CREATE TABLE `{0}`
+        (
+            `CommandId` VARCHAR(255) NOT NULL,
+            `CommandType` VARCHAR(256) NOT NULL,
+            `CommandBody` TEXT NOT NULL,
+            `Timestamp` TIMESTAMP(4) NOT NULL,
+            `ContextKey` VARCHAR(256) NULL,
+            PRIMARY KEY (`CommandId`)
+        ) ENGINE = InnoDB;
+        """;
+
     /// <summary>
     /// Creates an inbox table with the V1 column set (no <c>ContextKey</c>). The history
     /// table is NOT seeded — the test under verification expects the runner to stamp it.
@@ -60,6 +76,20 @@ internal static class MySqlInboxLegacySeeder
         connection.Open();
         using var command = connection.CreateCommand();
         command.CommandText = string.Format(V1Ddl, tableName);
+        command.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// Creates an inbox table with the V2 column set (<c>ContextKey</c> present, but no
+    /// <c>CausationId</c>) — the pre-Replay schema a user runs after upgrading Brighter
+    /// without applying the V3 causation migration.
+    /// </summary>
+    public static void SeedAtV2(string connectionString, string tableName)
+    {
+        using var connection = new MySqlConnection(connectionString);
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = string.Format(V2Ddl, tableName);
         command.ExecuteNonQuery();
     }
 }

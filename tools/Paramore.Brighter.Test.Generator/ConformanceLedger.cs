@@ -40,7 +40,7 @@ public interface IAmAConformanceLedger
     /// behaviour column, or an empty string when the cell is Pass or Fixed (test runs).
     /// </summary>
     /// <param name="ledgerKey">
-    /// The conformance-ledger row identifier, e.g. "Kafka / Standard".
+    /// The conformance-ledger row identifier, e.g. "Kafka / Classic".
     /// </param>
     /// <param name="frColumn">
     /// The canonical-behaviour column key, e.g. "FR-22".

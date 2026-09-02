@@ -25,7 +25,7 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
     private const string TEMPLATE_NAME =
         "When_requeuing_a_failed_message_with_zero_delay_should_redeliver_immediately";
 
-    private const string LEDGER_KEY = "Kafka / Standard";
+    private const string LEDGER_KEY = "Kafka / Classic";
     private const string FR_COLUMN = "FR-15";
 
     private readonly string _testDirectory;

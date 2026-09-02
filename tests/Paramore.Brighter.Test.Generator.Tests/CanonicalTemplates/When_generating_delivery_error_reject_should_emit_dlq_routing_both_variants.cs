@@ -25,7 +25,7 @@ public class WhenGeneratingDeliveryErrorRejectShouldEmitDlqRoutingBothVariants :
     private const string TEMPLATE_NAME =
         "When_rejecting_message_with_delivery_error_should_send_to_dlq";
 
-    private const string LEDGER_KEY = "Kafka / Standard";
+    private const string LEDGER_KEY = "Kafka / Classic";
     private const string FR_COLUMN = "FR-4";
 
     private readonly string _testDirectory;

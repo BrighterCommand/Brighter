@@ -26,7 +26,7 @@ namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : IDisposable
 {
     private const string TEMPLATE_NAME = "When_rejecting_message_should_include_metadata";
-    private const string LEDGER_KEY = "Kafka / Standard";
+    private const string LEDGER_KEY = "Kafka / Classic";
     private const string FR_COLUMN = "FR-8";
 
     private readonly string _testDirectory;

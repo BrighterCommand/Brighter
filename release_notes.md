@@ -2,6 +2,8 @@
 
 ## Master
 
+## 10.7.0
+
 ### Azure Service Bus: dead-letter reason and description (#4196)
 
 When a handler rejects a message consumed from Azure Service Bus, `AzureServiceBusConsumer` now records the rejection reason and description in the broker's native `DeadLetterReason` and `DeadLetterErrorDescription` fields rather than dead-lettering with blank values — so the reason is visible to operators triaging the dead-letter queue instead of living only in logs. Values are truncated to the 4096-character limit Azure Service Bus enforces. A `DeadLetterAsync(lockToken, reason, description)` overload is added to the public `IServiceBusReceiverWrapper`.
@@ -298,6 +300,170 @@ While applying the value-type pattern we corrected a latent null-safety bug in n
   No call-site fix is needed unless your code both has NRT enabled and treats warnings as errors.
 
 > Note: `Tenant` (in `Paramore.Brighter.Transformers.JustSaying`) is a `readonly record struct`, not a reference type — its receiver can never be null, so its `operator string` is intentionally left non-nullable.
+
+### Replay Outbox Messages on Inbox Duplicate (spec 0027)
+
+When an inbox detects a duplicate request, Brighter can now optionally **replay** the outbox messages that were produced under that request's causation, rather than silently dropping the duplicate. The feature is opt-in (`OnceOnlyAction.Replay` on the inbox attribute) and non-breaking: it requires a causation-tracking inbox and outbox (`IAmACausationTrackingInbox` / `IAmACausationTrackingOutbox`), and the relational stores gate the causation-aware write on a memoized column probe so un-migrated schemas keep depositing unchanged. Startup pipeline validation fails fast if a `Replay` pipeline is configured without causation tracking. See [ADR 0057](docs/adr/0057-replay-outbox-on-inbox-duplicate.md) and [spec 0027](specs/0027-replay-matching-outbox-events-when-inbox-has-already-seen/) for full details.
+
+#### Usage requirement: thread your `RequestContext` through `Post` / `DepositPost`
+
+Replay links a duplicate back to its original outbox messages through the **causation id**. `[UseInbox]` stamps that id into the pipeline's `RequestContext.Bag`, and the outbox `Add` reads it back from the bag — **but only if the handler that deposits the outbox message passes its own `Context` down**. If a handler calls the idiomatic `_commandProcessor.Post(evt)` (or `DepositPost`) *without* a request context, `CommandProcessor` creates a fresh context, the causation id is lost, the message is stored with a `null` `CausationId`, and a later `Replay` finds nothing to replay — a **silent no-op** with no error.
+
+To use Replay, every handler that produces outbox messages must forward its handler `Context`:
+
+```csharp
+// ❌ Silent no-op under Replay — fresh context, causation id lost
+public override MyCommand Handle(MyCommand command)
+{
+    _commandProcessor.Post(new DownstreamEvent(...));
+    return base.Handle(command);
+}
+
+// ✅ Threads the causation id so Replay can match
+public override MyCommand Handle(MyCommand command)
+{
+    _commandProcessor.Post(new DownstreamEvent(...), Context);
+    return base.Handle(command);
+}
+```
+
+This applies to the async equivalents (`PostAsync` / `DepositPostAsync`) as well.
+
+#### Source-breaking change: `IRequestContext.InstrumentationOptions`
+
+`IRequestContext` gains a new required `InstrumentationOptions InstrumentationOptions { get; set; }` member. It carries the instrumentation options configured for the pipeline that created the context, so middleware handlers can gate their own telemetry (for example on `InstrumentationOptions.Brighter`) without taking a dependency on how the processor was configured. `Paramore.Brighter` targets `netstandard2.0`, which does not support default interface members, so — as with the spec-0027/0029 box-provisioning interface additions — this is exposed as a plain abstract member.
+
+The change is **source-breaking** for any third-party or test type that implements `IRequestContext`: such types will fail to compile until they add the new member. It affects more consumers than just those adopting Replay, hence its call-out here. The shipped `RequestContext` already implements it and defaults to `InstrumentationOptions.All`, so call sites that use the shipped context require no change.
+
+```csharp
+// Custom IRequestContext implementations must add:
+public InstrumentationOptions InstrumentationOptions { get; set; } = InstrumentationOptions.All;
+```
+
+### Per-message factory scope leak fix; transient handler lifetime now isolates its DI scope (#4252, #4254)
+
+`ServiceProviderLifetimeScope` — the lifetime helper shared by the handler, mapper and transformer factories — previously created a **single** `IServiceScope` per factory and reused it for every transient resolution. For the app-lifetime mapper and transformer factories that scope was never released per message, so a transient mapper or transform accumulated one scope per message for the life of the process — the leak reported in #4252. Because `MapperLifetime` and `TransformerLifetime` both **default to `Transient`** (`ServiceLifetime.Transient`), this was the default code path, not an opt-in one. `GetTransient` now creates a fresh `IServiceScope` per resolution, tracked by the scope's own identity and disposed when the resolution's lease is released, closing the leak: each transient mapper/transform now gets and releases its own scope.
+
+#### Breaking change: `Create`/`Get` return an opaque `Lease<T>`, and `Release` keys on the lease, across six public factory / registry interfaces
+
+Closing the leak on the mapper path required a way to return a mapper to its factory (transformers already had one), and returning a mapper/transform to the *right* resolution's scope required keying release on the resolution rather than the instance. The factory and registry surface therefore now flows an opaque `Lease<T>` (see *Opaque lease* below) from `Create`/`Get` to `Release`:
+
+* `IAmAMessageMapperFactory` — `Lease<IAmAMessageMapper>? Create(Type)`, `void Release(Lease<IAmAMessageMapper>?)`
+* `IAmAMessageMapperFactoryAsync` — `Lease<IAmAMessageMapperAsync>? Create(Type)`, `void Release(Lease<IAmAMessageMapperAsync>?)`, `ValueTask ReleaseAsync(Lease<IAmAMessageMapperAsync>?)`
+* `IAmAMessageTransformerFactory` — `Lease<IAmAMessageTransform>? Create(Type)`, `void Release(Lease<IAmAMessageTransform>?)`
+* `IAmAMessageTransformerFactoryAsync` — `Lease<IAmAMessageTransformAsync>? Create(Type)`, `void Release(Lease<IAmAMessageTransformAsync>?)`, `ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync>?)`
+* `IAmAMessageMapperRegistry` — `Lease<IAmAMessageMapper<T>>? Get<T>()`, `void Release<T>(Lease<IAmAMessageMapper<T>>?)`
+* `IAmAMessageMapperRegistryAsync` — `Lease<IAmAMessageMapperAsync<T>>? GetAsync<T>()`, `void Release<T>(Lease<IAmAMessageMapperAsync<T>>?)`, `ValueTask ReleaseAsync<T>(Lease<IAmAMessageMapperAsync<T>>?)`
+
+`Release`/`ReleaseAsync` take the lease as `Lease<T>?` and treat a `null` lease as a no-op, so the "over-release is harmless" contract holds for the `null` a caller following the "release what you `Get`" rule may still hold (`Get`/`Create` return `Lease<T>?`) without a hand-written null check.
+
+`Paramore.Brighter` targets `netstandard2.0`, which has no runtime support for default interface members, so these ship without a default body — **any third-party implementation of these interfaces must update to the lease-typed signatures** to compile, and any caller holding a `Create`/`Get` result as a bare mapper/transform must read it through `.Instance` and release the lease. All in-tree implementations are updated; the `Func`-based `SimpleMessageMapperFactory` constructor is unchanged (it wraps the `Func` result in a no-op lease), so its call sites are unaffected.
+
+##### Opaque lease
+
+`Lease<T>` (new, in `Paramore.Brighter`) is a small `sealed class` pairing the resolved `Instance` with an opaque `ReleaseToken`. The token — for the DI-backed factories, the resolution's own `IServiceScope` — lets the factory reclaim exactly the one resolution being released, so a shared instance handed out under a transient lifetime is torn down one resolution at a time and an over-release is a no-op. A factory that opens a per-resolution scope **must** return a lease carrying its release token (`new Lease<T>(instance, token)`); the token-less "reclaims nothing on release" case — a shared instance, or a no-op factory — is built through the named `Lease<T>.Untracked(instance)`. There is no implicit conversion from `T`: a bare `return mapper;` from a custom factory does not compile, so a scope-owning factory cannot silently produce a token-less lease whose `Release` is a no-op (which would reopen the leak this change closes). If you implement `IAmAMessageMapperFactory`/`IAmAMessageTransformerFactory` (or their async forms), return `new Lease<T>(instance, token)` when you open a scope, `Lease<T>.Untracked(instance)` when you hand out a shared instance or reclaim nothing, and `null` when nothing resolves.
+
+The two mapper-registry interfaces also gain a type-resolution member so a caller can ask *"is a mapper registered for this request?"* without creating (and then having to release) one:
+
+* `IAmAMessageMapperRegistry` — `(Type? MapperType, bool IsDefault) ResolveMapperInfo(Type requestType)`
+* `IAmAMessageMapperRegistryAsync` — `(Type? MapperType, bool IsDefault) ResolveAsyncMapperInfo(Type requestType)`
+
+Both mirror `Get`/`GetAsync` (factory-aware, same default and generic-definition guards) without instantiating. `TransformPipelineBuilder[Async].HasPipeline` now answers through them, so the outbox send/receive path no longer creates and releases a throwaway probe mapper per message. Same netstandard2.0 rule: third-party registry implementations must add the member to compile.
+
+#### Breaking change: validation/diagnostics constructors take a `Func<MessageMapperRegistry>`
+
+Making registry ownership explicit (the disposer creates the disposable it disposes) changed three `public` signatures. These are compile-time source breaks — the registry parameter moved from an instance to a factory delegate:
+
+| Symbol | Was | Now |
+|---|---|---|
+| `PipelineValidator` constructor, param 6 | `MessageMapperRegistry? mapperRegistry` | `Func<MessageMapperRegistry>? mapperRegistryFactory` |
+| `PipelineDiagnosticWriter` constructor, param 3 | `MessageMapperRegistry? mapperRegistry` | `Func<MessageMapperRegistry>? mapperRegistryFactory` |
+| `ConsumerValidationRules.UnwrapTransformResolvable` | `(MessageMapperRegistry, IAmATransformerResolvabilityProbe)` | `(Func<MessageMapperRegistry>, IAmATransformerResolvabilityProbe)` |
+
+Both constructors take the registry positionally among optional parameters, so anyone constructing a `PipelineValidator` or `PipelineDiagnosticWriter` directly — in a test or a custom host — and anyone calling the `public static` `UnwrapTransformResolvable` rule must pass a factory (`() => registry`) instead of the registry. The rule now invokes the factory once and owns/disposes only the registry it created, so it can never dispose a caller's shared registry.
+
+> **`Create`/`Get`/`GetAsync` now return an opaque `Lease<T>`, and `Release` takes that lease.** This is a breaking signature change on the factory and registry surface: `IAmAMessageMapperFactory[Async].Create`, `IAmAMessageTransformerFactory[Async].Create`, and `IAmAMessageMapperRegistry[Async].Get<T>`/`GetAsync<T>` now return a `Lease<T>?` (null when nothing resolves), and `Release`/`ReleaseAsync` take a `Lease<T>` rather than the bare instance. A `Lease<T>` pairs the resolved `Instance` with an opaque `ReleaseToken`; hold the lease from create to release. If you resolve a mapper or transform directly, you must still call `Release` (or `ReleaseAsync`) when finished, **even for a non-disposable mapper such as the default `JsonMessageMapper`** — a transient resolution opens an `IServiceScope` per resolution (it can own the instance's injected dependencies and its own `IServiceProvider`), and that scope is retained until the lease is released or the factory is disposed at host shutdown. All in-tree call sites already release. Note that `SimpleMessageMapperFactory`'s `Release` is a deliberate no-op — the `Func` you supply owns what it returns — so a `Func` that news up a disposable mapper is not disposed for you.
+
+The lease keys release on the **resolution**, not the instance, which designs out a whole bug class: a mapper or transform registered in the container as a `Singleton` (or otherwise handing back one shared instance) while its `MapperLifetime`/`TransformerLifetime` is the default `Transient` opens a fresh scope per resolution over the same object. Keyed by instance identity (the previous model) releasing one resolution could dispose a scope another still-live resolution depended on — a use-after-dispose — and an over-release could pop yet another. Keyed by the lease, `Release(lease)` disposes exactly that resolution's scope, and an over-release of a lease is an **idempotent no-op**. Because the lease's generic argument carries the interface (`Get<T>` returns a `Lease<IAmAMessageMapper<T>>`, `GetAsync<T>` a `Lease<IAmAMessageMapperAsync<T>>`), releasing a dual-interface mapper resolved from `GetAsync` through the sync factory is now a **compile-time type error** rather than a silent leak — no interface cast is needed on the concrete registry:
+
+```csharp
+var registry = ServiceCollectionExtensions.MessageMapperRegistry(sp);
+
+var lease = registry.Get<MyCommand>();                        // Lease<IAmAMessageMapper<MyCommand>>?
+// ...use lease.Instance...
+registry.Release(lease);                                      // binds to the sync overload by lease type
+
+var asyncLease = registry.GetAsync<MyCommand>();              // Lease<IAmAMessageMapperAsync<MyCommand>>?
+registry.Release(asyncLease);                                 // ...or ReleaseAsync(asyncLease)
+```
+
+#### Deterministic factory disposal at host shutdown
+
+The IoC-backed mapper and transformer factories (`ServiceProviderMapperFactory`, `ServiceProviderMapperFactoryAsync`, `ServiceProviderTransformerFactory`, `ServiceProviderTransformerFactoryAsync`) are created for, and owned by, the objects that use them; they are not registered in the container. Those owners now dispose them, so every per-resolution `IServiceScope` they retain is drained at teardown instead of being held until the process exits:
+
+* `MessageMapperRegistry` is now `IDisposable` and disposes the two mapper factories it was built from.
+* `OutboxProducerMediator.Dispose()` now disposes the `MessageMapperRegistry` (cascading to both mapper factories) and the two transformer factories, in addition to closing the producer registry.
+* `PipelineValidator` and `PipelineDiagnosticWriter` are now `IDisposable` and dispose the validation/diagnostic-time `MessageMapperRegistry` each builds.
+
+* `Dispatcher` is now `IDisposable` and disposes the `MessageMapperRegistry` (cascading to both mapper factories) and the two transformer factories built for it — the consumer-side counterpart to the mediator's producer-side disposal. The `IDispatcher` **interface** deliberately does not extend `IDisposable`: on the `AddServiceActivator` path the `Dispatcher` is a container singleton, so the container disposes it (and drains its factories) at host shutdown, and adding `IDisposable` to the interface would be a source break for every external implementer for no gain on that path. If you wire a `Dispatcher` up **manually** and hold it as an `IDispatcher`, cast to `Dispatcher` (or `IDisposable`) to dispose it and drain the factories it owns.
+
+All of these owners are registered as container singletons, so the container disposes them — and therefore drains their factories — at host shutdown. Previously none were disposed, so a scope a direct resolver failed to release was held for the life of the process. The `IDisposable` additions themselves are binary-compatible; note, however, that the `PipelineValidator` / `PipelineDiagnosticWriter` constructor and `UnwrapTransformResolvable` signatures **did** change — see *Breaking change: validation/diagnostics constructors* above.
+
+> **Ownership note for manual wiring.** Because `MessageMapperRegistry` is now `IDisposable` and `OutboxProducerMediator.Dispose()` cascades into the `IAmAMessageMapperRegistry` **and both transformer factories** it was given, **disposing a `CommandProcessor`'s external bus now disposes the mapper registry and the transformer factories you handed it.** The standard manual shape is `DispatchBuilder.MessageMappers(registry, registryAsync, transformFactory, transformFactoryAsync)`, so the transform factories are shared just as readily as the registry. In the DI path this is airtight — each mediator gets its own registry and factories newed per resolution — but if you **manually** share a `MessageMapperRegistry` or a `ServiceProviderTransformerFactory` between a `CommandProcessor` external bus and a `Dispatcher`, disposing the command processor disposes objects the dispatcher is still using; subsequent mapper or transform resolutions then throw `ObjectDisposedException` per message. This is a runtime break with no compile-time signal. If you share a registry or transformer factory across independently-disposed owners, give each owner its own, or defer disposal until all owners are done.
+
+**This shutdown disposal is a teardown backstop, not a substitute for `Release`.** It reclaims once, at host shutdown; it does nothing for a host that runs for days. Releasing each mapper/transform you resolve directly — as the pipeline does on every message — is what bounds retention *during* the run. Relying on owner disposal for reclamation along the way just reproduces the unbounded accumulation this fix closes.
+
+#### Breaking change: `IBrighterOptions` gains `IsolateTransientHandlerScope`
+
+`IBrighterOptions` (in `Paramore.Brighter.Extensions.DependencyInjection`) gains a `bool IsolateTransientHandlerScope { get; set; }` member — the opt-out described in the *Behaviour change* below. `Paramore.Brighter.Extensions.DependencyInjection` targets `netstandard2.0`, which has no default interface members, so this ships without a default body: **any third-party implementation of `IBrighterOptions` must add the member to compile.** In-tree there is exactly one implementer (`BrighterOptions`), which defaults it to `true` (isolate), so the change is invisible to CI but a source break for external implementers — the same class of break as the factory/registry interfaces above.
+
+#### Behaviour change: transient handler lifetime isolates its DI scope per handler
+
+On the **default** configuration — `HandlerLifetime.Transient` with `IsolateTransientHandlerScope = true` — two handlers in the same pipeline that each inject a DI-`Scoped` dependency (an EF Core `DbContext`, a unit of work, a transaction provider) now receive **two instances, and therefore two transactions, where they previously received one.** If your handlers relied on a single `DbContext` / one transaction being shared across the pipeline for a message, that unit of work is now split — see the fix below.
+
+This is the only **observable semantic** change in this release, and it is invisible at compile time — no signature change and no exception; only the number of DI-`Scoped` instances a pipeline sees changes. (The interface additions above are the compile-time breaks.) It lands on the **default** `HandlerLifetime` (`Transient`).
+
+A handler pipeline for a single message resolves every handler in the chain — attribute/middleware handlers plus the target handler — through one `IAmALifetime`. Because all transient resolutions used to share that factory's single `IServiceScope`, a dependency **registered in DI as `Scoped`** (an EF Core `DbContext`, a unit of work, a transaction provider) was one shared instance across the whole chain for that message. Now each transient handler is resolved in its **own** `IServiceScope`, so a DI-`Scoped` dependency is a **distinct instance per handler** — the two-contexts / two-transactions consequence above.
+
+This aligns `Transient` with its DI meaning (a transient resolution is genuinely isolated) and is what allows a transient's scope to be its own to create and release, which is what closes the leak above.
+
+**If you rely on a DI-`Scoped` dependency being shared across the handlers in a pipeline** — the unit-of-work / one-transaction-per-message pattern — set the **handler** lifetime to `Scoped`:
+
+```csharp
+services.AddBrighter(options =>
+{
+    options.HandlerLifetime = ServiceLifetime.Scoped; // default is Transient
+});
+```
+
+Under `Scoped`, every handler in the pipeline shares one `IServiceScope`, so a `Scoped` dependency is a single instance for the message — the pre-fix sharing behaviour.
+
+Switching the **handler** lifetime to `Scoped` is the intended way to share state across a pipeline, and almost certainly what you want if you were depending on the old sharing — under `Transient` it was never a designed behaviour, just a side effect of the shared scope. So we do not expect anyone to need an escape hatch. If you do rely on the pre-#4254 sharing and cannot move to `Scoped` immediately, you can restore it **without changing the handler lifetime** by setting `IsolateTransientHandlerScope = false`:
+
+```csharp
+services.AddBrighter(options =>
+{
+    options.IsolateTransientHandlerScope = false; // default is true; prefer HandlerLifetime.Scoped
+});
+```
+
+With the flag off, the transient handlers in one pipeline again share a single `IServiceScope` (disposed when the pipeline completes), so a DI-`Scoped` dependency is one shared instance across the chain — the pre-#4254 behaviour — while `Transient` still means a fresh handler instance per resolution. The flag governs **only** transient handlers; it has no effect on `Scoped` or `Singleton` handlers, nor on the mapper and transformer factories, which always isolate (that is the leak fix). It defaults to `true`, so the isolating behaviour described above is the default, and the flag is a compatibility fallback rather than a knob most applications should touch.
+
+#### Other observable changes
+
+A few smaller changes that are unlikely to affect you but are observable:
+
+* **`IAmAMessageMapperRegistry.Get<TRequest>()` no longer registers the default mapper it falls back to.** When no mapper is registered for `TRequest`, `Get<TRequest>()` / `GetAsync<TRequest>()` still returns the default mapper, but now records that resolution in a separate cache rather than writing it into the registration table. So a fallback no longer answers *"a mapper is registered for `TRequest`"*, and a subsequent `Register<TRequest, TMapper>()` for that type **succeeds** where it previously threw `ArgumentException("… already has a mapper")`. An explicit `Register` still always wins on a later `Get`.
+* **`ServiceProviderHandlerFactory.Release` no longer disposes the handler itself; it disposes the per-resolution scope instead.** Both `Release` overloads dropped the old `if (handler is IDisposable d) d.Dispose();` — for the Transient and Scoped lifetimes the handler was resolved from a `ServiceProviderLifetimeScope`, and disposing that scope is what disposes the handler, exactly once (disposing it here as well double-disposed it). One case changes observably: a handler **registered in the container as a singleton** (`services.AddSingleton<MyDisposableHandler>()`) but resolved under the **default `HandlerLifetime.Transient`** comes from the root provider, so the per-resolution child scope tracks nothing and disposes nothing — that handler used to be `Dispose()`d after every message and now is not disposed until the root provider is torn down at host shutdown. Disposing a process-wide singleton once per message was itself a bug, so this is a fix, but it is an observable change on the handler path. If you relied on it, register the handler as transient (`services.AddTransient<MyDisposableHandler>()`) so each per-message scope owns and disposes it.
+* **Resolving a mapper or transform after its factory is disposed now throws `ObjectDisposedException`.** `ServiceProviderMapperFactory` / `ServiceProviderTransformerFactory` (through `ServiceProviderLifetimeScope.GetOrCreate`) previously returned an instance from an already-disposed factory; they now throw. In practice this only surfaces if an in-flight message resolves a mapper during host shutdown, after the factory has been disposed — a race the `Dispatcher` shutdown drain below now closes on the consumer side. The `ObjectDisposedException` message names the configured lifetime and points at the shared-registry cause rather than an internal type name.
+* **`Dispatcher.Dispose()` now stops the pumps and drains their in-flight message before disposing the mapper/transform factories, bounded by a configurable `ShutdownTimeout`.** Because `Dispose()` cascades disposal into the factories (see the ownership item below), a container teardown that raced a still-running pump — the host's `ShutdownTimeout` elapsed before the consumers drained, or the provider was disposed without a graceful stop — could tear the factories down under an in-flight message, surfacing the `ObjectDisposedException` above, which was reclassified as *Unacceptable* and the good message **rejected and discarded**. `Dispose()` now calls `End()` first (which pushes a quit onto each pump so it runs out its current message, acknowledges it, and stops) and waits for the drain before disposing. If the drain exceeds the timeout, disposal proceeds anyway and the interrupted message is left **un-acknowledged** so the broker redelivers it rather than dropping it. The wait is bounded by a new `TimeSpan ShutdownTimeout` (default **10 seconds**), configurable so a consumer with long-running handlers (for example video processing) can allow more time: set it on the `AddServiceActivator` consumer options (`IAmConsumerOptions.ShutdownTimeout`), via `DispatchBuilder.Build(shutdownTimeout: …)`, or the `Dispatcher` constructor's new trailing optional `shutdownTimeout` parameter. **Source break for external implementers:** `IAmConsumerOptions` gains a `ShutdownTimeout` member with no default interface body (the assembly targets `netstandard2.0`); the in-tree `ConsumersOptions` implements it defaulting to 10s. `IAmADispatchBuilder.Build` and the `Dispatcher` constructor gain trailing optional parameters (source-compatible for callers; binary-breaking, so recompile against this version). `Dispatcher` also now implements `IAsyncDisposable` alongside `IDisposable` (an additive, non-breaking change): on the graceful path a host that tears its provider down through `DisposeAsync` — which Microsoft.Extensions.DependencyInjection honours in preference to `IDisposable` — **awaits** the shutdown drain instead of blocking a thread on it, and async-disposes any owned factory that is itself `IAsyncDisposable`. `Dispose()` is retained as the synchronous fallback (MS DI throws if it must synchronously dispose an async-only service); both paths share one run-at-most-once guard, so disposing either way, or both, drains and disposes exactly once.
+* **`OutboxProducerMediator.Dispose` no longer propagates a broker-close failure.** `Dispose(bool)` now wraps `_producerRegistry.CloseAll()` in a try/catch that logs and swallows the failure, so a broker that throws while closing its producers no longer escapes from `Dispose` — and, more importantly, no longer skips the subsequent factory disposals (the per-resolution scope drain this owner exists to perform). Previously a `CloseAll()` throw propagated out of `Dispose` and left those factories undisposed.
+* **Release each resolution's lease when finished; over-releasing a lease is now a safe no-op.** Release keys on the `Lease<T>` (the resolution), not the instance, so `Release(lease)` disposes exactly that resolution's scope. This designs out the former shared-instance hazard: a mapper or transform registered in the container as a `Singleton` (or otherwise handing back one shared instance) under the default `Transient` `MapperLifetime`/`TransformerLifetime` no longer risks one resolution's release disposing another still-live resolution's scope, and a spurious second `Release` of the same lease — or a `Release(null)`, since `Get`/`Create` return `Lease<T>?` — is an idempotent no-op rather than a pop of another resolution's scope or a `NullReferenceException`. All in-tree call sites already release exactly once; this only concerns code that resolves and releases mappers/transforms directly.
+* **`HasPipeline` now answers by resolving the mapper *type*, not by creating a probe instance** (see `ResolveMapperInfo` above). This changes the exception on one narrow misconfiguration — a mapper *type* registered but whose *instance* cannot be built (a `SimpleMessageMapperFactory` `Func` that returns `null`, or a `Register` without a matching container registration). The type is kept in sync with the container on the `AddBrighter` path, so this does not arise there.
+  * **Send path** (`OutboxProducerMediator.MapMessage` / `MapMessageAsync`): `HasPipeline` now returns `true` for that type, so building the pipeline fails and throws `ConfigurationException` (with the underlying `InvalidOperationException` as its inner exception) rather than the previous `ArgumentOutOfRangeException("No message mapper defined for request")`.
+  * **Reply path** (`CreateRequestFromMessage`): where an unresolvable *async* mapper type previously made the async probe `false` and the reply **fell through to the sync pipeline**, it now throws `ConfigurationException` on the async attempt instead of silently using the sync pipeline. The normal fall-through — no async mapper registered at all — is unchanged.
+* **A failed release from a transform scope or pipeline `Dispose`/`DisposeAsync` now surfaces as an `AggregateException`.** The transform lifetime scope drains every tracked transform in one pass and collects any release failures, throwing them together as an `AggregateException` (a single failure is wrapped too); previously the first failure propagated unwrapped. If both a transform-scope disposal and the pipeline's mapper release throw, both are surfaced (the mapper-release failure no longer masks the transform one). Every in-tree caller logs and swallows release failures, so this has no functional impact on the standard paths; it only matters to code that disposes a `TransformPipeline`/`TransformLifetimeScope` directly and catches a specific exception type — catch `AggregateException` (or its `InnerExceptions`).
+* **`Dispatcher` and `OutboxProducerMediator` dispose the mapper registry and transform factories only when they own them.** Both types became `IDisposable`/gained disposal of the runtime mapper/transform graph in this release. Ownership is now explicit: the constructors (and `DispatchBuilder.Build`) take `ownsRegistry`/`ownsTransformerFactories`, both **defaulting to `false`**. The DI paths (`AddServiceActivator`/`AddBrighter`) new up a graph solely for their owner and pass `true`, so container teardown disposes it as before. On the **manual-wiring** path — where a `MessageMapperRegistry` is commonly shared between a `Dispatcher` and a `CommandProcessor`'s external bus — the default `false` means neither disposes the shared registry out from under the other; if you construct these directly and want them to own (dispose) the graph, pass `ownsRegistry: true, ownsTransformerFactories: true`.
 
 ## Release 10.0.0
 

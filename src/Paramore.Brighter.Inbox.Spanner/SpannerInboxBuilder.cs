@@ -21,7 +21,8 @@ public class SpannerInboxBuilder
             `CommandType` STRING(256),
             `CommandBody` JSON,
             `Timestamp` TIMESTAMP,
-            `ContextKey` STRING(256) 
+            `ContextKey` STRING(256),
+            `CausationId` STRING(256)
         ) PRIMARY KEY (`CommandId`, `ContextKey`)
         """;
     

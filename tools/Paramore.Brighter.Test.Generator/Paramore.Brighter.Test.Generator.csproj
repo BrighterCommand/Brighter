@@ -30,6 +30,10 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
 
+    <None Update="Templates\Outbox\Causation\*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+
     <None Update="Templates\MessagingGateway\Proactor\*">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
