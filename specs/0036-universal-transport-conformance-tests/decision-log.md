@@ -470,3 +470,43 @@ immediate-redelivery gaps as Pull are expected there too, to be confirmed on rea
 (non-ledger-gated) streaming tests hang, the `~MessagingGateway.Stream.`/`.StreamOrdering.` suites cannot be
 run locally; the ledger's no-`Unknown` state is the gate, and dotnet-test verification is deferred to a
 real-Pub/Sub run.**
+
+## Decided: the umbrella issue #4240 covers EVERY Deferred cell — no per-deferral follow-up issues
+
+**Maintainer ruling (2026-09-02). Do NOT re-litigate.** Every `Deferred -> #NNNN (sign-off: @maintainer)`
+cell in the ledger resolves to the **single umbrella issue [#4240](https://github.com/BrighterCommand/Brighter/issues/4240)**
+— the spec's own tracking issue. Distinct per-deferral follow-up issues are **not** to be raised.
+
+**Scope of the ruling** — this covers all currently deferred cells, namely:
+
+| Deferral | Cells | Cause |
+|---|---|---|
+| `AzureServiceBus / AzureServiceBusMessagingGateway` | all 11 | infra — no broker, no credentials |
+| `GCP / Stream` + `/ StreamOrdering` | all 11 each | streaming pull unrunnable on the emulator |
+| `GCP / Pull` + `/ PullOrdering` | FR-2/4/5/6/8/17 | emulator cannot exercise IAM/DLQ; `Reject` == `Acknowledge` |
+| `RocketMQ / RocketMQMessagingGateway` | FR-2, FR-15 | upstream no-op `Requeue` (`ChangeInvisibleDuration` commented out) |
+| `RMQ.Async / Classic`, `/ Quorum`, `RMQ.Sync / RmqSyncMessagingGateway` | FR-5 | `BasicReject` routes to the DLX, not a distinct invalid channel |
+| `Redis / RedisMessagingGateway`, `MSSQL / MSSQLMessagingGateway` | FR-16 | destructive read → `Nack` is a no-op |
+| `AWS / SqsFifo`, `AWS.V4 / SqsFifo` | FR-9 | SQS FIFO rejects per-message `DelaySeconds` |
+| OOS-2 supplementary scheduler tests | n/a | six scheduler-capable gateways, out of scope |
+
+**Rationale.** Each deferral is already documented in `conformance-status.md` with its specific mechanism and
+evidence, so a separate issue per cell would duplicate that record without adding information, and would
+fragment tracking of one coherent piece of work across a dozen tickets. The ledger — not the issue tracker —
+is the single source of truth for per-configuration conformance state (FR-21 / AC-24); #4240 is the place the
+work is tracked.
+
+**Consequence for the "Raise follow-up issues" task (ralph task 60).** It requires no issue creation: every
+real deferred cell **already** references `#4240`, verified this session. Its remaining work is purely the
+`#NNNN`-placeholder audit, and **its RALPH-VERIFY grep must be widened**. The grep currently excludes only
+`**/ConformanceAudit/**`, but four legitimate *format placeholders* survive and are NOT deferred cells:
+
+- `conformance-status.md` line 16 (cell-vocabulary table) and line 21 (placeholder-row rule) — these document
+  the **notation** `Deferred -> #NNNN`, not any cell's state.
+- `tests/Paramore.Brighter.Test.Generator.Tests/CanonicalTemplates/When_generating_everywhere_should_emit_skipped_canonical_suite_in_all_wired_projects.cs`
+- `tests/Paramore.Brighter.Test.Generator.Tests/CanonicalTemplates/When_ledger_marks_a_cell_should_emit_skip_only_when_not_proven.cs`
+
+The last two are **test fixtures asserting the placeholder behaviour** — exactly the category the task text
+already carves out for `ConformanceAudit`, but they live under `CanonicalTemplates/` and so are not excluded.
+Widen the exclusion (or target the grep at deferred cells and generated Skip markers only), or the task cannot
+pass. Because no issues need raising, task 60 is safe to run **unattended**.
