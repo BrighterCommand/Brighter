@@ -173,6 +173,17 @@ public class MessagingGatewayGenerator(
             return true;
         }
 
+        // Narrower than the gate above: a transport can honour an explicit Validate and still
+        // complete silently against infrastructure that is not there, so this skips assume_channel
+        // alone and leaves validate_channel generated.
+        if (
+            !configuration.HasSupportToDetectMissingInfrastructureOnAssume
+            && fileName.Contains("assume_channel")
+        )
+        {
+            return true;
+        }
+
         return false;
     }
 

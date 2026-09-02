@@ -22,7 +22,7 @@
       "LedgerKey": "Kafka / Consumer",
       "HasSupportToPublishConfirmation": true,
       "HasSupportToValidateBrokerExistence": false,
-      "HasSupportToValidateInfrastructure": false,
+      "HasSupportToDetectMissingInfrastructureOnAssume": false,
       "ReceiveMessageTimeoutInMilliseconds": 15000
     },
     "PartitionKey": {

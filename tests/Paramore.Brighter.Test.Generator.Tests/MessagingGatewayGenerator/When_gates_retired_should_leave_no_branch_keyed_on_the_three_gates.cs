@@ -134,6 +134,55 @@ public class WhenGatesRetiredShouldLeaveNoBranchKeyedOnTheThreeGates : IDisposab
     }
 
     /// <summary>
+    /// HasSupportToDetectMissingInfrastructureOnAssume is deliberately NARROWER than
+    /// HasSupportToValidateInfrastructure: it skips assume_channel alone and leaves validate_channel
+    /// generated. Kafka's KIP-848 consumer needs exactly this — it honours an explicit
+    /// OnMissingChannel.Validate but completes silently against a topic that does not exist, so the
+    /// coarse flag was suppressing a validate_channel test that passes.
+    /// </summary>
+    [Fact]
+    public async Task When_assume_detection_is_unsupported_should_skip_assume_channel_but_still_emit_validate_channel()
+    {
+        // Arrange — only the narrow gate is false; HasSupportToValidateInfrastructure keeps its
+        // default of true, so the explicit-validate template must still be generated
+        var configuration = new TestConfiguration
+        {
+            Namespace = "MyApp.Tests",
+            DestinationFolder = _testDirectory,
+            MessageBuilder = "TestMessageBuilder",
+            MessageAssertion = "TestMessageAssertion",
+            MessagingGateway = new MessagingGatewayConfiguration
+            {
+                Prefix = "Test",
+                Namespace = "MyApp.Tests",
+                MessageGatewayProvider = "TestProvider",
+                Publication = "Publication",
+                Subscription = "Subscription",
+                HasSupportToDetectMissingInfrastructureOnAssume = false,
+            }
+        };
+        var generator = new Generators.MessagingGatewayGenerator(_logger);
+        var reactorOutput = Path.Combine(_testDirectory, "MessagingGateway", "Test", "Generated", "Reactor");
+
+        // Act
+        await generator.GenerateAsync(configuration);
+
+        // Assert — assume_channel is skipped
+        Assert.False(
+            File.Exists(Path.Combine(reactorOutput,
+                "When_infrastructure_missing_and_assume_channel_should_throw_exception.cs")),
+            "assume_channel must be skipped when the transport cannot detect missing infrastructure " +
+            "under OnMissingChannel.Assume");
+
+        // Assert — validate_channel is NOT skipped: that is the whole point of the narrower gate
+        Assert.True(
+            File.Exists(Path.Combine(reactorOutput,
+                "When_infrastructure_missing_and_validate_channel_should_throw_exception.cs")),
+            "validate_channel must still be generated — the narrow gate must not suppress the " +
+            "explicit-validate test the way HasSupportToValidateInfrastructure does");
+    }
+
+    /// <summary>
     /// The legacy gating mechanism matched a closed list of template names. If anyone ever
     /// reintroduces gating by SUBSTRING instead, a canonical template whose name happens to contain
     /// "requeuing" and "with_delay" — as the real FR-2 template

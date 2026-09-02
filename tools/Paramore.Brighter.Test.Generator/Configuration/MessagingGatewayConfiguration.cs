@@ -96,6 +96,18 @@ public class MessagingGatewayConfiguration
     public bool HasSupportToValidateInfrastructure { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets a value indicating whether the messaging gateway surfaces an error when
+    /// infrastructure is absent and <c>OnMissingChannel.Assume</c> told it not to look.
+    ///
+    /// This is narrower than <see cref="HasSupportToValidateInfrastructure"/>, which covers the
+    /// explicit <c>OnMissingChannel.Validate</c> check. A transport can support the explicit check
+    /// and still complete a send/receive silently against infrastructure that does not exist —
+    /// Kafka's KIP-848 consumer-group protocol does exactly that. Setting this false skips only the
+    /// <c>assume_channel</c> template, leaving <c>validate_channel</c> generated.
+    /// </summary>
+    public bool HasSupportToDetectMissingInfrastructureOnAssume { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets the maximum time to wait when receiving a message in milliseconds.
     /// </summary>
     public int ReceiveMessageTimeoutInMilliseconds { get; set; } = 300;
