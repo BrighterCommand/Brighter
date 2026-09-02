@@ -728,7 +728,7 @@
 
 > Precondition for every task in this phase: `specs/0036-universal-transport-conformance-tests/conformance-status.md` has NO `Unknown` cell — every cell reads `Pass`, `Fixed (#…)`, or `Deferred -> #NNNN (sign-off: @maintainer)`, and every one of the twelve transports is represented (placeholders resolved to signed-off Deferred). Order within the phase is load-bearing: templates + generated copies first, keys last.
 
-- [ ] **Delete the four legacy templates and sweep their 80 generated copies**
+- [x] **Delete the four legacy templates and sweep their 80 generated copies**
   - **Behavior**: Delete the four legacy gated templates in BOTH variants and manually sweep all 80 checked-in generated copies (the generator never deletes stale files): 6 delayed-message, 36 plain-requeue, 6 with_delay, 32 exhaustion. After this, no legacy template or generated copy remains, and every remaining delayed-requeue template passes a non-null `TimeSpan` to `Requeue`/`RequeueAsync`.
   - **Test file**: `tests/Paramore.Brighter.Test.Generator.Tests/Cleanup/When_legacy_templates_deleted_should_leave_no_template_or_generated_copy.cs`
   - **Test should verify**:

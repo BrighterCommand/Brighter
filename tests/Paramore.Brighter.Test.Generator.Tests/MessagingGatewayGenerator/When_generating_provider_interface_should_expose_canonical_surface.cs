@@ -83,16 +83,6 @@ public class WhenGeneratingProviderInterfaceShouldExposeCanonicalSurface : IDisp
         // Assert — XML doc states the MT_NONE contract for bounded read members (FR-1(3))
         Assert.Contains("MT_NONE", proactorInterface);
 
-        // Assert — The exhaustion template passes deadLetterRoutingKey explicitly, not the bare positional true (FR-1(6))
-        var reactorExhaustion = await File.ReadAllTextAsync(
-            Path.Combine(reactorOutput,
-                "When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue.cs"));
-        Assert.Contains("deadLetterRoutingKey:", reactorExhaustion);
-
-        var proactorExhaustion = await File.ReadAllTextAsync(
-            Path.Combine(proactorOutput,
-                "When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue.cs"));
-        Assert.Contains("deadLetterRoutingKey:", proactorExhaustion);
     }
 
     public void Dispose()
