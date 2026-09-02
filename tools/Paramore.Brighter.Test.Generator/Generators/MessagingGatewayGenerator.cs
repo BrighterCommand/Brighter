@@ -83,16 +83,6 @@ public class MessagingGatewayGenerator(
         ["FR-22"] = "canonical plain requeue",
     };
 
-    // The four legacy templates gated by the three capability flags below.
-    // This list is closed: nothing is ever added. It is also the deletion work list for step C.
-    private static readonly string[] LegacyGatedTemplates =
-    [
-        "When_reading_a_delayed_message_via_the_messaging_gateway_should_delay_delivery",
-        "When_requeuing_a_failed_message_should_receive_message_again",
-        "When_requeuing_a_failed_message_with_delay_should_receive_message_again",
-        "When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue",
-    ];
-
     // Resolved once per GenerateAsync(TestConfiguration) call.
     private IAmAConformanceLedger? _ledger;
 
@@ -196,32 +186,6 @@ public class MessagingGatewayGenerator(
         )
         {
             return true;
-        }
-
-        // The three capability gates are consulted only for the closed set of legacy templates;
-        // canonical templates are ungated by construction, regardless of flag values.
-        var templateBaseName = Path.GetFileName(fileName).Replace(".cs.liquid", "");
-        if (Array.Exists(LegacyGatedTemplates, name => name == templateBaseName))
-        {
-            if (!configuration.HasSupportToDelayedMessages && fileName.Contains("delayed_message"))
-            {
-                return true;
-            }
-
-            if (!configuration.HasSupportToDelayedMessages && fileName.Contains("with_delay"))
-            {
-                return true;
-            }
-
-            if (!configuration.HasSupportToDeadLetterQueue && fileName.Contains("dead_letter_queue"))
-            {
-                return true;
-            }
-
-            if (!configuration.HasSupportToRequeue && fileName.Contains("requeuing"))
-            {
-                return true;
-            }
         }
 
         if (
