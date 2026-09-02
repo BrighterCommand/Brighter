@@ -20,7 +20,8 @@ namespace Paramore.Brighter.AWS.V4.Tests.Helpers;
 /// belonging to a particular test, so anything a fixture does not delete itself survives until
 /// someone sweeps the account by hand. Fixtures pass every name they generate through
 /// <see cref="TrackTopic"/> or <see cref="TrackQueue"/> and call <see cref="ReapAsync"/> from
-/// teardown.
+/// teardown. Tracking is not synchronised: a fixture is expected to register its names from the
+/// thread that builds it.
 ///
 /// Names are reaped rather than the objects built from them. A test that fails while standing
 /// its infrastructure up has still created the topic or queue, and by that point there is no
@@ -81,12 +82,21 @@ public class AwsTestResourceReaper
     /// </remarks>
     public async Task ReapAsync(CancellationToken cancellationToken = default)
     {
+        // Teardown is usually reached with no token at all, and the reactor path blocks a test
+        // thread on the result. A hung SNS or SQS call would hang the run, which is the sort of
+        // harm this method promises not to do.
+        using var timeout = cancellationToken.CanBeCanceled
+            ? null
+            : new CancellationTokenSource(TimeSpan.FromSeconds(30));
+
+        var token = timeout?.Token ?? cancellationToken;
+
         try
         {
             // Topics first. Deleting a topic takes its subscriptions with it, which would
             // otherwise be left pointing at queues we are about to delete.
-            await ReapTopicsAsync(cancellationToken);
-            await ReapQueuesAsync(cancellationToken);
+            await ReapTopicsAsync(token);
+            await ReapQueuesAsync(token);
         }
         finally
         {

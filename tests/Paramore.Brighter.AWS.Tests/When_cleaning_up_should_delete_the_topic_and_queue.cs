@@ -1,5 +1,7 @@
 using System;
 using System.Threading.Tasks;
+using Amazon;
+using Amazon.SecurityToken.Model;
 using Amazon.SimpleNotificationService.Model;
 using Amazon.SQS.Model;
 using Paramore.Brighter.AWS.Tests.Helpers;
@@ -16,7 +18,8 @@ namespace Paramore.Brighter.AWS.Tests;
 /// they need AWS credentials.
 /// </summary>
 [Trait("Category", "AWS")]
-public class MessageGatewayProviderCleanUpTests
+[Trait("LiveAWS", "true")]
+public class MessageGatewayProviderCleanUpTests : IAsyncLifetime
 {
     private readonly SnsStandardMessageGatewayProvider _provider = new();
     private readonly AWSMessagingGatewayConnection _connection = GatewayFactory.CreateFactory();
@@ -29,6 +32,14 @@ public class MessageGatewayProviderCleanUpTests
         _routingKey = _provider.GetOrCreateRoutingKey();
         _channelName = _provider.GetOrCreateChannelName();
     }
+
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    /// <summary>
+    /// Reaps whatever the test did not. Safe to run after a test that already tore down: reaping
+    /// is a single attempt, so the second call finds nothing left to do.
+    /// </summary>
+    public async Task DisposeAsync() => await _provider.CleanUpAsync(null, null, []);
 
     [Fact]
     public async Task When_cleaning_up_should_delete_the_topic_and_queue()
@@ -56,8 +67,17 @@ public class MessageGatewayProviderCleanUpTests
             () => _provider.CleanUpAsync(producer, new PurgeFailingChannelAsync(channel), []));
 
         //assert
-        Assert.IsType<PurgeQueueInProgressException>(exception);
-        await AssertTopicAndQueueDeletedAsync();
+        try
+        {
+            Assert.IsType<PurgeQueueInProgressException>(exception);
+            await AssertTopicAndQueueDeletedAsync();
+        }
+        finally
+        {
+            // The purge threw before CleanUpAsync could dispose either of these.
+            channel.Dispose();
+            await producer.DisposeAsync();
+        }
     }
 
     private async Task<(IAmAMessageProducerAsync Producer, IAmAChannelAsync Channel)> CreateInfrastructureAsync()
@@ -68,8 +88,19 @@ public class MessageGatewayProviderCleanUpTests
         var producer = await _provider.CreateProducerAsync(publication);
         var channel = await _provider.CreateChannelAsync(subscription);
 
-        using var snsClient = new AWSClientFactory(_connection).CreateSnsClient();
-        _topicArn = (await snsClient.FindTopicAsync(_routingKey.Value)).TopicArn;
+        // Composed rather than looked up: FindTopicAsync pages ListTopics, which is eventually
+        // consistent, so a topic created moments ago may not be listed yet.
+        using var stsClient = new AWSClientFactory(_connection).CreateStsClient();
+        var identity = await stsClient.GetCallerIdentityAsync(new GetCallerIdentityRequest());
+
+        _topicArn = new Arn
+        {
+            Partition = _connection.Region.PartitionName,
+            Service = "sns",
+            Region = _connection.Region.SystemName,
+            AccountId = identity.Account,
+            Resource = _routingKey.Value
+        }.ToString();
 
         return (producer, channel);
     }

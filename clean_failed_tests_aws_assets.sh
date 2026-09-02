@@ -238,6 +238,9 @@ TEST_PREFIXES="Producer-Send-Tests|Producer-Requeue-Tests|Producer-DLQ-Tests|Pro
 
 # The 32-hex GUID makes this pattern specific enough that it cannot collide with a
 # hand-named resource; it is the only thing standing between a real queue and deletion.
+# Note the asymmetry with TEST_PREFIXES above, which carries no such requirement and is anchored
+# at the start only: a queue named DLQ-Reader-orders would be swept by it. That is tolerable in a
+# dedicated test account and nowhere else.
 GENERATED_TEST_PATTERN="(sqs|sns)-(std|fifo)(-ch)?-[0-9a-f]{32}"
 
 # A resource is treated as a test leftover if its name matches either convention.

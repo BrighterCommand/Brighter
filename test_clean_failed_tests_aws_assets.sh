@@ -109,10 +109,15 @@ assert_not_empty() {
     fi
 }
 
-# The GUIDs in the convention names only have to be 32 hex characters. uuidgen ships with
-# every platform the AWS CLI runs on, which openssl does not.
+# The GUIDs in the convention names only have to be 32 hex characters. uuidgen covers the CI
+# runners, but it is uuid-runtime on Debian and Ubuntu and is missing from leaner images, so fall
+# back to urandom rather than assume either it or openssl is present.
 hex_id() {
-    uuidgen | tr -d '-' | tr '[:upper:]' '[:lower:]'
+    if command -v uuidgen >/dev/null 2>&1; then
+        uuidgen | tr -d '-' | tr '[:upper:]' '[:lower:]'
+    else
+        od -An -tx1 -N16 /dev/urandom | tr -d ' \n'
+    fi
 }
 
 # --- Setup: create tagged and untagged resources ---
