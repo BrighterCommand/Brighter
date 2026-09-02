@@ -23,10 +23,13 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: eu-west-1
       AWS_DEFAULT_OUTPUT: json
-      # The name sweep matches most of what the AWS suites create, so the six-hourly run could
-      # delete queues out from under a job that is still running. It leaves recent ones alone;
-      # the run triggered by CI completing has nothing in flight to protect and sweeps the lot.
-      CLEANUP_MIN_AGE_SECONDS: ${{ github.event_name == 'schedule' && '3600' || '0' }}
+      # The name sweep matches most of what the AWS suites create, so it could delete queues out
+      # from under a job that is still running. The guard applies on every trigger, not just the
+      # schedule: CI runs on every push and every pull request and declares no concurrency group,
+      # so the run that just finished is never the only one in the account. Nothing is deferred by
+      # this that would otherwise leak — providers reap their own resources now, and the sweep is
+      # a backstop for the runs that die before they can.
+      CLEANUP_MIN_AGE_SECONDS: 3600
 
     steps:
       - uses: actions/checkout@v7
