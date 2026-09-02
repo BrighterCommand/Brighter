@@ -41,7 +41,7 @@ public class WhenRejectingMessageWithUnacceptableAndNoInvalidChannelShouldFallba
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #NNNN — fallback: unacceptable, DLQ-only not yet conformant for AzureServiceBus / (not yet declared) (maintainer sign-off)")]
+    [Fact(Skip = "Deferred: #4240 — fallback: unacceptable, DLQ-only not yet conformant for AzureServiceBus / AzureServiceBusMessagingGateway (maintainer sign-off)")]
     public async Task When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq_async()
     {
         // Arrange — DLQ configured only; no invalid channel (FR-6, AC-6, FR-1(2))

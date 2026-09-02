@@ -6,7 +6,7 @@
     "MessageGatewayProvider": "Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.AzureServiceBusMessageGatewayProvider",
     "Category": "AzureServiceBus",
     "CollectionName": "AzureServiceBus",
-    "LedgerKey": "AzureServiceBus / (not yet declared)",
+    "LedgerKey": "AzureServiceBus / AzureServiceBusMessagingGateway",
     "HasSupportToPublishConfirmation": false,
     "HasSupportToValidateBrokerExistence": true,
     "HasSupportToValidateInfrastructure": true,

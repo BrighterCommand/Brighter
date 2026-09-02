@@ -712,7 +712,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && (cd tests/Paramore.Brighter.AzureServiceBus.Tests && dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator --framework net10.0) && dotnet build tests/Paramore.Brighter.AzureServiceBus.Tests`
   - **References**: requirements FR-20(1),(2), AC-23, FR-13 mapping + the `Azure.Tests` trap; ADR 0066 "provider implementations FR-20 adds".
 
-- [ ] **Onboard AzureServiceBus: run against a broker or record a signed-off Deferred (FR-20 step 3)**
+- [x] **Onboard AzureServiceBus: run against a broker or record a signed-off Deferred (FR-20 step 3)**
   - **Behavior**: Attempt to run ASB's generated canonical suite against a real broker (cloud instance/emulator). ASB is a cloud service with no container story in this repo, so infra is the likeliest block — apply flag-and-move-on: replace the placeholder ledger row with per-configuration rows and record `Deferred -> #NNNN (sign-off: @maintainer)` with Skip markers on infra grounds; the configuration stays in the target set and is never dropped. If infra can be stood up, record `Pass`/`Fixed` where both variants pass against the broker.
   - **Test file**: `tests/Paramore.Brighter.AzureServiceBus.Tests/MessagingGateway/Generated/Reactor/*.cs` (generated canonical suite)
   - **Test should verify**:

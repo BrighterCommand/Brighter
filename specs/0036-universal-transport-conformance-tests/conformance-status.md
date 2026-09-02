@@ -254,6 +254,45 @@ cell remains `Unknown`.
     with the identical 9 mTLS tests. After the collection fix there are **zero non-mTLS failures**. The
     conformance conclusion rests on the generated canonical suite, which is fully green apart from the
     FR-5 Deferred skips.
+- `AzureServiceBus / AzureServiceBusMessagingGateway` — **ALL ELEVEN cells `Deferred -> #4240
+  (sign-off: @maintainer)` on INFRA grounds.** AC-23 makes *"inability to provide CI infrastructure"* a
+  valid ground for deferral, and ADR `0067` ("Negative") anticipated ASB landing here. **This is a
+  deferral of VERIFICATION, not a declaration of non-conformance** — no ASB behaviour has been observed
+  to fail; none has been observed at all. The configuration stays in the target set and is never dropped
+  (FR-21).
+  - **Broker attempt and why it failed.** ASB is a cloud service with no container story in this repo:
+    there is **no `docker-compose-*asb*.yaml`**, the credentials `ASBCreds.cs` requires
+    (`BrighterTestsASBConnectionString` / `BrighterTestsASBNameSpace`) are **both unset**, the `az` CLI
+    is **absent**, and no Service Bus emulator container is present. `ASBCreds.ASBClientProvider` throws
+    at runtime when neither env var is set, so every canonical test would fail on client construction
+    rather than on a behaviour.
+  - **The wiring is real and ready to flip.** Task 54 (`b70db98e9`) landed a genuine
+    `AzureServiceBusMessageGatewayProvider` implementing both provider interfaces, and the 22 canonical
+    tests generate. The DLQ read hook is a **real bounded read** — a `ServiceBusReceiver` with
+    `SubQueue.DeadLetter` polling the built-in `$DeadLetterQueue` entity — not a `Message.Empty` stub.
+  - **`RejectionMetadataKeys` are all `string.Empty` — a native-DLQ declaration, NOT an unfilled stub.**
+    `AzureServiceBusConsumer.Reject` dead-letters natively via
+    `ServiceBusReceiver.DeadLetterAsync(lockToken, reason, description)` and stamps no Brighter bag keys,
+    exactly as RMQ does. Under the maintainer-approved **FR-8 relaxation** a native-dead-letter transport
+    is conformant on **routing alone**. ⚠️ This is the same empty-keys situation the GCP guardrail flagged,
+    but the opposite reading applies here because the native dead-letter path is real and verified in
+    source — contrast GCP, where `Reject` == `Acknowledge` (discards).
+  - **⚠️ The `dotnet test` leg of this row's RALPH-VERIFY cannot pass on a machine without ASB
+    credentials, and did not pass BEFORE this work either.** Measured: a baseline run at commit
+    `32d1a6f9f` (before ASB onboarding) is **112 pass / 10 fail / 0 skip** — the project's hand-written
+    broker tests (`ASBConsumerTests`, `ASBProducerTests`, `LargeAsbMessageProducerTests`) already threw
+    `ASB ConnectionString or Namespace not set`. After onboarding it is **118 pass / 18 fail / 24 skip**:
+    the **22 canonical tests are correctly skipped** carrying their `Deferred: #4240` markers, and the 8
+    added failures are the generator's *non-canonical* companions (basic post/receive, multi-message,
+    multi-thread post, activity-context) which are not FR-mapped and so take no ledger-driven Skip —
+    they fail on the identical missing-credentials exception, not on any behaviour.
+    **Precedent**: this is the same resolution as `GCP / Stream` + `/ StreamOrdering`, where the scoped
+    suite could not be run locally and **the no-`Unknown` ledger is the gate**, with `dotnet test`
+    verification deferred to real infrastructure.
+  - **To close these deferrals**: supply `BrighterTestsASBConnectionString` (or
+    `BrighterTestsASBNameSpace`) against a real namespace, or stand up the Service Bus emulator, flip the
+    cells, and regenerate. No code change is expected to be needed to *run* — only to fix whatever the
+    run then reveals.
 
 ## Conformance Matrix
 
@@ -279,6 +318,6 @@ cell remains `Unknown`.
 | RMQ.Async / Classic | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | RMQ.Async / Quorum | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | RocketMQ / RocketMQMessagingGateway | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) |
-| AzureServiceBus / (not yet declared) | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown | Unknown |
+| AzureServiceBus / AzureServiceBusMessagingGateway | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) |
 | MQTT / MqttMessagingGateway | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) |
 | RMQ.Sync / RmqSyncMessagingGateway | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) |
