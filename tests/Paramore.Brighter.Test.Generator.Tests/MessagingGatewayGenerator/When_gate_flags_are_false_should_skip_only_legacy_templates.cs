@@ -48,9 +48,6 @@ public class WhenGateFlagsAreFalseShouldSkipOnlyLegacyTemplates : IDisposable
                 MessageGatewayProvider = "TestProvider",
                 Publication = "Publication",
                 Subscription = "Subscription",
-                HasSupportToDelayedMessages = false,
-                HasSupportToDeadLetterQueue = false,
-                HasSupportToRequeue = false,
                 HasSupportToPublishConfirmation = false,
                 HasSupportToValidateBrokerExistence = false,
                 HasSupportToValidateInfrastructure = false,
@@ -62,34 +59,36 @@ public class WhenGateFlagsAreFalseShouldSkipOnlyLegacyTemplates : IDisposable
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — the four legacy templates are NOT generated when their capability gates are false
+        // Assert — the four legacy templates are NOT generated. Their capability gates were retired in
+        // ADR 0066 step C; the templates themselves are deleted, so these now guard against a restore.
         Assert.False(
             File.Exists(Path.Combine(reactorOutput,
                 "When_reading_a_delayed_message_via_the_messaging_gateway_should_delay_delivery.cs")),
-            "Legacy delayed-message template must be skipped when HasSupportToDelayedMessages is false");
+            "Legacy delayed-message template is deleted and must never be generated again");
 
         Assert.False(
             File.Exists(Path.Combine(reactorOutput,
                 "When_requeuing_a_failed_message_should_receive_message_again.cs")),
-            "Legacy requeue template must be skipped when HasSupportToRequeue is false");
+            "Legacy requeue template is deleted and must never be generated again");
 
         Assert.False(
             File.Exists(Path.Combine(reactorOutput,
                 "When_requeuing_a_failed_message_with_delay_should_receive_message_again.cs")),
-            "Legacy requeue-with-delay template must be skipped when HasSupportToDelayedMessages is false");
+            "Legacy requeue-with-delay template is deleted and must never be generated again");
 
         Assert.False(
             File.Exists(Path.Combine(reactorOutput,
                 "When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue.cs")),
-            "Legacy dead-letter-queue template must be skipped when HasSupportToDeadLetterQueue is false");
+            "Legacy dead-letter-queue template is deleted and must never be generated again");
 
-        // Assert — a canonical template whose name contains both "requeuing" and "with_delay" IS generated
-        // because it is absent from the legacy list; gates are consulted only for the four legacy names
+        // Assert — a canonical template whose name contains both "requeuing" and "with_delay" IS generated.
+        // The closed legacy list is gone, so nothing can gate it; this guards against substring matching
+        // being reintroduced as a gating mechanism (ADR 0066 "the substring-matching hazard")
         Assert.True(
             File.Exists(Path.Combine(reactorOutput,
                 "When_requeuing_a_canonical_message_with_delay_should_confirm_redelivery.cs")),
             "Canonical template containing 'requeuing' and 'with_delay' must not be gated — " +
-            "the closed legacy list, not substring matching, determines gate applicability");
+            "substring matching must never determine gate applicability");
 
         // Assert — retained gates (confirming_posting, no_broker_created, assume_channel, validate_channel)
         // still behave as before: their templates are skipped when the corresponding flag is false

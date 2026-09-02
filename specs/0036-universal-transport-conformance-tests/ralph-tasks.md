@@ -753,7 +753,7 @@
   - **RALPH-VERIFY**: `dotnet build tools/Paramore.Brighter.Test.Generator && dotnet test tests/Paramore.Brighter.Test.Generator.Tests --filter "FullyQualifiedName~MessagingGatewayGenerator" && ! grep -nE "HasSupportToDelayedMessages|HasSupportToDeadLetterQueue|HasSupportToRequeue" tools/Paramore.Brighter.Test.Generator/Generators/MessagingGatewayGenerator.cs`
   - **References**: requirements FR-10(4), AC-10(c); ADR 0066 "Step C", "four branches keyed on three gates".
 
-- [ ] **Remove the three properties from MessagingGatewayConfiguration**
+- [x] **Remove the three properties from MessagingGatewayConfiguration**
   - **Behavior**: Delete `HasSupportToDelayedMessages`, `HasSupportToDeadLetterQueue`, and `HasSupportToRequeue` from `MessagingGatewayConfiguration` (former lines 91/96/106). The generator builds; the retained flag properties are untouched.
   - **Test file**: `tests/Paramore.Brighter.Test.Generator.Tests/MessagingGatewayGenerator/When_gates_retired_should_absent_config_properties.cs`
   - **Test should verify**:
