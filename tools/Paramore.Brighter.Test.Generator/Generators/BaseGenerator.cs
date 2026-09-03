@@ -47,18 +47,24 @@ public abstract class BaseGenerator(ILogger logger)
     /// <param name="templateFolderName">The name of the subfolder within the Templates directory that contains the Liquid templates.</param>
     /// <param name="model">The model object whose properties are available to the templates during rendering.</param>
     /// <param name="ignore">An optional predicate that, when returning <c>true</c> for a template file name, causes that template to be skipped.</param>
-    protected virtual async Task GenerateAsync(TestConfiguration configuration, 
+    /// <param name="prepareModel">
+    /// An optional action invoked with the template file name and the model immediately before
+    /// each template is rendered. Subclasses use this to mutate per-template state on the model
+    /// (for example, setting the ledger-driven <c>Skip</c> value on a canonical template).
+    /// </param>
+    protected virtual async Task GenerateAsync(TestConfiguration configuration,
         string prefix, string templateFolderName,
-        object model, Func<string, bool>? ignore = null)
+        object model, Func<string, bool>? ignore = null,
+        Action<string, object>? prepareModel = null)
     {
         var templatePath = Path.Combine(AppContext.BaseDirectory, "Templates", templateFolderName);
         var fileNames = Directory.GetFiles(templatePath , "*.liquid", SearchOption.TopDirectoryOnly);
-        
+
         logger.LogInformation("Found {FileCount} liquid files", fileNames.Length);
-        
+
         var destinationFolder = Path.Combine(configuration.DestinationFolder, prefix);
         logger.LogInformation("Base destination folder {FileCount}", destinationFolder);
-        
+
         ignore  ??= _ => false;
 
         foreach (var fileName in fileNames)
@@ -68,7 +74,9 @@ public abstract class BaseGenerator(ILogger logger)
                 logger.LogInformation("Skipping {FileName}", fileName);
                 continue;
             }
-            
+
+            prepareModel?.Invoke(fileName, model);
+
             var file = new FileInfo(fileName);
             var destinationTemplateFile = new FileInfo(Path.Combine(destinationFolder, file.Name.Replace(".liquid", string.Empty)));
             if (destinationTemplateFile.Directory == null)
@@ -76,11 +84,11 @@ public abstract class BaseGenerator(ILogger logger)
                 logger.LogError("Destination folder {DestinationFolder} does not exist", destinationFolder);
                 continue;
             }
-            
+
             destinationTemplateFile.Directory.Create();
-            
+
             logger.LogInformation("Generating file from {TemplatePath} to {DestinationPath}", file.FullName, destinationTemplateFile.FullName);
-            
+
             await _parser.ParseAsync(new ParseContext(file.FullName,
                 destinationTemplateFile.FullName,
                 model));

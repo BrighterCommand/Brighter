@@ -86,29 +86,30 @@ public class MessagingGatewayConfiguration
     public bool HasSupportToPublishConfirmation { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether the messaging gateway supports delayed message delivery.
-    /// </summary>
-    public bool HasSupportToDelayedMessages { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether the messaging gateway supports dead letter queues.
-    /// </summary>
-    public bool HasSupportToDeadLetterQueue { get; set; }
-
-    /// <summary>
     /// Gets or sets a value indicating whether the messaging gateway supports validating broker existence.
     /// </summary>
     public bool HasSupportToValidateBrokerExistence { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether the messaging gateway supports requeuing messages.
-    /// </summary>
-    public bool HasSupportToRequeue { get; set; }
-
-    /// <summary>
     /// Gets or sets a value indicating whether the messaging gateway supports validating infrastructure existence.
     /// </summary>
     public bool HasSupportToValidateInfrastructure { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the messaging gateway surfaces an error when
+    /// infrastructure is absent and <c>OnMissingChannel.Assume</c> told it not to look.
+    ///
+    /// This is narrower than <see cref="HasSupportToValidateInfrastructure"/>, which covers the
+    /// explicit <c>OnMissingChannel.Validate</c> check. A transport can support the explicit check
+    /// and still complete a send/receive silently against infrastructure that does not exist —
+    /// Kafka's KIP-848 consumer-group protocol does exactly that. Setting this false skips only the
+    /// <c>assume_channel</c> template, leaving <c>validate_channel</c> generated.
+    ///
+    /// The only configuration declaring it false is <c>Kafka / Consumer</c>, tracked by
+    /// BrighterCommand/Brighter#4299. That is a gateway defect, not a platform limit: when it is
+    /// fixed, drop the flag from that configuration and let this default back to true.
+    /// </summary>
+    public bool HasSupportToDetectMissingInfrastructureOnAssume { get; set; } = true;
 
     /// <summary>
     /// Gets or sets the maximum time to wait when receiving a message in milliseconds.
@@ -119,4 +120,18 @@ public class MessagingGatewayConfiguration
     /// Gets or sets the maximum time to wait for a message publish confirmation in milliseconds.
     /// </summary>
     public int MessageConfirmationTimeoutInMilliseconds { get; set; } = 1000;
+
+    /// <summary>
+    /// Gets or sets the conformance-ledger row key for this configuration,
+    /// e.g. "Kafka / Classic" or "RMQ.Async / Classic" (FR-21 / ADR 0067).
+    /// When null the ledger-driven Skip mechanism is skipped for this configuration.
+    /// </summary>
+    public string? LedgerKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets the per-template Deferred Skip value computed from the conformance ledger.
+    /// Set by <see cref="Generators.MessagingGatewayGenerator"/> before each canonical template
+    /// render; empty when the ledger cell is Pass/Fixed (test runs without a Skip).
+    /// </summary>
+    public string? Skip { get; set; }
 }

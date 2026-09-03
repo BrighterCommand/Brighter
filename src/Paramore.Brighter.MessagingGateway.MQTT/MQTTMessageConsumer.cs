@@ -190,25 +190,48 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         }
 
         /// <summary>
-        /// Retrieves the current received messages from the internal buffer.
+        /// Retrieves all currently buffered messages, waiting up to <paramref name="timeOut"/>
+        /// for at least one to arrive if the buffer is empty.
+        /// Messages arrive asynchronously via the MQTT <see cref="IMqttClient.ApplicationMessageReceivedAsync"/>
+        /// event handler. If the internal queue is empty on entry, this method polls in 10 ms
+        /// increments until the deadline so that callers do not need an external sleep before
+        /// every <c>Receive</c> call.
         /// </summary>
-        /// <param name="timeOut">The time to delay retrieval. Defaults to 300ms</param>
+        /// <param name="timeOut">
+        /// How long to wait for at least one message to arrive. Defaults to 300 ms.
+        /// </param>
+        /// <remarks>
+        /// Callers that go through a Brighter <see cref="Channel"/> wrapper must ensure the
+        /// Channel's buffer size (set on the subscription's <c>BufferSize</c>) is large enough
+        /// to accommodate the number of messages that can accumulate between calls — the Channel
+        /// will throw <see cref="InvalidOperationException"/> if more messages are returned than
+        /// its internal buffer can hold.
+        /// </remarks>
         public Message[] Receive(TimeSpan? timeOut = null)
         {
-            if (_messageQueue.IsEmpty)
-            {
-                return new[] { _noopMessage };
-            }
-
-            var messages = new List<Message>();
             timeOut ??= TimeSpan.FromMilliseconds(300);
 
-            using (var cts = new CancellationTokenSource(timeOut.Value))
+            // Block until at least one message arrives in the async event-driven queue, or the
+            // timeout expires. Polling in short increments avoids busy-waiting while still
+            // reacting quickly to the first message.
+            var deadline = DateTime.UtcNow + timeOut.Value;
+            while (_messageQueue.IsEmpty && DateTime.UtcNow < deadline)
             {
-                while (!cts.IsCancellationRequested && _messageQueue.TryDequeue(out var message))
-                {
-                    messages.Add(message);
-                }
+                Thread.Sleep(10);
+            }
+
+            if (_messageQueue.IsEmpty)
+            {
+                return [_noopMessage];
+            }
+
+            // Drain all available messages accumulated during the wait. Channel callers must
+            // set subscription.BufferSize >= the maximum number of messages that can accumulate
+            // between polls (the MQTT provider sets BufferSize = 5 by default).
+            var messages = new List<Message>();
+            while (_messageQueue.TryDequeue(out var message))
+            {
+                messages.Add(message);
             }
 
             return messages.ToArray();

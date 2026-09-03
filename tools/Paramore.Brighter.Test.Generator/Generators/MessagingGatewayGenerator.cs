@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -38,9 +39,22 @@ namespace Paramore.Brighter.Test.Generator.Generators;
 /// and conditionally skipping tests for unsupported gateway features.
 /// </summary>
 /// <param name="logger">The logger instance used for diagnostic output during generation.</param>
-public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger)
+/// <param name="ledger">
+/// Optional conformance ledger override. When null the generator loads the ledger from the
+/// checked-in file by walking up from <see cref="AppContext.BaseDirectory"/>. Pass an
+/// <see cref="InMemoryConformanceLedger"/> in tests to control per-cell values.
+/// </param>
+public class MessagingGatewayGenerator(
+    ILogger<MessagingGatewayGenerator> logger,
+    IAmAConformanceLedger? ledger = null)
     : BaseGenerator(logger)
 {
+    // Canonical-template base name → conformance-ledger FR column (FR-21 / ADR 0067).
+    // Only templates whose names appear here receive the ledger-driven Deferred Skip.
+    // This list is authoritative: a template absent from it is treated as non-canonical.
+    // Resolved once per GenerateAsync(TestConfiguration) call.
+    private IAmAConformanceLedger? _ledger;
+
     /// <summary>
     /// Generates messaging gateway test files for the configured gateway(s) in the provided <paramref name="configuration"/>.
     /// Uses <see cref="TestConfiguration.MessagingGateway"/> for a single gateway or <see cref="TestConfiguration.MessagingGateways"/> for multiple.
@@ -48,15 +62,21 @@ public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger
     /// <param name="configuration">The root test configuration containing messaging gateway settings and destination folder.</param>
     public async Task GenerateAsync(TestConfiguration configuration)
     {
+        // Resolve the conformance ledger once for this generation run.
+        _ledger = ledger ?? LoadLedgerFromFileSystem();
+
         if (configuration.MessagingGateway != null)
         {
             var prefix = configuration.MessagingGateway.Prefix;
+            var prepareModel = _ledger != null ? (Action<string, object>)SetCanonicalSkip : null;
+
             await GenerateAsync(
                 configuration,
                 Path.Combine("MessagingGateway", prefix, "Generated", "Reactor"),
                 Path.Combine("MessagingGateway", "Reactor"),
                 configuration.MessagingGateway,
-                filename => SkipTest(configuration.MessagingGateway, filename)
+                filename => SkipTest(configuration.MessagingGateway, filename),
+                prepareModel
             );
 
             await GenerateAsync(
@@ -64,7 +84,15 @@ public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger
                 Path.Combine("MessagingGateway", prefix, "Generated", "Proactor"),
                 Path.Combine("MessagingGateway", "Proactor"),
                 configuration.MessagingGateway,
-                filename => SkipTest(configuration.MessagingGateway, filename)
+                filename => SkipTest(configuration.MessagingGateway, filename),
+                prepareModel
+            );
+
+            await GenerateAsync(
+                configuration,
+                Path.Combine("MessagingGateway", prefix, "Generated"),
+                Path.Combine("MessagingGateway", "Shared"),
+                configuration.MessagingGateway
             );
         }
         else if (configuration.MessagingGateways != null)
@@ -79,13 +107,15 @@ public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger
                 }
 
                 messagingGatewayConfiguration.Prefix = $".{prefix}";
+                var prepareModel = _ledger != null ? (Action<string, object>)SetCanonicalSkip : null;
 
                 await GenerateAsync(
                     configuration,
                     Path.Combine("MessagingGateway", prefix, "Generated", "Reactor"),
                     Path.Combine("MessagingGateway", "Reactor"),
                     messagingGatewayConfiguration,
-                    filename => SkipTest(messagingGatewayConfiguration, filename)
+                    filename => SkipTest(messagingGatewayConfiguration, filename),
+                    prepareModel
                 );
 
                 await GenerateAsync(
@@ -93,7 +123,15 @@ public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger
                     Path.Combine("MessagingGateway", prefix, "Generated", "Proactor"),
                     Path.Combine("MessagingGateway", "Proactor"),
                     messagingGatewayConfiguration,
-                    filename => SkipTest(messagingGatewayConfiguration, filename)
+                    filename => SkipTest(messagingGatewayConfiguration, filename),
+                    prepareModel
+                );
+
+                await GenerateAsync(
+                    configuration,
+                    Path.Combine("MessagingGateway", prefix, "Generated"),
+                    Path.Combine("MessagingGateway", "Shared"),
+                    messagingGatewayConfiguration
                 );
             }
         }
@@ -119,21 +157,6 @@ public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger
             return true;
         }
 
-        if (!configuration.HasSupportToDelayedMessages && fileName.Contains("delayed_message"))
-        {
-            return true;
-        }
-
-        if (!configuration.HasSupportToDelayedMessages && fileName.Contains("with_delay"))
-        {
-            return true;
-        }
-
-        if (!configuration.HasSupportToDeadLetterQueue && fileName.Contains("dead_letter_queue"))
-        {
-            return true;
-        }
-
         if (
             !configuration.HasSupportToValidateBrokerExistence
             && fileName.Contains("no_broker_created")
@@ -142,14 +165,20 @@ public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger
             return true;
         }
 
-        if (!configuration.HasSupportToRequeue && fileName.Contains("requeuing"))
+        if (
+            !configuration.HasSupportToValidateInfrastructure
+            && (fileName.Contains("assume_channel") || fileName.Contains("validate_channel"))
+        )
         {
             return true;
         }
 
+        // Narrower than the gate above: a transport can honour an explicit Validate and still
+        // complete silently against infrastructure that is not there, so this skips assume_channel
+        // alone and leaves validate_channel generated.
         if (
-            !configuration.HasSupportToValidateInfrastructure
-            && (fileName.Contains("assume_channel") || fileName.Contains("validate_channel"))
+            !configuration.HasSupportToDetectMissingInfrastructureOnAssume
+            && fileName.Contains("assume_channel")
         )
         {
             return true;
@@ -170,8 +199,8 @@ public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger
         string prefix,
         string templateFolderName,
         object model,
-        Func<string, bool>? ignore = null
-    )
+        Func<string, bool>? ignore = null,
+        Action<string, object>? prepareModel = null)
     {
         if (model is MessagingGatewayConfiguration messagingGatewayConfiguration)
         {
@@ -191,6 +220,50 @@ public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger
             }
         }
 
-        return base.GenerateAsync(configuration, prefix, templateFolderName, model, ignore);
+        return base.GenerateAsync(configuration, prefix, templateFolderName, model, ignore, prepareModel);
+    }
+
+    // ── Ledger integration ───────────────────────────────────────────────────
+
+    /// <summary>
+    /// Loads the conformance ledger by walking up from <see cref="AppContext.BaseDirectory"/>
+    /// until <c>specs/0036-…/conformance-status.md</c> is found.
+    /// Returns null when the ledger cannot be located (no Skip is applied).
+    /// </summary>
+    private static IAmAConformanceLedger? LoadLedgerFromFileSystem()
+    {
+        var path = ConformanceLedger.FindLedgerPath(AppContext.BaseDirectory);
+        return path != null ? new ConformanceLedger(path) : null;
+    }
+
+    /// <summary>
+    /// Sets the <see cref="MessagingGatewayConfiguration.Skip"/> property on the model before
+    /// each Reactor/Proactor template render. For canonical templates whose base name is in
+    /// <see cref="CanonicalBehaviours.TEMPLATE_FR_COLUMNS"/> and whose configuration declares a
+    /// <see cref="MessagingGatewayConfiguration.LedgerKey"/>, the ledger determines whether a
+    /// Deferred Skip string is emitted. For all other templates the property is set to the empty
+    /// string (not null) so that `{% if Skip != empty %}` evaluates to false in the template.
+    /// </summary>
+    private void SetCanonicalSkip(string templateFileName, object model)
+    {
+        if (model is not MessagingGatewayConfiguration config) return;
+
+        var baseName = Path.GetFileName(templateFileName).Replace(".cs.liquid", "");
+
+        var frColumn = CanonicalBehaviours.FrColumnFor(baseName);
+
+        if (frColumn != null
+            && !string.IsNullOrEmpty(config.LedgerKey)
+            && _ledger != null)
+        {
+            config.Skip = _ledger.GetSkip(config.LedgerKey, frColumn, CanonicalBehaviours.BehaviourFor(frColumn));
+        }
+        else
+        {
+            // Empty string rather than null: Liquid's `nil != empty` is TRUE, so null would
+            // cause `{% if Skip != empty %}` to render even when Skip carries no value.
+            // An empty string satisfies `"" == empty` and correctly suppresses the block.
+            config.Skip = string.Empty;
+        }
     }
 }

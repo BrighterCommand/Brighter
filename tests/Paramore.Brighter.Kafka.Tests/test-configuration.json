@@ -8,11 +8,9 @@
       "MessageGatewayProvider": "Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaClassicMessageGatewayProvider",
       "Category": "Kafka",
       "CollectionName": "Kafka",
+      "LedgerKey": "Kafka / Classic",
       "HasSupportToPublishConfirmation": true,
-      "HasSupportToDeadLetterQueue": false,
-      "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": false,
-      "HasSupportToRequeue": false,
       "ReceiveMessageTimeoutInMilliseconds": 15000
     },
     "Consumer": {
@@ -21,12 +19,10 @@
       "MessageGatewayProvider": "Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaConsumerMessageGatewayProvider",
       "Category": "Kafka",
       "CollectionName": "Kafka",
+      "LedgerKey": "Kafka / Consumer",
       "HasSupportToPublishConfirmation": true,
-      "HasSupportToDeadLetterQueue": false,
-      "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": false,
-      "HasSupportToValidateInfrastructure": false,
-      "HasSupportToRequeue": false,
+      "HasSupportToDetectMissingInfrastructureOnAssume": false,
       "ReceiveMessageTimeoutInMilliseconds": 15000
     },
     "PartitionKey": {
@@ -36,11 +32,9 @@
       "MessageBuilder": "FifoMessageBuilder",
       "Category": "Kafka",
       "CollectionName": "Kafka",
+      "LedgerKey": "Kafka / PartitionKey",
       "HasSupportToPublishConfirmation": true,
-      "HasSupportToDeadLetterQueue": false,
-      "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": false,
-      "HasSupportToRequeue": false,
       "ReceiveMessageTimeoutInMilliseconds": 15000
     }
   }

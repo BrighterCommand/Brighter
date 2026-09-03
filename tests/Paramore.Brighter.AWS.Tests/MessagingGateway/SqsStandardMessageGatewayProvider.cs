@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.AWS.Tests.Helpers;
+using Paramore.Brighter.AWS.Tests.MessagingGateway.SqsStandard;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 
@@ -30,6 +31,11 @@ public class SqsStandardMessageGatewayProvider
         return new ChannelName($"sqs-std-ch-{Uuid.New():N}");
     }
 
+    // SQS queue names permit only alphanumerics, hyphens and underscores. Map the canonical
+    // dotted DLQ/invalid routing keys onto that alphabet so the queue can be created.
+    private static RoutingKey? ToValidSqsName(RoutingKey? routingKey) =>
+        routingKey is null ? null : new RoutingKey(routingKey.Value.Replace(".", "-"));
+
     public SqsPublication CreatePublication(RoutingKey routingKey, OnMissingChannel makeChannels = OnMissingChannel.Create)
     {
         return new SqsPublication
@@ -44,14 +50,22 @@ public class SqsStandardMessageGatewayProvider
         RoutingKey routingKey,
         ChannelName channelName,
         OnMissingChannel makeChannel,
-        bool setupDeadLetterQueue = false)
+        RoutingKey? deadLetterRoutingKey = null,
+        RoutingKey? invalidMessageRoutingKey = null)
     {
+        // SQS queue names allow only alphanumerics, hyphens and underscores (1–80 chars); the
+        // canonical DLQ/invalid convention ("<topic>.DLQ" / "<topic>.Invalid") uses dots, which
+        // SQS rejects. Adapt the universal naming to the transport's rules — the read hooks below
+        // read from subscription.DeadLetterRoutingKey/InvalidMessageRoutingKey, so they stay consistent.
+        deadLetterRoutingKey = ToValidSqsName(deadLetterRoutingKey);
+        invalidMessageRoutingKey = ToValidSqsName(invalidMessageRoutingKey);
+
         // For SQS point-to-point, the channel (queue) must match the publication's queue
         channelName = new ChannelName(routingKey);
 
-        if (setupDeadLetterQueue)
+        if (deadLetterRoutingKey != null)
         {
-            var deadLetterChannelName = new ChannelName($"{channelName}-dlq");
+            var deadLetterChannelName = new ChannelName(deadLetterRoutingKey.Value);
             return new SqsSubscription<MyCommand>(
                 subscriptionName: new SubscriptionName(channelName),
                 channelName: channelName,
@@ -62,7 +76,8 @@ public class SqsStandardMessageGatewayProvider
                 queueAttributes: new SqsAttributes(
                     redrivePolicy: new RedrivePolicy(deadLetterChannelName, 3)
                 ),
-                deadLetterRoutingKey: new RoutingKey(deadLetterChannelName),
+                deadLetterRoutingKey: deadLetterRoutingKey,
+                invalidMessageRoutingKey: invalidMessageRoutingKey,
                 requeueCount: 3
             );
         }
@@ -73,9 +88,69 @@ public class SqsStandardMessageGatewayProvider
             channelType: ChannelType.PointToPoint,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
-            makeChannels: makeChannel
+            makeChannels: makeChannel,
+            invalidMessageRoutingKey: invalidMessageRoutingKey
         );
     }
+
+    public Message GetMessageFromInvalidChannel(SqsSubscription subscription)
+    {
+        return GetMessageFromInvalidChannelAsync(subscription).GetAwaiter().GetResult();
+    }
+
+    public async Task<Message> GetMessageFromInvalidChannelAsync(
+        SqsSubscription subscription,
+        CancellationToken cancellationToken = default)
+    {
+        var invalidSubscription = new SqsSubscription<MyCommand>(
+            subscriptionName: new SubscriptionName(subscription.InvalidMessageRoutingKey!.Value),
+            channelName: new ChannelName(subscription.InvalidMessageRoutingKey!.Value),
+            channelType: ChannelType.PointToPoint,
+            routingKey: subscription.InvalidMessageRoutingKey!,
+            messagePumpType: MessagePumpType.Proactor,
+            makeChannels: OnMissingChannel.Assume
+        );
+
+        IAmAChannelAsync? invalidChannel = null;
+        try
+        {
+            invalidChannel = await new ChannelFactory(_awsConnection)
+                .CreateAsyncChannelAsync(invalidSubscription, cancellationToken);
+
+            for (var i = 0; i < 10; i++)
+            {
+                var message = await invalidChannel.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
+                if (message.Header.MessageType != MessageType.MT_NONE)
+                {
+                    await invalidChannel.AcknowledgeAsync(message, cancellationToken);
+                    return message;
+                }
+
+                await Task.Delay(1000, cancellationToken);
+            }
+
+            return new Message();
+        }
+        catch (Amazon.SQS.Model.QueueDoesNotExistException)
+        {
+            // The invalid channel is created lazily on first send; if nothing was ever routed
+            // there the queue does not exist, which is equivalent to it being empty (MT_NONE).
+            return new Message();
+        }
+        finally
+        {
+            invalidChannel?.Dispose();
+        }
+    }
+
+    public RejectionMetadataKeys RejectionMetadataKeys =>
+        new RejectionMetadataKeys(
+            "originalTopic",
+            "originalMessageType",
+            "rejectionReason",
+            "rejectionMessage",
+            "rejectionTimestamp"
+        );
 
     public void CleanUp(
         IAmAMessageProducerSync? producer,

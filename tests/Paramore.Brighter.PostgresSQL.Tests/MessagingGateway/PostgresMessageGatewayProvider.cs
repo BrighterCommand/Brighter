@@ -124,14 +124,15 @@ public class PostgresMessageGatewayProvider
         RoutingKey routingKey,
         ChannelName channelName,
         OnMissingChannel makeChannel,
-        bool setupDeadLetterQueue = false
+        RoutingKey? deadLetterRoutingKey = null,
+        RoutingKey? invalidMessageRoutingKey = null
     )
     {
         // In PostgreSQL messaging, the producer writes to "queue" = Topic.Value and the consumer
         // reads from "queue" = ChannelName.Value, so they must match for message delivery.
         var pgChannelName = new ChannelName(routingKey.Value);
 
-        if (setupDeadLetterQueue)
+        if (deadLetterRoutingKey != null)
         {
             return new PostgresSubscription<MyCommand>(
                 subscriptionName: new SubscriptionName(Uuid.NewAsString()),
@@ -139,7 +140,8 @@ public class PostgresMessageGatewayProvider
                 routingKey: routingKey,
                 messagePumpType: MessagePumpType.Proactor,
                 makeChannels: makeChannel,
-                deadLetterRoutingKey: new RoutingKey($"{routingKey}.DLQ"),
+                deadLetterRoutingKey: deadLetterRoutingKey,
+                invalidMessageRoutingKey: invalidMessageRoutingKey,
                 requeueCount: 3
             );
         }
@@ -149,7 +151,8 @@ public class PostgresMessageGatewayProvider
             channelName: pgChannelName,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
-            makeChannels: makeChannel
+            makeChannels: makeChannel,
+            invalidMessageRoutingKey: invalidMessageRoutingKey
         );
     }
 
@@ -163,11 +166,20 @@ public class PostgresMessageGatewayProvider
         return new RoutingKey($"Topic{Uuid.New():N}");
     }
 
+    public RejectionMetadataKeys RejectionMetadataKeys =>
+        new RejectionMetadataKeys(
+            "originalTopic",
+            "originalMessageType",
+            "rejectionReason",
+            "rejectionMessage",
+            "rejectionTimestamp"
+        );
+
     public Message GetMessageFromDeadLetterQueue(PostgresSubscription subscription)
     {
         var dlqSubscription = new PostgresSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(Uuid.NewAsString()),
-            channelName: new ChannelName($"DLQ-{Uuid.New():N}"),
+            channelName: new ChannelName(subscription.DeadLetterRoutingKey!.Value),
             routingKey: subscription.DeadLetterRoutingKey!,
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Assume
@@ -207,7 +219,7 @@ public class PostgresMessageGatewayProvider
     {
         var dlqSubscription = new PostgresSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(Uuid.NewAsString()),
-            channelName: new ChannelName($"DLQ-{Uuid.New():N}"),
+            channelName: new ChannelName(subscription.DeadLetterRoutingKey!.Value),
             routingKey: subscription.DeadLetterRoutingKey!,
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Assume
@@ -237,6 +249,89 @@ public class PostgresMessageGatewayProvider
         finally
         {
             await dlqConsumer.DisposeAsync();
+        }
+    }
+
+    public Message GetMessageFromInvalidChannel(PostgresSubscription subscription)
+    {
+        if (subscription.InvalidMessageRoutingKey == null)
+            return Message.Empty;
+
+        var invalidSubscription = new PostgresSubscription<MyCommand>(
+            subscriptionName: new SubscriptionName(Uuid.NewAsString()),
+            channelName: new ChannelName(subscription.InvalidMessageRoutingKey!.Value),
+            routingKey: subscription.InvalidMessageRoutingKey,
+            messagePumpType: MessagePumpType.Reactor,
+            makeChannels: OnMissingChannel.Assume
+        );
+
+        var invalidConsumer = new PostgresMessageConsumer(
+            _configuration,
+            invalidSubscription
+        );
+
+        try
+        {
+            for (var i = 0; i < 10; i++)
+            {
+                var messages = invalidConsumer.Receive(TimeSpan.FromSeconds(5));
+                var message = messages.First();
+                if (message.Header.MessageType != MessageType.MT_NONE)
+                {
+                    invalidConsumer.Acknowledge(message);
+                    return message;
+                }
+                Thread.Sleep(1000);
+            }
+
+            return new Message();
+        }
+        finally
+        {
+            invalidConsumer.Dispose();
+        }
+    }
+
+    public async Task<Message> GetMessageFromInvalidChannelAsync(
+        PostgresSubscription subscription,
+        CancellationToken cancellationToken = default
+    )
+    {
+        if (subscription.InvalidMessageRoutingKey == null)
+            return Message.Empty;
+
+        var invalidSubscription = new PostgresSubscription<MyCommand>(
+            subscriptionName: new SubscriptionName(Uuid.NewAsString()),
+            channelName: new ChannelName(subscription.InvalidMessageRoutingKey!.Value),
+            routingKey: subscription.InvalidMessageRoutingKey,
+            messagePumpType: MessagePumpType.Proactor,
+            makeChannels: OnMissingChannel.Assume
+        );
+
+        var invalidConsumer = new PostgresMessageConsumer(
+            _configuration,
+            invalidSubscription
+        );
+
+        try
+        {
+            for (var i = 0; i < 10; i++)
+            {
+                var messages = await invalidConsumer.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
+                var message = messages.First();
+                if (message.Header.MessageType != MessageType.MT_NONE)
+                {
+                    await invalidConsumer.AcknowledgeAsync(message, cancellationToken);
+                    return message;
+                }
+                await Task.Delay(1000, cancellationToken);
+            }
+
+            return new Message();
+        }
+        finally
+        {
+            await invalidConsumer.DisposeAsync();
         }
     }
 

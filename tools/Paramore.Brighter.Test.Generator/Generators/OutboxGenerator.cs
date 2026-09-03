@@ -140,7 +140,8 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
         string prefix,
         string templateFolderName,
         object model,
-        Func<string, bool>? ignore = null
+        Func<string, bool>? ignore = null,
+        Action<string, object>? prepareModel = null
     )
     {
         if (model is OutboxConfiguration outboxConfiguration)
@@ -156,6 +157,6 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
             }
         }
 
-        return base.GenerateAsync(configuration, prefix, templateFolderName, model, ignore);
+        return base.GenerateAsync(configuration, prefix, templateFolderName, model, ignore, prepareModel);
     }
 }

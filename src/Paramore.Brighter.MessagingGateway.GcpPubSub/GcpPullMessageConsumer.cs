@@ -1,4 +1,6 @@
-﻿using Google.Cloud.PubSub.V1;
+﻿using Google.Api.Gax;
+using Google.Api.Gax.Grpc;
+using Google.Cloud.PubSub.V1;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
@@ -149,18 +151,27 @@ public partial class GcpPullMessageConsumer(
         try
         {
             var client = await connection.CreateSubscriberServiceApiClientAsync();
+            // Honour the caller's timeout: bound the Pull so it returns after the requested window
+            // rather than long-polling until a message arrives (which would block the pump and, for a
+            // delayed send, surface a scheduled message inside a shorter negative-observation window).
+            var callSettings = BuildPullCallSettings(timeOut).WithCancellationToken(cancellationToken);
             response = await client.PullAsync(
                 new PullRequest
                 {
-                    SubscriptionAsSubscriptionName = subscriptionName, 
+                    SubscriptionAsSubscriptionName = subscriptionName,
                     MaxMessages = batchSize,
                 },
-                cancellationToken);
+                callSettings);
 
             if (response.ReceivedMessages.Count == 0)
             {
                 return [new Message()];
             }
+        }
+        catch (RpcException rcpException) when (rcpException.Status.StatusCode == StatusCode.DeadlineExceeded)
+        {
+            // The Pull window elapsed with no messages available — a normal empty receive.
+            return [new Message()];
         }
         catch (RpcException rcpException) when (rcpException.Status.StatusCode == StatusCode.Unavailable)
         {
@@ -177,6 +188,14 @@ public partial class GcpPullMessageConsumer(
         return response.ReceivedMessages.Select(Parser.ToBrighterMessage).ToArray();
     }
 
+    // Bounds a Pull to the caller's timeout so an empty subscription returns after the requested
+    // window (as DeadlineExceeded) instead of long-polling. A null/non-positive timeout leaves the
+    // call unbounded, preserving the prior default behaviour.
+    private static CallSettings BuildPullCallSettings(TimeSpan? timeOut) =>
+        timeOut is { } window && window > TimeSpan.Zero
+            ? CallSettings.FromExpiration(Expiration.FromTimeout(window))
+            : CallSettings.FromExpiration(Expiration.None);
+
     
     /// <summary>
     /// Synchronously receives a batch of messages from the subscription using the Pull API.
@@ -190,15 +209,22 @@ public partial class GcpPullMessageConsumer(
         try
         {
             var client = connection.GetOrCreateSubscriberServiceApiClient();
+            // Honour the caller's timeout (see ReceiveAsync) so an empty subscription returns after
+            // the requested window rather than long-polling until a message arrives.
             response = client.Pull(new PullRequest
             {
                 SubscriptionAsSubscriptionName = subscriptionName, MaxMessages = batchSize
-            });
+            }, BuildPullCallSettings(timeOut));
 
             if (response.ReceivedMessages.Count == 0)
             {
                 return [new Message()];
             }
+        }
+        catch (RpcException rcpException) when (rcpException.Status.StatusCode == StatusCode.DeadlineExceeded)
+        {
+            // The Pull window elapsed with no messages available — a normal empty receive.
+            return [new Message()];
         }
         catch (RpcException rcpException) when (rcpException.Status.StatusCode == StatusCode.Unavailable)
         {

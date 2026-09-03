@@ -41,6 +41,10 @@
     <None Update="Templates\MessagingGateway\Reactor\*">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+
+    <None Update="Templates\MessagingGateway\Shared\*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

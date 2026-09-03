@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
+using Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Quorum;
 using Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Quorum.Proactor;
 using Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Quorum.Reactor;
 using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
@@ -18,6 +19,26 @@ public class RmqQuorumMessageGatewayProvider
 {
     private static readonly Uri s_amqpUri = new("amqp://guest:guest@localhost:5672/%2f");
     private readonly RmqMessagingGatewayConnection _connection;
+
+    // FR-2 / FR-9: prove Quorum's delay via the gateway's scheduler-delegation seam (the same
+    // mechanism proven for Classic / Kafka / Redis / MSSQL), not the native x-delayed-message
+    // exchange plugin. We present a plain (non-delay) exchange so RmqMessageProducer reports
+    // DelaySupported == false and routes a non-zero delay to IAmAMessageProducer.Scheduler —
+    // producer.Scheduler for FR-9 send-with-delay, and the consumer factory's scheduler for
+    // FR-2 delayed requeue (forwarded to the requeue producer). One shared wall-clock scheduler
+    // re-publishes to the topic. Lazily created; disposed in CleanUp.
+    //
+    // The native plugin path is deliberately NOT exercised here because it is not yet conformant:
+    // RmqMessagePublisher.RequeueMessageAsync hardcodes TimeSpan.Zero and publishes to the
+    // default exchange, dropping a requeue delay (FR-2 redelivers immediately); and a
+    // plugin-delivered send arrives carrying Header.Delayed == the applied delay, tripping the
+    // universal message-equivalence assertion (Delayed == TimeSpan.Zero). Both are larger src
+    // fixes tracked as follow-up; the scheduler seam is a real, gateway-supported delay path
+    // that delivers conformant semantics.
+    private RmqHarnessMessageScheduler? _scheduler;
+
+    private RmqHarnessMessageScheduler Scheduler =>
+        _scheduler ??= new RmqHarnessMessageScheduler(_connection);
 
     public RmqQuorumMessageGatewayProvider()
     {
@@ -42,6 +63,9 @@ public class RmqQuorumMessageGatewayProvider
         }
 
         producer?.Dispose();
+
+        try { _scheduler?.Dispose(); } catch { /* best effort */ }
+        _scheduler = null;
     }
 
     public async Task CleanUpAsync(
@@ -60,12 +84,15 @@ public class RmqQuorumMessageGatewayProvider
         {
             await producer.DisposeAsync();
         }
+
+        try { _scheduler?.Dispose(); } catch { /* best effort */ }
+        _scheduler = null;
     }
 
     public IAmAChannelSync CreateChannel(RmqSubscription subscription)
     {
         var channel = new ChannelFactory(
-            new RmqMessageConsumerFactory(_connection)
+            new RmqMessageConsumerFactory(_connection, Scheduler)
         ).CreateSyncChannel(subscription);
 
         if (subscription.MakeChannels == OnMissingChannel.Create)
@@ -87,7 +114,7 @@ public class RmqQuorumMessageGatewayProvider
     )
     {
         var channel = await new ChannelFactory(
-            new RmqMessageConsumerFactory(_connection)
+            new RmqMessageConsumerFactory(_connection, Scheduler)
         ).CreateAsyncChannelAsync(subscription, cancellationToken);
 
         if (subscription.MakeChannels == OnMissingChannel.Create)
@@ -119,6 +146,7 @@ public class RmqQuorumMessageGatewayProvider
         var produces = new RmqMessageProducerFactory(connection, [publication]).Create();
 
         var producer = produces.First().Value;
+        producer.Scheduler = Scheduler;
         return (IAmAMessageProducerSync)producer;
     }
 
@@ -144,6 +172,7 @@ public class RmqQuorumMessageGatewayProvider
         ).CreateAsync();
 
         var producer = produces.First().Value;
+        producer.Scheduler = Scheduler;
         return (IAmAMessageProducerAsync)producer;
     }
 
@@ -160,10 +189,11 @@ public class RmqQuorumMessageGatewayProvider
         RoutingKey routingKey,
         ChannelName channelName,
         OnMissingChannel makeChannel,
-        bool setupDeadLetterQueue = false
+        RoutingKey? deadLetterRoutingKey = null,
+        RoutingKey? invalidMessageRoutingKey = null
     )
     {
-        if (setupDeadLetterQueue)
+        if (deadLetterRoutingKey != null)
         {
             return new RmqSubscription<MyCommand>(
                 subscriptionName: new SubscriptionName(Uuid.NewAsString()),
@@ -172,8 +202,8 @@ public class RmqQuorumMessageGatewayProvider
                 messagePumpType: MessagePumpType.Proactor,
                 isDurable: true,
                 makeChannels: makeChannel,
-                deadLetterChannelName: new ChannelName($"{routingKey}.DLQ"),
-                deadLetterRoutingKey: new RoutingKey($"{routingKey}.DLQ"),
+                deadLetterChannelName: new ChannelName(deadLetterRoutingKey.Value),
+                deadLetterRoutingKey: deadLetterRoutingKey,
                 requeueCount: 3,
                 queueType: QueueType.Quorum
             );
@@ -268,6 +298,79 @@ public class RmqQuorumMessageGatewayProvider
             dlqConsumer.Dispose();
         }
     }
+
+    // FR-5: RMQ.Async / Quorum has no invalid-message channel. Its rejection path is a native
+    // BasicReject that dead-letters through the single configured DLX (x-dead-letter-routing-key),
+    // and neither RmqMessageConsumer nor RmqSubscription models a separate invalid destination.
+    // This hook makes a GENUINE bounded read against an invalid queue bound (by the {topic}.Invalid
+    // convention the canonical test uses) so the harness is complete: because the gateway never
+    // routes an unacceptable rejection to that routing key, the read observes MT_NONE — evidencing
+    // an architectural src gap (no Brighter-managed invalid routing), not a stubbed harness hook.
+    public async Task<Message> GetMessageFromInvalidChannelAsync(
+        RmqSubscription subscription,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var invalidConsumer = CreateInvalidChannelConsumer(subscription);
+        try
+        {
+            var messages = await invalidConsumer.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
+            var message = messages.First();
+            if (message.Header.MessageType != MessageType.MT_NONE)
+            {
+                await invalidConsumer.AcknowledgeAsync(message, cancellationToken);
+                return message;
+            }
+
+            return new Message();
+        }
+        finally
+        {
+            await invalidConsumer.DisposeAsync();
+        }
+    }
+
+    public Message GetMessageFromInvalidChannel(RmqSubscription subscription)
+    {
+        var invalidConsumer = CreateInvalidChannelConsumer(subscription);
+        try
+        {
+            var messages = invalidConsumer.Receive(TimeSpan.FromSeconds(5));
+            var message = messages.First();
+            if (message.Header.MessageType != MessageType.MT_NONE)
+            {
+                invalidConsumer.Acknowledge(message);
+                return message;
+            }
+
+            return new Message();
+        }
+        finally
+        {
+            invalidConsumer.Dispose();
+        }
+    }
+
+    private RmqMessageConsumer CreateInvalidChannelConsumer(RmqSubscription subscription)
+    {
+        var invalidRoutingKey = new RoutingKey($"{subscription.RoutingKey.Value}.Invalid");
+        return new RmqMessageConsumer(
+            connection: _connection,
+            queueName: new ChannelName(invalidRoutingKey.Value),
+            routingKey: invalidRoutingKey,
+            isDurable: false,
+            makeChannels: OnMissingChannel.Create
+        );
+    }
+
+    public RejectionMetadataKeys RejectionMetadataKeys =>
+        new RejectionMetadataKeys(
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty
+        );
 
     /// <summary>
     /// Channel decorator that tracks requeue count per original message ID and

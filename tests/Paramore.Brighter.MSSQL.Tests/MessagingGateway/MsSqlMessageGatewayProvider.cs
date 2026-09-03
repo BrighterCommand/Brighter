@@ -22,10 +22,19 @@ public class MsSqlMessageGatewayProvider
         IAmAMessageGatewayReactorProvider
 {
     private RelationalDatabaseConfiguration? _configuration;
+    private MsSqlHarnessMessageScheduler? _scheduler;
 
     public MsSqlMessageGatewayProvider()
     {
     }
+
+    // MSSQL has no native delayed delivery: the gateway delegates a requested delay to the
+    // scheduler seam (producer.Scheduler for FR-9 send-with-delay; the consumer factory's
+    // scheduler for FR-2 requeue-with-delay). One shared harness scheduler honours the delay by
+    // wall-clock and re-publishes to the topic. Accessed only after _configuration is set (the
+    // channel/producer factories assign it first); disposed in CleanUp.
+    private MsSqlHarnessMessageScheduler Scheduler =>
+        _scheduler ??= new MsSqlHarnessMessageScheduler(_configuration!);
 
     public void CleanUp(
         IAmAMessageProducerSync? producer,
@@ -40,6 +49,8 @@ public class MsSqlMessageGatewayProvider
         }
 
         producer?.Dispose();
+        _scheduler?.Dispose();
+        _scheduler = null;
     }
 
     public async Task CleanUpAsync(
@@ -58,6 +69,9 @@ public class MsSqlMessageGatewayProvider
         {
             await producer.DisposeAsync();
         }
+
+        _scheduler?.Dispose();
+        _scheduler = null;
     }
 
     public IAmAChannelSync CreateChannel(MsSqlSubscription subscription)
@@ -69,7 +83,7 @@ public class MsSqlMessageGatewayProvider
             _configuration = testHelper.QueueConfiguration;
         }
 
-        var consumerFactory = new MsSqlMessageConsumerFactory(_configuration);
+        var consumerFactory = new MsSqlMessageConsumerFactory(_configuration, Scheduler);
         var channel = new ChannelFactory(consumerFactory).CreateSyncChannel(subscription);
 
         if (subscription.DeadLetterRoutingKey != null && subscription.RequeueCount > 0)
@@ -92,7 +106,7 @@ public class MsSqlMessageGatewayProvider
             _configuration = testHelper.QueueConfiguration;
         }
 
-        var consumerFactory = new MsSqlMessageConsumerFactory(_configuration);
+        var consumerFactory = new MsSqlMessageConsumerFactory(_configuration, Scheduler);
         var channel = new ChannelFactory(consumerFactory).CreateAsyncChannel(subscription);
 
         if (subscription.DeadLetterRoutingKey != null && subscription.RequeueCount > 0)
@@ -113,8 +127,9 @@ public class MsSqlMessageGatewayProvider
         }
 
         var producers = new MsSqlMessageProducerFactory(_configuration, [publication]).Create();
-        var producer = producers.First().Value;
-        return (IAmAMessageProducerSync)producer;
+        var producer = (IAmAMessageProducerSync)producers.First().Value;
+        producer.Scheduler = Scheduler;
+        return producer;
     }
 
     public async Task<IAmAMessageProducerAsync> CreateProducerAsync(
@@ -131,8 +146,9 @@ public class MsSqlMessageGatewayProvider
 
         var producers = await new MsSqlMessageProducerFactory(_configuration, [publication])
             .CreateAsync();
-        var producer = producers.First().Value;
-        return (IAmAMessageProducerAsync)producer;
+        var producer = (IAmAMessageProducerAsync)producers.First().Value;
+        producer.Scheduler = Scheduler;
+        return producer;
     }
 
     public Publication CreatePublication(RoutingKey routingKey, OnMissingChannel makeChannels = OnMissingChannel.Create)
@@ -148,14 +164,15 @@ public class MsSqlMessageGatewayProvider
         RoutingKey routingKey,
         ChannelName channelName,
         OnMissingChannel makeChannel,
-        bool setupDeadLetterQueue = false
+        RoutingKey? deadLetterRoutingKey = null,
+        RoutingKey? invalidMessageRoutingKey = null
     )
     {
         // In MSSQL messaging, the producer writes to "queue" = Topic.Value and the consumer
         // reads from "queue" = ChannelName.Value, so they must match for message delivery.
         var msSqlChannelName = new ChannelName(routingKey.Value);
 
-        if (setupDeadLetterQueue)
+        if (deadLetterRoutingKey != null)
         {
             return new MsSqlSubscription<MyCommand>(
                 subscriptionName: new SubscriptionName(Uuid.NewAsString()),
@@ -163,7 +180,8 @@ public class MsSqlMessageGatewayProvider
                 routingKey: routingKey,
                 messagePumpType: MessagePumpType.Proactor,
                 makeChannels: makeChannel,
-                deadLetterRoutingKey: new RoutingKey($"{routingKey}.DLQ"),
+                deadLetterRoutingKey: deadLetterRoutingKey,
+                invalidMessageRoutingKey: invalidMessageRoutingKey,
                 requeueCount: 3
             );
         }
@@ -173,7 +191,8 @@ public class MsSqlMessageGatewayProvider
             channelName: msSqlChannelName,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
-            makeChannels: makeChannel
+            makeChannels: makeChannel,
+            invalidMessageRoutingKey: invalidMessageRoutingKey
         );
     }
 
@@ -187,19 +206,23 @@ public class MsSqlMessageGatewayProvider
         return new RoutingKey($"Topic{Uuid.New():N}");
     }
 
+    public RejectionMetadataKeys RejectionMetadataKeys =>
+        new RejectionMetadataKeys(
+            "originalTopic",
+            "originalMessageType",
+            "rejectionReason",
+            "rejectionMessage",
+            "rejectionTimestamp"
+        );
+
     public Message GetMessageFromDeadLetterQueue(MsSqlSubscription subscription)
     {
-        var dlqSubscription = new MsSqlSubscription<MyCommand>(
-            subscriptionName: new SubscriptionName(Uuid.NewAsString()),
-            channelName: new ChannelName($"DLQ-{Uuid.New():N}"),
-            routingKey: subscription.DeadLetterRoutingKey!,
-            messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Assume
-        );
+        if (subscription.DeadLetterRoutingKey == null)
+            return Message.Empty;
 
         var dlqConsumer = new MsSqlMessageConsumer(
             _configuration,
-            dlqSubscription.RoutingKey.Value
+            subscription.DeadLetterRoutingKey.Value
         );
 
         try
@@ -229,17 +252,12 @@ public class MsSqlMessageGatewayProvider
         CancellationToken cancellationToken = default
     )
     {
-        var dlqSubscription = new MsSqlSubscription<MyCommand>(
-            subscriptionName: new SubscriptionName(Uuid.NewAsString()),
-            channelName: new ChannelName($"DLQ-{Uuid.New():N}"),
-            routingKey: subscription.DeadLetterRoutingKey!,
-            messagePumpType: MessagePumpType.Proactor,
-            makeChannels: OnMissingChannel.Assume
-        );
+        if (subscription.DeadLetterRoutingKey == null)
+            return Message.Empty;
 
         var dlqConsumer = new MsSqlMessageConsumer(
             _configuration,
-            dlqSubscription.RoutingKey.Value
+            subscription.DeadLetterRoutingKey.Value
         );
 
         try
@@ -261,6 +279,73 @@ public class MsSqlMessageGatewayProvider
         finally
         {
             await dlqConsumer.DisposeAsync();
+        }
+    }
+
+    public Message GetMessageFromInvalidChannel(MsSqlSubscription subscription)
+    {
+        if (subscription.InvalidMessageRoutingKey == null)
+            return Message.Empty;
+
+        var invalidConsumer = new MsSqlMessageConsumer(
+            _configuration,
+            subscription.InvalidMessageRoutingKey.Value
+        );
+
+        try
+        {
+            for (var i = 0; i < 10; i++)
+            {
+                var messages = invalidConsumer.Receive(TimeSpan.FromSeconds(5));
+                var message = messages.First();
+                if (message.Header.MessageType != MessageType.MT_NONE)
+                {
+                    invalidConsumer.Acknowledge(message);
+                    return message;
+                }
+                Thread.Sleep(1000);
+            }
+
+            return new Message();
+        }
+        finally
+        {
+            invalidConsumer.Dispose();
+        }
+    }
+
+    public async Task<Message> GetMessageFromInvalidChannelAsync(
+        MsSqlSubscription subscription,
+        CancellationToken cancellationToken = default
+    )
+    {
+        if (subscription.InvalidMessageRoutingKey == null)
+            return Message.Empty;
+
+        var invalidConsumer = new MsSqlMessageConsumer(
+            _configuration,
+            subscription.InvalidMessageRoutingKey.Value
+        );
+
+        try
+        {
+            for (var i = 0; i < 10; i++)
+            {
+                var messages = await invalidConsumer.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
+                var message = messages.First();
+                if (message.Header.MessageType != MessageType.MT_NONE)
+                {
+                    await invalidConsumer.AcknowledgeAsync(message, cancellationToken);
+                    return message;
+                }
+                await Task.Delay(1000, cancellationToken);
+            }
+
+            return new Message();
+        }
+        finally
+        {
+            await invalidConsumer.DisposeAsync();
         }
     }
 

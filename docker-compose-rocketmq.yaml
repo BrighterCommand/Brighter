@@ -32,7 +32,7 @@ services:
       - BROKER_NAME=broker-a
       - BROKER_ID=0
       - AUTO_CREATE_TOPIC_ENABLE=true  # Auto-create topics
-      - JAVA_OPT_EXT=-Xms128m -Xmx128m -Xmn64m -XX:MaxDirectMemorySize=128m -XX:MaxMetaspaceSize=128m
+      - JAVA_OPT_EXT=-Xms2g -Xmx2g -Xmn512m -XX:MaxDirectMemorySize=1g -XX:MaxMetaspaceSize=256m
     command: sh mqbroker
     depends_on:
       - nameserver
@@ -54,7 +54,7 @@ services:
       - "9877:9877"   # gRPC endpoint (for clients)
     environment:
       - NAMESRV_ADDR=nameserver:9876
-      - JAVA_OPT_EXT=-Xms64m -Xmx64m -Xmn32m -XX:MaxDirectMemorySize=64m -XX:MaxMetaspaceSize=96m
+      - JAVA_OPT_EXT=-Xms1g -Xmx1g -Xmn256m -XX:MaxDirectMemorySize=512m -XX:MaxMetaspaceSize=256m
     command: sh mqproxy
     healthcheck: 
       test: [ "CMD", "sh", "-c", "netstat -an | grep 8081" ]
