@@ -1,10 +1,21 @@
 #!/bin/bash
 # clean_failed_tests_aws_assets.sh
-# Cleans up orphaned AWS test resources identified by the Environment=Test tag.
+# Cleans up orphaned AWS test resources, found two ways: by the Environment=Test tag, and by the
+# naming conventions the AWS test suites use. The name sweep is not a nicety -- the gateway only
+# tags what it creates with Source=Brighter, so most leaked resources carry no Environment=Test
+# tag at all and the tag query alone finds nothing.
+#
+# Operates on the ambient AWS region (AWS_REGION / AWS_DEFAULT_REGION / the configured default).
+# Resources leaked in any other region are invisible to it, so a developer running the tests
+# locally against a different default region needs to run it for that region too.
 #
 # Usage:
-#   ./clean_failed_tests_aws_assets.sh            # delete tagged resources
+#   ./clean_failed_tests_aws_assets.sh            # delete orphaned resources
 #   ./clean_failed_tests_aws_assets.sh --dry-run   # list without deleting
+#
+# Environment:
+#   CLEANUP_PARALLELISM     concurrent deletions in the name sweep (default 16)
+#   CLEANUP_MIN_AGE_SECONDS  queues younger than this are left alone (default 3600; 0 disables)
 
 # Intentionally omitting -e: individual deletion failures are soft errors handled inline.
 set -uo pipefail
@@ -33,6 +44,23 @@ delete_schedules_in_group() {
         fi
     done
 }
+
+# Helper: convert an ISO-8601 timestamp to a Unix epoch second (cross-platform).
+iso_to_epoch() {
+    local ts="$1"
+    local result
+    # GNU date (Linux / GitHub Actions)
+    result=$(date -d "$ts" +%s 2>/dev/null) && { echo "$result"; return; }
+    # Python fallback (macOS / BSD)
+    result=$(python3 -c "import sys,datetime; ts=sys.argv[1].replace('Z','+00:00'); print(int(datetime.datetime.fromisoformat(ts).timestamp()))" "$ts" 2>/dev/null) && { echo "$result"; return; }
+    echo ""
+}
+
+# --- Age guard: resources younger than this are left alone ---
+# Applied in both the tag sweep and the name sweep so that an in-flight CI job's
+# resources are never deleted.  SNS has no creation-time API so topics are excluded.
+MIN_AGE_SECONDS="${CLEANUP_MIN_AGE_SECONDS:-3600}"
+NOW=$(date +%s)
 
 # --- Discover tagged resources via Resource Groups Tagging API ---
 # Note: AWS CLI v2 auto-paginates by default. The --query/--output flags are applied
@@ -140,6 +168,15 @@ if [[ ${#QUEUES[@]} -gt 0 ]]; then
         else
             QUEUE_URL=$(aws sqs get-queue-url --queue-name "$QUEUE_NAME" --query 'QueueUrl' --output text 2>&1 || echo "")
             if [[ -n "$QUEUE_URL" && "$QUEUE_URL" != *"NonExistentQueue"* ]]; then
+                if [[ "$MIN_AGE_SECONDS" -gt 0 ]]; then
+                    CREATED=$(aws sqs get-queue-attributes --queue-url "$QUEUE_URL" \
+                        --attribute-names CreatedTimestamp \
+                        --query "Attributes.CreatedTimestamp" --output text 2>/dev/null || echo "")
+                    if [[ -n "$CREATED" && "$CREATED" != "None" && $(( NOW - CREATED )) -lt "$MIN_AGE_SECONDS" ]]; then
+                        echo "  Skipping tagged queue (too young, $(( NOW - CREATED ))s old): $QUEUE_NAME"
+                        continue
+                    fi
+                fi
                 echo "  Deleting queue: $QUEUE_NAME ($QUEUE_URL)"
                 aws sqs delete-queue --queue-url "$QUEUE_URL" 2>&1 || echo "    WARNING: failed to delete queue $QUEUE_NAME"
             else
@@ -160,6 +197,18 @@ if [[ ${#SCHEDULE_GROUPS[@]} -gt 0 ]]; then
             echo "  Cleaning schedules in default group (group itself cannot be deleted)"
             delete_schedules_in_group "$GROUP_NAME"
             continue
+        fi
+
+        if [[ "$MIN_AGE_SECONDS" -gt 0 ]]; then
+            CREATED_DATE=$(aws scheduler get-schedule-group --name "$GROUP_NAME" \
+                --query 'CreationDate' --output text 2>/dev/null || echo "")
+            if [[ -n "$CREATED_DATE" && "$CREATED_DATE" != "None" ]]; then
+                CREATED_TS=$(iso_to_epoch "$CREATED_DATE")
+                if [[ -n "$CREATED_TS" && $(( NOW - CREATED_TS )) -lt "$MIN_AGE_SECONDS" ]]; then
+                    echo "  Skipping tagged schedule group (too young): $GROUP_NAME"
+                    continue
+                fi
+            fi
         fi
 
         echo "  Processing schedule group: $GROUP_NAME"
@@ -195,6 +244,18 @@ if [[ -n "$BRIGHTER_GROUPS" && "$BRIGHTER_GROUPS" != "None" ]]; then
             continue
         fi
 
+        if [[ "$MIN_AGE_SECONDS" -gt 0 ]]; then
+            CREATED_DATE=$(aws scheduler get-schedule-group --name "$GROUP_NAME" \
+                --query 'CreationDate' --output text 2>/dev/null || echo "")
+            if [[ -n "$CREATED_DATE" && "$CREATED_DATE" != "None" ]]; then
+                CREATED_TS=$(iso_to_epoch "$CREATED_DATE")
+                if [[ -n "$CREATED_TS" && $(( NOW - CREATED_TS )) -lt "$MIN_AGE_SECONDS" ]]; then
+                    echo "  Skipping Brighter schedule group (too young): $GROUP_NAME"
+                    continue
+                fi
+            fi
+        fi
+
         echo "  Processing Brighter schedule group: $GROUP_NAME"
         delete_schedules_in_group "$GROUP_NAME"
 
@@ -211,58 +272,141 @@ else
 fi
 
 # --- Fallback: clean up untagged test resources by naming convention ---
-# Some test fixtures (particularly FIFO tests) were not tagged with Environment=Test.
-# These are identified by their naming pattern: <TestPrefix>-<GUID> (truncated to 45 chars).
-# This section lists all topics/queues and deletes those matching known test prefixes.
+# Most test fixtures are not tagged with Environment=Test -- the AWS gateway only stamps
+# Source=Brighter -- so the Tagging API query above misses them. We therefore also sweep
+# by name, matching the two naming conventions the AWS test suites use.
+#
+# 1. Hand-written fixtures name resources <TestPrefix>-<GUID>, truncated to 45 chars.
+# 2. Generated MessageGateway tests (Paramore.Brighter.Test.Generator) name resources
+#    <transport>-<type>[-ch]-<32 hex GUID>, e.g. sqs-fifo-019f8f426d6378db9404c3550dd9c3c1.fifo.
+#    See tests/Paramore.Brighter.AWS.Tests/MessagingGateway/*MessageGatewayProvider.cs and the
+#    matching files under tests/Paramore.Brighter.AWS.V4.Tests.
+#
+# Both patterns are anchored at the start only, so derived resources that append a suffix
+# (-DLQ, -Invalid, -dlq.fifo, .fifo) are matched by the same rule as their parent.
 TEST_PREFIXES="Producer-Send-Tests|Producer-Requeue-Tests|Producer-DLQ-Tests|Producer-Scheduler-Tests|Producer-Scheduler-Async-Tests|Producer-Fire-Scheduler-Tests|Producer-Fire-Scheduler-Async-Tests|Producer-Tag-Tests|Producer-FSR-Tests|Producer-FSRA-Tests|Consumer-Requeue-Tests|Consumer-DLQ-Tests|Consumer-DLQ-Fifo|Consumer-Fallback-Tests|Consumer-Invalid-Tests|Consumer-NoChan-Tests|Buffered-Consumer-Tests|Buffered-Scheduler-Tests|Buffered-Scheduler-Async-Tests|Buffered-FSR-Tests|Redrive-Tests|Redrive-DLQ-Tests|Raw-Msg-Delivery-Tests|DLQ-Reader|Invalid-Reader"
+
+# The 32-hex GUID makes this pattern specific enough that it cannot collide with a
+# hand-named resource; it is the only thing standing between a real queue and deletion.
+# Note the asymmetry with TEST_PREFIXES above, which carries no such requirement and is anchored
+# at the start only: a queue named DLQ-Reader-orders would be swept by it. That is tolerable in a
+# dedicated test account and nowhere else.
+GENERATED_TEST_PATTERN="(sqs|sns)-(std|fifo)(-ch)?-[0-9a-f]{32}"
+
+# A resource is treated as a test leftover if its name matches either convention.
+TEST_NAME_PATTERN="^($TEST_PREFIXES|$GENERATED_TEST_PATTERN)"
 
 echo ""
 echo "Scanning for untagged test resources by naming convention ..."
 
-# Clean untagged SNS topics
-ALL_TOPICS=$(aws sns list-topics --query 'Topics[*].TopicArn' --output text 2>&1 || echo "")
-UNTAGGED_TOPIC_COUNT=0
-if [[ -n "$ALL_TOPICS" && "$ALL_TOPICS" != "None" ]]; then
-    for topic_arn in $ALL_TOPICS; do
-        TOPIC_NAME="${topic_arn##*:}"
-        if echo "$TOPIC_NAME" | grep -qE "^($TEST_PREFIXES)"; then
-            UNTAGGED_TOPIC_COUNT=$((UNTAGGED_TOPIC_COUNT + 1))
-            if $DRY_RUN; then
-                echo "  [DRY RUN] Would delete untagged test topic: $TOPIC_NAME"
-            else
-                # Delete subscriptions first
-                TOPIC_SUBS=$(aws sns list-subscriptions-by-topic --topic-arn "$topic_arn" \
-                    --query 'Subscriptions[*].SubscriptionArn' --output text 2>&1 || echo "")
-                for sub_arn in $TOPIC_SUBS; do
-                    [[ "$sub_arn" == "PendingConfirmation" || -z "$sub_arn" || "$sub_arn" == "None" ]] && continue
-                    aws sns unsubscribe --subscription-arn "$sub_arn" 2>&1 || true
-                done
-                echo "  Deleting untagged test topic: $TOPIC_NAME"
-                aws sns delete-topic --topic-arn "$topic_arn" 2>&1 || echo "    WARNING: failed to delete topic $TOPIC_NAME"
-            fi
-        fi
-    done
-fi
-echo "  Found $UNTAGGED_TOPIC_COUNT untagged test topic(s)"
+# Deletions run in parallel. A backlog of leaked resources runs to tens of thousands, and one
+# AWS API call at a time does not get through that inside the cleanup workflow's timeout.
+PARALLELISM="${CLEANUP_PARALLELISM:-16}"
 
-# Clean untagged SQS queues
-ALL_QUEUES=$(aws sqs list-queues --query 'QueueUrls[*]' --output text 2>&1 || echo "")
-UNTAGGED_QUEUE_COUNT=0
-if [[ -n "$ALL_QUEUES" && "$ALL_QUEUES" != "None" ]]; then
-    for queue_url in $ALL_QUEUES; do
-        QUEUE_NAME="${queue_url##*/}"
-        if echo "$QUEUE_NAME" | grep -qE "^($TEST_PREFIXES)"; then
-            UNTAGGED_QUEUE_COUNT=$((UNTAGGED_QUEUE_COUNT + 1))
-            if $DRY_RUN; then
-                echo "  [DRY RUN] Would delete untagged test queue: $QUEUE_NAME"
-            else
-                echo "  Deleting untagged test queue: $QUEUE_NAME"
-                aws sqs delete-queue --queue-url "$queue_url" 2>&1 || echo "    WARNING: failed to delete queue $QUEUE_NAME"
-            fi
-        fi
-    done
+# MIN_AGE_SECONDS and NOW are defined near the top of the file so the tag sweep can share them.
+
+# Clean untagged SNS topics.
+# SNS list-topics returns a NextToken, so the CLI's default auto-pagination sees every topic.
+ALL_TOPICS=$(aws sns list-topics --query 'Topics[*].TopicArn' --output text 2>&1)
+SNS_LIST_EXIT=$?
+if [[ $SNS_LIST_EXIT -ne 0 ]]; then
+    echo "ERROR: Failed to list SNS topics (exit code $SNS_LIST_EXIT)."
+    echo "  Ensure the caller has sns:ListTopics permission."
+    echo "  Response: $ALL_TOPICS"
+    exit 1
 fi
-echo "  Found $UNTAGGED_QUEUE_COUNT untagged test queue(s)"
+MATCHED_TOPICS=()
+for topic_arn in $ALL_TOPICS; do
+    [[ -z "$topic_arn" || "$topic_arn" == "None" ]] && continue
+    # The topic name is the last ARN segment and cannot itself contain a colon.
+    if [[ "${topic_arn##*:}" =~ $TEST_NAME_PATTERN ]]; then
+        MATCHED_TOPICS+=("$topic_arn")
+    fi
+done
+
+if [[ ${#MATCHED_TOPICS[@]} -gt 0 ]]; then
+    if $DRY_RUN; then
+        for topic_arn in "${MATCHED_TOPICS[@]}"; do
+            echo "  [DRY RUN] Would delete untagged test topic: ${topic_arn##*:}"
+        done
+    else
+        # Deleting a topic deletes its subscriptions with it, so there is no need to unsubscribe
+        # first -- and skipping that saves an API call per topic.
+        printf '%s\n' "${MATCHED_TOPICS[@]}" \
+            | xargs -P "$PARALLELISM" -I {} sh -c '
+                if aws sns delete-topic --topic-arn "$1" >/dev/null 2>&1; then
+                    echo "  Deleted untagged test topic: ${1##*:}"
+                else
+                    echo "    WARNING: failed to delete topic ${1##*:}"
+                fi' _ {}
+    fi
+fi
+echo "  Found ${#MATCHED_TOPICS[@]} untagged test topic(s)"
+
+# Clean untagged SQS queues.
+# --page-size is required: without it SQS returns at most 1000 queues and no NextToken, so the
+# CLI has nothing to paginate on and the rest are silently invisible.
+ALL_QUEUES=$(aws sqs list-queues --page-size 1000 --query 'QueueUrls[*]' --output text 2>&1)
+SQS_LIST_EXIT=$?
+if [[ $SQS_LIST_EXIT -ne 0 ]]; then
+    echo "ERROR: Failed to list SQS queues (exit code $SQS_LIST_EXIT)."
+    echo "  Ensure the caller has sqs:ListQueues permission."
+    echo "  Response: $ALL_QUEUES"
+    exit 1
+fi
+MATCHED_QUEUES=()
+for queue_url in $ALL_QUEUES; do
+    [[ -z "$queue_url" || "$queue_url" == "None" ]] && continue
+    if [[ "${queue_url##*/}" =~ $TEST_NAME_PATTERN ]]; then
+        MATCHED_QUEUES+=("$queue_url")
+    fi
+done
+
+# Drop the ones that are too young to be certain about. CreatedTimestamp costs a call per
+# queue, so the lookups run at the same parallelism as the deletions.
+if [[ ${#MATCHED_QUEUES[@]} -gt 0 && "$MIN_AGE_SECONDS" -gt 0 ]]; then
+    OLD_ENOUGH=()
+    while IFS= read -r queue_url; do
+        [[ -n "$queue_url" ]] && OLD_ENOUGH+=("$queue_url")
+    done < <(printf '%s\n' "${MATCHED_QUEUES[@]}" \
+        | xargs -P "$PARALLELISM" -I {} sh -c '
+            created=$(aws sqs get-queue-attributes --queue-url "$1" \
+                --attribute-names CreatedTimestamp \
+                --query "Attributes.CreatedTimestamp" --output text 2>/dev/null || echo "")
+            case "$created" in
+                ""|None)
+                    # Age unknown — skip rather than risk deleting a resource a live run may be using.
+                    ;;
+                *)
+                    if [ $(( $2 - created )) -ge "$3" ]; then
+                        echo "$1"
+                    fi
+                    ;;
+            esac' _ {} "$NOW" "$MIN_AGE_SECONDS")
+
+    SKIPPED_QUEUES=$(( ${#MATCHED_QUEUES[@]} - ${#OLD_ENOUGH[@]} ))
+    if [[ $SKIPPED_QUEUES -gt 0 ]]; then
+        echo "  Skipped $SKIPPED_QUEUES queue(s) created in the last $(( MIN_AGE_SECONDS / 60 )) minute(s); a test run may still be using them"
+    fi
+    MATCHED_QUEUES=(${OLD_ENOUGH[@]+"${OLD_ENOUGH[@]}"})
+fi
+
+if [[ ${#MATCHED_QUEUES[@]} -gt 0 ]]; then
+    if $DRY_RUN; then
+        for queue_url in "${MATCHED_QUEUES[@]}"; do
+            echo "  [DRY RUN] Would delete untagged test queue: ${queue_url##*/}"
+        done
+    else
+        printf '%s\n' "${MATCHED_QUEUES[@]}" \
+            | xargs -P "$PARALLELISM" -I {} sh -c '
+                if aws sqs delete-queue --queue-url "$1" >/dev/null 2>&1; then
+                    echo "  Deleted untagged test queue: ${1##*/}"
+                else
+                    echo "    WARNING: failed to delete queue ${1##*/}"
+                fi' _ {}
+    fi
+fi
+echo "  Found ${#MATCHED_QUEUES[@]} untagged test queue(s)"
 
 echo ""
 echo "Cleanup complete."

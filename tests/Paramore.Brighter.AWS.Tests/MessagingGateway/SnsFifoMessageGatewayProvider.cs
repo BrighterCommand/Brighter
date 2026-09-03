@@ -14,15 +14,21 @@ public class SnsFifoMessageGatewayProvider
       SnsFifo.Reactor.IAmAMessageGatewayReactorProvider
 {
     private readonly AWSMessagingGatewayConnection _awsConnection = GatewayFactory.CreateFactory();
+    private readonly AwsTestResourceReaper _reaper;
+
+    public SnsFifoMessageGatewayProvider()
+    {
+        _reaper = new AwsTestResourceReaper(_awsConnection);
+    }
 
     public RoutingKey GetOrCreateRoutingKey([CallerMemberName] string? testName = null)
     {
-        return new RoutingKey($"sns-fifo-{Uuid.New():N}.fifo");
+        return new RoutingKey(_reaper.TrackTopic($"sns-fifo-{Uuid.New():N}.fifo"));
     }
 
     public ChannelName GetOrCreateChannelName([CallerMemberName] string? testName = null)
     {
-        return new ChannelName($"sns-fifo-ch-{Uuid.New():N}.fifo");
+        return new ChannelName(_reaper.TrackQueue($"sns-fifo-ch-{Uuid.New():N}.fifo"));
     }
 
     public SnsPublication CreatePublication(RoutingKey routingKey, OnMissingChannel makeChannels = OnMissingChannel.Create)
@@ -43,7 +49,7 @@ public class SnsFifoMessageGatewayProvider
     {
         if (setupDeadLetterQueue)
         {
-            var deadLetterChannelName = new ChannelName($"{channelName.Value.Replace(".fifo", "")}-dlq.fifo");
+            var deadLetterChannelName = new ChannelName(_reaper.TrackQueue($"{channelName.Value.Replace(".fifo", "")}-dlq.fifo"));
             return new SqsSubscription<MyCommand>(
                 subscriptionName: new SubscriptionName(channelName),
                 channelName: channelName,
@@ -78,13 +84,23 @@ public class SnsFifoMessageGatewayProvider
         IAmAChannelSync? channel,
         IEnumerable<Message> messages)
     {
-        if (channel != null)
+        try
         {
-            channel.Purge();
-            channel.Dispose();
-        }
+            if (channel != null)
+            {
+                channel.Purge();
+                channel.Dispose();
+            }
 
-        producer?.Dispose();
+            producer?.Dispose();
+        }
+        finally
+        {
+            // Purge and Dispose reach AWS and can fail — PurgeQueue alone is throttled to one
+            // call per queue a minute — and a teardown that throws before it reaps is how the
+            // topics and queues leaked in the first place.
+            _reaper.Reap();
+        }
     }
 
     public async Task CleanUpAsync(
@@ -92,15 +108,23 @@ public class SnsFifoMessageGatewayProvider
         IAmAChannelAsync? channel,
         IEnumerable<Message> messages)
     {
-        if (channel != null)
+        try
         {
-            await channel.PurgeAsync();
-            channel.Dispose();
-        }
+            if (channel != null)
+            {
+                await channel.PurgeAsync();
+                channel.Dispose();
+            }
 
-        if (producer != null)
+            if (producer != null)
+            {
+                await producer.DisposeAsync();
+            }
+        }
+        finally
         {
-            await producer.DisposeAsync();
+            // See CleanUp: the reap has to survive a teardown that throws.
+            await _reaper.ReapAsync();
         }
     }
 
