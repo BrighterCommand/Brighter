@@ -335,7 +335,7 @@ Counts and `file:line` anchors below were re-derived against the working tree; w
   - **Depends on**: T2.4
   - **References**: AC-10 (FR-8, D10, ADR 0039); ADR 0071 step 3
 
-- [ ] **TEST + IMPLEMENT: T2.6 — a handler-factory `Release` that throws is logged and does not reach the caller (the one an implementation is most likely to fail)**
+- [x] **TEST + IMPLEMENT: T2.6 — a handler-factory `Release` that throws is logged and does not reach the caller (the one an implementation is most likely to fail)**
   - **USE COMMAND**: `/test-first a handler factory Release that throws is logged at Error and never replaces the handler's own exception`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_handler_factory_release_throws_it_should_be_logged_and_not_reach_the_caller.cs`
