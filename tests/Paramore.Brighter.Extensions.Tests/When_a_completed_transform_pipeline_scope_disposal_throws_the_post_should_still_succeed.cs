@@ -100,10 +100,12 @@ public class CompletedPipelineScopeDisposalLoggingTests
         //act — the first Post completes despite its owned scope's disposal throwing
         commandProcessor.Post(new PoisonedScopeCompletingCommand());
 
-        //assert — exactly one Error naming the request type, and the Post did not throw to get here
-        var disposalFailures = loggerProvider.Entries
-            .Where(e => e.EventId.Name == "FailedToDisposePipelineScope")
-            .ToList();
+        //assert — exactly one Error naming the request type, and the Post did not throw to get here.
+        //Filtered by CategoryName as well as EventId.Name: TransformPipelineDrain and HandlerLifetimeScope
+        //both log a "FailedToDisposePipelineScope" event, and xUnit may run this test concurrently with
+        //one that exercises the other, against the same shared static logger factory (Initializer.Factory)
+        //— CategoryName is what tells them apart.
+        var disposalFailures = loggerProvider.Entries.Where(IsTransformScopeDisposalFailure).ToList();
         var disposalFailure = Assert.Single(disposalFailures);
         Assert.Equal(LogLevel.Error, disposalFailure.Level);
         Assert.Contains(nameof(PoisonedScopeCompletingCommand), disposalFailure.Message);
@@ -116,10 +118,12 @@ public class CompletedPipelineScopeDisposalLoggingTests
         commandProcessor.Post(new PoisonedScopeCompletingCommand());
 
         //assert — the failure is not latched: a second, separate Error was logged for the second Post
-        var disposalFailuresAfterSecondPost = loggerProvider.Entries
-            .Where(e => e.EventId.Name == "FailedToDisposePipelineScope")
-            .ToList();
+        var disposalFailuresAfterSecondPost = loggerProvider.Entries.Where(IsTransformScopeDisposalFailure).ToList();
         Assert.Equal(2, disposalFailuresAfterSecondPost.Count);
         Assert.All(disposalFailuresAfterSecondPost, e => Assert.Equal(LogLevel.Error, e.Level));
     }
+
+    private static bool IsTransformScopeDisposalFailure(CapturedLogEntry entry) =>
+        entry.EventId.Name == "FailedToDisposePipelineScope" &&
+        entry.CategoryName == "Paramore.Brighter.TransformPipelineDrain";
 }
