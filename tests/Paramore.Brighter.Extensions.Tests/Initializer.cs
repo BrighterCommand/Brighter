@@ -32,8 +32,8 @@ namespace Paramore.Brighter.Extensions.Tests;
 /// <summary>
 /// Fixes <see cref="ApplicationLogging.LoggerFactory"/> to one stable instance before any test runs, and
 /// forces the static <c>ILogger</c> fields of <see cref="TransformPipelineBuilder"/>,
-/// <see cref="TransformPipelineBuilderAsync"/>, the internal <c>TransformPipelineDrain</c> and the
-/// internal <c>ServiceProviderLifetimeScope</c> to bind to it.
+/// <see cref="TransformPipelineBuilderAsync"/>, the internal <c>TransformPipelineDrain</c>, the internal
+/// <c>ServiceProviderLifetimeScope</c> and <see cref="HandlerLifetimeScope"/> to bind to it.
 /// </summary>
 /// <remarks>
 /// Without this, a test that adds a capturing <see cref="ILoggerProvider"/> to
@@ -78,5 +78,7 @@ internal static class Initializer
         var diPackage = typeof(ServiceProviderMapperFactory).Assembly;
         RuntimeHelpers.RunClassConstructor(
             diPackage.GetType("Paramore.Brighter.Extensions.DependencyInjection.ServiceProviderLifetimeScope")!.TypeHandle);
+
+        RuntimeHelpers.RunClassConstructor(typeof(HandlerLifetimeScope).TypeHandle);
     }
 }
