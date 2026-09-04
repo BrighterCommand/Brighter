@@ -353,7 +353,7 @@ Counts and `file:line` anchors below were re-derived against the working tree; w
   - **Depends on**: T2.5
   - **References**: AC-51 (FR-13, FR-5, FR-6); ADR 0071 steps 2, 6 (third required test)
 
-- [ ] **TEST + IMPLEMENT: T2.7 — a disposal failure on a successful handler pipeline does not affect the result**
+- [x] **TEST + IMPLEMENT: T2.7 — a disposal failure on a successful handler pipeline does not affect the result**
   - **USE COMMAND**: `/test-first a Send whose pipeline scope disposal throws returns the handler's result unchanged and logs at Error`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_successful_send_pipeline_scope_disposal_throws_the_result_should_be_unchanged.cs`
