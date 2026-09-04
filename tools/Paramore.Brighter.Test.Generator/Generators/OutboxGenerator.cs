@@ -48,9 +48,15 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
     {
         if (configuration.Outbox != null)
         {
-            await GenerateAsync(configuration, "Outbox", "Outbox", configuration.Outbox);
-
             var prefix = configuration.Outbox.Prefix;
+            await GenerateAsync(
+                configuration,
+                Path.Combine("Outbox", prefix, "Generated", "Sync"),
+                Path.Combine("Outbox", "Sync"),
+                configuration.Outbox,
+                filename => SkipTest(configuration.Outbox, filename)
+            );
+
             await GenerateAsync(
                 configuration,
                 Path.Combine("Outbox", prefix, "Generated", "Async"),
