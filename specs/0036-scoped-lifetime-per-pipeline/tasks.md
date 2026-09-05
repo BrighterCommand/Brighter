@@ -429,7 +429,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T3.1
   - **References**: FR-8, FR-9, NFR-4, D6; ADR 0075 step 1
 
-- [ ] **STRUCTURAL: T3.4 — `IBrighterOptions` and `BrighterOptions` gain `DefaultScopeAffinity`**
+- [x] **STRUCTURAL: T3.4 — `IBrighterOptions` and `BrighterOptions` gain `DefaultScopeAffinity`**
   - **USE COMMAND**: `/tidy-first add the DefaultScopeAffinity property to IBrighterOptions and BrighterOptions defaulting to AlwaysNew`
   - Files: `src/Paramore.Brighter.Extensions.DependencyInjection/BrighterOptions.cs` (`:9`) and its `IBrighterOptions` interface
   - `ScopeAffinity DefaultScopeAffinity { get; set; }` on the interface, `= ScopeAffinity.AlwaysNew` on the class. `ConsumersOptions : BrighterOptions` (`ConsumersOptions.cs:10`) inherits it with no separate work, and it is settable in an `AddConsumers` delegate
