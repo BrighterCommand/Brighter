@@ -907,14 +907,26 @@ public class LoggingHandler<T> : RequestHandler<T> where T : class, IRequest
 The `CommandProcessorBuilder` provides fluent configuration:
 
 ```csharp
-var commandProcessor = CommandProcessorBuilder.With()
+var commandProcessor = CommandProcessorBuilder.StartNew()
     .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
-    .Policies(policyRegistry)
-    .ExternalBus(externalBusConfiguration)
-    .RequestContextFactory(requestContextFactory)
-    .InboxConfiguration(inboxConfig)
+    .DefaultResilience()
+    .NoExternalBus()
+    .NoInstrumentation()
+    .RequestContextFactory(new InMemoryRequestContextFactory())
+    .RequestSchedulerFactory(new InMemorySchedulerFactory())
     .Build();
 ```
+
+Each step of the chain offers alternatives:
+
+- `.DefaultResilience()` supplies Brighter's own retry pipelines. To supply your own, use
+  `.Resilience(resiliencePipelineRegistry, policyRegistry)` — and build that registry with
+  `new ResiliencePipelineRegistry<string>().AddBrighterDefault()`, because Brighter's required
+  `CommandProcessor.OutboxProducer` pipeline is otherwise missing and the builder throws.
+- `.NoExternalBus()` configures an internal bus only. To send messages out of process use
+  `.ExternalBus(busType, outboxProducerMediator, transactionType, responseChannelFactory,
+  subscriptions, inboxConfiguration)` — the inbox is a parameter here, not a step of its own.
+- `.NoInstrumentation()` can be replaced by `.ConfigureInstrumentation(tracer, instrumentationOptions)`.
 
 ### Dependency Injection Integration
 Brighter integrates with .NET's dependency injection:
