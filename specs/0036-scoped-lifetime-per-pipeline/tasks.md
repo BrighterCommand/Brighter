@@ -398,7 +398,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T2.8 (Phase 2 complete)
   - **References**: FR-10, D4, D17, C-8; ADR 0072 step 1
 
-- [ ] **TEST + IMPLEMENT: T3.2 — `AmbientScopeSourceException` never carries a null inner exception**
+- [x] **TEST + IMPLEMENT: T3.2 — `AmbientScopeSourceException` never carries a null inner exception**
   - **USE COMMAND**: `/test-first constructing an AmbientScopeSourceException with a null inner exception throws ArgumentNullException`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CommandProcessors/Pipeline"
   - Test file: `When_an_ambient_scope_source_exception_is_constructed_with_no_inner_it_should_throw.cs`
