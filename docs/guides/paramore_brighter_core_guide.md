@@ -387,10 +387,20 @@ The Call operation supports a blocking RPC-style interaction:
 // Similar to Post but returns a response
 TResponse? result = commandProcessor.Call<MyQuery, MyResponse>(query);
 
-// External call setup requires reply channels
-var replyChannelFactory = // Configure reply channel factory
-var commandProcessor = CommandProcessorBuilder.With()
-    .RequestReplyQueues(replyChannelFactory, replySubscriptions)
+// External call setup requires reply channels. Request-reply is not a step of its
+// own: it is ExternalBusType.RPC on the ExternalBus step, which is what sets the
+// builder's request-reply mode and takes the reply channel factory and subscriptions.
+var commandProcessor = CommandProcessorBuilder.StartNew()
+    .Handlers(handlerConfiguration)
+    .DefaultResilience()
+    .ExternalBus(
+        ExternalBusType.RPC,
+        bus,                                  // IAmAnOutboxProducerMediator
+        responseChannelFactory: replyChannelFactory,
+        subscriptions: replySubscriptions)
+    .NoInstrumentation()
+    .RequestContextFactory(new InMemoryRequestContextFactory())
+    .RequestSchedulerFactory(new InMemorySchedulerFactory())
     .Build();
 ```
 
@@ -920,12 +930,20 @@ var commandProcessor = CommandProcessorBuilder.StartNew()
 Each step of the chain offers alternatives:
 
 - `.DefaultResilience()` supplies Brighter's own retry pipelines. To supply your own, use
-  `.Resilience(resiliencePipelineRegistry, policyRegistry)` — and build that registry with
-  `new ResiliencePipelineRegistry<string>().AddBrighterDefault()`, because Brighter's required
-  `CommandProcessor.OutboxProducer` pipeline is otherwise missing and the builder throws.
+  `.Resilience(resiliencePipelineRegistry, policyRegistry)`. Two things bite here:
+  - The registry must contain `CommandProcessor.OutboxProducer`, or `Resilience` throws
+    `ConfigurationException`. Get it from
+    `new ResiliencePipelineRegistry<string>().AddBrighterDefault()`. **`AddBrighterDefault` uses
+    `TryAddBuilder`, so it never overwrites**: register your own pipelines *first* and call
+    `AddBrighterDefault()` afterwards to backfill. Calling it first means your own
+    `CommandProcessor.OutboxProducer` is silently discarded.
+  - The optional `policyRegistry` is validated too — a registry you supply must contain both
+    `CommandProcessor.RETRYPOLICY` and `CommandProcessor.CIRCUITBREAKER`. **Omit the argument**
+    and Brighter uses `DefaultPolicy`, which has both.
 - `.NoExternalBus()` configures an internal bus only. To send messages out of process use
-  `.ExternalBus(busType, outboxProducerMediator, transactionType, responseChannelFactory,
-  subscriptions, inboxConfiguration)` — the inbox is a parameter here, not a step of its own.
+  `.ExternalBus(busType, bus, transactionType, responseChannelFactory, subscriptions,
+  inboxConfiguration)` — the inbox is a parameter here, not a step of its own, and request-reply
+  is `ExternalBusType.RPC` rather than a step of its own either.
 - `.NoInstrumentation()` can be replaced by `.ConfigureInstrumentation(tracer, instrumentationOptions)`.
 
 ### Dependency Injection Integration
@@ -998,11 +1016,13 @@ public void When_Sending_Command_Should_Execute_Pipeline()
     registry.Register<CreateCustomerCommand, CreateCustomerHandler>();
     
     var handlerFactory = new SimpleHandlerFactory();
-    var commandProcessor = CommandProcessorBuilder.With()
+    var commandProcessor = CommandProcessorBuilder.StartNew()
         .Handlers(new HandlerConfiguration(registry, handlerFactory))
-        .DefaultPolicy()
+        .DefaultResilience()
         .NoExternalBus()
+        .NoInstrumentation()
         .RequestContextFactory(new InMemoryRequestContextFactory())
+        .RequestSchedulerFactory(new InMemorySchedulerFactory())
         .Build();
     
     var command = new CreateCustomerCommand("John", "john@example.com");
@@ -1074,10 +1094,13 @@ Brighter provides several test doubles for different scenarios:
 #### InMemoryBus
 For testing without external dependencies:
 ```csharp
-var commandProcessor = CommandProcessorBuilder.With()
+var commandProcessor = CommandProcessorBuilder.StartNew()
     .Handlers(handlerConfiguration)
-    .DefaultPolicy()
+    .DefaultResilience()
     .NoExternalBus() // Uses in-memory bus
+    .NoInstrumentation()
+    .RequestContextFactory(new InMemoryRequestContextFactory())
+    .RequestSchedulerFactory(new InMemorySchedulerFactory())
     .Build();
 ```
 
