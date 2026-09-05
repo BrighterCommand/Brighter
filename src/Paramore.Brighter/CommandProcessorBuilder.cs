@@ -403,7 +403,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Post{TRequest}"/> or <see cref="CommandProcessor.ClearOutbox"/> using an external bus.
         /// You need to provide a policy to specify how QoS issues, specifically <see cref="CommandProcessor.RETRYPOLICY "/> or <see cref="CommandProcessor.CIRCUITBREAKER "/> 
-        /// are handled by adding appropriate <see cref="CommandProcessorBuilder.Policies"/> when choosing this option.
+        /// are handled by adding appropriate resilience via <see cref="INeedResilience.Resilience"/> or <see cref="INeedResilience.DefaultResilience"/> when choosing this option.
         /// </summary>
         /// <param name="busType">The type of Bus: In-memory, Db, or RPC</param>
         /// <param name="bus">The bus that we wish to use</param>
