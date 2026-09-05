@@ -389,7 +389,7 @@ Counts and `file:line` anchors below were re-derived against the working tree; w
 
 This phase declares types and moves a registration. It has **no acceptance criterion of its own**: every AC that would exercise adoption needs the protocol (Phase 4) or the extension (Phase 6). Two contract-level tests and one design-owed write-through test carry it, and each is traced to an FR.
 
-- [ ] **STRUCTURAL: T3.1 — add `IAmAScopeProvider`, `ScopeAffinity` and `AmbientScopeSourceException` to core**
+- [x] **STRUCTURAL: T3.1 — add `IAmAScopeProvider`, `ScopeAffinity` and `AmbientScopeSourceException` to core**
   - **USE COMMAND**: `/tidy-first add the IAmAScopeProvider seam interface, the ScopeAffinity enum and AmbientScopeSourceException to Paramore.Brighter`
   - Files: `src/Paramore.Brighter/IAmAScopeProvider.cs`, `src/Paramore.Brighter/ScopeAffinity.cs`, `src/Paramore.Brighter/AmbientScopeSourceException.cs` (all new)
   - `IAmAScope? GetAmbient(ScopeAffinity affinity)` — the member spelling is a working name that ADR 0073 keeps; the contract is fixed by D17. `AlwaysNew = 0` so that `default(ScopeAffinity)` is the safe value. Names are settled by D4 and may not be changed
