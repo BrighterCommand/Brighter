@@ -121,7 +121,7 @@ namespace Paramore.Brighter
         /// Supplies the specified handler configuration, so that we can register subscribers and the handler factory used to create instances of them
         /// </summary>
         /// <param name="handlerConfiguration">The handler configuration.</param>
-        /// <returns>INeedPolicy.</returns>
+        /// <returns>INeedResilience.</returns>
         public INeedResilience Handlers(HandlerConfiguration handlerConfiguration)
         {
             _registry = handlerConfiguration.SubscriberRegistry;
@@ -133,7 +133,7 @@ namespace Paramore.Brighter
         /// Supplies the specified feature switching configuration, so we can use feature switches on user-defined request handlers
         /// </summary>
         /// <param name="featureSwitchRegistry">The feature switch config provider</param>
-        /// <returns>INeedPolicy</returns>
+        /// <returns>INeedResilience</returns>
         public INeedAHandlers ConfigureFeatureSwitches(IAmAFeatureSwitchRegistry featureSwitchRegistry)
         {
             _featureSwitchRegistry = featureSwitchRegistry;
@@ -178,7 +178,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Post{TRequest}"/> or <see cref="CommandProcessor.ClearOutbox"/> using an external bus.
         /// You need to provide a policy to specify how QoS issues, specifically <see cref="CommandProcessor.RETRYPOLICY "/> or <see cref="CommandProcessor.CIRCUITBREAKER "/> 
-        /// are handled by adding appropriate <see cref="Policies"/> when choosing this option.
+        /// are handled by adding appropriate resilience via <see cref="Resilience"/> or <see cref="DefaultResilience"/> when choosing this option.
         /// </summary>
         /// <param name="busType">The type of Bus: In-memory, Db, or RPC</param>
         /// <param name="bus">The service bus that we need to use to send messages externally</param>
@@ -363,7 +363,7 @@ namespace Paramore.Brighter
         /// Handlers the specified the registry.
         /// </summary>
         /// <param name="theRegistry">The registry.</param>
-        /// <returns>INeedPolicy.</returns>
+        /// <returns>INeedResilience.</returns>
         INeedResilience Handlers(HandlerConfiguration theRegistry);
 
         /// <summary>
@@ -403,7 +403,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Post{TRequest}"/> or <see cref="CommandProcessor.ClearOutbox"/> using an external bus.
         /// You need to provide a policy to specify how QoS issues, specifically <see cref="CommandProcessor.RETRYPOLICY "/> or <see cref="CommandProcessor.CIRCUITBREAKER "/> 
-        /// are handled by adding appropriate <see cref="CommandProcessorBuilder.Policies"/> when choosing this option.
+        /// are handled by adding appropriate resilience via <see cref="INeedResilience.Resilience"/> or <see cref="INeedResilience.DefaultResilience"/> when choosing this option.
         /// </summary>
         /// <param name="busType">The type of Bus: In-memory, Db, or RPC</param>
         /// <param name="bus">The bus that we wish to use</param>

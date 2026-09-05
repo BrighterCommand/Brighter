@@ -85,27 +85,35 @@ The following is an example of how to specify the configuration for the SQL Serv
 
         //create the gateway
         var messagingConfiguration =
-            new MsSqlMessagingGatewayConfiguration(
-                @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", "QueueData");
+            new RelationalDatabaseConfiguration(
+                @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;",
+                queueStoreTable: "QueueData");
         var messageConsumerFactory = new MsSqlMessageConsumerFactory(messagingConfiguration);
 
-        var dispatcher = DispatchBuilder.With()
-            .CommandProcessor(CommandProcessorBuilder.With()
-                .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
-                .Policies(policyRegistry)
-                .NoTaskQueues()
-                .RequestContextFactory(new InMemoryRequestContextFactory())
-                .Build())
-            .MessageMappers(messageMapperRegistry)
-            .DefaultChannelFactory(new MsSqlInputChannelFactory(messageConsumerFactory))
-            .Connections(new Connection[]
+        var commandProcessor = CommandProcessorBuilder.StartNew()
+            .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
+            .DefaultResilience()
+            .NoExternalBus()
+            .NoInstrumentation()
+            .RequestContextFactory(new InMemoryRequestContextFactory())
+            .RequestSchedulerFactory(new InMemorySchedulerFactory())
+            .Build();
+
+        var dispatcher = DispatchBuilder.StartNew()
+            .CommandProcessor(commandProcessor, new InMemoryRequestContextFactory())
+            .MessageMappers(messageMapperRegistry, null, null, null)
+            .ChannelFactory(new ChannelFactory(messageConsumerFactory))
+            .Subscriptions(new Subscription[]
             {
-                new Connection<GreetingEvent>(
-                    new ConnectionName("paramore.example.greeting"),
+                new MsSqlSubscription<GreetingEvent>(
+                    new SubscriptionName("paramore.example.greeting"),
                     new ChannelName("greeting.event"),
                     new RoutingKey("greeting.event"),
-                    timeoutInMilliseconds: 200)
-            }).Build();
+                    messagePumpType: MessagePumpType.Reactor,
+                    timeOut: TimeSpan.FromMilliseconds(200))
+            })
+            .NoInstrumentation()
+            .Build();
 
         dispatcher.Receive();
 
