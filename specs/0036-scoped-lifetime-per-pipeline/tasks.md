@@ -412,7 +412,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T3.1
   - **References**: FR-24.1, NFR-7; ADR 0072 step 1 (*the courier* contract table)
 
-- [ ] **TEST + IMPLEMENT: T3.3 — `AmbientScopeSuppression` carries one bit along a logical flow and restores it on dispose**
+- [x] **TEST + IMPLEMENT: T3.3 — `AmbientScopeSuppression` carries one bit along a logical flow and restores it on dispose**
   - **USE COMMAND**: `/test-first AmbientScopeSuppression reports false outside a bracket, true inside one, restores the captured value on dispose and nests correctly`
   - Test location: "tests/Paramore.Brighter.Core.Tests/CommandProcessors/Pipeline"
   - Test file: `When_suppression_brackets_are_nested_they_should_restore_the_captured_value.cs`
