@@ -105,10 +105,11 @@ The following is an example of how to specify the configuration for the SQL Serv
             .ChannelFactory(new ChannelFactory(messageConsumerFactory))
             .Subscriptions(new Subscription[]
             {
-                new Subscription<GreetingEvent>(
+                new MsSqlSubscription<GreetingEvent>(
                     new SubscriptionName("paramore.example.greeting"),
                     new ChannelName("greeting.event"),
                     new RoutingKey("greeting.event"),
+                    messagePumpType: MessagePumpType.Reactor,
                     timeOut: TimeSpan.FromMilliseconds(200))
             })
             .NoInstrumentation()
