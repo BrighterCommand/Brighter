@@ -224,6 +224,45 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         }
 
         /// <summary>
+        /// Registers this path's <see cref="IBrighterOptions"/> descriptor, applying a registered
+        /// <see cref="ScopeAffinityOverride"/> to it at first resolution, and records the descriptor's
+        /// identity so a validator can later ask whether it is still the effective one - all without
+        /// resolving anything here. A no-op where an unkeyed <see cref="IBrighterOptions"/> descriptor
+        /// is already registered, so a host that registers its own keeps it.
+        /// </summary>
+        /// <param name="services">The collection to register into.</param>
+        /// <param name="optionsFunc">This registration path's own options factory.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="services"/> or
+        /// <paramref name="optionsFunc"/> is <see langword="null"/>.</exception>
+        private static void RegisterBrighterOptions(
+            IServiceCollection services,
+            Func<IServiceProvider, BrighterOptions> optionsFunc)
+        {
+            if (services is null) throw new ArgumentNullException(nameof(services));
+            if (optionsFunc is null) throw new ArgumentNullException(nameof(optionsFunc));
+
+            // TryAddSingleton spelled out, because the descriptor we add has to be one we can hand on:
+            // a validator's rule asks whether the effective IBrighterOptions descriptor is this one.
+            // ServiceKey is part of the test because that is what TryAdd itself matches on - without
+            // it, a host with a KEYED IBrighterOptions would get no Brighter registration at all.
+            if (services.Any(d => d.ServiceType == typeof(IBrighterOptions) && d.ServiceKey is null))
+                return;
+
+            var descriptor = ServiceDescriptor.Singleton<IBrighterOptions>(sp =>
+            {
+                var options = optionsFunc(sp)
+                    ?? throw new InvalidOperationException("The Brighter options factory returned null.");
+                var over = sp.GetService<ScopeAffinityOverride>();
+                if (over is not null)
+                    options.DefaultScopeAffinity = over.Affinity; // D18: the extension wins
+                return options;
+            });
+
+            services.Add(descriptor);
+            services.AddSingleton(new BrighterOptionsRegistration(descriptor));
+        }
+
+        /// <summary>
         ///We use AddProducers to register an external bus, which is a bus that is not the Brighter In-Memory Bus.
         /// The external bus uses Message Oriented Middleware (MoM) to dispatch a message from a producer
         /// to a consumer. 
