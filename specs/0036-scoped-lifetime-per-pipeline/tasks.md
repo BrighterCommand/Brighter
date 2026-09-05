@@ -368,7 +368,7 @@ Counts and `file:line` anchors below were re-derived against the working tree; w
   - **Depends on**: T2.6, T1.10
   - **References**: AC-33 (FR-13); ADR 0071 steps 2, 6 (second required test)
 
-- [ ] **TEST + IMPLEMENT: T2.8 — bounded scope growth over sustained consumption**
+- [x] **TEST + IMPLEMENT: T2.8 — bounded scope growth over sustained consumption**
   - **USE COMMAND**: `/test-first consuming ten thousand messages begins as many pipeline scopes as it releases with zero live at the end`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_consuming_ten_thousand_messages_scopes_begun_should_equal_scopes_released.cs`
