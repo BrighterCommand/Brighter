@@ -45,8 +45,11 @@ namespace Paramore.Brighter
         /// Initializes a new instance of the <see cref="AmbientScopeSourceException"/> class.
         /// </summary>
         /// <param name="inner">The exception the ambient source threw.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="inner"/> is <see langword="null"/>.
+        /// The constructor validates rather than trusting its callers, because <see cref="InnerException"/>
+        /// being non-null is a guarantee the builders' rethrow sites rely on.</exception>
         public AmbientScopeSourceException(Exception inner)
-            : base(inner?.Message, inner)
+            : base((inner ?? throw new ArgumentNullException(nameof(inner))).Message, inner)
         {
         }
     }
