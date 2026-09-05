@@ -439,7 +439,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T3.1 (the DI package cannot name `ScopeAffinity` until core declares it)
   - **References**: FR-14, FR-15, C-9 (settled), AC-24 (general clause); ADR 0076 step 1
 
-- [ ] **STRUCTURAL: T3.5 — add `ScopeAffinityOverride`, `BrighterOptionsRegistration` and `RegisterBrighterOptions`, uncalled**
+- [x] **STRUCTURAL: T3.5 — add `ScopeAffinityOverride`, `BrighterOptionsRegistration` and `RegisterBrighterOptions`, uncalled**
   - **USE COMMAND**: `/tidy-first add ScopeAffinityOverride, BrighterOptionsRegistration and the private RegisterBrighterOptions helper to the DI package without calling it`
   - Files: `src/Paramore.Brighter.Extensions.DependencyInjection/ScopeAffinityOverride.cs` (new, **public**), `BrighterOptionsRegistration.cs` (new, **internal**), `ServiceCollectionExtensions.cs` (the new `private static RegisterBrighterOptions`, beside `BrighterHandlerBuilder` at `:142`)
   - `ScopeAffinityOverride`'s `<remarks>` must state the registration obligation it places on every registrar: a **constructed instance** under a plain `AddSingleton` — never `TryAdd*`, which would make the first call win the affinity while the last wins the provider, and never a factory delegate, whose descriptor carries no instance for validation to read (this is what T7.9's rule reports on)
