@@ -498,7 +498,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T4.1, T3.2
   - **References**: AC-30 (FR-24.1); ADR 0072 steps 1b, 2
 
-- [ ] **STRUCTURAL: T4.2a — land `AmbientScopeDiagnostics` and its registration, inert**
+- [x] **STRUCTURAL: T4.2a — land `AmbientScopeDiagnostics` and its registration, inert**
   - **USE COMMAND**: `/tidy-first add the AmbientScopeDiagnostics container-scoped singleton and register it in BrighterHandlerBuilder, with no caller`
   - Files: `src/Paramore.Brighter.Extensions.DependencyInjection/AmbientScopeDiagnostics.cs` (new); `src/Paramore.Brighter.Extensions.DependencyInjection/ServiceCollectionExtensions.cs` (`:142`, `BrighterHandlerBuilder` — the single registration point all four entry points route through, ADR 0072 step 5)
   - The type, its three `Condition` values (*no ambient offered*, *ambient offered but unusable*, *ambient offered for an `AlwaysNew` ask and ignored*) and the `WarnOnce(condition, providerImplementationType)` member are declared and registered `TryAddSingleton`. **Nothing calls it in this commit** — the same shape T3.5 uses for `RegisterBrighterOptions`
