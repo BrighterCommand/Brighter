@@ -448,7 +448,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T3.4
   - **References**: FR-17, FR-22.4, D18; ADR 0076 step 2
 
-- [ ] **TEST + IMPLEMENT: T3.6 — design-owed: a registered affinity override reaches the object the factories read, on all four registration paths**
+- [x] **TEST + IMPLEMENT: T3.6 — design-owed: a registered affinity override reaches the object the factories read, on all four registration paths**
   - **USE COMMAND**: `/test-first a registered ScopeAffinityOverride is applied to the resolved IBrighterOptions on all four Brighter registration entry points`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_an_affinity_override_is_registered_it_should_reach_the_resolved_brighter_options.cs`
