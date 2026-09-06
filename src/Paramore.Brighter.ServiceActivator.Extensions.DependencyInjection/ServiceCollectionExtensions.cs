@@ -35,7 +35,6 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
             
             var options = new ConsumersOptions();
             configure?.Invoke(options);
-            services.TryAddSingleton<IBrighterOptions>(options);
             services.TryAddSingleton<IAmConsumerOptions>(options);
             
             services.TryAdd(new ServiceDescriptor(typeof(IDispatcher),
@@ -85,7 +84,6 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
                 throw new ArgumentNullException(nameof(configure));
 
             // Register options with deferred resolution - ensure both interfaces resolve to the same instance
-            services.TryAddSingleton<IBrighterOptions>(configure);
             services.TryAddSingleton<IAmConsumerOptions>(sp =>
                 (IAmConsumerOptions)sp.GetRequiredService<IBrighterOptions>());
 

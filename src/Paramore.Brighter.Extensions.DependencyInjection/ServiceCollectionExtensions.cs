@@ -70,13 +70,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (configure != null)
                 services.Configure(configure);
 
-            // Register IBrighterOptions resolved from IOptions<BrighterOptions>
-            services.TryAddSingleton<IBrighterOptions>(sp =>
-                sp.GetRequiredService<IOptions<BrighterOptions>>().Value);
-
             return BrighterHandlerBuilder(
                 services,
-                sp => (BrighterOptions)sp.GetRequiredService<IBrighterOptions>());
+                sp => sp.GetRequiredService<IOptions<BrighterOptions>>().Value);
         }
 
         /// <summary>
@@ -94,7 +90,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (configure == null)
                 throw new ArgumentNullException(nameof(configure));
 
-            services.TryAddSingleton<IBrighterOptions>(configure);
             return BrighterHandlerBuilder(
                 services,
                 configure);
@@ -143,6 +138,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             IServiceCollection services,
             Func<IServiceProvider, BrighterOptions> optionsFunc)
         {
+            // Every registration path funnels through here - this is the one place that registers
+            // IBrighterOptions, so a registered ScopeAffinityOverride reaches it regardless of path (FR-17)
+            RegisterBrighterOptions(services, optionsFunc);
+
             // DO NOT build intermediate provider - defer all resolution
             // Create registries - they always register as Transient, actual lifetime managed by ServiceProviderHandlerFactory
             var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
