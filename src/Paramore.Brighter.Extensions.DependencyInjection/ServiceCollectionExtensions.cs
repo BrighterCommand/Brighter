@@ -142,6 +142,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             // IBrighterOptions, so a registered ScopeAffinityOverride reaches it regardless of path (FR-17)
             RegisterBrighterOptions(services, optionsFunc);
 
+            // ADR 0072 step 5 - the ambient-scope diagnostics singleton, latched per Brighter
+            // container (D19). Landed inert here; the factories that call WarnOnce arrive later.
+            services.TryAddSingleton<AmbientScopeDiagnostics>();
+
             // DO NOT build intermediate provider - defer all resolution
             // Create registries - they always register as Transient, actual lifetime managed by ServiceProviderHandlerFactory
             var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
