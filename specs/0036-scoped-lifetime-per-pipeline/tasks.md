@@ -472,7 +472,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
 
 ## Phase 4 — ADR 0072: the ambient scope adoption seam
 
-- [ ] **STRUCTURAL: T4.1 — one spelling for the two `PipelineBuilder` catch filters**
+- [x] **STRUCTURAL: T4.1 — one spelling for the two `PipelineBuilder` catch filters**
   - **USE COMMAND**: `/tidy-first normalise the two PipelineBuilder catch filters to one spelling`
   - Files: `src/Paramore.Brighter/PipelineBuilder.cs` — re-derived at HEAD: `:202` reads `catch (Exception e) when (e is not ConfigurationException)` and `:248` reads `catch (Exception e) when(!(e is ConfigurationException))`. **Both anchors and both spellings match the ADR**
   - ADR 0072's own words: *"Normalising them changes no behaviour and belongs in its own commit ahead of the behavioural change, per Tidy First. Doing it first also means the clause added below is added twice to the same shape"*
