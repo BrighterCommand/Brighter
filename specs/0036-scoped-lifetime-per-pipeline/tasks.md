@@ -480,7 +480,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T3.6 (Phase 3 complete)
   - **References**: ADR 0072 step 1a
 
-- [ ] **TEST + IMPLEMENT: T4.2 — a throwing ambient source surfaces to the caller unwrapped, on both a `Send` and a `Post`**
+- [x] **TEST + IMPLEMENT: T4.2 — a throwing ambient source surfaces to the caller unwrapped, on both a `Send` and a `Post`**
   - **USE COMMAND**: `/test-first a scope provider whose GetAmbient throws surfaces that exception unwrapped from both Send and Post with no leaked scope`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_the_ambient_query_throws_the_caller_should_see_it_unwrapped.cs`
