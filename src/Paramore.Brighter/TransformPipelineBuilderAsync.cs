@@ -28,6 +28,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
@@ -115,6 +116,12 @@ namespace Paramore.Brighter
 
                 return pipeline;
             }
+            catch (AmbientScopeSourceException ambientEx)
+            {
+                CleanUpQuietly(pipeline, transformLeases, messageMapperLease, scope);
+                ExceptionDispatchInfo.Capture(ambientEx.InnerException!).Throw();
+                throw; // unreachable - satisfies the compiler
+            }
             catch (Exception e)
             {
                 //nothing was returned to the caller to take ownership of the mapper and transforms, so
@@ -156,6 +163,12 @@ namespace Paramore.Brighter
                 }
 
                 return pipeline;
+            }
+            catch (AmbientScopeSourceException ambientEx)
+            {
+                CleanUpQuietly(pipeline, transformLeases, messageMapperLease, scope);
+                ExceptionDispatchInfo.Capture(ambientEx.InnerException!).Throw();
+                throw; // unreachable - satisfies the compiler
             }
             catch (Exception e)
             {

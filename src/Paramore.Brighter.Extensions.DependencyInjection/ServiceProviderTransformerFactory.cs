@@ -35,6 +35,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ServiceProviderLifetimeScope _lifetimeScope;
+        private readonly IAmAScopeProvider? _scopeProvider;
 
         /// <summary>
         /// Constructs a transformer factory
@@ -46,6 +47,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var options = (IBrighterOptions?)serviceProvider.GetService(typeof(IBrighterOptions));
             var lifetime = options?.TransformerLifetime ?? ServiceLifetime.Singleton;
             _lifetimeScope = new ServiceProviderLifetimeScope(serviceProvider, lifetime);
+            _scopeProvider = (IAmAScopeProvider?)serviceProvider.GetService(typeof(IAmAScopeProvider));
         }
 
         /// <summary>
@@ -53,10 +55,18 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// pipeline's transforms (and, once offered by the mapper factory too, its mapper) resolve from
         /// one DI scope per pipeline rather than a factory-wide one. Any other lifetime offers none.
         /// </summary>
-        public IAmAScope? CreatePipelineScope() =>
-            _lifetimeScope.Lifetime == ServiceLifetime.Scoped
+        /// <exception cref="AmbientScopeSourceException">
+        /// A registered <see cref="IAmAScopeProvider"/>'s <c>GetAmbient</c> threw. The calling pipeline
+        /// builder recognises this type and rethrows the inner exception unwrapped.
+        /// </exception>
+        public IAmAScope? CreatePipelineScope()
+        {
+            AmbientScopeQuery.Ask(_scopeProvider);
+
+            return _lifetimeScope.Lifetime == ServiceLifetime.Scoped
                 ? new ServiceProviderPipelineScope(new ServiceProviderLifetimeScope(_serviceProvider, ServiceLifetime.Scoped))
                 : null;
+        }
 
         /// <summary>
         /// Creates a specific transformer on demand.

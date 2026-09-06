@@ -26,6 +26,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Collections.Generic;
+using System.Runtime.ExceptionServices;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Validation;
@@ -199,7 +200,12 @@ namespace Paramore.Brighter
 
                 return pipelines;
             }
-            catch (Exception e) when (e is not ConfigurationException)
+            catch (AmbientScopeSourceException ambientEx)
+            {
+                ExceptionDispatchInfo.Capture(ambientEx.InnerException!).Throw();
+                throw; // unreachable - satisfies the compiler
+            }
+            catch (Exception e) when (e is not ConfigurationException and not AmbientScopeSourceException)
             {
                 throw new ConfigurationException("Error when building pipeline, see inner Exception for details", e);
             }
@@ -245,7 +251,12 @@ namespace Paramore.Brighter
 
                 return pipelines;
             }
-            catch (Exception e) when (e is not ConfigurationException)
+            catch (AmbientScopeSourceException ambientEx)
+            {
+                ExceptionDispatchInfo.Capture(ambientEx.InnerException!).Throw();
+                throw; // unreachable - satisfies the compiler
+            }
+            catch (Exception e) when (e is not ConfigurationException and not AmbientScopeSourceException)
             {
                 throw new ConfigurationException("Error when building pipeline, see inner Exception for details", e);
             }

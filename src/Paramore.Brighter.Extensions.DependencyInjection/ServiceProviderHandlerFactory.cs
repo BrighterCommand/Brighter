@@ -36,6 +36,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private readonly ServiceLifetime _handlerLifetime;
         private readonly bool _isolateTransientHandlerScope;
         private readonly ServiceProviderLifetimeScope _singletonScope;
+        private readonly IAmAScopeProvider? _scopeProvider;
 
         /// <summary>
         /// Constructs a factory that uses the .NET IoC container as the factory
@@ -48,6 +49,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             _handlerLifetime = options?.HandlerLifetime ?? ServiceLifetime.Transient;
             _isolateTransientHandlerScope = options?.IsolateTransientHandlerScope ?? true;
             _singletonScope = new ServiceProviderLifetimeScope(serviceProvider, ServiceLifetime.Singleton);
+            _scopeProvider = (IAmAScopeProvider?)serviceProvider.GetService(typeof(IAmAScopeProvider));
         }
 
         /// <summary>
@@ -61,10 +63,18 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// (see <see cref="ServiceProviderLifetimeScope"/>'s isolated-transient-scope support), not an
         /// optional convenience.
         /// </remarks>
-        public IAmAScope? CreatePipelineScope() =>
-            _handlerLifetime == ServiceLifetime.Singleton
+        /// <exception cref="AmbientScopeSourceException">
+        /// A registered <see cref="IAmAScopeProvider"/>'s <c>GetAmbient</c> threw. The calling pipeline
+        /// builder recognises this type and rethrows the inner exception unwrapped.
+        /// </exception>
+        public IAmAScope? CreatePipelineScope()
+        {
+            AmbientScopeQuery.Ask(_scopeProvider);
+
+            return _handlerLifetime == ServiceLifetime.Singleton
                 ? null
                 : new ServiceProviderPipelineScope(new ServiceProviderLifetimeScope(_serviceProvider, _handlerLifetime, _isolateTransientHandlerScope));
+        }
 
         /// <summary>
         /// Creates an instance of the request handler

@@ -36,6 +36,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ServiceProviderLifetimeScope _lifetimeScope;
+        private readonly IAmAScopeProvider? _scopeProvider;
 
         /// <summary>
         /// Constructs a mapper factory that uses the .NET Service Provider for implementation details
@@ -47,6 +48,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var options = (IBrighterOptions?)serviceProvider.GetService(typeof(IBrighterOptions));
             var lifetime = options?.MapperLifetime ?? ServiceLifetime.Singleton;
             _lifetimeScope = new ServiceProviderLifetimeScope(serviceProvider, lifetime);
+            _scopeProvider = (IAmAScopeProvider?)serviceProvider.GetService(typeof(IAmAScopeProvider));
         }
 
         /// <summary>
@@ -54,10 +56,18 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// pipeline's mapper (and, once offered by the transformer factory too, its transforms) resolve
         /// from one DI scope per pipeline rather than a factory-wide one. Any other lifetime offers none.
         /// </summary>
-        public IAmAScope? CreatePipelineScope() =>
-            _lifetimeScope.Lifetime == ServiceLifetime.Scoped
+        /// <exception cref="AmbientScopeSourceException">
+        /// A registered <see cref="IAmAScopeProvider"/>'s <c>GetAmbient</c> threw. The calling pipeline
+        /// builder recognises this type and rethrows the inner exception unwrapped.
+        /// </exception>
+        public IAmAScope? CreatePipelineScope()
+        {
+            AmbientScopeQuery.Ask(_scopeProvider);
+
+            return _lifetimeScope.Lifetime == ServiceLifetime.Scoped
                 ? new ServiceProviderPipelineScope(new ServiceProviderLifetimeScope(_serviceProvider, ServiceLifetime.Scoped))
                 : null;
+        }
 
         /// <summary>
         /// Create an instance of the async message mapper type from the .NET IoC container.
