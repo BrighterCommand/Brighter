@@ -569,7 +569,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T4.4
   - **References**: AC-31 (FR-24.2, FR-18, D19); ADR 0072 steps 2, *`AmbientScopeDiagnostics`*
 
-- [ ] **TEST + IMPLEMENT: T4.6 — a stale ambient is declined, not surfaced**
+- [x] **TEST + IMPLEMENT: T4.6 — a stale ambient is declined, not surfaced**
   - **USE COMMAND**: `/test-first a provider offering a disposed resolution source is declined with one warning and no ObjectDisposedException reaches the caller`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_an_offered_ambient_is_stale_it_should_be_declined_and_reported_once.cs`
