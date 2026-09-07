@@ -509,7 +509,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T4.2
   - **References**: FR-24.2, FR-24.4, FR-23, D19; ADR 0072 steps 2, 5, *`AmbientScopeDiagnostics`*
 
-- [ ] **TEST + IMPLEMENT: T4.3 — the ambient query is made only for `Scoped` pipelines, and a pipeline mixing `Scoped` with `Transient` declines to adopt**
+- [x] **TEST + IMPLEMENT: T4.3 — the ambient query is made only for `Scoped` pipelines, and a pipeline mixing `Scoped` with `Transient` declines to adopt**
   - **USE COMMAND**: `/test-first a recording scope provider sees zero asks for an all Transient host and one AlwaysNew ask for a mixed Scoped and Transient transform pipeline`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_no_participating_factory_is_scoped_the_ambient_source_should_not_be_asked.cs`
