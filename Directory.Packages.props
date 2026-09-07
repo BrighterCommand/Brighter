@@ -54,16 +54,16 @@
     <PackageVersion Include="FluentMigrator.Runner.Postgres" Version="8.0.1" />
     <PackageVersion Include="FluentMigrator.Runner.SQLite" Version="8.0.1" />
     <PackageVersion Include="FluentMigrator.Runner.SqlServer" Version="8.0.1" />
-    <PackageVersion Include="FluentValidation" Version="11.12.1" />
+    <PackageVersion Include="FluentValidation" Version="11.12.0" />
     <PackageVersion Include="Fluid.Core" Version="2.40.0" />
     <PackageVersion Include="GitHubActionsTestLogger" Version="3.0.5" />
-    <PackageVersion Include="Google.Cloud.Firestore.V1" Version="4.4.0" />
-    <PackageVersion Include="Google.Cloud.PubSub.V1" Version="3.37.0" />
+    <PackageVersion Include="Google.Cloud.Firestore.V1" Version="4.3.0" />
+    <PackageVersion Include="Google.Cloud.PubSub.V1" Version="3.36.0" />
     <PackageVersion Include="Google.Cloud.ResourceManager.V3" Version="2.6.0" />
     <PackageVersion Include="Google.Cloud.Spanner.Data" Version="5.12.0" />
     <PackageVersion Include="Google.Cloud.Storage.V1" Version="4.15.0" />
     <PackageVersion Include="Google.Cloud.Tasks.V2" Version="3.5.0" />
-    <PackageVersion Include="Grpc.Core.Api" Version="2.83.0" />
+    <PackageVersion Include="Grpc.Core.Api" Version="2.80.0" />
     <PackageVersion Include="Hangfire.Core" Version="1.8.25" />
     <PackageVersion Include="Hangfire.InMemory" Version="1.0.0" />
     <PackageVersion Include="JustSaying" Version="8.1.1" />
@@ -210,8 +210,7 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.11" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="10.0.11" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.11" />
-    <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0" />
-    <PackageVersion Include="MongoDB.EntityFrameworkCore" Version="10.0.3" />
+    <PackageVersion Include="MongoDB.EntityFrameworkCore" Version="10.0.2" />
     <PackageVersion Include="Npgsql" Version="10.0.3" />
     <PackageVersion Include="TickerQ" Version="10.4.0" />
   </ItemGroup>
