@@ -86,8 +86,17 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 return null;
             }
 
-            if (ambient is not IAmAServiceProviderScope src) return null;
-            if (!AmbientScopeProbe.CanResolveFrom(src, rootProvider)) return null;
+            if (ambient is not IAmAServiceProviderScope src)
+            {
+                diagnostics?.WarnOnce(AmbientScopeDiagnostics.Condition.AmbientUnusable, scopeProvider.GetType());
+                return null;
+            }
+
+            if (!AmbientScopeProbe.CanResolveFrom(src, rootProvider))
+            {
+                diagnostics?.WarnOnce(AmbientScopeDiagnostics.Condition.AmbientUnusable, scopeProvider.GetType());
+                return null;
+            }
 
             return new ServiceProviderPipelineScope(ServiceProviderLifetimeScope.CreateBorrowed(src.Services));
         }
