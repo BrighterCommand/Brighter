@@ -440,11 +440,17 @@ QUEUE_CHECK=$(aws sqs get-queue-url --queue-name "$GUARDED_QUEUE" --query 'Queue
 assert_not_empty "$QUEUE_CHECK" "nothing was deleted before the guard was validated"
 
 # --- Test 11: releasing the guard deletes what it deferred ---
-# Deferral must not become permanent: a stamped topic is still swept once it is old enough.
+# Deferral must not become permanent: the topic Test 9 stamped is still swept once that stamp is
+# older than the window. The guard is left ON at one second rather than disabled, because a zero
+# window short-circuits topic_is_too_young before the stamp is ever read -- which would leave the
+# stamp-read-and-compare branch, the entire age mechanism for topics, covered by no test at all.
 echo ""
 echo "=== Test 11: deferred resources are deleted once the guard allows it ==="
 
-CLEANUP_MIN_AGE_SECONDS=0 "$CLEANUP_SCRIPT" >/dev/null 2>&1
+# Put Test 9's stamp, and the queue's CreatedTimestamp, outside a one-second window.
+sleep 2
+
+CLEANUP_MIN_AGE_SECONDS=1 "$CLEANUP_SCRIPT" >/dev/null 2>&1
 
 assert_eventually_contains \
     "aws sqs get-queue-url --queue-name \"$GUARDED_QUEUE\"" \

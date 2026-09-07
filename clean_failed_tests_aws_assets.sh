@@ -108,20 +108,30 @@ queue_is_too_young() {
 # Needs sns:ListTagsForResource and sns:TagResource. Without TagResource no stamp ever lands and
 # every topic is deferred indefinitely, which is the leak this script exists to stop, so that
 # failure is reported rather than swallowed.
+#
+# A tag read that fails -- most likely throttling, since SNS's tagging APIs are documented at
+# around 10 TPS per account and this runs at CLEANUP_PARALLELISM -- must not be confused with a
+# topic that has no stamp yet: re-stamping on every failed read would reset the clock every
+# sweep and defer the topic forever. So a failed read defers and leaves any existing stamp
+# alone. The CLI distinguishes the two: a successful query with no such tag prints None, a
+# failed call prints nothing and exits non-zero.
 topic_is_too_young() {
     local topic_arn="$1" first_seen
     [[ "$MIN_AGE_SECONDS" -gt 0 ]] || return 1
 
-    first_seen=$(aws sns list-tags-for-resource --resource-arn "$topic_arn" \
-        --query "Tags[?Key=='$FIRST_SEEN_TAG'].Value | [0]" --output text 2>/dev/null || echo "")
+    if ! first_seen=$(aws sns list-tags-for-resource --resource-arn "$topic_arn" \
+        --query "Tags[?Key=='$FIRST_SEEN_TAG'].Value | [0]" --output text 2>/dev/null); then
+        echo "    WARNING: could not read tags on ${topic_arn##*:} (needs sns:ListTagsForResource, or the call was throttled); deferring without stamping" >&2
+        return 0
+    fi
 
     if [[ "$first_seen" =~ ^[0-9]+$ ]]; then
         [[ $(( NOW - first_seen )) -lt "$MIN_AGE_SECONDS" ]]
         return
     fi
 
-    # First sighting, or a stamp we cannot read: record it and defer. A dry run writes nothing,
-    # so it previews the same deferral the next real run would make.
+    # First sighting -- the read succeeded and carried no stamp. Record it and defer. A dry run
+    # writes nothing, so it previews the same deferral the next real run would make.
     if ! $DRY_RUN; then
         aws sns tag-resource --resource-arn "$topic_arn" \
             --tags "Key=$FIRST_SEEN_TAG,Value=$NOW" >/dev/null 2>&1 \
