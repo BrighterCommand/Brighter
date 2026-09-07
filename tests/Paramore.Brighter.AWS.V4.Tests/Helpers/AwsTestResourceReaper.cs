@@ -72,31 +72,37 @@ public class AwsTestResourceReaper
     public IReadOnlyCollection<string> PendingQueues => _queues;
 
     /// <summary>
+    /// The budget for a single delete. Teardown is usually reached with no cancellation token at
+    /// all, and the reactor path blocks a test thread on the result, so a hung SNS or SQS call
+    /// would hang the run — the sort of harm this class promises not to do.
+    /// </summary>
+    /// <remarks>
+    /// Budgeted per resource rather than per sweep. One budget for the whole sweep means a slow
+    /// delete cancels the deletes queued behind it, and since the tracked names are dropped
+    /// either way, those become leaks that nothing retries and nothing reports. A fixture tracks
+    /// a handful of names, so the worst case is still bounded.
+    /// </remarks>
+    private static readonly TimeSpan DeleteTimeout = TimeSpan.FromSeconds(30);
+
+    /// <summary>
     /// Deletes every tracked topic and queue. Failures are swallowed: teardown runs after a
     /// test that may already have failed, and must not replace that failure with its own.
     /// </summary>
     /// <remarks>
     /// Reaping is a single attempt. The tracked names are dropped whether or not the delete
     /// reached AWS, so a second call is a no-op rather than a retry; anything left behind by a
-    /// failed sweep is the account sweep's problem, not teardown's.
+    /// failed sweep is the account sweep's problem, not teardown's. Failures are reported on
+    /// standard error on the way past — a reaper that silently reaps nothing is the leak this
+    /// class exists to close, and swallowing without a trace is how it would go unnoticed again.
     /// </remarks>
     public async Task ReapAsync(CancellationToken cancellationToken = default)
     {
-        // Teardown is usually reached with no token at all, and the reactor path blocks a test
-        // thread on the result. A hung SNS or SQS call would hang the run, which is the sort of
-        // harm this method promises not to do.
-        using var timeout = cancellationToken.CanBeCanceled
-            ? null
-            : new CancellationTokenSource(TimeSpan.FromSeconds(30));
-
-        var token = timeout?.Token ?? cancellationToken;
-
         try
         {
             // Topics first. Deleting a topic takes its subscriptions with it, which would
             // otherwise be left pointing at queues we are about to delete.
-            await ReapTopicsAsync(token);
-            await ReapQueuesAsync(token);
+            await ReapTopicsAsync(cancellationToken).ConfigureAwait(false);
+            await ReapQueuesAsync(cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -104,6 +110,14 @@ public class AwsTestResourceReaper
             _queues.Clear();
         }
     }
+
+    /// <summary>
+    /// Reports a failure teardown has chosen not to throw, so that a systematically failing
+    /// reaper can be found by searching a run rather than by counting resources in the account.
+    /// </summary>
+    private static void Report(string action, Exception exception)
+        => Console.Error.WriteLine(
+            $"AwsTestResourceReaper: could not {action}: {exception.GetType().Name}: {exception.Message}");
 
     private async Task ReapTopicsAsync(CancellationToken cancellationToken)
     {
@@ -117,13 +131,14 @@ public class AwsTestResourceReaper
             using var snsClient = new AWSClientFactory(_connection).CreateSnsClient();
             foreach (var topic in _topics)
             {
-                await DeleteTopicAsync(snsClient, topic, cancellationToken);
+                await DeleteTopicAsync(snsClient, topic, cancellationToken).ConfigureAwait(false);
             }
         }
-        catch (Exception)
+        catch (Exception exception)
         {
             // Swallowed by design; see ReapAsync. Creating the client can fail as readily as
             // the deletes it is created for.
+            Report($"reap {_topics.Count} topic(s)", exception);
         }
     }
 
@@ -139,12 +154,13 @@ public class AwsTestResourceReaper
             using var sqsClient = new AWSClientFactory(_connection).CreateSqsClient();
             foreach (var queue in _queues)
             {
-                await DeleteQueueAsync(sqsClient, queue, cancellationToken);
+                await DeleteQueueAsync(sqsClient, queue, cancellationToken).ConfigureAwait(false);
             }
         }
-        catch (Exception)
+        catch (Exception exception)
         {
             // Swallowed by design; see ReapAsync.
+            Report($"reap {_queues.Count} queue(s)", exception);
         }
     }
 
@@ -152,6 +168,14 @@ public class AwsTestResourceReaper
     /// Runs <see cref="ReapAsync"/> to completion on the calling thread, for fixtures that tear
     /// down synchronously.
     /// </summary>
+    /// <remarks>
+    /// Blocking here is only safe because every await in this class carries
+    /// <c>ConfigureAwait(false)</c>. xUnit installs a synchronisation context bounded by
+    /// <c>maxParallelThreads</c>; a continuation posted back to it while enough test threads sit
+    /// blocked in this method has no worker left to run it, and the per-delete budget cannot
+    /// rescue that — the cancelled call's continuation needs the same context. Do not drop the
+    /// <c>ConfigureAwait(false)</c> calls.
+    /// </remarks>
     public void Reap() => ReapAsync().GetAwaiter().GetResult();
 
     private async Task DeleteTopicAsync(
@@ -159,9 +183,13 @@ public class AwsTestResourceReaper
         string topicName,
         CancellationToken cancellationToken)
     {
+        using var budget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        budget.CancelAfter(DeleteTimeout);
+
         try
         {
-            var topicArn = await ResolveTopicArnAsync(snsClient, topicName, cancellationToken);
+            var topicArn = await ResolveTopicArnAsync(snsClient, topicName, budget.Token)
+                .ConfigureAwait(false);
             if (topicArn is null)
             {
                 return;
@@ -169,11 +197,12 @@ public class AwsTestResourceReaper
 
             // DeleteTopic is idempotent, so a topic the test never got as far as creating is not
             // an error.
-            await snsClient.DeleteTopicAsync(topicArn, cancellationToken);
+            await snsClient.DeleteTopicAsync(topicArn, budget.Token).ConfigureAwait(false);
         }
-        catch (Exception)
+        catch (Exception exception)
         {
             // Swallowed by design; see ReapAsync.
+            Report($"delete topic {topicName}", exception);
         }
     }
 
@@ -182,18 +211,23 @@ public class AwsTestResourceReaper
         string queueName,
         CancellationToken cancellationToken)
     {
+        using var budget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        budget.CancelAfter(DeleteTimeout);
+
         try
         {
-            var queueUrl = await sqsClient.GetQueueUrlAsync(queueName, cancellationToken);
-            await sqsClient.DeleteQueueAsync(queueUrl.QueueUrl, cancellationToken);
+            var queueUrl = await sqsClient.GetQueueUrlAsync(queueName, budget.Token)
+                .ConfigureAwait(false);
+            await sqsClient.DeleteQueueAsync(queueUrl.QueueUrl, budget.Token).ConfigureAwait(false);
         }
         catch (QueueDoesNotExistException)
         {
             // The test failed before it created the queue, or already deleted it.
         }
-        catch (Exception)
+        catch (Exception exception)
         {
             // Swallowed by design; see ReapAsync.
+            Report($"delete queue {queueName}", exception);
         }
     }
 
@@ -218,23 +252,27 @@ public class AwsTestResourceReaper
             try
             {
                 using var stsClient = new AWSClientFactory(_connection).CreateStsClient();
-                var identity = await stsClient.GetCallerIdentityAsync(
-                    new GetCallerIdentityRequest(), cancellationToken);
+                var identity = await stsClient
+                    .GetCallerIdentityAsync(new GetCallerIdentityRequest(), cancellationToken)
+                    .ConfigureAwait(false);
 
                 _accountId = identity.Account;
             }
-            catch (Exception)
+            catch (Exception exception)
             {
                 // Asked once. Retrying per topic would add a failing call to each of the
-                // searches the lookup exists to avoid.
+                // searches the lookup exists to avoid. Said out loud once too: without it the
+                // fallback below turns teardown quietly slow rather than loudly broken.
                 _identityUnavailable = true;
+                Report("look up the caller identity; falling back to a ListTopics scan per topic",
+                    exception);
             }
         }
 
         if (_accountId is null)
         {
             // FindTopicAsync has no cancellable overload in this SDK.
-            return (await snsClient.FindTopicAsync(topicName))?.TopicArn;
+            return (await snsClient.FindTopicAsync(topicName).ConfigureAwait(false))?.TopicArn;
         }
 
         return new Arn
