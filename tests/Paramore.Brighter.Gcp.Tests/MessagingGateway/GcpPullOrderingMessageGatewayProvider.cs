@@ -144,6 +144,9 @@ public class GcpPullOrderingMessageGatewayProvider
             channelName: channelName,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
+            // Nack is a no-op for Pub/Sub: redelivery waits for the ack deadline to expire, so the
+            // deadline must be shorter than the tests' 30s bounded-retry ceiling (default 30 == 30).
+            ackDeadlineSeconds: 10,
             makeChannels: makeChannel,
             subscriptionMode: SubscriptionMode.Pull,
             enableMessageOrdering: true
