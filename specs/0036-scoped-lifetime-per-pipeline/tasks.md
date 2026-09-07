@@ -587,7 +587,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T4.5
   - **References**: AC-29 (FR-23, D19); ADR 0072 steps 2, 2a, 2b
 
-- [ ] **TEST + IMPLEMENT: T4.7 — an ambient that names the root provider is declined, not borrowed from**
+- [x] **TEST + IMPLEMENT: T4.7 — an ambient that names the root provider is declined, not borrowed from**
   - **USE COMMAND**: `/test-first a scope provider offering the root service provider is declined and each Send resolves its own scope`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_an_offered_ambient_names_the_root_provider_it_should_be_declined.cs`
