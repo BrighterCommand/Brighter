@@ -148,9 +148,8 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
         return baggage;
     }
 
-    private Uri GetCloudEventsDataSchema(IBrokeredMessageWrapper azureServiceBusMessage)
+    private Uri? GetCloudEventsDataSchema(IBrokeredMessageWrapper azureServiceBusMessage)
     {
-        var defaultSchemaUri = new Uri("http://goparamore.io"); // Default schema URI
         if (
             !azureServiceBusMessage.ApplicationProperties.TryGetValue(
                 ASBConstants.CloudEventsSchema,
@@ -159,7 +158,7 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
         )
         {
             Log.NoCloudEventsDataSchema(s_logger, _topic, subscription.Name);
-            return defaultSchemaUri;
+            return null;
         }
 
         var dataSchema = property.ToString();
@@ -167,10 +166,11 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
         if (string.IsNullOrEmpty(dataSchema))
         {
             Log.EmptyCloudEventsDataSchema(s_logger, _topic, subscription.Name);
-            return defaultSchemaUri;
+            return null;
         }
 
-        return new Uri(dataSchema);
+        // CloudEvents defines dataschema as a URI-reference, which may be relative
+        return Uri.TryCreate(dataSchema, UriKind.RelativeOrAbsolute, out var uri) ? uri : null;
     }
 
     private string GetCloudEventsSubject(IBrokeredMessageWrapper azureServiceBusMessage)
@@ -308,7 +308,7 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
 
     private Uri GetSource(IBrokeredMessageWrapper azureServiceBusMessage)
     {
-        var defaultSourceUri = new Uri("http://goparamore.io"); // Default source URI
+        var defaultSourceUri = new Uri(MessageHeader.DefaultSource);
         if (
             !azureServiceBusMessage.ApplicationProperties.TryGetValue(
                 ASBConstants.CloudEventsSource,
@@ -326,9 +326,8 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
             return defaultSourceUri;
         }
 
-        var source = property.ToString();
-
-        return new Uri(source!);
+        // CloudEvents defines source as a URI-reference, which may be relative
+        return Uri.TryCreate(sourceString, UriKind.RelativeOrAbsolute, out var uri) ? uri : defaultSourceUri;
     }
 
     private TraceParent GetTraceParent(IBrokeredMessageWrapper azureServiceBusMessage)
