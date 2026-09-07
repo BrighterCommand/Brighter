@@ -58,7 +58,7 @@ public class MySqlRunnerDefaultLockTimeoutTests : IAsyncLifetime
         // Detection-helper ctor is the ONLY one that exposes `lockTimeout` as optional. The
         // backward-compat ctor (MySqlBoxMigrationRunner.cs:84) takes it as required, so it
         // cannot exercise the default path.
-        var runner = new MySqlBoxMigrationRunner(new MySqlBoxDetectionHelper(), new MySqlOutboxMigrationCatalog(), config, advisoryLock: fakeLock);
+        var runner = new MySqlBoxMigrationRunner(new MySqlBoxDetectionHelper(), new MySqlOutboxMigrationCatalog(), config, advisoryLock: fakeLock, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act

@@ -55,13 +55,13 @@ public class MsSqlLegacyTableRaceTests : IAsyncLifetime
             new MsSqlOutboxMigrationCatalog(),
             new MsSqlPayloadModeValidator(),
             config,
-            new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
+            new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var provisionerB = new MsSqlOutboxProvisioner(
             new MsSqlBoxDetectionHelper(),
             new MsSqlOutboxMigrationCatalog(),
             new MsSqlPayloadModeValidator(),
             config,
-            new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
+            new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //Act — race two provisioners against the same legacy table.
         await Task.WhenAll(provisionerA.ProvisionAsync(), provisionerB.ProvisionAsync());
@@ -101,13 +101,13 @@ public class MsSqlLegacyTableRaceTests : IAsyncLifetime
             new MsSqlInboxMigrationCatalog(),
             new MsSqlPayloadModeValidator(),
             config,
-            new MsSqlBoxMigrationRunner(new MsSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
+            new MsSqlBoxMigrationRunner(new MsSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var provisionerB = new MsSqlInboxProvisioner(
             new MsSqlBoxDetectionHelper(),
             new MsSqlInboxMigrationCatalog(),
             new MsSqlPayloadModeValidator(),
             config,
-            new MsSqlBoxMigrationRunner(new MsSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
+            new MsSqlBoxMigrationRunner(new MsSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //Act — race two provisioners against the same legacy table.
         await Task.WhenAll(provisionerA.ProvisionAsync(), provisionerB.ProvisionAsync());

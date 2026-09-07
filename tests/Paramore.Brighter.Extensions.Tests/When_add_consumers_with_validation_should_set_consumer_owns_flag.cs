@@ -36,7 +36,7 @@ public class AddConsumersValidationFlagTests
     public void When_validate_pipelines_then_add_consumers_should_set_consumer_owns_validation_true()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         var brighterBuilder = services.AddBrighter();
 
         // Act — ValidatePipelines first, then AddConsumers
@@ -53,7 +53,7 @@ public class AddConsumersValidationFlagTests
     public void When_add_consumers_then_validate_pipelines_should_set_consumer_owns_validation_true()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
 
         // Act — AddConsumers first, then ValidatePipelines (order independent)
         var brighterBuilder = services.AddConsumers();
@@ -69,7 +69,7 @@ public class AddConsumersValidationFlagTests
     public void When_add_consumers_without_validate_pipelines_should_not_register_validation_options()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
 
         // Act — AddConsumers only, no ValidatePipelines
         services.AddConsumers();

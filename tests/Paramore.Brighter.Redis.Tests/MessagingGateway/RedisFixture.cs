@@ -18,8 +18,8 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
 
             RedisMessagingGatewayConfiguration configuration = RedisMessagingGatewayConfiguration();
 
-            MessageProducer = new RedisMessageProducer(configuration, new RedisMessagePublication {Topic = Topic});
-            MessageConsumer = new RedisMessageConsumer(configuration, queueName, Topic);
+            MessageProducer = new RedisMessageProducer(configuration, new RedisMessagePublication {Topic = Topic}, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+            MessageConsumer = new RedisMessageConsumer(configuration, queueName, Topic, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         }
 
         public static RedisMessagingGatewayConfiguration RedisMessagingGatewayConfiguration()

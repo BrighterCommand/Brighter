@@ -66,7 +66,7 @@ public class MsSqlRunnerLockResourceSchemaQualificationTests
             throwOnAcquire: new InvalidOperationException("acquire-then-stop probe for lock-resource assertion"));
 
         var runner = new MsSqlBoxMigrationRunner(
-            new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), fakeLock);
+            new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, fakeLock);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act

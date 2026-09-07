@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             _timeProvider = new FakeTimeProvider();
             InMemoryMessageProducer messageProducer =
-                new(new InternalBus(), new Publication { Topic = routingKey, RequestType = typeof(MyCommand) });
+                new(new InternalBus(), Initializer.TestLoggerFactory, new Publication { Topic = routingKey, RequestType = typeof(MyCommand) });
 
             _message = new Message(
                 new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND),
@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                _outbox,
+                Initializer.TestLoggerFactory, _outbox,
                 timeProvider: _timeProvider
             );
 
@@ -65,8 +65,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new DefaultPolicy(),
                 resiliencePipelineRegistry,
                 bus,
-                new InMemorySchedulerFactory()
-            );
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+                loggerFactory: Initializer.TestLoggerFactory);
 
             _controlBusSender = new ControlBusSender(commandProcessor);
         }

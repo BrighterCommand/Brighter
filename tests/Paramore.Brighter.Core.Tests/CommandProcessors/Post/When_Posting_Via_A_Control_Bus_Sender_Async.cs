@@ -30,7 +30,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             var timeProvider = new FakeTimeProvider();
             var tracer = new BrighterTracer(timeProvider);
             _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
-            InMemoryMessageProducer messageProducer = new(_internalBus, new Publication { Topic = _routingKey, RequestType = typeof(MyCommand) });
+            InMemoryMessageProducer messageProducer = new(_internalBus, Initializer.TestLoggerFactory, new Publication { Topic = _routingKey, RequestType = typeof(MyCommand) });
 
             _message = new Message(
                 new MessageHeader(_myCommand.Id, _routingKey, MessageType.MT_COMMAND),
@@ -55,7 +55,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                _outbox
+                Initializer.TestLoggerFactory, _outbox
             );
 
             var commandProcessor = new CommandProcessor(
@@ -63,8 +63,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new DefaultPolicy(),
                 resiliencePipelineRegistry,
                 bus, 
-                new InMemorySchedulerFactory()
-            );
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+                loggerFactory: Initializer.TestLoggerFactory);
 
             _controlBusSender = new ControlBusSender(commandProcessor);
         }

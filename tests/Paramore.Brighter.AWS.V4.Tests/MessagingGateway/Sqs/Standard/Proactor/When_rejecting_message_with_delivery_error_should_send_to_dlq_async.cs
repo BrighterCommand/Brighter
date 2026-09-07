@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2025 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -75,12 +75,12 @@ public class SqsMessageConsumerDeliveryErrorDlqTestsAsync : IDisposable, IAsyncD
 
         var awsConnection = GatewayFactory.CreateFactory();
 
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _channel = _channelFactory.CreateAsyncChannel(subscription);
 
         _messageProducer = new SqsMessageProducer(
             awsConnection,
-            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create));
+            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         // Create a separate async channel to consume from the DLQ queue
         var dlqSubscription = new SqsSubscription<MyCommand>(
@@ -91,7 +91,7 @@ public class SqsMessageConsumerDeliveryErrorDlqTestsAsync : IDisposable, IAsyncD
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Create);
 
-        _dlqChannelFactory = new ChannelFactory(awsConnection);
+        _dlqChannelFactory = new ChannelFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _dlqChannel = _dlqChannelFactory.CreateAsyncChannel(dlqSubscription);
     }
 

@@ -34,7 +34,7 @@ public class InMemorySchedulerMessageAsyncTests
         _timeProvider = new FakeTimeProvider();
         _timeProvider.SetUtcNow(DateTimeOffset.UtcNow);
 
-        _scheduler = new InMemorySchedulerFactory { TimeProvider = _timeProvider };
+        _scheduler = new InMemorySchedulerFactory (loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance) { TimeProvider = _timeProvider };
 
         var handlerFactory = new SimpleHandlerFactoryAsync(
             type =>
@@ -60,7 +60,7 @@ public class InMemorySchedulerMessageAsyncTests
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            [_routingKey] = new InMemoryMessageProducer(_internalBus, new Publication{ Topic = _routingKey, RequestType = typeof(MyEvent) })
+            [_routingKey] = new InMemoryMessageProducer(_internalBus, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, new Publication{ Topic = _routingKey, RequestType = typeof(MyEvent) })
         });
 
         var messageMapperRegistry = new MessageMapperRegistry(
@@ -85,7 +85,7 @@ public class InMemorySchedulerMessageAsyncTests
             new EmptyMessageTransformerFactoryAsync(),
             trace,
             new FindPublicationByPublicationTopicOrRequestType(),
-            _outbox
+            global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, _outbox
         );
 
         _processor = new CommandProcessor(
@@ -95,8 +95,8 @@ public class InMemorySchedulerMessageAsyncTests
             policyRegistry,
             new ResiliencePipelineRegistry<string>(),
             outboxBus,
-            _scheduler
-        );
+            _scheduler,
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

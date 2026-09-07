@@ -146,13 +146,13 @@ public class PostgreSqlMultiBoxGlobalToPerSchemaFlipTests : IAsyncLifetime
             schemaName: _schemaName);
         var runner = new PostgreSqlBoxMigrationRunner(
             new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30),
-            scope: scope);
+            scope: scope, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         return new PostgreSqlOutboxProvisioner(
-            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlBoxDetectionHelper(logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.BoxProvisioning.PostgreSql.PostgreSqlBoxDetectionHelper>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)),
             new PostgreSqlOutboxMigrationCatalog(),
             new PostgreSqlPayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     private PostgreSqlInboxProvisioner BuildInboxProvisioner(MigrationHistoryScope scope)
@@ -163,13 +163,13 @@ public class PostgreSqlMultiBoxGlobalToPerSchemaFlipTests : IAsyncLifetime
             schemaName: _schemaName);
         var runner = new PostgreSqlBoxMigrationRunner(
             new PostgreSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30),
-            scope: scope);
+            scope: scope, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         return new PostgreSqlInboxProvisioner(
-            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlBoxDetectionHelper(logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.BoxProvisioning.PostgreSql.PostgreSqlBoxDetectionHelper>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)),
             new PostgreSqlInboxMigrationCatalog(),
             new PostgreSqlPayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     private async Task EnsureSchemaExistsAsync(string schemaName)

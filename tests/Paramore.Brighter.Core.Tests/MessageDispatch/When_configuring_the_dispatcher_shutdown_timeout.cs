@@ -45,7 +45,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             return new Dispatcher(
                 commandProcessor,
                 new List<Subscription>(),
-                messageMapperRegistry,
+                Initializer.TestLoggerFactory, messageMapperRegistry,
                 shutdownTimeout: shutdownTimeout);
         }
     }

@@ -13,7 +13,7 @@ public class MySqlTextInboxAsyncTest : RelationalDatabaseInboxAsyncTests
     protected override bool JsonMessagePayload => false;
 
     protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration) 
-        => new MySqlInbox(configuration);
+        => new MySqlInbox(configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Inbox.MySql.MySqlInbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 
     protected override async Task CreateInboxTableAsync(RelationalDatabaseConfiguration configuration)
     {

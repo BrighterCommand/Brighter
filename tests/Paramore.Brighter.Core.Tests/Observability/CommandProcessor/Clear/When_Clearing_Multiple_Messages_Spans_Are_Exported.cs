@@ -18,7 +18,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.Observability.CommandProcessor.Clear;
 
 [Collection("Observability")]
-public class CommandProcessorMultipleClearObservabilityTests 
+public class CommandProcessorMultipleClearObservabilityTests
 {
     private readonly List<Activity> _exportedActivities;
     private readonly TracerProvider _traceProvider;
@@ -28,7 +28,7 @@ public class CommandProcessorMultipleClearObservabilityTests
     public CommandProcessorMultipleClearObservabilityTests()
     {
         var routingKey = new RoutingKey("MyEvent");
-        
+
         var builder = Sdk.CreateTracerProviderBuilder();
         _exportedActivities = new List<Activity>();
 
@@ -37,22 +37,22 @@ public class CommandProcessorMultipleClearObservabilityTests
             .ConfigureResource(r => r.AddService("in-memory-tracer"))
             .AddInMemoryExporter(_exportedActivities)
             .Build();
-        
-        
+
+
         var registry = new SubscriberRegistry();
 
-        var handlerFactory = new PostCommandTests.EmptyHandlerFactorySync(); 
-        
+        var handlerFactory = new PostCommandTests.EmptyHandlerFactorySync();
+
         var retryPolicy = Policy
             .Handle<Exception>()
             .Retry();
-        
+
         var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICY, retryPolicy}};
 
         var timeProvider  = new FakeTimeProvider();
         var tracer = new BrighterTracer(timeProvider);
         InMemoryOutbox outbox = new(timeProvider){Tracer = tracer};
-        
+
         var messageMapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
             null);
@@ -60,8 +60,8 @@ public class CommandProcessorMultipleClearObservabilityTests
 
 
         var cloudEventsType = new CloudEventsType("io.goparamore.brighter.myevent");
-        InMemoryMessageProducer messageProducer = new(_internalBus, 
-            new Publication 
+        InMemoryMessageProducer messageProducer = new(_internalBus,
+        Initializer.TestLoggerFactory, new Publication
             {
                 Source = new Uri("http://localhost"),
                 RequestType = typeof(MyEvent),
@@ -74,65 +74,65 @@ public class CommandProcessorMultipleClearObservabilityTests
         {
             {new ProducerKey(routingKey, cloudEventsType), messageProducer}
         });
-        
+
         IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-            producerRegistry, 
-            new ResiliencePipelineRegistry<string>().AddBrighterDefault(), 
-            messageMapperRegistry, 
-            new EmptyMessageTransformerFactory(), 
+            producerRegistry,
+            new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
+            messageMapperRegistry,
+            new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            outbox,
+            Initializer.TestLoggerFactory, outbox,
             maxOutStandingMessages: -1
         );
-        
+
         _commandProcessor = new Brighter.CommandProcessor(
-            registry, 
-            handlerFactory, 
+            registry,
+            handlerFactory,
             new InMemoryRequestContextFactory(),
-            policyRegistry, 
+            policyRegistry,
             new ResiliencePipelineRegistry<string>(),
             bus,
-            new InMemorySchedulerFactory(),
-            tracer: tracer, 
-            instrumentationOptions: InstrumentationOptions.All
-        );
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+            tracer: tracer,
+            instrumentationOptions: InstrumentationOptions.All,
+            loggerFactory: Initializer.TestLoggerFactory);
     }
-    
+
     [Fact]
     public void When_Clearing_A_Message_A_Span_Is_Exported()
     {
         //arrange
         var parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("BrighterTracerSpanTests");
-        
+
         var eventOne = new MyEvent();
         var eventTwo = new MyEvent();
         var eventThree = new MyEvent();
-        
+
         var context = new RequestContext { Span = parentActivity };
 
         //act
         var messageIds = _commandProcessor.DepositPost([eventOne, eventTwo, eventThree], context);
-        
+
         //reset the parent span as deposit and clear are siblings
-        
+
         context.Span = parentActivity;
         _commandProcessor.ClearOutbox(messageIds, context);
-        
+
         parentActivity?.Stop();
-        
+
         _traceProvider.ForceFlush();
-        
+
         //assert
         //+1 confirmation (settle) span emitted per confirmed message (3 messages) (FR-2)
         Assert.Equal(22, _exportedActivities.Count);
         Assert.Contains(_exportedActivities, a => a.Source.Name == "Paramore.Brighter");
-        
+
         //there should be a create span for the batch
         var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{BrighterSemanticConventions.ClearMessages} {CommandProcessorSpanOperation.Create.ToSpanName()}");
         Assert.NotNull(createActivity);
-        
+
         //there should be a clear span for each message id
         var clearActivity = _exportedActivities.Where(a => a.DisplayName == $"{BrighterSemanticConventions.ClearMessages} {CommandProcessorSpanOperation.Clear.ToSpanName()}");
         Assert.Equal(3, clearActivity.Count());

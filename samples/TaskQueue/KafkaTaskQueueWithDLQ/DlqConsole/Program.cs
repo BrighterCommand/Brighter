@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -75,9 +75,10 @@ var host = Host.CreateDefaultBuilder(args)
         var consumerFactory = new KafkaMessageConsumerFactory(
             new KafkaMessagingGatewayConfiguration
             {
-                Name = "paramore.brighter.dlq", BootStrapServers = new[] { "localhost:9092" }
-            }
-        );
+                Name = "paramore.brighter.dlq",
+                BootStrapServers = new[] { "localhost:9092" }
+            },
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         services.AddConsumers(options =>
         {
@@ -86,7 +87,7 @@ var host = Host.CreateDefaultBuilder(args)
         })
         // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
         // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-        .UseScheduler(new InMemorySchedulerFactory())
+        .UseScheduler(new InMemorySchedulerFactory(loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance))
         .AutoFromAssemblies();
 
 

@@ -94,7 +94,7 @@ public class RmqClassicMessageGatewayProvider
     public IAmAChannelSync CreateChannel(RmqSubscription subscription)
     {
         var channel = new ChannelFactory(
-            new RmqMessageConsumerFactory(_connection)
+            new RmqMessageConsumerFactory(_connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
         ).CreateSyncChannel(subscription);
 
         if (subscription.MakeChannels == OnMissingChannel.Create)
@@ -117,7 +117,7 @@ public class RmqClassicMessageGatewayProvider
     )
     {
         var channel = await new ChannelFactory(
-            new RmqMessageConsumerFactory(_connection)
+            new RmqMessageConsumerFactory(_connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
         ).CreateAsyncChannelAsync(subscription, cancellationToken);
 
         if (subscription.MakeChannels == OnMissingChannel.Create)
@@ -148,7 +148,7 @@ public class RmqClassicMessageGatewayProvider
             };
         }
 
-        var produces = new RmqMessageProducerFactory(connection, [publication]).Create();
+        var produces = new RmqMessageProducerFactory(connection, [publication], loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create();
 
         var producer = produces.First().Value;
         return (IAmAMessageProducerSync)producer;
@@ -173,8 +173,8 @@ public class RmqClassicMessageGatewayProvider
 
         var produces = await new RmqMessageProducerFactory(
             connection,
-            [publication]
-        ).CreateAsync();
+            [publication],
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).CreateAsync();
 
         var producer = produces.First().Value;
         return (IAmAMessageProducerAsync)producer;
@@ -239,8 +239,8 @@ public class RmqClassicMessageGatewayProvider
             queueName: subscription.DeadLetterChannelName!,
             routingKey: subscription.DeadLetterRoutingKey!,
             isDurable: false,
-            makeChannels: OnMissingChannel.Assume
-        );
+            makeChannels: OnMissingChannel.Assume,
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         try
         {
@@ -271,8 +271,8 @@ public class RmqClassicMessageGatewayProvider
             queueName: subscription.DeadLetterChannelName!,
             routingKey: subscription.DeadLetterRoutingKey!,
             isDurable: false,
-            makeChannels: OnMissingChannel.Assume
-        );
+            makeChannels: OnMissingChannel.Assume,
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         try
         {

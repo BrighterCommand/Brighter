@@ -66,14 +66,14 @@ public class KafkaConsumerDisposesRequeueProducerTests : IDisposable
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
                 }
-            ]).Create();
+            ], loggerFactory: Initializer.TestLoggerFactory).Create();
 
         _consumer = new KafkaMessageConsumerFactory(
             new KafkaMessagingGatewayConfiguration
             {
                 Name = "Kafka Consumer Dispose Test",
                 BootStrapServers = new[] { "localhost:9092" }
-            })
+            }, loggerFactory: Initializer.TestLoggerFactory)
             .Create(new KafkaSubscription<MyCommand>(
                 channelName: new ChannelName(_channelName),
                 routingKey: new RoutingKey(_topic),

@@ -52,13 +52,13 @@ public class MsSqlGlobalScopeHistoryPlacementTests : IAsyncLifetime
             schemaName: _schemaName);
         var runner = new MsSqlBoxMigrationRunner(
             new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30),
-            scope: MigrationHistoryScope.Global);
+            scope: MigrationHistoryScope.Global, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _provisioner = new MsSqlOutboxProvisioner(
             new MsSqlBoxDetectionHelper(),
             new MsSqlOutboxMigrationCatalog(),
             new MsSqlPayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

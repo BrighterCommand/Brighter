@@ -34,7 +34,7 @@ builder.Services.AddConsumers(opt =>
         };
 
     opt.DefaultChannelFactory = new ChannelFactory(
-        new RmqMessageConsumerFactory(rmqConnection)
+        new RmqMessageConsumerFactory(rmqConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
     );
 
 })
@@ -53,7 +53,7 @@ app.UseHttpsRedirection();
 
 app.MapGet("/", () =>
 {
-   return "helloConsumer";
+    return "helloConsumer";
 });
 
 app.Run();

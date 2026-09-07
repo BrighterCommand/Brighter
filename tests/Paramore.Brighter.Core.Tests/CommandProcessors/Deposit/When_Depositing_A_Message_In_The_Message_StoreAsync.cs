@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             _myCommand.Value = "Hello World";
 
             var timeProvider = new FakeTimeProvider();
-            InMemoryMessageProducer messageProducer = new(_internalBus, new Publication{ Topic = _routingKey, RequestType = typeof(MyCommand) });
+            InMemoryMessageProducer messageProducer = new(_internalBus, Initializer.TestLoggerFactory, new Publication{ Topic = _routingKey, RequestType = typeof(MyCommand) });
 
             _message = new Message(
                 new MessageHeader(_myCommand.Id, _routingKey, MessageType.MT_COMMAND),
@@ -61,7 +61,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                _outbox
+                Initializer.TestLoggerFactory, _outbox
             );
 
             _commandProcessor = new CommandProcessor(
@@ -69,8 +69,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 new DefaultPolicy(),
                 resiliencePipelineRegistry,
                 bus,
-                new InMemorySchedulerFactory()
-            );
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+                loggerFactory: Initializer.TestLoggerFactory);
         }
 
         [Fact]

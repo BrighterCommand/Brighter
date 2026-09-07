@@ -40,7 +40,7 @@ public class ValidatePipelinesWithConsumersTests
     public void When_validate_pipelines_with_consumers_should_detect_missing_handler()
     {
         // Arrange — set up a subscription for a request type with no handler registered
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddConsumers(options =>
         {
             options.Subscriptions =
@@ -69,7 +69,7 @@ public class ValidatePipelinesWithConsumersTests
     public void When_add_consumers_should_register_consumer_validation_specs()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddConsumers();
 
         var provider = services.BuildServiceProvider();
@@ -87,7 +87,7 @@ public class ValidatePipelinesWithConsumersTests
         // Arrange — AddConsumers WITHOUT ValidatePipelines: the transformer-resolvability probe is never
         // registered, so the unwrap-transform spec must be inert (yield nothing) and must not throw when
         // resolved and evaluated.
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddConsumers();
         var provider = services.BuildServiceProvider();
 

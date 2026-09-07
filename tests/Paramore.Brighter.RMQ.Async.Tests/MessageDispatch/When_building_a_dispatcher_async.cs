@@ -40,7 +40,7 @@ public class DispatchBuilderTestsAsync
             Exchange = new Exchange("paramore.brighter.exchange")
         };
 
-        var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
+        var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var container = new ServiceCollection();
 
         var tracer = new BrighterTracer(TimeProvider.System);
@@ -52,7 +52,8 @@ public class DispatchBuilderTestsAsync
             .NoExternalBus()
             .ConfigureInstrumentation(tracer, instrumentationOptions)
             .RequestContextFactory(new InMemoryRequestContextFactory())
-            .RequestSchedulerFactory(new InMemorySchedulerFactory())
+            .RequestSchedulerFactory(new InMemorySchedulerFactory(loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance))
+            .ConfigureLogging(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
             .Build();
 
         _builder = DispatchBuilder.StartNew()
@@ -76,7 +77,8 @@ public class DispatchBuilderTestsAsync
                     messagePumpType: MessagePumpType.Proactor,
                     timeOut: TimeSpan.FromMilliseconds(200))
             ])
-            .ConfigureInstrumentation(tracer, instrumentationOptions);
+            .ConfigureInstrumentation(tracer, instrumentationOptions)
+            .ConfigureLogging(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
                 
     [Fact(Skip = "Breaks due to fault in Task Scheduler running after context has closed")]

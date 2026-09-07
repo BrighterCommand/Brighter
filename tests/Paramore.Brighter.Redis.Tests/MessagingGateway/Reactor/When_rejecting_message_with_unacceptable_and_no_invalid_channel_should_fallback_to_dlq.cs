@@ -49,13 +49,13 @@ public class RedisMessageConsumerUnacceptableFallbackToDlqTests : IDisposable
         var dlqQueueName = new ChannelName($"fallback-test-dlq-{Guid.NewGuid()}");
 
         _messageProducer = new RedisMessageProducer(configuration,
-            new RedisMessagePublication { Topic = topic });
+            new RedisMessagePublication { Topic = topic }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         // Only DLQ configured — no invalidMessageRoutingKey
         _consumer = new RedisMessageConsumer(configuration, queueName, topic,
-            deadLetterRoutingKey: dlqTopic);
+            deadLetterRoutingKey: dlqTopic, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
-        _dlqConsumer = new RedisMessageConsumer(configuration, dlqQueueName, dlqTopic);
+        _dlqConsumer = new RedisMessageConsumer(configuration, dlqQueueName, dlqTopic, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_COMMAND),

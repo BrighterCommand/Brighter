@@ -72,14 +72,14 @@ public class KafkaConsumerRequeueAsyncTests : IAsyncDisposable, IDisposable
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
                 }
-            ]).CreateAsync().Result;
+            ], loggerFactory: Initializer.TestLoggerFactory).CreateAsync().Result;
 
         _consumer = new KafkaMessageConsumerFactory(
             new KafkaMessagingGatewayConfiguration
             {
                 Name = "Kafka Consumer Requeue Async Test",
                 BootStrapServers = new[] { "localhost:9092" }
-            })
+            }, loggerFactory: Initializer.TestLoggerFactory)
             .CreateAsync(new KafkaSubscription<MyCommand>(
                 channelName: new ChannelName(_channelName),
                 routingKey: new RoutingKey(_topic),

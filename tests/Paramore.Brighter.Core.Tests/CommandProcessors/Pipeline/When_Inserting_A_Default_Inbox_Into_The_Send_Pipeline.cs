@@ -24,7 +24,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             //This handler has no Inbox attribute
             subscriberRegistry.Add(typeof(MyCommand), typeof(MyCommandHandler));
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyCommandHandler>(_ => new MyCommandHandler(_receivedMessages));
             container.AddSingleton<IAmAnInboxSync>(new InMemoryInbox(new FakeTimeProvider()));
             container.AddTransient<UseInboxHandler<MyCommand>>();
@@ -54,9 +54,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry {{CommandProcessor.RETRYPOLICY, retryPolicy}, {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}},
                 new ResiliencePipelineRegistry<string>(),
-                new InMemorySchedulerFactory(),
-                inboxConfiguration: inboxConfiguration
-            );
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+                inboxConfiguration: inboxConfiguration,
+                loggerFactory: Initializer.TestLoggerFactory);
 
             PipelineBuilder<MyCommand>.ClearPipelineCache();
         }

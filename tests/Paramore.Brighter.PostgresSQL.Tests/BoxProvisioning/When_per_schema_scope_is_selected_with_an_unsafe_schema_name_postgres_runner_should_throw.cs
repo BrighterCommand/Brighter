@@ -63,13 +63,13 @@ public class PostgreSqlPerSchemaUnsafeSchemaNameTests : IAsyncLifetime
             schemaName: UnsafeSchemaName);
         var runner = new PostgreSqlBoxMigrationRunner(
             new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30),
-            scope: MigrationHistoryScope.PerSchema);
+            scope: MigrationHistoryScope.PerSchema, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var provisioner = new PostgreSqlOutboxProvisioner(
-            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlBoxDetectionHelper(logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.BoxProvisioning.PostgreSql.PostgreSqlBoxDetectionHelper>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)),
             new PostgreSqlOutboxMigrationCatalog(),
             new PostgreSqlPayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //Act
         var thrown = await Record.ExceptionAsync(() => provisioner.ProvisionAsync());

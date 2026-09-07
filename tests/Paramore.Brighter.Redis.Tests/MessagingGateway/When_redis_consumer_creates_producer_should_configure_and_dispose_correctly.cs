@@ -48,7 +48,7 @@ public class When_redis_consumer_creates_producer_should_configure_and_dispose_c
         var queueName = new ChannelName($"Producer-Config-Queue-{Guid.NewGuid()}");
 
         var scheduler = new SpySchedulerSync();
-        var consumer = new RedisMessageConsumer(configuration, queueName, topic, scheduler);
+        var consumer = new RedisMessageConsumer(configuration, queueName, topic, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, scheduler);
 
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_COMMAND),
@@ -76,7 +76,7 @@ public class When_redis_consumer_creates_producer_should_configure_and_dispose_c
         var queueName = new ChannelName($"Producer-Dispose-Queue-{Guid.NewGuid()}");
 
         var scheduler = new SpySchedulerSync();
-        var consumer = new RedisMessageConsumer(configuration, queueName, topic, scheduler);
+        var consumer = new RedisMessageConsumer(configuration, queueName, topic, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, scheduler);
 
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_COMMAND),
@@ -99,7 +99,7 @@ public class When_redis_consumer_creates_producer_should_configure_and_dispose_c
         var queueName = new ChannelName($"Producer-NoRequeue-Queue-{Guid.NewGuid()}");
 
         var scheduler = new SpySchedulerSync();
-        var consumer = new RedisMessageConsumer(configuration, queueName, topic, scheduler);
+        var consumer = new RedisMessageConsumer(configuration, queueName, topic, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, scheduler);
 
         // Act & Assert - dispose without producer creation should not throw
         var exception = Record.Exception(() => consumer.Dispose());
@@ -116,7 +116,7 @@ public class When_redis_consumer_creates_producer_should_configure_and_dispose_c
         var queueName = new ChannelName($"Producer-AsyncDispose-Queue-{Guid.NewGuid()}");
 
         var scheduler = new SpySchedulerSync();
-        var consumer = new RedisMessageConsumer(configuration, queueName, topic, scheduler);
+        var consumer = new RedisMessageConsumer(configuration, queueName, topic, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, scheduler);
 
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_COMMAND),

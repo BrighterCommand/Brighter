@@ -52,17 +52,17 @@ public class PostgreSqlLegacyTableRaceTests : IAsyncLifetime
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _outboxTableName);
         var provisionerA = new PostgreSqlOutboxProvisioner(
-            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlBoxDetectionHelper(logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.BoxProvisioning.PostgreSql.PostgreSqlBoxDetectionHelper>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)),
             new PostgreSqlOutboxMigrationCatalog(),
             new PostgreSqlPayloadModeValidator(),
             config,
-            new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
+            new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var provisionerB = new PostgreSqlOutboxProvisioner(
-            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlBoxDetectionHelper(logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.BoxProvisioning.PostgreSql.PostgreSqlBoxDetectionHelper>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)),
             new PostgreSqlOutboxMigrationCatalog(),
             new PostgreSqlPayloadModeValidator(),
             config,
-            new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
+            new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //Act — race two provisioners against the same legacy table.
         await Task.WhenAll(provisionerA.ProvisionAsync(), provisionerB.ProvisionAsync());
@@ -99,17 +99,17 @@ public class PostgreSqlLegacyTableRaceTests : IAsyncLifetime
 
         var config = new RelationalDatabaseConfiguration(_connectionString, inboxTableName: _inboxTableName);
         var provisionerA = new PostgreSqlInboxProvisioner(
-            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlBoxDetectionHelper(logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.BoxProvisioning.PostgreSql.PostgreSqlBoxDetectionHelper>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)),
             new PostgreSqlInboxMigrationCatalog(),
             new PostgreSqlPayloadModeValidator(),
             config,
-            new PostgreSqlBoxMigrationRunner(new PostgreSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
+            new PostgreSqlBoxMigrationRunner(new PostgreSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var provisionerB = new PostgreSqlInboxProvisioner(
-            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlBoxDetectionHelper(logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.BoxProvisioning.PostgreSql.PostgreSqlBoxDetectionHelper>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)),
             new PostgreSqlInboxMigrationCatalog(),
             new PostgreSqlPayloadModeValidator(),
             config,
-            new PostgreSqlBoxMigrationRunner(new PostgreSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
+            new PostgreSqlBoxMigrationRunner(new PostgreSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //Act — race two provisioners against the same legacy table.
         await Task.WhenAll(provisionerA.ProvisionAsync(), provisionerB.ProvisionAsync());

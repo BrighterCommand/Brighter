@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -30,7 +30,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
 {
@@ -41,7 +40,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     /// </summary>
     internal sealed partial class ServiceProviderLifetimeScope : IDisposable
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<ServiceProviderLifetimeScope>();
+        private readonly ILogger _logger;
 
         private readonly IServiceProvider _serviceProvider;
         private readonly ServiceLifetime _lifetime;
@@ -81,6 +80,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public ServiceProviderLifetimeScope(IServiceProvider serviceProvider, ServiceLifetime lifetime, bool isolateTransientScopes = true)
         {
             _serviceProvider = serviceProvider;
+            _logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger<ServiceProviderLifetimeScope>();
             _lifetime = lifetime;
             _isolateTransientScopes = isolateTransientScopes;
         }
@@ -465,7 +465,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             //The exchange also publishes _disposed before we drain, so a concurrent GetOrCreate either
             //fails its guard or, if it slipped past, sees it on its post-add re-check and cleans up the
             //scope it just tracked.
-            if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+                return;
 
             try
             {
@@ -481,8 +482,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     //best-effort cleanup: a throw must not skip the remaining scopes, but it is logged
                     //(a repeated failure on this terminal teardown path means an unbounded leak) rather
                     //than swallowed silently, matching the other release paths in this change.
-                    try { DisposeScope(scope); }
-                    catch (Exception e) { Log.FailedToDisposeScope(s_logger, e); }
+                    try
+                    { DisposeScope(scope); }
+                    catch (Exception e) { Log.FailedToDisposeScope(_logger, e); }
                 }
             }
             finally
@@ -494,8 +496,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 if (rootScope != null)
                 {
                     //logged for the same reason as the transient drain above — best-effort, but not silent
-                    try { DisposeScope(rootScope); }
-                    catch (Exception e) { Log.FailedToDisposeScope(s_logger, e); }
+                    try
+                    { DisposeScope(rootScope); }
+                    catch (Exception e) { Log.FailedToDisposeScope(_logger, e); }
                 }
                 _scopedInstances.Clear();
             }

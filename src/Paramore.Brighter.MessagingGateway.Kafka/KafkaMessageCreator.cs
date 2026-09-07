@@ -31,7 +31,6 @@ using System.Text;
 using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
@@ -45,7 +44,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     /// </summary>
     public partial class KafkaMessageCreator
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<KafkaMessageCreator>();
+        private readonly ILogger _logger;
+
+        public KafkaMessageCreator(ILogger<KafkaMessageCreator> logger)
+        {
+            _logger = logger;
+        }
 
         private sealed class MessageHeaderResults
         {
@@ -65,24 +69,24 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             public required HeaderResult<Uri?> Source { get; set; }
             public required HeaderResult<TraceParent?> TraceParent { get; set; }
             public required HeaderResult<TraceState?> TraceState { get; set; }
-            public required HeaderResult<Baggage?> Baggage { get; set; } 
+            public required HeaderResult<Baggage?> Baggage { get; set; }
         }
 
         public Message CreateMessage(ConsumeResult<string, byte[]> consumeResult)
         {
             try
             {
-                var headerResults = KafkaMessageCreator.ReadAllHeaders(consumeResult);
+                var headerResults = ReadAllHeaders(consumeResult);
                 return CreateMessageFromHeaders(headerResults, consumeResult);
             }
             catch (Exception e)
             {
-                Log.FailedToCreateMessageFromKafkaOffset(s_logger, e);
+                Log.FailedToCreateMessageFromKafkaOffset(_logger, e);
                 return Message.FailureMessage(RoutingKey.Empty, Id.Empty);
             }
         }
 
-        private static MessageHeaderResults ReadAllHeaders(ConsumeResult<string, byte[]> consumeResult)
+        private MessageHeaderResults ReadAllHeaders(ConsumeResult<string, byte[]> consumeResult)
         {
             var result = new MessageHeaderResults
             {
@@ -118,11 +122,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             var message = SuccessMessage(headers, consumeResult);
             AddPartitionOffset(message, consumeResult);
             AddCustomHeaders(message, consumeResult.Message.Headers);
-            
+
             return message;
         }
 
-        private static Message SuccessMessage(MessageHeaderResults headers, ConsumeResult<string, byte[]> consumeResult)
+        private Message SuccessMessage(MessageHeaderResults headers, ConsumeResult<string, byte[]> consumeResult)
         {
             var messageHeader = new MessageHeader(
                 messageId: (headers.MessageId.Success ? headers.MessageId.Result : Id.Empty)!,
@@ -158,12 +162,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             headers.Each(header => ReadBagEntry(header, message));
         }
 
-        private static HeaderResult<ContentType?> ReadContentType(Headers headers)
+        private HeaderResult<ContentType?> ReadContentType(Headers headers)
         {
             var contentType = ReadHeader(headers, HeaderNames.CLOUD_EVENTS_DATA_CONTENT_TYPE, true);
-            
+
             if (contentType.Success && !string.IsNullOrEmpty(contentType.Result))
-                return new HeaderResult<ContentType?>( new ContentType(contentType.Result!), true);
+                return new HeaderResult<ContentType?>(new ContentType(contentType.Result!), true);
 
             contentType = ReadHeader(headers, HeaderNames.CONTENT_TYPE);
             if (contentType.Success && !string.IsNullOrEmpty(contentType.Result))
@@ -172,14 +176,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             return new HeaderResult<ContentType?>(null, false);
         }
 
-        private static HeaderResult<Id?> ReadCorrelationId(Headers headers)
+        private HeaderResult<Id?> ReadCorrelationId(Headers headers)
         {
             return ReadHeader(headers, HeaderNames.CORRELATION_ID)
                 .Map(correlationId =>
                 {
                     if (string.IsNullOrEmpty(correlationId))
                     {
-                        Log.NoCorrelationIdFoundInMessage(s_logger);
+                        Log.NoCorrelationIdFoundInMessage(_logger);
                         return new HeaderResult<Id?>(Id.Empty, true);
                     }
 
@@ -187,14 +191,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 });
         }
 
-        private static HeaderResult<TimeSpan> ReadDelay(Headers headers)
+        private HeaderResult<TimeSpan> ReadDelay(Headers headers)
         {
             return ReadHeader(headers, HeaderNames.DELAYED_MILLISECONDS)
                 .Map(s =>
                 {
                     if (string.IsNullOrEmpty(s))
                     {
-                        Log.NoDelayMillisecondsFoundInMessage(s_logger);
+                        Log.NoDelayMillisecondsFoundInMessage(_logger);
                         return new HeaderResult<TimeSpan>(TimeSpan.Zero, true);
                     }
 
@@ -203,19 +207,19 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                         return new HeaderResult<TimeSpan>(TimeSpan.FromMilliseconds(delayMilliseconds), true);
                     }
 
-                    Log.CouldNotParseMessageDelayMilliseconds(s_logger, s!);
+                    Log.CouldNotParseMessageDelayMilliseconds(_logger, s!);
                     return new HeaderResult<TimeSpan>(TimeSpan.Zero, false);
                 });
         }
 
-        private static HeaderResult<int> ReadHandledCount(Headers headers)
+        private HeaderResult<int> ReadHandledCount(Headers headers)
         {
             return ReadHeader(headers, HeaderNames.HANDLED_COUNT)
                 .Map(s =>
                 {
                     if (string.IsNullOrEmpty(s))
                     {
-                        Log.NoHandledCountFoundInMessage(s_logger);
+                        Log.NoHandledCountFoundInMessage(_logger);
                         return new HeaderResult<int>(0, true);
                     }
 
@@ -224,19 +228,19 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                         return new HeaderResult<int>(handledCount, true);
                     }
 
-                    Log.CouldNotParseMessageHandledCount(s_logger, s!);
+                    Log.CouldNotParseMessageHandledCount(_logger, s!);
                     return new HeaderResult<int>(0, false);
                 });
         }
 
-        private static HeaderResult<RoutingKey?> ReadReplyTo(Headers headers)
+        private HeaderResult<RoutingKey?> ReadReplyTo(Headers headers)
         {
             return ReadHeader(headers, HeaderNames.REPLY_TO)
                 .Map(s =>
                 {
                     if (string.IsNullOrEmpty(s))
                     {
-                        Log.NoReplyToFoundInMessage(s_logger);
+                        Log.NoReplyToFoundInMessage(_logger);
                         return new HeaderResult<RoutingKey?>(RoutingKey.Empty, true);
                     }
 
@@ -244,7 +248,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 });
         }
 
-        private static HeaderResult<DateTimeOffset> ReadTimeStamp(Headers headers)
+        private HeaderResult<DateTimeOffset> ReadTimeStamp(Headers headers)
         {
             if (headers.TryGetLastBytesIgnoreCase(HeaderNames.TIMESTAMP, out var lastHeader))
             {
@@ -274,7 +278,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     : new HeaderResult<DateTimeOffset>(DateTimeOffset.UtcNow, true));
         }
 
-        private static HeaderResult<MessageType> ReadMessageType(Headers headers)
+        private HeaderResult<MessageType> ReadMessageType(Headers headers)
         {
             return ReadHeader(headers, HeaderNames.MESSAGE_TYPE)
                 .Map(s =>
@@ -289,16 +293,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 });
         }
 
-        private static HeaderResult<RoutingKey> ReadTopic(string topic)
+        private HeaderResult<RoutingKey> ReadTopic(string topic)
         {
             return new HeaderResult<RoutingKey>(new RoutingKey(topic), true);
         }
 
-        private static HeaderResult<Id?> ReadMessageId(Headers headers)
+        private HeaderResult<Id?> ReadMessageId(Headers headers)
         {
             var id = ReadHeader(headers, HeaderNames.CLOUD_EVENTS_ID, true)
                 .Map(messageId => new HeaderResult<Id?>(string.IsNullOrEmpty(messageId) ? Id.Random() : Id.Create(messageId), true));
-            
+
             if (id.Success)
             {
                 return id;
@@ -310,7 +314,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     if (string.IsNullOrEmpty(messageId))
                     {
-                        Log.NoMessageIdFoundInMessage(s_logger, newMessageId);
+                        Log.NoMessageIdFoundInMessage(_logger, newMessageId);
                         return new HeaderResult<Id?>(Id.Random(), true);
                     }
 
@@ -318,7 +322,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 });
         }
 
-        private static HeaderResult<PartitionKey?> ReadPartitionKey(Message<string, byte[]> message)
+        private HeaderResult<PartitionKey?> ReadPartitionKey(Message<string, byte[]> message)
         {
 
             var pKey = ReadHeader(message.Headers, HeaderNames.PARTITIONKEY)
@@ -326,7 +330,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     if (string.IsNullOrEmpty(s))
                     {
-                        Log.NoPartitionKeyFoundInMessage(s_logger);
+                        Log.NoPartitionKeyFoundInMessage(_logger);
                         return new HeaderResult<PartitionKey?>(PartitionKey.Empty, false);
                     }
 
@@ -338,40 +342,40 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             {
                 return pKey;
             }
-           
+
             //if we have no partition key header, but we have a message key, we assume it is not a Brighter message,
             //and we use the message key as the partition key
             if (!string.IsNullOrEmpty(message.Key))
             {
                 return new HeaderResult<PartitionKey?>(message.Key, true);
             }
-            
+
             //if we have no partition key header, and no message key, we return empty
-            return new HeaderResult<PartitionKey?>(PartitionKey.Empty, false); 
+            return new HeaderResult<PartitionKey?>(PartitionKey.Empty, false);
         }
 
-        private static HeaderResult<string?> ReadSubject(Headers headers)
+        private HeaderResult<string?> ReadSubject(Headers headers)
             => ReadHeader(headers, HeaderNames.CLOUD_EVENTS_SUBJECT);
 
-        private static HeaderResult<CloudEventsType?> ReadType(Headers headers)
+        private HeaderResult<CloudEventsType?> ReadType(Headers headers)
             => ReadHeader(headers, HeaderNames.CLOUD_EVENTS_TYPE)
-                .Map(x =>x is not null 
+                .Map(x => x is not null
                     ? new HeaderResult<CloudEventsType?>(new CloudEventsType(x), true)
                     : new HeaderResult<CloudEventsType?>(CloudEventsType.Empty, true));
 
-        private static HeaderResult<Uri?> ReadDataSchema(Headers headers) =>
+        private HeaderResult<Uri?> ReadDataSchema(Headers headers) =>
             ReadHeader(headers, HeaderNames.CLOUD_EVENTS_DATA_SCHEMA, true)
                 .Map(x => Uri.TryCreate(x, UriKind.RelativeOrAbsolute, out var dataSchema)
                     ? new HeaderResult<Uri?>(dataSchema, true)
                     : new HeaderResult<Uri?>(null, false));
 
-        private static HeaderResult<Uri?> ReadSource(Headers headers) =>
+        private HeaderResult<Uri?> ReadSource(Headers headers) =>
             ReadHeader(headers, HeaderNames.CLOUD_EVENTS_SOURCE)
                 .Map(x => Uri.TryCreate(x, UriKind.RelativeOrAbsolute, out var dataSchema)
                     ? new HeaderResult<Uri?>(dataSchema, true)
                     : new HeaderResult<Uri?>(new Uri("http://goparamore.io"), true));
 
-        private static HeaderResult<TraceParent?> ReadTraceParent(Headers headers)
+        private HeaderResult<TraceParent?> ReadTraceParent(Headers headers)
         {
             return ReadHeader(headers, HeaderNames.CLOUD_EVENTS_TRACE_PARENT)
                 .Map(s =>
@@ -385,7 +389,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 });
         }
 
-        private static HeaderResult<TraceState?> ReadTraceState(Headers headers)
+        private HeaderResult<TraceState?> ReadTraceState(Headers headers)
         {
             return ReadHeader(headers, HeaderNames.CLOUD_EVENTS_TRACE_STATE)
                 .Map(s =>
@@ -399,7 +403,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 });
         }
 
-        private static HeaderResult<Baggage?> ReadBaggage(Headers headers)
+        private HeaderResult<Baggage?> ReadBaggage(Headers headers)
         {
             return ReadHeader(headers, HeaderNames.W3C_BAGGAGE)
                 .Map(s =>
@@ -415,7 +419,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 });
         }
 
-        private static HeaderResult<string?> ReadHeader(Headers headers, string key, bool dieOnMissing = false)
+        private HeaderResult<string?> ReadHeader(Headers headers, string key, bool dieOnMissing = false)
         {
             if (headers.TryGetLastBytesIgnoreCase(key, out byte[]? lastHeader))
             {
@@ -427,7 +431,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 catch (Exception e)
                 {
                     var firstTwentyBytes = BitConverter.ToString(lastHeader!.Take(20).ToArray());
-                    Log.FailedToReadTheValueOfHeader(s_logger, e, key, firstTwentyBytes);
+                    Log.FailedToReadTheValueOfHeader(_logger, e, key, firstTwentyBytes);
                     return new HeaderResult<string?>(null, false);
                 }
             }

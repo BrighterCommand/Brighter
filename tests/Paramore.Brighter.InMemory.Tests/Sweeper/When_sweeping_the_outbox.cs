@@ -34,7 +34,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 {
-                    routingKey, new InMemoryMessageProducer(internalBus, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
+                    routingKey, new InMemoryMessageProducer(internalBus, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
                 }
             });
 
@@ -53,7 +53,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                outbox
+                global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, outbox
             );
 
 
@@ -62,7 +62,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new PolicyRegistry(),
                 new ResiliencePipelineRegistry<string>(),
                 mediator,
-                new InMemorySchedulerFactory());
+                new InMemorySchedulerFactory(loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
             var sweeper = new OutboxSweeper(timeSinceSent, mediator, new InMemoryRequestContextFactory());
 
@@ -105,7 +105,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 {
-                    routingKey, new InMemoryMessageProducer(internalBus, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
+                    routingKey, new InMemoryMessageProducer(internalBus, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
                 }
             });
 
@@ -124,7 +124,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                outbox
+                global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, outbox
             );
 
 
@@ -133,8 +133,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new PolicyRegistry(),
                 new ResiliencePipelineRegistry<string>(),
                 mediator,
-                new InMemorySchedulerFactory());
-            
+                new InMemorySchedulerFactory(loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+
             var sweeper = new OutboxSweeper(timeSinceSent, mediator, new InMemoryRequestContextFactory());
 
             var events = new[]
@@ -175,7 +175,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 {
-                    routingKey, new InMemoryMessageProducer(internalBus, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
+                    routingKey, new InMemoryMessageProducer(internalBus, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
                 }
             });
 
@@ -194,7 +194,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                outbox
+                global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, outbox
             );
 
 
@@ -203,8 +203,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new PolicyRegistry(),
                 new ResiliencePipelineRegistry<string>(),
                 mediator,
-                new InMemorySchedulerFactory());
-            
+                new InMemorySchedulerFactory(loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+
             var sweeper = new OutboxSweeper(
                 timeSinceSent,
                 mediator,
@@ -254,7 +254,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 {
-                    routingKey, new InMemoryMessageProducer(internalBus, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
+                    routingKey, new InMemoryMessageProducer(internalBus, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
                 }
             });
 
@@ -273,7 +273,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                outbox
+                global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, outbox
             );
 
 
@@ -282,8 +282,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new PolicyRegistry(),
                 new ResiliencePipelineRegistry<string>(),
                 mediator,
-                new InMemorySchedulerFactory());           
-            
+                new InMemorySchedulerFactory(loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+
             var sweeper = new OutboxSweeper(timeSinceSent, mediator, new InMemoryRequestContextFactory());
 
             var oldEvent = new MyEvent{Value = "old"};

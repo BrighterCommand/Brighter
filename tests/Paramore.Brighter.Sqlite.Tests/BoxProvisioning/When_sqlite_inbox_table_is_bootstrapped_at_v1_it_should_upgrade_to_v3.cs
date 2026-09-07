@@ -51,13 +51,13 @@ public class InboxV1ToV3UpgradeTests : IAsyncLifetime
         await SeedMarkerRow();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, inboxTableName: _tableName);
-        var runner = new SqliteBoxMigrationRunner(new SqliteInboxMigrationCatalog(), config);
+        var runner = new SqliteBoxMigrationRunner(new SqliteInboxMigrationCatalog(), config, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var provisioner = new SqliteInboxProvisioner(
             new SqliteBoxDetectionHelper(),
             new SqliteInboxMigrationCatalog(),
             new SqlitePayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //Act
         await provisioner.ProvisionAsync();

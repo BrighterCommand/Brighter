@@ -2,22 +2,28 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter
 {
-    public partial class TransformLifetimeScopeAsync(IAmAMessageTransformerFactoryAsync factory)
-        : IAmATransformLifetimeAsync
+    public partial class TransformLifetimeScopeAsync : IAmATransformLifetimeAsync
     {
-        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<TransformLifetimeScopeAsync>();
+        private readonly ILogger _logger;
+        private readonly IAmAMessageTransformerFactoryAsync _factory;
         private readonly IList<Lease<IAmAMessageTransformAsync>> _trackedObjects = new List<Lease<IAmAMessageTransformAsync>>();
+
+        public TransformLifetimeScopeAsync(IAmAMessageTransformerFactoryAsync factory, ILoggerFactory loggerFactory)
+        {
+            _factory = factory;
+            _logger = loggerFactory.CreateLogger<TransformLifetimeScopeAsync>();
+        }
 
         public void Dispose()
         {
             //SuppressFinalize in a finally: the drain can now throw (a Release failure surfaces as an
             //AggregateException to an explicit Dispose), and if it does the object would otherwise stay
             //registered for finalization, whose retry only re-runs the already-drained list — wasted work
-            try { ReleaseTrackedObjects(); }
+            try
+            { ReleaseTrackedObjects(); }
             finally { GC.SuppressFinalize(this); }
         }
 
@@ -31,7 +37,8 @@ namespace Paramore.Brighter
             //SuppressFinalize in a finally: the drain can now throw (a Release failure surfaces as an
             //AggregateException to an explicit DisposeAsync), and if it does the object would otherwise stay
             //registered for finalization, whose retry only re-runs the already-drained list — wasted work
-            try { await ReleaseTrackedObjectsAsync().ConfigureAwait(false); }
+            try
+            { await ReleaseTrackedObjectsAsync().ConfigureAwait(false); }
             finally { GC.SuppressFinalize(this); }
         }
 
@@ -44,15 +51,16 @@ namespace Paramore.Brighter
             //Finalization order is non-deterministic, so this scope can be finalized before its owning
             //pipeline disposes it. Release best-effort here and swallow; an explicit Dispose/DisposeAsync
             //still surfaces the exception to the owner.
-            try { ReleaseTrackedObjects(); }
+            try
+            { ReleaseTrackedObjects(); }
             catch { /* swallowed: a finalizer must not throw */ }
         }
 
         public void Add(Lease<IAmAMessageTransformAsync> lease)
         {
             _trackedObjects.Add(lease);
-            Log.TrackingInstance(s_logger, lease.Instance.GetHashCode(), lease.Instance.GetType());
-         }
+            Log.TrackingInstance(_logger, lease.Instance.GetHashCode(), lease.Instance.GetType());
+        }
 
         private void ReleaseTrackedObjects()
         {
@@ -70,8 +78,8 @@ namespace Paramore.Brighter
                 _trackedObjects.RemoveAt(lastIndex);
                 try
                 {
-                    factory.Release(trackedItem);
-                    Log.ReleasingHandlerInstance(s_logger, trackedItem.Instance.GetHashCode(), trackedItem.Instance.GetType());
+                    _factory.Release(trackedItem);
+                    Log.ReleasingHandlerInstance(_logger, trackedItem.Instance.GetHashCode(), trackedItem.Instance.GetType());
                 }
                 catch (Exception ex)
                 {
@@ -99,8 +107,8 @@ namespace Paramore.Brighter
                 _trackedObjects.RemoveAt(lastIndex);
                 try
                 {
-                    await factory.ReleaseAsync(trackedItem).ConfigureAwait(false);
-                    Log.ReleasingHandlerInstance(s_logger, trackedItem.Instance.GetHashCode(), trackedItem.Instance.GetType());
+                    await _factory.ReleaseAsync(trackedItem).ConfigureAwait(false);
+                    Log.ReleasingHandlerInstance(_logger, trackedItem.Instance.GetHashCode(), trackedItem.Instance.GetType());
                 }
                 catch (Exception ex)
                 {
@@ -122,4 +130,5 @@ namespace Paramore.Brighter
         }
     }
 }
+
 

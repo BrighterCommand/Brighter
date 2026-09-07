@@ -1,7 +1,8 @@
-using System;
+﻿using System;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
@@ -30,13 +31,15 @@ public static class PostgreSqlBoxProvisioningExtensions
             {
                 var catalog = sp.GetRequiredService<PostgreSqlOutboxMigrationCatalog>();
                 var runner = new PostgreSqlBoxMigrationRunner(catalog, configuration, options.MigrationLockTimeout,
+                    sp.GetRequiredService<ILoggerFactory>(),
                     tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new PostgreSqlOutboxProvisioner(
                     sp.GetRequiredService<PostgreSqlBoxDetectionHelper>(),
                     catalog,
                     sp.GetRequiredService<PostgreSqlPayloadModeValidator>(),
                     configuration,
-                    runner);
+                    runner,
+                    sp.GetRequiredService<ILoggerFactory>());
             });
         });
         return options;
@@ -69,13 +72,15 @@ public static class PostgreSqlBoxProvisioningExtensions
                     binaryMessagePayload: binaryMessagePayload);
                 var catalog = sp.GetRequiredService<PostgreSqlOutboxMigrationCatalog>();
                 var runner = new PostgreSqlBoxMigrationRunner(catalog, dbConfig, options.MigrationLockTimeout,
+                    sp.GetRequiredService<ILoggerFactory>(),
                     tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new PostgreSqlOutboxProvisioner(
                     sp.GetRequiredService<PostgreSqlBoxDetectionHelper>(),
                     catalog,
                     sp.GetRequiredService<PostgreSqlPayloadModeValidator>(),
                     dbConfig,
-                    runner);
+                    runner,
+                    sp.GetRequiredService<ILoggerFactory>());
             });
         });
         return options;
@@ -96,13 +101,15 @@ public static class PostgreSqlBoxProvisioningExtensions
             {
                 var catalog = sp.GetRequiredService<PostgreSqlInboxMigrationCatalog>();
                 var runner = new PostgreSqlBoxMigrationRunner(catalog, configuration, options.MigrationLockTimeout,
+                    sp.GetRequiredService<ILoggerFactory>(),
                     tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new PostgreSqlInboxProvisioner(
                     sp.GetRequiredService<PostgreSqlBoxDetectionHelper>(),
                     catalog,
                     sp.GetRequiredService<PostgreSqlPayloadModeValidator>(),
                     configuration,
-                    runner);
+                    runner,
+                    sp.GetRequiredService<ILoggerFactory>());
             });
         });
         return options;
@@ -135,13 +142,15 @@ public static class PostgreSqlBoxProvisioningExtensions
                     binaryMessagePayload: binaryMessagePayload);
                 var catalog = sp.GetRequiredService<PostgreSqlInboxMigrationCatalog>();
                 var runner = new PostgreSqlBoxMigrationRunner(catalog, dbConfig, options.MigrationLockTimeout,
+                    sp.GetRequiredService<ILoggerFactory>(),
                     tracer: sp.GetService<IAmABrighterTracer>(), scope: options.MigrationHistoryScope);
                 return new PostgreSqlInboxProvisioner(
                     sp.GetRequiredService<PostgreSqlBoxDetectionHelper>(),
                     catalog,
                     sp.GetRequiredService<PostgreSqlPayloadModeValidator>(),
                     dbConfig,
-                    runner);
+                    runner,
+                    sp.GetRequiredService<ILoggerFactory>());
             });
         });
         return options;

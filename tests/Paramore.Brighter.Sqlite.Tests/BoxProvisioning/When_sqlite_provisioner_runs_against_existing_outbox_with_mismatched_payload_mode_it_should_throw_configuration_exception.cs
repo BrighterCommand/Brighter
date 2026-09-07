@@ -50,7 +50,7 @@ public class OutboxPayloadModeMismatchTests : IAsyncLifetime
             new SqliteOutboxMigrationCatalog(),
             new SqlitePayloadModeValidator(),
             config,
-            new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config));
+            new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //Act & Assert
         var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
@@ -72,7 +72,7 @@ public class OutboxPayloadModeMismatchTests : IAsyncLifetime
             new SqliteOutboxMigrationCatalog(),
             new SqlitePayloadModeValidator(),
             config,
-            new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config));
+            new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //Act & Assert
         var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());

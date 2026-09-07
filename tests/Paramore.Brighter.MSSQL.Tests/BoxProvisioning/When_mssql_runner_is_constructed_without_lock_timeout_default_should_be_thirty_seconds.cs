@@ -59,7 +59,7 @@ public class MsSqlRunnerDefaultLockTimeoutTests : IAsyncLifetime
         // Detection-helper ctor is the ONLY one that exposes `lockTimeout` as optional. The
         // backward-compat ctor (MsSqlBoxMigrationRunner.cs:76) takes it as required, so it
         // cannot exercise the default path.
-        var runner = new MsSqlBoxMigrationRunner(new MsSqlBoxDetectionHelper(), new MsSqlOutboxMigrationCatalog(), config, advisoryLock: fakeLock);
+        var runner = new MsSqlBoxMigrationRunner(new MsSqlBoxDetectionHelper(), new MsSqlOutboxMigrationCatalog(), config, advisoryLock: fakeLock, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act

@@ -1,15 +1,14 @@
-using Azure.Storage;
+﻿using Azure.Storage;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Storage.Azure;
 
-public class AzureBlobArchiveProvider(AzureBlobArchiveProviderOptions options) : IAmAnArchiveProvider
+public class AzureBlobArchiveProvider(AzureBlobArchiveProviderOptions options, ILoggerFactory loggerFactory) : IAmAnArchiveProvider
 {
     private readonly BlobContainerClient _containerClient = new BlobContainerClient(options.BlobContainerUri, options.TokenCredential);
-    private readonly ILogger _logger = ApplicationLogging.CreateLogger<AzureBlobArchiveProvider>();
+    private readonly ILogger _logger = loggerFactory.CreateLogger<AzureBlobArchiveProvider>();
 
     /// <summary>
     /// Send a Message to the archive provider
@@ -27,7 +26,8 @@ public class AzureBlobArchiveProvider(AzureBlobArchiveProviderOptions options) :
             return;
         }
 
-        if (message.Body.Memory.IsEmpty) throw new AggregateException("Messages must have a body to be archived");
+        if (message.Body.Memory.IsEmpty)
+            throw new AggregateException("Messages must have a body to be archived");
 
         var opts = GetUploadOptions(message);
         blobClient.Upload(BinaryData.FromBytes(message.Body.Memory), opts);
@@ -48,8 +48,9 @@ public class AzureBlobArchiveProvider(AzureBlobArchiveProviderOptions options) :
             _logger.LogDebug("Message with Id {MessageId} has already been uploaded", message.Id);
             return;
         }
-        
-        if (message.Body.Memory.IsEmpty) throw new AggregateException("Messages must have a body to be archived");
+
+        if (message.Body.Memory.IsEmpty)
+            throw new AggregateException("Messages must have a body to be archived");
 
         var opts = GetUploadOptions(message);
         await blobClient.UploadAsync(BinaryData.FromBytes(message.Body.Memory), opts, cancellationToken);
@@ -84,7 +85,7 @@ public class AzureBlobArchiveProvider(AzureBlobArchiveProviderOptions options) :
             await ArchiveMessageAsync(message, cancellationToken);
             return message.Id;
         }
-        catch(Exception e)
+        catch (Exception e)
         {
             _logger.LogError(e, "Error archiving message with Id {MessageId}", message.Id);
             return null;
@@ -97,7 +98,7 @@ public class AzureBlobArchiveProvider(AzureBlobArchiveProviderOptions options) :
         _logger.LogDebug("Uploading Message with Id {MessageId} to {ArchiveLocation}", message.Id, storageLocation);
         return _containerClient.GetBlobClient(storageLocation);
     }
-    
+
     private BlobUploadOptions GetUploadOptions(Message message)
     {
         var opts = new BlobUploadOptions()

@@ -34,27 +34,27 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 new SubscriptionName("test"),
                 noOfPerformers: 1,
                 timeOut: TimeSpan.FromMilliseconds(100),
-                channelFactory: new InMemoryChannelFactory(_bus, _timeProvider),
+                channelFactory: new InMemoryChannelFactory(_bus, _timeProvider, loggerFactory: Initializer.TestLoggerFactory),
                 channelName: _channelName,
                 messagePumpType: MessagePumpType.Proactor,
                 routingKey: _routingKey
             );
-            
+
             Subscription newSubscription = new Subscription<MyEvent>(
-                new SubscriptionName("newTest"), 
-                noOfPerformers: 1, timeOut: TimeSpan.FromMilliseconds(100), 
-                channelFactory: new InMemoryChannelFactory(_bus, _timeProvider), 
-                channelName: _channelName, 
+                new SubscriptionName("newTest"),
+                noOfPerformers: 1, timeOut: TimeSpan.FromMilliseconds(100),
+                channelFactory: new InMemoryChannelFactory(_bus, _timeProvider, loggerFactory: Initializer.TestLoggerFactory),
+                channelName: _channelName,
                 messagePumpType: MessagePumpType.Proactor,
                 routingKey: _routingKey
             );
-            
+
             _publication = new Publication{Topic = subscription.RoutingKey};
-            
+
             _dispatcher = new Dispatcher(
-                commandProcessor, 
-                new List<Subscription> { subscription, newSubscription }, 
-                messageMapperRegistryAsync: messageMapperRegistry)
+                commandProcessor,
+                new List<Subscription> { subscription, newSubscription },
+                messageMapperRegistryAsync: messageMapperRegistry, loggerFactory: Initializer.TestLoggerFactory)
             ;
 
             var @event = new MyEvent();
@@ -62,7 +62,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 .MapToMessageAsync(@event, _publication )
                 .GetAwaiter()
                 .GetResult();
-           
+
             _bus.Enqueue(message);
 
 
@@ -73,7 +73,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             _dispatcher.Shut(newSubscription.Name);
             Task.Delay(1000).Wait();
             Assert.Empty(_dispatcher.Consumers);
-            
+
         }
 
         [Fact]
@@ -83,10 +83,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             var @event = new MyEvent();
             var message = await new MyEventMessageMapperAsync().MapToMessageAsync(@event, _publication);
             _bus.Enqueue(message);
-            
+
             await Task.Delay(1000);
             _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
-            
+
             Assert.Empty(_bus.Stream(_routingKey));
             Assert.Equal(DispatcherState.DS_RUNNING, _dispatcher.State);
             Assert.Single(_dispatcher.Consumers);

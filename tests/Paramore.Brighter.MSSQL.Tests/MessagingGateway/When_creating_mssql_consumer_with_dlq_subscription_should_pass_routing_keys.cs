@@ -40,7 +40,7 @@ public class MsSqlMessageConsumerFactoryDlqTests : IDisposable
     {
         //Arrange
         var configuration = new RelationalDatabaseConfiguration("Server=127.0.0.1,11433;Database=BrighterTests;User Id=sa;Password=Password1!;TrustServerCertificate=true");
-        _factory = new MsSqlMessageConsumerFactory(configuration);
+        _factory = new MsSqlMessageConsumerFactory(configuration, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

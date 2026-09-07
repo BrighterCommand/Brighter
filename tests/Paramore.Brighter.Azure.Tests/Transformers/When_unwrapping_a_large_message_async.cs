@@ -11,7 +11,7 @@ namespace Paramore.Brighter.Azure.Tests.Transformers;
 
 [Category("Azure")]
 [Property("Fragile", "CI")]
-public class LargeMessagePayloadAUnwrapAsyncTests : IAsyncDisposable 
+public class LargeMessagePayloadAUnwrapAsyncTests : IAsyncDisposable
 {
     private readonly BlobContainerClient _client;
     private readonly AzureBlobLuggageStore _luggageStore;
@@ -30,31 +30,31 @@ public class LargeMessagePayloadAUnwrapAsyncTests : IAsyncDisposable
             ContainerUri = bucketUrl,
             Credential = new AzureCliCredential()
         });
-        
+
         TransformPipelineBuilder.ClearPipelineCache();
 
         var mapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()),
             null);
         mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();
-        
+
         var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.All);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, InstrumentationOptions.All);
     }
-    
+
     [Test]
     public async Task When_unwrapping_a_large_message_async()
     {
         //arrange
         await Task.Delay(3000); //allow bucket definition to propagate
-            
+
         //store our luggage and get the claim check
         var contents = DataGenerator.CreateString(6000);
         var myCommand = new MyLargeCommand(1) { Value = contents };
         var commandAsJson = JsonSerializer.Serialize(myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General));
-        
-        var stream = new MemoryStream();                                                                               
+
+        var stream = new MemoryStream();
         var writer = new StreamWriter(stream);
         await writer.WriteAsync(commandAsJson);
         await writer.FlushAsync();
@@ -63,7 +63,7 @@ public class LargeMessagePayloadAUnwrapAsyncTests : IAsyncDisposable
 
         //pretend we ran through the claim check
         myCommand.Value = $"Claim Check {id}";
- 
+
         //set the headers, so that we have a claim check listed
         var message = new Message(
             new MessageHeader(myCommand.Id, new RoutingKey("transform.event"), MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow),
@@ -71,12 +71,12 @@ public class LargeMessagePayloadAUnwrapAsyncTests : IAsyncDisposable
         );
 
         message.Header.DataRef = id;
-        message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK] = id; 
-         
+        message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK] = id;
+
         //act
         var transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyLargeCommand>();
         var transformedMessage = await transformPipeline.UnwrapAsync(message, new RequestContext());
-        
+
         //assert
         //contents should be from storage
         Assert.Equals(contents, transformedMessage.Value);

@@ -62,7 +62,7 @@ public class RmqMessageProducerDisposeConfirmationTests : IDisposable, IAsyncLif
             {
                 MakeChannels = OnMissingChannel.Create,
                 WaitForConfirmsTimeOutInMilliseconds = 2000
-            });
+            }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         _messageProducer.OnMessagePublished += result =>
         {

@@ -70,10 +70,10 @@ public class RMQMessageConsumerRetryDLQTests : IDisposable
         {
             Topic = routingKey, 
             RequestType = typeof(MyDeferredCommand)
-        });
+        }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //set up our receiver
-        ChannelFactory channelFactory = new(new RmqMessageConsumerFactory(rmqConnection));
+        ChannelFactory channelFactory = new(new RmqMessageConsumerFactory(rmqConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         _channel = channelFactory.CreateSyncChannel(_subscription);
 
         //how do we handle a command
@@ -90,8 +90,8 @@ public class RMQMessageConsumerRetryDLQTests : IDisposable
             requestContextFactory: new InMemoryRequestContextFactory(),
             policyRegistry: new PolicyRegistry(),
             resilienceResiliencePipelineRegistry: new ResiliencePipelineRegistry<string>(),
-            requestSchedulerFactory: new InMemorySchedulerFactory()
-        );
+            requestSchedulerFactory: new InMemorySchedulerFactory(loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance),
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
         var messageMapperRegistry = new MessageMapperRegistry(
@@ -102,7 +102,7 @@ public class RMQMessageConsumerRetryDLQTests : IDisposable
         messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
             
         _messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyDeferredCommand), messageMapperRegistry, 
-            new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel)
+            new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
         {
             Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 0
         };
@@ -112,8 +112,8 @@ public class RMQMessageConsumerRetryDLQTests : IDisposable
             queueName: deadLetterQueueName,
             routingKey: deadLetterRoutingKey,
             isDurable: false,
-            makeChannels: OnMissingChannel.Assume
-        );
+            makeChannels: OnMissingChannel.Assume,
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact(Skip = "Breaks due to fault in Task Scheduler running after context has closed")]

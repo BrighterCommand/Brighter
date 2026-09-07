@@ -61,7 +61,7 @@ public class RunnerWalModeJournalTests : IAsyncLifetime
         var config = new RelationalDatabaseConfiguration(
             ConnectionString, outBoxTableName: tableName);
         var runner = new SqliteBoxMigrationRunner(
-            new SqliteOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), enableWalMode: false);
+            new SqliteOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), enableWalMode: false, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //Act — let the runner provision a fresh outbox.
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
@@ -83,7 +83,7 @@ public class RunnerWalModeJournalTests : IAsyncLifetime
         var config = new RelationalDatabaseConfiguration(
             ConnectionString, outBoxTableName: tableName);
         var runner = new SqliteBoxMigrationRunner(
-            new SqliteOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), enableWalMode: true);
+            new SqliteOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), enableWalMode: true, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //Act
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);

@@ -66,7 +66,7 @@ public class RocketMqDeliveryErrorDlqAsyncTests : IAsyncDisposable
             deadLetterRoutingKey: dlqTopic,
             messagePumpType: MessagePumpType.Proactor);
 
-        var consumerFactory = new RocketMessageConsumerFactory(connection);
+        var consumerFactory = new RocketMessageConsumerFactory(connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _consumer = consumerFactory.CreateAsync(sourceSub);
 
         // DLQ topic consumer (to verify forwarded messages)

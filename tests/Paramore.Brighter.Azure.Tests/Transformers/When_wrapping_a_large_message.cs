@@ -27,9 +27,9 @@ public class LargeMessagePayloadWrapTests : IDisposable
         var mapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()),
             null);
-        mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();    
-            
-        _publication = new Publication{ Topic = new RoutingKey("transform.event") };
+        mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();
+
+        _publication = new Publication { Topic = new RoutingKey("transform.event") };
         _myCommand = new MyLargeCommand(6000);
 
         var bucketName = $"brightertestbucket-{Guid.NewGuid()}";
@@ -42,16 +42,16 @@ public class LargeMessagePayloadWrapTests : IDisposable
             ContainerUri = bucketUrl,
             Credential = new AzureCliCredential()
         });
-        
+
         var messageTransformerFactory = new SimpleMessageTransformerFactory(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
-    
+
     [Test]
     public void When_wrapping_a_large_message()
     {
         _luggageStore.EnsureStoreExists();
-        
+
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyLargeCommand>();
         var message = _transformPipeline.Wrap(_myCommand, new RequestContext(), _publication);
@@ -60,13 +60,13 @@ public class LargeMessagePayloadWrapTests : IDisposable
         Assert.That(message.Header.DataRef, Is.Not.Null);
         Assert.That(message.Header.Bag.ContainsKey(ClaimCheckTransformer.CLAIM_CHECK));
         Assert.That(message.Header.DataRef, Is.EqualTo((string)message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK]));
-        
+
         _id = (string)message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK];
         Assert.Equals($"Claim Check {_id}", message.Body.Value);
 
         Assert.That(_luggageStore.HasClaim(_id));
     }
-    
+
     public void Dispose()
     {
         _client.Delete();

@@ -36,7 +36,7 @@ public class KafkaMessageConsumerNackRedelivery : IDisposable
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
                 }
-            ]).Create();
+            ], loggerFactory: Initializer.TestLoggerFactory).Create();
     }
 
     [Fact]
@@ -155,7 +155,7 @@ public class KafkaMessageConsumerNackRedelivery : IDisposable
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = "Kafka Consumer Test", BootStrapServers = new[] { "localhost:9092" }
-                })
+                }, loggerFactory: Initializer.TestLoggerFactory)
             .Create(new KafkaSubscription<MyCommand>
             (
                 subscriptionName: new SubscriptionName("Paramore.Brighter.Tests"),

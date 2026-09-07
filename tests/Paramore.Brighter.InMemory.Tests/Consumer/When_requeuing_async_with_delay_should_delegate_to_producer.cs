@@ -53,7 +53,7 @@ public class AsyncInMemoryConsumerRequeueWithDelayTests
         _scheduler = new SpySchedulerAsync();
 
         // Create consumer with scheduler configured
-        _consumer = new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, scheduler: _scheduler);
+        _consumer = new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, scheduler: _scheduler, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),

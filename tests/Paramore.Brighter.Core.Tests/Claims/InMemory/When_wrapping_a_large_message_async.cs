@@ -33,7 +33,7 @@ public class AsyncLargeMessagePayloadWrapTests
 
         _publication = new Publication { Topic = new RoutingKey("MyLargeCommand") };
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.All);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, Initializer.TestLoggerFactory, InstrumentationOptions.All);
     }
 
     [Fact]

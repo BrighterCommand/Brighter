@@ -59,7 +59,7 @@ public class PostgreSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
             realMigrations, BrokenVersion, BrokenUpScript);
         var brokenCatalog = new BrokenChainCatalog(brokenMigrations, realCatalog.FreshInstallDdl(config));
 
-        var brokenRunner = new PostgreSqlBoxMigrationRunner(brokenCatalog, config, TimeSpan.FromSeconds(30));
+        var brokenRunner = new PostgreSqlBoxMigrationRunner(brokenCatalog, config, TimeSpan.FromSeconds(30), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var staleHint = new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: SeedVersion);
 
         //Act + Assert (1) — broken V6 in chain: runner throws and rolls back everything.
@@ -79,13 +79,13 @@ public class PostgreSqlRunnerMidChainFailureRollbackTests : IAsyncLifetime
         Assert.Equal(1, await GetMarkerRowCount());
 
         //Act + Assert (2) — retry with the real migration list: bootstrap path completes V4..V7.
-        var realRunner = new PostgreSqlBoxMigrationRunner(realCatalog, config, TimeSpan.FromSeconds(30));
+        var realRunner = new PostgreSqlBoxMigrationRunner(realCatalog, config, TimeSpan.FromSeconds(30), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var provisioner = new PostgreSqlOutboxProvisioner(
-            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlBoxDetectionHelper(logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.BoxProvisioning.PostgreSql.PostgreSqlBoxDetectionHelper>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)),
             new PostgreSqlOutboxMigrationCatalog(),
             new PostgreSqlPayloadModeValidator(),
             config,
-            realRunner);
+            realRunner, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         await provisioner.ProvisionAsync();
 
         //Assert — exactly one synthetic V3 + one applied per V4..V7 (no duplicates).

@@ -39,7 +39,7 @@ public class DispatchBuilderWithNamedGateway
         };
 
         var connection = GatewayFactory.CreateConnection(); 
-        var consumerFactory = new RocketMessageConsumerFactory(connection);
+        var consumerFactory = new RocketMessageConsumerFactory(connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         var container = new ServiceCollection();
         var tracer = new BrighterTracer(TimeProvider.System);
@@ -51,7 +51,8 @@ public class DispatchBuilderWithNamedGateway
             .NoExternalBus()
             .ConfigureInstrumentation(tracer, instrumentationOptions)
             .RequestContextFactory(new InMemoryRequestContextFactory())
-            .RequestSchedulerFactory(new InMemorySchedulerFactory())
+            .RequestSchedulerFactory(new InMemorySchedulerFactory(loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance))
+            .ConfigureLogging(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
             .Build();
 
         _builder = DispatchBuilder.StartNew()
@@ -76,7 +77,8 @@ public class DispatchBuilderWithNamedGateway
                     messagePumpType: MessagePumpType.Reactor,
                     timeOut: TimeSpan.FromMilliseconds(200))
             ])
-            .ConfigureInstrumentation(tracer, instrumentationOptions);
+            .ConfigureInstrumentation(tracer, instrumentationOptions)
+            .ConfigureLogging(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

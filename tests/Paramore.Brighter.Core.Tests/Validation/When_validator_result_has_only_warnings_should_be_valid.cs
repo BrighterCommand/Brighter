@@ -36,7 +36,7 @@ public class PipelineValidatorIsValidWithWarningsTests
         // Arrange — handler with misordered backstop/resilience produces only a warning
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyDescribableCommand), typeof(MyMisorderedBackstopHandler));
-        var pipelineBuilder = new PipelineBuilder<IRequest>(registry);
+        var pipelineBuilder = new PipelineBuilder<IRequest>(registry, loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<IRequest>.ClearPipelineCache();
 
         // No publications or subscriptions — only handler path runs

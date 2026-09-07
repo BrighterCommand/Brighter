@@ -64,13 +64,13 @@ public class PostgresMessageConsumerDeliveryErrorDlqTests : IDisposable
         // Producer registry factory ensures queue table exists
         var producerRegistry = new PostgresProducerRegistryFactory(
             connection,
-            [new PostgresPublication { Topic = topic }]
-        ).Create();
+            [new PostgresPublication { Topic = topic }],
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create();
 
         _producer = (IAmAMessageProducerSync)producerRegistry.LookupBy(topic);
 
         // Consumer factory creates consumers; table already exists from producer registry
-        var consumerFactory = new PostgresConsumerFactory(connection);
+        var consumerFactory = new PostgresConsumerFactory(connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _consumer = consumerFactory.Create(sub);
         _dlqConsumer = consumerFactory.Create(dlqSub);
 

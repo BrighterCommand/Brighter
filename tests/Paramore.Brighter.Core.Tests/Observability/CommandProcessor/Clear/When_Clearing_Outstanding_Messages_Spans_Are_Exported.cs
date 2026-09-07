@@ -20,7 +20,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.Observability.CommandProcessor.Clear;
 
 [Collection("Observability")]
-public class CommandProcessorClearOutstandingObservabilityTests 
+public class CommandProcessorClearOutstandingObservabilityTests
 {
     private readonly List<Activity> _exportedActivities;
     private readonly TracerProvider _traceProvider;
@@ -32,7 +32,7 @@ public class CommandProcessorClearOutstandingObservabilityTests
     public CommandProcessorClearOutstandingObservabilityTests()
     {
         _topic = "MyEvent";
-        
+
         var builder = Sdk.CreateTracerProviderBuilder();
         _exportedActivities = new List<Activity>();
 
@@ -41,31 +41,31 @@ public class CommandProcessorClearOutstandingObservabilityTests
             .ConfigureResource(r => r.AddService("in-memory-tracer"))
             .AddInMemoryExporter(_exportedActivities)
             .Build();
-        
-        
+
+
         var registry = new SubscriberRegistry();
 
-        var handlerFactory = new PostCommandTests.EmptyHandlerFactorySync(); 
-        
+        var handlerFactory = new PostCommandTests.EmptyHandlerFactorySync();
+
         var retryPolicy = Policy
             .Handle<Exception>()
             .Retry();
-        
+
         var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICY, retryPolicy}};
 
         var timeProvider  = new FakeTimeProvider();
         var tracer = new BrighterTracer(timeProvider);
         InMemoryOutbox outbox = new(timeProvider){Tracer = tracer};
-        
+
         var messageMapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
             null);
         messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
         var routingKey = new RoutingKey(_topic);
-        
-        InMemoryMessageProducer messageProducer = new(_internalBus, 
-            new Publication 
+
+        InMemoryMessageProducer messageProducer = new(_internalBus,
+        Initializer.TestLoggerFactory, new Publication
             {
                 Source = new Uri("http://localhost"),
                 RequestType = typeof(MyEvent),
@@ -77,39 +77,39 @@ public class CommandProcessorClearOutstandingObservabilityTests
         {
             {routingKey, messageProducer}
         });
-        
+
         _mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
-            producerRegistry, 
-            new ResiliencePipelineRegistry<string>().AddBrighterDefault(), 
-            messageMapperRegistry, 
-            new EmptyMessageTransformerFactory(), 
+            producerRegistry,
+            new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
+            messageMapperRegistry,
+            new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            outbox,
+            Initializer.TestLoggerFactory, outbox,
             maxOutStandingMessages: -1
         );
-        
+
         _commandProcessor = new Brighter.CommandProcessor(
-            registry, 
-            handlerFactory, 
+            registry,
+            handlerFactory,
             new InMemoryRequestContextFactory(),
-            policyRegistry, 
+            policyRegistry,
             new ResiliencePipelineRegistry<string>(),
             _mediator,
-            new InMemorySchedulerFactory(),
-            tracer: tracer, 
-            instrumentationOptions: InstrumentationOptions.All
-        );
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+            tracer: tracer,
+            instrumentationOptions: InstrumentationOptions.All,
+            loggerFactory: Initializer.TestLoggerFactory);
     }
-    
+
     [Fact(Skip = "This test is fragile due to background processing")]
     //[Fact]
     public async Task When_Clearing_Outstanding_Messages_Spans_Are_Exported()
     {
         //arrange
         var parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("BrighterTracerSpanTests");
-        
+
         var eventOne = new MyEvent();
         var eventTwo = new MyEvent();
         var eventThree = new MyEvent();
@@ -118,36 +118,36 @@ public class CommandProcessorClearOutstandingObservabilityTests
 
         //act
         _commandProcessor.DepositPost([eventOne, eventTwo, eventThree], context);
-        
+
         //reset the parent span as deposit and clear are siblings
-        
+
         context.Span = parentActivity;
         await _mediator.ClearOutstandingFromOutboxAsync(3, TimeSpan.Zero, false, context);
 
         await Task.Delay(3000);     //allow bulk clear to run -- can make test fragile
-        
+
         parentActivity?.Stop();
-        
+
         _traceProvider.ForceFlush();
-        
-        //assert 
+
+        //assert
         //_exportedActivities.Count.Should().Be(18);
         Assert.Contains(_exportedActivities, a => a.Source.Name == "Paramore.Brighter");
-        
+
         //there should be a create span for the batch
         var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{BrighterSemanticConventions.ClearMessages} {CommandProcessorSpanOperation.Create.ToSpanName()}");
         Assert.NotNull(createActivity);
-        
+
         //there should be a clear span for the batch of messages
         var clearActivity = _exportedActivities.Single(a => a.DisplayName == $"{BrighterSemanticConventions.ClearMessages} {CommandProcessorSpanOperation.Clear.ToSpanName()}");
-        
+
         //retrieving the messages should be an event
         var events = clearActivity.Events.ToList();
         var messages = _internalBus.Stream(new RoutingKey(_topic)).ToArray();
-        
+
         var depositEvents = events.Where(e => e.Name == BoxDbOperation.OutStandingMessages.ToSpanName()).ToArray();
         Assert.Equal(messages.Length, depositEvents.Length);
-        
+
         foreach (var message in messages)
         {
             var depositEvent = depositEvents.Single(e => e.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageId && (string)a.Value == message.Id));
@@ -175,8 +175,8 @@ public class CommandProcessorClearOutstandingObservabilityTests
         //there should be a span for publishing the message via the producer
         var producerActivity = _exportedActivities
             .Single(a => a.DisplayName == $"{_topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}");
-        
+
         var producerEvents = producerActivity.Events.ToArray();
-        Assert.Equal(3, producerEvents.Length);   
+        Assert.Equal(3, producerEvents.Length);
     }
 }

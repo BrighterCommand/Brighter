@@ -64,7 +64,7 @@ public class AsyncCommandProcessorMultipleDepositObservabilityTests
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
             {
-                routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication  { Topic = routingKey, RequestType = typeof(MyEvent)})
+                routingKey, new InMemoryMessageProducer(new InternalBus(), Initializer.TestLoggerFactory, new Publication  { Topic = routingKey, RequestType = typeof(MyEvent)})
             }
         });
         
@@ -76,7 +76,7 @@ public class AsyncCommandProcessorMultipleDepositObservabilityTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            outbox,
+            Initializer.TestLoggerFactory, outbox,
             maxOutStandingMessages: -1
         );
         
@@ -87,10 +87,10 @@ public class AsyncCommandProcessorMultipleDepositObservabilityTests
             policyRegistry, 
             new ResiliencePipelineRegistry<string>(),
             bus,
-            new InMemorySchedulerFactory(),
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
             tracer: tracer, 
-            instrumentationOptions: InstrumentationOptions.All
-        );
+            instrumentationOptions: InstrumentationOptions.All,
+            loggerFactory: Initializer.TestLoggerFactory);
     }
 
     [Fact]

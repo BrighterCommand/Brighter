@@ -31,16 +31,20 @@ using Amazon;
 using Amazon.SQS;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 
 internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsInlineMessageCreator>();
+    private readonly ILogger _logger;
 
     private Dictionary<string, JsonElement> _messageAttributes = new();
+
+    public SqsInlineMessageCreator(ILoggerFactory loggerFactory)
+    {
+        _logger = loggerFactory.CreateLogger<SqsInlineMessageCreator>();
+    }
 
     public Message CreateMessage(Amazon.SQS.Model.Message sqsMessage)
     {
@@ -54,7 +58,7 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
 
             topic = ReadTopic();
             messageId = ReadMessageId();
-            var cloudEvents = ReadMessageCloudEvents(); 
+            var cloudEvents = ReadMessageCloudEvents();
             var contentType = ReadContentType(cloudEvents);
             var correlationId = ReadCorrelationId();
             var handledCount = ReadHandledCount();
@@ -72,11 +76,11 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
             var traceParent = ReadCloudEventsTraceParent(cloudEvents);
             var traceState = ReadCloudEventsTraceState(cloudEvents);
             var baggage = ReadCloudEventsBaggage(cloudEvents);
-            
+
             var bag = ReadMessageBag();
             if (deduplicationId.Success)
             {
-               bag[HeaderNames.DeduplicationId] = deduplicationId.Result;
+                bag[HeaderNames.DeduplicationId] = deduplicationId.Result;
             }
 
             if (receiptHandle.Success)
@@ -112,12 +116,12 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         }
         catch (Exception e)
         {
-            Log.FailedToCreateMessageFromAwsSqsMessage(s_logger, e);
+            Log.FailedToCreateMessageFromAwsSqsMessage(_logger, e);
             return Message.FailureMessage(topic.Result, messageId.Result);
         }
     }
 
-    private static Dictionary<string, JsonElement> ReadMessageAttributes(JsonDocument jsonDocument)
+    private Dictionary<string, JsonElement> ReadMessageAttributes(JsonDocument jsonDocument)
     {
         var messageAttributes = new Dictionary<string, JsonElement>();
 
@@ -132,7 +136,7 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         }
         catch (Exception ex)
         {
-            Log.FailedWhileDeserializingSqsMessageBody(s_logger, ex);
+            Log.FailedWhileDeserializingSqsMessageBody(_logger, ex);
         }
 
         return messageAttributes ?? new Dictionary<string, JsonElement>();
@@ -145,13 +149,13 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
             var result = contentType.GetValueInString();
             return new HeaderResult<ContentType>(result is not null ? new ContentType(result) : new ContentType(MediaTypeNames.Text.Plain), true);
         }
-        
+
         if (_messageAttributes.TryGetValue(HeaderNames.ContentType, out contentType))
         {
             var result = contentType.GetValueInString() ?? MediaTypeNames.Text.Plain;
             return new HeaderResult<ContentType>(new ContentType(result), true);
         }
-        
+
         if (headers.TryGetValue(HeaderNames.DataContentType, out var val))
         {
             return new HeaderResult<ContentType>(new ContentType(val), true);
@@ -215,7 +219,7 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         {
             return new HeaderResult<string>(specVersion.GetValueInString(), true);
         }
-        
+
         if (headers.TryGetValue(HeaderNames.SpecVersion, out var val))
         {
             return new HeaderResult<string>(val, true);
@@ -232,10 +236,11 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
             if (!string.IsNullOrEmpty(val))
             {
                 return new HeaderResult<CloudEventsType>(new CloudEventsType(val!), true);
-            };
+            }
+            ;
         }
-        
-        if (headers.TryGetValue(HeaderNames.Type, out var cloudEventType) 
+
+        if (headers.TryGetValue(HeaderNames.Type, out var cloudEventType)
             && !string.IsNullOrEmpty(cloudEventType))
         {
             return new HeaderResult<CloudEventsType>(new CloudEventsType(cloudEventType), true);
@@ -243,15 +248,15 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
 
         return new HeaderResult<CloudEventsType>(CloudEventsType.Empty, true);
     }
-    
+
     private HeaderResult<Uri> ReadSource(Dictionary<string, string> headers)
     {
-         if (_messageAttributes.TryGetValue(HeaderNames.Source, out var source)
-            && Uri.TryCreate(source.GetValueInString(), UriKind.RelativeOrAbsolute, out var uri))
+        if (_messageAttributes.TryGetValue(HeaderNames.Source, out var source)
+           && Uri.TryCreate(source.GetValueInString(), UriKind.RelativeOrAbsolute, out var uri))
         {
             return new HeaderResult<Uri>(uri, true);
         }
-        
+
         if (headers.TryGetValue(HeaderNames.Source, out var val)
             && Uri.TryCreate(val, UriKind.RelativeOrAbsolute, out uri))
         {
@@ -260,45 +265,45 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
 
         return new HeaderResult<Uri>(new Uri(MessageHeader.DefaultSource), true);
     }
-    
-     private HeaderResult<Uri?> ReadDataSchema(Dictionary<string, string> headers)
-     {
-         if (_messageAttributes.TryGetValue(HeaderNames.DataSchema, out var source)
-             && Uri.TryCreate(source.GetValueInString(), UriKind.RelativeOrAbsolute, out var uri))
-         {
-             return new HeaderResult<Uri?>(uri, true);
-         }
-         
-         if (headers.TryGetValue(HeaderNames.DataSchema, out var val)
-             && Uri.TryCreate(val, UriKind.RelativeOrAbsolute, out uri))
-         {
-             return new HeaderResult<Uri?>(uri, true);
-         }
-    
-         return new HeaderResult<Uri?>(null, true);
-     }
+
+    private HeaderResult<Uri?> ReadDataSchema(Dictionary<string, string> headers)
+    {
+        if (_messageAttributes.TryGetValue(HeaderNames.DataSchema, out var source)
+            && Uri.TryCreate(source.GetValueInString(), UriKind.RelativeOrAbsolute, out var uri))
+        {
+            return new HeaderResult<Uri?>(uri, true);
+        }
+
+        if (headers.TryGetValue(HeaderNames.DataSchema, out var val)
+            && Uri.TryCreate(val, UriKind.RelativeOrAbsolute, out uri))
+        {
+            return new HeaderResult<Uri?>(uri, true);
+        }
+
+        return new HeaderResult<Uri?>(null, true);
+    }
 
     private HeaderResult<DateTimeOffset> ReadTimestamp(Dictionary<string, string> headers)
     {
-         if (headers.TryGetValue(HeaderNames.Timestamp, out var val) 
-            && DateTimeOffset.TryParse(val, out var value))
-         { 
-             return new HeaderResult<DateTimeOffset>(value, true); 
-         }
-        
-         if (_messageAttributes.TryGetValue(HeaderNames.Time, out var timeStamp)
-             && DateTimeOffset.TryParse(timeStamp.GetValueInString(), out value))
-         {
-             return new HeaderResult<DateTimeOffset>(value, true);
-         }
-         
-         if (_messageAttributes.TryGetValue(HeaderNames.Timestamp, out timeStamp)
-             && DateTimeOffset.TryParse(timeStamp.GetValueInString(), out value))
-         {
-             return new HeaderResult<DateTimeOffset>(value, true);
-         }
+        if (headers.TryGetValue(HeaderNames.Timestamp, out var val)
+           && DateTimeOffset.TryParse(val, out var value))
+        {
+            return new HeaderResult<DateTimeOffset>(value, true);
+        }
 
-         return new HeaderResult<DateTimeOffset>(DateTimeOffset.UtcNow, true);
+        if (_messageAttributes.TryGetValue(HeaderNames.Time, out var timeStamp)
+            && DateTimeOffset.TryParse(timeStamp.GetValueInString(), out value))
+        {
+            return new HeaderResult<DateTimeOffset>(value, true);
+        }
+
+        if (_messageAttributes.TryGetValue(HeaderNames.Timestamp, out timeStamp)
+            && DateTimeOffset.TryParse(timeStamp.GetValueInString(), out value))
+        {
+            return new HeaderResult<DateTimeOffset>(value, true);
+        }
+
+        return new HeaderResult<DateTimeOffset>(DateTimeOffset.UtcNow, true);
     }
 
     private HeaderResult<MessageType> ReadMessageType()
@@ -374,32 +379,32 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
 
     private HeaderResult<string?> ReadMessageSubject(JsonDocument jsonDocument, Dictionary<string, string> headers)
     {
-         if (_messageAttributes.TryGetValue(HeaderNames.Subject, out var messageId))
-         {
-             return new HeaderResult<string?>(messageId.GetValueInString(), true);
-         }
-          
-         try
-         {
-             if (jsonDocument.RootElement.TryGetProperty("Subject", out var value))
-             {
-                 return new HeaderResult<string?>(value.GetString(), true);
-             }
-              
-             if (headers.TryGetValue(HeaderNames.Subject, out var subject))
-             {
-                 return new HeaderResult<string?>(subject, true);
-             }
-         }
-         catch (Exception ex)
-         {
-             Log.FailedToParseSqsMessageBodyToValidJsonDocument(s_logger, ex);
-         }
+        if (_messageAttributes.TryGetValue(HeaderNames.Subject, out var messageId))
+        {
+            return new HeaderResult<string?>(messageId.GetValueInString(), true);
+        }
 
-         return new HeaderResult<string?>(null, true);
+        try
+        {
+            if (jsonDocument.RootElement.TryGetProperty("Subject", out var value))
+            {
+                return new HeaderResult<string?>(value.GetString(), true);
+            }
+
+            if (headers.TryGetValue(HeaderNames.Subject, out var subject))
+            {
+                return new HeaderResult<string?>(subject, true);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.FailedToParseSqsMessageBodyToValidJsonDocument(_logger, ex);
+        }
+
+        return new HeaderResult<string?>(null, true);
     }
 
-    private static MessageBody ReadMessageBody(JsonDocument jsonDocument)
+    private MessageBody ReadMessageBody(JsonDocument jsonDocument)
     {
         try
         {
@@ -410,7 +415,7 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         }
         catch (Exception ex)
         {
-            Log.FailedToParseSqsMessageBodyToValidJsonDocument(s_logger, ex);
+            Log.FailedToParseSqsMessageBodyToValidJsonDocument(_logger, ex);
         }
 
         return new MessageBody(string.Empty);
@@ -439,7 +444,7 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
 
         return new HeaderResult<string>(string.Empty, false);
     }
-    
+
     private Dictionary<string, string> ReadMessageCloudEvents()
     {
         if (_messageAttributes.TryGetValue(HeaderNames.CloudEventHeaders, out var headerBag))
@@ -465,34 +470,34 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
 
         return new Dictionary<string, string>();
     }
-    
-    private static HeaderResult<TraceParent> ReadCloudEventsTraceParent(Dictionary<string,string> cloudEventHeaders)
+
+    private static HeaderResult<TraceParent> ReadCloudEventsTraceParent(Dictionary<string, string> cloudEventHeaders)
     {
         if (cloudEventHeaders.TryGetValue(HeaderNames.TraceParent, out var value))
         {
             return new HeaderResult<TraceParent>(new TraceParent(value), true);
         }
-        
+
         return new HeaderResult<TraceParent>(null, true);
     }
-    
-    private static HeaderResult<TraceState> ReadCloudEventsTraceState(Dictionary<string,string> cloudEventHeaders)
+
+    private static HeaderResult<TraceState> ReadCloudEventsTraceState(Dictionary<string, string> cloudEventHeaders)
     {
         if (cloudEventHeaders.TryGetValue(HeaderNames.TraceState, out var value))
         {
             return new HeaderResult<TraceState>(new TraceState(value), true);
-        }  
+        }
         return new HeaderResult<TraceState>(null, true);
     }
-    
-    private static HeaderResult<Baggage> ReadCloudEventsBaggage(Dictionary<string,string> cloudEventHeaders)
+
+    private static HeaderResult<Baggage> ReadCloudEventsBaggage(Dictionary<string, string> cloudEventHeaders)
     {
         var baggage = new Baggage();
         if (cloudEventHeaders.TryGetValue(HeaderNames.Baggage, out var value))
         {
             baggage.LoadBaggage(value);
-        }  
-        
+        }
+
         return new HeaderResult<Baggage>(baggage, true);
     }
 
@@ -503,7 +508,7 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
 
         [LoggerMessage(LogLevel.Warning, "Failed while deserializing Sqs Message body")]
         public static partial void FailedWhileDeserializingSqsMessageBody(ILogger logger, Exception ex);
-        
+
         [LoggerMessage(LogLevel.Warning, "Failed to parse Sqs Message Body to valid Json Document")]
         public static partial void FailedToParseSqsMessageBodyToValidJsonDocument(ILogger logger, Exception ex);
 

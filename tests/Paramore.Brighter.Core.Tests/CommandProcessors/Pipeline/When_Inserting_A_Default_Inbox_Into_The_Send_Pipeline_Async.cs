@@ -25,7 +25,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
              //This handler has no Inbox attribute
              subscriberRegistry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
              
-             var container = new ServiceCollection();
+             var container = new ServiceCollection().AddLogging();
              container.AddSingleton(handler);
              container.AddSingleton<IAmAnInboxAsync>(_inbox);
              container.AddTransient<UseInboxHandlerAsync<MyCommand>>();
@@ -55,9 +55,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
                     { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy }
                 },
                 new ResiliencePipelineRegistry<string>(),
-                new InMemorySchedulerFactory(),
-                inboxConfiguration: inboxConfiguration
-                );
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+                inboxConfiguration: inboxConfiguration,
+                loggerFactory: Initializer.TestLoggerFactory);
         }
         
         [Fact]

@@ -41,7 +41,7 @@ public class RocketConsumerFactoryDlqTests : IDisposable
     public RocketConsumerFactoryDlqTests()
     {
         _connection = GatewayFactory.CreateConnection();
-        _factory = new RocketMessageConsumerFactory(_connection);
+        _factory = new RocketMessageConsumerFactory(_connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

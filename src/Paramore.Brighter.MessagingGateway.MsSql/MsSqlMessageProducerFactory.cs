@@ -24,6 +24,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
 {
@@ -31,21 +32,25 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
     {
         private readonly RelationalDatabaseConfiguration _msSqlConfiguration;
         private readonly IEnumerable<Publication> _publications;
+        private readonly ILoggerFactory _loggerFactory;
 
         /// <summary>
         /// Creates a collection of MsSQL message producers from the MsSQL publication information
         /// </summary>
         /// <param name="msSqlConfiguration">The connection to use to connect to MsSQL</param>
         /// <param name="publications">The publications describing the MySQL topics that we want to use</param>
+        /// <param name="loggerFactory">The optional <see cref="ILoggerFactory"/> used to create loggers</param>
         public MsSqlMessageProducerFactory(
             RelationalDatabaseConfiguration msSqlConfiguration,
-            IEnumerable<Publication> publications)
+            IEnumerable<Publication> publications,
+            ILoggerFactory loggerFactory)
         {
-            _msSqlConfiguration = 
+            _msSqlConfiguration =
                 msSqlConfiguration ?? throw new ArgumentNullException(nameof(msSqlConfiguration));
             if (string.IsNullOrEmpty(msSqlConfiguration.QueueStoreTable))
                 throw new ArgumentNullException(nameof(msSqlConfiguration.QueueStoreTable));
             _publications = publications;
+            _loggerFactory = loggerFactory;
         }
 
         /// <summary>
@@ -53,20 +58,21 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// </summary>
         /// <returns>A dictionary of <see cref="IAmAMessageProducer"/> indexed by <see cref="RoutingKey"/></returns>
         /// <exception cref="ArgumentException">Thrown when a publication does not have a topic</exception>
-        public Dictionary<ProducerKey,IAmAMessageProducer> Create()
+        public Dictionary<ProducerKey, IAmAMessageProducer> Create()
         {
             var producers = new Dictionary<ProducerKey, IAmAMessageProducer>();
 
             foreach (var publication in _publications)
             {
-                if (publication.Topic is null) throw new ConfigurationException("MS SQL Message Producer Factory: Topic is missing from the publication");
-                var producer = new MsSqlMessageProducer(_msSqlConfiguration, publication);
+                if (publication.Topic is null)
+                    throw new ConfigurationException("MS SQL Message Producer Factory: Topic is missing from the publication");
+                var producer = new MsSqlMessageProducer(_msSqlConfiguration, _loggerFactory, publication);
                 producer.Publication = publication;
                 var producerKey = new ProducerKey(publication.Topic, publication.Type);
                 if (producers.ContainsKey(producerKey))
-                    throw new ConfigurationException($"MS SQL Message Producer Factory: A publication with the topic {publication.Topic} and {publication.Type} already exists in the producer registry. Each topic + type must be unique in the producer registry. If you did not set a type, we will match against an empty type, so you cannot have two publications with the same topic and no type in the producer registry.");    
+                    throw new ConfigurationException($"MS SQL Message Producer Factory: A publication with the topic {publication.Topic} and {publication.Type} already exists in the producer registry. Each topic + type must be unique in the producer registry. If you did not set a type, we will match against an empty type, so you cannot have two publications with the same topic and no type in the producer registry.");
                 producers[producerKey] = producer;
-                
+
             }
 
             return producers;
@@ -79,7 +85,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <exception cref="ArgumentException">Thrown when a publication does not have a topic</exception>
         public Task<Dictionary<ProducerKey, IAmAMessageProducer>> CreateAsync()
         {
-           return Task.FromResult(Create()); 
+            return Task.FromResult(Create());
         }
     }
 }

@@ -51,7 +51,7 @@ public class PostgreSqlPerSchemaNullSchemaNameTests : IAsyncLifetime
             schemaName: null);
         _runner = new PostgreSqlBoxMigrationRunner(
             new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30),
-            scope: MigrationHistoryScope.PerSchema);
+            scope: MigrationHistoryScope.PerSchema, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

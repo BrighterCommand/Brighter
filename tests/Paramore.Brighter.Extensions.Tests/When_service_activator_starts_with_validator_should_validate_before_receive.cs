@@ -47,7 +47,7 @@ public class ServiceActivatorValidationTests
         var validator = SpyPipelineValidator.WithNoErrors(actionLog);
         var diagnosticWriter = new SpyPipelineDiagnosticWriter(actionLog);
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddSingleton<IAmAPipelineValidator>(validator);
         services.AddSingleton<IAmAPipelineDiagnosticWriter>(diagnosticWriter);
         var provider = services.BuildServiceProvider();
@@ -72,7 +72,7 @@ public class ServiceActivatorValidationTests
         var actionLog = new List<string>();
         var dispatcher = new SpyDispatcher(actionLog);
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         var provider = services.BuildServiceProvider();
 
         var options = Options.Create(new BrighterPipelineValidationOptions { ConsumerOwnsValidation = false });
@@ -97,7 +97,7 @@ public class ServiceActivatorValidationTests
         var validator = SpyPipelineValidator.WithErrors(actionLog, error);
         var diagnosticWriter = new SpyPipelineDiagnosticWriter(actionLog);
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddSingleton<IAmAPipelineValidator>(validator);
         services.AddSingleton<IAmAPipelineDiagnosticWriter>(diagnosticWriter);
         var provider = services.BuildServiceProvider();

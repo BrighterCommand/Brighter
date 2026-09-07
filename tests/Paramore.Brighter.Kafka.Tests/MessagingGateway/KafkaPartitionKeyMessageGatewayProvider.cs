@@ -125,7 +125,7 @@ public class KafkaPartitionKeyMessageGatewayProvider
     public IAmAChannelSync CreateChannel(KafkaSubscription subscription)
     {
         var channel = new ChannelFactory(
-            new KafkaMessageConsumerFactory(_configuration)
+            new KafkaMessageConsumerFactory(_configuration, loggerFactory: Initializer.TestLoggerFactory)
         ).CreateSyncChannel(subscription);
 
         return new RetryableChannelSync(channel);
@@ -137,7 +137,7 @@ public class KafkaPartitionKeyMessageGatewayProvider
     )
     {
         var channel = await new ChannelFactory(
-            new KafkaMessageConsumerFactory(_configuration)
+            new KafkaMessageConsumerFactory(_configuration, loggerFactory: Initializer.TestLoggerFactory)
         ).CreateAsyncChannelAsync(subscription, cancellationToken);
 
         return new RetryableChannelAsync(channel);
@@ -147,8 +147,8 @@ public class KafkaPartitionKeyMessageGatewayProvider
     {
         var producerRegistry = new KafkaProducerRegistryFactory(
             _configuration,
-            [publication]
-        ).Create();
+            [publication],
+            loggerFactory: Initializer.TestLoggerFactory).Create();
 
         _producerRegistries.Add(producerRegistry);
 
@@ -162,8 +162,8 @@ public class KafkaPartitionKeyMessageGatewayProvider
     {
         var producerRegistry = await new KafkaProducerRegistryFactory(
             _configuration,
-            [publication]
-        ).CreateAsync(cancellationToken);
+            [publication],
+            loggerFactory: Initializer.TestLoggerFactory).CreateAsync(cancellationToken);
 
         _producerRegistries.Add(producerRegistry);
 

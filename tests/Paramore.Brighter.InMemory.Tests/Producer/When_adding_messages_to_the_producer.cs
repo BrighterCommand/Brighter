@@ -15,7 +15,7 @@ public class InMemoryMessageProducerTests
         const string topic = "test_topic";
         var message = new Message(new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(topic), MessageType.MT_DOCUMENT), new MessageBody("test_content"));
         var bus = new InternalBus();
-        var producer = new InMemoryMessageProducer(bus, instrumentationOptions:InstrumentationOptions.All);
+        var producer = new InMemoryMessageProducer(bus, instrumentationOptions:InstrumentationOptions.All, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         // act
         producer.Send(message);

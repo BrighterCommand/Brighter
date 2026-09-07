@@ -29,7 +29,7 @@ public class TransformPipelineBothReleasesThrowTests
             messageTransformerFactory: new ThrowingOnReleaseTransformerFactory(),
             transformLeases: new Lease<IAmAMessageTransform>[] { Lease<IAmAMessageTransform>.Untracked(new NoOpTransform()) },
             instrumentationOptions: InstrumentationOptions.All,
-            mapperRegistry: new ThrowingOnReleaseRegistry());
+            mapperRegistry: new ThrowingOnReleaseRegistry(), loggerFactory: Initializer.TestLoggerFactory);
 
         var aggregate = Assert.Throws<AggregateException>(() => pipeline.Dispose());
 
@@ -44,7 +44,7 @@ public class TransformPipelineBothReleasesThrowTests
             messageTransformerFactoryAsync: new ThrowingOnReleaseTransformerFactoryAsync(),
             transformLeases: new Lease<IAmAMessageTransformAsync>[] { Lease<IAmAMessageTransformAsync>.Untracked(new NoOpTransformAsync()) },
             instrumentationOptions: InstrumentationOptions.All,
-            mapperRegistry: new ThrowingOnReleaseRegistryAsync());
+            mapperRegistry: new ThrowingOnReleaseRegistryAsync(), loggerFactory: Initializer.TestLoggerFactory);
 
         var aggregate = await Assert.ThrowsAsync<AggregateException>(async () => await pipeline.DisposeAsync());
 
@@ -59,7 +59,7 @@ public class TransformPipelineBothReleasesThrowTests
             messageTransformerFactoryAsync: new ThrowingOnReleaseTransformerFactoryAsync(),
             transformLeases: new Lease<IAmAMessageTransformAsync>[] { Lease<IAmAMessageTransformAsync>.Untracked(new NoOpTransformAsync()) },
             instrumentationOptions: InstrumentationOptions.All,
-            mapperRegistry: new ThrowingOnReleaseRegistryAsync());
+            mapperRegistry: new ThrowingOnReleaseRegistryAsync(), loggerFactory: Initializer.TestLoggerFactory);
 
         var aggregate = Assert.Throws<AggregateException>(() => pipeline.Dispose());
 

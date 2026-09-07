@@ -25,12 +25,12 @@ public class SpannerTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPro
 
     public IAmAnOutboxSync<Message, DbTransaction> CreateOutbox()
     {
-        return new SpannerOutbox(_configuration);
+        return new SpannerOutbox(_configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.Spanner.SpannerOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
     }
 
     public IAmAnOutboxAsync<Message, DbTransaction> CreateOutboxAsync()
     {
-        return new SpannerOutbox(_configuration);
+        return new SpannerOutbox(_configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.Spanner.SpannerOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
     }
 
     public void CreateStore()
@@ -76,13 +76,13 @@ public class SpannerTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPro
 
     public IEnumerable<Message> GetAllMessages()
     {
-        var outbox = new SpannerOutbox(_configuration);
+        var outbox = new SpannerOutbox(_configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.Spanner.SpannerOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         return outbox.Get(new RequestContext());
     }
 
     public async Task<IEnumerable<Message>> GetAllMessagesAsync()
     {
-        var outbox = new SpannerOutbox(_configuration);
+        var outbox = new SpannerOutbox(_configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.Spanner.SpannerOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         return await outbox.GetAsync(new RequestContext());
     }
 }

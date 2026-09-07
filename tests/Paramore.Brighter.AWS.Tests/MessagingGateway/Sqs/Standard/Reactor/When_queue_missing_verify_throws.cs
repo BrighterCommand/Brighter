@@ -28,7 +28,7 @@ public class AwsValidateMissingTopicTests
         //arrange
         var producer = new SqsMessageProducer(
             _awsConnection,
-            new SqsPublication(channelName: new ChannelName(_routingKey), makeChannels: OnMissingChannel.Validate));
+            new SqsPublication(channelName: new ChannelName(_routingKey), makeChannels: OnMissingChannel.Validate), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //act && assert
         Assert.Throws<QueueDoesNotExistException>(() => producer.Send(new Message(

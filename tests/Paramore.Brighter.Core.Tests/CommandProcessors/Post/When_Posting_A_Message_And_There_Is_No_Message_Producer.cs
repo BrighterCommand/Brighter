@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new EmptyMessageTransformerFactoryAsync(),
                 _tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                _outbox)
+                Initializer.TestLoggerFactory, _outbox)
             );               
 
             Assert.IsType<ConfigurationException>(exception);

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -73,7 +73,7 @@ var host = Host.CreateDefaultBuilder(args)
             Exchange = new Exchange("paramore.brighter.exchange")
         };
 
-        var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
+        var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         services.AddConsumers(options =>
         {
@@ -82,7 +82,7 @@ var host = Host.CreateDefaultBuilder(args)
         })
         // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
         // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-        .UseScheduler(new InMemorySchedulerFactory())
+        .UseScheduler(new InMemorySchedulerFactory(loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance))
         .AutoFromAssemblies();
 
         services.AddHostedService<ServiceActivatorHostedService>();

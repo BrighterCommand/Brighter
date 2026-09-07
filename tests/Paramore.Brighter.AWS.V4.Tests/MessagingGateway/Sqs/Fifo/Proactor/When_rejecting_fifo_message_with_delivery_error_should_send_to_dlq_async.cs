@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2025 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -86,12 +86,12 @@ public class SqsMessageConsumerFifoDeliveryErrorDlqTestsAsync : IDisposable, IAs
 
         var awsConnection = GatewayFactory.CreateFactory();
 
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _channel = _channelFactory.CreateAsyncChannel(subscription);
 
         _messageProducer = new SqsMessageProducer(
             awsConnection,
-            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create, queueAttributes: queueAttributes));
+            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create, queueAttributes: queueAttributes), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         var dlqSubscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName($"DLQ-Reader-{Guid.NewGuid().ToString()}".Truncate(45)),
@@ -102,7 +102,7 @@ public class SqsMessageConsumerFifoDeliveryErrorDlqTestsAsync : IDisposable, IAs
             queueAttributes: queueAttributes,
             makeChannels: OnMissingChannel.Create);
 
-        _dlqChannelFactory = new ChannelFactory(awsConnection);
+        _dlqChannelFactory = new ChannelFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _dlqChannel = _dlqChannelFactory.CreateAsyncChannel(dlqSubscription);
     }
 

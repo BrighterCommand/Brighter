@@ -48,7 +48,7 @@ public class When_kafka_consumer_factory_creates_consumer_should_pass_scheduler
     {
         // Arrange — factory constructed with a scheduler
         var scheduler = new StubMessageScheduler();
-        var factory = new KafkaMessageConsumerFactory(_configuration, scheduler);
+        var factory = new KafkaMessageConsumerFactory(_configuration, Initializer.TestLoggerFactory, scheduler);
 
         // Act
         var consumer = factory.Create(_subscription);
@@ -63,7 +63,7 @@ public class When_kafka_consumer_factory_creates_consumer_should_pass_scheduler
     {
         // Arrange — factory constructed with a scheduler
         var scheduler = new StubMessageScheduler();
-        var factory = new KafkaMessageConsumerFactory(_configuration, scheduler);
+        var factory = new KafkaMessageConsumerFactory(_configuration, Initializer.TestLoggerFactory, scheduler);
 
         // Act
         var consumer = factory.CreateAsync(_subscription);
@@ -77,7 +77,7 @@ public class When_kafka_consumer_factory_creates_consumer_should_pass_scheduler
     public void Should_create_consumer_without_scheduler_for_backward_compat()
     {
         // Arrange — factory constructed without a scheduler (backward compat)
-        var factory = new KafkaMessageConsumerFactory(_configuration);
+        var factory = new KafkaMessageConsumerFactory(_configuration, loggerFactory: Initializer.TestLoggerFactory);
 
         // Act
         var consumer = factory.Create(_subscription);

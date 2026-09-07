@@ -25,7 +25,7 @@ public class When_kafka_channel_factory_has_scheduler_should_pass_to_consumers
     public void Should_implement_channel_factory_with_scheduler()
     {
         // Arrange
-        var consumerFactory = new KafkaMessageConsumerFactory(_configuration);
+        var consumerFactory = new KafkaMessageConsumerFactory(_configuration, loggerFactory: Initializer.TestLoggerFactory);
         var channelFactory = new ChannelFactory(consumerFactory);
 
         // Assert
@@ -37,7 +37,7 @@ public class When_kafka_channel_factory_has_scheduler_should_pass_to_consumers
     {
         // Arrange
         var scheduler = new StubMessageScheduler();
-        var consumerFactory = new KafkaMessageConsumerFactory(_configuration);
+        var consumerFactory = new KafkaMessageConsumerFactory(_configuration, loggerFactory: Initializer.TestLoggerFactory);
         var channelFactory = new ChannelFactory(consumerFactory);
         ((IAmAChannelFactoryWithScheduler)channelFactory).Scheduler = scheduler;
 
@@ -54,7 +54,7 @@ public class When_kafka_channel_factory_has_scheduler_should_pass_to_consumers
     {
         // Arrange
         var scheduler = new StubMessageScheduler();
-        var consumerFactory = new KafkaMessageConsumerFactory(_configuration);
+        var consumerFactory = new KafkaMessageConsumerFactory(_configuration, loggerFactory: Initializer.TestLoggerFactory);
         var channelFactory = new ChannelFactory(consumerFactory);
         ((IAmAChannelFactoryWithScheduler)channelFactory).Scheduler = scheduler;
 
@@ -70,7 +70,7 @@ public class When_kafka_channel_factory_has_scheduler_should_pass_to_consumers
     public void Should_create_channel_without_scheduler_for_backward_compat()
     {
         // Arrange — no scheduler set
-        var consumerFactory = new KafkaMessageConsumerFactory(_configuration);
+        var consumerFactory = new KafkaMessageConsumerFactory(_configuration, loggerFactory: Initializer.TestLoggerFactory);
         var channelFactory = new ChannelFactory(consumerFactory);
 
         // Act

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Jonny Olliff-Lee <jonny.ollifflee@gmail.com>
 
@@ -47,7 +47,7 @@ var kafkaConfig = new KafkaMessagingGatewayConfiguration
     BootStrapServers = new[] { "localhost:9092" }
 };
 
-var kafkaMessageConsumerFactory = new KafkaMessageConsumerFactory(kafkaConfig);
+var kafkaMessageConsumerFactory = new KafkaMessageConsumerFactory(kafkaConfig, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
 // KafkaProducerRegistryFactory.Create() opens a real broker connection at construction
 // time, so we only build the registry when actually starting the producer side. In
@@ -86,7 +86,7 @@ var host = new HostBuilder()
                         MessageTimeoutMs = 1000,
                         MaxInFlightRequestsPerConnection = 1
                     }
-                }).Create();
+                }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create();
 
             brighter.AddProducers(configure =>
             {

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -75,16 +75,17 @@ var host = Host.CreateDefaultBuilder(args)
         var consumerFactory = new KafkaMessageConsumerFactory(
             new KafkaMessagingGatewayConfiguration
             {
-                Name = "paramore.brighter", BootStrapServers = new[] { "localhost:9092" }
-            }
-        );
+                Name = "paramore.brighter",
+                BootStrapServers = new[] { "localhost:9092" }
+            },
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         services.AddConsumers(options =>
         {
             options.Subscriptions = subscriptions;
             options.DefaultChannelFactory = new ChannelFactory(consumerFactory);
         })
-        .UseScheduler(new InMemorySchedulerFactory())
+        .UseScheduler(new InMemorySchedulerFactory(loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance))
         .AutoFromAssemblies();
 
         services.AddHostedService<ServiceActivatorHostedService>();

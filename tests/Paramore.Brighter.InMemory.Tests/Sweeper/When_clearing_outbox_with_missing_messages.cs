@@ -31,7 +31,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 {
-                    routingKey, new InMemoryMessageProducer(internalBus, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
+                    routingKey, new InMemoryMessageProducer(internalBus, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
                 }
             });
 
@@ -50,7 +50,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                outbox
+                global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, outbox
             );
 
             var context = new RequestContext();
@@ -99,7 +99,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 {
-                    routingKey, new InMemoryMessageProducer(internalBus, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
+                    routingKey, new InMemoryMessageProducer(internalBus, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, new Publication { RequestType = typeof(MyEvent), Topic = routingKey })
                 }
             });
 
@@ -118,7 +118,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                outbox
+                global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, outbox
             );
 
             var context = new RequestContext();

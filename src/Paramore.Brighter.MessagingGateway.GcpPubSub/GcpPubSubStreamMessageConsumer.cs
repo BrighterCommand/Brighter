@@ -1,7 +1,6 @@
 ﻿using Google.Cloud.PubSub.V1;
 using Google.Protobuf.WellKnownTypes;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
@@ -19,11 +18,12 @@ public partial class GcpPubSubStreamMessageConsumer(
     GcpMessagingGatewayConnection connection,
     GcpStreamConsumer consumer,
     Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
-    TimeProvider timeProvider) : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
+    TimeProvider timeProvider,
+    ILoggerFactory loggerFactory) : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
 {
 
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<GcpPubSubStreamMessageConsumer>();
-    
+    private readonly ILogger _logger = loggerFactory.CreateLogger<GcpPubSubStreamMessageConsumer>();
+
     /// <summary>
     /// Synchronously acknowledges a message, signalling the Pub/Sub service that the message
     /// has been successfully processed and can be discarded.
@@ -35,11 +35,11 @@ public partial class GcpPubSubStreamMessageConsumer(
         {
             return;
         }
-        
+
         gcpStreamMessage.Accepted();
-        Log.AcknowledgeSuccess(s_logger, message.Id.Value, "", subscriptionName.ToString());
+        Log.AcknowledgeSuccess(_logger, message.Id.Value, "", subscriptionName.ToString());
     }
-    
+
     /// <summary>
     /// Asynchronously acknowledges a message, signalling the Pub/Sub service that the message
     /// has been successfully processed and can be discarded.
@@ -87,12 +87,12 @@ public partial class GcpPubSubStreamMessageConsumer(
         {
             return true;
         }
-        
+
         gcpStreamMessage.Accepted();
-        Log.RejectMessage(s_logger, message.Id.Value, "", subscriptionName.ToString());
+        Log.RejectMessage(_logger, message.Id.Value, "", subscriptionName.ToString());
         return true;
     }
-    
+
     /// <summary>
     /// Asynchronously rejects a message. In this implementation, it calls <see cref="GcpStreamMessage.Accepted"/>
     /// to signal processing completion and prevents redelivery, while logging the rejection.
@@ -117,22 +117,22 @@ public partial class GcpPubSubStreamMessageConsumer(
         {
             var client = connection.GetOrCreateSubscriberServiceApiClient();
 
-            Log.PurgeStart(s_logger, subscriptionName.ToString());
+            Log.PurgeStart(_logger, subscriptionName.ToString());
 
             client.Seek(new SeekRequest
             {
                 Time = Timestamp.FromDateTimeOffset(timeProvider.GetUtcNow().AddMinutes(1))
             });
 
-            Log.PurgeComplete(s_logger, subscriptionName.ToString());
+            Log.PurgeComplete(_logger, subscriptionName.ToString());
         }
         catch (Exception ex)
         {
-            Log.PurgeError(s_logger, ex, subscriptionName.ToString());
+            Log.PurgeError(_logger, ex, subscriptionName.ToString());
             throw;
         }
     }
-    
+
     /// <summary>
     /// Asynchronously purges all messages from the subscription backlog by executing a 
     /// Pub/Sub Seek operation to a timestamp slightly in the future.
@@ -146,17 +146,17 @@ public partial class GcpPubSubStreamMessageConsumer(
         {
             var client = await connection.CreateSubscriberServiceApiClientAsync();
 
-            Log.PurgeStart(s_logger, subscriptionName.ToString());
+            Log.PurgeStart(_logger, subscriptionName.ToString());
 
             await client.SeekAsync(
                 new SeekRequest { Time = Timestamp.FromDateTimeOffset(timeProvider.GetUtcNow().AddMinutes(1)) },
                 cancellationToken);
 
-            Log.PurgeComplete(s_logger, subscriptionName.ToString());
+            Log.PurgeComplete(_logger, subscriptionName.ToString());
         }
         catch (Exception ex)
         {
-            Log.PurgeError(s_logger, ex, subscriptionName.ToString());
+            Log.PurgeError(_logger, ex, subscriptionName.ToString());
             throw;
         }
     }
@@ -171,7 +171,7 @@ public partial class GcpPubSubStreamMessageConsumer(
     {
         return BrighterAsyncContext.Run(() => ReceiveAsync(timeOut));
     }
-    
+
     /// <summary>
     /// Asynchronously reads the next message from the internal channel reader, waiting 
     /// until a message is available or the timeout is reached.
@@ -198,7 +198,7 @@ public partial class GcpPubSubStreamMessageConsumer(
                     return [Parser.ToBrighterMessage(message)];
                 }
             }
-            
+
             return [new Message()];
         }
         catch (OperationCanceledException)
@@ -220,9 +220,9 @@ public partial class GcpPubSubStreamMessageConsumer(
         {
             return true;
         }
-        
+
         gcpStreamMessage.Reject();
-        Log.RequeueComplete(s_logger, message.Id.Value);
+        Log.RequeueComplete(_logger, message.Id.Value);
         return true;
     }
 
@@ -239,7 +239,7 @@ public partial class GcpPubSubStreamMessageConsumer(
     {
         return Task.FromResult(Requeue(message, delay));
     }
-    
+
     /// <summary>
     /// Disposes of the consumer's resources synchronously.
     /// </summary>
@@ -247,7 +247,7 @@ public partial class GcpPubSubStreamMessageConsumer(
     {
         consumer.StopAsync().GetAwaiter().GetResult();
     }
-    
+
     /// <summary>
     /// Disposes of the consumer's resources asynchronously.
     /// </summary>
@@ -256,7 +256,7 @@ public partial class GcpPubSubStreamMessageConsumer(
     {
         await consumer.StopAsync();
     }
-    
+
     private static partial class Log
     {
         [LoggerMessage(LogLevel.Information, "GcpStreamMessageConsumer: The message {Id} acknowledged with the receipt handle {ReceiptHandle} on the subscription {SubscriptionName}")]

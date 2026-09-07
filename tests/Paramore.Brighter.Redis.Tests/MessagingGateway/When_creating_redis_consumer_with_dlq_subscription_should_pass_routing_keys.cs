@@ -39,7 +39,7 @@ public class RedisMessageConsumerFactoryDlqTests : IDisposable
     {
         //Arrange
         var configuration = RedisFixture.RedisMessagingGatewayConfiguration();
-        _factory = new RedisMessageConsumerFactory(configuration);
+        _factory = new RedisMessageConsumerFactory(configuration, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

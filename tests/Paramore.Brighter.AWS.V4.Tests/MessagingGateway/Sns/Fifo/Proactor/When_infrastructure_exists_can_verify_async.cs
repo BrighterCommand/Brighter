@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Net.Mime;
 using System.Text.Json;
@@ -25,7 +25,7 @@ public class AwsValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
     public AwsValidateInfrastructureTestsAsync()
     {
         _myCommand = new MyCommand { Value = "Test" };
-       var replyTo = new RoutingKey("http:\\queueUrl");
+        var replyTo = new RoutingKey("http:\\queueUrl");
         var contentType = new ContentType(MediaTypeNames.Text.Plain);
         var correlationId = Id.Random();
         var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
@@ -39,9 +39,9 @@ public class AwsValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
             channelName: new ChannelName(channelName),
             channelType: ChannelType.PubSub,
             routingKey: routingKey,
-            queueAttributes: new SqsAttributes(type: SqsType.Fifo, tags: new Dictionary<string, string> { { "Environment", "Test" } }), 
+            queueAttributes: new SqsAttributes(type: SqsType.Fifo, tags: new Dictionary<string, string> { { "Environment", "Test" } }),
             topicAttributes: topicAttributes,
-            messagePumpType: MessagePumpType.Proactor, 
+            messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
@@ -52,7 +52,7 @@ public class AwsValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
 
         var awsConnection = GatewayFactory.CreateFactory();
 
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var channel = _channelFactory.CreateAsyncChannel(subscription);
 
         //Now change the subscription to validate, just check what we made
@@ -66,10 +66,10 @@ public class AwsValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
                 MakeChannels = OnMissingChannel.Validate,
                 Topic = new RoutingKey(topicName),
                 TopicAttributes = topicAttributes
-            }
-        );
+            },
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
-        _consumer = new SqsMessageConsumerFactory(awsConnection).CreateAsync(subscription);
+        _consumer = new SqsMessageConsumerFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).CreateAsync(subscription);
     }
 
     [Fact]

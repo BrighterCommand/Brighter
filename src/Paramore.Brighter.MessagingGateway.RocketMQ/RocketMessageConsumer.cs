@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Org.Apache.Rocketmq;
 using Paramore.Brighter.Extensions;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
 
@@ -23,15 +22,17 @@ namespace Paramore.Brighter.MessagingGateway.RocketMQ;
 /// <param name="connection">The gateway connection configuration, used for lazy DLQ producer creation.</param>
 /// <param name="deadLetterRoutingKey">The routing key for the dead letter queue topic.</param>
 /// <param name="invalidMessageRoutingKey">The routing key for the invalid message topic.</param>
+/// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create the logger.</param>
 public partial class RocketMessageConsumer(SimpleConsumer consumer,
     int bufferSize,
     TimeSpan invisibilityTimeout,
+    ILoggerFactory loggerFactory,
     RocketMessagingGatewayConnection? connection = null,
     RoutingKey? deadLetterRoutingKey = null,
     RoutingKey? invalidMessageRoutingKey = null)
     : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RocketMessageConsumer>();
+    private readonly ILogger _logger = loggerFactory.CreateLogger<RocketMessageConsumer>();
 
     private readonly RocketMessagingGatewayConnection? _connection = connection;
     private readonly RoutingKey? _deadLetterRoutingKey = deadLetterRoutingKey;
@@ -42,22 +43,22 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
     private RocketMqMessageProducer? _invalidMessageProducer;
 
     /// <inheritdoc />
-    public void Acknowledge(Message message) 
+    public void Acknowledge(Message message)
         => BrighterAsyncContext.Run(() => AcknowledgeAsync(message));
-    
+
     /// <inheritdoc />
     public async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default)
     {
         if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var handler) || handler is not MessageView view)
         {
-           return;
+            return;
         }
-        
+
         await consumer.Ack(view);
     }
-    
+
     /// <inheritdoc />
-    public void Purge() 
+    public void Purge()
         => BrighterAsyncContext.Run(() => PurgeAsync());
 
     /// <inheritdoc />
@@ -70,11 +71,11 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
             {
                 break;
             }
-            
+
             await messages.EachAsync(async message => await consumer.Ack(message));
         }
     }
-    
+
     /// <inheritdoc />
     public Message[] Receive(TimeSpan? timeOut = null)
         => BrighterAsyncContext.Run(() => ReceiveAsync(timeOut));
@@ -87,16 +88,16 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
         {
             return [new Message()];
         }
-        
+
         var messages = new Message[messageView.Count];
         for (int i = 0; i < messageView.Count; i++)
         {
             messages[i] = CreateMessage(messageView[i]);
         }
-        
+
         return messages;
     }
-    
+
     /// <inheritdoc />
     public void Nack(Message message)
     {
@@ -123,12 +124,12 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
             return false;
         }
 
-        Log.RejectingMessage(s_logger, message.Id.Value);
+        Log.RejectingMessage(_logger, message.Id.Value);
 
         if (_deadLetterRoutingKey == null && _invalidMessageRoutingKey == null)
         {
             if (reason != null)
-                Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value, reason.RejectionReason.ToString());
+                Log.NoChannelsConfiguredForRejection(_logger, message.Id.Value, reason.RejectionReason.ToString());
 
             await consumer.Ack(view);
             return true;
@@ -147,7 +148,7 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
             {
                 message.Header.Topic = routingKey!;
                 if (isFallingBackToDlq)
-                    Log.FallingBackToDlq(s_logger, message.Id.Value);
+                    Log.FallingBackToDlq(_logger, message.Id.Value);
 
                 producer = await GetProducerForRouteAsync(routingKey!);
             }
@@ -155,16 +156,16 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
             if (producer != null)
             {
                 await producer.SendAsync(message, cancellationToken);
-                Log.MessageSentToRejectionChannel(s_logger, message.Id.Value, rejectionReason.ToString());
+                Log.MessageSentToRejectionChannel(_logger, message.Id.Value, rejectionReason.ToString());
             }
             else
             {
-                Log.NoChannelsConfiguredForRejection(s_logger, message.Id.Value, rejectionReason.ToString());
+                Log.NoChannelsConfiguredForRejection(_logger, message.Id.Value, rejectionReason.ToString());
             }
         }
         catch (Exception ex)
         {
-            Log.ErrorSendingToRejectionChannel(s_logger, ex, message.Id.Value, rejectionReason.ToString());
+            Log.ErrorSendingToRejectionChannel(_logger, ex, message.Id.Value, rejectionReason.ToString());
             return true;
         }
         finally
@@ -174,7 +175,7 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
 
         return true;
     }
-    
+
     /// <inheritdoc />
     public bool Requeue(Message message, TimeSpan? delay = null)
     {
@@ -182,7 +183,7 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
         {
             return false;
         }
-        
+
         // Waiting for next RocketMQ C# version, due an issue on ChangeInvisibleDuration
         // consumer.ChangeInvisibleDuration(view, TimeSpan.Zero);
         return true;
@@ -206,7 +207,7 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
         }
         catch (Exception ackEx)
         {
-            Log.ErrorAckingSourceMessage(s_logger, ackEx);
+            Log.ErrorAckingSourceMessage(_logger, ackEx);
             return false;
         }
     }
@@ -240,7 +241,7 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
         }
         catch (Exception ex)
         {
-            Log.ErrorCreatingProducer(s_logger, ex, routingKey.Value);
+            Log.ErrorCreatingProducer(_logger, ex, routingKey.Value);
             return null;
         }
     }
@@ -251,7 +252,8 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
         message.Header.Bag["rejectionTimestamp"] = DateTimeOffset.UtcNow.ToString("o");
         message.Header.Bag["originalMessageType"] = message.Header.MessageType.ToString();
 
-        if (reason == null) return;
+        if (reason == null)
+            return;
 
         message.Header.Bag["rejectionReason"] = reason.RejectionReason.ToString();
         if (!string.IsNullOrEmpty(reason.Description))
@@ -300,7 +302,7 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
         var traceParent = ReadTraceParent(message);
         var traceState = ReadTraceState(message);
         var baggage = ReadBaggage(message);
-        
+
         var header = new MessageHeader(
             messageId: messageId,
             topic: topic,
@@ -331,9 +333,9 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
         }
 
         header.Bag["ReceiptHandle"] = message;
-        
+
         var body = new MessageBody(message.Body, header.ContentType);
-        
+
         return new Message(header, body);
 
         static RoutingKey ReadTopic(MessageView message) => new(message.Topic);
@@ -346,12 +348,12 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
 
         static DateTimeOffset ReadTimeStamp(MessageView message)
         {
-            if (message.Properties.TryGetValue(HeaderNames.TimeStamp, out var timestamp) 
+            if (message.Properties.TryGetValue(HeaderNames.TimeStamp, out var timestamp)
                 && DateTimeOffset.TryParse(timestamp, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AdjustToUniversal, out var datetime))
             {
                 return datetime;
             }
-            
+
             if (message.DeliveryTimestamp != null)
             {
                 return message.DeliveryTimestamp.Value;
@@ -359,7 +361,7 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
 
             return DateTimeOffset.UtcNow;
         }
-        
+
         static MessageType ReadMessageType(MessageView message)
         {
             if (message.Properties.TryGetValue(HeaderNames.MessageType, out var type) && Enum.TryParse<MessageType>(type, true, out var messageType))
@@ -387,7 +389,7 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
             {
                 return null;
             }
-            
+
             return new PartitionKey(message.MessageGroup);
         }
 
@@ -409,7 +411,7 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
             {
                 return new ContentType(val);
             }
-            
+
             val = message.Properties.GetValueOrDefault(HeaderNames.ContentType);
             if (!string.IsNullOrEmpty(val))
             {
@@ -421,7 +423,7 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
 
         static int ReadHandledCount(MessageView message)
         {
-            if (message.Properties.TryGetValue(HeaderNames.HandledCount, out var handledCount) 
+            if (message.Properties.TryGetValue(HeaderNames.HandledCount, out var handledCount)
                 && int.TryParse(handledCount, out var count))
             {
                 return count;
@@ -432,7 +434,7 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
 
         static TimeSpan ReadDelay(MessageView message)
         {
-            if (message.Properties.TryGetValue(HeaderNames.HandledCount, out var delayString) 
+            if (message.Properties.TryGetValue(HeaderNames.HandledCount, out var delayString)
                 && TimeSpan.TryParse(delayString, out var delay))
             {
                 return delay;
@@ -440,7 +442,7 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
 
             return TimeSpan.Zero;
         }
-        
+
         static Uri ReadSource(MessageView message)
         {
             var val = message.Properties.GetValueOrDefault(HeaderNames.Source);
@@ -451,7 +453,7 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
 
             return new Uri(MessageHeader.DefaultSource);
         }
-        
+
         static string ReadSpecVersion(MessageView message)
         {
             var val = message.Properties.GetValueOrDefault(HeaderNames.SpecVersion);
@@ -462,13 +464,13 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
 
             return MessageHeader.DefaultSpecVersion;
         }
-        
+
         static CloudEventsType ReadType(MessageView message)
         {
             var val = message.Properties.GetValueOrDefault(HeaderNames.Type);
             return string.IsNullOrEmpty(val) ? CloudEventsType.Empty : new CloudEventsType(val);
         }
-        
+
         static Uri? ReadDataSchema(MessageView message)
         {
             var val = message.Properties.GetValueOrDefault(HeaderNames.DataSchema);
@@ -479,7 +481,7 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
 
             return null;
         }
-        
+
         static string? ReadSubject(MessageView message)
         {
             var val = message.Properties.GetValueOrDefault(HeaderNames.Subject);
@@ -490,7 +492,7 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
 
             return null;
         }
-        
+
         static string? ReadDataRef(MessageView message)
         {
             var val = message.Properties.GetValueOrDefault(HeaderNames.DataRef);
@@ -501,7 +503,7 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
 
             return null;
         }
-        
+
         static TraceParent? ReadTraceParent(MessageView message)
         {
             var val = message.Properties.GetValueOrDefault(HeaderNames.TraceParent);
@@ -512,7 +514,7 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
 
             return null;
         }
-        
+
         static TraceState? ReadTraceState(MessageView message)
         {
             var val = message.Properties.GetValueOrDefault(HeaderNames.TraceState);
@@ -523,7 +525,7 @@ public partial class RocketMessageConsumer(SimpleConsumer consumer,
 
             return null;
         }
-        
+
         static Baggage ReadBaggage(MessageView message)
         {
             var baggage = new Baggage();

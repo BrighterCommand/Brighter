@@ -60,7 +60,7 @@ var subscriptions = new Subscription[]
 };
 
 string dbConnString = "Server=127.0.0.1,11433;Database=BrighterTests;User Id=sa;Password=Password1!;Application Name=BrighterTests;MultipleActiveResultSets=True";
-            
+
 //EF
 builder.Services.AddDbContext<GreetingsDataContext>(o =>
 {
@@ -69,17 +69,17 @@ builder.Services.AddDbContext<GreetingsDataContext>(o =>
 
 var clientProvider = new ServiceBusConnectionStringClientProvider("Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;");
 
-var asbConsumerFactory = new AzureServiceBusConsumerFactory(clientProvider);
+var asbConsumerFactory = new AzureServiceBusConsumerFactory(clientProvider, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 builder.Services.AddConsumers(options =>
     {
         options.Subscriptions = subscriptions;
         options.DefaultChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
-        
+
     })
     .AutoFromAssemblies();
 
 builder.Services.AddHostedService<ServiceActivatorHostedService>();
-                
+
 builder.Logging.SetMinimumLevel(LogLevel.Information).AddConsole();
 
 

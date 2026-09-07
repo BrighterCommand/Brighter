@@ -23,8 +23,8 @@ public class When_nacking_a_message_without_offset_should_not_throw : IDisposabl
             offsetDefault: AutoOffsetReset.Earliest,
             numPartitions: 1,
             replicationFactor: 1,
-            makeChannels: OnMissingChannel.Assume
-        );
+            makeChannels: OnMissingChannel.Assume,
+            loggerFactory: Initializer.TestLoggerFactory);
     }
 
     [Fact]

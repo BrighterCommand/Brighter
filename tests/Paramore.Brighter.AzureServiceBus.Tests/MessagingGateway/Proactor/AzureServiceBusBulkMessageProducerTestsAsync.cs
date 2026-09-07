@@ -28,14 +28,14 @@ public class AzureServiceBusBulkMessageProducerTestsAsync
         _producer = new AzureServiceBusTopicMessageProducer(
             _nameSpaceManagerWrapper,
             topicClientProvider,
-            new AzureServiceBusPublication { MakeChannels = OnMissingChannel.Create }
-        );
+            new AzureServiceBusPublication { MakeChannels = OnMissingChannel.Create },
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         _queueProducer = new AzureServiceBusQueueMessageProducer(
             _nameSpaceManagerWrapper,
             topicClientProvider,
-            new AzureServiceBusPublication { MakeChannels = OnMissingChannel.Create }
-        );
+            new AzureServiceBusPublication { MakeChannels = OnMissingChannel.Create },
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

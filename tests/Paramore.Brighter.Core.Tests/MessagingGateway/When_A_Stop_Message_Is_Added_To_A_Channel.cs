@@ -37,14 +37,14 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
         public ChannelStopTests()
         {
             _bus = new InternalBus();
-            IAmAMessageConsumerSync gateway = new InMemoryMessageConsumer(_routingKey, _bus, TimeProvider.System, ackTimeout: TimeSpan.FromMilliseconds(1000)); 
+            IAmAMessageConsumerSync gateway = new InMemoryMessageConsumer(_routingKey, _bus, TimeProvider.System, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory);
 
             _channel = new Channel(new(ChannelName),_routingKey, gateway);
 
             Message sentMessage = new(
                 new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
                 new MessageBody("a test body"));
-            
+
             _bus.Enqueue(sentMessage);
 
             _channel.Stop(_routingKey);
@@ -55,7 +55,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
         {
             var stopMessage = _channel.Receive(TimeSpan.FromMilliseconds(1000));
             Assert.Equal(MessageType.MT_QUIT, stopMessage.Header.MessageType);
-            
+
             Assert.Single(_bus.Stream(new RoutingKey(_routingKey)));
         }
     }

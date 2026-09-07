@@ -25,8 +25,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Data;
+using Microsoft.Extensions.Logging;
 using MySqlConnector;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.MySql;
 using Paramore.Brighter.Observability;
 
@@ -44,9 +44,10 @@ public class MySqlInbox : RelationalDatabaseInbox
     /// </summary>
     /// <param name="configuration">The configuration.</param>
     /// <param name="connectionProvider">The Connection Provider.</param>
-    public MySqlInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider)
-        : base(DbSystem.MySql, configuration, connectionProvider, 
-            new MySqlQueries(), ApplicationLogging.CreateLogger<MySqlInbox>())
+    /// <param name="logger">The logger to use.</param>
+    public MySqlInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider, ILogger<MySqlInbox> logger)
+        : base(DbSystem.MySql, configuration, connectionProvider,
+            new MySqlQueries(), logger)
     {
     }
 
@@ -54,8 +55,9 @@ public class MySqlInbox : RelationalDatabaseInbox
     ///     Initializes a new instance of the <see cref="MySqlInbox" /> class.
     /// </summary>
     /// <param name="configuration">The configuration.</param>
-    public MySqlInbox(IAmARelationalDatabaseConfiguration configuration) : this(configuration,
-        new MySqlConnectionProvider(configuration))
+    /// <param name="logger">The logger to use.</param>
+    public MySqlInbox(IAmARelationalDatabaseConfiguration configuration, ILogger<MySqlInbox> logger) : this(configuration,
+        new MySqlConnectionProvider(configuration), logger)
     {
     }
 
@@ -73,7 +75,7 @@ public class MySqlInbox : RelationalDatabaseInbox
 
     protected override IDbDataParameter CreateJsonSqlParameter(string parameterName, object? value)
     {
-        return new MySqlParameter{ParameterName = parameterName, MySqlDbType = MySqlDbType.JSON, Value = value ?? DBNull.Value }; 
+        return new MySqlParameter { ParameterName = parameterName, MySqlDbType = MySqlDbType.JSON, Value = value ?? DBNull.Value };
     }
 
 }

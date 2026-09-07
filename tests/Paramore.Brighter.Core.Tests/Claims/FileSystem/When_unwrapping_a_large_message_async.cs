@@ -37,7 +37,7 @@ public class LargeMessagePayloadAsyncUnwrapTests : IDisposable
         var messageTransformerFactory =
             new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.All);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, Initializer.TestLoggerFactory, InstrumentationOptions.All);
     }
 
     [Fact]

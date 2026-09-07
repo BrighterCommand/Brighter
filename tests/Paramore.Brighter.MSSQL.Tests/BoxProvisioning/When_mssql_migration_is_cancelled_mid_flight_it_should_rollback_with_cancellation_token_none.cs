@@ -84,7 +84,7 @@ public class MsSqlMigrationCancellationRollbackTests : IAsyncLifetime
         // short-circuited by a signalled CT the sp_getapplock would still be held by the
         // zombied transaction and the second BeginAsync would block until the 5s timeout
         // elapsed and throw MigrationLockDeadlockException.
-        var freshRunner = new MsSqlBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(5));
+        var freshRunner = new MsSqlBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(5), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         await freshRunner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, staleHint, CancellationToken.None);
 
@@ -139,7 +139,8 @@ file sealed class CancellingMsSqlBoxMigrationRunner : MsSqlBoxMigrationRunner
         IAmABoxMigrationCatalog catalog,
         IAmARelationalDatabaseConfiguration configuration,
         TimeSpan lockTimeout)
-        : base(catalog, configuration, lockTimeout)
+        : base(catalog, configuration, lockTimeout,
+            global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
     {
     }
 

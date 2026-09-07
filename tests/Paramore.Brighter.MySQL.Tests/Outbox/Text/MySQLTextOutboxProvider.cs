@@ -19,12 +19,12 @@ public class MySQLTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvi
 
     public IAmAnOutboxSync<Message, DbTransaction> CreateOutbox()
     {
-        return new MySqlOutbox(_configuration);
+        return new MySqlOutbox(_configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.MySql.MySqlOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
     }
 
     public IAmAnOutboxAsync<Message, DbTransaction> CreateOutboxAsync()
     {
-        return new MySqlOutbox(_configuration);
+        return new MySqlOutbox(_configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.MySql.MySqlOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
     }
 
     public void CreateStore()
@@ -70,13 +70,13 @@ public class MySQLTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvi
 
     public IEnumerable<Message> GetAllMessages()
     {
-        var outbox = new MySqlOutbox(_configuration);
+        var outbox = new MySqlOutbox(_configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.MySql.MySqlOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         return outbox.Get(new RequestContext());
     }
 
     public async Task<IEnumerable<Message>> GetAllMessagesAsync()
     {
-        var outbox = new MySqlOutbox(_configuration);
+        var outbox = new MySqlOutbox(_configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.MySql.MySqlOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         return await outbox.GetAsync(new RequestContext());
     }
 }

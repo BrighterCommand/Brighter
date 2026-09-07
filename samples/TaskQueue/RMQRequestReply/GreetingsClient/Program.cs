@@ -57,7 +57,7 @@ namespace GreetingsSender
                 .AddBrighter()
                 // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
                 // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-                .UseScheduler(new InMemorySchedulerFactory())
+                .UseScheduler(new InMemorySchedulerFactory(loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance))
                 .AddProducers((configure) =>
                 {
                     configure.ProducerRegistry = new RmqProducerRegistryFactory(
@@ -68,19 +68,19 @@ namespace GreetingsSender
                                 Topic = new RoutingKey("Greeting.Request"),
                                 RequestType = typeof(GreetingRequest)
                             }
-                        ]).Create();
+                        ], loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create();
                     configure.UseRpc = true;
                     configure.ReplyQueueSubscriptions =
                     [
                         new RmqSubscription(
-                            new SubscriptionName("ReplySubscription"), 
-                            new ChannelName("ReplyChannel"), 
-                            new RoutingKey("Reply"), 
+                            new SubscriptionName("ReplySubscription"),
+                            new ChannelName("ReplyChannel"),
+                            new RoutingKey("Reply"),
                             typeof(GreetingReply),
                             messagePumpType: MessagePumpType.Reactor
                         )
                     ];
-                    configure.ResponseChannelFactory = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection));
+                    configure.ResponseChannelFactory = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
                 })
                 .AutoFromAssemblies();
 
@@ -94,8 +94,9 @@ namespace GreetingsSender
             commandProcessor.Call<GreetingRequest, GreetingReply>(
                 new GreetingRequest
                 {
-                    Name = "Ian", Language = "en-gb"
-                }, 
+                    Name = "Ian",
+                    Language = "en-gb"
+                },
                 timeOut: TimeSpan.FromMilliseconds(2000)
             );
 

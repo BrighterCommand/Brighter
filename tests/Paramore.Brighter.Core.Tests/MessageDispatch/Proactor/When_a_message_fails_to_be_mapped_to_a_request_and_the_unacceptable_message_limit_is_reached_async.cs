@@ -48,7 +48,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 new (Channel), _routingKey,
                 new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider,
                     invalidMessageTopic: _invalidMessageKey,
-                    ackTimeout: TimeSpan.FromMilliseconds(1000)),
+                    ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory),
                 2
             );
             var messageMapperRegistry = new MessageMapperRegistry(
@@ -57,7 +57,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             messageMapperRegistry.RegisterAsync<MyFailingMapperEvent, FailingEventMessageMapperAsync>();
 
             _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyFailingMapperEvent),
-                messageMapperRegistry, null, new InMemoryRequestContextFactory(), channel)
+                messageMapperRegistry, null, new InMemoryRequestContextFactory(), channel, loggerFactory: Initializer.TestLoggerFactory)
             {
                 Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3, UnacceptableMessageLimit = 3
             };

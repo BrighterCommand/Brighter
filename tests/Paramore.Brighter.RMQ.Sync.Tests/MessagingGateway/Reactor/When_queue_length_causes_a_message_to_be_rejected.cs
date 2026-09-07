@@ -59,7 +59,7 @@ public class RmqMessageProducerQueueLengthTests : IDisposable
             Exchange = new Exchange("paramore.brighter.exchange"),
         };
             
-        _messageProducer = new RmqMessageProducer(rmqConnection);
+        _messageProducer = new RmqMessageProducer(rmqConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         _messageConsumer = new RmqMessageConsumer(
             connection: rmqConnection, 
@@ -69,8 +69,8 @@ public class RmqMessageProducerQueueLengthTests : IDisposable
             highAvailability: false,
             batchSize: 5,
             maxQueueLength: 1,
-            makeChannels:OnMissingChannel.Create
-        );
+            makeChannels:OnMissingChannel.Create,
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

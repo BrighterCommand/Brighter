@@ -43,11 +43,11 @@ public class CommandProcessorIsolationTests
     public void TwoCommandProcessors_HaveIsolatedState()
     {
         // Arrange - Create two independent service providers
-        var services1 = new ServiceCollection();
+        var services1 = new ServiceCollection().AddLogging();
         services1.AddBrighter();
         var provider1 = services1.BuildServiceProvider();
 
-        var services2 = new ServiceCollection();
+        var services2 = new ServiceCollection().AddLogging();
         services2.AddBrighter();
         var provider2 = services2.BuildServiceProvider();
 
@@ -71,7 +71,7 @@ public class CommandProcessorIsolationTests
             var index = i;
             tasks[i] = Task.Run(() =>
             {
-                var services = new ServiceCollection();
+                var services = new ServiceCollection().AddLogging();
                 services.AddBrighter();
                 var provider = services.BuildServiceProvider();
                 processors[index] = provider.GetRequiredService<IAmACommandProcessor>();
@@ -115,7 +115,7 @@ public class CommandProcessorIsolationTests
                 var routingKey = new RoutingKey($"test.command.{index}");
                 var internalBus = new InternalBus();
 
-                var producer = new InMemoryMessageProducer(internalBus, new Publication
+                var producer = new InMemoryMessageProducer(internalBus, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, new Publication
                 {
                     Topic = routingKey,
                     RequestType = typeof(IsolationTestCommand)
@@ -127,7 +127,7 @@ public class CommandProcessorIsolationTests
                 // Each test has its OWN outbox - this is the key isolation requirement
                 outboxes[index] = new InMemoryOutbox(timeProvider);
 
-                var services = new ServiceCollection();
+                var services = new ServiceCollection().AddLogging();
                 services.AddBrighter()
                     .AddProducers(cfg =>
                     {
@@ -186,7 +186,7 @@ public class CommandProcessorIsolationTests
                 var routingKey = new RoutingKey($"test.func.{index}");
                 var internalBus = new InternalBus();
 
-                var producer = new InMemoryMessageProducer(internalBus, new Publication
+                var producer = new InMemoryMessageProducer(internalBus, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, new Publication
                 {
                     Topic = routingKey,
                     RequestType = typeof(IsolationTestCommand)
@@ -196,7 +196,7 @@ public class CommandProcessorIsolationTests
                     new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, producer } });
 
                 // Using the new Func<IServiceProvider, T> overload pattern
-                var services = new ServiceCollection();
+                var services = new ServiceCollection().AddLogging();
                 services.AddSingleton(outbox);
                 services.AddSingleton(producerRegistry);
 

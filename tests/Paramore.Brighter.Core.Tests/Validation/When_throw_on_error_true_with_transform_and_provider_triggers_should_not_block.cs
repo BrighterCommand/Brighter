@@ -47,11 +47,11 @@ public class ValidatePipelinesNonBlockingWarningsTests
         var routingKey = new RoutingKey("greeting");
         var producer = new InMemoryMessageProducer(
             new InternalBus(),
-            new Publication { Topic = routingKey, RequestType = typeof(MyDescribableCommand) });
+            Initializer.TestLoggerFactory, new Publication { Topic = routingKey, RequestType = typeof(MyDescribableCommand) });
         var producerRegistry = new ProducerRegistry(
             new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, producer } });
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddLogging();
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         subscriberRegistry.Register<MyValidatedCommand, MyValidatedSyncHandler>();

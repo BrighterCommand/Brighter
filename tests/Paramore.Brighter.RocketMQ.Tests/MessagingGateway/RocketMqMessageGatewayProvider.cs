@@ -148,7 +148,7 @@ public class RocketMqMessageGatewayProvider
 
     public IAmAChannelSync CreateChannel(RocketSubscription subscription)
     {
-        var channelFactory = new RocketMqChannelFactory(new RocketMessageConsumerFactory(_connection));
+        var channelFactory = new RocketMqChannelFactory(new RocketMessageConsumerFactory(_connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         var channel = channelFactory.CreateSyncChannel(subscription);
 
         if (subscription.DeadLetterRoutingKey != null && subscription.RequeueCount > 0)
@@ -163,7 +163,7 @@ public class RocketMqMessageGatewayProvider
         RocketSubscription subscription,
         CancellationToken cancellationToken = default)
     {
-        var channelFactory = new RocketMqChannelFactory(new RocketMessageConsumerFactory(_connection));
+        var channelFactory = new RocketMqChannelFactory(new RocketMessageConsumerFactory(_connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         var channel = await channelFactory.CreateAsyncChannelAsync(subscription, cancellationToken);
 
         if (subscription.DeadLetterRoutingKey != null && subscription.RequeueCount > 0)
@@ -215,7 +215,7 @@ public class RocketMqMessageGatewayProvider
             })
             .Build();
 
-        var consumer = new RocketMessageConsumer(dlqConsumer, 1, TimeSpan.FromSeconds(30));
+        var consumer = new RocketMessageConsumer(dlqConsumer, 1, TimeSpan.FromSeconds(30), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         try
         {

@@ -27,10 +27,10 @@ public class RmqMessageProducerSendPersistentMessageTestsAsync : IDisposable, IA
             PersistMessages = true
         };
 
-        _messageProducer = new RmqMessageProducer(rmqConnection);
+        _messageProducer = new RmqMessageProducer(rmqConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var queueName = new ChannelName(Guid.NewGuid().ToString());
             
-        _messageConsumer = new RmqMessageConsumer(rmqConnection, queueName, _message.Header.Topic, false);
+        _messageConsumer = new RmqMessageConsumer(rmqConnection, queueName, _message.Header.Topic, false, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         new QueueFactory(rmqConnection, queueName, new RoutingKeys( _message.Header.Topic))
             .CreateAsync()

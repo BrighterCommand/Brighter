@@ -26,7 +26,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Mediator;
 
@@ -39,18 +38,20 @@ public class Waker<TData>
     private readonly TimeSpan _jobAge;
     private readonly Scheduler<TData> _scheduler;
     private readonly string _wakerName = Uuid.New().ToString("N");
-    
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<Waker<TData>>();
+
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Waker{TData}"/> class.
     /// </summary>
     /// <param name="jobAge">The age of the job to determine if it is due.</param>
     /// <param name="scheduler">The scheduler to trigger due jobs.</param>
-    public Waker(TimeSpan jobAge, Scheduler<TData> scheduler)
+    /// <param name="loggerFactory">The factory used to create the logger for this waker.</param>
+    public Waker(TimeSpan jobAge, Scheduler<TData> scheduler, ILoggerFactory loggerFactory)
     {
         _jobAge = jobAge;
         _scheduler = scheduler;
+        _logger = loggerFactory.CreateLogger<Waker<TData>>();
     }
 
     /// <summary>
@@ -61,7 +62,7 @@ public class Waker<TData>
     /// <returns>A task that completes when the wake loop exits (via cancellation).</returns>
     public async Task RunAsync(CancellationToken cancellationToken = default(CancellationToken))
     {
-        s_logger.LogInformation("Starting waker {WakerName}", _wakerName);
+        _logger.LogInformation("Starting waker {WakerName}", _wakerName);
 
         try
         {
@@ -69,7 +70,7 @@ public class Waker<TData>
         }
         finally
         {
-            s_logger.LogInformation("Finished waker {WakerName}", _wakerName);
+            _logger.LogInformation("Finished waker {WakerName}", _wakerName);
         }
     }
 
@@ -79,7 +80,7 @@ public class Waker<TData>
         {
             if (cancellationToken.IsCancellationRequested)
                 break;
-            
+
             await _scheduler.TriggerDueJobsAsync(_jobAge, cancellationToken);
             await Task.Delay(_jobAge, cancellationToken);
         }

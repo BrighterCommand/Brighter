@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Net.Mime;
 using System.Text.Json;
@@ -32,7 +32,7 @@ public class AwsValidateInfrastructureByUrlTestsAsync : IAsyncDisposable, IDispo
         var routingKey = new RoutingKey(queueName);
 
         var channelName = new ChannelName(queueName);
-        
+
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(subscriptionName),
             channelName: channelName,
@@ -50,7 +50,7 @@ public class AwsValidateInfrastructureByUrlTestsAsync : IAsyncDisposable, IDispo
 
         var awsConnection = GatewayFactory.CreateFactory();
 
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var channel = _channelFactory.CreateAsyncChannel(subscription);
 
         var queueUrl = FindQueueUrl(awsConnection, routingKey.Value).Result;
@@ -67,13 +67,13 @@ public class AwsValidateInfrastructureByUrlTestsAsync : IAsyncDisposable, IDispo
         _messageProducer = new SqsMessageProducer(
             awsConnection,
             new SqsPublication(
-                channelName: new ChannelName(queueUrl), 
+                channelName: new ChannelName(queueUrl),
                 findQueueBy: QueueFindBy.Url,
-                makeChannels: OnMissingChannel.Validate) 
-        );
-      
+                makeChannels: OnMissingChannel.Validate),
+                loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
-        _consumer = new SqsMessageConsumerFactory(awsConnection).CreateAsync(subscription);
+
+        _consumer = new SqsMessageConsumerFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).CreateAsync(subscription);
     }
 
     [Fact]

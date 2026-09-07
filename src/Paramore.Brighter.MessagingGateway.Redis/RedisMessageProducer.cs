@@ -28,7 +28,6 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
 using ServiceStack.Redis;
@@ -56,12 +55,13 @@ namespace Paramore.Brighter.MessagingGateway.Redis
     public partial class RedisMessageProducer(
         RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration,
         RedisMessagePublication publication,
+        ILoggerFactory loggerFactory,
         InstrumentationOptions instrumentation = InstrumentationOptions.All)
         : RedisMessageGateway(redisMessagingGatewayConfiguration, publication.Topic!), IAmAMessageProducerSync, IAmAMessageProducerAsync
     {
 
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RedisMessageProducer>();
-        private Publication _publication = publication; 
+        private readonly ILogger _logger = loggerFactory.CreateLogger<RedisMessageProducer>();
+        private Publication _publication = publication;
         private const string NEXT_ID = "nextid";
         private const string QUEUES = "queues";
 
@@ -71,12 +71,12 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         public Publication Publication
         {
             get { return _publication; }
-            set {_publication = value;}
+            set { _publication = value; }
         }
 
         /// <inheritdoc />
         public Activity? Span { get; set; }
-        
+
         /// <inheritdoc />
         public IAmAMessageScheduler? Scheduler { get; set; }
 
@@ -85,7 +85,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             DisposePool();
             GC.SuppressFinalize(this);
         }
-        
+
         public async ValueTask DisposeAsync()
         {
             await DisposePoolAsync();
@@ -109,7 +109,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             await SendWithDelayAsync(message, TimeSpan.Zero, cancellationToken);
         }
-        
+
         /// <summary>
         /// Sends the specified message.
         /// </summary>
@@ -144,18 +144,18 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             Topic = message.Header.Topic;
 
             BrighterTracer.WriteProducerEvent(Span, "redis", message, instrumentation);
-            Log.PreparingToSend(s_logger);
-  
+            Log.PreparingToSend(_logger);
+
             var redisMessage = CreateRedisMessage(message);
 
-            Log.PublishingMessage(s_logger, message.Header.Topic.Value, message.Id.ToString(), message.Body.Value);
+            Log.PublishingMessage(_logger, message.Header.Topic.Value, message.Id.ToString(), message.Body.Value);
             //increment a counter to get the next message id
             var nextMsgId = IncrementMessageCounter(client);
             //store the message, against that id
             StoreMessage(client, redisMessage, nextMsgId);
             //If there are subscriber queues, push the message to the subscriber queues
             var pushedTo = PushToQueues(client, nextMsgId);
-            Log.PublishedMessage(s_logger, message.Header.Topic.Value, message.Id.ToString(), message.Body.Value, string.Join(", ", pushedTo));
+            Log.PublishedMessage(_logger, message.Header.Topic.Value, message.Id.ToString(), message.Body.Value, string.Join(", ", pushedTo));
         }
 
         /// <summary>
@@ -193,18 +193,18 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             Topic = message.Header.Topic;
 
             BrighterTracer.WriteProducerEvent(Span, "redis", message, instrumentation);
-            Log.PreparingToSend(s_logger);
+            Log.PreparingToSend(_logger);
 
             var redisMessage = CreateRedisMessage(message);
 
-            Log.PublishingMessage(s_logger, message.Header.Topic.Value, message.Id.ToString(), message.Body.Value);
+            Log.PublishingMessage(_logger, message.Header.Topic.Value, message.Id.ToString(), message.Body.Value);
             //increment a counter to get the next message id
             var nextMsgId = await IncrementMessageCounterAsync(client, cancellationToken);
             //store the message, against that id
             await StoreMessageAsync(client, redisMessage, nextMsgId);
             //If there are subscriber queues, push the message to the subscriber queues
             var pushedTo = await PushToQueuesAsync(client, nextMsgId, cancellationToken);
-            Log.PublishedMessage(s_logger, message.Header.Topic.Value, message.Id.ToString(), message.Body.Value, string.Join(", ", pushedTo));
+            Log.PublishedMessage(_logger, message.Header.Topic.Value, message.Id.ToString(), message.Body.Value, string.Join(", ", pushedTo));
         }
 
         private HashSet<string> PushToQueues(IRedisClient client, long nextMsgId)
@@ -218,7 +218,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             }
             return queues;
         }
-        
+
         private async Task<HashSet<string>> PushToQueuesAsync(IRedisClientAsync client, long nextMsgId, CancellationToken cancellationToken = default)
         {
             var key = Topic + "." + QUEUES;
@@ -238,7 +238,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             var key = Topic + "." + NEXT_ID;
             return client.IncrementValue(key);
         }
-        
+
         private async Task<long> IncrementMessageCounterAsync(IRedisClientAsync client, CancellationToken cancellationToken = default)
         {
             //This holds the next id for this topic; we use that to store message contents and signal to queue
@@ -254,7 +254,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
             [LoggerMessage(LogLevel.Debug, "RedisMessageProducer: Publishing message with topic {Topic} and id {Id} and body: {Request}")]
             public static partial void PublishingMessage(ILogger logger, string topic, string id, string request);
-            
+
             [LoggerMessage(LogLevel.Debug, "RedisMessageProducer: Published message with topic {Topic} and id {Id} and body: {Request} to queues: {Queues}")]
             public static partial void PublishedMessage(ILogger logger, string topic, string id, string request, string queues);
         }

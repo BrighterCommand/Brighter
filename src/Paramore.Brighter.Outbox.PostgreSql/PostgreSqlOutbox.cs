@@ -26,8 +26,8 @@ THE SOFTWARE. */
 using System;
 using System.Data;
 using System.Linq;
+using Microsoft.Extensions.Logging;
 using Npgsql;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.PostgreSql;
 
@@ -43,11 +43,13 @@ public class PostgreSqlOutbox : RelationDatabaseOutbox
     /// </summary>
     /// <param name="configuration">The configuration to connect to this data store</param>
     /// <param name="connectionProvider">Provides a connection to the Db that allows us to enlist in an ambient transaction</param>
+    /// <param name="logger">The logger to use.</param>
     public PostgreSqlOutbox(
         IAmARelationalDatabaseConfiguration configuration,
-        IAmARelationalDbConnectionProvider connectionProvider) 
-        : base(DbSystem.Postgresql, configuration, connectionProvider, 
-            new PostgreSqlQueries(), ApplicationLogging.CreateLogger<PostgreSqlOutbox>())
+        IAmARelationalDbConnectionProvider connectionProvider,
+        ILogger<PostgreSqlOutbox> logger)
+        : base(DbSystem.Postgresql, configuration, connectionProvider,
+            new PostgreSqlQueries(), logger)
     {
     }
 
@@ -58,10 +60,12 @@ public class PostgreSqlOutbox : RelationDatabaseOutbox
     /// <param name="dataSource">From v7.0 Npgsql uses an Npgsql data source, leave null to have Brighter manage
     /// connections; Brighter will not manage type mapping for you in this case so you must register them
     /// globally</param>
+    /// <param name="logger">The logger to use.</param>
     public PostgreSqlOutbox(
         IAmARelationalDatabaseConfiguration configuration,
+        ILogger<PostgreSqlOutbox> logger,
         NpgsqlDataSource? dataSource = null)
-        : this(configuration, new PostgreSqlConnectionProvider(configuration, dataSource))
+        : this(configuration, new PostgreSqlConnectionProvider(configuration, dataSource), logger)
     {
     }
 

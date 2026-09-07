@@ -11,7 +11,7 @@ public class InMemoryChannelFactoryTests
     {
         //arrange
         var internalBus = new InternalBus();
-        var inMemoryChannelFactory = new InMemoryChannelFactory(internalBus, TimeProvider.System);
+        var inMemoryChannelFactory = new InMemoryChannelFactory(internalBus, TimeProvider.System, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         
         //act
         var channel = inMemoryChannelFactory.CreateSyncChannel(new Subscription<MyEvent>(messagePumpType: MessagePumpType.Reactor));

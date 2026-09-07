@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Transactions;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Monitoring.Events;
@@ -36,7 +37,7 @@ namespace Paramore.Brighter
     /// <summary>
     /// Class ControlBusSenderFactory. Helper for creating instances of a control bus (which requires messaging, but not subscribers).
     /// </summary>
-    public class ControlBusSenderFactory : IAmAControlBusSenderFactory
+    public class ControlBusSenderFactory(ILoggerFactory loggerFactory) : IAmAControlBusSenderFactory
     {
         /// <summary>
         /// Creates the specified configuration.
@@ -46,7 +47,7 @@ namespace Paramore.Brighter
         /// <param name="tracer"></param>
         /// <param name="requestSchedulerFactory"></param>
         /// <returns>IAmAControlBusSender.</returns>
-        public IAmAControlBusSender Create<T, TTransaction>(IAmAnOutbox outbox, 
+        public IAmAControlBusSender Create<T, TTransaction>(IAmAnOutbox outbox,
             IAmAProducerRegistry producerRegistry,
             BrighterTracer tracer,
             IAmARequestSchedulerFactory? requestSchedulerFactory = null,
@@ -66,17 +67,19 @@ namespace Paramore.Brighter
                 messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), tracer: tracer,
                 outbox: outbox,
                 outboxCircuitBreaker: new InMemoryOutboxCircuitBreaker(),
-                publicationFinder: publicationFinder ?? new FindPublicationByPublicationTopicOrRequestType()
-                ); 
-            
+                publicationFinder: publicationFinder ?? new FindPublicationByPublicationTopicOrRequestType(),
+                loggerFactory: loggerFactory
+                );
+
             return new ControlBusSender(
                 CommandProcessorBuilder.StartNew()
                 .Handlers(new HandlerConfiguration())
                 .DefaultResilience()
-                .ExternalBus(ExternalBusType.FireAndForget, mediator)   
+                .ExternalBus(ExternalBusType.FireAndForget, mediator)
                 .ConfigureInstrumentation(null, InstrumentationOptions.None)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
-                .RequestSchedulerFactory(requestSchedulerFactory ?? new InMemorySchedulerFactory())
+                .RequestSchedulerFactory(requestSchedulerFactory ?? new InMemorySchedulerFactory(loggerFactory))
+                .ConfigureLogging(loggerFactory)
                 .Build()
                 );
         }

@@ -21,7 +21,7 @@ public class LuggageStoreExistsTests
             Credential = GatewayFactory.GetCredential()
         };
         
-        var luggageStore = new GcsLuggageStore(options);
+        var luggageStore = new GcsLuggageStore(options, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         await luggageStore.EnsureStoreExistsAsync();
         
         // act
@@ -48,7 +48,7 @@ public class LuggageStoreExistsTests
                      Credential = GatewayFactory.GetCredential()
                  };
         
-                 var luggageStore = new GcsLuggageStore(options);
+                 var luggageStore = new GcsLuggageStore(options, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
                  await luggageStore.EnsureStoreExistsAsync();
              });
          

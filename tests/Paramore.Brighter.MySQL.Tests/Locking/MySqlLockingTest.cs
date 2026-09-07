@@ -9,6 +9,6 @@ public class MySqlLockingTest : RelationalDatabaseDistributedLockingAsyncTest
     protected override string DefaultConnectingString => Const.DefaultConnectingString;
     protected override IDistributedLock CreateDistributedLock()
     {
-        return new MySqlLockingProvider(new MySqlConnectionProvider(Configuration));
+        return new MySqlLockingProvider(new MySqlConnectionProvider(Configuration), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 }

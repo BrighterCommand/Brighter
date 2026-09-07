@@ -56,8 +56,8 @@ var host = new HostBuilder()
                         Topic = new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
                         RequestType = typeof(GreetingEvent)
                     }
-                ]
-            ).Create();
+                ],
+                loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create();
 
             services.AddBrighter()
                 .AddProducers((configure) =>
@@ -96,7 +96,7 @@ internal sealed class RunCommandProcessor(IAmACommandProcessor commandProcessor,
 
             logger.LogInformation("Scheduling message #{Loop}", loop);
             commandProcessor.Post(TimeSpan.FromSeconds(10), new GreetingEvent($"Scheduler message Ian #{loop}"));
-            
+
             if (loop % 100 != 0)
             {
                 continue;

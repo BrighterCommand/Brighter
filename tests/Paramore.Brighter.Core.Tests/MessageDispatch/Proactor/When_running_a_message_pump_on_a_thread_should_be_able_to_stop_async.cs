@@ -24,7 +24,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             SpyCommandProcessor commandProcessor = new();
             ChannelAsync channel = new(
                 new(Channel), _routingKey, 
-                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000))
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory)
             );
             
             var messageMapperRegistry = new MessageMapperRegistry(
@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
             
             var messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyEvent), messageMapperRegistry, 
-                new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), channel);
+                new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), channel, loggerFactory: Initializer.TestLoggerFactory);
             messagePump.Channel = channel;
             messagePump.TimeOut = TimeSpan.FromMilliseconds(5000);
 

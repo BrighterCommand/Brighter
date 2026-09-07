@@ -99,7 +99,7 @@ public class MsSqlAdvisoryLockAcquireExceptionPropagationTests : IAsyncLifetime
         var fakeLock = new FakeMsSqlAdvisoryLock(throwOnAcquire: null);
 
         var runner = new MsSqlBoxMigrationRunner(
-            catalog, config, TimeSpan.FromSeconds(30), fakeLock);
+            catalog, config, TimeSpan.FromSeconds(30), global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, fakeLock);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act
@@ -125,7 +125,7 @@ public class MsSqlAdvisoryLockAcquireExceptionPropagationTests : IAsyncLifetime
         var fakeLock = new FakeMsSqlAdvisoryLock(throwOnAcquire: toThrow);
 
         var runner = new MsSqlBoxMigrationRunner(
-            catalog, config, TimeSpan.FromSeconds(30), fakeLock);
+            catalog, config, TimeSpan.FromSeconds(30), global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, fakeLock);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act + Assert — runner surfaces the same exception type without wrapping.

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Org.Apache.Rocketmq;
 using Paramore.Brighter.Tasks;
 
@@ -9,14 +10,14 @@ namespace Paramore.Brighter.MessagingGateway.RocketMQ;
 /// RocketMQ message producer implementation for Brighter.
 /// Integrates RocketMQ's producer group pattern and transactional message support.
 /// </summary>
-public class RocketMessageConsumerFactory(RocketMessagingGatewayConnection connection) : IAmAMessageConsumerFactory
+public class RocketMessageConsumerFactory(RocketMessagingGatewayConnection connection, ILoggerFactory loggerFactory) : IAmAMessageConsumerFactory
 {
     /// <inheritdoc />
     public IAmAMessageConsumerSync Create(Subscription subscription)
         => BrighterAsyncContext.Run(() => CreateConsumerAsync(subscription));
 
     /// <inheritdoc />
-    public IAmAMessageConsumerAsync CreateAsync(Subscription subscription) 
+    public IAmAMessageConsumerAsync CreateAsync(Subscription subscription)
         => BrighterAsyncContext.Run(() => CreateConsumerAsync(subscription));
 
     internal async Task<RocketMessageConsumer> CreateConsumerAsync(Subscription subscription)
@@ -27,7 +28,7 @@ public class RocketMessageConsumerFactory(RocketMessagingGatewayConnection conne
         }
 
         var builder = new SimpleConsumer.Builder();
-        
+
         builder.SetClientConfig(connection.ClientConfig)
             .SetConsumerGroup(rocketSubscription.ConsumerGroup)
             .SetAwaitDuration(rocketSubscription.ReceiveMessageTimeout)
@@ -41,6 +42,6 @@ public class RocketMessageConsumerFactory(RocketMessagingGatewayConnection conne
 
         var consumer = await builder.Build();
         return new RocketMessageConsumer(consumer, rocketSubscription.BufferSize,
-            rocketSubscription.InvisibilityTimeout, connection, deadLetterRoutingKey, invalidMessageRoutingKey);
+            rocketSubscription.InvisibilityTimeout, loggerFactory, connection, deadLetterRoutingKey, invalidMessageRoutingKey);
     }
 }

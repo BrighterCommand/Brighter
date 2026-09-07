@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -104,7 +104,8 @@ public class SqlBoxProvisionerNegativeVersionClampTests
             IAmARelationalDatabaseConfiguration configuration,
             IAmABoxMigrationRunner migrationRunner,
             BoxType boxType)
-            : base(detectionHelper, catalog, payloadValidator, configuration, migrationRunner, boxType)
+            : base(detectionHelper, catalog, payloadValidator, configuration, migrationRunner, boxType,
+                global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
         {
         }
 

@@ -23,8 +23,8 @@ public class RMQBufferedConsumerTests : IDisposable
             Exchange = new Exchange("paramore.brighter.exchange")
         };
 
-        _messageProducer = new RmqMessageProducer(rmqConnection);
-        _messageConsumer = new RmqMessageConsumer(connection:rmqConnection, queueName:_channelName, routingKey:_routingKey, isDurable:false, highAvailability:false, batchSize:BatchSize);
+        _messageProducer = new RmqMessageProducer(rmqConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+        _messageConsumer = new RmqMessageConsumer(connection:rmqConnection, queueName:_channelName, routingKey:_routingKey, isDurable:false, highAvailability:false, batchSize:BatchSize, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             
         //create the queue, so that we can receive messages posted to it
         new QueueFactory(rmqConnection, _channelName, new RoutingKeys(_routingKey)).Create(TimeSpan.FromMilliseconds(1000));

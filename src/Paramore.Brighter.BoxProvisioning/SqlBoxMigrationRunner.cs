@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -28,7 +28,6 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.BoxProvisioning;
@@ -114,7 +113,7 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
     /// chain and fresh-install DDL on each <see cref="MigrateAsync"/> call.</param>
     /// <param name="lockTimeout">How long the per-backend UoW waits for the advisory lock
     /// before throwing.</param>
-    /// <param name="logger">Optional logger. Defaults to <see cref="NullLogger.Instance"/>.</param>
+    /// <param name="logger">The logger.</param>
     /// <param name="tracer">Optional <see cref="IAmABrighterTracer"/>. When supplied,
     /// <see cref="MigrateAsync"/> emits a migration span on the tracer's
     /// <see cref="System.Diagnostics.ActivitySource"/>. Defaults to null (no instrumentation).</param>
@@ -126,7 +125,7 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
         IAmABoxMigrationCatalog catalog,
         IAmARelationalDatabaseConfiguration configuration,
         TimeSpan lockTimeout,
-        ILogger? logger = null,
+        ILogger logger,
         IAmABrighterTracer? tracer = null,
         MigrationHistoryScope scope = MigrationHistoryScope.Global)
     {
@@ -135,7 +134,7 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
         _configuration = configuration;
         _lockTimeout = lockTimeout;
         _scope = scope;
-        Logger = logger ?? NullLogger.Instance;
+        Logger = logger;
         Tracer = tracer;
     }
 
@@ -366,7 +365,8 @@ public abstract class SqlBoxMigrationRunner<TConnection, TTransaction>
         var activity = Tracer?.ActivitySource.StartActivity(
             $"{BrighterSemanticConventions.BoxMigration} {tableName}",
             ActivityKind.Internal);
-        if (activity is null) return null;
+        if (activity is null)
+            return null;
         activity.SetTag(BrighterSemanticConventions.DbSystem, DbSystem.ToDbName());
         activity.SetTag(BrighterSemanticConventions.DbTable, tableName);
         if (schemaName is not null)

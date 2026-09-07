@@ -63,13 +63,14 @@ builder.Services.AddConsumers(options =>
         new KafkaMessageConsumerFactory(
             new KafkaMessagingGatewayConfiguration
             {
-                Name = "paramore.brighter", BootStrapServers = ["localhost:9092"]
-            }
-        ));
+                Name = "paramore.brighter",
+                BootStrapServers = ["localhost:9092"]
+            },
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 })
 // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
 // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-.UseScheduler(new InMemorySchedulerFactory())
+.UseScheduler(new InMemorySchedulerFactory(loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance))
 .AutoFromAssemblies();
 
 builder.Services.AddHostedService<ServiceActivatorHostedService>();

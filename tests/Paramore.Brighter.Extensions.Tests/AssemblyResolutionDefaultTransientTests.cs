@@ -20,7 +20,7 @@ namespace Paramore.Brighter.Extensions.Tests
 
         public AssemblyResolutionDefaultTransientTests()
         {
-            _services = new ServiceCollection();
+            _services = new ServiceCollection().AddLogging();
 
             _services.AddConsumers().AutoFromAssemblies();
               

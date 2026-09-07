@@ -35,7 +35,7 @@ public class PipelineDiagnosticWriterNoItemsTests
     {
         // Arrange — empty registry, no publications, no subscriptions
         var registry = new SubscriberRegistry();
-        var pipelineBuilder = new PipelineBuilder<IRequest>(registry);
+        var pipelineBuilder = new PipelineBuilder<IRequest>(registry, loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<IRequest>.ClearPipelineCache();
 
         var logger = new SpyLogger();

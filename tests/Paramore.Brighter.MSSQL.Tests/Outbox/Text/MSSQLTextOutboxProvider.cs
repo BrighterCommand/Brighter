@@ -18,12 +18,12 @@ public class MSSQLTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvi
 
     public IAmAnOutboxSync<Message, DbTransaction> CreateOutbox()
     {
-        return new MsSqlOutbox(_configuration);
+        return new MsSqlOutbox(_configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.MsSql.MsSqlOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
     }
 
     public IAmAnOutboxAsync<Message, DbTransaction> CreateOutboxAsync()
     {
-        return new MsSqlOutbox(_configuration);
+        return new MsSqlOutbox(_configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.MsSql.MsSqlOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
     }
 
     public void CreateStore()
@@ -73,13 +73,13 @@ public class MSSQLTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvi
 
     public IEnumerable<Message> GetAllMessages()
     {
-        var outbox = new MsSqlOutbox(_configuration);
+        var outbox = new MsSqlOutbox(_configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.MsSql.MsSqlOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         return outbox.Get(new RequestContext());
     }
 
     public async Task<IEnumerable<Message>> GetAllMessagesAsync()
     {
-        var outbox = new MsSqlOutbox(_configuration);
+        var outbox = new MsSqlOutbox(_configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.MsSql.MsSqlOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         return await outbox.GetAsync(new RequestContext());
     }
 }

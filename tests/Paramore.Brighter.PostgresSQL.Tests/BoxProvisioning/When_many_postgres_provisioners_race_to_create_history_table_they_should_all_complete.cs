@@ -95,13 +95,13 @@ public class PostgreSqlManyProvisionersHistoryRaceTests : IAsyncLifetime
             var config = new RelationalDatabaseConfiguration(
                 _connectionString, outBoxTableName: tableName);
             var runner = new PostgreSqlBoxMigrationRunner(
-                new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), tracer: tracer);
+                new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), tracer: tracer, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             var provisioner = new PostgreSqlOutboxProvisioner(
-                new PostgreSqlBoxDetectionHelper(),
+                new PostgreSqlBoxDetectionHelper(logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.BoxProvisioning.PostgreSql.PostgreSqlBoxDetectionHelper>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)),
                 new PostgreSqlOutboxMigrationCatalog(),
                 new PostgreSqlPayloadModeValidator(),
                 config,
-                runner);
+                runner, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             await provisioner.ProvisionAsync();
         })).ToArray();
 

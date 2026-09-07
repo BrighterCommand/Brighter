@@ -23,7 +23,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             var timeProvider = new FakeTimeProvider();
             InMemoryMessageProducer messageProducer =
-                new(new InternalBus(), new Publication { Topic = routingKey, RequestType = typeof(MyCommand) });
+                new(new InternalBus(), Initializer.TestLoggerFactory, new Publication { Topic = routingKey, RequestType = typeof(MyCommand) });
 
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
@@ -41,30 +41,30 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             var outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
 
             IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-                producerRegistry, 
+                producerRegistry,
                 resiliencePipelineRegistry,
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                outbox
+                Initializer.TestLoggerFactory, outbox
             );
-        
+
             _commandProcessor = new CommandProcessor(
-                new InMemoryRequestContextFactory(), 
+                new InMemoryRequestContextFactory(),
                 new DefaultPolicy(),
                 resiliencePipelineRegistry,
                 bus,
-                new InMemorySchedulerFactory()
-            ); 
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+                loggerFactory: Initializer.TestLoggerFactory);
         }
 
         [Fact]
         public void When_Posting_A_Message_And_There_Is_No_Message_Mapper_Factory()
         {
             var exception = Catch.Exception(() => _commandProcessor.Post(_myCommand));
-            Assert.IsType<ArgumentOutOfRangeException>(exception); 
+            Assert.IsType<ArgumentOutOfRangeException>(exception);
         }
     }
 }

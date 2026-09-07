@@ -30,7 +30,7 @@ public class MediatorUnresolvableMapperSendTests
         var timeProvider = new FakeTimeProvider();
 
         InMemoryMessageProducer messageProducer = new(new InternalBus(),
-            new Publication { Topic = _routingKey, RequestType = typeof(MyCommand) });
+        Initializer.TestLoggerFactory, new Publication { Topic = _routingKey, RequestType = typeof(MyCommand) });
 
         //the type is registered, but the factory cannot instantiate it (Create returns null)
         var messageMapperRegistry = new MessageMapperRegistry(new NullReturningMapperFactory(), null);
@@ -49,7 +49,7 @@ public class MediatorUnresolvableMapperSendTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            new InMemoryOutbox(timeProvider) { Tracer = tracer }
+            Initializer.TestLoggerFactory, new InMemoryOutbox(timeProvider) { Tracer = tracer }
         );
     }
 

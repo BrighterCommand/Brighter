@@ -142,13 +142,13 @@ public class MsSqlMultiBoxGlobalToPerSchemaFlipTests : IAsyncLifetime
             schemaName: _schemaName);
         var runner = new MsSqlBoxMigrationRunner(
             new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30),
-            scope: scope);
+            scope: scope, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         return new MsSqlOutboxProvisioner(
             new MsSqlBoxDetectionHelper(),
             new MsSqlOutboxMigrationCatalog(),
             new MsSqlPayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     private MsSqlInboxProvisioner BuildInboxProvisioner(MigrationHistoryScope scope)
@@ -159,13 +159,13 @@ public class MsSqlMultiBoxGlobalToPerSchemaFlipTests : IAsyncLifetime
             schemaName: _schemaName);
         var runner = new MsSqlBoxMigrationRunner(
             new MsSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30),
-            scope: scope);
+            scope: scope, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         return new MsSqlInboxProvisioner(
             new MsSqlBoxDetectionHelper(),
             new MsSqlInboxMigrationCatalog(),
             new MsSqlPayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     private void EnsureSchemaExists(string schemaName) =>

@@ -102,9 +102,9 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { _inboundRoutingKey, new InMemoryMessageProducer(_internalBus,
-                    new Publication { Topic = _inboundRoutingKey, RequestType = typeof(MyCommand) }) },
+                Initializer.TestLoggerFactory, new Publication { Topic = _inboundRoutingKey, RequestType = typeof(MyCommand) }) },
                 { _outgoingRoutingKey, new InMemoryMessageProducer(_internalBus,
-                    new Publication { Topic = _outgoingRoutingKey, RequestType = typeof(MyEvent) }) }
+                Initializer.TestLoggerFactory, new Publication { Topic = _outgoingRoutingKey, RequestType = typeof(MyEvent) }) }
             });
 
             IAmAnOutboxProducerMediator mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
@@ -115,14 +115,14 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                _outbox);
+                Initializer.TestLoggerFactory, _outbox);
 
             //The handler needs the command processor (to forward) and the signal channel; the command processor needs the
             //handler factory. Break the cycle by resolving the processor lazily from the container the factory wraps.
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, ProcessAndForwardHandler>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<ProcessAndForwardHandler>();
             container.AddSingleton(handledChannel.Writer);
             container.AddSingleton<IAmAnInboxSync>(_inbox);
@@ -136,7 +136,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
                 new DefaultPolicy(),
                 resiliencePipelineRegistry,
                 mediator,
-                new InMemorySchedulerFactory()));
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory));
 
             _commandProcessor = container.BuildServiceProvider().GetRequiredService<IAmACommandProcessor>();
 
@@ -144,10 +144,10 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             var channel = new Channel(
                 new ChannelName("MyChannel"),
                 _inboundRoutingKey,
-                new InMemoryMessageConsumer(_inboundRoutingKey, _internalBus, timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)));
+                new InMemoryMessageConsumer(_inboundRoutingKey, _internalBus, timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory));
 
             var pump = new Reactor(_commandProcessor, _ => typeof(MyCommand),
-                    messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel)
+                    messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel, loggerFactory: Initializer.TestLoggerFactory)
                 { Channel = channel, TimeOut = TimeSpan.FromMilliseconds(200), EmptyChannelDelay = TimeSpan.FromMilliseconds(10) };
 
             _performer = new Performer(channel, pump);

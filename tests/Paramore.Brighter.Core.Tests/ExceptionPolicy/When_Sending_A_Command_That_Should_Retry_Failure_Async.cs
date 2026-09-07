@@ -24,7 +24,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyFailsWithFallbackDivideByZeroHandlerAsync>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddSingleton<MyFailsWithFallbackDivideByZeroHandlerAsync>();
             container.AddSingleton<ExceptionPolicyHandlerAsync<MyCommand>>();
             container.AddSingleton<FallbackPolicyHandlerRequestHandlerAsync<MyCommand>>();
@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 
             _provider.GetService<MyFailsWithFallbackDivideByZeroHandlerAsync>().ReceivedCommand = false;
             
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         }
 
         //We have to catch the final exception that bubbles out after retry

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -106,7 +106,7 @@ public class SnsFifoMessageGatewayProvider
 
     public IAmAChannelSync CreateChannel(SqsSubscription subscription)
     {
-        var channel = new ChannelFactory(_awsConnection)
+        var channel = new ChannelFactory(_awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
             .CreateSyncChannel(subscription);
 
         if (subscription.MakeChannels == OnMissingChannel.Create)
@@ -121,7 +121,7 @@ public class SnsFifoMessageGatewayProvider
         SqsSubscription subscription,
         CancellationToken cancellationToken = default)
     {
-        var channel = await new ChannelFactory(_awsConnection)
+        var channel = await new ChannelFactory(_awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
             .CreateAsyncChannelAsync(subscription, cancellationToken);
 
         if (subscription.MakeChannels == OnMissingChannel.Create)
@@ -141,7 +141,7 @@ public class SnsFifoMessageGatewayProvider
             connection = GatewayFactory.CreateFactory();
         }
 
-        var producer = new SnsMessageProducer(connection, publication);
+        var producer = new SnsMessageProducer(connection, publication, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         return producer;
     }
 
@@ -156,7 +156,7 @@ public class SnsFifoMessageGatewayProvider
             connection = GatewayFactory.CreateFactory();
         }
 
-        var producer = new SnsMessageProducer(connection, publication);
+        var producer = new SnsMessageProducer(connection, publication, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         return Task.FromResult<IAmAMessageProducerAsync>(producer);
     }
 
@@ -174,7 +174,7 @@ public class SnsFifoMessageGatewayProvider
             queueAttributes: new SqsAttributes(type: SqsType.Fifo)
         );
 
-        var dlqChannel = await new ChannelFactory(_awsConnection)
+        var dlqChannel = await new ChannelFactory(_awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
             .CreateAsyncChannelAsync(dlqSubscription, cancellationToken);
 
         try

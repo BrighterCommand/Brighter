@@ -29,7 +29,7 @@ public class AwsValidateMissingTopicTests
             new SnsPublication
             {
                 MakeChannels = OnMissingChannel.Validate,
-            });
+            }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //act && assert
         Assert.Throws<BrokerUnreachableException>(() => producer.Send(new Message(

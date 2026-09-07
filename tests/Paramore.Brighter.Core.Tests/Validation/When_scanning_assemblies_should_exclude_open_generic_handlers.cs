@@ -37,7 +37,7 @@ public class AssemblyScanningOpenGenericExclusionTests
     public void When_scanning_assemblies_should_not_register_open_generic_type_parameters()
     {
         // Arrange — scan the Brighter core assembly, which contains DeferMessageOnErrorHandler<TRequest>
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         var mapperRegistry = new ServiceCollectionMessageMapperRegistryBuilder(services);
         var builder = new ServiceCollectionBrighterBuilder(services, subscriberRegistry, mapperRegistry);

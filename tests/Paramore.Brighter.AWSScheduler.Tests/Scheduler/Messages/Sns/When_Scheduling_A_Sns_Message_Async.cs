@@ -23,7 +23,7 @@ public class SnsSchedulingAsyncMessageTest : IAsyncDisposable
     {
         var awsConnection = GatewayFactory.CreateFactory();
 
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         //we need the channel to create the queues and notifications
         _topicName = $"Producer-Scheduler-Async-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var channelName = $"Producer-Scheduler-Async-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
@@ -40,9 +40,9 @@ public class SnsSchedulingAsyncMessageTest : IAsyncDisposable
 
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
         //just for the tests, so create a new consumer from the properties
-        _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), BufferSize);
+        _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, BufferSize);
         _messageProducer = new SnsMessageProducer(awsConnection,
-            new SnsPublication { MakeChannels = OnMissingChannel.Create, TopicAttributes = new SnsAttributes(tags: [new Tag { Key = "Environment", Value = "Test" }]) });
+            new SnsPublication { MakeChannels = OnMissingChannel.Create, TopicAttributes = new SnsAttributes(tags: [new Tag { Key = "Environment", Value = "Test" }]) }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         // Enforce topic to be created
         _messageProducer.SendAsync(new Message(

@@ -28,7 +28,7 @@ public class AsyncMessageWrapCleanupTests
         
         _publication = new Publication{Topic = new RoutingKey("MyTransformableCommand"), RequestType= typeof(MyTransformableCommand)};
         
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, new MyReleaseTrackingTransformFactoryAsync(), InstrumentationOptions.All);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, new MyReleaseTrackingTransformFactoryAsync(), Initializer.TestLoggerFactory, InstrumentationOptions.All);
     }
     
     [Fact]

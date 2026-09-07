@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging;
+
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
     /// <summary>
@@ -29,13 +31,15 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     public class SqsMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly AWSMessagingGatewayConnection _awsConnection;
+        private readonly ILoggerFactory _loggerFactory;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SqsMessageConsumerFactory"/> class.
         /// </summary>
-        public SqsMessageConsumerFactory(AWSMessagingGatewayConnection awsConnection)
+        public SqsMessageConsumerFactory(AWSMessagingGatewayConnection awsConnection, ILoggerFactory loggerFactory)
         {
             _awsConnection = awsConnection;
+            _loggerFactory = loggerFactory;
         }
 
         /// <summary>
@@ -57,12 +61,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         private SqsMessageConsumer CreateImpl(Subscription subscription)
         {
             SqsSubscription? sqsSubscription = subscription as SqsSubscription;
-            if (sqsSubscription == null) throw new ConfigurationException("We expect an SqsSubscription or SqsSubscription<T> as a parameter");
+            if (sqsSubscription == null)
+                throw new ConfigurationException("We expect an SqsSubscription or SqsSubscription<T> as a parameter");
 
             //if it is a url, don't alter; if it is just a name, ensure it is valid
             ChannelName queueName = subscription.ChannelName;
             if (sqsSubscription.FindQueueBy == QueueFindBy.Name)
-               queueName =queueName.ToValidSQSQueueName(sqsSubscription.QueueAttributes.Type == SqsType.Fifo);
+                queueName = queueName.ToValidSQSQueueName(sqsSubscription.QueueAttributes.Type == SqsType.Fifo);
 
             // Extract DLQ and invalid message routing keys if subscription supports them
             RoutingKey? deadLetterRoutingKey = null;
@@ -87,7 +92,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 makeChannels: sqsSubscription.MakeChannels,
                 isQueueUrl: (sqsSubscription.FindQueueBy == QueueFindBy.Url),
                 rawMessageDelivery: sqsSubscription.QueueAttributes.RawMessageDelivery,
-                queueAttributes: sqsSubscription.QueueAttributes
+                queueAttributes: sqsSubscription.QueueAttributes,
+                loggerFactory: _loggerFactory
             );
         }
     }

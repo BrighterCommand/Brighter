@@ -27,7 +27,8 @@ return;
 
 static void AddSchemaRegistryMaybe(IServiceCollection services, MessagingTransport messagingTransport)
 {
-    if (messagingTransport != MessagingTransport.Kafka) return;
+    if (messagingTransport != MessagingTransport.Kafka)
+        return;
 
     SchemaRegistryConfig schemaRegistryConfig = new() { Url = "http://localhost:8081" };
     CachedSchemaRegistryClient cachedSchemaRegistryClient = new(schemaRegistryConfig);
@@ -70,7 +71,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
     MessagingTransport messagingTransport = ConfigureTransport.TransportType(transport);
 
     AddSchemaRegistryMaybe(services, messagingTransport);
-    
+
     string? dbType = hostContext.Configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
     if (string.IsNullOrWhiteSpace(dbType))
         throw new InvalidOperationException("DbType is not set");
@@ -88,7 +89,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
     services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
 
     Rdbms rdbms = DbResolver.GetDatabaseType(dbType);
-    (IAmAnOutbox outbox, Type transactionProvider, Type connectionProvider)  makeOutbox =
+    (IAmAnOutbox outbox, Type transactionProvider, Type connectionProvider) makeOutbox =
         OutboxFactory.MakeEfOutbox<SalutationsEntityGateway>(rdbms, outboxConfiguration);
 
     IAmAProducerRegistry producerRegistry = ConfigureProducerRegistry();
@@ -110,7 +111,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
     {
         AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
         Exchange = new Exchange("paramore.brighter.exchange"),
-    });
+    }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
     services.AddConsumers(options =>
         {
@@ -149,7 +150,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
 static string GetEnvironment()
 {
     //NOTE: Hosting Context will always return Production outside of ASPNET_CORE at this point, so grab it directly
-    return Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") 
+    return Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
            ?? throw new InvalidOperationException(" ASP_NETCORE_ENVIRONMENT is not set ");
 }
 
@@ -193,8 +194,8 @@ static IAmAProducerRegistry ConfigureProducerRegistry()
                 WaitForConfirmsTimeOutInMilliseconds = 1000,
                 MakeChannels = OnMissingChannel.Create
             }
-        ]
-    ).Create();
+        ],
+        loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create();
 
     return producerRegistry;
 }

@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 
@@ -33,18 +34,22 @@ public class SnsMessageProducerFactory : IAmAMessageProducerFactory
 {
     private readonly AWSMessagingGatewayConnection _connection;
     private readonly IEnumerable<SnsPublication> _publications;
+    private readonly ILoggerFactory _loggerFactory;
 
     /// <summary>
     /// Creates a collection of SNS message producers from the SNS publication information
     /// </summary>
     /// <param name="connection">The Connection to use to connect to AWS</param>
     /// <param name="publications">The publications describing the SNS topics that we want to use</param>
+    /// <param name="loggerFactory">The factory used to create loggers for the producers.</param>
     public SnsMessageProducerFactory(
         AWSMessagingGatewayConnection connection,
-        IEnumerable<SnsPublication> publications)
+        IEnumerable<SnsPublication> publications,
+        ILoggerFactory loggerFactory)
     {
         _connection = connection;
         _publications = publications;
+        _loggerFactory = loggerFactory;
     }
 
     /// <summary>
@@ -60,9 +65,9 @@ public class SnsMessageProducerFactory : IAmAMessageProducerFactory
             if (publication.Topic is null)
                 throw new ConfigurationException("Missing topic on Publication");
 
-            var producer = new SnsMessageProducer(_connection, publication);
+            var producer = new SnsMessageProducer(_connection, publication, loggerFactory: _loggerFactory);
             producer.Publication = publication;
-            
+
             if (producer.ConfirmTopicExists())
             {
                 var producerKey = new ProducerKey(publication.Topic, publication.Type);
@@ -92,9 +97,9 @@ public class SnsMessageProducerFactory : IAmAMessageProducerFactory
             if (publication.Topic is null)
                 throw new ConfigurationException("Missing topic on Publication");
 
-            var producer = new SnsMessageProducer(_connection, publication);
+            var producer = new SnsMessageProducer(_connection, publication, loggerFactory: _loggerFactory);
             producer.Publication = publication;
-            
+
             if (await producer.ConfirmTopicExistsAsync())
             {
                 var producerKey = new ProducerKey(publication.Topic, publication.Type);

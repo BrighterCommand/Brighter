@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Net.Mime;
 using System.Text.Json;
@@ -39,9 +39,9 @@ public class AwsValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
             channelName: new ChannelName(channelName),
             channelType: ChannelType.PubSub,
             routingKey: routingKey,
-            queueAttributes: new SqsAttributes(type: SqsType.Fifo, tags: new Dictionary<string, string> { { "Environment", "Test" } }), 
+            queueAttributes: new SqsAttributes(type: SqsType.Fifo, tags: new Dictionary<string, string> { { "Environment", "Test" } }),
             topicAttributes: topicAttributes,
-            messagePumpType: MessagePumpType.Reactor, 
+            messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
@@ -55,7 +55,7 @@ public class AwsValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
         //We need to do this manually in a test - will create the channel from subscriber parameters
         //This doesn't look that different from our create tests - this is because we create using the channel factory in
         //our AWS transport, not the consumer (as it's a more likely to use infrastructure declared elsewhere)
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var channel = _channelFactory.CreateSyncChannel(subscription);
 
         var topicArn = FindTopicArn(awsConnection, routingKey.ToValidSNSTopicName(true));
@@ -74,9 +74,9 @@ public class AwsValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
                 FindTopicBy = TopicFindBy.Arn,
                 MakeChannels = OnMissingChannel.Validate,
                 TopicAttributes = topicAttributes
-            });
+            }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
-        _consumer = new SqsMessageConsumerFactory(awsConnection).Create(subscription);
+        _consumer = new SqsMessageConsumerFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create(subscription);
     }
 
     [Fact]

@@ -15,7 +15,7 @@ public class ReleaseScopeDisposalThrowRetentionTests
     {
         // Arrange — a transient mapper resolved through a scope whose Dispose throws (as MS DI's sync scope
         // Dispose does for an IAsyncDisposable-only service). The scope is tracked against the instance.
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddTransient<NonDisposableMapper>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions { MapperLifetime = ServiceLifetime.Transient });
         var rootProvider = collection.BuildServiceProvider();

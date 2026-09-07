@@ -197,10 +197,10 @@ public sealed class MsSqlLegacySchemaCausationCompatibilityTests : IDisposable
             _connectionString,
             databaseName: "brightertests",
             outBoxTableName: tableName,
-            binaryMessagePayload: false));
+            binaryMessagePayload: false), logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.MsSql.MsSqlOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 
     private IAmAnInboxSync InboxFor(string tableName)
-        => new MsSqlInbox(new RelationalDatabaseConfiguration(_connectionString, inboxTableName: tableName));
+        => new MsSqlInbox(new RelationalDatabaseConfiguration(_connectionString, inboxTableName: tableName), logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Inbox.MsSql.MsSqlInbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 
     private static Message CreateMessage()
         => new(

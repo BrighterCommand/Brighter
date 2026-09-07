@@ -12,8 +12,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.V4.Tests.Transformers;
 
-[Trait("Category", "AWS")] 
-public class S3LuggageStoreExistsTests 
+[Trait("Category", "AWS")]
+public class S3LuggageStoreExistsTests
 {
     private readonly IHttpClientFactory _httpClientFactory;
 
@@ -25,12 +25,12 @@ public class S3LuggageStoreExistsTests
         var provider = services.BuildServiceProvider();
         _httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
     }
-    
+
     [Fact]
     public async Task When_checking_store_that_exists()
     {
         var bucketName = $"brightertestbucket-{Guid.NewGuid()}";
-        
+
         //arrange
         var luggageStore = new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), bucketName)
         {
@@ -38,8 +38,8 @@ public class S3LuggageStoreExistsTests
             BucketAddressTemplate = CredentialsChain.GetBucketAddressTemplate(),
             ACLs = S3CannedACL.Private,
             Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
-        });
-        
+        }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
+
         await luggageStore.EnsureStoreExistsAsync();
 
         //allow bucket endpoint to come into existence
@@ -49,39 +49,39 @@ public class S3LuggageStoreExistsTests
         luggageStore = new S3LuggageStore(new S3LuggageOptions(GatewayFactory.CreateS3Connection(), bucketName)
         {
             Strategy = StorageStrategy.Validate,
-            HttpClientFactory = _httpClientFactory, 
+            HttpClientFactory = _httpClientFactory,
             BucketAddressTemplate = CredentialsChain.GetBucketAddressTemplate(),
             Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
-        });
+        }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         Assert.NotNull(luggageStore);
-        
+
         //teardown
         var factory = new AWSClientFactory(GatewayFactory.CreateFactory());
         var client = factory.CreateS3Client();
         await client.DeleteBucketAsync(bucketName);
     }
-    
+
     [Fact]
     public async Task When_checking_store_that_does_not_exist()
     {
         //act
-         var doesNotExist = await Catch.ExceptionAsync(async () =>
-             {
-                 var luggageStore = new S3LuggageStore(
-                     new S3LuggageOptions(GatewayFactory.CreateS3Connection(), $"brightertestbucket-{Guid.NewGuid()}")
-                     {
-                         Strategy = StorageStrategy.Validate,
-                         HttpClientFactory = _httpClientFactory,
-                         BucketAddressTemplate = CredentialsChain.GetBucketAddressTemplate(),
-                         ACLs = S3CannedACL.Private,
-                         Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
-                     });
+        var doesNotExist = await Catch.ExceptionAsync(async () =>
+            {
+                var luggageStore = new S3LuggageStore(
+                    new S3LuggageOptions(GatewayFactory.CreateS3Connection(), $"brightertestbucket-{Guid.NewGuid()}")
+                    {
+                        Strategy = StorageStrategy.Validate,
+                        HttpClientFactory = _httpClientFactory,
+                        BucketAddressTemplate = CredentialsChain.GetBucketAddressTemplate(),
+                        ACLs = S3CannedACL.Private,
+                        Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
+                    }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
-                 await luggageStore.EnsureStoreExistsAsync();
-             });
-         
-         Assert.NotNull(doesNotExist);
-         Assert.True(doesNotExist is InvalidOperationException);
+                await luggageStore.EnsureStoreExistsAsync();
+            });
+
+        Assert.NotNull(doesNotExist);
+        Assert.True(doesNotExist is InvalidOperationException);
     }
 }

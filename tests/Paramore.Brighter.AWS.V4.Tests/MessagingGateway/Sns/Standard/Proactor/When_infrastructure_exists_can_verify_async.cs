@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Net.Mime;
 using System.Text.Json;
@@ -50,11 +50,11 @@ namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sns.Standard.Proactor
 
             var awsConnection = GatewayFactory.CreateFactory();
 
-            _channelFactory = new ChannelFactory(awsConnection);
+            _channelFactory = new ChannelFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             var channel = _channelFactory.CreateAsyncChannel(subscription);
 
             //Now change the subscription to validate, just check what we made
-            subscription.MakeChannels = OnMissingChannel.Validate; 
+            subscription.MakeChannels = OnMissingChannel.Validate;
 
             _messageProducer = new SnsMessageProducer(
                 awsConnection,
@@ -63,10 +63,10 @@ namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sns.Standard.Proactor
                     FindTopicBy = TopicFindBy.Name,
                     MakeChannels = OnMissingChannel.Validate,
                     Topic = new RoutingKey(topicName)
-                }
-            );
+                },
+                loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
-            _consumer = new SqsMessageConsumerFactory(awsConnection).CreateAsync(subscription);
+            _consumer = new SqsMessageConsumerFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).CreateAsync(subscription);
         }
 
         [Fact]
@@ -83,7 +83,7 @@ namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sns.Standard.Proactor
 
             await _consumer.AcknowledgeAsync(message);
         }
-        
+
         public void Dispose()
         {
             //Clean up resources that we have created

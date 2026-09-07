@@ -54,7 +54,7 @@ public class When_spanner_provisioner_runs_against_existing_outbox_with_mismatch
             new SpannerBoxDetectionHelper(),
             new SpannerPayloadModeValidator(),
             config,
-            new SpannerBoxMigrationRunner(config));
+            new SpannerBoxMigrationRunner(config, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 
         //Act & Assert
         var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
@@ -75,7 +75,7 @@ public class When_spanner_provisioner_runs_against_existing_outbox_with_mismatch
             new SpannerBoxDetectionHelper(),
             new SpannerPayloadModeValidator(),
             config,
-            new SpannerBoxMigrationRunner(config));
+            new SpannerBoxMigrationRunner(config, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 
         //Act & Assert
         var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());

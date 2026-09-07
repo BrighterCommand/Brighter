@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -29,12 +29,12 @@ public class CustomisingAwsClientConfigTestsAsync : IDisposable, IAsyncDisposabl
         var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(queueName);
         var channelName = new ChannelName(queueName);
-        
+
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(subscriptionName),
             channelName: channelName,
-            channelType: ChannelType.PointToPoint, 
-            routingKey: routingKey, 
+            channelType: ChannelType.PointToPoint,
+            routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Create,
             queueAttributes: new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } }));
@@ -51,7 +51,7 @@ public class CustomisingAwsClientConfigTestsAsync : IDisposable, IAsyncDisposabl
                 new InterceptingHttpClientFactory(new InterceptingDelegatingHandler("sqs_async_sub"));
         });
 
-        _channelFactory = new ChannelFactory(subscribeAwsConnection);
+        _channelFactory = new ChannelFactory(subscribeAwsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _channel = _channelFactory.CreateAsyncChannel(subscription);
 
         var publishAwsConnection = GatewayFactory.CreateFactory(config =>
@@ -61,8 +61,8 @@ public class CustomisingAwsClientConfigTestsAsync : IDisposable, IAsyncDisposabl
         });
 
         _messageProducer = new SqsMessageProducer(publishAwsConnection,
-            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create)
-            );
+            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create),
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

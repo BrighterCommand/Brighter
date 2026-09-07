@@ -26,7 +26,6 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
@@ -36,10 +35,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 /// </summary>
 public partial class AzureServiceBusTopicMessageProducer : AzureServiceBusMessageProducer
 {
-    protected override ILogger Logger => s_logger;
-        
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AzureServiceBusTopicMessageProducer>();
-        
+    protected override ILogger Logger => _logger;
+
+    private readonly ILogger _logger;
+
     private readonly IAdministrationClientWrapper _administrationClientWrapper;
 
     /// <summary>
@@ -49,13 +48,16 @@ public partial class AzureServiceBusTopicMessageProducer : AzureServiceBusMessag
     /// <param name="serviceBusSenderProvider">The provider to use when producing messages.</param>
     /// <param name="publication">Configuration of a producer</param>
     /// <param name="bulkSendBatchSize">When sending more than one message using the MessageProducer, the max amount to send in a single transmission.</param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create the logger.</param>
     public AzureServiceBusTopicMessageProducer(
         IAdministrationClientWrapper administrationClientWrapper,
         IServiceBusSenderProvider serviceBusSenderProvider,
         AzureServiceBusPublication publication,
+        ILoggerFactory loggerFactory,
         int bulkSendBatchSize = 10
     ) : base(serviceBusSenderProvider, publication, bulkSendBatchSize)
     {
+        _logger = loggerFactory.CreateLogger<AzureServiceBusTopicMessageProducer>();
         _administrationClientWrapper = administrationClientWrapper;
     }
 
@@ -76,7 +78,7 @@ public partial class AzureServiceBusTopicMessageProducer : AzureServiceBusMessag
             {
                 throw new ChannelFailureException($"Topic {channelName} does not exist and missing channel mode set to Validate.");
             }
-                
+
             await _administrationClientWrapper.CreateTopicAsync(channelName);
             TopicCreated = true;
         }
@@ -84,7 +86,7 @@ public partial class AzureServiceBusTopicMessageProducer : AzureServiceBusMessag
         {
             //The connection to Azure Service bus may have failed so we re-establish the connection.
             _administrationClientWrapper.Reset();
-            Log.FailingToCheckOrCreateTopic(s_logger, e);
+            Log.FailingToCheckOrCreateTopic(_logger, e);
             throw;
         }
     }

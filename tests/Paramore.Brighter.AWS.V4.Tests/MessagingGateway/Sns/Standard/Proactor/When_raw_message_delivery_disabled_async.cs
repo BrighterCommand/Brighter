@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net.Mime;
 using System.Threading.Tasks;
@@ -22,7 +22,7 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
     {
         var awsConnection = GatewayFactory.CreateFactory();
 
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var channelName = $"Raw-Msg-Delivery-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         _routingKey = new RoutingKey($"Raw-Msg-Delivery-Tests-{Guid.NewGuid().ToString()}".Truncate(45));
 
@@ -38,7 +38,7 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
             messagePumpType: MessagePumpType.Proactor,
             queueAttributes: new SqsAttributes(
                 rawMessageDelivery: false,
-                tags: new Dictionary<string, string> { { "Environment", "Test" } }), 
+                tags: new Dictionary<string, string> { { "Environment", "Test" } }),
             makeChannels: OnMissingChannel.Create,
             topicAttributes: new SnsAttributes(tags: [new Tag { Key = "Environment", Value = "Test" }])));
 
@@ -46,7 +46,7 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
             new SnsPublication
             {
                 MakeChannels = OnMissingChannel.Create
-            });
+            }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]
@@ -84,10 +84,10 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
         Assert.Equal(customHeaderItem.Value, messageReceived.Header.Bag[customHeaderItem.Key]);
         Assert.Equal(messageToSend.Body.Value, messageReceived.Body.Value);
     }
-        
+
     public void Dispose()
     {
-        _channelFactory.DeleteTopicAsync().Wait(); 
+        _channelFactory.DeleteTopicAsync().Wait();
         _channelFactory.DeleteQueueAsync().Wait();
     }
 

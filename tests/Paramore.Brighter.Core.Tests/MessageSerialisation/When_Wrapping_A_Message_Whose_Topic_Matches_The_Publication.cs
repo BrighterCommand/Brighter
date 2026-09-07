@@ -30,7 +30,7 @@ public class WrapMatchingPublicationTopicTests
 
         var pipelineBuilder = new TransformPipelineBuilder(
             mapperRegistry,
-            new SimpleMessageTransformerFactory(_ => null));
+            new SimpleMessageTransformerFactory(_ => null), loggerFactory: Initializer.TestLoggerFactory);
 
         var message = pipelineBuilder
             .BuildWrapPipeline<MyCommand>()

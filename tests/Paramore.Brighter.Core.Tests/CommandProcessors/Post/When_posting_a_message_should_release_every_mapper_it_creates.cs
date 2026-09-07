@@ -25,7 +25,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             var routingKey = new RoutingKey(Topic);
 
             InMemoryMessageProducer messageProducer = new(_internalBus,
-                new Publication { Topic = routingKey, RequestType = typeof(MyCommand) });
+            Initializer.TestLoggerFactory, new Publication { Topic = routingKey, RequestType = typeof(MyCommand) });
 
             var messageMapperRegistry = new MessageMapperRegistry(_mapperFactory, null);
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
@@ -45,7 +45,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                new InMemoryOutbox(timeProvider) { Tracer = tracer }
+                Initializer.TestLoggerFactory, new InMemoryOutbox(timeProvider) { Tracer = tracer }
             );
 
             _commandProcessor = new CommandProcessor(
@@ -53,8 +53,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new DefaultPolicy(),
                 resiliencePipelineRegistry,
                 bus,
-                new InMemorySchedulerFactory()
-            );
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+                loggerFactory: Initializer.TestLoggerFactory);
         }
 
         [Fact]

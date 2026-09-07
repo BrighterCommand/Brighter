@@ -42,14 +42,14 @@ public class LargeMessagePayloadWrapTests : IDisposable
             BucketName = _bucketName
         };
         
-        _luggageStore = new GcsLuggageStore(_luggageStoreOptions);
+        _luggageStore = new GcsLuggageStore(_luggageStoreOptions, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _luggageStore.EnsureStoreExists();
 
         var transformerFactoryAsync = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
         _publication = new Publication { Topic = new RoutingKey("MyLargeCommand"), RequestType = typeof(MyLargeCommand) };
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync, InstrumentationOptions.None);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, InstrumentationOptions.None);
     }
 
     [Fact]

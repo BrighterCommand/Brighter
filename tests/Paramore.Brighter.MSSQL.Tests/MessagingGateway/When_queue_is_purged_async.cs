@@ -30,10 +30,10 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             
             _producerRegistry = new MsSqlProducerRegistryFactory(
                 testHelper.QueueConfiguration,
-                [new() { Topic = _routingKey }]
-            ).CreateAsync().Result;
+                [new() { Topic = _routingKey }],
+                loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).CreateAsync().Result;
             
-            _consumer = new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration).CreateAsync(sub);
+            _consumer = new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).CreateAsync(sub);
         }
 
         [Fact]

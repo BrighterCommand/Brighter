@@ -52,11 +52,11 @@ public class RmqMessageProducerDelayedMessageTests : IDisposable
             Exchange = new Exchange("paramore.delay.brighter.exchange", supportDelay: true)
         };
 
-        _messageProducer = new RmqMessageProducer(rmqConnection);
+        _messageProducer = new RmqMessageProducer(rmqConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             
         var queueName = new ChannelName(Guid.NewGuid().ToString());
             
-        _messageConsumer = new RmqMessageConsumer(rmqConnection, queueName, routingKey, false);
+        _messageConsumer = new RmqMessageConsumer(rmqConnection, queueName, routingKey, false, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         new QueueFactory(rmqConnection, queueName, new RoutingKeys([routingKey])).Create(TimeSpan.FromMilliseconds(1000));
     }

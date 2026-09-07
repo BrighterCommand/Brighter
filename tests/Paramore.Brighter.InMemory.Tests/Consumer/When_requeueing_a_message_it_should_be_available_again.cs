@@ -42,7 +42,7 @@ public class InMemoryConsumerRequeueTests
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            [_routingKey] = new InMemoryMessageProducer(_internalBus, new Publication{ Topic = _routingKey, RequestType = typeof(MyEvent) })
+            [_routingKey] = new InMemoryMessageProducer(_internalBus, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, new Publication{ Topic = _routingKey, RequestType = typeof(MyEvent) })
         });
 
         var messageMapperRegistry = new MessageMapperRegistry(
@@ -67,10 +67,10 @@ public class InMemoryConsumerRequeueTests
             new EmptyMessageTransformerFactoryAsync(),
             trace,
             new FindPublicationByPublicationTopicOrRequestType(),
-            outbox
+            global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, outbox
         );
 
-        var schedulerFactory = new InMemorySchedulerFactory { TimeProvider = _timeProvider };
+        var schedulerFactory = new InMemorySchedulerFactory (loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance) { TimeProvider = _timeProvider };
         
         _processor = new CommandProcessor(
             subscriberRegistry,
@@ -79,8 +79,8 @@ public class InMemoryConsumerRequeueTests
             new DefaultPolicy(),
             policyRegistry,
             outboxBus,
-            schedulerFactory
-        );
+            schedulerFactory,
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         _scheduler = schedulerFactory.Create(_processor);
     }
@@ -96,7 +96,7 @@ public class InMemoryConsumerRequeueTests
         _internalBus.Enqueue(expectedMessage);
 
         var consumer = new InMemoryMessageConsumer(_routingKey, _internalBus, _timeProvider, 
-            ackTimeout: TimeSpan.FromMilliseconds(1000), scheduler: _scheduler);
+            ackTimeout: TimeSpan.FromMilliseconds(1000), scheduler: _scheduler, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         
         //act
         var receivedMessage = consumer.Receive().Single();
@@ -119,7 +119,7 @@ public class InMemoryConsumerRequeueTests
         _internalBus.Enqueue(expectedMessage);
 
         var consumer = new InMemoryMessageConsumer(_routingKey, _internalBus, _timeProvider, 
-            ackTimeout: TimeSpan.FromMilliseconds(1000), scheduler: _scheduler);
+            ackTimeout: TimeSpan.FromMilliseconds(1000), scheduler: _scheduler, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         
         //act
         var receivedMessage = consumer.Receive().Single();

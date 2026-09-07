@@ -81,7 +81,7 @@ public class MySqlMigrationCancellationTests : IAsyncLifetime
         // BeginAsync calls GET_LOCK on the same per-table lock resource completes the migration
         // normally; the 5s lock timeout would expire and surface as MigrationLockDeadlockException
         // if the lock were still held.
-        var freshRunner = new MySqlBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(5));
+        var freshRunner = new MySqlBoxMigrationRunner(catalog, config, TimeSpan.FromSeconds(5), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         await freshRunner.MigrateAsync(
             _tableName, schemaName: null, BoxType.Outbox, staleHint, CancellationToken.None);
 
@@ -136,7 +136,8 @@ file sealed class CancellingMySqlBoxMigrationRunner : MySqlBoxMigrationRunner
         IAmABoxMigrationCatalog catalog,
         IAmARelationalDatabaseConfiguration configuration,
         TimeSpan lockTimeout)
-        : base(catalog, configuration, lockTimeout)
+        : base(catalog, configuration, lockTimeout,
+            global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
     {
     }
 

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 {
@@ -10,7 +11,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
     /// </summary>
     public class RmqProducerRegistryFactory(
         RmqMessagingGatewayConnection connection,
-        IEnumerable<RmqPublication> publications)
+        IEnumerable<RmqPublication> publications,
+        ILoggerFactory loggerFactory)
         : IAmAProducerRegistryFactory
     {
         /// <summary>
@@ -19,7 +21,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// <returns>A has of middleware clients by topic, for sending messages to the middleware</returns>
         public IAmAProducerRegistry Create()
         {
-            var producerFactory = new RmqMessageProducerFactory(connection, publications);
+            var producerFactory = new RmqMessageProducerFactory(connection, publications, loggerFactory);
 
             return new ProducerRegistry(producerFactory.Create());
         }

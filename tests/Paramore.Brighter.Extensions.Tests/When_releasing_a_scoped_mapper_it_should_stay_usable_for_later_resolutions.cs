@@ -17,7 +17,7 @@ public class ScopedMapperReleaseReuseTests
         // disposing the cached instance would hand message #2 a disposed mapper.
         var disposals = new DisposalLog();
 
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddSingleton(disposals);
         collection.AddScoped<DisposableMapper>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions { MapperLifetime = ServiceLifetime.Scoped });

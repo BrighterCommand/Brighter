@@ -30,7 +30,7 @@ public class ValidationComponentLazyRegistryTests
             return NewRegistry();
         };
 
-        var pipelineBuilder = new PipelineBuilder<IRequest>(new SubscriberRegistry());
+        var pipelineBuilder = new PipelineBuilder<IRequest>(new SubscriberRegistry(), loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<IRequest>.ClearPipelineCache();
 
         var validator = new PipelineValidator(
@@ -58,7 +58,7 @@ public class ValidationComponentLazyRegistryTests
             return NewRegistry();
         };
 
-        var pipelineBuilder = new PipelineBuilder<IRequest>(new SubscriberRegistry());
+        var pipelineBuilder = new PipelineBuilder<IRequest>(new SubscriberRegistry(), loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<IRequest>.ClearPipelineCache();
 
         var writer = new PipelineDiagnosticWriter(

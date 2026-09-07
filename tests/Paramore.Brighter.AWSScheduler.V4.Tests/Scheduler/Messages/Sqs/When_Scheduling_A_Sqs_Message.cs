@@ -22,7 +22,7 @@ public class SqsSchedulingMessageTest : IDisposable
     {
         var awsConnection = GatewayFactory.CreateFactory();
 
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var subscriptionName = $"Buffered-Scheduler-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         _queueName = $"Buffered-Scheduler-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
 
@@ -37,13 +37,13 @@ public class SqsSchedulingMessageTest : IDisposable
 
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
         //just for the tests, so create a new consumer from the properties
-        _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), BufferSize);
+        _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, BufferSize);
         _messageProducer = new SqsMessageProducer(awsConnection,
-            new SqsPublication { MakeChannels = OnMissingChannel.Create, QueueAttributes = new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } }) });
+            new SqsPublication { MakeChannels = OnMissingChannel.Create, QueueAttributes = new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } }) }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         _factory = new AwsSchedulerFactory(awsConnection, "brighter-scheduler")
         {
-            UseMessageTopicAsTarget = true, 
+            UseMessageTopicAsTarget = true,
             MakeRole = OnMissingRole.Create
         };
     }

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2025 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -81,12 +81,12 @@ public class SqsMessageConsumerUnacceptableInvalidChannelTests : IDisposable, IA
 
         var awsConnection = GatewayFactory.CreateFactory();
 
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _channel = _channelFactory.CreateSyncChannel(subscription);
 
         _messageProducer = new SqsMessageProducer(
             awsConnection,
-            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create));
+            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         // Create a separate channel to consume from the invalid message queue
         var invalidSubscription = new SqsSubscription<MyCommand>(
@@ -97,7 +97,7 @@ public class SqsMessageConsumerUnacceptableInvalidChannelTests : IDisposable, IA
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Create);
 
-        _invalidChannelFactory = new ChannelFactory(awsConnection);
+        _invalidChannelFactory = new ChannelFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _invalidChannel = _invalidChannelFactory.CreateSyncChannel(invalidSubscription);
 
         // Create a separate channel to consume from the DLQ queue (to verify it stays empty)
@@ -109,7 +109,7 @@ public class SqsMessageConsumerUnacceptableInvalidChannelTests : IDisposable, IA
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Create);
 
-        _dlqChannelFactory = new ChannelFactory(awsConnection);
+        _dlqChannelFactory = new ChannelFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _dlqChannel = _dlqChannelFactory.CreateSyncChannel(dlqSubscription);
     }
 

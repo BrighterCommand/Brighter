@@ -87,13 +87,13 @@ public class SqlitePerSchemaNoOpTests : IAsyncLifetime
         // Evident data: PerSchema is the scope under test.
         var runner = new SqliteBoxMigrationRunner(
             new SqliteOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30),
-            scope: MigrationHistoryScope.PerSchema);
+            scope: MigrationHistoryScope.PerSchema, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         return new SqliteOutboxProvisioner(
             new SqliteBoxDetectionHelper(),
             new SqliteOutboxMigrationCatalog(),
             new SqlitePayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     private async Task<long> TableCountAsync(string tableName)

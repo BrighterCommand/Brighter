@@ -45,7 +45,7 @@ public class When_sending_with_zero_delay_should_send_immediately_without_schedu
     {
         // Arrange
         _bus = new InternalBus();
-        _producer = new InMemoryMessageProducer(_bus);
+        _producer = new InMemoryMessageProducer(_bus, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _scheduler = new SpyScheduler();
         _producer.Scheduler = _scheduler;
 

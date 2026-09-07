@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.ServiceActivator.Ports.Handlers;
 
 namespace Paramore.Brighter.ServiceActivator.Ports
@@ -6,12 +7,17 @@ namespace Paramore.Brighter.ServiceActivator.Ports
     internal sealed class ControlBusHandlerFactorySync : IAmAHandlerFactorySync
     {
         private readonly Func<IAmACommandProcessor?> _commandProcessorFactory;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly IDispatcher _worker;
 
-        public ControlBusHandlerFactorySync(IDispatcher worker, Func<IAmACommandProcessor?> commandProcessorFactory) 
+        public ControlBusHandlerFactorySync(
+            IDispatcher worker,
+            Func<IAmACommandProcessor?> commandProcessorFactory,
+            ILoggerFactory loggerFactory)
         {
             _worker = worker;
             _commandProcessorFactory = commandProcessorFactory;
+            _loggerFactory = loggerFactory;
         }
 
         /// <summary>
@@ -23,7 +29,9 @@ namespace Paramore.Brighter.ServiceActivator.Ports
         public IHandleRequests Create(Type handlerType, IAmALifetime lifetime)
         {
             if (handlerType == typeof(ConfigurationCommandHandler))
-                return new ConfigurationCommandHandler(_worker);
+                return new ConfigurationCommandHandler(
+                    _worker,
+                    _loggerFactory.CreateLogger<ConfigurationCommandHandler>());
 
             if (handlerType == typeof(HeartbeatRequestCommandHandler))
                 return new HeartbeatRequestCommandHandler(_commandProcessorFactory(), _worker);

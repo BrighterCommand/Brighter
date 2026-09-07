@@ -25,7 +25,7 @@ namespace GreetingsSender
             serviceCollection.AddBrighter()
                 // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
                 // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-                .UseScheduler(new InMemorySchedulerFactory())
+                .UseScheduler(new InMemorySchedulerFactory(loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance))
                 .AddProducers((configure) =>
                 {
                     configure.ProducerRegistry = new MsSqlProducerRegistryFactory(
@@ -33,8 +33,8 @@ namespace GreetingsSender
                                 @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;",
                                 databaseName: "BrighterSqlQueue",
                                 queueStoreTable: "QueueData"),
-                            [new Publication{Topic = new RoutingKey("greeting.event"), RequestType = typeof(GreetingEvent)}]
-                        )
+                            [new Publication { Topic = new RoutingKey("greeting.event"), RequestType = typeof(GreetingEvent) }],
+                            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
                         .Create();
                 })
                 .AutoFromAssemblies();

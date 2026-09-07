@@ -54,7 +54,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
 
             _channel = new Channel(
                 new(Channel), _routingKey, 
-                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000))
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory)
             );
             
             var messageMapperRegistry = new MessageMapperRegistry(
@@ -63,12 +63,12 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
              
             _messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyEvent), 
-                messageMapperRegistry, null, new InMemoryRequestContextFactory(), _channel)
+                messageMapperRegistry, null, new InMemoryRequestContextFactory(), _channel, loggerFactory: Initializer.TestLoggerFactory)
             {
                 Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = _requeueCount
             };
 
-            var transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, null);
+            var transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, null, loggerFactory: Initializer.TestLoggerFactory);
 
             var msg = transformPipelineBuilder.BuildWrapPipeline<MyEvent>()
                 .Wrap(new MyEvent(), new RequestContext(), new Publication{Topic = _routingKey});

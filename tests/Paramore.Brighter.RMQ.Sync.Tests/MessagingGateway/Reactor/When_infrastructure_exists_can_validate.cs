@@ -27,14 +27,14 @@ public class RmqValidateExistingInfrastructureTests : IDisposable
             Exchange = new Exchange("paramore.brighter.exchange")
         };
 
-        _messageProducer = new RmqMessageProducer(rmqConnection, new RmqPublication{MakeChannels = OnMissingChannel.Validate});
+        _messageProducer = new RmqMessageProducer(rmqConnection, new RmqPublication{MakeChannels = OnMissingChannel.Validate}, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _messageConsumer = new RmqMessageConsumer(
             connection: rmqConnection, 
             queueName: queueName, 
             routingKey: routingKey, 
             isDurable: false, 
             highAvailability: false, 
-            makeChannels: OnMissingChannel.Validate);
+            makeChannels: OnMissingChannel.Validate, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //This creates the infrastructure we want
         new QueueFactory(rmqConnection, queueName, new RoutingKeys(routingKey)).Create(TimeSpan.FromMilliseconds(1000));

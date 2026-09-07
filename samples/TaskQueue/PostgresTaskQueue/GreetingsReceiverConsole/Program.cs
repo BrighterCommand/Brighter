@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -56,7 +56,7 @@ var connection = new PostgresMessagingGatewayConnection(new RelationalDatabaseCo
 builder.Services.AddConsumers(options =>
     {
         options.Subscriptions = subscriptions;
-        options.DefaultChannelFactory = new PostgresChannelFactory(connection);
+        options.DefaultChannelFactory = new PostgresChannelFactory(connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     })
     .AutoFromAssemblies();
 

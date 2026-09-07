@@ -38,7 +38,7 @@ public class ValidatePipelinesWithoutDescribeTests
     public async Task When_validate_pipelines_called_without_describe_should_build_and_start()
     {
         // Arrange — register ValidatePipelines but NOT DescribePipelines
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddLogging();
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         services.AddSingleton(subscriberRegistry);

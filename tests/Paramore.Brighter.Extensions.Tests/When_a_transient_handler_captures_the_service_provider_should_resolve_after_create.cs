@@ -11,7 +11,7 @@ public class TransientHandlerCapturedProviderTests
     public void When_a_transient_handler_captures_the_service_provider_should_resolve_after_create()
     {
         //arrange
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddTransient<IDependencyService, DependencyService>();
         collection.AddTransient<HandlerCapturingServiceProvider>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });

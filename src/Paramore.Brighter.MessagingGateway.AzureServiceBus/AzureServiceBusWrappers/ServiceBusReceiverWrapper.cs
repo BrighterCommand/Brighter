@@ -27,7 +27,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 {
@@ -37,15 +36,17 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
     internal sealed partial class ServiceBusReceiverWrapper : IServiceBusReceiverWrapper
     {
         private readonly ServiceBusReceiver _messageReceiver;
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<ServiceBusReceiverWrapper>();
+        private readonly ILogger _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ServiceBusReceiverWrapper"/> class.
         /// </summary>
         /// <param name="messageReceiver">The <see cref="ServiceBusReceiver"/> to wrap.</param>
-        public ServiceBusReceiverWrapper(ServiceBusReceiver messageReceiver)
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create the logger.</param>
+        public ServiceBusReceiverWrapper(ServiceBusReceiver messageReceiver, ILoggerFactory loggerFactory)
         {
             _messageReceiver = messageReceiver;
+            _logger = loggerFactory.CreateLogger<ServiceBusReceiverWrapper>();
         }
 
         /// <summary>
@@ -70,16 +71,16 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// </summary>
         public void Close()
         {
-            Log.ClosingMessageReceiverConnection(s_logger);
+            Log.ClosingMessageReceiverConnection(_logger);
             _messageReceiver.CloseAsync().GetAwaiter().GetResult();
-            Log.MessageReceiverConnectionStopped(s_logger);
+            Log.MessageReceiverConnectionStopped(_logger);
         }
-        
+
         public async Task CloseAsync()
         {
-            Log.ClosingMessageReceiverConnection(s_logger);
+            Log.ClosingMessageReceiverConnection(_logger);
             await _messageReceiver.CloseAsync().ConfigureAwait(false);
-            Log.MessageReceiverConnectionStopped(s_logger);
+            Log.MessageReceiverConnectionStopped(_logger);
         }
 
         /// <summary>

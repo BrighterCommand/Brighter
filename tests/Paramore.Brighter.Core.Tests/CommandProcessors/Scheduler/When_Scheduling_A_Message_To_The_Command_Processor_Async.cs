@@ -53,7 +53,7 @@ public class CommandProcessorSchedulerCommandAsyncTests
         
         messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
 
-        var producer = new InMemoryMessageProducer (_internalBus) { Publication = { Topic = routingKey, RequestType = typeof(MyCommand) } };
+        var producer = new InMemoryMessageProducer (_internalBus, loggerFactory: Initializer.TestLoggerFactory) { Publication = { Topic = routingKey, RequestType = typeof(MyCommand) } };
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, producer }, });
         var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
             .AddBrighterDefault();
@@ -69,7 +69,7 @@ public class CommandProcessorSchedulerCommandAsyncTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            _outbox
+            Initializer.TestLoggerFactory, _outbox
         );
 
         _commandProcessor = new CommandProcessor(registry,
@@ -78,7 +78,7 @@ public class CommandProcessorSchedulerCommandAsyncTests
             new DefaultPolicy(),
             resiliencePipelineRegistry,
             bus,
-            new InMemorySchedulerFactory { TimeProvider = _timeProvider });
+            new InMemorySchedulerFactory (loggerFactory: Initializer.TestLoggerFactory) { TimeProvider = _timeProvider }, loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<MyCommand>.ClearPipelineCache();
         PipelineBuilder<FireSchedulerRequest>.ClearPipelineCache();
     }

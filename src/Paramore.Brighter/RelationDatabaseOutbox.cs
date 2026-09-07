@@ -71,7 +71,7 @@ namespace Paramore.Brighter
         /// <returns>Task.</returns>
         public void Add(
             Message message,
-            RequestContext requestContext,
+            RequestContext? requestContext,
             int outBoxTimeout = -1,
             IAmABoxTransactionProvider<DbTransaction>? transactionProvider = null)
         {
@@ -166,7 +166,7 @@ namespace Paramore.Brighter
         /// <returns>Task&lt;Message&gt;.</returns>
         public async Task AddAsync(
             Message message,
-            RequestContext requestContext,
+            RequestContext? requestContext,
             int outBoxTimeout = -1,
             IAmABoxTransactionProvider<DbTransaction>? transactionProvider = null,
             CancellationToken cancellationToken = default)
@@ -500,7 +500,7 @@ namespace Paramore.Brighter
         /// <returns>The message</returns>
         public IEnumerable<Message> Get(
             IEnumerable<Id> messageIds,
-            RequestContext requestContext,
+            RequestContext? requestContext,
             int outBoxTimeout = -1,
             Dictionary<string, object>? args = null)
         {
@@ -542,7 +542,7 @@ namespace Paramore.Brighter
         /// <returns>The message</returns>
         public Message Get(
             Id messageId,
-            RequestContext requestContext,
+            RequestContext? requestContext,
             int outBoxTimeout = -1,
             Dictionary<string, object>? args = null
         )
@@ -583,7 +583,7 @@ namespace Paramore.Brighter
         /// <returns><see cref="Task{Message}" />.</returns>
         public async Task<Message> GetAsync(
             Id messageId,
-            RequestContext requestContext,
+            RequestContext? requestContext,
             int outBoxTimeout = -1,
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
@@ -617,7 +617,7 @@ namespace Paramore.Brighter
         /// <inheritdoc/>
         public async Task<IEnumerable<Message>> GetAsync(
             IEnumerable<Id> messageIds,
-            RequestContext requestContext,
+            RequestContext? requestContext,
             int outBoxTimeout = -1,
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default
@@ -874,7 +874,7 @@ namespace Paramore.Brighter
         /// <param name="args">Allows additional arguments to be provided for specific Outbox Db providers</param>
         public void MarkDispatched(
             Id id,
-            RequestContext requestContext,
+            RequestContext? requestContext,
             DateTimeOffset? dispatchedAt = null,
             Dictionary<string, object>? args = null)
         {

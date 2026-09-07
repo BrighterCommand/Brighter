@@ -44,14 +44,14 @@ namespace Paramore.Brighter.Core.Tests.Timeout
             //Handler is decorated with UsePolicy 
             registry.Register<MyCommand, MyPassesTimeoutHandler>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyPassesTimeoutHandler>();
             container.AddTransient<TimeoutPolicyHandler<MyCommand>>();
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
             
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
-                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
+                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         }
 
         //We have to catch the final exception that bubbles out after retry

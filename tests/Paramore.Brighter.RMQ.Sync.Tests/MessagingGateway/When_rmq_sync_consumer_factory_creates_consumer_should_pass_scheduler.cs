@@ -48,7 +48,7 @@ public class When_rmq_sync_consumer_factory_creates_consumer_should_pass_schedul
     {
         // Arrange — factory constructed with a scheduler
         var scheduler = new StubMessageScheduler();
-        var factory = new RmqMessageConsumerFactory(_connection, scheduler);
+        var factory = new RmqMessageConsumerFactory(_connection, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, scheduler);
 
         // Act
         var consumer = factory.Create(_subscription);
@@ -62,7 +62,7 @@ public class When_rmq_sync_consumer_factory_creates_consumer_should_pass_schedul
     public void Should_create_consumer_without_scheduler_for_backward_compat()
     {
         // Arrange — factory constructed without a scheduler (backward compat)
-        var factory = new RmqMessageConsumerFactory(_connection);
+        var factory = new RmqMessageConsumerFactory(_connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         // Act
         var consumer = factory.Create(_subscription);

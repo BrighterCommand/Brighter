@@ -61,7 +61,7 @@ public class RMQMessageConsumerProducerTopicSchedulerTestsAsync : IAsyncDisposab
             new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_COMMAND),
             new MessageBody("test content for scheduler injection"));
 
-        _messageProducer = new RmqMessageProducer(rmqConnection);
+        _messageProducer = new RmqMessageProducer(rmqConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         _scheduler = new SpySchedulerAsync();
 
@@ -71,7 +71,7 @@ public class RMQMessageConsumerProducerTopicSchedulerTestsAsync : IAsyncDisposab
             queueName,
             topic,
             isDurable: false,
-            scheduler: _scheduler);
+            scheduler: _scheduler, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         new QueueFactory(rmqConnection, queueName, new RoutingKeys(topic))
             .CreateAsync()

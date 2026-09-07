@@ -63,8 +63,8 @@ public class AsyncCommandProcessorMultipleClearObservabilityTests
         var routingKey = new RoutingKey(_topic);
 
         var type = new CloudEventsType("io.goparamore.brighter.myevent");
-        InMemoryMessageProducer messageProducer = new(_internalBus, 
-            new Publication
+        InMemoryMessageProducer messageProducer = new(_internalBus,
+        Initializer.TestLoggerFactory, new Publication
             {
                 Source = new Uri("http://localhost"),
                 RequestType = typeof(MyEvent),
@@ -86,7 +86,7 @@ public class AsyncCommandProcessorMultipleClearObservabilityTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            outbox,
+            Initializer.TestLoggerFactory, outbox,
             maxOutStandingMessages: -1
         );
         
@@ -97,10 +97,10 @@ public class AsyncCommandProcessorMultipleClearObservabilityTests
             policyRegistry, 
             new ResiliencePipelineRegistry<string>(),
             bus,
-            new InMemorySchedulerFactory(),
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
             tracer: tracer, 
-            instrumentationOptions: InstrumentationOptions.All
-        );
+            instrumentationOptions: InstrumentationOptions.All,
+            loggerFactory: Initializer.TestLoggerFactory);
     }
     
     [Fact]

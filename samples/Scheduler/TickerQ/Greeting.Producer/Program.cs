@@ -56,7 +56,7 @@ builder.Services.AddBrighter().AddProducers(c =>
                                     RequestType = typeof(GreetingEvent),
                                     MakeChannels = OnMissingChannel.Create
                                 }
-                             ]).Create();
+                             ], loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create();
 
 }).UseScheduler(provider =>
 {
@@ -92,7 +92,7 @@ app.MapPost("/send-one", async (IAmACommandProcessor commandProcessor) =>
 
 app.MapPost("/send-multiple", async (IAmACommandProcessor commandProcessor) =>
 {
-    var iterations =  5;
+    var iterations = 5;
     for (int i = 1; i <= iterations; i++)
     {
         var content = $"Manual multiple message #{i}";

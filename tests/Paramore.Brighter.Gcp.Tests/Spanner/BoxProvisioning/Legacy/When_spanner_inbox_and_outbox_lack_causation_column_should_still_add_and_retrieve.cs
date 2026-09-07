@@ -203,10 +203,10 @@ public sealed class SpannerLegacySchemaCausationCompatibilityTests : IDisposable
             _connectionString,
             databaseName: "brightertests",
             outBoxTableName: tableName,
-            binaryMessagePayload: false));
+            binaryMessagePayload: false), logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.Spanner.SpannerOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 
     private IAmAnInboxSync InboxFor(string tableName)
-        => new SpannerInboxAsync(new RelationalDatabaseConfiguration(_connectionString, inboxTableName: tableName));
+        => new SpannerInboxAsync(new RelationalDatabaseConfiguration(_connectionString, inboxTableName: tableName), logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Inbox.Spanner.SpannerInboxAsync>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 
     private void ExecuteDdl(string ddl)
     {

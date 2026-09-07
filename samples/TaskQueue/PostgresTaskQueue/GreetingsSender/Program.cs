@@ -50,7 +50,7 @@ public static class Program
         var connection = new PostgresMessagingGatewayConnection(new RelationalDatabaseConfiguration("Host=localhost;Username=postgres;Password=password;Database=brightertests;"));
 
         var producerRegistry = new PostgresProducerRegistryFactory(
-            connection, 
+            connection,
             [
                 new PostgresPublication
                 {
@@ -64,8 +64,8 @@ public static class Program
                     Topic = new RoutingKey("farewell.event"),
                     RequestType = typeof(FarewellEvent)
                 }
-            ]).Create();
-            
+            ], loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create();
+
         serviceCollection
             .AddBrighter()
             .AddProducers((configure) =>

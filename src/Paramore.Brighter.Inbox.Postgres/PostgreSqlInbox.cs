@@ -26,9 +26,9 @@ THE SOFTWARE. */
 using System;
 using System.Data;
 using System.Linq;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 using NpgsqlTypes;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.PostgreSql;
 
@@ -36,14 +36,14 @@ namespace Paramore.Brighter.Inbox.Postgres;
 
 public class PostgreSqlInbox : RelationalDatabaseInbox
 {
-    public PostgreSqlInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider)
-        : base(DbSystem.Postgresql, configuration, connectionProvider, 
-            new PostgreSqlQueries(), ApplicationLogging.CreateLogger<PostgreSqlInbox>())
+    public PostgreSqlInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider, ILogger<PostgreSqlInbox> logger)
+        : base(DbSystem.Postgresql, configuration, connectionProvider,
+            new PostgreSqlQueries(), logger)
     {
     }
 
-    public PostgreSqlInbox(IAmARelationalDatabaseConfiguration configuration)
-        : this(configuration, new PostgreSqlConnectionProvider(configuration))
+    public PostgreSqlInbox(IAmARelationalDatabaseConfiguration configuration, ILogger<PostgreSqlInbox> logger)
+        : this(configuration, new PostgreSqlConnectionProvider(configuration), logger)
     {
     }
 
@@ -62,7 +62,7 @@ public class PostgreSqlInbox : RelationalDatabaseInbox
 
     protected override IDbDataParameter CreateJsonSqlParameter(string parameterName, object? value)
     {
-        return new NpgsqlParameter { ParameterName = parameterName, NpgsqlDbType = DatabaseConfiguration.BinaryMessagePayload ? NpgsqlDbType.Jsonb : NpgsqlDbType.Json,Value = value ?? DBNull.Value };
+        return new NpgsqlParameter { ParameterName = parameterName, NpgsqlDbType = DatabaseConfiguration.BinaryMessagePayload ? NpgsqlDbType.Jsonb : NpgsqlDbType.Json, Value = value ?? DBNull.Value };
     }
 
     /// <summary>

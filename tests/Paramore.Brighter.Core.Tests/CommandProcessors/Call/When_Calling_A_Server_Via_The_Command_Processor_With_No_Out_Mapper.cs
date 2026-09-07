@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             var routingKey = new RoutingKey("MyRequest");
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication{Topic =routingKey } ) },
+                { routingKey, new InMemoryMessageProducer(new InternalBus(), Initializer.TestLoggerFactory, new Publication{Topic =routingKey } ) },
             });
 
             var tracer = new BrighterTracer(timeProvider);
@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                new InMemoryOutbox(timeProvider){Tracer = tracer}
+                Initializer.TestLoggerFactory, new InMemoryOutbox(timeProvider){Tracer = tracer}
             );
 
             _commandProcessor = new CommandProcessor(
@@ -64,9 +64,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 resiliencePipelineRegistry,
                 bus,
                 replySubscriptions:replySubs,
-                responseChannelFactory: new InMemoryChannelFactory(new InternalBus(), TimeProvider.System),
-                requestSchedulerFactory: new InMemorySchedulerFactory()
-            );
+                responseChannelFactory: new InMemoryChannelFactory(new InternalBus(), TimeProvider.System, loggerFactory: Initializer.TestLoggerFactory),
+                requestSchedulerFactory: new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+                loggerFactory: Initializer.TestLoggerFactory);
 
             PipelineBuilder<MyResponse>.ClearPipelineCache();
         }

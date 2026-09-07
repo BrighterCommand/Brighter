@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -30,12 +30,12 @@ public class SqsMessageConsumerRejectTests : IDisposable
         var queueName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(queueName);
         var channelName = new ChannelName(queueName);
-        
+
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(subscriptionName),
             channelName: channelName,
-            channelType: ChannelType.PointToPoint, 
-            routingKey: routingKey, 
+            channelType: ChannelType.PointToPoint,
+            routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Create,
             queueAttributes: new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } }));
@@ -50,14 +50,14 @@ public class SqsMessageConsumerRejectTests : IDisposable
         var awsConnection = GatewayFactory.CreateFactory();
 
         //We need to do this manually in a test - will create the channel from subscriber parameters
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _channel = _channelFactory.CreateSyncChannel(subscription);
 
         _messageProducer =
             new SqsMessageProducer(
-                awsConnection, 
-                new SqsPublication(channelName: channelName,  makeChannels: OnMissingChannel.Create) 
-                );
+                awsConnection,
+                new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create),
+                loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

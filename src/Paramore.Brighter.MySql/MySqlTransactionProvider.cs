@@ -43,7 +43,7 @@ namespace Paramore.Brighter.MySql
         /// Initialise a new instance of MySql Connection provider from a connection string
         /// </summary>
         /// <param name="configuration">MySql Configuration</param>
-        public MySqlTransactionProvider(IAmARelationalDatabaseConfiguration configuration)
+        public MySqlTransactionProvider(IAmARelationalDatabaseConfiguration? configuration)
         {
             if (string.IsNullOrWhiteSpace(configuration?.ConnectionString))
                 throw new ArgumentNullException(nameof(configuration.ConnectionString));

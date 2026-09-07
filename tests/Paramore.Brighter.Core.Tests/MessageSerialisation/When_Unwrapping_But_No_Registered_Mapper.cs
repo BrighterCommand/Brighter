@@ -24,7 +24,7 @@ public class MessageUnwrapRequestMissingMapperTests
         
         var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MySimpleTransform()));
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, loggerFactory: Initializer.TestLoggerFactory);
 
         Message message = new(
             new MessageHeader(myCommand.Id, new RoutingKey("transform.event"), MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow),

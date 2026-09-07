@@ -70,7 +70,7 @@ public class MySqlRunnerNonMonotonicMigrationsTests : IAsyncLifetime
         //Arrange — do NOT create the box table (so fresh path is selected).
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
         var malformedCatalog = new MalformedListCatalog(malformed);
-        var runner = new MySqlBoxMigrationRunner(malformedCatalog, config, TimeSpan.FromSeconds(30));
+        var runner = new MySqlBoxMigrationRunner(malformedCatalog, config, TimeSpan.FromSeconds(30), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act + Assert — runner refuses to begin migration when the version sequence is malformed.

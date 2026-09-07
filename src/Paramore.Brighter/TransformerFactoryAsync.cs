@@ -23,15 +23,15 @@ THE SOFTWARE. */
 
 using System;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter
 {
-    internal sealed partial class TransformerFactoryAsync<TRequest>(TransformAttribute attribute, IAmAMessageTransformerFactoryAsync factory)
+    internal sealed partial class TransformerFactoryAsync<TRequest>(
+        TransformAttribute attribute,
+        IAmAMessageTransformerFactoryAsync factory,
+        ILogger logger)
         where TRequest : class, IRequest
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<TransformerFactoryAsync<TRequest>>();
-
         private readonly Type _messageType = typeof(TRequest);
 
         public Lease<IAmAMessageTransformAsync> CreateMessageTransformer()
@@ -56,8 +56,9 @@ namespace Paramore.Brighter
                 //netstandard2.0 for an IAsyncDisposable-only transform); log-and-swallow it so it cannot
                 //mask the real initialization error being rethrown, but a repeated failure here (an
                 //unreleased transform scope) is not left invisible.
-                try { factory.Release(lease); }
-                catch (Exception releaseException) { Log.FailedToReleaseTransformerAfterInitFailure(s_logger, releaseException); }
+                try
+                { factory.Release(lease); }
+                catch (Exception releaseException) { Log.FailedToReleaseTransformerAfterInitFailure(logger, releaseException); }
                 throw;
             }
             return lease;

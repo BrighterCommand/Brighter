@@ -49,7 +49,7 @@ public class MsSqlPerSchemaNullSchemaNameTests : IAsyncLifetime
             schemaName: null);
         _runner = new MsSqlBoxMigrationRunner(
             new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30),
-            scope: MigrationHistoryScope.PerSchema);
+            scope: MigrationHistoryScope.PerSchema, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

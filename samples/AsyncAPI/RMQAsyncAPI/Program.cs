@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Jonny Olliff-Lee <jonny.ollifflee@gmail.com>
 
@@ -45,7 +45,7 @@ var rmqConnection = new RmqMessagingGatewayConnection
     Exchange = new Exchange("paramore.brighter.asyncapi.exchange"),
 };
 
-var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
+var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
 // Build a producer registry with a typed Publication<T> to demonstrate RequestType auto-discovery
 var producerRegistry = new RmqProducerRegistryFactory(
@@ -58,7 +58,7 @@ var producerRegistry = new RmqProducerRegistryFactory(
             MakeChannels = OnMissingChannel.Create,
             Topic = new RoutingKey("order.created")
         }
-    }).Create();
+    }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create();
 
 var host = new HostBuilder()
     .ConfigureServices((_, services) =>

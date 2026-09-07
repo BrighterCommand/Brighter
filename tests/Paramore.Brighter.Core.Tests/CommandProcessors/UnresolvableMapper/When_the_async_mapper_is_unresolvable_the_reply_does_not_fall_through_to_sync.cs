@@ -33,7 +33,7 @@ public class MediatorUnresolvableMapperReplyTests
         var timeProvider = new FakeTimeProvider();
 
         InMemoryMessageProducer messageProducer = new(new InternalBus(),
-            new Publication { Topic = _routingKey, RequestType = typeof(MyCommand) });
+        Initializer.TestLoggerFactory, new Publication { Topic = _routingKey, RequestType = typeof(MyCommand) });
 
         //sync mapper works; the async mapper type is registered but its factory cannot instantiate it
         var messageMapperRegistry = new MessageMapperRegistry(
@@ -55,7 +55,7 @@ public class MediatorUnresolvableMapperReplyTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            new InMemoryOutbox(timeProvider) { Tracer = tracer }
+            Initializer.TestLoggerFactory, new InMemoryOutbox(timeProvider) { Tracer = tracer }
         );
 
         //a genuinely round-trippable reply, so that on master the sync fall-through would have succeeded

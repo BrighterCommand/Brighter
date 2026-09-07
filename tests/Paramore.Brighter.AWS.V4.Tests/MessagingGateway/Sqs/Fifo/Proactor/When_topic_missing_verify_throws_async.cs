@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using Amazon.SQS.Model;
 using Paramore.Brighter.AWS.V4.Tests.Helpers;
@@ -16,7 +16,7 @@ public class AwsValidateMissingTopicTestsAsync
     private readonly ChannelName _channelName;
 
     public AwsValidateMissingTopicTestsAsync()
-    { 
+    {
         var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         _channelName = new ChannelName(queueName);
         _routingKey = new RoutingKey(_channelName);
@@ -35,7 +35,7 @@ public class AwsValidateMissingTopicTestsAsync
                 channelName: new ChannelName(_channelName!),
                 queueAttributes: new SqsAttributes(type: SqsType.Fifo, tags: new Dictionary<string, string> { { "Environment", "Test" } }),
                 makeChannels: OnMissingChannel.Validate
-            ));
+            ), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
 

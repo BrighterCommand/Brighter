@@ -19,7 +19,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
- 
+
 #endregion
 
 using System;
@@ -35,7 +35,6 @@ using Amazon.S3.Transfer;
 using Amazon.SecurityToken;
 using Amazon.SecurityToken.Model;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
 using Paramore.Brighter.Transforms.Storage;
@@ -70,7 +69,7 @@ namespace Paramore.Brighter.Transformers.AWS;
 public partial class S3LuggageStore : IAmAStorageProvider, IAmAStorageProviderAsync
 {
     private const string ClaimCheckProvider = "aws_s3";
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<S3LuggageStore>();
+    private readonly ILogger _logger;
     private readonly S3LuggageOptions _options;
     private readonly Dictionary<string, string> _spanAttributes = new();
     private readonly string _bucketName;
@@ -81,20 +80,23 @@ public partial class S3LuggageStore : IAmAStorageProvider, IAmAStorageProviderAs
     /// Initializes a new instance of the <see cref="S3LuggageStore"/> class with the specified S3 luggage options.
     /// </summary>
     /// <param name="options">The <see cref="S3LuggageOptions"/> containing the S3 client, bucket details, and other configuration.</param>
-    public S3LuggageStore(S3LuggageOptions options)
+    /// <param name="loggerFactory">The factory used to create the logger for this store.</param>
+    public S3LuggageStore(S3LuggageOptions options, ILoggerFactory loggerFactory)
     {
         _client = options.Client;
         _luggagePrefix = options.LuggagePrefix;
         _options = options;
         _bucketName = options.BucketName;
-        
+
         _spanAttributes["claim_check.aws-s3.region"] = options.BucketRegion.Value;
+
+        _logger = loggerFactory.CreateLogger<S3LuggageStore>();
     }
 
     /// <inheritdoc cref="IAmAStorageProvider.Tracer"/>
     public IAmABrighterTracer? Tracer { get; set; }
 
-    
+
     /// <inheritdoc />
     public async Task EnsureStoreExistsAsync(CancellationToken cancellationToken = default)
     {
@@ -102,21 +104,21 @@ public partial class S3LuggageStore : IAmAStorageProvider, IAmAStorageProviderAs
         {
             return;
         }
-        
-        if(_options.HttpClientFactory == null)
+
+        if (_options.HttpClientFactory == null)
         {
             throw new ConfigurationException("No HTTP Factory setup on S3Luggage Store");
         }
-        
+
         try
         {
             var accountId = await GetAccountIdAsync(_options.StsClient);
-            var bucketExists = await BucketExistsAsync(_options.HttpClientFactory, 
+            var bucketExists = await BucketExistsAsync(_options.HttpClientFactory,
                 accountId,
                 _options.BucketName,
-                _options.BucketRegion, 
+                _options.BucketRegion,
                 _options.BucketAddressTemplate);
-        
+
             if (bucketExists)
             {
                 return;
@@ -148,7 +150,7 @@ public partial class S3LuggageStore : IAmAStorageProvider, IAmAStorageProviderAs
         }
         catch (Exception e)
         {
-            Log.ErrorCreatingValidatingLuggageStore(s_logger, _bucketName, _options.BucketRegion, e);
+            Log.ErrorCreatingValidatingLuggageStore(_logger, _bucketName, _options.BucketRegion, e);
             throw;
         }
     }
@@ -165,7 +167,7 @@ public partial class S3LuggageStore : IAmAStorageProvider, IAmAStorageProviderAs
 
             if (response.HttpStatusCode != HttpStatusCode.NoContent)
             {
-                Log.CouldNotDeleteLuggage(s_logger, claimCheck, _bucketName);
+                Log.CouldNotDeleteLuggage(_logger, claimCheck, _bucketName);
             }
         }
         finally
@@ -182,13 +184,13 @@ public partial class S3LuggageStore : IAmAStorageProvider, IAmAStorageProviderAs
         {
             var request = new GetObjectRequest { BucketName = _bucketName, Key = claimCheck, };
 
-            Log.Downloading(s_logger, claimCheck, _bucketName);
+            Log.Downloading(_logger, claimCheck, _bucketName);
 
             // Issue request and remember to dispose of the response
             using var response = await _client.GetObjectAsync(request, cancellationToken);
             if (response.HttpStatusCode != HttpStatusCode.OK)
             {
-                Log.CouldNotDownload(s_logger, claimCheck, _bucketName);
+                Log.CouldNotDownload(_logger, claimCheck, _bucketName);
                 throw new InvalidOperationException($"Could not download {claimCheck} from {_bucketName}");
             }
 
@@ -197,7 +199,7 @@ public partial class S3LuggageStore : IAmAStorageProvider, IAmAStorageProviderAs
                 // Save object to local file
                 var stream = new MemoryStream();
 #if NETSTANDARD
-                    await response.ResponseStream.CopyToAsync(stream);
+                await response.ResponseStream.CopyToAsync(stream);
 #else
                 await response.ResponseStream.CopyToAsync(stream, cancellationToken);
 #endif
@@ -206,12 +208,12 @@ public partial class S3LuggageStore : IAmAStorageProvider, IAmAStorageProviderAs
             }
             catch (AmazonS3Exception)
             {
-                Log.UnableToRead(s_logger, claimCheck, _bucketName);
+                Log.UnableToRead(_logger, claimCheck, _bucketName);
                 throw;
             }
             catch (Exception e) when (e is ObjectDisposedException || e is NotSupportedException)
             {
-                Log.UnableToRead(s_logger, claimCheck, _bucketName);
+                Log.UnableToRead(_logger, claimCheck, _bucketName);
                 throw;
             }
         }
@@ -255,7 +257,7 @@ public partial class S3LuggageStore : IAmAStorageProvider, IAmAStorageProviderAs
         var span = Tracer?.CreateClaimCheckSpan(new ClaimCheckSpanInfo(ClaimCheckOperation.Store, ClaimCheckProvider, _bucketName, claimCheck, _spanAttributes, stream.Length));
         try
         {
-            Log.Uploading(s_logger, claimCheck, _bucketName);
+            Log.Uploading(_logger, claimCheck, _bucketName);
             var transferUtility = new TransferUtility(_client);
             await transferUtility.UploadAsync(stream, _bucketName, claimCheck, cancellationToken);
             return claimCheck;
@@ -281,9 +283,9 @@ public partial class S3LuggageStore : IAmAStorageProvider, IAmAStorageProviderAs
     /// <inheritdoc />
     public string Store(Stream stream) => BrighterAsyncContext.Run(() => StoreAsync(stream));
 
-    private static async Task<bool> BucketExistsAsync(IHttpClientFactory httpClientFactory, 
-        string accountId, 
-        string bucketName, 
+    private static async Task<bool> BucketExistsAsync(IHttpClientFactory httpClientFactory,
+        string accountId,
+        string bucketName,
         S3Region bucketRegion,
         string bucketAddressTemplate)
     {
@@ -292,10 +294,10 @@ public partial class S3LuggageStore : IAmAStorageProvider, IAmAStorageProviderAs
             .Replace("{BucketName}", bucketName)
             .Replace("{BucketRegion}", bucketRegion.Value)
         );
-        
+
         using var headRequest = new HttpRequestMessage(HttpMethod.Head, "/");
         headRequest.Headers.Add("x-amz-expected-bucket-owner", accountId);
-        
+
         using var response = await httpClient.SendAsync(headRequest);
         //If we deny public access to the bucket, but it exists we get access denied; we get not-found if it does not exist 
         return response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.Forbidden;
@@ -317,9 +319,9 @@ public partial class S3LuggageStore : IAmAStorageProvider, IAmAStorageProviderAs
         {
             var bucketRequest = new PutBucketRequest
             {
-                BucketName = bucketName, 
+                BucketName = bucketName,
                 BucketRegionName = region.Value,
-                CannedACL = cannedAcl, 
+                CannedACL = cannedAcl,
                 UseClientRegion = false
             };
 
@@ -335,7 +337,7 @@ public partial class S3LuggageStore : IAmAStorageProvider, IAmAStorageProviderAs
             {
                 // Ignoring this exception since it was created by another requests 
             }
-            
+
         });
 
         await asyncRetryPolicy.ExecuteAsync(async () =>
@@ -364,7 +366,9 @@ public partial class S3LuggageStore : IAmAStorageProvider, IAmAStorageProviderAs
 
             var lifeCycleRequest = new PutLifecycleConfigurationRequest
             {
-                BucketName = bucketName, ExpectedBucketOwner = accountId, Configuration = new LifecycleConfiguration { Rules = rules }
+                BucketName = bucketName,
+                ExpectedBucketOwner = accountId,
+                Configuration = new LifecycleConfiguration { Rules = rules }
             };
             var lifeCycleResponse = await client.PutLifecycleConfigurationAsync(lifeCycleRequest);
             if (lifeCycleResponse.HttpStatusCode != HttpStatusCode.OK)
@@ -416,7 +420,8 @@ public partial class S3LuggageStore : IAmAStorageProvider, IAmAStorageProviderAs
     {
         var callerIdentityResponse = await stsClient.GetCallerIdentityAsync(new GetCallerIdentityRequest());
 
-        if (callerIdentityResponse.HttpStatusCode != HttpStatusCode.OK) throw new InvalidOperationException("Could not find identity of AWS account");
+        if (callerIdentityResponse.HttpStatusCode != HttpStatusCode.OK)
+            throw new InvalidOperationException("Could not find identity of AWS account");
 
         return callerIdentityResponse.Account;
     }
@@ -458,7 +463,7 @@ public partial class S3LuggageStore : IAmAStorageProvider, IAmAStorageProviderAs
 
         [LoggerMessage(LogLevel.Error, "Unable to read {ClaimCheck} from {Bucket}")]
         public static partial void UnableToRead(ILogger logger, string claimCheck, string bucket);
-            
+
         [LoggerMessage(LogLevel.Information, "Uploading {ClaimCheck} to {Bucket}")]
         public static partial void Uploading(ILogger logger, string claimCheck, string bucket);
     }

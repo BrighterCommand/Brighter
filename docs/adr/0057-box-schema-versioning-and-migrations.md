@@ -336,7 +336,7 @@ The advisory-lock primitive that wraps the runner's chain (§3, §5a) is exposed
 - SQLite is **exempt** from the abstraction — it has no advisory lock; serialization is provided by `BEGIN IMMEDIATE`'s writer slot (per §5 table). The runner's existing `BeginImmediateWithRetryAsync` handles `SQLITE_BUSY` retry directly; introducing an `ISqliteAdvisoryLock` would invent a primitive that does not exist in the database.
 - Spanner is **exempt** — degenerate runner per §6, no concurrency primitive of its own.
 
-**Constructor injection (additive)**: each runner ctor gains two optional parameters — `I*AdvisoryLock? advisoryLock = null` (default: `new *AdvisoryLock()`) and `ILogger? logger = null` (default: `ApplicationLogging.CreateLogger<*BoxMigrationRunner>()`). Both are non-breaking additions; existing call sites continue to compile and run with default behaviour. The DI extensions (`UseBoxProvisioning`) do not register the abstractions — operators wanting custom impls construct the runner explicitly. This matches the existing wiring approach for `IAmABoxMigrationRunner` itself.
+**Constructor injection**: each runner ctor accepts an optional `I*AdvisoryLock? advisoryLock = null` (default: `new *AdvisoryLock()`) and requires an `ILoggerFactory`. An optional `ILogger? logger = null` can override the logger created by that factory. There is no implicit null-logger fallback; callers that want logging disabled must explicitly supply `NullLoggerFactory.Instance` or a null logger. The DI extensions obtain `ILoggerFactory` from the container. Operators wanting custom advisory-lock implementations construct the runner explicitly.
 
 **What does not absorb into the abstraction**:
 

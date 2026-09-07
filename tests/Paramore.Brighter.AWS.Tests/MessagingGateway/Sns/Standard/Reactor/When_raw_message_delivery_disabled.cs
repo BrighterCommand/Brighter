@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net.Mime;
 using System.Threading.Tasks;
@@ -10,7 +10,7 @@ using Amazon.SimpleNotificationService.Model;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Reactor;
 
-[Trait("Category", "AWS")] 
+[Trait("Category", "AWS")]
 public class SqsRawMessageDeliveryTests : IDisposable, IAsyncDisposable
 {
     private readonly SnsMessageProducer _messageProducer;
@@ -22,7 +22,7 @@ public class SqsRawMessageDeliveryTests : IDisposable, IAsyncDisposable
     {
         var awsConnection = GatewayFactory.CreateFactory();
 
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var channelName = $"Raw-Msg-Delivery-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         _routingKey = new RoutingKey($"Raw-Msg-Delivery-Tests-{Guid.NewGuid().ToString()}".Truncate(45));
 
@@ -41,11 +41,11 @@ public class SqsRawMessageDeliveryTests : IDisposable, IAsyncDisposable
                 tags: new Dictionary<string, string> { { "Environment", "Test" } }), makeChannels: OnMissingChannel.Create,
             topicAttributes: new SnsAttributes(tags: [new Tag { Key = "Environment", Value = "Test" }])));
 
-        _messageProducer = new SnsMessageProducer(awsConnection, 
+        _messageProducer = new SnsMessageProducer(awsConnection,
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create 
-            });
+                MakeChannels = OnMissingChannel.Create
+            }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]
@@ -53,11 +53,11 @@ public class SqsRawMessageDeliveryTests : IDisposable, IAsyncDisposable
     {
         //arrange
         var messageHeader = new MessageHeader(
-            Guid.NewGuid().ToString(), 
-            _routingKey, 
-            MessageType.MT_COMMAND, 
-            correlationId: Guid.NewGuid().ToString(), 
-            replyTo: RoutingKey.Empty, 
+            Guid.NewGuid().ToString(),
+            _routingKey,
+            MessageType.MT_COMMAND,
+            correlationId: Guid.NewGuid().ToString(),
+            replyTo: RoutingKey.Empty,
             contentType: new ContentType(MediaTypeNames.Text.Plain));
 
         var customHeaderItem = new KeyValuePair<string, object>("custom-header-item", "custom-header-item-value");
@@ -86,13 +86,13 @@ public class SqsRawMessageDeliveryTests : IDisposable, IAsyncDisposable
 
     public void Dispose()
     {
-        _channelFactory.DeleteTopicAsync().Wait(); 
+        _channelFactory.DeleteTopicAsync().Wait();
         _channelFactory.DeleteQueueAsync().Wait();
     }
-        
+
     public async ValueTask DisposeAsync()
     {
-        await _channelFactory.DeleteTopicAsync(); 
+        await _channelFactory.DeleteTopicAsync();
         await _channelFactory.DeleteQueueAsync();
     }
 }

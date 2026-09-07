@@ -61,7 +61,7 @@ public class MqttMessageConsumerRejectDeliveryErrorDlqAsyncTests : IDisposable
             TopicPrefix = SOURCE_TOPIC_PREFIX,
             ClientID = "BrighterTests-DlqAsync-Producer"
         };
-        var publisher = new MqttMessagePublisher(producerConfig);
+        var publisher = new MqttMessagePublisher(producerConfig, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _sourceProducer = new MqttMessageProducer(publisher, new Publication());
 
         //Arrange — source consumer with DLQ routing key
@@ -74,8 +74,8 @@ public class MqttMessageConsumerRejectDeliveryErrorDlqAsyncTests : IDisposable
         };
         _sourceConsumer = new MqttMessageConsumer(
             consumerConfig,
-            deadLetterRoutingKey: new RoutingKey(DLQ_TOPIC_PREFIX)
-        );
+            deadLetterRoutingKey: new RoutingKey(DLQ_TOPIC_PREFIX),
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //Arrange — DLQ consumer
         var dlqConsumerConfig = new MqttMessagingGatewayConsumerConfiguration
@@ -85,7 +85,7 @@ public class MqttMessageConsumerRejectDeliveryErrorDlqAsyncTests : IDisposable
             TopicPrefix = DLQ_TOPIC_PREFIX,
             ClientID = "BrighterTests-DlqAsyncTarget-Consumer"
         };
-        _dlqConsumer = new MqttMessageConsumer(dlqConsumerConfig);
+        _dlqConsumer = new MqttMessageConsumer(dlqConsumerConfig, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

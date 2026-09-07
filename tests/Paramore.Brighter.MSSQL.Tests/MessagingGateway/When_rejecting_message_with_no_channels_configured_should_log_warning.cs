@@ -51,9 +51,9 @@ public class MsSqlMessageConsumerNoChannelsConfiguredTests : IDisposable
             _topic,
             messagePumpType: MessagePumpType.Reactor);
 
-        _producer = new MsSqlMessageProducer(testHelper.QueueConfiguration);
+        _producer = new MsSqlMessageProducer(testHelper.QueueConfiguration, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
-        _consumer = (MsSqlMessageConsumer)new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration).Create(sub);
+        _consumer = (MsSqlMessageConsumer)new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create(sub);
     }
 
     [Fact]

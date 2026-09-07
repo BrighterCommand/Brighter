@@ -94,9 +94,9 @@ public class RmqMessageProducerRequeuingMessageTests : IDisposable
                 requestType: typeof(MyCommand),
                 messagePumpType: MessagePumpType.Reactor);
 
-        _messageProducer = new RmqMessageProducer(rmqConnection);
+        _messageProducer = new RmqMessageProducer(rmqConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
-        _channel = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection))
+        _channel = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance))
             .CreateSyncChannel(subscription);
 
         new QueueFactory(rmqConnection, queueName, new RoutingKeys(_message.Header.Topic))

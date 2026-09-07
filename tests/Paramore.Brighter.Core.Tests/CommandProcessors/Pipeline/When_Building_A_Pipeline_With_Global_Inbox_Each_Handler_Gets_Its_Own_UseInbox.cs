@@ -111,7 +111,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             var registryB = new SubscriberRegistry();
             registryB.Register<MyCommand, InboxSyncB.CollidingInboxHandler>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<InboxSyncA.CollidingInboxHandler>();
             container.AddTransient<InboxSyncB.CollidingInboxHandler>();
             container.AddTransient<MyValidationHandler<MyCommand>>();
@@ -123,8 +123,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             var inboxConfiguration = new InboxConfiguration();
 
             return (
-                new PipelineBuilder<MyCommand>(registryA, (IAmAHandlerFactorySync)factory, inboxConfiguration),
-                new PipelineBuilder<MyCommand>(registryB, (IAmAHandlerFactorySync)factory, inboxConfiguration));
+                new PipelineBuilder<MyCommand>(registryA, (IAmAHandlerFactorySync)factory, Initializer.TestLoggerFactory, inboxConfiguration),
+                new PipelineBuilder<MyCommand>(registryB, (IAmAHandlerFactorySync)factory, Initializer.TestLoggerFactory, inboxConfiguration));
         }
 
         private static (PipelineBuilder<MyCommand>, PipelineBuilder<MyCommand>) CreateAsyncInboxBuilders()
@@ -137,7 +137,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             var registryB = new SubscriberRegistry();
             registryB.RegisterAsync<MyCommand, InboxAsyncB.CollidingInboxHandler>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<InboxAsyncA.CollidingInboxHandler>();
             container.AddTransient<InboxAsyncB.CollidingInboxHandler>();
             container.AddTransient<MyValidationHandlerAsync<MyCommand>>();
@@ -149,8 +149,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             var inboxConfiguration = new InboxConfiguration();
 
             return (
-                new PipelineBuilder<MyCommand>(registryA, (IAmAHandlerFactoryAsync)factory, inboxConfiguration),
-                new PipelineBuilder<MyCommand>(registryB, (IAmAHandlerFactoryAsync)factory, inboxConfiguration));
+                new PipelineBuilder<MyCommand>(registryA, (IAmAHandlerFactoryAsync)factory, Initializer.TestLoggerFactory, inboxConfiguration),
+                new PipelineBuilder<MyCommand>(registryB, (IAmAHandlerFactoryAsync)factory, Initializer.TestLoggerFactory, inboxConfiguration));
         }
 
         private static void AssertCacheExcludesUseInbox(Type handlerType)

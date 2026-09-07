@@ -63,12 +63,12 @@ public class SpannerConcurrentFreshInstallTests : IAsyncLifetime
             new SpannerBoxDetectionHelper(),
             new SpannerPayloadModeValidator(),
             _config,
-            new SpannerBoxMigrationRunner(_config));
+            new SpannerBoxMigrationRunner(_config, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         var provisionerB = new SpannerOutboxProvisioner(
             new SpannerBoxDetectionHelper(),
             new SpannerPayloadModeValidator(),
             _config,
-            new SpannerBoxMigrationRunner(_config));
+            new SpannerBoxMigrationRunner(_config, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 
         //Act
         var act = async () => await Task.WhenAll(

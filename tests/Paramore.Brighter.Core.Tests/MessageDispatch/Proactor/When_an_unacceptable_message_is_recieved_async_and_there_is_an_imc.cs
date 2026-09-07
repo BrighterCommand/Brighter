@@ -52,7 +52,7 @@ public class AsyncMessagePumpUnacceptableMessageInvalidMessageChannelTests
 
         _channel = new ChannelAsync(
             new(Channel), _routingKey,
-            new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, invalidMessageTopic: _invalidMessageKey, ackTimeout: TimeSpan.FromMilliseconds(1000))
+            new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, invalidMessageTopic: _invalidMessageKey, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory)
         );
 
         var messageMapperRegistry = new MessageMapperRegistry(
@@ -61,7 +61,7 @@ public class AsyncMessagePumpUnacceptableMessageInvalidMessageChannelTests
         messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
         _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyEvent),
-            messageMapperRegistry, null, new InMemoryRequestContextFactory(), _channel)
+            messageMapperRegistry, null, new InMemoryRequestContextFactory(), _channel, loggerFactory: Initializer.TestLoggerFactory)
         {
             Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3
         };

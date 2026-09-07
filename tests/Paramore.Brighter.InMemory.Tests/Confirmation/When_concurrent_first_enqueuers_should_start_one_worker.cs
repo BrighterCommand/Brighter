@@ -39,7 +39,7 @@ public class ConcurrentStartGuardTests
         const string topic = "test_topic_concurrent_start";
         const int threadCount = 20;
         var bus = new InternalBus();
-        var producer = new InMemoryMessageProducer(bus, instrumentationOptions: InstrumentationOptions.All)
+        var producer = new InMemoryMessageProducer(bus, instrumentationOptions: InstrumentationOptions.All, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
         {
             UseAsyncPublishConfirmation = true
         };

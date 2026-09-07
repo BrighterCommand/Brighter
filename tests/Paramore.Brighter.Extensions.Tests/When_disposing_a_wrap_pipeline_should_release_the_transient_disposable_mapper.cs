@@ -14,7 +14,7 @@ public class TransformPipelineMapperReleaseTests
         //arrange
         var disposals = new MapperDisposalLog();
 
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddSingleton(disposals);
         collection.AddTransient<DisposableMapper>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions { MapperLifetime = ServiceLifetime.Transient });
@@ -24,7 +24,7 @@ public class TransformPipelineMapperReleaseTests
         var mapperRegistry = new MessageMapperRegistry(mapperFactory, null);
         mapperRegistry.Register<MinimalCommand, DisposableMapper>();
 
-        var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, new EmptyMessageTransformerFactory());
+        var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, new EmptyMessageTransformerFactory(), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //act
         using (pipelineBuilder.BuildWrapPipeline<MinimalCommand>())

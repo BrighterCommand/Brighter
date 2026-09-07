@@ -36,7 +36,7 @@ public class FactoryLifetimeTests
     public void Factory_WithScopedLifetime_ReturnsSameInstanceWithinScope()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddTransient<TestHandler>();
         services.AddSingleton<IBrighterOptions>(new BrighterOptions
         {
@@ -59,7 +59,7 @@ public class FactoryLifetimeTests
     public void Factory_WithScopedLifetime_ReturnsDifferentInstancesAcrossScopes()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddTransient<TestHandler>();
         services.AddSingleton<IBrighterOptions>(new BrighterOptions
         {
@@ -83,7 +83,7 @@ public class FactoryLifetimeTests
     public void Factory_WithTransientLifetime_ReturnsDifferentInstancesEachTime()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddTransient<TestHandler>();
         services.AddSingleton<IBrighterOptions>(new BrighterOptions
         {
@@ -106,7 +106,7 @@ public class FactoryLifetimeTests
     public void Factory_WithSingletonLifetime_ReturnsSameInstanceAcrossScopes()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddSingleton<TestHandler>();
         services.AddSingleton<IBrighterOptions>(new BrighterOptions
         {
@@ -130,7 +130,7 @@ public class FactoryLifetimeTests
     public void AsyncFactory_WithSingletonLifetime_ReturnsSameInstanceAcrossScopes()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddSingleton<TestAsyncHandler>();
         services.AddSingleton<IBrighterOptions>(new BrighterOptions
         {
@@ -154,7 +154,7 @@ public class FactoryLifetimeTests
     public void AsyncFactory_WithScopedLifetime_ReturnsSameInstanceWithinScope()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddTransient<TestAsyncHandler>();
         services.AddSingleton<IBrighterOptions>(new BrighterOptions
         {
@@ -177,7 +177,7 @@ public class FactoryLifetimeTests
     public void AsyncFactory_WithScopedLifetime_ReturnsDifferentInstancesAcrossScopes()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddTransient<TestAsyncHandler>();
         services.AddSingleton<IBrighterOptions>(new BrighterOptions
         {
@@ -201,7 +201,7 @@ public class FactoryLifetimeTests
     public void AsyncFactory_WithTransientLifetime_ReturnsDifferentInstances()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddTransient<TestAsyncHandler>();
         services.AddSingleton<IBrighterOptions>(new BrighterOptions
         {
@@ -224,7 +224,7 @@ public class FactoryLifetimeTests
     public void Factory_HandlerWithDependency_ResolvesBothCorrectly()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddSingleton<IDependencyService, DependencyService>();
         services.AddTransient<HandlerWithDependency>();
         services.AddSingleton<IBrighterOptions>(new BrighterOptions
@@ -248,7 +248,7 @@ public class FactoryLifetimeTests
     public void Factory_Release_ClearsHandlerFromCache()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddTransient<TestHandler>();
         services.AddSingleton<IBrighterOptions>(new BrighterOptions
         {
@@ -273,7 +273,7 @@ public class FactoryLifetimeTests
     public void Factory_WithScopedLifetime_TracksDisposableHandler()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddTransient<DisposableTestHandler>();
         services.AddSingleton<IBrighterOptions>(new BrighterOptions
         {

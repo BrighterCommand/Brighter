@@ -38,9 +38,9 @@ public class ChannelFactorySchedulerTests
     {
         // Arrange — configure AddConsumers with an InMemoryChannelFactory (which implements IAmAChannelFactoryWithScheduler)
         var bus = new InternalBus();
-        var channelFactory = new InMemoryChannelFactory(bus, TimeProvider.System);
+        var channelFactory = new InMemoryChannelFactory(bus, TimeProvider.System, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services
             .AddConsumers(options =>
             {
@@ -60,7 +60,7 @@ public class ChannelFactorySchedulerTests
                 configure.ProducerRegistry = new ProducerRegistry(
                     new Dictionary<ProducerKey, IAmAMessageProducer>
                     {
-                        { new ProducerKey("in-memory"), new InMemoryMessageProducer(bus, new Publication { Topic = "test" }) }
+                        { new ProducerKey("in-memory"), new InMemoryMessageProducer(bus, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, new Publication { Topic = "test" }) }
                     });
             })
             .AutoFromAssemblies();
@@ -81,10 +81,10 @@ public class ChannelFactorySchedulerTests
     {
         // Arrange — configure with a custom scheduler factory
         var bus = new InternalBus();
-        var channelFactory = new InMemoryChannelFactory(bus, TimeProvider.System);
+        var channelFactory = new InMemoryChannelFactory(bus, TimeProvider.System, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var customSchedulerFactory = new StubSchedulerFactory();
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services
             .AddConsumers(options =>
             {
@@ -104,7 +104,7 @@ public class ChannelFactorySchedulerTests
                 configure.ProducerRegistry = new ProducerRegistry(
                     new Dictionary<ProducerKey, IAmAMessageProducer>
                     {
-                        { new ProducerKey("in-memory"), new InMemoryMessageProducer(bus, new Publication { Topic = "test" }) }
+                        { new ProducerKey("in-memory"), new InMemoryMessageProducer(bus, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, new Publication { Topic = "test" }) }
                     });
             })
             .UseScheduler(customSchedulerFactory)

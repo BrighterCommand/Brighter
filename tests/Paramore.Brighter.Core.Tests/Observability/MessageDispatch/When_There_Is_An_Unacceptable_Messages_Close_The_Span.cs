@@ -55,13 +55,13 @@ public class MessagePumpUnacceptableMessageOberservabilityTests
                 new InMemoryRequestContextFactory(), 
                 new PolicyRegistry(),
                 new ResiliencePipelineRegistry<string>(),
-                new InMemorySchedulerFactory(),
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
                 tracer: tracer,
-                instrumentationOptions: instrumentationOptions);
+                instrumentationOptions: instrumentationOptions, loggerFactory: Initializer.TestLoggerFactory);
             
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
-            _channel = new Channel(new(ChannelName), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)));
+            _channel = new Channel(new(ChannelName), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory));
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(
                     _ => new MyEventMessageMapper()),
@@ -69,7 +69,7 @@ public class MessagePumpUnacceptableMessageOberservabilityTests
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
             _messagePump = new Reactor(commandProcessor, (message) => typeof(MyEvent), 
-                messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel, tracer, instrumentationOptions)
+                messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel, Initializer.TestLoggerFactory, tracer, instrumentationOptions)
             {
                 Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), EmptyChannelDelay = TimeSpan.FromMilliseconds(1000)
             };

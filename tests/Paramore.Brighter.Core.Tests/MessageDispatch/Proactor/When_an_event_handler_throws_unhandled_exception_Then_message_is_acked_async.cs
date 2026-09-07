@@ -29,20 +29,20 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 
             var bus = new InternalBus();
 
-            _channel = new ChannelAsync(new (Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)));
+            _channel = new ChannelAsync(new (Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory));
             
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,
                 new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
             messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
-            _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyEvent), 
-                messageMapperRegistry, null, new InMemoryRequestContextFactory(), _channel)
+            _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyEvent),
+                messageMapperRegistry, null, new InMemoryRequestContextFactory(), _channel, loggerFactory: Initializer.TestLoggerFactory)
             {
                 Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = _requeueCount
             };
 
-            var msg = new TransformPipelineBuilderAsync(messageMapperRegistry, null, InstrumentationOptions.All)
+            var msg = new TransformPipelineBuilderAsync(messageMapperRegistry, null, Initializer.TestLoggerFactory, InstrumentationOptions.All)
                 .BuildWrapPipeline<MyEvent>()
                 .WrapAsync(new MyEvent(), new RequestContext(), new Publication{Topic = _routingKey})
                 .Result;

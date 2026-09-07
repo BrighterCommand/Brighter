@@ -1,9 +1,8 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Org.Apache.Rocketmq;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.RocketMQ;
@@ -12,12 +11,15 @@ namespace Paramore.Brighter.MessagingGateway.RocketMQ;
 /// Factory class for creating RocketMQ message producers in Brighter.
 /// Implements RocketMQ's producer group pattern and transactional message support.
 /// </summary>
-public partial class RocketMessageProducerFactory(RocketMessagingGatewayConnection connection, IEnumerable<RocketMqPublication> publications) : IAmAMessageProducerFactory
+/// <param name="connection">The gateway connection configuration.</param>
+/// <param name="publications">The publications to create producers for.</param>
+/// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create the logger.</param>
+public partial class RocketMessageProducerFactory(RocketMessagingGatewayConnection connection, IEnumerable<RocketMqPublication> publications, ILoggerFactory loggerFactory) : IAmAMessageProducerFactory
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RocketMessageProducerFactory>();
-    
+    private readonly ILogger _logger = loggerFactory.CreateLogger<RocketMessageProducerFactory>();
+
     /// <inheritdoc />
-    public Dictionary<ProducerKey, IAmAMessageProducer> Create() 
+    public Dictionary<ProducerKey, IAmAMessageProducer> Create()
         => BrighterAsyncContext.Run(() => CreateAsync());
 
     /// <inheritdoc />
@@ -34,9 +36,9 @@ public partial class RocketMessageProducerFactory(RocketMessagingGatewayConnecti
 
             if (publication.MakeChannels == OnMissingChannel.Create)
             {
-                Log.CreateTopicIsNotSupported(s_logger, publication.Topic!.Value);
+                Log.CreateTopicIsNotSupported(_logger, publication.Topic!.Value);
             }
-            
+
             producers[new ProducerKey(publication.Topic, publication.Type)] = new RocketMqMessageProducer(connection,
                 rocketProducer,
                 publication,
@@ -51,7 +53,7 @@ public partial class RocketMessageProducerFactory(RocketMessagingGatewayConnecti
         builder.SetClientConfig(connection.ClientConfig)
             .SetMaxAttempts(connection.MaxAttempts)
             .SetTopics(publications
-                .Where(x =>  !RoutingKey.IsNullOrEmpty(x.Topic))
+                .Where(x => !RoutingKey.IsNullOrEmpty(x.Topic))
                 .Select(x => x.Topic!.Value)
                 .ToArray());
 
@@ -59,10 +61,10 @@ public partial class RocketMessageProducerFactory(RocketMessagingGatewayConnecti
         {
             builder.SetTransactionChecker(connection.Checker);
         }
-        
-        return await builder.Build(); 
+
+        return await builder.Build();
     }
-    
+
     private static partial class Log
     {
         [LoggerMessage(LogLevel.Warning, "RocketMQ doesn't support create topic via code ({Topic})")]

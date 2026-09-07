@@ -41,7 +41,7 @@ public class AsyncConfirmationOffTests
             new MessageHeader(messageId, new RoutingKey(topic), MessageType.MT_DOCUMENT),
             new MessageBody("test_content"));
         var bus = new InternalBus();
-        var producer = new InMemoryMessageProducer(bus, instrumentationOptions: InstrumentationOptions.All)
+        var producer = new InMemoryMessageProducer(bus, instrumentationOptions: InstrumentationOptions.All, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
         {
             UseAsyncPublishConfirmation = false
         };
@@ -70,7 +70,7 @@ public class AsyncConfirmationOffTests
             new MessageHeader(messageId, new RoutingKey(topic), MessageType.MT_DOCUMENT),
             new MessageBody("test_content"));
         var bus = new InternalBus();
-        var producer = new InMemoryMessageProducer(bus, instrumentationOptions: InstrumentationOptions.All);
+        var producer = new InMemoryMessageProducer(bus, instrumentationOptions: InstrumentationOptions.All, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         var confirmations = new List<PublishConfirmationResult>();
         producer.OnMessagePublished += confirmations.Add;

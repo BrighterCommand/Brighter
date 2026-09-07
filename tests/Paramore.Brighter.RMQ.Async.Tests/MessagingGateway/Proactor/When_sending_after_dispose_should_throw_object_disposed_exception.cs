@@ -68,7 +68,7 @@ public class RmqMessageProducerDisposedSendTests
             Exchange = new Exchange("paramore.brighter.exchange")
         };
 
-        return new RmqMessageProducer(rmqConnection);
+        return new RmqMessageProducer(rmqConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     private static Message CreateMessage()

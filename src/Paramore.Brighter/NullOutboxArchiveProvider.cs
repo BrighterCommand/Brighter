@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -27,7 +27,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter
 {
@@ -36,7 +35,16 @@ namespace Paramore.Brighter
     /// </summary>
     public class NullOutboxArchiveProvider : IAmAnArchiveProvider
     {
-        private readonly ILogger _logger = ApplicationLogging.CreateLogger<NullOutboxArchiveProvider>();
+        private readonly ILogger _logger;
+
+        /// <summary>
+        /// Creates an archive provider that discards archived messages.
+        /// </summary>
+        /// <param name="logger">The logger.</param>
+        public NullOutboxArchiveProvider(ILogger<NullOutboxArchiveProvider> logger)
+        {
+            _logger = logger;
+        }
 
         /// <summary>
         /// Send a Message to the archive provider

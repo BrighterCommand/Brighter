@@ -15,7 +15,7 @@ public class TransientMapperScopeAccumulationTests
         // Arrange
         const int messageCount = 10;
 
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddTransient<NonDisposableMapper>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions { MapperLifetime = ServiceLifetime.Transient });
         var rootProvider = collection.BuildServiceProvider();
@@ -44,7 +44,7 @@ public class TransientMapperScopeAccumulationTests
     public void When_creating_a_transient_mapper_the_scope_should_survive_until_release()
     {
         // Arrange
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddTransient<NonDisposableMapper>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions { MapperLifetime = ServiceLifetime.Transient });
         var rootProvider = collection.BuildServiceProvider();

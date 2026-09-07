@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -52,13 +52,13 @@ builder.Services.AddConsumers(options =>
         @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;",
                 databaseName: "BrighterSqlQueue",
                 queueStoreTable: "QueueData"
-            )
-        )
-    );
+            ),
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance),
+            logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.MessagingGateway.MsSql.ChannelFactory>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
 })
 // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
 // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-.UseScheduler(new InMemorySchedulerFactory())
+.UseScheduler(new InMemorySchedulerFactory(loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance))
 .AutoFromAssemblies();
 
 builder.Services.AddHostedService<ServiceActivatorHostedService>();

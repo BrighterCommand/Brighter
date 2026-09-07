@@ -46,7 +46,7 @@ public class When_sending_async_with_delay_and_scheduler_configured_should_use_s
     {
         // Arrange
         _bus = new InternalBus();
-        _producer = new InMemoryMessageProducer(_bus);
+        _producer = new InMemoryMessageProducer(_bus, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _scheduler = new SpySchedulerAsync();
         _producer.Scheduler = _scheduler;
 

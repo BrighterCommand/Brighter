@@ -29,13 +29,13 @@ public class ConcurrentProvisionerTests : IAsyncLifetime
             new MySqlOutboxMigrationCatalog(),
             new MySqlPayloadModeValidator(),
             config,
-            new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
+            new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var provisioner2 = new MySqlOutboxProvisioner(
             new MySqlBoxDetectionHelper(),
             new MySqlOutboxMigrationCatalog(),
             new MySqlPayloadModeValidator(),
             config,
-            new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
+            new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         // Act
         await Task.WhenAll(

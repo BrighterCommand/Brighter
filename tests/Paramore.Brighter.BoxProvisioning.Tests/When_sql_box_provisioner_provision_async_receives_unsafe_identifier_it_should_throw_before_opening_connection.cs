@@ -109,7 +109,8 @@ public class SqlBoxProvisionerIdentifierValidationTests
                 new ThrowingPayloadValidator(),
                 configuration,
                 new ThrowingMigrationRunner(),
-                BoxType.Outbox)
+                BoxType.Outbox,
+                global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
         {
         }
 

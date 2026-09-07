@@ -25,7 +25,7 @@ public class TransientScopeReferenceIdentityTests
         // Arrange — a SINGLETON mapper resolved under a Transient MapperLifetime, so each Create opens its own
         // scope over the one shared instance. The scope factory hands back scopes that are VALUE-equal (every
         // instance Equals every other, same hash) rather than reference-distinct.
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddSingleton<SharedMapper>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions { MapperLifetime = ServiceLifetime.Transient });
         var rootProvider = collection.BuildServiceProvider();

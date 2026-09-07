@@ -40,7 +40,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 new(ChannelName), _routingKey,
                 new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider,
                     invalidMessageTopic: _invalidMessageKey,
-                    ackTimeout: TimeSpan.FromMilliseconds(1000))
+                    ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory)
             );
 
             var messageMapperRegistry = new MessageMapperRegistry(
@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 null,
                 new InMemoryRequestContextFactory(),
                 _channel,
-                tracer,
+                Initializer.TestLoggerFactory, tracer,
                 instrumentationOptions)
             {
                 Channel = _channel,
@@ -65,7 +65,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             };
 
             // Build a properly-mapped command message so that mapping succeeds and the exception comes from dispatch
-            var mappableMessage = new TransformPipelineBuilderAsync(messageMapperRegistry, null, InstrumentationOptions.All)
+            var mappableMessage = new TransformPipelineBuilderAsync(messageMapperRegistry, null, Initializer.TestLoggerFactory, InstrumentationOptions.All)
                 .BuildWrapPipeline<MyCommand>()
                 .WrapAsync(new MyCommand(), new RequestContext(), new Publication { Topic = _routingKey })
                 .Result;

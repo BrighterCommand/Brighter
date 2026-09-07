@@ -3,25 +3,28 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
 {
     public partial class MsSqlProducerRegistryFactory : IAmAProducerRegistryFactory
     {
         private readonly RelationalDatabaseConfiguration _msSqlConfiguration;
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlProducerRegistryFactory>();
+        private readonly ILogger _logger;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly IEnumerable<Publication> _publications; //-- placeholder for future use
 
         public MsSqlProducerRegistryFactory(
             RelationalDatabaseConfiguration msSqlConfiguration,
-            IEnumerable<Publication> publications)
+            IEnumerable<Publication> publications,
+            ILoggerFactory loggerFactory)
         {
-            _msSqlConfiguration = 
+            _msSqlConfiguration =
                 msSqlConfiguration ?? throw new ArgumentNullException(nameof(msSqlConfiguration));
             if (string.IsNullOrEmpty(msSqlConfiguration.QueueStoreTable))
                 throw new ArgumentNullException(nameof(msSqlConfiguration.QueueStoreTable));
             _publications = publications;
+            _loggerFactory = loggerFactory;
+            _logger = loggerFactory.CreateLogger<MsSqlProducerRegistryFactory>();
         }
 
         /// <summary>
@@ -30,9 +33,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <returns>A registry of middleware clients by topic, for sending messages to the middleware</returns>
         public IAmAProducerRegistry Create()
         {
-            Log.MsSqlMessageProducerFactoryCreateProducer(s_logger);
+            Log.MsSqlMessageProducerFactoryCreateProducer(_logger);
 
-            var producerFactory = new MsSqlMessageProducerFactory(_msSqlConfiguration, _publications);
+            var producerFactory = new MsSqlMessageProducerFactory(_msSqlConfiguration, _publications, _loggerFactory);
 
             return new ProducerRegistry(producerFactory.Create());
         }
@@ -47,7 +50,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <returns>A registry of middleware clients by topic, for sending messages to the middleware</returns>
         public Task<IAmAProducerRegistry> CreateAsync(CancellationToken ct = default)
         {
-           return Task.FromResult(Create()); 
+            return Task.FromResult(Create());
         }
 
         private static partial class Log

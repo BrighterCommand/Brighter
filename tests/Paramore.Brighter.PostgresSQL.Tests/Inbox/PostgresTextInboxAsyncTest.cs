@@ -14,7 +14,7 @@ public class PostgresTextInboxAsyncTest : RelationalDatabaseInboxAsyncTests
     
     protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration)
     {
-        return new PostgreSqlInbox(configuration);
+        return new PostgreSqlInbox(configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Inbox.Postgres.PostgreSqlInbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
     }
 
     protected override async Task CreateInboxTableAsync(RelationalDatabaseConfiguration configuration)

@@ -30,7 +30,7 @@ public class ProactorShutdownInsideAsyncContextTests
         var timeProvider = new FakeTimeProvider();
 
         var commandProcessor = new SpyCommandProcessor();
-        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000));
+        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory);
 
         // Use a channel whose DisposeAsync does real async work (Task.Yield)
         // to force continuations back onto the scheduler
@@ -51,8 +51,8 @@ public class ProactorShutdownInsideAsyncContextTests
             messageMapperRegistry,
             new EmptyMessageTransformerFactoryAsync(),
             new InMemoryRequestContextFactory(),
-            channel
-        );
+            channel,
+            loggerFactory: Initializer.TestLoggerFactory);
         messagePump.TimeOut = TimeSpan.FromMilliseconds(5000);
 
         // Enqueue a message followed by a quit

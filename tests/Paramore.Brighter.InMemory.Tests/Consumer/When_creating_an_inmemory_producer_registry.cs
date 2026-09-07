@@ -12,7 +12,7 @@ public class InMemoryProducerRegistryFactoryTests
        // arrange
        var bus = new InternalBus(); 
        var publication = new Publication() { Topic = new RoutingKey("Topic") };
-       var inMemoryProducerRegistryFactory = new InMemoryProducerRegistryFactory(bus, [publication], InstrumentationOptions.All);
+       var inMemoryProducerRegistryFactory = new InMemoryProducerRegistryFactory(bus, [publication], global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, InstrumentationOptions.All);
 
        //act
        var producerRegistry = inMemoryProducerRegistryFactory.Create();

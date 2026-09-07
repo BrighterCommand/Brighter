@@ -21,7 +21,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
         public DispatcherAddNewConnectionTestsAsync()
         {
             _bus = new InternalBus();
-            
+
             IAmACommandProcessor commandProcessor = new SpyCommandProcessor();
 
             var messageMapperRegistry = new MessageMapperRegistry(
@@ -30,16 +30,16 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
             Subscription subscription = new Subscription<MyEvent>(
-                new SubscriptionName("test"), noOfPerformers: 1, timeOut: TimeSpan.FromMilliseconds(1000), 
-                channelFactory: new InMemoryChannelFactory(_bus, TimeProvider.System), channelName: new ChannelName("fakeChannel"), 
+                new SubscriptionName("test"), noOfPerformers: 1, timeOut: TimeSpan.FromMilliseconds(1000),
+                channelFactory: new InMemoryChannelFactory(_bus, TimeProvider.System, loggerFactory: Initializer.TestLoggerFactory), channelName: new ChannelName("fakeChannel"),
                 messagePumpType: MessagePumpType.Proactor, routingKey: _routingKey
             );
-            
+
             _newSubscription = new Subscription<MyEvent>(
-                new SubscriptionName("newTest"), noOfPerformers: 1, timeOut: TimeSpan.FromMilliseconds(1000), 
-                channelFactory: new InMemoryChannelFactory(_bus, TimeProvider.System), 
+                new SubscriptionName("newTest"), noOfPerformers: 1, timeOut: TimeSpan.FromMilliseconds(1000),
+                channelFactory: new InMemoryChannelFactory(_bus, TimeProvider.System, loggerFactory: Initializer.TestLoggerFactory),
                 channelName: new ChannelName("fakeChannelTwo"), messagePumpType: MessagePumpType.Proactor, routingKey: _routingKeyTwo);
-            _dispatcher = new Dispatcher(commandProcessor, new List<Subscription> { subscription }, messageMapperRegistryAsync: messageMapperRegistry);
+            _dispatcher = new Dispatcher(commandProcessor, new List<Subscription> { subscription }, messageMapperRegistryAsync: messageMapperRegistry, loggerFactory: Initializer.TestLoggerFactory);
 
             var @event = new MyEvent();
             var message = new MyEventMessageMapperAsync()
@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 
             Assert.Equal(DispatcherState.DS_AWAITING, _dispatcher.State);
             _dispatcher.Receive();
-            
+
         }
 
         [Fact]

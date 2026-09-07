@@ -25,7 +25,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyCommandInboxedHandler>();
             
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyCommandInboxedHandler>();
             container.AddSingleton(inbox);
             container.AddTransient<UseInboxHandler<MyCommand>>();
@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
                 onceOnly: true, 
                 actionOnExists: OnceOnlyAction.Throw);
 
-            _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory, inboxConfiguration);
+            _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory, Initializer.TestLoggerFactory, inboxConfiguration);
             
         }
 

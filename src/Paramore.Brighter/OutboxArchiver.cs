@@ -27,7 +27,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
@@ -39,7 +38,7 @@ namespace Paramore.Brighter
     /// <typeparam name="TTransaction">The transaction type of the Db</typeparam>
     public partial class OutboxArchiver<TMessage, TTransaction> where TMessage : Message
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<OutboxArchiver<TMessage, TTransaction>>();
+        private readonly ILogger _logger;
         private readonly IAmARequestContextFactory _requestContextFactory;
         private readonly IAmAnOutboxSync<TMessage, TTransaction>? _outBox;
         private readonly IAmAnOutboxAsync<TMessage, TTransaction>? _asyncOutbox;
@@ -56,6 +55,7 @@ namespace Paramore.Brighter
         public OutboxArchiver(
             IAmAnOutbox outbox,
             IAmAnArchiveProvider archiveProvider,
+            ILoggerFactory loggerFactory,
             IAmARequestContextFactory? requestContextFactory = null,
             int archiveBatchSize = 100,
             IAmABrighterTracer? tracer = null,
@@ -66,9 +66,12 @@ namespace Paramore.Brighter
             _tracer = tracer;
             _instrumentationOptions = instrumentationOptions;
             _requestContextFactory = requestContextFactory ?? new InMemoryRequestContextFactory();
-            
-            if (outbox is IAmAnOutboxSync<TMessage, TTransaction> syncOutbox) _outBox = syncOutbox;
-            if (outbox is IAmAnOutboxAsync<TMessage, TTransaction> asyncOutbox) _asyncOutbox = asyncOutbox;
+            _logger = loggerFactory.CreateLogger<OutboxArchiver<TMessage, TTransaction>>();
+
+            if (outbox is IAmAnOutboxSync<TMessage, TTransaction> syncOutbox)
+                _outBox = syncOutbox;
+            if (outbox is IAmAnOutboxAsync<TMessage, TTransaction> asyncOutbox)
+                _asyncOutbox = asyncOutbox;
         }
 
         /// <summary>
@@ -94,25 +97,28 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="dispatchedSince">How stale is the message that we want archive</param>
         /// <param name="requestContext">The context for the request pipeline; gives us the OTel span for example</param>
-         public void Archive(TimeSpan dispatchedSince, RequestContext? requestContext = null)
+        public void Archive(TimeSpan dispatchedSince, RequestContext? requestContext = null)
         {
             requestContext ??= _requestContextFactory.Create();
             //This is an archive span parent; we expect individual archiving operations for messages to have their own spans
             var parentSpan = requestContext.Span;
             var span = _tracer?.CreateArchiveSpan(requestContext.Span, dispatchedSince, options: _instrumentationOptions);
             requestContext.Span = span;
-            
+
             try
             {
-                if (_outBox is null) throw new ArgumentException(NoSyncOutboxError);
-                if (_archiveProvider is null) throw new ArgumentException(NoArchiveProviderError);
+                if (_outBox is null)
+                    throw new ArgumentException(NoSyncOutboxError);
+                if (_archiveProvider is null)
+                    throw new ArgumentException(NoArchiveProviderError);
                 var messages = _outBox
                     .DispatchedMessages(dispatchedSince, requestContext, _archiveBatchSize)
                     .ToArray();
 
-                Log.FoundMessagesToArchive(s_logger, messages.Length, _archiveBatchSize);
+                Log.FoundMessagesToArchive(_logger, messages.Length, _archiveBatchSize);
 
-                if (messages.Length <= 0) return;
+                if (messages.Length <= 0)
+                    return;
 
                 foreach (var message in messages)
                 {
@@ -121,11 +127,11 @@ namespace Paramore.Brighter
 
                 _outBox.Delete(messages.Select(e => e.Id).ToArray(), requestContext);
 
-                Log.SuccessfullyArchivedMessages(s_logger, messages.Length, _archiveBatchSize);
+                Log.SuccessfullyArchivedMessages(_logger, messages.Length, _archiveBatchSize);
             }
             catch (Exception e)
             {
-                Log.ErrorArchivingFromOutbox(s_logger, e);
+                Log.ErrorArchivingFromOutbox(_logger, e);
                 _tracer?.AddExceptionToSpan(span, [e]);
                 throw;
             }
@@ -151,11 +157,13 @@ namespace Paramore.Brighter
             var parentSpan = requestContext.Span;
             var span = _tracer?.CreateArchiveSpan(requestContext.Span, dispatchedSince, options: _instrumentationOptions);
             requestContext.Span = span;
-            
+
             try
             {
-                if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
-                if (_archiveProvider is null) throw new ArgumentException(NoArchiveProviderError);
+                if (_asyncOutbox is null)
+                    throw new ArgumentException(NoAsyncOutboxError);
+                if (_archiveProvider is null)
+                    throw new ArgumentException(NoArchiveProviderError);
                 var messages = (await _asyncOutbox.DispatchedMessagesAsync(
                     dispatchedSince, requestContext, pageSize: _archiveBatchSize,
                     cancellationToken: cancellationToken
@@ -178,7 +186,7 @@ namespace Paramore.Brighter
             }
             catch (Exception e)
             {
-                Log.ErrorArchivingFromOutbox(s_logger, e);
+                Log.ErrorArchivingFromOutbox(_logger, e);
                 _tracer?.AddExceptionToSpan(span, [e]);
                 throw;
             }

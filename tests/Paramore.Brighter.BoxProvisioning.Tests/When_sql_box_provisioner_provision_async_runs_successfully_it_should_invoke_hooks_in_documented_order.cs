@@ -184,7 +184,8 @@ public class SqlBoxProvisionerHookOrderTests
             IAmABoxMigrationRunner migrationRunner,
             BoxType boxType,
             List<string> log)
-            : base(detectionHelper, catalog, payloadValidator, configuration, migrationRunner, boxType)
+            : base(detectionHelper, catalog, payloadValidator, configuration, migrationRunner, boxType,
+                global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
         {
             _log = log;
         }

@@ -60,7 +60,7 @@ public class RmqMessageConsumerDelayTests : IDisposable
             new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_COMMAND),
             new MessageBody("test content for delay requeue"));
 
-        _messageProducer = new RmqMessageProducer(rmqConnection);
+        _messageProducer = new RmqMessageProducer(rmqConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         var subscription = new RmqSubscription(
             subscriptionName: new SubscriptionName("rmq-delay-producer-test"),
@@ -69,7 +69,7 @@ public class RmqMessageConsumerDelayTests : IDisposable
             requestType: typeof(MyCommand),
             messagePumpType: MessagePumpType.Reactor);
 
-        _channel = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection))
+        _channel = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance))
             .CreateSyncChannel(subscription);
 
         new QueueFactory(rmqConnection, queueName, new RoutingKeys(topic))

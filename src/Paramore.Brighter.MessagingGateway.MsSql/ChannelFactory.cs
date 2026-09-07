@@ -2,7 +2,6 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql;
 
@@ -11,7 +10,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql;
 /// </summary>
 public partial class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWithScheduler
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<ChannelFactory>();
+    private readonly ILogger _logger;
     private readonly MsSqlMessageConsumerFactory _msSqlMessageConsumerFactory;
 
     /// <summary>
@@ -28,11 +27,13 @@ public partial class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWith
     /// Initializes a new instance of the <see cref="ChannelFactory"/> class.
     /// </summary>
     /// <param name="msSqlMessageConsumerFactory">The factory for creating MS SQL message consumers.</param>
+    /// <param name="logger">The logger.</param>
     /// <exception cref="ArgumentNullException">Thrown when the msSqlMessageConsumerFactory is null.</exception>
-    public ChannelFactory(MsSqlMessageConsumerFactory msSqlMessageConsumerFactory)
+    public ChannelFactory(MsSqlMessageConsumerFactory msSqlMessageConsumerFactory, ILogger<ChannelFactory> logger)
     {
         _msSqlMessageConsumerFactory = msSqlMessageConsumerFactory ??
                                        throw new ArgumentNullException(nameof(msSqlMessageConsumerFactory));
+        _logger = logger;
     }
 
     /// <summary>
@@ -47,7 +48,7 @@ public partial class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWith
         if (rmqSubscription == null)
             throw new ConfigurationException("MS SQL ChannelFactory We expect an MsSqlSubscription or MsSqlSubscription<T> as a parameter");
 
-        Log.MsSqlInputChannelFactoryCreateInputChannel(s_logger, subscription.ChannelName, subscription.RoutingKey.Value);
+        Log.MsSqlInputChannelFactoryCreateInputChannel(_logger, subscription.ChannelName, subscription.RoutingKey.Value);
         return new Channel(
             subscription.ChannelName,
             subscription.RoutingKey,
@@ -67,7 +68,7 @@ public partial class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWith
         if (rmqSubscription == null)
             throw new ConfigurationException("MS SQL ChannelFactory We expect an MsSqlSubscription or MsSqlSubscription<T> as a parameter");
 
-        Log.MsSqlInputChannelFactoryCreateInputChannel(s_logger, subscription.ChannelName, subscription.RoutingKey.Value);
+        Log.MsSqlInputChannelFactoryCreateInputChannel(_logger, subscription.ChannelName, subscription.RoutingKey.Value);
         return new ChannelAsync(
             subscription.ChannelName,
             subscription.RoutingKey,
@@ -89,9 +90,9 @@ public partial class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWith
         if (rmqSubscription == null)
             throw new ConfigurationException("MS SQL ChannelFactory We expect an MsSqlSubscription or MsSqlSubscription<T> as a parameter");
 
-        Log.MsSqlInputChannelFactoryCreateInputChannel(s_logger, subscription.ChannelName, subscription.RoutingKey.Value);
+        Log.MsSqlInputChannelFactoryCreateInputChannel(_logger, subscription.ChannelName, subscription.RoutingKey.Value);
         var channel = new ChannelAsync(
-            subscription.ChannelName, 
+            subscription.ChannelName,
             subscription.RoutingKey,
             _msSqlMessageConsumerFactory.CreateAsync(subscription),
             subscription.BufferSize);

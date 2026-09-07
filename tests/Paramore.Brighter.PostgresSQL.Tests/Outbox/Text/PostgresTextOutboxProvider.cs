@@ -36,18 +36,18 @@ public class PostgresTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPr
 
     public IAmAnOutboxSync<Message, DbTransaction> CreateOutbox()
     {
-        return new PostgreSqlOutbox(_configuration);
+        return new PostgreSqlOutbox(_configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.PostgreSql.PostgreSqlOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
     }
 
     public IEnumerable<Message> GetAllMessages()
     {
-        var outbox = new PostgreSqlOutbox(_configuration);
+        var outbox = new PostgreSqlOutbox(_configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.PostgreSql.PostgreSqlOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         return outbox.Get(new RequestContext());
     }
 
     public async Task<IEnumerable<Message>> GetAllMessagesAsync()
     {
-        var outbox = new PostgreSqlOutbox(_configuration);
+        var outbox = new PostgreSqlOutbox(_configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.PostgreSql.PostgreSqlOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         return await outbox.GetAsync(new RequestContext());
     }
 
@@ -58,7 +58,7 @@ public class PostgresTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPr
 
     public IAmAnOutboxAsync<Message, DbTransaction> CreateOutboxAsync()
     {
-        return new PostgreSqlOutbox(_configuration);
+        return new PostgreSqlOutbox(_configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Outbox.PostgreSql.PostgreSqlOutbox>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
     }
     
     public async Task CreateStoreAsync()

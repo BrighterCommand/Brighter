@@ -31,7 +31,7 @@ public class KafkaConfirmationTopicAndLinkTestsAsync : IDisposable, IAsyncDispos
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
                 }
-            ]).CreateAsync().Result;
+            ], loggerFactory: Initializer.TestLoggerFactory).CreateAsync().Result;
     }
 
     [Fact]

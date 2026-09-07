@@ -36,7 +36,7 @@ public class ValidatePipelinesThroughDiPathTests
     public void When_validator_resolved_from_di_should_validate_without_configuration_exception()
     {
         // Arrange — wire up Brighter with a handler and ValidatePipelines through the builder
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         subscriberRegistry.Register<MyDescribableCommand, MyPublicSyncHandler>();
         services.AddSingleton(subscriberRegistry);

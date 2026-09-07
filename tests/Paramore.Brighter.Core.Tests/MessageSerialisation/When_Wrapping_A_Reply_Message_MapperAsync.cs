@@ -33,7 +33,7 @@ public class AsyncReplyMessageWrapRequestTests
             RequestType = typeof(MyResponse)
         };
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.All);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, Initializer.TestLoggerFactory, InstrumentationOptions.All);
     }
 
     [Fact]

@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
             new MessageBody(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
         );
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, null);
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, null, loggerFactory: Initializer.TestLoggerFactory);
     }
     
     [Fact]

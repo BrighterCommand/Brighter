@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -78,7 +78,7 @@ if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var cr
     builder.Services.AddConsumers(options =>
         {
             options.Subscriptions = subscriptions;
-            options.DefaultChannelFactory = new ChannelFactory(awsConnection);
+            options.DefaultChannelFactory = new ChannelFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         })
         .AutoFromAssemblies();
 

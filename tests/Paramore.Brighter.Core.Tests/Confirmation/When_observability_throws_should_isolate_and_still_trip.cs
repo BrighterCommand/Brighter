@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
             // Arrange: a confirmation that always fails, wired to a mediator whose tracer throws from
             // CreateConfirmationSpan — modelling an observability fault inside the callback.
             var bus = new InternalBus();
-            _producer = new InMemoryMessageProducer(bus, new Publication { Topic = _topic })
+            _producer = new InMemoryMessageProducer(bus, Initializer.TestLoggerFactory, new Publication { Topic = _topic })
             {
                 UseAsyncPublishConfirmation = true,
                 PublishFailurePredicate = _ => true
@@ -68,7 +68,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer: new ThrowingConfirmationTracer(),
                 new FindPublicationByPublicationTopicOrRequestType(),
-                outboxCircuitBreaker: _circuitBreaker);
+                outboxCircuitBreaker: _circuitBreaker, loggerFactory: Initializer.TestLoggerFactory);
 
             _message = new Message(
                 new MessageHeader(new Id(Guid.NewGuid().ToString()), _topic, MessageType.MT_EVENT),

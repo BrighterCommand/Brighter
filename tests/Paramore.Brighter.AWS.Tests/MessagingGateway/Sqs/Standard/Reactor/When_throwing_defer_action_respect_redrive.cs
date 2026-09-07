@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Mime;
@@ -32,7 +32,7 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
     {
         const string replyTo = "http:\\queueUrl";
         var contentType = new ContentType(MediaTypeNames.Text.Plain);
-        
+
         _dlqChannelName = $"Redrive-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var correlationId = Guid.NewGuid().ToString();
         var subscriptionName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
@@ -78,11 +78,11 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         //how do we send to the queue
         _sender = new SqsMessageProducer(
             _awsConnection,
-            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create)
-        );
+            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create),
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //We need to do this manually in a test - will create the channel from subscriber parameters
-        _channelFactory = new ChannelFactory(_awsConnection);
+        _channelFactory = new ChannelFactory(_awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _channel = _channelFactory.CreateSyncChannel(_subscription);
 
         //how do we handle a command
@@ -99,8 +99,8 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
             requestContextFactory: new InMemoryRequestContextFactory(),
             policyRegistry: new PolicyRegistry(),
             resilienceResiliencePipelineRegistry: new ResiliencePipelineRegistry<string>(),
-            requestSchedulerFactory: new InMemorySchedulerFactory()
-        );
+            requestSchedulerFactory: new InMemorySchedulerFactory(loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance),
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         var messageMapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper()),
@@ -109,16 +109,18 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
 
         //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
-        _messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyDeferredCommand), 
-            messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel)
+        _messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyDeferredCommand),
+            messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
         {
-            Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3
+            Channel = _channel,
+            TimeOut = TimeSpan.FromMilliseconds(5000),
+            RequeueCount = 3
         };
     }
 
     private int GetDLQCount(string queueName)
     {
-        using var sqsClient = new AWSClientFactory(_awsConnection).CreateSqsClient(); 
+        using var sqsClient = new AWSClientFactory(_awsConnection).CreateSqsClient();
         var queueUrlResponse = sqsClient.GetQueueUrlAsync(queueName).GetAwaiter().GetResult();
         var response = sqsClient.ReceiveMessageAsync(new ReceiveMessageRequest
         {

@@ -54,7 +54,7 @@ public class AsyncExternalServiceBusArchiveObservabilityTests
             Type = type,
         };
 
-        var producer = new InMemoryMessageProducer(internalBus, _publication);
+        var producer = new InMemoryMessageProducer(internalBus, Initializer.TestLoggerFactory, _publication);
 
         var producerRegistry =
             new ProducerRegistry(new Dictionary<ProducerKey, IAmAMessageProducer> { { new ProducerKey(_routingKey, type), producer } });
@@ -74,7 +74,7 @@ public class AsyncExternalServiceBusArchiveObservabilityTests
             new EmptyMessageTransformerFactoryAsync(),
             _tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            _outbox,
+            Initializer.TestLoggerFactory, _outbox,
             timeProvider:_timeProvider);
     }
 
@@ -105,7 +105,7 @@ public class AsyncExternalServiceBusArchiveObservabilityTests
         var archiveProvider = new InMemoryArchiveProvider();
 
         var archiver = new OutboxArchiver<Message, CommittableTransaction>(_outbox, archiveProvider, tracer: _tracer,
-            instrumentationOptions: instrumentationOptions);
+            instrumentationOptions: instrumentationOptions, loggerFactory: Initializer.TestLoggerFactory);
         await archiver.ArchiveAsync(dispatchedSince, context);
         
          //should be no messages in the outbox

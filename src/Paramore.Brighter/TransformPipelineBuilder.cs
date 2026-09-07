@@ -30,7 +30,6 @@ using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Validation;
 
@@ -47,7 +46,8 @@ namespace Paramore.Brighter
     /// </summary>
     public partial class TransformPipelineBuilder
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<TransformPipelineBuilder>();
+        private readonly ILogger _logger;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly IAmAMessageMapperRegistry _mapperRegistry;
 
         private readonly IAmAMessageTransformerFactory _messageTransformerFactory;
@@ -72,8 +72,9 @@ namespace Paramore.Brighter
         /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
         /// <exception cref="ConfigurationException">Throws a configuration exception on a null mapperRegistry</exception>
         public TransformPipelineBuilder(
-            IAmAMessageMapperRegistry mapperRegistry, 
+            IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageTransformerFactory messageTransformerFactory,
+            ILoggerFactory loggerFactory,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All
             )
         {
@@ -82,6 +83,8 @@ namespace Paramore.Brighter
 
             _messageTransformerFactory = messageTransformerFactory;
             _instrumentationOptions = instrumentationOptions;
+            _loggerFactory = loggerFactory;
+            _logger = loggerFactory.CreateLogger<TransformPipelineBuilder>();
         }
 
         /// <summary>
@@ -101,14 +104,14 @@ namespace Paramore.Brighter
 
                 transformLeases = BuildTransformPipeline<TRequest>(FindWrapTransforms(messageMapperLease.Instance));
 
-                pipeline = new WrapPipeline<TRequest>(messageMapperLease, _messageTransformerFactory, transformLeases, _instrumentationOptions, _mapperRegistry);
+                pipeline = new WrapPipeline<TRequest>(messageMapperLease, _messageTransformerFactory, transformLeases, _instrumentationOptions, _loggerFactory, _mapperRegistry);
 
-                Log.NewWrapPipelineCreated(s_logger, typeof(TRequest).Name, TraceWrapPipeline(pipeline));
+                Log.NewWrapPipelineCreated(_logger, typeof(TRequest).Name, TraceWrapPipeline(pipeline));
 
                 var unwraps = FindUnwrapTransforms(messageMapperLease.Instance);
                 if (unwraps.Any())
                 {
-                    Log.UnwrapAttributesOnMapToMessageMethodIgnored(s_logger, typeof(TRequest).Name, TraceWrapPipeline(pipeline));
+                    Log.UnwrapAttributesOnMapToMessageMethodIgnored(_logger, typeof(TRequest).Name, TraceWrapPipeline(pipeline));
                 }
 
                 return pipeline;
@@ -119,8 +122,9 @@ namespace Paramore.Brighter
                 //release them here rather than leak them. Cleanup may throw (Release/Dispose surface
                 //exceptions), so guard it: a disposal failure must not mask the configuration error
                 //the caller needs to see.
-                try { CleanUpAfterFailedBuild(pipeline, transformLeases, messageMapperLease); }
-                catch (Exception cleanupException) { Log.FailedToCleanUpAfterFailedBuild(s_logger, cleanupException); }
+                try
+                { CleanUpAfterFailedBuild(pipeline, transformLeases, messageMapperLease); }
+                catch (Exception cleanupException) { Log.FailedToCleanUpAfterFailedBuild(_logger, cleanupException); }
                 throw new ConfigurationException("Error building wrap pipeline for outgoing message, see inner exception for details", e);
             }
         }
@@ -142,14 +146,14 @@ namespace Paramore.Brighter
 
                 transformLeases = BuildTransformPipeline<TRequest>(FindUnwrapTransforms(messageMapperLease.Instance));
 
-                pipeline = new UnwrapPipeline<TRequest>(transformLeases, _messageTransformerFactory, messageMapperLease, _mapperRegistry);
+                pipeline = new UnwrapPipeline<TRequest>(transformLeases, _messageTransformerFactory, messageMapperLease, _loggerFactory, _mapperRegistry);
 
-                Log.NewUnwrapPipelineCreated(s_logger, typeof(TRequest).Name, TraceUnwrapPipeline(pipeline));
+                Log.NewUnwrapPipelineCreated(_logger, typeof(TRequest).Name, TraceUnwrapPipeline(pipeline));
 
                 var wraps = FindWrapTransforms(messageMapperLease.Instance);
                 if (wraps.Any())
                 {
-                    Log.WrapAttributesOnMapToRequestMethodIgnored(s_logger, typeof(TRequest).Name, TraceUnwrapPipeline(pipeline));
+                    Log.WrapAttributesOnMapToRequestMethodIgnored(_logger, typeof(TRequest).Name, TraceUnwrapPipeline(pipeline));
                 }
 
                 return pipeline;
@@ -160,8 +164,9 @@ namespace Paramore.Brighter
                 //release them here rather than leak them. Cleanup may throw (Release/Dispose surface
                 //exceptions), so guard it: a disposal failure must not mask the configuration error
                 //the caller needs to see.
-                try { CleanUpAfterFailedBuild(pipeline, transformLeases, messageMapperLease); }
-                catch (Exception cleanupException) { Log.FailedToCleanUpAfterFailedBuild(s_logger, cleanupException); }
+                try
+                { CleanUpAfterFailedBuild(pipeline, transformLeases, messageMapperLease); }
+                catch (Exception cleanupException) { Log.FailedToCleanUpAfterFailedBuild(_logger, cleanupException); }
                 throw new ConfigurationException("Error building unwrap pipeline for outgoing message, see inner exception for details", e);
             }
         }
@@ -181,7 +186,7 @@ namespace Paramore.Brighter
             {
                 int i = transformAttributes.Count();
                 if (i > 0)
-                    Log.NoMessageTransformerFactoryConfigured(s_logger, i);
+                    Log.NoMessageTransformerFactoryConfigured(_logger, i);
 
                 return transforms;
             }
@@ -190,7 +195,7 @@ namespace Paramore.Brighter
             {
                 transformAttributes.Each((attribute) =>
                 {
-                    var transformerLease = new TransformerFactory<TRequest>(attribute, _messageTransformerFactory).CreateMessageTransformer();
+                    var transformerLease = new TransformerFactory<TRequest>(attribute, _messageTransformerFactory, _logger).CreateMessageTransformer();
                     transforms.Add(transformerLease);
                 });
             }
@@ -210,7 +215,8 @@ namespace Paramore.Brighter
         //when no transformer factory was supplied (v9 compatibility), because none were created.
         private void ReleaseTransforms(IEnumerable<Lease<IAmAMessageTransform>> transformLeases)
         {
-            if (_messageTransformerFactory is null) return;
+            if (_messageTransformerFactory is null)
+                return;
 
             //release every transform even when one Release throws: on the failed-build path no pipeline
             //owns these transforms and no finalizer retries, so skipping the rest would leak their DI
@@ -218,8 +224,9 @@ namespace Paramore.Brighter
             //build error the caller rethrows.
             foreach (var transformLease in transformLeases)
             {
-                try { _messageTransformerFactory.Release(transformLease); }
-                catch (Exception releaseException) { Log.FailedToReleaseTransform(s_logger, releaseException); }
+                try
+                { _messageTransformerFactory.Release(transformLease); }
+                catch (Exception releaseException) { Log.FailedToReleaseTransform(_logger, releaseException); }
             }
         }
 
@@ -240,8 +247,10 @@ namespace Paramore.Brighter
                 return;
             }
 
-            if (transformLeases is not null) ReleaseTransforms(transformLeases);
-            if (messageMapperLease is not null) _mapperRegistry.Release(messageMapperLease);
+            if (transformLeases is not null)
+                ReleaseTransforms(transformLeases);
+            if (messageMapperLease is not null)
+                _mapperRegistry.Release(messageMapperLease);
         }
 
         /// <summary>
@@ -330,7 +339,8 @@ namespace Paramore.Brighter
         private Lease<IAmAMessageMapper<TRequest>> FindMessageMapper<TRequest>() where TRequest : class, IRequest
         {
             var messageMapperLease = _mapperRegistry.Get<TRequest>();
-            if (messageMapperLease == null) throw new InvalidOperationException(string.Format("Could not find mapper for {0}. Hint: did you set MessagePumpType.Reactor on the subscription to match the mapper type?", typeof(TRequest).Name));
+            if (messageMapperLease == null)
+                throw new InvalidOperationException(string.Format("Could not find mapper for {0}. Hint: did you set MessagePumpType.Reactor on the subscription to match the mapper type?", typeof(TRequest).Name));
             return messageMapperLease;
         }
 
@@ -387,7 +397,7 @@ namespace Paramore.Brighter
             pipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
-        
+
         private static partial class Log
         {
             [LoggerMessage(LogLevel.Debug, "New wrap pipeline created for: {Message} of {Pipeline}")]
@@ -395,7 +405,7 @@ namespace Paramore.Brighter
 
             [LoggerMessage(LogLevel.Debug, "Unwrap attributes on MapToMessage method for mapper of: {Message} in {Pipeline}, will be ignored")]
             public static partial void UnwrapAttributesOnMapToMessageMethodIgnored(ILogger logger, string message, TransformPipelineTracer pipeline);
-            
+
             [LoggerMessage(LogLevel.Debug, "New unwrap pipeline created for: {Message} of {Pipeline}")]
             public static partial void NewUnwrapPipelineCreated(ILogger logger, string message, TransformPipelineTracer pipeline);
 

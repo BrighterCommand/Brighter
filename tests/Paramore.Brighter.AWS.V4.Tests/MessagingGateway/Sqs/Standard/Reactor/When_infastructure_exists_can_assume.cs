@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Net.Mime;
 using System.Text.Json;
@@ -26,19 +26,19 @@ public class AWSAssumeInfrastructureTests : IDisposable, IAsyncDisposable
         _myCommand = new MyCommand { Value = "Test" };
         const string replyTo = "http:\\queueUrl";
         var contentType = new ContentType(MediaTypeNames.Text.Plain);
-        
+
         var correlationId = Guid.NewGuid().ToString();
         var subscriptionName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(queueName);
         var channelName = new ChannelName(queueName);
-        
+
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(subscriptionName),
             channelName: channelName,
-            channelType: ChannelType.PointToPoint, 
-            routingKey: routingKey, 
-            messagePumpType: MessagePumpType.Reactor, 
+            channelType: ChannelType.PointToPoint,
+            routingKey: routingKey,
+            messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Create,
             queueAttributes: new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } }));
 
@@ -53,7 +53,7 @@ public class AWSAssumeInfrastructureTests : IDisposable, IAsyncDisposable
         //We need to do this manually in a test - will create the channel from subscriber parameters
         //This doesn't look that different from our create tests - this is because we create using the channel factory in
         //our AWS transport, not the consumer (as it's a more likely to use infrastructure declared elsewhere)
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var channel = _channelFactory.CreateSyncChannel(subscription);
 
         //Now change the subscription to validate, just check what we made
@@ -61,10 +61,10 @@ public class AWSAssumeInfrastructureTests : IDisposable, IAsyncDisposable
         subscription.ChannelName = channel.Name;
 
         _messageProducer = new SqsMessageProducer(
-            awsConnection, 
-            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Assume));
+            awsConnection,
+            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Assume), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
-        _consumer = new SqsMessageConsumer(awsConnection, channel.Name);
+        _consumer = new SqsMessageConsumer(awsConnection, channel.Name, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

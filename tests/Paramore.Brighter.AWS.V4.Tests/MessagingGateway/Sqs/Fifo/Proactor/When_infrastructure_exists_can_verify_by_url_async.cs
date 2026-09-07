@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Net.Mime;
 using System.Text.Json;
@@ -33,14 +33,14 @@ public class AwsValidateInfrastructureByUrlTestsAsync : IAsyncDisposable, IDispo
 
         var channelName = new ChannelName(queueName);
         var queueAttributes = new SqsAttributes(type: SqsType.Fifo, tags: new Dictionary<string, string> { { "Environment", "Test" } });
-        
+
         var subscription = new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(queueName),
             channelName: channelName,
-            channelType: ChannelType.PointToPoint, 
-            routingKey: routingKey, 
-            messagePumpType: MessagePumpType.Proactor, 
-            queueAttributes: queueAttributes, 
+            channelType: ChannelType.PointToPoint,
+            routingKey: routingKey,
+            messagePumpType: MessagePumpType.Proactor,
+            queueAttributes: queueAttributes,
             makeChannels: OnMissingChannel.Create);
 
         _message = new Message(
@@ -51,7 +51,7 @@ public class AwsValidateInfrastructureByUrlTestsAsync : IAsyncDisposable, IDispo
 
         var awsConnection = GatewayFactory.CreateFactory();
 
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var channel = _channelFactory.CreateAsyncChannel(subscription);
 
         var queueUrl = FindQueueUrl(awsConnection, routingKey.ToValidSQSQueueName(true)).Result;
@@ -65,10 +65,10 @@ public class AwsValidateInfrastructureByUrlTestsAsync : IAsyncDisposable, IDispo
                 queueAttributes: queueAttributes,
                 findQueueBy: QueueFindBy.Url,
                 makeChannels: OnMissingChannel.Validate
-                )
-            );
+                ),
+                loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
-        _consumer = new SqsMessageConsumerFactory(awsConnection).CreateAsync(subscription);
+        _consumer = new SqsMessageConsumerFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).CreateAsync(subscription);
     }
 
     [Fact]

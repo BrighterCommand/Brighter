@@ -99,11 +99,11 @@ public class RmqMutualTlsQuorumObservabilityAsyncTests : IDisposable
         var traceParent = activity?.Id;
 
         // Act - Create consumer first to ensure queue exists
-        using var consumer = new RmqMessageConsumer(connection, queueName.Value, routingKey.Value, false);
+        using var consumer = new RmqMessageConsumer(connection, queueName.Value, routingKey.Value, false, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         consumer.Purge();
 
         // Publish message with trace context
-        using var producer = new RmqMessageProducer(connection)
+        using var producer = new RmqMessageProducer(connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
         {
             Span = activity
         };
@@ -161,10 +161,10 @@ public class RmqMutualTlsQuorumObservabilityAsyncTests : IDisposable
         try
         {
             // Act
-            using var consumer = new RmqMessageConsumer(connection, queueName.Value, routingKey.Value, false);
+            using var consumer = new RmqMessageConsumer(connection, queueName.Value, routingKey.Value, false, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             consumer.Purge();
 
-            using var producer = new RmqMessageProducer(connection)
+            using var producer = new RmqMessageProducer(connection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
             {
                 Span = activity
             };

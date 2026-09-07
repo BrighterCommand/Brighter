@@ -21,7 +21,7 @@ public class LifetimeScopeDisposalThrowDrainTests
         // only thing that drains them.
         var disposalAttempts = new StrongBox<int>(0);
 
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddTransient<NonDisposableMapper>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions { MapperLifetime = ServiceLifetime.Transient });
         var rootProvider = collection.BuildServiceProvider();

@@ -26,7 +26,7 @@ public class CommandProcessorWithCircuitBreakerAndResiliencePipelineAsyncTests
         var registry = new SubscriberRegistry();
         registry.RegisterAsync<MyCommand, MyFailsWithDivideByZeroWithResiliencePipelineHandlerAsync>();
 
-        var container = new ServiceCollection();
+        var container = new ServiceCollection().AddLogging();
         container.AddSingleton<MyFailsWithDivideByZeroWithResiliencePipelineHandlerAsync>();
         container.AddSingleton<ResilienceExceptionPolicyHandlerAsync<MyCommand>>();
         container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
@@ -45,7 +45,7 @@ public class CommandProcessorWithCircuitBreakerAndResiliencePipelineAsyncTests
         MyFailsWithDivideByZeroWithResiliencePipelineHandlerAsync.ReceivedCommand = false;
 
         _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
-            new PolicyRegistry(), resiliencePipeline, new InMemorySchedulerFactory());
+            new PolicyRegistry(), resiliencePipeline, new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
     }
 
     [Fact]

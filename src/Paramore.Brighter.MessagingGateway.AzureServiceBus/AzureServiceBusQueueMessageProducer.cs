@@ -26,7 +26,6 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
@@ -36,10 +35,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
     /// </summary>
     public partial class AzureServiceBusQueueMessageProducer : AzureServiceBusMessageProducer
     {
-        protected override ILogger Logger => s_logger;
-        
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AzureServiceBusQueueMessageProducer>();
-        
+        protected override ILogger Logger => _logger;
+
+        private readonly ILogger _logger;
+
         private readonly IAdministrationClientWrapper _administrationClientWrapper;
 
         /// <summary>
@@ -49,13 +48,16 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="serviceBusSenderProvider">The provider to use when producing messages.</param>
         /// <param name="publication">Configuration of a producer</param>
         /// <param name="bulkSendBatchSize">When sending more than one message using the MessageProducer, the max amount to send in a single transmission.</param>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create the logger.</param>
         public AzureServiceBusQueueMessageProducer(
             IAdministrationClientWrapper administrationClientWrapper,
             IServiceBusSenderProvider serviceBusSenderProvider,
             AzureServiceBusPublication publication,
+            ILoggerFactory loggerFactory,
             int bulkSendBatchSize = 10
         ) : base(serviceBusSenderProvider, publication, bulkSendBatchSize)
         {
+            _logger = loggerFactory.CreateLogger<AzureServiceBusQueueMessageProducer>();
             _administrationClientWrapper = administrationClientWrapper;
         }
 
@@ -84,7 +86,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             {
                 //The connection to Azure Service bus may have failed so we re-establish the connection.
                 _administrationClientWrapper.Reset();
-                Log.FailingToCheckOrCreateQueue(s_logger, e);
+                Log.FailingToCheckOrCreateQueue(_logger, e);
                 throw;
             }
         }

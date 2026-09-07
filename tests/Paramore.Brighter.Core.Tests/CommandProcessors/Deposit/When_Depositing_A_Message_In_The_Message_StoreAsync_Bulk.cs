@@ -37,13 +37,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
 
             var timeProvider = new FakeTimeProvider();
 
-            InMemoryMessageProducer commandMessageProducer = new(_internalBus, new Publication 
+            InMemoryMessageProducer commandMessageProducer = new(_internalBus, Initializer.TestLoggerFactory, new Publication
             {
                 Topic =  new RoutingKey(_commandTopic),
                 RequestType = typeof(MyCommand)
             } );
 
-            InMemoryMessageProducer eventMessageProducer = new(_internalBus, new Publication
+            InMemoryMessageProducer eventMessageProducer = new(_internalBus, Initializer.TestLoggerFactory, new Publication
             {
                 Topic =  new RoutingKey(_eventTopic),
                 RequestType = typeof(MyEvent)
@@ -70,7 +70,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             {
                 if (type == typeof(MyCommandMessageMapperAsync))
                     return new MyCommandMessageMapperAsync();
-                else                              
+                else
                     return new MyEventMessageMapperAsync();
             }));
             messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
@@ -81,11 +81,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 {
                     { _commandTopic, commandMessageProducer },
                     { _eventTopic, eventMessageProducer }
-                }); 
-            
+                });
+
             var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
                 .AddBrighterDefault();
-            
+
             var tracer = new BrighterTracer(new FakeTimeProvider());
             _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
 
@@ -97,7 +97,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                _outbox
+                Initializer.TestLoggerFactory, _outbox
             );
 
             _commandProcessor = new CommandProcessor(
@@ -105,8 +105,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 new DefaultPolicy(),
                 resiliencePipelineRegistry,
                 bus,
-                new InMemorySchedulerFactory()
-            );
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+                loggerFactory: Initializer.TestLoggerFactory);
         }
 
 

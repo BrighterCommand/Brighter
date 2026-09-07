@@ -45,7 +45,7 @@ public class ValidationHostedServiceWarningLoggingTests
         var validator = SpyPipelineValidator.WithWarningsOnly(warning1, warning2);
         var options = Options.Create(new BrighterPipelineValidationOptions { ConsumerOwnsValidation = false });
         var logger = new SpyLogger<BrighterValidationHostedService>();
-        var provider = new ServiceCollection().BuildServiceProvider();
+        var provider = new ServiceCollection().AddLogging().BuildServiceProvider();
         var service = new BrighterValidationHostedService(options, validator, provider, logger);
 
         // Act
@@ -67,7 +67,7 @@ public class ValidationHostedServiceWarningLoggingTests
         var validator = SpyPipelineValidator.WithNoErrors();
         var options = Options.Create(new BrighterPipelineValidationOptions { ConsumerOwnsValidation = false });
         var logger = new SpyLogger<BrighterValidationHostedService>();
-        var provider = new ServiceCollection().BuildServiceProvider();
+        var provider = new ServiceCollection().AddLogging().BuildServiceProvider();
         var service = new BrighterValidationHostedService(options, validator, provider, logger);
 
         // Act

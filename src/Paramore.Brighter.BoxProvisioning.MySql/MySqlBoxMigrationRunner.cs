@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -27,7 +27,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.BoxProvisioning.MySql;
@@ -61,13 +60,14 @@ public class MySqlBoxMigrationRunner : SqlBoxMigrationRunner<MySqlConnection, My
         MySqlBoxDetectionHelper detectionHelper,
         IAmABoxMigrationCatalog catalog,
         IAmARelationalDatabaseConfiguration configuration,
+        ILoggerFactory loggerFactory,
         IMySqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null,
         TimeSpan? lockTimeout = null,
         IAmABrighterTracer? tracer = null,
         MigrationHistoryScope scope = MigrationHistoryScope.Global)
         : base(detectionHelper, catalog, configuration, lockTimeout ?? TimeSpan.FromSeconds(30),
-            logger ?? ApplicationLogging.CreateLogger<MySqlBoxMigrationRunner>(),
+            logger ?? loggerFactory.CreateLogger<MySqlBoxMigrationRunner>(),
             tracer, scope)
     {
         _advisoryLock = advisoryLock ?? new MySqlAdvisoryLock();
@@ -83,11 +83,12 @@ public class MySqlBoxMigrationRunner : SqlBoxMigrationRunner<MySqlConnection, My
         IAmABoxMigrationCatalog catalog,
         IAmARelationalDatabaseConfiguration configuration,
         TimeSpan lockTimeout,
+        ILoggerFactory loggerFactory,
         IMySqlAdvisoryLock? advisoryLock = null,
         ILogger? logger = null,
         IAmABrighterTracer? tracer = null,
         MigrationHistoryScope scope = MigrationHistoryScope.Global)
-        : this(new MySqlBoxDetectionHelper(), catalog, configuration, advisoryLock, logger, lockTimeout, tracer, scope)
+        : this(new MySqlBoxDetectionHelper(), catalog, configuration, loggerFactory, advisoryLock, logger, lockTimeout, tracer, scope)
     {
     }
 
@@ -205,7 +206,8 @@ CREATE TABLE IF NOT EXISTS `{MIGRATION_HISTORY_TABLE}` (
         for (var i = 0; i < migrations.Count; i++)
         {
             var migration = migrations[i];
-            if (migration.Version <= detected) continue;
+            if (migration.Version <= detected)
+                continue;
 
             await ExecuteUpScriptAsync(connection, migration, cancellationToken);
             await InsertHistoryRowAsync(
@@ -224,7 +226,8 @@ CREATE TABLE IF NOT EXISTS `{MIGRATION_HISTORY_TABLE}` (
 
         foreach (var migration in migrations)
         {
-            if (migration.Version <= maxVersion) continue;
+            if (migration.Version <= maxVersion)
+                continue;
 
             await ExecuteUpScriptAsync(connection, migration, cancellationToken);
             await InsertHistoryRowAsync(
@@ -284,7 +287,8 @@ VALUES (@Version, @SchemaName, @BoxTableName, @Description)";
     private string EnsureAllowUserVariables(string connectionString)
     {
         var builder = new MySqlConnectionStringBuilder(connectionString);
-        if (builder.AllowUserVariables) return builder.ConnectionString;
+        if (builder.AllowUserVariables)
+            return builder.ConnectionString;
 
         Logger.LogInformation(
             "MySQL box-migration runner: enabling AllowUserVariables=true on the migration connection (caller's connection string had it disabled). Required by the V2..V7 prepared-statement idempotency pattern per ADR 0057 §5a; the mutation is scoped to the runner's own MySqlConnection and does not affect the caller-supplied connection string instance.");

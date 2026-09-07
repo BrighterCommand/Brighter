@@ -73,7 +73,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
 
             var bus = new InternalBus();
             _outbox = new InMemoryOutbox(_timeProvider);
-            _producer = new InMemoryMessageProducer(bus, new Publication { Topic = _topic })
+            _producer = new InMemoryMessageProducer(bus, Initializer.TestLoggerFactory, new Publication { Topic = _topic })
             {
                 UseAsyncPublishConfirmation = true
                 // PublishFailurePredicate not set => every confirmation succeeds (ack)
@@ -96,7 +96,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
                 new FindPublicationByPublicationTopicOrRequestType(),
                 outbox: _outbox,
                 outboxCircuitBreaker: _circuitBreaker,
-                timeProvider: _timeProvider);
+                timeProvider: _timeProvider, loggerFactory: Initializer.TestLoggerFactory);
 
             _message = new Message(
                 new MessageHeader(new Id(Guid.NewGuid().ToString()), _topic, MessageType.MT_EVENT),

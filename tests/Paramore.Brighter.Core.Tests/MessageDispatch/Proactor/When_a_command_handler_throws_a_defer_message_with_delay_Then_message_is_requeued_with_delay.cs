@@ -48,7 +48,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             //Arrange
             var bus = new InternalBus();
             var timeProvider = new FakeTimeProvider();
-            var consumer = new InMemoryMessageConsumer(_routingKey, bus, timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000));
+            var consumer = new InMemoryMessageConsumer(_routingKey, bus, timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory);
             var spyChannel = new SpyChannelAsync(new ChannelName(ChannelName), _routingKey, consumer);
 
             var commandProcessor = new SpyRequeueWithDelayCommandProcessor(delayMilliseconds: 5000);
@@ -64,7 +64,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 messageMapperRegistry,
                 null,
                 new InMemoryRequestContextFactory(),
-                spyChannel)
+                spyChannel, loggerFactory: Initializer.TestLoggerFactory)
             {
                 Channel = spyChannel,
                 TimeOut = TimeSpan.FromMilliseconds(5000),
@@ -72,7 +72,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 RequeueDelay = TimeSpan.FromMilliseconds(100) // Subscription default — should NOT be used when DeferMessageAction has a delay
             };
 
-            var msg = new TransformPipelineBuilderAsync(messageMapperRegistry, null, InstrumentationOptions.All)
+            var msg = new TransformPipelineBuilderAsync(messageMapperRegistry, null, Initializer.TestLoggerFactory, InstrumentationOptions.All)
                 .BuildWrapPipeline<MyCommand>()
                 .WrapAsync(new MyCommand(), new RequestContext(), new Publication { Topic = _routingKey })
                 .Result;

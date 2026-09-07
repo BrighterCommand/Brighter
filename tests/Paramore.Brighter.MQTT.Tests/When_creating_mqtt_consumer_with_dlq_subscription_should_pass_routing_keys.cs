@@ -57,7 +57,7 @@ public class MqttMessageConsumerFactoryDlqTests : IDisposable
             ClientID = "BrighterTests-FactoryDlq"
         };
 
-        _factory = new MqttMessageConsumerFactory(configuration);
+        _factory = new MqttMessageConsumerFactory(configuration, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

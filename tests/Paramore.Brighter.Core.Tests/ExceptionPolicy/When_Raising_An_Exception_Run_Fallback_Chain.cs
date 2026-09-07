@@ -45,7 +45,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             registry.Register<MyCommand, MyFailsWithFallbackMultipleHandlers>();
             var policyRegistry = new PolicyRegistry();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddSingleton<MyFailsWithFallbackMultipleHandlers>();
             container.AddSingleton<FallbackPolicyHandler<MyCommand>>();
             container.AddSingleton<RequestLoggingHandler<MyCommand>>();
@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             
             MyFailsWithFallbackMultipleHandlers.ReceivedCommand = false;
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         }
 
         [Fact]

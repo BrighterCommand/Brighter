@@ -64,7 +64,7 @@ public class KafkaMessageConsumerUnknownReasonAsyncTests : IAsyncDisposable
                 Name = "Kafka Producer Unknown Reason Async Test",
                 BootStrapServers = new[] { "localhost:9092" }
             },
-            publication);
+            publication, loggerFactory: Initializer.TestLoggerFactory);
 
         _producer.Init();
     }
@@ -139,7 +139,7 @@ public class KafkaMessageConsumerUnknownReasonAsyncTests : IAsyncDisposable
                 {
                     Name = "Kafka Consumer Unknown Reason Async Test",
                     BootStrapServers = new[] { "localhost:9092" }
-                })
+                }, loggerFactory: Initializer.TestLoggerFactory)
             .CreateAsync(new KafkaSubscription<MyCommand>
             (
                 subscriptionName: new SubscriptionName("Paramore.Brighter.Tests"),
@@ -162,7 +162,7 @@ public class KafkaMessageConsumerUnknownReasonAsyncTests : IAsyncDisposable
                 {
                     Name = "Kafka DLQ Consumer Async Test",
                     BootStrapServers = new[] { "localhost:9092" }
-                })
+                }, loggerFactory: Initializer.TestLoggerFactory)
             .CreateAsync(new KafkaSubscription<MyCommand>
             (
                 subscriptionName: new SubscriptionName("Paramore.Brighter.DLQ.Tests"),

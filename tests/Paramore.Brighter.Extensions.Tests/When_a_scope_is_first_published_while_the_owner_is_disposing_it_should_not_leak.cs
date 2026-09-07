@@ -13,7 +13,7 @@ public class ScopedFirstResolutionVsDisposeRaceTests
     public void When_a_scope_is_first_published_while_the_owner_is_disposing_it_should_not_leak()
     {
         // Arrange
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddScoped<NonDisposableMapper>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions { MapperLifetime = ServiceLifetime.Scoped });
         var rootProvider = collection.BuildServiceProvider();

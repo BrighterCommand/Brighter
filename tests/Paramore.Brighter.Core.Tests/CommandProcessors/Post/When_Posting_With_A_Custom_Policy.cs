@@ -33,7 +33,7 @@ public class PostCommandWithCustomPolicyTests
         var timeProvider = new FakeTimeProvider();
         var tracer = new BrighterTracer(timeProvider);
         _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
-        InMemoryMessageProducer messageProducer = new(_internalBus, new Publication { Topic = _routingKey, RequestType = typeof(MyCommand) });
+        InMemoryMessageProducer messageProducer = new(_internalBus, Initializer.TestLoggerFactory, new Publication { Topic = _routingKey, RequestType = typeof(MyCommand) });
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, _routingKey, MessageType.MT_COMMAND),
@@ -66,8 +66,8 @@ public class PostCommandWithCustomPolicyTests
             tracer: tracer,
             publicationFinder: new FindPublicationByPublicationTopicOrRequestType(),
             outboxCircuitBreaker: new InMemoryOutboxCircuitBreaker(),
-            outbox: _outbox
-        );
+            outbox: _outbox,
+            loggerFactory: Initializer.TestLoggerFactory);
 
         _commandProcessor = CommandProcessorBuilder.StartNew()
             .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactorySync()))
@@ -75,7 +75,8 @@ public class PostCommandWithCustomPolicyTests
             .ExternalBus(ExternalBusType.FireAndForget, externalBus)
             .ConfigureInstrumentation(new BrighterTracer(TimeProvider.System), InstrumentationOptions.All)
             .RequestContextFactory(new InMemoryRequestContextFactory())
-            .RequestSchedulerFactory(new InMemorySchedulerFactory())
+            .RequestSchedulerFactory(new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory))
+            .ConfigureLogging(Initializer.TestLoggerFactory)
             .Build();
     }
 

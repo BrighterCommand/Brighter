@@ -23,7 +23,7 @@ public class ServiceBusMessageStoreArchiverTestsAsync
         _outbox = new InMemoryOutbox(_timeProvider){Tracer = tracer};
         _archiveProvider = new InMemoryArchiveProvider();
 
-        _archiver = new OutboxArchiver<Message, CommittableTransaction>(_outbox, _archiveProvider);
+        _archiver = new OutboxArchiver<Message, CommittableTransaction>(_outbox, _archiveProvider, loggerFactory: Initializer.TestLoggerFactory);
 
     }
 

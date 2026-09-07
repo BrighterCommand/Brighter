@@ -36,8 +36,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             var timeProvider = new FakeTimeProvider();
             var cloudEventsType = new CloudEventsType("go.paramore.brighter.test");
             
-            InMemoryMessageProducer messageProducer = new(_internalBus, 
-                new Publication()
+            InMemoryMessageProducer messageProducer = new(_internalBus,
+            Initializer.TestLoggerFactory, new Publication()
                 {
                     DataSchema = new Uri("https://goparamore.io/schemas/MyCommand.json"),
                     Source = new Uri("https://goparamore.io"),
@@ -89,7 +89,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                _outbox
+                Initializer.TestLoggerFactory, _outbox
             );
 
             _commandProcessor = new CommandProcessor(
@@ -97,8 +97,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new DefaultPolicy(),
                 resiliencePipelineRegistry,
                 bus,
-                new InMemorySchedulerFactory()
-            );
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+                loggerFactory: Initializer.TestLoggerFactory);
         }
 
         [Fact]

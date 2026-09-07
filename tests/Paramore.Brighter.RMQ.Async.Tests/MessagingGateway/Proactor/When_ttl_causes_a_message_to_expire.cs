@@ -56,7 +56,7 @@ public class RmqMessageProducerTTLTests : IAsyncDisposable, IDisposable
             Exchange = new Exchange("paramore.brighter.exchange"),
         };
             
-        _messageProducer = new RmqMessageProducer(rmqConnection);
+        _messageProducer = new RmqMessageProducer(rmqConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         _messageConsumer = new RmqMessageConsumer(
             connection: rmqConnection, 
@@ -65,8 +65,8 @@ public class RmqMessageProducerTTLTests : IAsyncDisposable, IDisposable
             isDurable: false, 
             highAvailability: false,
             ttl: TimeSpan.FromMilliseconds(10000),
-            makeChannels:OnMissingChannel.Create
-        );
+            makeChannels:OnMissingChannel.Create,
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         //create the infrastructure
         _messageConsumer.ReceiveAsync(TimeSpan.Zero).GetAwaiter().GetResult(); 

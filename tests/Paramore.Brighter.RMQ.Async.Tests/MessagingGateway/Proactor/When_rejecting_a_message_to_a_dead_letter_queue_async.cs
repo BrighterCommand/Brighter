@@ -62,7 +62,7 @@ public class RmqMessageProducerDLQTestsAsync : IDisposable, IAsyncDisposable
             DeadLetterExchange = new Exchange("paramore.brighter.exchange.dlq")
         };
             
-        _messageProducer = new RmqMessageProducer(rmqConnection);
+        _messageProducer = new RmqMessageProducer(rmqConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         _messageConsumer = new RmqMessageConsumer(
             connection: rmqConnection, 
@@ -72,16 +72,16 @@ public class RmqMessageProducerDLQTestsAsync : IDisposable, IAsyncDisposable
             highAvailability: false,
             deadLetterQueueName: deadLetterQueueName,
             deadLetterRoutingKey: deadLetterRoutingKey,
-            makeChannels:OnMissingChannel.Create
-        );
+            makeChannels:OnMissingChannel.Create,
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         _deadLetterConsumer = new RmqMessageConsumer(
             connection: rmqConnection,
             queueName: deadLetterQueueName,
             routingKey: deadLetterRoutingKey,
             isDurable:false,
-            makeChannels:OnMissingChannel.Assume
-        );
+            makeChannels:OnMissingChannel.Assume,
+            loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
     }
 
     [Fact]

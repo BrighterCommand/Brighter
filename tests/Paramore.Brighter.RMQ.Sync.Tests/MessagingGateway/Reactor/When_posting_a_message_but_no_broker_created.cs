@@ -24,7 +24,7 @@ public class RmqBrokerNotPreCreatedTests : IDisposable
             Exchange = new Exchange(Guid.NewGuid().ToString())
         };
 
-        _messageProducer = new RmqMessageProducer(rmqConnection, new RmqPublication{MakeChannels = OnMissingChannel.Validate});
+        _messageProducer = new RmqMessageProducer(rmqConnection, new RmqPublication{MakeChannels = OnMissingChannel.Validate}, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
     }
         

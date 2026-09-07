@@ -60,7 +60,7 @@ var host = new HostBuilder()
         };
 
         //create the gateway
-        var serviceURL = "http://localhost:4566/"; 
+        var serviceURL = "http://localhost:4566/";
         var region = RegionEndpoint.USEast1;
         var awsConnection = new AWSMessagingGatewayConnection(new BasicAWSCredentials("test", "test"), region,
             cfg => { cfg.ServiceURL = serviceURL; });
@@ -68,7 +68,7 @@ var host = new HostBuilder()
         services.AddConsumers(options =>
             {
                 options.Subscriptions = subscriptions;
-                options.DefaultChannelFactory = new ChannelFactory(awsConnection);
+                options.DefaultChannelFactory = new ChannelFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             })
             .AutoFromAssemblies();
 

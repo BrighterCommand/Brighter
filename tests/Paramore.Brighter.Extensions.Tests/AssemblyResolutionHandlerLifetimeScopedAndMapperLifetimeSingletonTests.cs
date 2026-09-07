@@ -20,7 +20,7 @@ namespace Tests
 
         public AssemblyResolutionHandlerLifetimeScopedAndMapperLifetimeSingletonTests()
         {
-            _services = new ServiceCollection();
+            _services = new ServiceCollection().AddLogging();
 
             _services.AddConsumers()
                 .AutoFromAssemblies();

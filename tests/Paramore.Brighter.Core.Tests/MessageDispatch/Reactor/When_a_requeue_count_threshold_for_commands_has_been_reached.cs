@@ -24,24 +24,24 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
         public MessagePumpCommandRequeueCountThresholdTests()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
-            _channel = new Channel(new(Channel) ,_routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)));
+            _channel = new Channel(new(Channel) ,_routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory));
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()),
                 null);
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
              _messagePump = new ServiceActivator.Reactor(_commandProcessor, (message) => typeof(MyCommand),
-                     messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel) 
+                     messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel, loggerFactory: Initializer.TestLoggerFactory)
                 { Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3 };
 
-             var message1 = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), 
+             var message1 = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize((MyCommand)new(), JsonSerialisationOptions.Options))
             );
-            var message2 = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), 
+            var message2 = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize((MyCommand)new(), JsonSerialisationOptions.Options))
             );
             _bus.Enqueue(message1);
             _bus.Enqueue(message2);
-            
+
         }
 
         [Fact]
@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
             await Task.Delay(1000);
-            
+
             _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
 
             var quitMessage = MessageFactory.CreateQuitMessage(new RoutingKey("MyTopic"));
@@ -61,7 +61,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             Assert.Equal(6, _commandProcessor.SendCount);
 
             Assert.Empty(_bus.Stream(_routingKey));
-            
+
             //TODO: How can we observe that the channel has been closed? Observability?
         }
     }

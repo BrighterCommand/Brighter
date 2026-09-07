@@ -94,7 +94,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation
             registry.RegisterAsync<Reuse.ReuseCommand, Reuse.ReuseMapper>();
 
             var transformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new Reuse.ReuseTransformAsync());
-            var builder = new TransformPipelineBuilderAsync(registry, transformerFactory, InstrumentationOptions.All);
+            var builder = new TransformPipelineBuilderAsync(registry, transformerFactory, Initializer.TestLoggerFactory, InstrumentationOptions.All);
 
             // Act — build the same mapper's wrap and unwrap pipelines twice (single-threaded, so the
             // GetOrAdd factory has already run and the retained entry is served thereafter)
@@ -130,7 +130,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation
                     ? new A.FirstTransformAsync()
                     : (IAmAMessageTransformAsync)new B.SecondTransformAsync());
 
-            return new TransformPipelineBuilderAsync(registry, transformerFactory, InstrumentationOptions.All);
+            return new TransformPipelineBuilderAsync(registry, transformerFactory, Initializer.TestLoggerFactory, InstrumentationOptions.All);
         }
 
         private static TransformPipelineTracer Trace<TRequest>(WrapPipelineAsync<TRequest> pipeline)

@@ -42,7 +42,7 @@ public class When_building_dispatcher_with_non_scheduler_channel_factory_should_
         var bus = new InternalBus();
         var channelFactory = new PlainChannelFactory(bus);
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services
             .AddConsumers(options =>
             {
@@ -62,7 +62,7 @@ public class When_building_dispatcher_with_non_scheduler_channel_factory_should_
                 configure.ProducerRegistry = new ProducerRegistry(
                     new Dictionary<ProducerKey, IAmAMessageProducer>
                     {
-                        { new ProducerKey("in-memory"), new InMemoryMessageProducer(bus, new Publication { Topic = "test" }) }
+                        { new ProducerKey("in-memory"), new InMemoryMessageProducer(bus, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, new Publication { Topic = "test" }) }
                     });
             })
             .AutoFromAssemblies();
@@ -95,7 +95,7 @@ public class When_building_dispatcher_with_non_scheduler_channel_factory_should_
             return new Channel(
                 subscription.ChannelName,
                 subscription.RoutingKey,
-                new InMemoryMessageConsumer(subscription.RoutingKey, _bus, TimeProvider.System));
+                new InMemoryMessageConsumer(subscription.RoutingKey, _bus, TimeProvider.System, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         }
 
         public IAmAChannelAsync CreateAsyncChannel(Subscription subscription)
@@ -103,7 +103,7 @@ public class When_building_dispatcher_with_non_scheduler_channel_factory_should_
             return new ChannelAsync(
                 subscription.ChannelName,
                 subscription.RoutingKey,
-                new InMemoryMessageConsumer(subscription.RoutingKey, _bus, TimeProvider.System));
+                new InMemoryMessageConsumer(subscription.RoutingKey, _bus, TimeProvider.System, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
         }
 
         public Task<IAmAChannelAsync> CreateAsyncChannelAsync(Subscription subscription,

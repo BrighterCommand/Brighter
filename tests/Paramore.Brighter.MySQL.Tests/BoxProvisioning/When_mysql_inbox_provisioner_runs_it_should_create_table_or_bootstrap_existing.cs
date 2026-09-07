@@ -26,13 +26,13 @@ public class InboxProvisionerTests : IAsyncLifetime
         var config = new RelationalDatabaseConfiguration(
             _connectionString,
             inboxTableName: _freshTableName);
-        var runner = new MySqlBoxMigrationRunner(new MySqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
+        var runner = new MySqlBoxMigrationRunner(new MySqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var provisioner = new MySqlInboxProvisioner(
             new MySqlBoxDetectionHelper(),
             new MySqlInboxMigrationCatalog(),
             new MySqlPayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         // Act
         await provisioner.ProvisionAsync();
@@ -74,13 +74,13 @@ WHERE `BoxTableName` = @BoxTableName AND `MigrationVersion` = @ExpectedVersion";
         var config = new RelationalDatabaseConfiguration(
             _connectionString,
             inboxTableName: _existingTableName);
-        var runner = new MySqlBoxMigrationRunner(new MySqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
+        var runner = new MySqlBoxMigrationRunner(new MySqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         var provisioner = new MySqlInboxProvisioner(
             new MySqlBoxDetectionHelper(),
             new MySqlInboxMigrationCatalog(),
             new MySqlPayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         // Act
         await provisioner.ProvisionAsync();

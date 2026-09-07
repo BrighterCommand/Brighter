@@ -1,4 +1,4 @@
-// If you run this receiver with the other receiver, and send you'll see different behaviours.
+﻿// If you run this receiver with the other receiver, and send you'll see different behaviours.
 // This scoped receiver will refresh the scoped dependency for each pipeline (Event/Command dispatch)
 
 using System;
@@ -44,7 +44,7 @@ var subscriptions = new Subscription[]
 
 //TODO: add your ASB qualified name here
 var asbClientProvider = new ServiceBusConnectionStringClientProvider("Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;");
-var asbConsumerFactory = new AzureServiceBusConsumerFactory(asbClientProvider);
+var asbConsumerFactory = new AzureServiceBusConsumerFactory(asbClientProvider, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 builder.Services
     .AddConsumers(options =>
     {

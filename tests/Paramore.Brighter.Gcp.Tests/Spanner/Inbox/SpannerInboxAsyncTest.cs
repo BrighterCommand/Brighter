@@ -15,7 +15,7 @@ public class SpannerInboxAsyncTest : RelationalDatabaseInboxAsyncTests
 
     protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration)
     {
-        return new SpannerInboxAsync(configuration);
+        return new SpannerInboxAsync(configuration, logger: global::Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger<global::Paramore.Brighter.Inbox.Spanner.SpannerInboxAsync>(global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance));
     }
 
     protected override async Task CreateInboxTableAsync(RelationalDatabaseConfiguration configuration)

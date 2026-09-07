@@ -50,7 +50,7 @@ public class When_redis_consumer_requeues_with_zero_delay_should_use_direct_list
         var queueName = new ChannelName($"Requeue-ZeroDelay-Queue-{Guid.NewGuid()}");
 
         _scheduler = new SpySchedulerSync();
-        _consumer = new RedisMessageConsumer(configuration, queueName, topic, _scheduler);
+        _consumer = new RedisMessageConsumer(configuration, queueName, topic, global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, _scheduler);
 
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_COMMAND),

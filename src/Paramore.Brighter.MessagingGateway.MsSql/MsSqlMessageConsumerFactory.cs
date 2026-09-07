@@ -1,13 +1,13 @@
 ﻿using System;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.MsSql;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
 {
     public partial class MsSqlMessageConsumerFactory : IAmAMessageConsumerFactory
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlMessageConsumerFactory>();
+        private readonly ILogger _logger;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly RelationalDatabaseConfiguration _msSqlConfiguration;
         private IAmAMessageScheduler? _scheduler;
 
@@ -26,10 +26,13 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// </summary>
         /// <param name="msSqlConfiguration">The configuration for connecting to the MsSql database</param>
         /// <param name="scheduler">The optional message scheduler for delayed requeue support</param>
-        public MsSqlMessageConsumerFactory(RelationalDatabaseConfiguration msSqlConfiguration, IAmAMessageScheduler? scheduler = null)
+        /// <param name="loggerFactory">The optional <see cref="ILoggerFactory"/> used to create loggers</param>
+        public MsSqlMessageConsumerFactory(RelationalDatabaseConfiguration msSqlConfiguration, ILoggerFactory loggerFactory, IAmAMessageScheduler? scheduler = null)
         {
             _msSqlConfiguration = msSqlConfiguration ?? throw new ArgumentNullException(nameof(msSqlConfiguration));
             _scheduler = scheduler;
+            _loggerFactory = loggerFactory;
+            _logger = loggerFactory.CreateLogger<MsSqlMessageConsumerFactory>();
         }
 
         /// <summary>
@@ -37,26 +40,28 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// </summary>
         /// <param name="subscription">The queue to connect to</param>
         /// <returns>IAmAMessageConsumerSync</returns>
-         public IAmAMessageConsumerSync Create(Subscription subscription)
+        public IAmAMessageConsumerSync Create(Subscription subscription)
         {
-            if (subscription.ChannelName is null) throw new ConfigurationException(nameof(subscription.ChannelName));
+            if (subscription.ChannelName is null)
+                throw new ConfigurationException(nameof(subscription.ChannelName));
 
             var deadLetterRoutingKey = (subscription as IUseBrighterDeadLetterSupport)?.DeadLetterRoutingKey;
             var invalidMessageRoutingKey = (subscription as IUseBrighterInvalidMessageSupport)?.InvalidMessageRoutingKey;
 
-            Log.MsSqlMessageConsumerFactoryCreate(s_logger, subscription.ChannelName);
-            return new MsSqlMessageConsumer(_msSqlConfiguration, subscription.ChannelName!, _scheduler, deadLetterRoutingKey, invalidMessageRoutingKey);
+            Log.MsSqlMessageConsumerFactoryCreate(_logger, subscription.ChannelName);
+            return new MsSqlMessageConsumer(_msSqlConfiguration, subscription.ChannelName!, _loggerFactory, _scheduler, deadLetterRoutingKey, invalidMessageRoutingKey);
         }
 
         public IAmAMessageConsumerAsync CreateAsync(Subscription subscription)
         {
-            if (subscription.ChannelName is null) throw new ConfigurationException(nameof(subscription.ChannelName));
+            if (subscription.ChannelName is null)
+                throw new ConfigurationException(nameof(subscription.ChannelName));
 
             var deadLetterRoutingKey = (subscription as IUseBrighterDeadLetterSupport)?.DeadLetterRoutingKey;
             var invalidMessageRoutingKey = (subscription as IUseBrighterInvalidMessageSupport)?.InvalidMessageRoutingKey;
 
-            Log.MsSqlMessageConsumerFactoryCreateAsync(s_logger, subscription.ChannelName);
-            return new MsSqlMessageConsumer(_msSqlConfiguration, subscription.ChannelName!, _scheduler, deadLetterRoutingKey, invalidMessageRoutingKey);
+            Log.MsSqlMessageConsumerFactoryCreateAsync(_logger, subscription.ChannelName);
+            return new MsSqlMessageConsumer(_msSqlConfiguration, subscription.ChannelName!, _loggerFactory, _scheduler, deadLetterRoutingKey, invalidMessageRoutingKey);
         }
 
         private static partial class Log

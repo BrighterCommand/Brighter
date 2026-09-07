@@ -25,7 +25,7 @@ public class SnsSchedulingMessageViaFireSchedulerTest : IDisposable
     {
         var awsConnection = GatewayFactory.CreateFactory();
 
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         //we need the channel to create the queues and notifications
         _topicName = $"Producer-Fire-Scheduler-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var channelName = $"Producer-Fire-Scheduler-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
@@ -42,9 +42,9 @@ public class SnsSchedulingMessageViaFireSchedulerTest : IDisposable
 
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
         //just for the tests, so create a new consumer from the properties
-        _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), BufferSize);
+        _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, BufferSize);
         _messageProducer =
-            new SnsMessageProducer(awsConnection, new SnsPublication { MakeChannels = OnMissingChannel.Create, TopicAttributes = new SnsAttributes(tags: [new Tag { Key = "Environment", Value = "Test" }]) });
+            new SnsMessageProducer(awsConnection, new SnsPublication { MakeChannels = OnMissingChannel.Create, TopicAttributes = new SnsAttributes(tags: [new Tag { Key = "Environment", Value = "Test" }]) }, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         // Enforce topic to be created
         _messageProducer.Send(new Message(
@@ -56,7 +56,9 @@ public class SnsSchedulingMessageViaFireSchedulerTest : IDisposable
 
         _factory = new AwsSchedulerFactory(awsConnection, "brighter-scheduler")
         {
-            UseMessageTopicAsTarget = false, MakeRole = OnMissingRole.Create, SchedulerTopicOrQueue = routingKey
+            UseMessageTopicAsTarget = false,
+            MakeRole = OnMissingRole.Create,
+            SchedulerTopicOrQueue = routingKey
         };
     }
 

@@ -30,7 +30,6 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Tasks;
 
@@ -42,7 +41,7 @@ namespace Paramore.Brighter
     /// </summary>
     public sealed partial class InMemoryMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync, ISupportPublishConfirmation, ISupportPublishConfirmationAsync
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<InMemoryMessageProducer>();
+        private readonly ILogger _logger;
         private readonly IAmABus _bus;
         private readonly InstrumentationOptions _instrumentationOptions;
         private readonly System.Threading.Channels.Channel<WorkItem> _channel =
@@ -60,12 +59,14 @@ namespace Paramore.Brighter
         /// then inspect the messages that have been sent.
         /// </summary>
         /// <param name="bus">An instance of <see cref="IAmABus"/> typically we use an <see cref="InternalBus"/></param>
+        /// <param name="loggerFactory">The factory used to create loggers.</param>
         /// <param name="publication">The <see cref="Publication"/> that we want to sent messages to via the publication; if null defaults to a Publication with a Topic of "Internal"</param>
         /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
-        public InMemoryMessageProducer(IAmABus bus, Publication? publication = null,
+        public InMemoryMessageProducer(IAmABus bus, ILoggerFactory loggerFactory, Publication? publication = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
             _bus = bus;
+            _logger = loggerFactory.CreateLogger<InMemoryMessageProducer>();
             _instrumentationOptions = instrumentationOptions;
             Publication = publication ?? new Publication { Topic = new RoutingKey("Internal") };
         }
@@ -73,7 +74,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// The publication that describes what the Producer is for
         /// </summary>
-        public Publication Publication { get; set; }  
+        public Publication Publication { get; set; }
 
         /// <summary>
         /// Used for OTel tracing. We use property injection to set this, so that we can use the same tracer across all
@@ -291,7 +292,7 @@ namespace Paramore.Brighter
                 }
                 catch (Exception ex)
                 {
-                    Log.ConfirmationCallbackFault(s_logger, result.MessageId.Value, ex);
+                    Log.ConfirmationCallbackFault(_logger, result.MessageId.Value, ex);
                 }
             }));
 
@@ -306,7 +307,7 @@ namespace Paramore.Brighter
             }
             catch (Exception ex)
             {
-                Log.ConfirmationCallbackFault(s_logger, result.MessageId.Value, ex);
+                Log.ConfirmationCallbackFault(_logger, result.MessageId.Value, ex);
             }
         }
 
@@ -334,11 +335,11 @@ namespace Paramore.Brighter
                 scheduler.Schedule(message, delay.Value);
                 return;
             }
-            
-            throw new ConfigurationException($"Cannot requeue {message.Id} with delay; no scheduler is configured. Configure a scheduler via MessageSchedulerFactory in IAmProducersConfiguration."); 
- 
+
+            throw new ConfigurationException($"Cannot requeue {message.Id} with delay; no scheduler is configured. Configure a scheduler via MessageSchedulerFactory in IAmProducersConfiguration.");
+
         }
-  
+
         /// <summary>
         /// Send a message to a broker; in this case an <see cref="InternalBus"/> with a delay.
         /// When delay is zero or null, the message is sent immediately.

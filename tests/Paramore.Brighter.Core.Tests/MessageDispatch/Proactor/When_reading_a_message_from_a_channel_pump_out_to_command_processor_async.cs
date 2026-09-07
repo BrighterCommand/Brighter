@@ -24,28 +24,28 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
         {
             _commandProcessor = new SpyCommandProcessor();
             ChannelAsync channel = new(
-                new(Channel), _routingKey, 
-                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000))
+                new(Channel), _routingKey,
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory)
             );
             var messagerMapperRegistry = new MessageMapperRegistry(
                 null,
                 new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
             messagerMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
-            
+
             _messagePump = new ServiceActivator.Proactor(_commandProcessor, (message) => typeof(MyEvent),
-                    messagerMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), channel) 
+                    messagerMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), channel, loggerFactory: Initializer.TestLoggerFactory)
                 { Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000) };
 
             _event = new MyEvent();
 
             var message = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
                 new MessageBody(JsonSerializer.Serialize(_event, JsonSerialisationOptions.Options))
             );
             channel.Enqueue(message);
             var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);
             channel.Enqueue(quitMessage);
-            
+
         }
 
         [Fact]

@@ -79,8 +79,8 @@ namespace GreetingsSender
                                 Type = SqsType.Fifo
                             }
                         }
-                    ]
-                ).Create();
+                    ],
+                    loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance).Create();
 
                 serviceCollection
                     .AddBrighter()
