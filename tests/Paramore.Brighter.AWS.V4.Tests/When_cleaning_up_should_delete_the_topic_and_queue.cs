@@ -69,6 +69,9 @@ public class MessageGatewayProviderCleanUpTests : IAsyncLifetime
         //assert
         try
         {
+            // The first assertion only proves CleanUpAsync rethrows what the channel threw — the
+            // exception comes from PurgeFailingChannelAsync, not from SQS. The second is the one
+            // that carries the requirement: the resources went anyway.
             Assert.IsType<PurgeQueueInProgressException>(exception);
             await AssertTopicAndQueueDeletedAsync();
         }
@@ -102,6 +105,19 @@ public class MessageGatewayProviderCleanUpTests : IAsyncLifetime
             Resource = _routingKey.Value
         }.ToString();
 
+        // What the assertions look for is absence, and absence holds just as well if nothing was
+        // ever created. Prove arrange worked before act can be credited with it: a producer that
+        // stopped creating its topic eagerly, a wrongly composed ARN, or a region that drifted
+        // would all otherwise turn this from the regression test for the reap into a test that
+        // passes whatever the reaper does.
+        using var sqsClient = new AWSClientFactory(_connection).CreateSqsClient();
+        using var snsClient = new AWSClientFactory(_connection).CreateSnsClient();
+
+        await AssertEventuallySucceedsAsync(
+            $"queue {_channelName.Value}", () => sqsClient.GetQueueUrlAsync(_channelName.Value));
+        await AssertEventuallySucceedsAsync(
+            $"topic {_topicArn}", () => snsClient.GetTopicAttributesAsync(_topicArn));
+
         return (producer, channel);
     }
 
@@ -115,6 +131,34 @@ public class MessageGatewayProviderCleanUpTests : IAsyncLifetime
 
         await AssertEventuallyThrowsAsync<NotFoundException>(
             () => snsClient.GetTopicAttributesAsync(_topicArn));
+    }
+
+    /// <summary>
+    /// Creation is eventually consistent too, so the arrange check polls on the same principle as
+    /// the assertions — on a much shorter deadline, because unlike a deletion this is expected to
+    /// be true almost at once.
+    /// </summary>
+    private static async Task AssertEventuallySucceedsAsync(string what, Func<Task> action)
+    {
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(30);
+
+        while (true)
+        {
+            var exception = await Catch.ExceptionAsync(action);
+            if (exception is null)
+            {
+                return;
+            }
+
+            if (DateTimeOffset.UtcNow > deadline)
+            {
+                Assert.Fail(
+                    $"Arrange did not create the {what}: {exception.GetType().Name}: {exception.Message}");
+                return;
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds(2));
+        }
     }
 
     /// <summary>
