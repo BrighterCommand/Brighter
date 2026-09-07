@@ -15,12 +15,21 @@ public class SnsStandardMessageGatewayProvider
       SnsStandard.Reactor.IAmAMessageGatewayReactorProvider
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
+    private readonly AwsTestResourceReaper _reaper;
     private SnsHarnessMessageScheduler? _scheduler;
 
     public SnsStandardMessageGatewayProvider()
     {
         _awsConnection = GatewayFactory.CreateFactory();
+        _reaper = new AwsTestResourceReaper(_awsConnection);
     }
+
+    /// <summary>
+    /// The reaper this provider tracks its names with, so that a test can assert every name the
+    /// provider hands out is registered for deletion. Tracking is hand-written in each provider,
+    /// and a name added without a Track call leaks silently.
+    /// </summary>
+    internal AwsTestResourceReaper Reaper => _reaper;
 
     // SNS has no native delayed publish; the producer delegates a requested delay to this seam,
     // which honours it by wall-clock and re-publishes to the SNS topic once the delay elapses (FR-9).
@@ -34,12 +43,12 @@ public class SnsStandardMessageGatewayProvider
 
     public RoutingKey GetOrCreateRoutingKey([CallerMemberName] string? testName = null)
     {
-        return new RoutingKey($"sns-std-{Uuid.New():N}");
+        return new RoutingKey(_reaper.TrackTopic($"sns-std-{Uuid.New():N}"));
     }
 
     public ChannelName GetOrCreateChannelName([CallerMemberName] string? testName = null)
     {
-        return new ChannelName($"sns-std-ch-{Uuid.New():N}");
+        return new ChannelName(_reaper.TrackQueue($"sns-std-ch-{Uuid.New():N}"));
     }
 
     public SnsPublication CreatePublication(RoutingKey routingKey, OnMissingChannel makeChannels = OnMissingChannel.Create)
@@ -65,9 +74,22 @@ public class SnsStandardMessageGatewayProvider
         deadLetterRoutingKey = ToValidSqsName(deadLetterRoutingKey);
         invalidMessageRoutingKey = ToValidSqsName(invalidMessageRoutingKey);
 
+        // The invalid-message queue is created lazily, by the producer the consumer builds on the
+        // first rejection (SqsMessageConsumer.CreateInvalidMessageProducer), so nothing else in
+        // this fixture ever holds its name. The reaper predates the invalid channel and cannot
+        // infer it, so register it here or it leaks exactly as the DLQ used to.
+        if (invalidMessageRoutingKey != null)
+        {
+            _reaper.TrackQueue(invalidMessageRoutingKey.Value);
+        }
+
         if (deadLetterRoutingKey != null)
         {
-            var deadLetterChannelName = new ChannelName(deadLetterRoutingKey.Value);
+            // Named from the routing key the harness was handed rather than derived from the
+            // channel name: the DLQ read hooks find the queue through
+            // subscription.DeadLetterRoutingKey, so the two have to be the same name. Tracked
+            // so that teardown reaps it.
+            var deadLetterChannelName = new ChannelName(_reaper.TrackQueue(deadLetterRoutingKey.Value));
             return new SqsSubscription<MyCommand>(
                 subscriptionName: new SubscriptionName(channelName),
                 channelName: channelName,
@@ -159,14 +181,25 @@ public class SnsStandardMessageGatewayProvider
         IAmAChannelSync? channel,
         IEnumerable<Message> messages)
     {
-        if (channel != null)
+        try
         {
-            channel.Purge();
-            channel.Dispose();
-        }
+            if (channel != null)
+            {
+                channel.Purge();
+                channel.Dispose();
+            }
 
-        producer?.Dispose();
-        _scheduler?.Dispose();
+            producer?.Dispose();
+        }
+        finally
+        {
+            // Purge and Dispose reach AWS and can fail — PurgeQueue alone is throttled to one
+            // call per queue a minute — and a teardown that throws before it reaps is how the
+            // topics and queues leaked in the first place. The scheduler holds a wall-clock
+            // timer, so it goes on the same path for the same reason.
+            _scheduler?.Dispose();
+            _reaper.Reap();
+        }
     }
 
     public async Task CleanUpAsync(
@@ -174,18 +207,26 @@ public class SnsStandardMessageGatewayProvider
         IAmAChannelAsync? channel,
         IEnumerable<Message> messages)
     {
-        if (channel != null)
+        try
         {
-            await channel.PurgeAsync();
-            channel.Dispose();
-        }
+            if (channel != null)
+            {
+                await channel.PurgeAsync();
+                channel.Dispose();
+            }
 
-        if (producer != null)
+            if (producer != null)
+            {
+                await producer.DisposeAsync();
+            }
+        }
+        finally
         {
-            await producer.DisposeAsync();
+            // See CleanUp: the reap, and the scheduler's timer, have to survive a teardown that
+            // throws.
+            _scheduler?.Dispose();
+            await _reaper.ReapAsync();
         }
-
-        _scheduler?.Dispose();
     }
 
     public IAmAChannelSync CreateChannel(SqsSubscription subscription)

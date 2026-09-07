@@ -16,17 +16,31 @@ public class SqsFifoMessageGatewayProvider
       SqsFifo.Reactor.IAmAMessageGatewayReactorProvider
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
+    private readonly AwsTestResourceReaper _reaper;
 
     public SqsFifoMessageGatewayProvider()
     {
         _awsConnection = GatewayFactory.CreateFactory();
+        _reaper = new AwsTestResourceReaper(_awsConnection);
     }
+
+    /// <summary>
+    /// The reaper this provider tracks its names with, so that a test can assert every name the
+    /// provider hands out is registered for deletion. Tracking is hand-written in each provider,
+    /// and a name added without a Track call leaks silently.
+    /// </summary>
+    internal AwsTestResourceReaper Reaper => _reaper;
 
     public RoutingKey GetOrCreateRoutingKey([CallerMemberName] string? testName = null)
     {
-        return new RoutingKey($"sqs-fifo-{Uuid.New():N}.fifo");
+        return new RoutingKey(_reaper.TrackQueue($"sqs-fifo-{Uuid.New():N}.fifo"));
     }
 
+    /// <remarks>
+    /// Not tracked for reaping: CreateSubscription replaces this name with the publication's
+    /// queue, so no queue by this name is ever created. The queue that is created is the one
+    /// <see cref="GetOrCreateRoutingKey"/> tracked.
+    /// </remarks>
     public ChannelName GetOrCreateChannelName([CallerMemberName] string? testName = null)
     {
         return new ChannelName($"sqs-fifo-ch-{Uuid.New():N}.fifo");
@@ -67,12 +81,25 @@ public class SqsFifoMessageGatewayProvider
         deadLetterRoutingKey = ToValidFifoName(deadLetterRoutingKey);
         invalidMessageRoutingKey = ToValidFifoName(invalidMessageRoutingKey);
 
+        // The invalid-message queue is created lazily, by the producer the consumer builds on the
+        // first rejection (SqsMessageConsumer.CreateInvalidMessageProducer), so nothing else in
+        // this fixture ever holds its name. The reaper predates the invalid channel and cannot
+        // infer it, so register it here or it leaks exactly as the DLQ used to.
+        if (invalidMessageRoutingKey != null)
+        {
+            _reaper.TrackQueue(invalidMessageRoutingKey.Value);
+        }
+
         // For SQS point-to-point, the channel (queue) must match the publication's queue
         channelName = new ChannelName(routingKey);
 
         if (deadLetterRoutingKey != null)
         {
-            var deadLetterChannelName = new ChannelName(deadLetterRoutingKey.Value);
+            // Named from the routing key the harness was handed rather than derived from the
+            // channel name: the DLQ read hooks find the queue through
+            // subscription.DeadLetterRoutingKey, so the two have to be the same name. Tracked
+            // so that teardown reaps it.
+            var deadLetterChannelName = new ChannelName(_reaper.TrackQueue(deadLetterRoutingKey.Value));
             return new SqsSubscription<MyCommand>(
                 subscriptionName: new SubscriptionName(channelName),
                 channelName: channelName,
@@ -168,13 +195,23 @@ public class SqsFifoMessageGatewayProvider
         IAmAChannelSync? channel,
         IEnumerable<Message> messages)
     {
-        if (channel != null)
+        try
         {
-            channel.Purge();
-            channel.Dispose();
-        }
+            if (channel != null)
+            {
+                channel.Purge();
+                channel.Dispose();
+            }
 
-        producer?.Dispose();
+            producer?.Dispose();
+        }
+        finally
+        {
+            // Purge and Dispose reach AWS and can fail — PurgeQueue alone is throttled to one
+            // call per queue a minute — and a teardown that throws before it reaps is how the
+            // topics and queues leaked in the first place.
+            _reaper.Reap();
+        }
     }
 
     public async Task CleanUpAsync(
@@ -182,15 +219,23 @@ public class SqsFifoMessageGatewayProvider
         IAmAChannelAsync? channel,
         IEnumerable<Message> messages)
     {
-        if (channel != null)
+        try
         {
-            await channel.PurgeAsync();
-            channel.Dispose();
-        }
+            if (channel != null)
+            {
+                await channel.PurgeAsync();
+                channel.Dispose();
+            }
 
-        if (producer != null)
+            if (producer != null)
+            {
+                await producer.DisposeAsync();
+            }
+        }
+        finally
         {
-            await producer.DisposeAsync();
+            // See CleanUp: the reap has to survive a teardown that throws.
+            await _reaper.ReapAsync();
         }
     }
 
