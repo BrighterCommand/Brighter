@@ -254,31 +254,40 @@ cell remains `Unknown`.
     with the identical 9 mTLS tests. After the collection fix there are **zero non-mTLS failures**. The
     conformance conclusion rests on the generated canonical suite, which is fully green apart from the
     FR-5 Deferred skips.
-- `AzureServiceBus / AzureServiceBusMessagingGateway` — **ALL ELEVEN cells `Deferred -> #4240
-  (sign-off: @maintainer)` on INFRA grounds.** AC-23 makes *"inability to provide CI infrastructure"* a
-  valid ground for deferral, and ADR `0067` ("Negative") anticipated ASB landing here. **This is a
-  deferral of VERIFICATION, not a declaration of non-conformance** — no ASB behaviour has been shown to
-  be non-conformant. The configuration stays in the target set and is never dropped (FR-21).
-  - ⚠️ **CORRECTION (2026-09-07): the suite HAS now been observed, in CI, and the deferral still
-    stands — for a different reason than first recorded.** The original note said no ASB behaviour "has
-    been observed at all", on the grounds that the credentials are unset. That is true locally but **not
-    in CI**: `.github/workflows/ci.yml` supplies `BrighterTestsASBConnectionString` from
-    `secrets.BRIGHTERTESTS_ASB_CONNECTION_STRING`, so `azure-ci` runs against a real namespace.
-    A throwaway probe (PR #4308, closed unmerged) flipped the cells so the generator emitted no `Skip`,
-    and let CI execute all 22 canonical tests once. Result: **161 tests, 131 passed, 30 failed** — every
-    canonical behaviour failed, **and so did the basic post/receive companion**, with
-    `Assert.NotEqual() Failure: … Actual: MT_NONE` (52 occurrences).
-  - **The probe is therefore INCONCLUSIVE as conformance evidence, and no cell may be flipped from it.**
-    A transport that cannot complete a plain round trip in this environment cannot have "does Nack
-    redeliver" judged against it; every canonical failure is downstream of the round trip, not evidence
-    about the behaviour. Alongside the `MT_NONE` failures the run shows `ServiceBusException:
-    SubCode=40900 / 40901, Status: 409 (Conflict)` on topic-and-subscription management, consistent with
-    contention on the shared namespace rather than per-behaviour non-conformance.
-  - **One distinct defect the probe did surface**: both variants of
-    `When_sending_a_delayed_message_should_deliver_after_delay` fail with
-    `System.UriFormatException: Invalid URI: The format of the URI could not be determined.` — a real
-    fault in the delayed-send path, not a missed message. It is the only ASB failure with a cause of its
-    own, and it needs its own investigation.
+- `AzureServiceBus / AzureServiceBusMessagingGateway` — **9 of 11 cells `Pass`, verified in CI against a
+  real namespace (2026-09-07). FR-5 and FR-9 remain `Deferred -> #4240 (sign-off: @maintainer)`.**
+  - **How this was established.** Probe PR #4317 (closed unmerged, as #4308 was) flipped all 11 cells so
+    the generator emitted no `Skip`, applied the #4309 fix, and merged the #4310 fix so the run measured
+    the right thing. `azure-ci` job `101853410391` against baseline run `34127954869`: the failing set
+    went from **30 distinct tests to 6**. The 26-strong `MT_NONE` wave collapsed to 2, and the 2
+    `UriFormatException` failures went to 0.
+  - ⚠️ **The earlier "ALL ELEVEN Deferred on INFRA grounds" note was superseded, and its stated reason
+    was wrong twice over.** It said no ASB behaviour "has been observed at all" because credentials are
+    unset. That is true locally but **not in CI**: `.github/workflows/ci.yml` supplies
+    `BrighterTestsASBConnectionString` from `secrets.BRIGHTERTESTS_ASB_CONNECTION_STRING`. The follow-up
+    correction then read the resulting 30 failures as "cannot complete a plain round trip", which was
+    the right call on the evidence then available but the wrong cause: the round trip was broken by
+    **#4309**, a test-harness ordering defect, not by anything about ASB's behaviour.
+  - **Why the round trip was failing — #4309.** `AzureServiceBusChannelFactory` provisions nothing, and
+    the ASB subscription is created lazily by the consumer's first receive. Every generated test sends
+    *before* it first receives, and an ASB topic with no subscription attached silently discards the
+    message. `AzureServiceBusMessageGatewayProvider` now provisions the topic and subscription before
+    handing out a channel — which is what the hand-written ASB tests have always done. ⚠️ Whether the
+    **gateway** should do this eagerly (it receives `MakeChannels` and ignores it, unlike AWS and GCP) is
+    deferred to **ADR 0066 / PR #4259**, the Infrastructure Provisioner. The fix here is harness-side by
+    decision, not by oversight.
+  - **FR-5 (reject → invalid channel) stays `Deferred`, and is expected to.** ASB dead-letters natively:
+    the DLQ is the built-in sub-queue and **there is no separate invalid-message channel** — the
+    provider's own doc comment says so, and `CreateSubscription` records that `invalidMessageRoutingKey`
+    has "no structural effect on the ASB subscription itself". This is a genuine platform difference, not
+    an unfixed defect. Tracked under #4240.
+  - **FR-9 (delayed send) stays `Deferred` — a REAL, newly-visible defect. See #4318.** It was masked
+    twice: first by #4309, then by the `UriFormatException` of #4310. With both cleared, the failure is
+    `Assert.Equal() Failure: Expected MT_NONE, Actual MT_EVENT` on the **before-delay** arm — i.e. a
+    message sent with a 5 s delay is **available within 2 s**. The delay is not honoured.
+    ⚠️ **No existing test could ever have caught this**: `FakeServiceBusSenderWrapper.ScheduleMessageAsync`
+    discards `scheduleEnqueueTime` and calls `Send(message)`, so every hand-written delayed-send test
+    passes identically whether or not the gateway schedules anything.
   - **Broker attempt and why it failed.** ASB is a cloud service with no container story in this repo:
     there is **no `docker-compose-*asb*.yaml`**, the credentials `ASBCreds.cs` requires
     (`BrighterTestsASBConnectionString` / `BrighterTestsASBNameSpace`) are **both unset**, the `az` CLI
@@ -367,6 +376,6 @@ cell remains `Unknown`.
 | RMQ.Async / Classic | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | RMQ.Async / Quorum | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | RocketMQ / RocketMQMessagingGateway | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) |
-| AzureServiceBus / AzureServiceBusMessagingGateway | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) |
+| AzureServiceBus / AzureServiceBusMessagingGateway | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass |
 | MQTT / MqttMessagingGateway | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) |
 | RMQ.Sync / RmqSyncMessagingGateway | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) |
