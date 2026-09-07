@@ -7,7 +7,7 @@
     <AWSSDKSchedulerV4>4.0.100.11</AWSSDKSchedulerV4>
     <AWSSDKV4>4.0.102.4</AWSSDKV4>
     <AWSSecurityTokenV4>4.0.100.11</AWSSecurityTokenV4>
-    <AWSSQSV4>4.0.100.7</AWSSQSV4>
+    <AWSSQSV4>4.0.100.11</AWSSQSV4>
     <AWSSDKSimpleNotificationServiceV4>4.0.100.11</AWSSDKSimpleNotificationServiceV4>
     <AWSSDKExtensionsNETCoreSetup>4.0.101.1</AWSSDKExtensionsNETCoreSetup>
     <RabbitMQClientV6>6.8.1</RabbitMQClientV6>
