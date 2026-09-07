@@ -30,9 +30,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     /// The ambient-source ask shared by every container-backed factory's <c>CreatePipelineScope()</c>.
     /// </summary>
     /// <remarks>
-    /// T4.3 replaces this unconditional ask with the affinity computation and the canonical ladder in
-    /// front of it (ADR 0072 steps 2, 3), by way of <c>ScopeAffinityPolicy</c>. Until then, every
-    /// factory asks whenever a provider is registered, regardless of its own configured lifetime.
+    /// Called only when the calling factory's own configured lifetime is <c>Scoped</c> - a factory whose
+    /// own lifetime is not <c>Scoped</c> must not call this at all, including a <c>Transient</c> handler
+    /// factory, which still offers a pipeline scope handle of its own for ADR 0067's per-resolution
+    /// isolation but must not ask for an ambient one.
     /// </remarks>
     internal static class AmbientScopeQuery
     {
@@ -40,17 +41,21 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Asks <paramref name="scopeProvider"/> for an ambient, when one is registered, discarding
         /// what it returns - nothing yet adopts it.
         /// </summary>
+        /// <param name="scopeProvider">The registered ambient source, or <see langword="null"/> where
+        /// none is registered, in which case no ask is made.</param>
+        /// <param name="affinity">The affinity this pipeline computed for the ask, from
+        /// <see cref="ScopeAffinityPolicy"/>.</param>
         /// <exception cref="AmbientScopeSourceException">
         /// <paramref name="scopeProvider"/>'s <c>GetAmbient</c> threw. The calling pipeline builder
         /// recognises this type and rethrows the inner exception unwrapped.
         /// </exception>
-        public static void Ask(IAmAScopeProvider? scopeProvider)
+        public static void Ask(IAmAScopeProvider? scopeProvider, ScopeAffinity affinity)
         {
             if (scopeProvider is null) return;
 
             try
             {
-                scopeProvider.GetAmbient(ScopeAffinity.AlwaysNew);
+                scopeProvider.GetAmbient(affinity);
             }
             catch (Exception e)
             {

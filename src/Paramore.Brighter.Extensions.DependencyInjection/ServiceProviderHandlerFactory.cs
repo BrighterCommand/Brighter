@@ -37,6 +37,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private readonly bool _isolateTransientHandlerScope;
         private readonly ServiceProviderLifetimeScope _singletonScope;
         private readonly IAmAScopeProvider? _scopeProvider;
+        private readonly ScopeAffinityPolicy _scopeAffinityPolicy;
 
         /// <summary>
         /// Constructs a factory that uses the .NET IoC container as the factory
@@ -50,6 +51,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             _isolateTransientHandlerScope = options?.IsolateTransientHandlerScope ?? true;
             _singletonScope = new ServiceProviderLifetimeScope(serviceProvider, ServiceLifetime.Singleton);
             _scopeProvider = (IAmAScopeProvider?)serviceProvider.GetService(typeof(IAmAScopeProvider));
+            _scopeAffinityPolicy = new ScopeAffinityPolicy(options);
         }
 
         /// <summary>
@@ -61,7 +63,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Unlike the mapper/transformer factories, <c>Transient</c> also gets a handle here: a per-request
         /// pipeline scope is how a <c>Transient</c> handler's own per-resolution isolation is delivered
         /// (see <see cref="ServiceProviderLifetimeScope"/>'s isolated-transient-scope support), not an
-        /// optional convenience.
+        /// optional convenience. It does not, however, ask for an ambient: only a <c>Scoped</c> handler
+        /// pipeline ever asks.
         /// </remarks>
         /// <exception cref="AmbientScopeSourceException">
         /// A registered <see cref="IAmAScopeProvider"/>'s <c>GetAmbient</c> threw. The calling pipeline
@@ -69,7 +72,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </exception>
         public IAmAScope? CreatePipelineScope()
         {
-            AmbientScopeQuery.Ask(_scopeProvider);
+            if (_handlerLifetime == ServiceLifetime.Scoped)
+                AmbientScopeQuery.Ask(_scopeProvider, _scopeAffinityPolicy.ForHandlerPipeline());
 
             return _handlerLifetime == ServiceLifetime.Singleton
                 ? null

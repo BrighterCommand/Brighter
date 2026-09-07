@@ -36,6 +36,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private readonly IServiceProvider _serviceProvider;
         private readonly ServiceProviderLifetimeScope _lifetimeScope;
         private readonly IAmAScopeProvider? _scopeProvider;
+        private readonly ScopeAffinityPolicy _scopeAffinityPolicy;
 
         /// <summary>
         /// Constructs a transformer factory
@@ -48,12 +49,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var lifetime = options?.TransformerLifetime ?? ServiceLifetime.Singleton;
             _lifetimeScope = new ServiceProviderLifetimeScope(serviceProvider, lifetime);
             _scopeProvider = (IAmAScopeProvider?)serviceProvider.GetService(typeof(IAmAScopeProvider));
+            _scopeAffinityPolicy = new ScopeAffinityPolicy(options);
         }
 
         /// <summary>
         /// Offers a pipeline scope when this factory's configured lifetime is <c>Scoped</c>, so the
         /// pipeline's transforms (and, once offered by the mapper factory too, its mapper) resolve from
-        /// one DI scope per pipeline rather than a factory-wide one. Any other lifetime offers none.
+        /// one DI scope per pipeline rather than a factory-wide one. Any other lifetime offers none and
+        /// asks nothing - only a <c>Scoped</c> pipeline ever asks for an ambient.
         /// </summary>
         /// <exception cref="AmbientScopeSourceException">
         /// A registered <see cref="IAmAScopeProvider"/>'s <c>GetAmbient</c> threw. The calling pipeline
@@ -61,11 +64,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </exception>
         public IAmAScope? CreatePipelineScope()
         {
-            AmbientScopeQuery.Ask(_scopeProvider);
+            if (_lifetimeScope.Lifetime != ServiceLifetime.Scoped) return null;
 
-            return _lifetimeScope.Lifetime == ServiceLifetime.Scoped
-                ? new ServiceProviderPipelineScope(new ServiceProviderLifetimeScope(_serviceProvider, ServiceLifetime.Scoped))
-                : null;
+            AmbientScopeQuery.Ask(_scopeProvider, _scopeAffinityPolicy.ForTransformPipeline());
+            return new ServiceProviderPipelineScope(new ServiceProviderLifetimeScope(_serviceProvider, ServiceLifetime.Scoped));
         }
 
         /// <summary>
