@@ -59,11 +59,10 @@ You can use the following example as a reference for SQL Server:
 
 You specify the connection string to the database, and the name of the table that will hold the data.
 
-#### Configure the command processor with a message producer
+#### Configure a producer (DI)
 
-The following is an example of how to specify the configuration for the SQL Server messaging gateway to the command processor.
-
-The producer side is registered through dependency injection, so this example needs the
+This example configures the SQL Server messaging gateway for sending. It never touches
+`CommandProcessorBuilder`: the producer side is registered through dependency injection, so it needs the
 `Paramore.Brighter.Extensions.DependencyInjection` package alongside this one — and two using
 directives the block does not print: `Microsoft.Extensions.DependencyInjection` for
 `ServiceCollection`, `BuildServiceProvider` and `GetRequiredService`, and
@@ -109,10 +108,10 @@ A runnable version of this is `samples/TaskQueue/MsSqlMessagingGateway/Greetings
 receiver is the counterpart to the dispatcher below. The consumer side that follows is wired by
 hand rather than through DI, so that the dispatcher and its subscriptions are visible.
 
-The producer passes `databaseName:` and the consumer omits it. Neither form is wrong and the
-difference is not significant: nothing in this gateway reads `DatabaseName` — the queue table is
-resolved from `queueStoreTable` and the database from the connection string. The producer keeps
-it only because `GreetingsSender/Program.cs` does.
+Both blocks pass the same three arguments, as both runnable samples do. `DatabaseName` is in fact
+inert here — nothing in this gateway reads it, and the queue table comes from `queueStoreTable`
+and the database from the connection string — so the value of spelling it identically in the two
+blocks is that neither form looks significant.
 
 #### Configure the dispatcher with a message consumer factory
 
@@ -125,6 +124,7 @@ The following is an example of how to specify the configuration for the SQL Serv
         var messagingConfiguration =
             new RelationalDatabaseConfiguration(
                 @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;",
+                databaseName: "BrighterSqlQueue",
                 queueStoreTable: "QueueData");
         var messageConsumerFactory = new MsSqlMessageConsumerFactory(messagingConfiguration);
 

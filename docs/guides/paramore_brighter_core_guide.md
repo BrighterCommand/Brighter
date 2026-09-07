@@ -112,7 +112,7 @@ participant "Handler Chain" as HC
 participant "Target Handler" as TH
 
 Client -> CP: Send(command)
-CP -> PB: Build(RequestContext)
+CP -> PB: Build(command, RequestContext)
 PB -> PB: Discover target handler
 PB -> PB: Analyze attributes
 PB -> PB: Build middleware chain
@@ -324,23 +324,45 @@ public void Post<TRequest>(TRequest request, RequestContext? requestContext = nu
     Dictionary<string, object>? args = null) where TRequest: class, IRequest
 {
     // Post is implemented as immediate DepositPost + ClearOutbox
-    var messageId = CallDepositPost(request, null, requestContext, args, null, s_transactionType);
+    var messageId = CallDepositPost(request, null, requestContext, args, null, _transactionType);
     ClearOutbox([messageId], requestContext, args);
 }
 
-// The actual deposit implementation:
-private Id CallDepositPost<TRequest>(TRequest request, ...)
+// CallDepositPost does not deposit anything itself. The transaction type is not known
+// until runtime, and an IEnumerable<IRequest> has lost the derived request type, so this
+// binds the generic DepositPost<TRequest, TTransaction> to both actual types and invokes
+// it reflectively, caching the bound MethodInfo:
+private Id CallDepositPost<TRequest>(TRequest actualRequest, ..., Type transactionType)
 {
-    // 1. Map request to message
-    var message = GetMessageMapper<TRequest>().MapToMessage(request);
-    
-    // 2. Apply any configured transforms 
-    message = ApplyTransforms(message);
-    
-    // 3. Store in outbox (transactionally if transaction provider given)
-    var messageId = AddToOutbox(message, transactionProvider);
-    
-    return messageId;
+    var cacheKey = $"{actualRequest.GetType().FullName}:{transactionType.FullName}";
+    if (!s_boundDepositCalls.TryGetValue(cacheKey, out MethodInfo? deposit))
+    {
+        // find the DepositPost overload carrying [DepositCallSite], then close it over
+        // the actual request type and the configured transaction type
+        deposit = depositMethod?.MakeGenericMethod(actualRequest.GetType(), transactionType)!;
+        s_boundDepositCalls[cacheKey] = deposit;
+    }
+
+    return CallMethodAndPreserveException(() => (deposit?.Invoke(this, [...]) as Id)!);
+}
+
+// The deposit itself is DepositPost<TRequest, TTransaction>, and the mapping and
+// transform steps live behind the mediator rather than in the CommandProcessor:
+public Id DepositPost<TRequest, TTransaction>(TRequest request, ...) where TRequest : class, IRequest
+{
+    if (typeof(TTransaction) != _transactionType)
+        throw new InvalidOperationException(
+            "Supplied transaction provider doesn't match configured transaction type.");
+
+    // maps the request and applies the transform pipeline
+    Message message = _mediator!.CreateMessageFromRequest(request, context);
+
+    if (!_mediator.HasOutbox())
+        throw new InvalidOperationException("No outbox defined.");
+
+    CallAddToOutbox(message, context, transactionProvider, batchId);
+
+    return message.Id;
 }
 ```
 
@@ -517,11 +539,11 @@ public void ClearOutbox(Id[] ids, RequestContext? requestContext = null,
     Dictionary<string, object>? args = null)
 {
     // Delegate to the outbox mediator, which handles:
-    // 1. Retrieve messages fromthe  outbox by ID
+    // 1. Retrieve messages from the outbox by ID
     // 2. Route each message to the appropriate producer
     // 3. Send via external transport
     // 4. Mark as dispatched on success
-    s_mediator!.ClearOutbox(ids, context, args);
+    _mediator!.ClearOutbox(ids, context, args);
 }
 ```
 
@@ -958,9 +980,8 @@ Each step of the chain offers alternatives:
     first `Call`. `AddBrighterDefault()` registers both, which is why building on it — rather
     than beside it — is the recipe above.
   - The optional `policyRegistry` is validated too — a registry you supply must contain both
-    `CommandProcessor.RETRYPOLICY` and `CommandProcessor.CIRCUITBREAKER` (both `[Obsolete]`;
-    prefer omitting `policyRegistry`). **Omit the argument**
-    and Brighter uses `DefaultPolicy`, which has both.
+    `CommandProcessor.RETRYPOLICY` and `CommandProcessor.CIRCUITBREAKER`, both of which are
+    `[Obsolete]`. **Omit the argument** and Brighter uses `DefaultPolicy`, which has both.
 - `.NoExternalBus()` routes `Send`/`Publish` in-process only; no producer, no outbox. To send messages out of process use
   `.ExternalBus(busType, bus, transactionType, responseChannelFactory, subscriptions,
   inboxConfiguration)` — the inbox is a parameter here, not a step of its own, and request-reply
@@ -992,8 +1013,9 @@ var tracer = new PipelineTracer();
 pipeline.First().DescribePath(tracer);
 var pipelineDescription = tracer.ToString();
 
-// Verify pipeline composition
-Assert.Contains("RetryHandler", pipelineDescription);
+// Verify pipeline composition. Middleware appears under its own type name — [UsePolicy]
+// contributes ExceptionPolicyHandler`1, [RequestLogging] contributes RequestLoggingHandler`1
+Assert.Contains("ExceptionPolicyHandler", pipelineDescription);
 Assert.Contains("MyBusinessHandler", pipelineDescription);
 ```
 
@@ -1129,21 +1151,37 @@ public void When_Handler_Has_Attributes_Should_Build_Correct_Pipeline()
     var registry = new SubscriberRegistry();
     registry.Register<TestCommand, TestHandlerWithAttributes>();
     
+    // Two traps in one line. The factory must construct by the type it is handed, because
+    // PipelineBuilder asks it for the middleware handlers too — a `_ => new TestHandler...()`
+    // lambda builds a pipeline of three identical handlers. And name the interface
+    // explicitly: PipelineBuilder<T> has two two-argument constructors differing only in
+    // IAmAHandlerFactorySync vs IAmAHandlerFactoryAsync, and SimpleHandlerFactory implements
+    // both, so handing it one of those is CS0121. (Activator is System, First() is System.Linq.)
+    var handlerFactory = new SimpleHandlerFactorySync(
+        type => (IHandleRequests)Activator.CreateInstance(type)!);
     var builder = new PipelineBuilder<TestCommand>(registry, handlerFactory);
     
     // Act
     var pipeline = builder.Build(new TestCommand(), new RequestContext());
     
-    // Assert pipeline composition — First() is System.Linq
+    // Assert pipeline composition
     var tracer = new PipelineTracer();
     pipeline.First().DescribePath(tracer);
     
+    // Middleware handlers are named for their types, so assert on those: [RequestLogging]
+    // contributes RequestLoggingHandler`1. There is no type called "RetryHandler" —
+    // [UsePolicy] contributes ExceptionPolicyHandler`1
     var description = tracer.ToString();
-    Assert.Contains("LoggingHandler", description);
-    Assert.Contains("RetryHandler", description);
+    Assert.Contains("RequestLoggingHandler", description);
     Assert.Contains("TestHandlerWithAttributes", description);
 }
 ```
+
+The example uses `[RequestLogging]` because it composes with nothing else. A handler carrying
+`[UsePolicy]` needs more: `ExceptionPolicyHandler` reads its policies from
+`Context.Policies` while the pipeline is being built, so building one against a bare
+`new RequestContext()` throws `ConfigurationException` wrapping a `NullReferenceException`.
+Give the context a policy registry, or let `CommandProcessor` build the pipeline for you.
 
 ### Test Double Support
 Brighter provides several test doubles for different scenarios:
@@ -1163,9 +1201,13 @@ var commandProcessor = CommandProcessorBuilder.StartNew()
 ```
 
 `NoExternalBus()` does not wire an in-memory transport — it leaves the mediator unset, so
-`Post` and `DepositPost` currently throw `NullReferenceException` on a processor built this way
-(a missing guard clause, not a documented contract — see `CommandProcessor.cs:680`/`:795`; the
-sibling check at `:835`, `"No outbox defined."`, shows the shape a fix would take). To test
+`Post` and `DepositPost` currently throw `NullReferenceException` on a processor built this way —
+a missing guard clause, not a documented contract. The dereference is `_mediator!` in
+`CommandProcessor.DepositPost<TRequest, TTransaction>`, which `Post` reaches through
+`CallDepositPost`; the `HasOutbox()` check a few lines below it, throwing
+`InvalidOperationException("No outbox defined.")`, is the shape a fix would take. Tracked as
+[#4307](https://github.com/BrighterCommand/Brighter/issues/4307) — **when that guard lands, this
+paragraph should go.** To test
 publishing, use the `InMemoryMessageProducer` and `InternalBus` recipe under *Testing Message
 Publishing* above, which is what gives you messages to read back.
 
