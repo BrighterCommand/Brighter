@@ -1811,7 +1811,8 @@ namespace Paramore.Brighter
                 return null;
             }
 
-            return Uri.TryCreate(dr.GetString(ordinal), UriKind.Absolute, out var uri) ? uri : null;
+            // CloudEvents defines dataschema as a URI-reference, which may be relative
+            return Uri.TryCreate(dr.GetString(ordinal), UriKind.RelativeOrAbsolute, out var uri) ? uri : null;
         }
         
         protected virtual string TypeColumnName => "Type";
