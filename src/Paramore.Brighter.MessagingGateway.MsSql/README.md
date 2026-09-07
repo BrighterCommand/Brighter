@@ -63,18 +63,43 @@ You specify the connection string to the database, and the name of the table tha
 
 The following is an example of how to specify the configuration for the SQL Server messaging gateway to the command processor.
 
+The producer side is registered through dependency injection, so this example needs the
+`Paramore.Brighter.Extensions.DependencyInjection` package alongside this one. `AddProducers`
+takes a producer registry, and `MsSqlProducerRegistryFactory` builds one from the connection
+string, the queue table, and a `Publication` per topic you send to. The `RequestType` on the
+publication is what Brighter matches a request against when you `Post` it, so a publication
+without one produces `ConfigurationException: No producer found for request type`.
+
 ```csharp
-        var messagingConfiguration = new MsSqlMessagingGatewayConfiguration(@"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", "QueueData");
-        var producer = new MsSqlMessageProducer(messagingConfiguration);
+        var serviceCollection = new ServiceCollection();
 
-        var builder = CommandProcessorBuilder.With()
-            .Handlers(new HandlerConfiguration())
-            .DefaultPolicy()
-            .TaskQueues(new MessagingConfiguration(outbox, producer, messageMapperRegistry))
-            .RequestContextFactory(new InMemoryRequestContextFactory());
+        serviceCollection.AddBrighter()
+            .AddProducers(configure =>
+            {
+                configure.ProducerRegistry = new MsSqlProducerRegistryFactory(
+                        new RelationalDatabaseConfiguration(
+                            @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;",
+                            databaseName: "BrighterSqlQueue",
+                            queueStoreTable: "QueueData"),
+                        [
+                            new Publication
+                            {
+                                Topic = new RoutingKey("greeting.event"),
+                                RequestType = typeof(GreetingEvent)
+                            }
+                        ])
+                    .Create();
+            })
+            .AutoFromAssemblies();
 
-        var commandProcessor = builder.Build();
+        var commandProcessor = serviceCollection.BuildServiceProvider()
+            .GetRequiredService<IAmACommandProcessor>();
+
+        commandProcessor.Post(new GreetingEvent("Ian"));
 ```
+
+A runnable version of this is `samples/TaskQueue/MsSqlMessagingGateway/GreetingsSender`, and its
+receiver is the counterpart to the dispatcher below.
 
 #### Configure the dispatcher with a message consumer factory
 
@@ -109,6 +134,8 @@ The following is an example of how to specify the configuration for the SQL Serv
                     new SubscriptionName("paramore.example.greeting"),
                     new ChannelName("greeting.event"),
                     new RoutingKey("greeting.event"),
+                    // Reactor, because MessageMappers above supplies no async registry.
+                    // The default is Proactor, which requires one and throws without it
                     messagePumpType: MessagePumpType.Reactor,
                     timeOut: TimeSpan.FromMilliseconds(200))
             })

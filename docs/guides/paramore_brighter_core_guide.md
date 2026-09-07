@@ -390,6 +390,17 @@ TResponse? result = commandProcessor.Call<MyQuery, MyResponse>(query);
 // External call setup requires reply channels. Request-reply is not a step of its
 // own: it is ExternalBusType.RPC on the ExternalBus step, which is what sets the
 // builder's request-reply mode and takes the reply channel factory and subscriptions.
+//
+// The four collaborators this chain needs, and where each comes from:
+//   handlerConfiguration — new HandlerConfiguration(subscriberRegistry, handlerFactory)
+//   bus                  — an IAmAnOutboxProducerMediator. Build one as
+//                          OutboxProducerMediator<Message, TTransaction>(...), as under
+//                          "Testing Message Publishing" below, or let AddProducers build
+//                          it for you when you configure Brighter through DI
+//   replyChannelFactory  — your transport's IAmAChannelFactory, which is what creates
+//                          the channel replies arrive on
+//   replySubscriptions   — one Subscription per reply topic, of the transport's own
+//                          subscription type
 var commandProcessor = CommandProcessorBuilder.StartNew()
     .Handlers(handlerConfiguration)
     .DefaultResilience()
@@ -930,13 +941,20 @@ var commandProcessor = CommandProcessorBuilder.StartNew()
 Each step of the chain offers alternatives:
 
 - `.DefaultResilience()` supplies Brighter's own retry pipelines. To supply your own, use
-  `.Resilience(resiliencePipelineRegistry, policyRegistry)`. Two things bite here:
+  `.Resilience(resiliencePipelineRegistry)`; `policyRegistry` is an optional second parameter.
+  Three things bite here:
   - The registry must contain `CommandProcessor.OutboxProducer`, or `Resilience` throws
     `ConfigurationException`. Get it from
     `new ResiliencePipelineRegistry<string>().AddBrighterDefault()`. **`AddBrighterDefault` uses
     `TryAddBuilder`, so it never overwrites**: register your own pipelines *first* and call
     `AddBrighterDefault()` afterwards to backfill. Calling it first means your own
     `CommandProcessor.OutboxProducer` is silently discarded.
+  - **`Resilience` validates one pipeline, but `Call` needs two.** It checks only
+    `CommandProcessor.OutboxProducer`, while `CommandProcessor.Call` resolves
+    `CommandProcessor.RequestReply` from the same registry. A hand-rolled registry holding
+    `OutboxProducer` alone therefore passes `Build()` and throws `KeyNotFoundException` at the
+    first `Call`. `AddBrighterDefault()` registers both, which is why building on it — rather
+    than beside it — is the recipe above.
   - The optional `policyRegistry` is validated too — a registry you supply must contain both
     `CommandProcessor.RETRYPOLICY` and `CommandProcessor.CIRCUITBREAKER`. **Omit the argument**
     and Brighter uses `DefaultPolicy`, which has both.
@@ -1015,7 +1033,7 @@ public void When_Sending_Command_Should_Execute_Pipeline()
     var registry = new SubscriberRegistry();
     registry.Register<CreateCustomerCommand, CreateCustomerHandler>();
     
-    var handlerFactory = new SimpleHandlerFactory();
+    var handlerFactory = new SimpleHandlerFactorySync(_ => new CreateCustomerHandler());
     var commandProcessor = CommandProcessorBuilder.StartNew()
         .Handlers(new HandlerConfiguration(registry, handlerFactory))
         .DefaultResilience()
@@ -1039,25 +1057,53 @@ Verify message publishing behavior:
 [Test]
 public void When_Publishing_Event_Should_Store_In_Outbox()
 {
-    // Arrange
-    var fakeOutbox = new InMemoryOutbox();
-    var commandProcessor = CommandProcessorBuilder.With()
-        .Handlers(handlerConfiguration)
-        .ExternalBus(new ExternalBusConfiguration(
-            new FakeMessageProducer(), 
-            new InMemoryMessageMapperRegistry(),
-            fakeOutbox))
+    // Arrange: an in-memory transport, so nothing leaves the test
+    var routingKey = new RoutingKey("CustomerCreated");
+    var internalBus = new InternalBus();
+    var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
+    {
+        [routingKey] = new InMemoryMessageProducer(internalBus,
+            new Publication { Topic = routingKey, RequestType = typeof(CustomerCreated) })
+    });
+
+    // JsonMessageMapper<T> ships with Brighter: no mapper to hand-write for the test
+    var messageMapperRegistry = new MessageMapperRegistry(
+        new SimpleMessageMapperFactory(_ => new JsonMessageMapper<CustomerCreated>()), null);
+    messageMapperRegistry.Register<CustomerCreated, JsonMessageMapper<CustomerCreated>>();
+
+    var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>().AddBrighterDefault();
+    var fakeOutbox = new InMemoryOutbox(TimeProvider.System);
+
+    IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
+        producerRegistry,
+        resiliencePipelineRegistry,
+        messageMapperRegistry,
+        new EmptyMessageTransformerFactory(),
+        new EmptyMessageTransformerFactoryAsync(),
+        new BrighterTracer(),
+        new FindPublicationByPublicationTopicOrRequestType(),
+        fakeOutbox);
+
+    var commandProcessor = CommandProcessorBuilder.StartNew()
+        .Handlers(new HandlerConfiguration(new SubscriberRegistry(),
+            new SimpleHandlerFactorySync(_ => new CreateCustomerHandler())))
+        .Resilience(resiliencePipelineRegistry)
+        .ExternalBus(ExternalBusType.FireAndForget, bus, typeof(CommittableTransaction))
+        .NoInstrumentation()
+        .RequestContextFactory(new InMemoryRequestContextFactory())
+        .RequestSchedulerFactory(new InMemorySchedulerFactory())
         .Build();
-    
+
     var @event = new CustomerCreated(Guid.NewGuid(), "John");
     
     // Act
     var messageId = commandProcessor.DepositPost(@event);
     
-    // Assert
-    var storedMessage = fakeOutbox.Get(messageId);
+    // Assert: DepositPost writes to the outbox and does not send
+    var storedMessage = fakeOutbox.Get(messageId, new RequestContext());
     Assert.That(storedMessage, Is.Not.Null);
-    Assert.That(storedMessage.Header.Topic, Is.EqualTo("CustomerCreated"));
+    Assert.That(storedMessage.Header.Topic, Is.EqualTo(routingKey));
+    Assert.That(internalBus.Stream(routingKey).Any(), Is.False);
 }
 ```
 
@@ -1104,26 +1150,34 @@ var commandProcessor = CommandProcessorBuilder.StartNew()
     .Build();
 ```
 
-#### FakeMessageProducer
-For verifying message production:
+#### InMemoryMessageProducer
+For verifying message production. Messages go to an `InternalBus`, and you read them back from
+the bus rather than from the producer:
 ```csharp
-var fakeProducer = new FakeMessageProducer();
-var sentMessages = fakeProducer.SentMessages; // Inspect what was sent
+var internalBus = new InternalBus();
+var routingKey = new RoutingKey("CustomerCreated");
+var fakeProducer = new InMemoryMessageProducer(internalBus,
+    new Publication { Topic = routingKey, RequestType = typeof(CustomerCreated) });
+
+var sentMessages = internalBus.Stream(routingKey); // Inspect what was sent
 ```
 
 #### InMemoryOutbox
-For testing outbox behavior:
+For testing outbox behavior. It takes the `TimeProvider` it stamps entries with, so a test can
+supply a fake clock and control how old a message appears to be:
 ```csharp
-var inMemoryOutbox = new InMemoryOutbox();
+var inMemoryOutbox = new InMemoryOutbox(TimeProvider.System);
 // Can inspect stored messages, simulate failures, etc.
 ```
 
-#### SimpleHandlerFactory
-For basic handler instantiation:
+#### SimpleHandlerFactorySync
+For basic handler instantiation. You supply the function that creates a handler for a requested
+type; there is no convention-based fallback:
 ```csharp
-var handlerFactory = new SimpleHandlerFactory();
-// Automatically creates handler instances with parameterless constructors
+var handlerFactory = new SimpleHandlerFactorySync(_ => new CreateCustomerHandler());
 ```
+Use `SimpleHandlerFactory` instead where a sync and an async factory are both needed — it takes
+one of each.
 
 ### Testing Async Operations
 For async handler testing:
