@@ -200,7 +200,7 @@ public void Send<T>(T command, RequestContext? requestContext = null)
         _handlerFactorySync, _inboxConfiguration);
     
     // Build the handler chain with middleware
-    var handlerChain = builder.Build(context);
+    var handlerChain = builder.Build(command, context);
     
     // Ensure exactly one handler for commands (point-to-point)
     AssertValidSendPipeline(command, handlerChain.Count());
@@ -255,7 +255,7 @@ public void Publish<T>(T @event, RequestContext? requestContext = null)
     // Build separate pipeline for each handler
     using var builder = new PipelineBuilder<T>(_subscriberRegistry, 
         _handlerFactorySync, _inboxConfiguration);
-    var handlerChain = builder.Build(context);
+    var handlerChain = builder.Build(@event, context);
 
     // Execute all handlers in parallel
     Parallel.ForEach(handlerChain, (handleRequests) =>
@@ -946,7 +946,8 @@ Each step of the chain offers alternatives:
   Three things bite here:
   - The registry must contain `CommandProcessor.OutboxProducer`, or `Resilience` throws
     `ConfigurationException`. Get it from
-    `new ResiliencePipelineRegistry<string>().AddBrighterDefault()`. **`AddBrighterDefault` uses
+    `new ResiliencePipelineRegistry<string>().AddBrighterDefault()` — `AddBrighterDefault` is an
+    extension method in `Paramore.Brighter.Extensions`. **`AddBrighterDefault` uses
     `TryAddBuilder`, so it never overwrites**: register your own pipelines *first* and call
     `AddBrighterDefault()` afterwards to backfill. Calling it first means your own
     `CommandProcessor.OutboxProducer` is silently discarded.
@@ -957,9 +958,10 @@ Each step of the chain offers alternatives:
     first `Call`. `AddBrighterDefault()` registers both, which is why building on it — rather
     than beside it — is the recipe above.
   - The optional `policyRegistry` is validated too — a registry you supply must contain both
-    `CommandProcessor.RETRYPOLICY` and `CommandProcessor.CIRCUITBREAKER`. **Omit the argument**
+    `CommandProcessor.RETRYPOLICY` and `CommandProcessor.CIRCUITBREAKER` (both `[Obsolete]`;
+    prefer omitting `policyRegistry`). **Omit the argument**
     and Brighter uses `DefaultPolicy`, which has both.
-- `.NoExternalBus()` configures an internal bus only. To send messages out of process use
+- `.NoExternalBus()` routes `Send`/`Publish` in-process only; no producer, no outbox. To send messages out of process use
   `.ExternalBus(busType, bus, transactionType, responseChannelFactory, subscriptions,
   inboxConfiguration)` — the inbox is a parameter here, not a step of its own, and request-reply
   is `ExternalBusType.RPC` rather than a step of its own either.
@@ -1143,7 +1145,7 @@ public void When_Handler_Has_Attributes_Should_Build_Correct_Pipeline()
 ### Test Double Support
 Brighter provides several test doubles for different scenarios:
 
-#### No external bus
+#### Builder configuration: no external bus
 For testing handler pipelines without external dependencies. This gives you `Send` and
 `Publish` only:
 ```csharp
@@ -1158,7 +1160,9 @@ var commandProcessor = CommandProcessorBuilder.StartNew()
 ```
 
 `NoExternalBus()` does not wire an in-memory transport — it leaves the mediator unset, so
-`Post` and `DepositPost` throw `NullReferenceException` on a processor built this way. To test
+`Post` and `DepositPost` currently throw `NullReferenceException` on a processor built this way
+(a missing guard clause, not a documented contract — see `CommandProcessor.cs:680`/`:795`; the
+sibling check at `:835`, `"No outbox defined."`, shows the shape a fix would take). To test
 publishing, use the `InMemoryMessageProducer` and `InternalBus` recipe under *Testing Message
 Publishing* above, which is what gives you messages to read back.
 

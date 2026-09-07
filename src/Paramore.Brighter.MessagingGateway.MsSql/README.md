@@ -187,7 +187,6 @@ See the `samples/TaskQueue/MsSqlMessagingGateway` folder for examples on how to 
 
 - A console mode program to post a Greeting event (.NET Core)
 - A console mode program to receive and process Greeting events (.NET Core)
-- A Windows Service to receive and process Greeting events (.NET Framework)
 
 #### Competing consumers
 
