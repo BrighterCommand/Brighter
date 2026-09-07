@@ -921,6 +921,7 @@ public class LoggingHandler<T> : RequestHandler<T> where T : class, IRequest
         return result;
     }
 }
+```
 
 ## Configuration and Dependency Injection
 
@@ -1006,7 +1007,7 @@ Assert.Contains("MyBusinessHandler", pipelineDescription);
 Test individual handlers in isolation:
 
 ```csharp
-[Test]
+[Fact]
 public void When_Handling_Valid_Command_Should_Process_Successfully()
 {
     // Arrange
@@ -1017,7 +1018,7 @@ public void When_Handling_Valid_Command_Should_Process_Successfully()
     var result = handler.Handle(command);
     
     // Assert
-    Assert.That(result.Id, Is.EqualTo(command.Id));
+    Assert.Equal(command.Id, result.Id);
     mockRepository.Verify(r => r.Save(It.IsAny<Customer>()), Times.Once);
 }
 ```
@@ -1026,7 +1027,7 @@ public void When_Handling_Valid_Command_Should_Process_Successfully()
 Use Brighter's test infrastructure for integration scenarios:
 
 ```csharp
-[Test]
+[Fact]
 public void When_Sending_Command_Should_Execute_Pipeline()
 {
     // Arrange
@@ -1046,7 +1047,7 @@ public void When_Sending_Command_Should_Execute_Pipeline()
     var command = new CreateCustomerCommand("John", "john@example.com");
     
     // Act & Assert
-    Assert.DoesNotThrow(() => commandProcessor.Send(command));
+    Assert.Null(Record.Exception(() => commandProcessor.Send(command)));
 }
 ```
 
@@ -1054,7 +1055,7 @@ public void When_Sending_Command_Should_Execute_Pipeline()
 Verify message publishing behavior:
 
 ```csharp
-[Test]
+[Fact]
 public void When_Publishing_Event_Should_Store_In_Outbox()
 {
     // Arrange: an in-memory transport, so nothing leaves the test
@@ -1084,6 +1085,8 @@ public void When_Publishing_Event_Should_Store_In_Outbox()
         new FindPublicationByPublicationTopicOrRequestType(),
         fakeOutbox);
 
+    // DepositPost runs no handler pipeline, but the builder still requires a handler
+    // configuration, so an empty registry is enough here
     var commandProcessor = CommandProcessorBuilder.StartNew()
         .Handlers(new HandlerConfiguration(new SubscriberRegistry(),
             new SimpleHandlerFactorySync(_ => new CreateCustomerHandler())))
@@ -1101,9 +1104,9 @@ public void When_Publishing_Event_Should_Store_In_Outbox()
     
     // Assert: DepositPost writes to the outbox and does not send
     var storedMessage = fakeOutbox.Get(messageId, new RequestContext());
-    Assert.That(storedMessage, Is.Not.Null);
-    Assert.That(storedMessage.Header.Topic, Is.EqualTo(routingKey));
-    Assert.That(internalBus.Stream(routingKey).Any(), Is.False);
+    Assert.NotNull(storedMessage);
+    Assert.Equal(routingKey, storedMessage.Header.Topic);
+    Assert.Empty(internalBus.Stream(routingKey));
 }
 ```
 
@@ -1111,7 +1114,7 @@ public void When_Publishing_Event_Should_Store_In_Outbox()
 Verify middleware execution and ordering:
 
 ```csharp
-[Test]
+[Fact]
 public void When_Handler_Has_Attributes_Should_Build_Correct_Pipeline()
 {
     // Arrange
@@ -1128,27 +1131,33 @@ public void When_Handler_Has_Attributes_Should_Build_Correct_Pipeline()
     pipeline.First().DescribePath(tracer);
     
     var description = tracer.ToString();
-    Assert.That(description, Contains.Substring("LoggingHandler"));
-    Assert.That(description, Contains.Substring("RetryHandler"));
-    Assert.That(description, Contains.Substring("TestHandlerWithAttributes"));
+    Assert.Contains("LoggingHandler", description);
+    Assert.Contains("RetryHandler", description);
+    Assert.Contains("TestHandlerWithAttributes", description);
 }
 ```
 
 ### Test Double Support
 Brighter provides several test doubles for different scenarios:
 
-#### InMemoryBus
-For testing without external dependencies:
+#### No external bus
+For testing handler pipelines without external dependencies. This gives you `Send` and
+`Publish` only:
 ```csharp
 var commandProcessor = CommandProcessorBuilder.StartNew()
     .Handlers(handlerConfiguration)
     .DefaultResilience()
-    .NoExternalBus() // Uses in-memory bus
+    .NoExternalBus() // internal dispatch only — no producer, no outbox
     .NoInstrumentation()
     .RequestContextFactory(new InMemoryRequestContextFactory())
     .RequestSchedulerFactory(new InMemorySchedulerFactory())
     .Build();
 ```
+
+`NoExternalBus()` does not wire an in-memory transport — it leaves the mediator unset, so
+`Post` and `DepositPost` throw `NullReferenceException` on a processor built this way. To test
+publishing, use the `InMemoryMessageProducer` and `InternalBus` recipe under *Testing Message
+Publishing* above, which is what gives you messages to read back.
 
 #### InMemoryMessageProducer
 For verifying message production. Messages go to an `InternalBus`, and you read them back from
@@ -1183,7 +1192,7 @@ one of each.
 For async handler testing:
 
 ```csharp
-[Test]
+[Fact]
 public async Task When_Sending_Command_Async_Should_Complete()
 {
     // Arrange
@@ -1191,8 +1200,8 @@ public async Task When_Sending_Command_Async_Should_Complete()
     var command = new AsyncCommand();
     
     // Act & Assert
-    await Assert.DoesNotThrowAsync(async () => 
-        await commandProcessor.SendAsync(command));
+    Assert.Null(await Record.ExceptionAsync(async () =>
+        await commandProcessor.SendAsync(command)));
 }
 ```
 
@@ -1200,7 +1209,7 @@ public async Task When_Sending_Command_Async_Should_Complete()
 Use telemetry for performance verification:
 
 ```csharp
-[Test]
+[Fact]
 public void When_Processing_Commands_Should_Meet_Performance_Targets()
 {
     // Arrange
@@ -1215,8 +1224,10 @@ public void When_Processing_Commands_Should_Meet_Performance_Targets()
     stopwatch.Stop();
     
     // Assert
-    Assert.That(stopwatch.ElapsedMilliseconds, Is.LessThan(5000));
+    Assert.True(stopwatch.ElapsedMilliseconds < 5000,
+        $"1000 sends took {stopwatch.ElapsedMilliseconds}ms, expected under 5000ms");
 }
+```
 
 ## Best Practices for Contributors
 

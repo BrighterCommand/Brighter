@@ -81,13 +81,14 @@ without one produces `ConfigurationException: No producer found for request type
                             @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;",
                             databaseName: "BrighterSqlQueue",
                             queueStoreTable: "QueueData"),
-                        [
+                        new[]
+                        {
                             new Publication
                             {
                                 Topic = new RoutingKey("greeting.event"),
                                 RequestType = typeof(GreetingEvent)
                             }
-                        ])
+                        })
                     .Create();
             })
             .AutoFromAssemblies();
@@ -99,7 +100,8 @@ without one produces `ConfigurationException: No producer found for request type
 ```
 
 A runnable version of this is `samples/TaskQueue/MsSqlMessagingGateway/GreetingsSender`, and its
-receiver is the counterpart to the dispatcher below.
+receiver is the counterpart to the dispatcher below. The consumer side that follows is wired by
+hand rather than through DI, so that the dispatcher and its subscriptions are visible.
 
 #### Configure the dispatcher with a message consumer factory
 
@@ -127,6 +129,8 @@ The following is an example of how to specify the configuration for the SQL Serv
         var dispatcher = DispatchBuilder.StartNew()
             .CommandProcessor(commandProcessor, new InMemoryRequestContextFactory())
             .MessageMappers(messageMapperRegistry, null, null, null)
+            // ChannelFactory here is Paramore.Brighter.MessagingGateway.MsSql.ChannelFactory;
+            // every transport ships a type of that name, so mind the using directive
             .ChannelFactory(new ChannelFactory(messageConsumerFactory))
             .Subscriptions(new Subscription[]
             {
