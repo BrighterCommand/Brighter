@@ -46,7 +46,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private readonly IServiceProvider _serviceProvider;
         private readonly ServiceLifetime _lifetime;
         private readonly ConcurrentDictionary<Type, Lazy<object?>> _singletonInstances = new();
-        private readonly ConcurrentDictionary<Type, Lazy<object?>> _scopedInstances = new();
+        //used only when this scope is OWNED and the owning container never registered
+        //ScopedArtefactCache (a hand-built host that never ran AddBrighter/BrighterHandlerBuilder) -
+        //see ResolveOwnedArtefactCache. A borrowed scope never reaches this: AmbientScopeProbe already
+        //required a resolvable ScopedArtefactCache before BORROWED was ever chosen.
+        private ScopedArtefactCache? _ownedFallbackCache;
+        //when true, this scope resolves everything directly from _serviceProvider - an ambient the
+        //caller owns - rather than creating and owning an IServiceScope of its own. See CreateBorrowed.
+        private readonly bool _borrowed;
         //every Transient resolution's own scope is tracked here by the scope's own reference identity, NOT by
         //the instance it produced. A resolution IS its scope, so a shared instance (a Singleton resolved under a
         //Transient lifetime) has one distinct entry per resolution rather than several stacked under one key —
@@ -79,11 +86,29 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// disposed with this lifetime scope (the pre-#4254 handler behaviour).
         /// </param>
         public ServiceProviderLifetimeScope(IServiceProvider serviceProvider, ServiceLifetime lifetime, bool isolateTransientScopes = true)
+            : this(serviceProvider, lifetime, isolateTransientScopes, borrowed: false)
+        {
+        }
+
+        private ServiceProviderLifetimeScope(IServiceProvider serviceProvider, ServiceLifetime lifetime, bool isolateTransientScopes, bool borrowed)
         {
             _serviceProvider = serviceProvider;
             _lifetime = lifetime;
             _isolateTransientScopes = isolateTransientScopes;
+            _borrowed = borrowed;
         }
+
+        /// <summary>
+        /// Creates a <c>Scoped</c> lifetime scope borrowed over an ambient <paramref name="borrowedProvider"/>
+        /// this factory does not own. Resolves everything directly from it - creates no
+        /// <see cref="IServiceScope"/> of its own - and <see cref="Dispose"/>/<see cref="DisposeAsync"/>/
+        /// <see cref="DisposeSurfacing"/>/<see cref="DisposeSurfacingAsync"/> are idempotent no-ops: the
+        /// caller who owns <paramref name="borrowedProvider"/> disposes it, never Brighter.
+        /// </summary>
+        /// <param name="borrowedProvider">The ambient's own resolution source, already known to pass
+        /// <see cref="AmbientScopeProbe.CanResolveFrom"/>.</param>
+        internal static ServiceProviderLifetimeScope CreateBorrowed(IServiceProvider borrowedProvider) =>
+            new(borrowedProvider, ServiceLifetime.Scoped, isolateTransientScopes: true, borrowed: true);
 
         /// <summary>
         /// Gets the configured lifetime for objects created by this scope
@@ -181,24 +206,56 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         }
 
         /// <summary>
-        /// Gets or creates a scoped instance. Thread-safe using Lazy&lt;T&gt;.
-        /// Scoped instances are shared within this scope and disposed when the scope is disposed.
+        /// Gets or creates a scoped instance, from a <see cref="ScopedArtefactCache"/> resolved from
+        /// whichever scope is in play: the borrowed ambient's own provider when this scope is borrowed,
+        /// or the <see cref="IServiceScope"/> this scope owns otherwise. Thread-safe: identity is the
+        /// cache's own <c>Lazy</c> publish protocol.
         /// </summary>
         private T? GetOrCreateScoped<T>(Type objectType) where T : class
         {
+            if (_borrowed)
+            {
+                var borrowedCache = (ScopedArtefactCache)_serviceProvider.GetService(typeof(ScopedArtefactCache))!;
+                return (T?)borrowedCache.GetOrAdd(objectType, () => _serviceProvider.GetService(objectType));
+            }
+
             EnsureRootScopePublished();
 
-            var lazy = _scopedInstances.GetOrAdd(objectType, _ =>
-                new Lazy<object?>(() =>
-                {
-                    //a concurrent Dispose nulls _scope as it claims it; surface that as an
-                    //ObjectDisposedException rather than dereferencing null
-                    var scope = _scope;
-                    if (scope is null)
-                        throw Disposed();
-                    return (T?)scope.ServiceProvider.GetService(objectType);
-                }));
-            return (T?)lazy.Value;
+            //a concurrent Dispose nulls _scope as it claims it; surface that as an ObjectDisposedException
+            //rather than dereferencing null. Which owned scope's cache to route through is read now -
+            //an owned scope's _scope, once published, only ever transitions to null (never to a
+            //different scope) - but the artefact resolution itself is deferred inside the cache's own
+            //Lazy factory below, re-reading _scope there, exactly as this method did before the cache
+            //moved out of a private field: a Dispose racing this call is caught at the point of
+            //resolution, not just at the point of choosing which cache to ask.
+            var currentScope = _scope;
+            if (currentScope is null)
+                throw Disposed();
+
+            var ownedCache = ResolveOwnedArtefactCache(currentScope.ServiceProvider);
+            return (T?)ownedCache.GetOrAdd(objectType, () =>
+            {
+                var scope = _scope;
+                if (scope is null)
+                    throw Disposed();
+                return scope.ServiceProvider.GetService(objectType);
+            });
+        }
+
+        /// <summary>
+        /// Resolves the <see cref="ScopedArtefactCache"/> for an owned scope from
+        /// <paramref name="scopeProvider"/>, falling back to a cache owned by this lifetime scope alone
+        /// when the container never registered one - a hand-built host that never ran
+        /// <c>AddBrighter</c>/<c>BrighterHandlerBuilder</c>. A borrowed scope never reaches this: only
+        /// an ambient whose provider already resolves a <see cref="ScopedArtefactCache"/> ever becomes
+        /// BORROWED, per <see cref="AmbientScopeProbe.CanResolveFrom"/>.
+        /// </summary>
+        private ScopedArtefactCache ResolveOwnedArtefactCache(IServiceProvider scopeProvider)
+        {
+            if (scopeProvider.GetService(typeof(ScopedArtefactCache)) is ScopedArtefactCache registered)
+                return registered;
+
+            return LazyInitializer.EnsureInitialized(ref _ownedFallbackCache, () => new ScopedArtefactCache())!;
         }
 
         /// <summary>
@@ -493,6 +550,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             //fails its guard or, if it slipped past, sees it on its post-add re-check and cleans up the
             //scope it just tracked.
             if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+            //a borrowed scope owns nothing to release - the ambient's own owner disposes it, never
+            //Brighter (FR-12, C-7)
+            if (_borrowed) return;
 
             try
             {
@@ -524,7 +584,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     try { DisposeScope(rootScope); }
                     catch (Exception e) { Log.FailedToDisposeScope(s_logger, e); }
                 }
-                _scopedInstances.Clear();
+                _ownedFallbackCache?.Dispose();
             }
             // Note: Don't clear singleton instances as they may be shared
         }
@@ -539,6 +599,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public async ValueTask DisposeAsync()
         {
             if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+            if (_borrowed) return;
 
             try
             {
@@ -558,7 +619,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     try { await DisposeScopeAsync(rootScope).ConfigureAwait(false); }
                     catch (Exception e) { Log.FailedToDisposeScope(s_logger, e); }
                 }
-                _scopedInstances.Clear();
+                _ownedFallbackCache?.Dispose();
             }
         }
 
@@ -572,6 +633,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public void DisposeSurfacing()
         {
             if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+            //a borrowed scope owns nothing to release - the ambient's own owner disposes it, never
+            //Brighter (FR-12, C-7). Idempotent no-op, same as Dispose above.
+            if (_borrowed) return;
 
             try
             {
@@ -587,7 +651,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 var rootScope = Interlocked.Exchange(ref _scope, null);
                 if (rootScope != null)
                     DisposeScope(rootScope);
-                _scopedInstances.Clear();
+                _ownedFallbackCache?.Dispose();
             }
         }
 
@@ -598,6 +662,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public async ValueTask DisposeSurfacingAsync()
         {
             if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+            if (_borrowed) return;
 
             try
             {
@@ -613,7 +678,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 var rootScope = Interlocked.Exchange(ref _scope, null);
                 if (rootScope != null)
                     await DisposeScopeAsync(rootScope).ConfigureAwait(false);
-                _scopedInstances.Clear();
+                _ownedFallbackCache?.Dispose();
             }
         }
 

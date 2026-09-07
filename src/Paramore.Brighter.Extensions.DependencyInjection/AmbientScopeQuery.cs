@@ -27,7 +27,8 @@ using System;
 namespace Paramore.Brighter.Extensions.DependencyInjection
 {
     /// <summary>
-    /// The ambient-source ask shared by every container-backed factory's <c>CreatePipelineScope()</c>.
+    /// The ambient-source ask shared by every container-backed factory's <c>CreatePipelineScope()</c>,
+    /// and the decision ladder run over its answer.
     /// </summary>
     /// <remarks>
     /// Called only when the calling factory's own configured lifetime is <c>Scoped</c> - a factory whose
@@ -38,29 +39,48 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     internal static class AmbientScopeQuery
     {
         /// <summary>
-        /// Asks <paramref name="scopeProvider"/> for an ambient, when one is registered, discarding
-        /// what it returns - nothing yet adopts it.
+        /// Asks <paramref name="scopeProvider"/> for an ambient, when one is registered, and decides
+        /// whether the calling pipeline should borrow it.
         /// </summary>
         /// <param name="scopeProvider">The registered ambient source, or <see langword="null"/> where
-        /// none is registered, in which case no ask is made.</param>
+        /// none is registered, in which case no ask is made and no diagnostic is produced.</param>
         /// <param name="affinity">The affinity this pipeline computed for the ask, from
         /// <see cref="ScopeAffinityPolicy"/>.</param>
+        /// <param name="rootProvider">The root <see cref="IServiceProvider"/> the calling factory was
+        /// constructed with, against which an offered ambient's usability is probed.</param>
+        /// <returns>
+        /// A pipeline scope borrowed over the offered ambient, when the ask carried
+        /// <see cref="ScopeAffinity.JoinAmbient"/> and the ambient offered in answer implements
+        /// <see cref="IAmAServiceProviderScope"/> and passes <see cref="AmbientScopeProbe.CanResolveFrom"/>.
+        /// <see langword="null"/> in every other case - no provider registered, an <c>AlwaysNew</c> ask,
+        /// nothing offered, an ambient of a foreign role type, or an ambient that failed the probe -
+        /// meaning the calling factory should create and own its own scope. An ambient this method
+        /// declines is never disposed.
+        /// </returns>
         /// <exception cref="AmbientScopeSourceException">
         /// <paramref name="scopeProvider"/>'s <c>GetAmbient</c> threw. The calling pipeline builder
         /// recognises this type and rethrows the inner exception unwrapped.
         /// </exception>
-        public static void Ask(IAmAScopeProvider? scopeProvider, ScopeAffinity affinity)
+        public static IAmAScope? Ask(IAmAScopeProvider? scopeProvider, ScopeAffinity affinity, IServiceProvider rootProvider)
         {
-            if (scopeProvider is null) return;
+            if (scopeProvider is null) return null;
 
+            IAmAScope? ambient;
             try
             {
-                scopeProvider.GetAmbient(affinity);
+                ambient = scopeProvider.GetAmbient(affinity);
             }
             catch (Exception e)
             {
                 throw new AmbientScopeSourceException(e);
             }
+
+            if (affinity != ScopeAffinity.JoinAmbient) return null;
+            if (ambient is null) return null;
+            if (ambient is not IAmAServiceProviderScope src) return null;
+            if (!AmbientScopeProbe.CanResolveFrom(src, rootProvider)) return null;
+
+            return new ServiceProviderPipelineScope(ServiceProviderLifetimeScope.CreateBorrowed(src.Services));
         }
     }
 }

@@ -73,7 +73,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public IAmAScope? CreatePipelineScope()
         {
             if (_handlerLifetime == ServiceLifetime.Scoped)
-                AmbientScopeQuery.Ask(_scopeProvider, _scopeAffinityPolicy.ForHandlerPipeline());
+            {
+                var borrowed = AmbientScopeQuery.Ask(_scopeProvider, _scopeAffinityPolicy.ForHandlerPipeline(), _serviceProvider);
+                if (borrowed is not null) return borrowed;
+            }
 
             return _handlerLifetime == ServiceLifetime.Singleton
                 ? null

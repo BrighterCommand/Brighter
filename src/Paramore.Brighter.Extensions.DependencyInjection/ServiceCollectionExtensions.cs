@@ -146,6 +146,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             // container (D19). Landed inert here; the factories that call WarnOnce arrive later.
             services.TryAddSingleton<AmbientScopeDiagnostics>();
 
+            // ADR 0072 step 5 - the per-request-scope artefact cache a borrowed ambient's Scoped
+            // resolution routes through, so two pipelines sharing one ambient share one artefact
+            // instance rather than one each.
+            services.TryAddScoped<ScopedArtefactCache>();
+
             // DO NOT build intermediate provider - defer all resolution
             // Create registries - they always register as Transient, actual lifetime managed by ServiceProviderHandlerFactory
             var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);

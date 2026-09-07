@@ -67,8 +67,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             if (_lifetimeScope.Lifetime != ServiceLifetime.Scoped) return null;
 
-            AmbientScopeQuery.Ask(_scopeProvider, _scopeAffinityPolicy.ForTransformPipeline());
-            return new ServiceProviderPipelineScope(new ServiceProviderLifetimeScope(_serviceProvider, ServiceLifetime.Scoped));
+            var borrowed = AmbientScopeQuery.Ask(_scopeProvider, _scopeAffinityPolicy.ForTransformPipeline(), _serviceProvider);
+            return borrowed ?? new ServiceProviderPipelineScope(new ServiceProviderLifetimeScope(_serviceProvider, ServiceLifetime.Scoped));
         }
 
         /// <summary>
