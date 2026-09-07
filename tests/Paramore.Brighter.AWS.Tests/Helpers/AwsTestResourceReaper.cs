@@ -33,8 +33,24 @@ public class AwsTestResourceReaper
     private readonly AWSMessagingGatewayConnection _connection;
     private readonly List<string> _topics = [];
     private readonly List<string> _queues = [];
-    private string? _accountId;
     private bool _identityUnavailable;
+
+    /// <summary>
+    /// The caller's account id, resolved once per run rather than once per reaper.
+    /// </summary>
+    /// <remarks>
+    /// Every generated test builds its own provider, and so its own reaper, in its constructor,
+    /// and xUnit constructs one per test method — so an instance-level cache meant one
+    /// GetCallerIdentity round trip per test, not the one the remarks on
+    /// <see cref="ResolveTopicArnAsync"/> claimed.
+    ///
+    /// Only success is cached. A failure stays on the instance: the reaper's own offline tests
+    /// run in this process against a deliberately broken connection, and a shared failure flag
+    /// would let them decide that STS is unavailable for every other test in the run.
+    /// </remarks>
+    private static string? s_accountId;
+
+    private static readonly SemaphoreSlim IdentityGate = new(1, 1);
 
     public AwsTestResourceReaper(AWSMessagingGatewayConnection connection)
     {
@@ -188,7 +204,7 @@ public class AwsTestResourceReaper
 
         try
         {
-            var topicArn = await ResolveTopicArnAsync(snsClient, topicName, budget.Token)
+            var topicArn = await ResolveTopicArnAsync(topicName, budget.Token)
                 .ConfigureAwait(false);
             if (topicArn is null)
             {
@@ -238,41 +254,23 @@ public class AwsTestResourceReaper
     /// <see cref="AmazonSimpleNotificationServiceClient.FindTopicAsync"/> pages through every
     /// topic in the account on each call, which turns teardown across a full test run into a
     /// quadratic scan. Only the account id has to be looked up — the region carries its own
-    /// partition — so we ask STS once and compose ARNs the same way
-    /// <see cref="ValidateTopicByArnConvention"/> does, falling back to a search if that lookup
-    /// is unavailable.
+    /// partition — so we ask STS once per run and compose ARNs the same way
+    /// <see cref="ValidateTopicByArnConvention"/> does.
+    ///
+    /// There is no search fallback. <c>FindTopicAsync</c> is the one call in this SDK surface
+    /// that takes no cancellation token, so it is the one call <see cref="DeleteTimeout"/> cannot
+    /// bound — an unbounded scan per topic, reached only on the path where something is already
+    /// wrong. Leaving the topics to the account sweep, which is the declared backstop for exactly
+    /// this, beats a teardown that quietly takes minutes.
     /// </remarks>
     private async Task<string?> ResolveTopicArnAsync(
-        IAmazonSimpleNotificationService snsClient,
         string topicName,
         CancellationToken cancellationToken)
     {
-        if (_accountId is null && !_identityUnavailable)
+        var accountId = await GetAccountIdAsync(cancellationToken).ConfigureAwait(false);
+        if (accountId is null)
         {
-            try
-            {
-                using var stsClient = new AWSClientFactory(_connection).CreateStsClient();
-                var identity = await stsClient
-                    .GetCallerIdentityAsync(new GetCallerIdentityRequest(), cancellationToken)
-                    .ConfigureAwait(false);
-
-                _accountId = identity.Account;
-            }
-            catch (Exception exception)
-            {
-                // Asked once. Retrying per topic would add a failing call to each of the
-                // searches the lookup exists to avoid. Said out loud once too: without it the
-                // fallback below turns teardown quietly slow rather than loudly broken.
-                _identityUnavailable = true;
-                Report("look up the caller identity; falling back to a ListTopics scan per topic",
-                    exception);
-            }
-        }
-
-        if (_accountId is null)
-        {
-            // FindTopicAsync has no cancellable overload in this SDK.
-            return (await snsClient.FindTopicAsync(topicName).ConfigureAwait(false))?.TopicArn;
+            return null;
         }
 
         return new Arn
@@ -280,8 +278,51 @@ public class AwsTestResourceReaper
             Partition = _connection.Region.PartitionName,
             Service = "sns",
             Region = _connection.Region.SystemName,
-            AccountId = _accountId,
+            AccountId = accountId,
             Resource = topicName
         }.ToString();
+    }
+
+    /// <summary>
+    /// Resolves the caller's account id, asking STS at most once per run; see
+    /// <see cref="s_accountId"/>. Returns null when the lookup is unavailable, which the caller
+    /// reads as "skip topic deletion".
+    /// </summary>
+    private async Task<string?> GetAccountIdAsync(CancellationToken cancellationToken)
+    {
+        if (s_accountId is not null || _identityUnavailable)
+        {
+            return s_accountId;
+        }
+
+        await IdentityGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (s_accountId is not null)
+            {
+                return s_accountId;
+            }
+
+            using var stsClient = new AWSClientFactory(_connection).CreateStsClient();
+            var identity = await stsClient
+                .GetCallerIdentityAsync(new GetCallerIdentityRequest(), cancellationToken)
+                .ConfigureAwait(false);
+
+            s_accountId = identity.Account;
+        }
+        catch (Exception exception)
+        {
+            // Asked once per reaper. Retrying per topic would add a failing call, and its
+            // backoff, to every topic this fixture tracked.
+            _identityUnavailable = true;
+            Report("look up the caller identity; its topics are left to the account sweep",
+                exception);
+        }
+        finally
+        {
+            IdentityGate.Release();
+        }
+
+        return s_accountId;
     }
 }
