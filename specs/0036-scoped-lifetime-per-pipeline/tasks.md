@@ -530,7 +530,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T4.2a (which lands `AmbientScopeDiagnostics`, without which row 5 cannot warn)
   - **References**: AC-46 (FR-27.1, FR-27.2, D12, D16); ADR 0072 steps 2, 3
 
-- [ ] **TEST + IMPLEMENT: T4.4 — the seam admits a non-ASP.NET ambient, and adoption works over it**
+- [x] **TEST + IMPLEMENT: T4.4 — the seam admits a non-ASP.NET ambient, and adoption works over it**
   - **USE COMMAND**: `/test-first an AsyncLocal backed scope provider in a console host lets a Send adopt the ambient scope and a Send outside it create and dispose its own`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_non_aspnet_provider_offers_an_ambient_the_pipeline_should_adopt_it.cs`
