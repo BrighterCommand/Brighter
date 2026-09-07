@@ -22,6 +22,13 @@ public class SnsFifoMessageGatewayProvider
         _reaper = new AwsTestResourceReaper(_awsConnection);
     }
 
+    /// <summary>
+    /// The reaper this provider tracks its names with, so that a test can assert every name the
+    /// provider hands out is registered for deletion. Tracking is hand-written in each provider,
+    /// and a name added without a Track call leaks silently.
+    /// </summary>
+    internal AwsTestResourceReaper Reaper => _reaper;
+
     public RoutingKey GetOrCreateRoutingKey([CallerMemberName] string? testName = null)
     {
         return new RoutingKey(_reaper.TrackTopic($"sns-fifo-{Uuid.New():N}.fifo"));
