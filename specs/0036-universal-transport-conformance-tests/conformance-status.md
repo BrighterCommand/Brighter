@@ -257,9 +257,28 @@ cell remains `Unknown`.
 - `AzureServiceBus / AzureServiceBusMessagingGateway` — **ALL ELEVEN cells `Deferred -> #4240
   (sign-off: @maintainer)` on INFRA grounds.** AC-23 makes *"inability to provide CI infrastructure"* a
   valid ground for deferral, and ADR `0067` ("Negative") anticipated ASB landing here. **This is a
-  deferral of VERIFICATION, not a declaration of non-conformance** — no ASB behaviour has been observed
-  to fail; none has been observed at all. The configuration stays in the target set and is never dropped
-  (FR-21).
+  deferral of VERIFICATION, not a declaration of non-conformance** — no ASB behaviour has been shown to
+  be non-conformant. The configuration stays in the target set and is never dropped (FR-21).
+  - ⚠️ **CORRECTION (2026-09-07): the suite HAS now been observed, in CI, and the deferral still
+    stands — for a different reason than first recorded.** The original note said no ASB behaviour "has
+    been observed at all", on the grounds that the credentials are unset. That is true locally but **not
+    in CI**: `.github/workflows/ci.yml` supplies `BrighterTestsASBConnectionString` from
+    `secrets.BRIGHTERTESTS_ASB_CONNECTION_STRING`, so `azure-ci` runs against a real namespace.
+    A throwaway probe (PR #4308, closed unmerged) flipped the cells so the generator emitted no `Skip`,
+    and let CI execute all 22 canonical tests once. Result: **161 tests, 131 passed, 30 failed** — every
+    canonical behaviour failed, **and so did the basic post/receive companion**, with
+    `Assert.NotEqual() Failure: … Actual: MT_NONE` (52 occurrences).
+  - **The probe is therefore INCONCLUSIVE as conformance evidence, and no cell may be flipped from it.**
+    A transport that cannot complete a plain round trip in this environment cannot have "does Nack
+    redeliver" judged against it; every canonical failure is downstream of the round trip, not evidence
+    about the behaviour. Alongside the `MT_NONE` failures the run shows `ServiceBusException:
+    SubCode=40900 / 40901, Status: 409 (Conflict)` on topic-and-subscription management, consistent with
+    contention on the shared namespace rather than per-behaviour non-conformance.
+  - **One distinct defect the probe did surface**: both variants of
+    `When_sending_a_delayed_message_should_deliver_after_delay` fail with
+    `System.UriFormatException: Invalid URI: The format of the URI could not be determined.` — a real
+    fault in the delayed-send path, not a missed message. It is the only ASB failure with a cause of its
+    own, and it needs its own investigation.
   - **Broker attempt and why it failed.** ASB is a cloud service with no container story in this repo:
     there is **no `docker-compose-*asb*.yaml`**, the credentials `ASBCreds.cs` requires
     (`BrighterTestsASBConnectionString` / `BrighterTestsASBNameSpace`) are **both unset**, the `az` CLI
@@ -286,6 +305,8 @@ cell remains `Unknown`.
     added failures are the generator's *non-canonical* companions (basic post/receive, multi-message,
     multi-thread post, activity-context) which are not FR-mapped and so take no ledger-driven Skip —
     they fail on the identical missing-credentials exception, not on any behaviour.
+    ⚠️ **That last clause holds only where the credentials are absent.** In CI, where they are supplied,
+    the same companions fail on `MT_NONE` and on `409 (Conflict)` — see the correction above.
     **Precedent**: this is the same resolution as `GCP / Stream` + `/ StreamOrdering`, where the scoped
     suite could not be run locally and **the no-`Unknown` ledger is the gate**, with `dotnet test`
     verification deferred to real infrastructure.
