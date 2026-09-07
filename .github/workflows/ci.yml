@@ -469,7 +469,7 @@ jobs:
           dotnet test ./tests/Paramore.Brighter.DynamoDB.V4.Tests/Paramore.Brighter.DynamoDB.V4.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --logger GitHubActions --blame -v n
   aws-mock-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 20
     needs: build
     env:
       AWS_SERVICE_URL: http://localhost:4566
@@ -510,7 +510,7 @@ jobs:
 
   aws-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 20
     if: |
       (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
       (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
