@@ -26,6 +26,9 @@ CONVENTION_QUEUE_URL=""
 CONVENTION_FIFO_QUEUE_URL=""
 CONVENTION_TOPIC_ARN=""
 CONVENTION_FIFO_TOPIC_ARN=""
+DLQ_ASYNC_QUEUE_URL=""
+GUARDED_QUEUE_URL=""
+GUARDED_TOPIC_ARN=""
 
 cleanup_test_resources() {
     echo ""
@@ -47,6 +50,9 @@ cleanup_test_resources() {
     [[ -n "$CONVENTION_FIFO_QUEUE_URL" ]] && aws sqs delete-queue --queue-url "$CONVENTION_FIFO_QUEUE_URL" 2>/dev/null || true
     [[ -n "$CONVENTION_TOPIC_ARN" ]] && aws sns delete-topic --topic-arn "$CONVENTION_TOPIC_ARN" 2>/dev/null || true
     [[ -n "$CONVENTION_FIFO_TOPIC_ARN" ]] && aws sns delete-topic --topic-arn "$CONVENTION_FIFO_TOPIC_ARN" 2>/dev/null || true
+    [[ -n "$DLQ_ASYNC_QUEUE_URL" ]] && aws sqs delete-queue --queue-url "$DLQ_ASYNC_QUEUE_URL" 2>/dev/null || true
+    [[ -n "$GUARDED_QUEUE_URL" ]] && aws sqs delete-queue --queue-url "$GUARDED_QUEUE_URL" 2>/dev/null || true
+    [[ -n "$GUARDED_TOPIC_ARN" ]] && aws sns delete-topic --topic-arn "$GUARDED_TOPIC_ARN" 2>/dev/null || true
     echo "  Cleaned up test fixtures"
 }
 trap cleanup_test_resources EXIT
@@ -74,6 +80,17 @@ assert_contains() {
     else
         echo "  FAIL: $message (output did not contain '$needle')"
         FAIL=$((FAIL + 1))
+    fi
+}
+
+assert_not_contains() {
+    local haystack="$1" needle="$2" message="$3"
+    if echo "$haystack" | grep -qE "$needle"; then
+        echo "  FAIL: $message (output contained '$needle')"
+        FAIL=$((FAIL + 1))
+    else
+        echo "  PASS: $message"
+        PASS=$((PASS + 1))
     fi
 }
 
@@ -186,6 +203,15 @@ CONVENTION_FIFO_TOPIC_ARN=$(aws sns create-topic \
     --query 'TopicArn' --output text)
 echo "  Created convention-named FIFO topic: $CONVENTION_FIFO_TOPIC"
 
+# The hand-written fixtures name resources by prefix rather than by the generated convention.
+# Consumer-DLQ-Async is one of those, and it leaks the same way when its constructor throws
+# before Dispose can run, so the prefix list has to carry it.
+DLQ_ASYNC_QUEUE="Consumer-DLQ-Async-$(hex_id)"
+DLQ_ASYNC_QUEUE_URL=$(aws sqs create-queue \
+    --queue-name "$DLQ_ASYNC_QUEUE" \
+    --query 'QueueUrl' --output text)
+echo "  Created prefix-named queue: $DLQ_ASYNC_QUEUE"
+
 # Subscription on the tagged topic (from the tagged queue)
 TAGGED_QUEUE_ARN=$(aws sqs get-queue-attributes \
     --queue-url "$TAGGED_QUEUE_URL" \
@@ -244,6 +270,7 @@ assert_contains "$DRY_RUN_OUTPUT" "$CONVENTION_QUEUE" "output lists convention-n
 assert_contains "$DRY_RUN_OUTPUT" "$CONVENTION_FIFO_QUEUE" "output lists convention-named FIFO queue"
 assert_contains "$DRY_RUN_OUTPUT" "$CONVENTION_TOPIC" "output lists convention-named topic"
 assert_contains "$DRY_RUN_OUTPUT" "$CONVENTION_FIFO_TOPIC" "output lists convention-named FIFO topic"
+assert_contains "$DRY_RUN_OUTPUT" "$DLQ_ASYNC_QUEUE" "output lists prefix-named async DLQ queue"
 
 # Tagged queue must still exist after dry-run
 QUEUE_CHECK=$(aws sqs get-queue-url --queue-name "$TAGGED_QUEUE" --query 'QueueUrl' --output text 2>/dev/null || echo "")
@@ -339,6 +366,93 @@ assert_eventually_contains \
 assert_eventually_contains \
     "aws sns get-topic-attributes --topic-arn \"$CONVENTION_FIFO_TOPIC_ARN\"" \
     "NotFound|not found|Not Found" "convention-named FIFO topic was deleted"
+
+assert_eventually_contains \
+    "aws sqs get-queue-url --queue-name \"$DLQ_ASYNC_QUEUE\"" \
+    "NonExistentQueue|does not exist" "prefix-named async DLQ queue was deleted"
+
+# --- Test 9: the age guard defers resources a live run may still be using ---
+# The sweep fires on every CI completion, and CI declares no concurrency group, so a run other
+# than the one that triggered the sweep is routinely still in flight. Queues carry a
+# CreatedTimestamp; SNS reports no creation time at all, so a topic's age has to be established
+# by stamping it on first sight and reading the stamp back on a later sweep.
+echo ""
+echo "=== Test 9: young resources are deferred, not deleted ==="
+
+GUARDED_QUEUE="sqs-std-$(hex_id)"
+GUARDED_QUEUE_URL=$(aws sqs create-queue \
+    --queue-name "$GUARDED_QUEUE" \
+    --query 'QueueUrl' --output text)
+GUARDED_TOPIC="sns-std-$(hex_id)"
+GUARDED_TOPIC_ARN=$(aws sns create-topic \
+    --name "$GUARDED_TOPIC" \
+    --query 'TopicArn' --output text)
+echo "  Created young convention-named queue: $GUARDED_QUEUE"
+echo "  Created young convention-named topic: $GUARDED_TOPIC"
+
+# A dry run has to preview what the real run would do, including what it would decline to do --
+# a developer who runs the tests locally and then dry-runs to see what leaked must not be shown
+# an empty list.
+GUARD_DRY_OUTPUT=$(CLEANUP_MIN_AGE_SECONDS=3600 "$CLEANUP_SCRIPT" --dry-run 2>&1)
+
+assert_contains "$GUARD_DRY_OUTPUT" "Would skip \(too young\): $GUARDED_QUEUE" \
+    "dry-run previews the young queue as skipped"
+assert_contains "$GUARD_DRY_OUTPUT" "Would skip \(too young\): $GUARDED_TOPIC" \
+    "dry-run previews the young topic as skipped"
+assert_not_contains "$GUARD_DRY_OUTPUT" "Would delete untagged test queue: $GUARDED_QUEUE" \
+    "dry-run does not offer to delete the young queue"
+assert_not_contains "$GUARD_DRY_OUTPUT" "Would delete untagged test topic: $GUARDED_TOPIC" \
+    "dry-run does not offer to delete the young topic"
+
+GUARD_RUN_OUTPUT=$(CLEANUP_MIN_AGE_SECONDS=3600 "$CLEANUP_SCRIPT" 2>&1)
+GUARD_RUN_EXIT=$?
+
+assert_eq "0" "$GUARD_RUN_EXIT" "guarded run exits with 0"
+assert_contains "$GUARD_RUN_OUTPUT" "too young|created in the last" \
+    "the run reports what it deferred rather than passing over it silently"
+
+QUEUE_CHECK=$(aws sqs get-queue-url --queue-name "$GUARDED_QUEUE" --query 'QueueUrl' --output text 2>/dev/null || echo "")
+assert_not_empty "$QUEUE_CHECK" "young queue survived the guarded run"
+
+TOPIC_CHECK=$(aws sns get-topic-attributes --topic-arn "$GUARDED_TOPIC_ARN" \
+    --query 'Attributes.TopicArn' --output text 2>/dev/null || echo "")
+assert_not_empty "$TOPIC_CHECK" "young topic survived the guarded run"
+
+# The stamp is the whole mechanism for topics: without it the next sweep has no more idea how
+# old the topic is than this one did, and would defer it forever.
+STAMP=$(aws sns list-tags-for-resource --resource-arn "$GUARDED_TOPIC_ARN" \
+    --query "Tags[?Key=='BrighterSweepFirstSeen'].Value | [0]" --output text 2>/dev/null || echo "")
+assert_contains "$STAMP" "^[0-9]+$" "the guarded run stamped the topic with a first-seen time"
+
+# --- Test 10: an unusable age guard stops the sweep rather than disabling itself ---
+# The guard is the only thing standing between the sweep and a live run's resources, and the
+# script deliberately omits set -e, so a value bash cannot compare has to be refused up front.
+echo ""
+echo "=== Test 10: a non-numeric CLEANUP_MIN_AGE_SECONDS refuses to run ==="
+
+BAD_AGE_OUTPUT=$(CLEANUP_MIN_AGE_SECONDS=an-hour "$CLEANUP_SCRIPT" 2>&1)
+BAD_AGE_EXIT=$?
+
+assert_eq "1" "$BAD_AGE_EXIT" "cleanup exits non-zero on a non-numeric age guard"
+assert_contains "$BAD_AGE_OUTPUT" "CLEANUP_MIN_AGE_SECONDS" "the error names the offending variable"
+
+QUEUE_CHECK=$(aws sqs get-queue-url --queue-name "$GUARDED_QUEUE" --query 'QueueUrl' --output text 2>/dev/null || echo "")
+assert_not_empty "$QUEUE_CHECK" "nothing was deleted before the guard was validated"
+
+# --- Test 11: releasing the guard deletes what it deferred ---
+# Deferral must not become permanent: a stamped topic is still swept once it is old enough.
+echo ""
+echo "=== Test 11: deferred resources are deleted once the guard allows it ==="
+
+CLEANUP_MIN_AGE_SECONDS=0 "$CLEANUP_SCRIPT" >/dev/null 2>&1
+
+assert_eventually_contains \
+    "aws sqs get-queue-url --queue-name \"$GUARDED_QUEUE\"" \
+    "NonExistentQueue|does not exist" "the deferred queue was deleted once old enough"
+
+assert_eventually_contains \
+    "aws sns get-topic-attributes --topic-arn \"$GUARDED_TOPIC_ARN\"" \
+    "NotFound|not found|Not Found" "the deferred topic was deleted once old enough"
 
 # Teardown is handled by the EXIT trap defined at the top of the script.
 

@@ -14,8 +14,13 @@
 #   ./clean_failed_tests_aws_assets.sh --dry-run   # list without deleting
 #
 # Environment:
-#   CLEANUP_PARALLELISM     concurrent deletions in the name sweep (default 16)
-#   CLEANUP_MIN_AGE_SECONDS  queues younger than this are left alone (default 3600; 0 disables)
+#   CLEANUP_PARALLELISM      concurrent deletions in the name sweep (default 16)
+#   CLEANUP_MIN_AGE_SECONDS  resources younger than this are left alone (default 3600; 0 disables).
+#                            Must be a whole number of seconds; anything else is refused.
+#
+# IAM: as well as the delete and list calls, the age guard needs sqs:GetQueueAttributes and --
+# because SNS reports no creation time -- sns:ListTagsForResource and sns:TagResource, which it
+# uses to stamp a topic on first sight and read that stamp back on a later sweep.
 
 # Intentionally omitting -e: individual deletion failures are soft errors handled inline.
 set -uo pipefail
@@ -57,10 +62,77 @@ iso_to_epoch() {
 }
 
 # --- Age guard: resources younger than this are left alone ---
-# Applied in both the tag sweep and the name sweep so that an in-flight CI job's
-# resources are never deleted.  SNS has no creation-time API so topics are excluded.
+# Applied in both the tag sweep and the name sweep, to queues and to topics, so that a CI job
+# still in flight does not have its resources deleted out from under it. The sweep fires on every
+# CI completion as well as on a schedule, and CI declares no concurrency group, so the run that
+# triggered a sweep is never the only one in the account.
+#
+# The guard is the only thing standing between the sweep and a live run's resources, and this
+# script deliberately omits `set -e`, so a value bash cannot compare would evaluate false and
+# silently disable it. Refuse to run instead.
 MIN_AGE_SECONDS="${CLEANUP_MIN_AGE_SECONDS:-3600}"
+if [[ ! "$MIN_AGE_SECONDS" =~ ^[0-9]+$ ]]; then
+    echo "ERROR: CLEANUP_MIN_AGE_SECONDS must be a whole number of seconds (got '$MIN_AGE_SECONDS')."
+    echo "  It guards a live test run's resources against this sweep. Disabling it by accident is"
+    echo "  worse than not sweeping at all, so nothing is deleted."
+    exit 1
+fi
 NOW=$(date +%s)
+
+# Stamped on a matched SNS topic the first time a sweep sees it; see topic_is_too_young.
+FIRST_SEEN_TAG="BrighterSweepFirstSeen"
+
+# True when a queue is young enough that a run still in flight may be using it. An age that
+# cannot be read counts as young: declining to delete costs a deferred leak, deleting wrongly
+# costs somebody else's build.
+queue_is_too_young() {
+    local queue_url="$1" created
+    [[ "$MIN_AGE_SECONDS" -gt 0 ]] || return 1
+
+    created=$(aws sqs get-queue-attributes --queue-url "$queue_url" \
+        --attribute-names CreatedTimestamp \
+        --query "Attributes.CreatedTimestamp" --output text 2>/dev/null || echo "")
+    [[ "$created" =~ ^[0-9]+$ ]] || return 0
+
+    [[ $(( NOW - created )) -lt "$MIN_AGE_SECONDS" ]]
+}
+
+# True when a topic may belong to a run still in flight.
+#
+# SNS reports no creation time -- there is no such attribute, and the tagging API does not carry
+# one -- so a topic's age cannot be read, only established. The first sweep to match a topic
+# stamps it with FIRST_SEEN_TAG and leaves it; a later sweep deletes it once that stamp is
+# MIN_AGE_SECONDS old. A topic a live run created moments ago therefore always survives its first
+# sweep, and nothing is deferred forever -- the sweep after the window takes it.
+#
+# Needs sns:ListTagsForResource and sns:TagResource. Without TagResource no stamp ever lands and
+# every topic is deferred indefinitely, which is the leak this script exists to stop, so that
+# failure is reported rather than swallowed.
+topic_is_too_young() {
+    local topic_arn="$1" first_seen
+    [[ "$MIN_AGE_SECONDS" -gt 0 ]] || return 1
+
+    first_seen=$(aws sns list-tags-for-resource --resource-arn "$topic_arn" \
+        --query "Tags[?Key=='$FIRST_SEEN_TAG'].Value | [0]" --output text 2>/dev/null || echo "")
+
+    if [[ "$first_seen" =~ ^[0-9]+$ ]]; then
+        [[ $(( NOW - first_seen )) -lt "$MIN_AGE_SECONDS" ]]
+        return
+    fi
+
+    # First sighting, or a stamp we cannot read: record it and defer. A dry run writes nothing,
+    # so it previews the same deferral the next real run would make.
+    if ! $DRY_RUN; then
+        aws sns tag-resource --resource-arn "$topic_arn" \
+            --tags "Key=$FIRST_SEEN_TAG,Value=$NOW" >/dev/null 2>&1 \
+            || echo "    WARNING: could not stamp $FIRST_SEEN_TAG on ${topic_arn##*:} (needs sns:TagResource); it will be deferred again next sweep" >&2
+    fi
+    return 0
+}
+
+# The name sweep runs these checks in parallel, each in its own bash subshell.
+export -f queue_is_too_young topic_is_too_young
+export MIN_AGE_SECONDS NOW FIRST_SEEN_TAG DRY_RUN
 
 # --- Discover tagged resources via Resource Groups Tagging API ---
 # Note: AWS CLI v2 auto-paginates by default. The --query/--output flags are applied
@@ -137,6 +209,15 @@ fi
 # 2. Topics
 if [[ ${#TOPICS[@]} -gt 0 ]]; then
     for arn in "${TOPICS[@]}"; do
+        if topic_is_too_young "$arn"; then
+            if $DRY_RUN; then
+                echo "  [DRY RUN] Would skip (too young): ${arn##*:}"
+            else
+                echo "  Skipping tagged topic (too young): ${arn##*:}"
+            fi
+            continue
+        fi
+
         # Delete any subscriptions on this topic that weren't tagged individually
         if ! $DRY_RUN; then
             TOPIC_SUBS=$(aws sns list-subscriptions-by-topic --topic-arn "$arn" \
@@ -163,25 +244,28 @@ if [[ ${#QUEUES[@]} -gt 0 ]]; then
         # Extract queue name from ARN (last segment)
         QUEUE_NAME="${arn##*:}"
 
+        # Resolved and age-checked before the dry-run branch, so that the preview reports the
+        # same decision the real run would reach rather than a longer list than it would act on.
+        QUEUE_URL=$(aws sqs get-queue-url --queue-name "$QUEUE_NAME" --query 'QueueUrl' --output text 2>&1 || echo "")
+        if [[ -z "$QUEUE_URL" || "$QUEUE_URL" == *"NonExistentQueue"* ]]; then
+            echo "  Queue already gone: $QUEUE_NAME"
+            continue
+        fi
+
+        if queue_is_too_young "$QUEUE_URL"; then
+            if $DRY_RUN; then
+                echo "  [DRY RUN] Would skip (too young): $QUEUE_NAME"
+            else
+                echo "  Skipping tagged queue (too young): $QUEUE_NAME"
+            fi
+            continue
+        fi
+
         if $DRY_RUN; then
             echo "  [DRY RUN] Would delete queue: $QUEUE_NAME ($arn)"
         else
-            QUEUE_URL=$(aws sqs get-queue-url --queue-name "$QUEUE_NAME" --query 'QueueUrl' --output text 2>&1 || echo "")
-            if [[ -n "$QUEUE_URL" && "$QUEUE_URL" != *"NonExistentQueue"* ]]; then
-                if [[ "$MIN_AGE_SECONDS" -gt 0 ]]; then
-                    CREATED=$(aws sqs get-queue-attributes --queue-url "$QUEUE_URL" \
-                        --attribute-names CreatedTimestamp \
-                        --query "Attributes.CreatedTimestamp" --output text 2>/dev/null || echo "")
-                    if [[ -n "$CREATED" && "$CREATED" != "None" && $(( NOW - CREATED )) -lt "$MIN_AGE_SECONDS" ]]; then
-                        echo "  Skipping tagged queue (too young, $(( NOW - CREATED ))s old): $QUEUE_NAME"
-                        continue
-                    fi
-                fi
-                echo "  Deleting queue: $QUEUE_NAME ($QUEUE_URL)"
-                aws sqs delete-queue --queue-url "$QUEUE_URL" 2>&1 || echo "    WARNING: failed to delete queue $QUEUE_NAME"
-            else
-                echo "  Queue already gone: $QUEUE_NAME"
-            fi
+            echo "  Deleting queue: $QUEUE_NAME ($QUEUE_URL)"
+            aws sqs delete-queue --queue-url "$QUEUE_URL" 2>&1 || echo "    WARNING: failed to delete queue $QUEUE_NAME"
         fi
     done
 fi
@@ -284,7 +368,7 @@ fi
 #
 # Both patterns are anchored at the start only, so derived resources that append a suffix
 # (-DLQ, -Invalid, -dlq.fifo, .fifo) are matched by the same rule as their parent.
-TEST_PREFIXES="Producer-Send-Tests|Producer-Requeue-Tests|Producer-DLQ-Tests|Producer-Scheduler-Tests|Producer-Scheduler-Async-Tests|Producer-Fire-Scheduler-Tests|Producer-Fire-Scheduler-Async-Tests|Producer-Tag-Tests|Producer-FSR-Tests|Producer-FSRA-Tests|Consumer-Requeue-Tests|Consumer-DLQ-Tests|Consumer-DLQ-Fifo|Consumer-Fallback-Tests|Consumer-Invalid-Tests|Consumer-NoChan-Tests|Buffered-Consumer-Tests|Buffered-Scheduler-Tests|Buffered-Scheduler-Async-Tests|Buffered-FSR-Tests|Redrive-Tests|Redrive-DLQ-Tests|Raw-Msg-Delivery-Tests|DLQ-Reader|Invalid-Reader"
+TEST_PREFIXES="Producer-Send-Tests|Producer-Requeue-Tests|Producer-DLQ-Tests|Producer-Scheduler-Tests|Producer-Scheduler-Async-Tests|Producer-Fire-Scheduler-Tests|Producer-Fire-Scheduler-Async-Tests|Producer-Tag-Tests|Producer-FSR-Tests|Producer-FSRA-Tests|Consumer-Requeue-Tests|Consumer-DLQ-Tests|Consumer-DLQ-Async|Consumer-DLQ-Fifo|Consumer-Fallback-Tests|Consumer-Invalid-Tests|Consumer-NoChan-Tests|Buffered-Consumer-Tests|Buffered-Scheduler-Tests|Buffered-Scheduler-Async-Tests|Buffered-FSR-Tests|Redrive-Tests|Redrive-DLQ-Tests|Raw-Msg-Delivery-Tests|DLQ-Reader|Invalid-Reader"
 
 # The 32-hex GUID makes this pattern specific enough that it cannot collide with a
 # hand-named resource; it is the only thing standing between a real queue and deletion.
@@ -303,7 +387,23 @@ echo "Scanning for untagged test resources by naming convention ..."
 # AWS API call at a time does not get through that inside the cleanup workflow's timeout.
 PARALLELISM="${CLEANUP_PARALLELISM:-16}"
 
-# MIN_AGE_SECONDS and NOW are defined near the top of the file so the tag sweep can share them.
+# MIN_AGE_SECONDS, NOW and the two age predicates are defined near the top of the file so the tag
+# sweep can share them.
+
+# Splits the names read from stdin into OLD_ENOUGH and TOO_YOUNG using the named predicate. Each
+# check costs an AWS call, so they run at the same parallelism as the deletions.
+partition_by_age() {
+    local predicate="$1" status name
+    OLD_ENOUGH=()
+    TOO_YOUNG=()
+    while read -r status name; do
+        case "$status" in
+            young) TOO_YOUNG+=("$name") ;;
+            old)   OLD_ENOUGH+=("$name") ;;
+        esac
+    done < <(xargs -P "$PARALLELISM" -I {} bash -c \
+        'if "$2" "$1"; then echo "young $1"; else echo "old $1"; fi' _ {} "$predicate")
+}
 
 # Clean untagged SNS topics.
 # SNS list-topics returns a NextToken, so the CLI's default auto-pagination sees every topic.
@@ -324,6 +424,26 @@ for topic_arn in $ALL_TOPICS; do
     fi
 done
 
+# Drop the ones that are not yet known to be old enough. Unlike a queue, a topic has no
+# creation time to read, so the first sweep to see one stamps it and defers; see
+# topic_is_too_young.
+MATCHED_TOPIC_COUNT=${#MATCHED_TOPICS[@]}
+if [[ ${#MATCHED_TOPICS[@]} -gt 0 && "$MIN_AGE_SECONDS" -gt 0 ]]; then
+    partition_by_age topic_is_too_young < <(printf '%s\n' "${MATCHED_TOPICS[@]}")
+
+    if [[ ${#TOO_YOUNG[@]} -gt 0 ]]; then
+        if $DRY_RUN; then
+            for topic_arn in "${TOO_YOUNG[@]}"; do
+                echo "  [DRY RUN] Would skip (too young): ${topic_arn##*:}"
+            done
+        else
+            echo "  Deferred ${#TOO_YOUNG[@]} topic(s) not yet known to be older than $(( MIN_AGE_SECONDS / 60 )) minute(s); a test run may still be using them"
+        fi
+    fi
+
+    MATCHED_TOPICS=(${OLD_ENOUGH[@]+"${OLD_ENOUGH[@]}"})
+fi
+
 if [[ ${#MATCHED_TOPICS[@]} -gt 0 ]]; then
     if $DRY_RUN; then
         for topic_arn in "${MATCHED_TOPICS[@]}"; do
@@ -341,7 +461,7 @@ if [[ ${#MATCHED_TOPICS[@]} -gt 0 ]]; then
                 fi' _ {}
     fi
 fi
-echo "  Found ${#MATCHED_TOPICS[@]} untagged test topic(s)"
+echo "  Matched $MATCHED_TOPIC_COUNT untagged test topic(s), acted on ${#MATCHED_TOPICS[@]}"
 
 # Clean untagged SQS queues.
 # --page-size is required: without it SQS returns at most 1000 queues and no NextToken, so the
@@ -362,32 +482,23 @@ for queue_url in $ALL_QUEUES; do
     fi
 done
 
-# Drop the ones that are too young to be certain about. CreatedTimestamp costs a call per
-# queue, so the lookups run at the same parallelism as the deletions.
+# Drop the ones that are too young to be certain about. The filter runs in both modes: a dry run
+# that quietly omitted them would show a developer who had just run the tests an empty list,
+# which is the opposite of what the flag is for.
+MATCHED_QUEUE_COUNT=${#MATCHED_QUEUES[@]}
 if [[ ${#MATCHED_QUEUES[@]} -gt 0 && "$MIN_AGE_SECONDS" -gt 0 ]]; then
-    OLD_ENOUGH=()
-    while IFS= read -r queue_url; do
-        [[ -n "$queue_url" ]] && OLD_ENOUGH+=("$queue_url")
-    done < <(printf '%s\n' "${MATCHED_QUEUES[@]}" \
-        | xargs -P "$PARALLELISM" -I {} sh -c '
-            created=$(aws sqs get-queue-attributes --queue-url "$1" \
-                --attribute-names CreatedTimestamp \
-                --query "Attributes.CreatedTimestamp" --output text 2>/dev/null || echo "")
-            case "$created" in
-                ""|None)
-                    # Age unknown — skip rather than risk deleting a resource a live run may be using.
-                    ;;
-                *)
-                    if [ $(( $2 - created )) -ge "$3" ]; then
-                        echo "$1"
-                    fi
-                    ;;
-            esac' _ {} "$NOW" "$MIN_AGE_SECONDS")
+    partition_by_age queue_is_too_young < <(printf '%s\n' "${MATCHED_QUEUES[@]}")
 
-    SKIPPED_QUEUES=$(( ${#MATCHED_QUEUES[@]} - ${#OLD_ENOUGH[@]} ))
-    if [[ $SKIPPED_QUEUES -gt 0 ]]; then
-        echo "  Skipped $SKIPPED_QUEUES queue(s) created in the last $(( MIN_AGE_SECONDS / 60 )) minute(s); a test run may still be using them"
+    if [[ ${#TOO_YOUNG[@]} -gt 0 ]]; then
+        if $DRY_RUN; then
+            for queue_url in "${TOO_YOUNG[@]}"; do
+                echo "  [DRY RUN] Would skip (too young): ${queue_url##*/}"
+            done
+        else
+            echo "  Skipped ${#TOO_YOUNG[@]} queue(s) created in the last $(( MIN_AGE_SECONDS / 60 )) minute(s); a test run may still be using them"
+        fi
     fi
+
     MATCHED_QUEUES=(${OLD_ENOUGH[@]+"${OLD_ENOUGH[@]}"})
 fi
 
@@ -406,7 +517,7 @@ if [[ ${#MATCHED_QUEUES[@]} -gt 0 ]]; then
                 fi' _ {}
     fi
 fi
-echo "  Found ${#MATCHED_QUEUES[@]} untagged test queue(s)"
+echo "  Matched $MATCHED_QUEUE_COUNT untagged test queue(s), acted on ${#MATCHED_QUEUES[@]}"
 
 echo ""
 echo "Cleanup complete."
