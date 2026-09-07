@@ -42,6 +42,8 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
     private static readonly ILogger s_logger =
         ApplicationLogging.CreateLogger<AzureServiceBusMessageCreator>();
 
+    private static readonly Uri s_defaultSourceUri = new(MessageHeader.DefaultSource);
+
     /// <summary>
     /// Maps an Azure Service Bus message to a Brighter <see cref="Message"/>.
     /// </summary>
@@ -161,9 +163,9 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
             return null;
         }
 
-        var dataSchema = property.ToString();
-
-        if (string.IsNullOrEmpty(dataSchema))
+        // An AMQP null application property arrives as a null value, not an absent key, so this
+        // must guard the value as well as the type — matching GetSource below
+        if (property is not string dataSchema || string.IsNullOrEmpty(dataSchema))
         {
             Log.EmptyCloudEventsDataSchema(s_logger, _topic, subscription.Name);
             return null;
@@ -308,7 +310,6 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
 
     private Uri GetSource(IBrokeredMessageWrapper azureServiceBusMessage)
     {
-        var defaultSourceUri = new Uri(MessageHeader.DefaultSource);
         if (
             !azureServiceBusMessage.ApplicationProperties.TryGetValue(
                 ASBConstants.CloudEventsSource,
@@ -317,17 +318,17 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
         )
         {
             Log.NoSourceFound(s_logger, _topic, subscription.Name);
-            return defaultSourceUri;
+            return s_defaultSourceUri;
         }
 
         if (property is not string sourceString || string.IsNullOrEmpty(sourceString))
         {
             Log.EmptyOrInvalidSource(s_logger, _topic, subscription.Name);
-            return defaultSourceUri;
+            return s_defaultSourceUri;
         }
 
         // CloudEvents defines source as a URI-reference, which may be relative
-        return Uri.TryCreate(sourceString, UriKind.RelativeOrAbsolute, out var uri) ? uri : defaultSourceUri;
+        return Uri.TryCreate(sourceString, UriKind.RelativeOrAbsolute, out var uri) ? uri : s_defaultSourceUri;
     }
 
     private TraceParent GetTraceParent(IBrokeredMessageWrapper azureServiceBusMessage)
@@ -409,8 +410,10 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
             SubscriptionName subscriptionName
         );
 
+        // dataschema is optional in CloudEvents, and since it is no longer substituted with a default
+        // its absence is the normal outcome rather than something an operator needs to act on
         [LoggerMessage(
-            LogLevel.Warning,
+            LogLevel.Debug,
             "No Cloud Events data schema found in message from topic {Topic} via subscription {SubscriptionName}"
         )]
         public static partial void NoCloudEventsDataSchema(

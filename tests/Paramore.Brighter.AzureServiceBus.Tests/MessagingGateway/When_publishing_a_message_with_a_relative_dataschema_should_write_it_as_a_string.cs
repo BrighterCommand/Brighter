@@ -31,6 +31,9 @@ public class AzureServiceBusRelativeDataSchemaPublishTests
         var asbMessage = AzureServiceBusMessagePublisher.ConvertToServiceBusMessage(message);
 
         // Assert
+        // The CloudEvents keys are written as string literals, not via ASBConstants, deliberately:
+        // these are wire-format attribute names, so a change to a constant's *value* must fail a test
+        // rather than silently rename an on-wire attribute. (ASBConstants is internal in any case.)
         var written = asbMessage.ApplicationProperties["cloudEvents:schema"];
         Assert.IsType<string>(written);
         Assert.Equal(relativeDataSchema.ToString(), written);

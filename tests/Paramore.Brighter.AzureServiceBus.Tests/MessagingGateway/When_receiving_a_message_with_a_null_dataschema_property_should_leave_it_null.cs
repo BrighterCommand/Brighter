@@ -8,17 +8,18 @@ using Xunit;
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
 /// <summary>
-/// CloudEvents defines both <c>source</c> and <c>dataschema</c> as URI-*references*, which MAY be
-/// relative. Brighter's own generated test message builders default the source to a bare GUID, so a
-/// relative source is the ordinary case rather than an exotic one — and every transport other than
-/// Azure Service Bus round-trips it without complaint.
+/// An AMQP-null application property arrives as a null *value* rather than an absent key —
+/// <c>BrokeredMessageWrapper</c> hands the SDK dictionary straight through. Reading it must not
+/// throw: like a <see cref="UriFormatException"/>, a <see cref="NullReferenceException"/> here would
+/// escape inside the consumer's receive loop, leaving the message undeliverable with no boundary at
+/// which the failure could be reported.
 /// </summary>
 [Trait("Category", "ASB")]
-public class AzureServiceBusRelativeCloudEventsUriTests
+public class AzureServiceBusNullDataSchemaPropertyTests
 {
     private readonly AzureServiceBusMessageCreator _creator;
 
-    public AzureServiceBusRelativeCloudEventsUriTests()
+    public AzureServiceBusNullDataSchemaPropertyTests()
     {
         var subscription = new AzureServiceBusSubscription<ASBTestCommand>(
             subscriptionName: new SubscriptionName("test-sub"),
@@ -30,12 +31,9 @@ public class AzureServiceBusRelativeCloudEventsUriTests
     }
 
     [Fact]
-    public void When_receiving_a_message_with_relative_cloud_events_uris_should_preserve_them()
+    public void When_receiving_a_message_with_a_null_dataschema_property_should_leave_it_null()
     {
-        // Arrange — the two relative URIs are the only data that decides this test
-        var relativeSource = new Uri(Uuid.NewAsString(), UriKind.Relative);
-        var relativeDataSchema = new Uri("/schemas/v1", UriKind.Relative);
-
+        // Arrange — the key is present but its value is null, which is what an AMQP null looks like
         // The CloudEvents keys are written as string literals, not via ASBConstants, deliberately:
         // these are wire-format attribute names, so a change to a constant's *value* must fail a test
         // rather than silently rename an on-wire attribute. (ASBConstants is internal in any case.)
@@ -45,8 +43,7 @@ public class AzureServiceBusRelativeCloudEventsUriTests
             ApplicationProperties = new Dictionary<string, object>
             {
                 { "MessageType", "MT_COMMAND" },
-                { "cloudEvents:source", relativeSource.ToString() },
-                { "cloudEvents:schema", relativeDataSchema.ToString() }
+                { "cloudEvents:schema", null! }
             },
             LockToken = Guid.NewGuid().ToString(),
             SequenceNumber = 1L,
@@ -59,8 +56,6 @@ public class AzureServiceBusRelativeCloudEventsUriTests
         var message = _creator.MapToBrighterMessage(received);
 
         // Assert
-        Assert.Equal(relativeSource, message.Header.Source);
-        Assert.False(message.Header.Source.IsAbsoluteUri);
-        Assert.Equal(relativeDataSchema, message.Header.DataSchema);
+        Assert.Null(message.Header.DataSchema);
     }
 }
