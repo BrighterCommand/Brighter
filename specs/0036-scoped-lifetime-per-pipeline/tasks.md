@@ -550,7 +550,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T4.3
   - **References**: AC-35 (NFR-7), FR-12, FR-16(a), FR-26, C-7; ADR 0072 steps 2, 2a, 3a, 4, 5
 
-- [ ] **TEST + IMPLEMENT: T4.5 — a null-returning ambient query is treated as "no ambient", and warns once per Brighter container**
+- [x] **TEST + IMPLEMENT: T4.5 — a null-returning ambient query is treated as "no ambient", and warns once per Brighter container**
   - **USE COMMAND**: `/test-first a scope provider returning null on a JoinAmbient ask behaves as the unregistered case and warns exactly once`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_the_ambient_query_returns_null_it_should_be_treated_as_no_ambient.cs`
