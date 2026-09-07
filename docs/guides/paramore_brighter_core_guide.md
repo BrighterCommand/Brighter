@@ -980,12 +980,14 @@ The `PipelineTracer` enables pipeline introspection for both debugging and testi
 ```csharp
 public interface IAmAPipelineTracer
 {
-    void AddDetail(string detail);
+    void AddToPath(HandlerName handlerName);
+    string ToString();
 }
 
-// Usage in testing:
+// Usage in testing: DescribePath is on the handler, and a pipeline is a
+// sequence of them, so walk from the first
 var tracer = new PipelineTracer();
-pipeline.DescribePath(tracer);
+pipeline.First().DescribePath(tracer);
 var pipelineDescription = tracer.ToString();
 
 // Verify pipeline composition
@@ -1067,7 +1069,8 @@ public void When_Publishing_Event_Should_Store_In_Outbox()
             new Publication { Topic = routingKey, RequestType = typeof(CustomerCreated) })
     });
 
-    // JsonMessageMapper<T> ships with Brighter: no mapper to hand-write for the test
+    // JsonMessageMapper<T> ships with Brighter, in Paramore.Brighter.MessageMappers:
+    // no mapper to hand-write for the test
     var messageMapperRegistry = new MessageMapperRegistry(
         new SimpleMessageMapperFactory(_ => new JsonMessageMapper<CustomerCreated>()), null);
     messageMapperRegistry.Register<CustomerCreated, JsonMessageMapper<CustomerCreated>>();
@@ -1124,7 +1127,7 @@ public void When_Handler_Has_Attributes_Should_Build_Correct_Pipeline()
     var builder = new PipelineBuilder<TestCommand>(registry, handlerFactory);
     
     // Act
-    var pipeline = builder.Build(new RequestContext());
+    var pipeline = builder.Build(new TestCommand(), new RequestContext());
     
     // Assert pipeline composition
     var tracer = new PipelineTracer();

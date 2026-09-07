@@ -67,8 +67,10 @@ The producer side is registered through dependency injection, so this example ne
 `Paramore.Brighter.Extensions.DependencyInjection` package alongside this one. `AddProducers`
 takes a producer registry, and `MsSqlProducerRegistryFactory` builds one from the connection
 string, the queue table, and a `Publication` per topic you send to. The `RequestType` on the
-publication is what Brighter matches a request against when you `Post` it, so a publication
-without one produces `ConfigurationException: No producer found for request type`.
+publication is what Brighter matches a request against when you `Post` it — with the default
+publication finder and no `[PublicationTopic]` attribute, since `RequestContext.Destination` and
+that attribute are both consulted first — so a publication without one produces
+`ConfigurationException: No producer found for request type`.
 
 ```csharp
         var serviceCollection = new ServiceCollection();
@@ -179,7 +181,7 @@ or newer.
 
 ## Examples
 
-See the samples\MsSqlMessagingGatewaySamples folders for examples on how to configure and use the SQL Server based messaging gateway.
+See the `samples/TaskQueue/MsSqlMessagingGateway` folder for examples on how to configure and use the SQL Server based messaging gateway.
 
 #### Simple post and receive
 
