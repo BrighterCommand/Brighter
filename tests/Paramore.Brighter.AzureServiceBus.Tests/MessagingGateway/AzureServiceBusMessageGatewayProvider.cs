@@ -32,6 +32,7 @@ using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
+using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 
@@ -112,8 +113,40 @@ public class AzureServiceBusMessageGatewayProvider
         return (IAmAMessageProducerSync)producers.First().Value;
     }
 
+    /// <summary>
+    /// Provisions the topic and subscription before a channel is handed out.
+    /// <para>
+    /// <see cref="AzureServiceBusChannelFactory"/> creates nothing on the broker — the subscription is
+    /// created lazily by the consumer's first receive. Every generated test sends before it first
+    /// receives, and an ASB topic with no subscription attached silently discards the message, so
+    /// without this the message is gone before anything can read it (#4309).
+    /// </para>
+    /// <para>
+    /// This is the same thing the hand-written ASB tests have always done — see
+    /// <c>When_posting_a_message_via_the_producer</c> — and it mirrors how the AWS and GCP providers
+    /// ensure their infrastructure exists before returning a channel.
+    /// </para>
+    /// <para>
+    /// <see cref="AdministrationClientWrapper.CreateSubscriptionAsync"/> creates the topic first if it
+    /// is missing, so this covers both entities.
+    /// </para>
+    /// </summary>
+    private static async Task EnsureSubscriptionExistsAsync(AzureServiceBusSubscription subscription)
+    {
+        if (subscription.MakeChannels != OnMissingChannel.Create)
+            return;
+
+        var administrationClient = new AdministrationClientWrapper(ASBCreds.ASBClientProvider);
+        await administrationClient.CreateSubscriptionAsync(
+            subscription.RoutingKey.Value,
+            subscription.ChannelName.Value,
+            new AzureServiceBusSubscriptionConfiguration());
+    }
+
     public IAmAChannelSync CreateChannel(AzureServiceBusSubscription subscription)
     {
+        EnsureSubscriptionExistsAsync(subscription).GetAwaiter().GetResult();
+
         var consumerFactory = new AzureServiceBusConsumerFactory(ASBCreds.ASBClientProvider);
         var channelFactory = new AzureServiceBusChannelFactory(consumerFactory);
         return channelFactory.CreateSyncChannel(subscription);
@@ -252,6 +285,8 @@ public class AzureServiceBusMessageGatewayProvider
         AzureServiceBusSubscription subscription,
         CancellationToken cancellationToken = default)
     {
+        await EnsureSubscriptionExistsAsync(subscription);
+
         var consumerFactory = new AzureServiceBusConsumerFactory(ASBCreds.ASBClientProvider);
         var channelFactory = new AzureServiceBusChannelFactory(consumerFactory);
         return await channelFactory.CreateAsyncChannelAsync(subscription, cancellationToken);
