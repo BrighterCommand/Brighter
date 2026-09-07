@@ -64,7 +64,11 @@ You specify the connection string to the database, and the name of the table tha
 The following is an example of how to specify the configuration for the SQL Server messaging gateway to the command processor.
 
 The producer side is registered through dependency injection, so this example needs the
-`Paramore.Brighter.Extensions.DependencyInjection` package alongside this one. `AddProducers`
+`Paramore.Brighter.Extensions.DependencyInjection` package alongside this one — and two using
+directives the block does not print: `Microsoft.Extensions.DependencyInjection` for
+`ServiceCollection`, `BuildServiceProvider` and `GetRequiredService`, and
+`Paramore.Brighter.Extensions.DependencyInjection` for `AddBrighter`, `AddProducers` and
+`AutoFromAssemblies`. `AddProducers`
 takes a producer registry, and `MsSqlProducerRegistryFactory` builds one from the connection
 string, the queue table, and a `Publication` per topic you send to. The `RequestType` on the
 publication is what Brighter matches a request against when you `Post` it — with the default
@@ -104,6 +108,11 @@ that attribute are both consulted first — so a publication without one produce
 A runnable version of this is `samples/TaskQueue/MsSqlMessagingGateway/GreetingsSender`, and its
 receiver is the counterpart to the dispatcher below. The consumer side that follows is wired by
 hand rather than through DI, so that the dispatcher and its subscriptions are visible.
+
+The producer passes `databaseName:` and the consumer omits it. Neither form is wrong and the
+difference is not significant: nothing in this gateway reads `DatabaseName` — the queue table is
+resolved from `queueStoreTable` and the database from the connection string. The producer keeps
+it only because `GreetingsSender/Program.cs` does.
 
 #### Configure the dispatcher with a message consumer factory
 

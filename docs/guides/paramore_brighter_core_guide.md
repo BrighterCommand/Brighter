@@ -987,7 +987,7 @@ public interface IAmAPipelineTracer
 }
 
 // Usage in testing: DescribePath is on the handler, and a pipeline is a
-// sequence of them, so walk from the first
+// sequence of them, so walk from the first — First() is System.Linq
 var tracer = new PipelineTracer();
 pipeline.First().DescribePath(tracer);
 var pipelineDescription = tracer.ToString();
@@ -1077,9 +1077,12 @@ public void When_Publishing_Event_Should_Store_In_Outbox()
         new SimpleMessageMapperFactory(_ => new JsonMessageMapper<CustomerCreated>()), null);
     messageMapperRegistry.Register<CustomerCreated, JsonMessageMapper<CustomerCreated>>();
 
+    // ResiliencePipelineRegistry<T> is Polly's, in Polly.Registry; AddBrighterDefault is
+    // Brighter's extension on it, in Paramore.Brighter.Extensions
     var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>().AddBrighterDefault();
     var fakeOutbox = new InMemoryOutbox(TimeProvider.System);
 
+    // CommittableTransaction is System.Transactions
     IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
         producerRegistry,
         resiliencePipelineRegistry,
@@ -1131,7 +1134,7 @@ public void When_Handler_Has_Attributes_Should_Build_Correct_Pipeline()
     // Act
     var pipeline = builder.Build(new TestCommand(), new RequestContext());
     
-    // Assert pipeline composition
+    // Assert pipeline composition — First() is System.Linq
     var tracer = new PipelineTracer();
     pipeline.First().DescribePath(tracer);
     
