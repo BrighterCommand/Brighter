@@ -48,6 +48,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <see cref="ScopeAffinityPolicy"/>.</param>
         /// <param name="rootProvider">The root <see cref="IServiceProvider"/> the calling factory was
         /// constructed with, against which an offered ambient's usability is probed.</param>
+        /// <param name="diagnostics">This Brighter container's ambient-scope diagnostics, or
+        /// <see langword="null"/> for a hand-built factory whose container never registered one - in
+        /// which case no diagnostic is ever raised.</param>
         /// <returns>
         /// A pipeline scope borrowed over the offered ambient, when the ask carried
         /// <see cref="ScopeAffinity.JoinAmbient"/> and the ambient offered in answer implements
@@ -61,7 +64,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <paramref name="scopeProvider"/>'s <c>GetAmbient</c> threw. The calling pipeline builder
         /// recognises this type and rethrows the inner exception unwrapped.
         /// </exception>
-        public static IAmAScope? Ask(IAmAScopeProvider? scopeProvider, ScopeAffinity affinity, IServiceProvider rootProvider)
+        public static IAmAScope? Ask(IAmAScopeProvider? scopeProvider, ScopeAffinity affinity, IServiceProvider rootProvider, AmbientScopeDiagnostics? diagnostics)
         {
             if (scopeProvider is null) return null;
 
@@ -76,7 +79,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             }
 
             if (affinity != ScopeAffinity.JoinAmbient) return null;
-            if (ambient is null) return null;
+
+            if (ambient is null)
+            {
+                diagnostics?.WarnOnce(AmbientScopeDiagnostics.Condition.NoAmbientOffered, scopeProvider.GetType());
+                return null;
+            }
+
             if (ambient is not IAmAServiceProviderScope src) return null;
             if (!AmbientScopeProbe.CanResolveFrom(src, rootProvider)) return null;
 

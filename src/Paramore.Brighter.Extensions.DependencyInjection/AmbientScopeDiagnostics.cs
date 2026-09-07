@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
@@ -35,15 +36,15 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     /// <remarks>
     /// Registered <c>TryAddSingleton</c> in <c>ServiceCollectionExtensions.BrighterHandlerBuilder</c>,
     /// scoped to the host's root service provider rather than the process, so a test process building
-    /// several hosts latches each afresh (FR-18, FR-23, FR-24.2, FR-24.4). Nothing calls
-    /// <see cref="WarnOnce"/> yet - the five container-backed factories that ask it arrive in later
-    /// tasks, and until then this type is inert. <see cref="WarnOnce"/> itself is a stub here: it logs
-    /// on every call rather than the once-per-pair latch its final contract requires, since the latch
-    /// is behaviour with nothing yet to exercise it.
+    /// several hosts latches each afresh (FR-18, FR-23, FR-24.2, FR-24.4). The latch is an atomic
+    /// <see cref="ConcurrentDictionary{TKey,TValue}.TryAdd"/> per (<see cref="Condition"/>, provider
+    /// implementation type) pair, so concurrent callers (e.g. several <c>Publish</c> subscribers) cannot
+    /// both observe "not yet latched" and both log.
     /// </remarks>
     internal sealed class AmbientScopeDiagnostics
     {
         private readonly ILogger<AmbientScopeDiagnostics> _logger;
+        private readonly ConcurrentDictionary<(Condition Condition, Type ProviderType), byte> _latched = new();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AmbientScopeDiagnostics"/> class.
@@ -74,13 +75,16 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
         /// <summary>
         /// Logs <paramref name="condition"/> at <see cref="LogLevel.Warning"/>, naming
-        /// <paramref name="providerImplementationType"/>.
+        /// <paramref name="providerImplementationType"/> - once only, for this (condition, provider type)
+        /// pair, for the lifetime of this Brighter container.
         /// </summary>
         /// <param name="condition">The condition that occurred.</param>
         /// <param name="providerImplementationType">The implementation type of the
         /// <see cref="IAmAScopeProvider"/> that was asked.</param>
         public void WarnOnce(Condition condition, Type providerImplementationType)
         {
+            if (!_latched.TryAdd((condition, providerImplementationType), 0)) return;
+
             _logger.LogWarning(
                 "Brighter ambient scope diagnostic {Condition} for provider {ProviderType}",
                 condition,

@@ -38,6 +38,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private readonly ServiceProviderLifetimeScope _lifetimeScope;
         private readonly IAmAScopeProvider? _scopeProvider;
         private readonly ScopeAffinityPolicy _scopeAffinityPolicy;
+        private readonly AmbientScopeDiagnostics? _diagnostics;
 
         /// <summary>
         /// Constructs a mapper factory that uses the .NET Service Provider for implementation details
@@ -51,6 +52,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             _lifetimeScope = new ServiceProviderLifetimeScope(serviceProvider, lifetime);
             _scopeProvider = (IAmAScopeProvider?)serviceProvider.GetService(typeof(IAmAScopeProvider));
             _scopeAffinityPolicy = new ScopeAffinityPolicy(options);
+            _diagnostics = (AmbientScopeDiagnostics?)serviceProvider.GetService(typeof(AmbientScopeDiagnostics));
         }
 
         /// <summary>
@@ -67,7 +69,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             if (_lifetimeScope.Lifetime != ServiceLifetime.Scoped) return null;
 
-            var borrowed = AmbientScopeQuery.Ask(_scopeProvider, _scopeAffinityPolicy.ForTransformPipeline(), _serviceProvider);
+            var borrowed = AmbientScopeQuery.Ask(_scopeProvider, _scopeAffinityPolicy.ForTransformPipeline(), _serviceProvider, _diagnostics);
             return borrowed ?? new ServiceProviderPipelineScope(new ServiceProviderLifetimeScope(_serviceProvider, ServiceLifetime.Scoped));
         }
 

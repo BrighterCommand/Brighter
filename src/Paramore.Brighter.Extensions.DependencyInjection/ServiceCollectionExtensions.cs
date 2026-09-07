@@ -30,6 +30,7 @@ using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
@@ -143,8 +144,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             RegisterBrighterOptions(services, optionsFunc);
 
             // ADR 0072 step 5 - the ambient-scope diagnostics singleton, latched per Brighter
-            // container (D19). Landed inert here; the factories that call WarnOnce arrive later.
-            services.TryAddSingleton<AmbientScopeDiagnostics>();
+            // container (D19). Falls back to a no-op logger when the host never called AddLogging(),
+            // so a container-backed factory asking for this singleton cannot fail construction on a
+            // host that has no interest in logging at all.
+            services.TryAddSingleton(sp => new AmbientScopeDiagnostics(
+                (ILogger<AmbientScopeDiagnostics>?)sp.GetService(typeof(ILogger<AmbientScopeDiagnostics>))
+                ?? NullLogger<AmbientScopeDiagnostics>.Instance));
 
             // ADR 0072 step 5 - the per-request-scope artefact cache a borrowed ambient's Scoped
             // resolution routes through, so two pipelines sharing one ambient share one artefact

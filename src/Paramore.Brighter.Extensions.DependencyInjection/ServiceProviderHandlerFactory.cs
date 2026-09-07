@@ -38,6 +38,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private readonly ServiceProviderLifetimeScope _singletonScope;
         private readonly IAmAScopeProvider? _scopeProvider;
         private readonly ScopeAffinityPolicy _scopeAffinityPolicy;
+        private readonly AmbientScopeDiagnostics? _diagnostics;
 
         /// <summary>
         /// Constructs a factory that uses the .NET IoC container as the factory
@@ -52,6 +53,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             _singletonScope = new ServiceProviderLifetimeScope(serviceProvider, ServiceLifetime.Singleton);
             _scopeProvider = (IAmAScopeProvider?)serviceProvider.GetService(typeof(IAmAScopeProvider));
             _scopeAffinityPolicy = new ScopeAffinityPolicy(options);
+            _diagnostics = (AmbientScopeDiagnostics?)serviceProvider.GetService(typeof(AmbientScopeDiagnostics));
         }
 
         /// <summary>
@@ -74,7 +76,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             if (_handlerLifetime == ServiceLifetime.Scoped)
             {
-                var borrowed = AmbientScopeQuery.Ask(_scopeProvider, _scopeAffinityPolicy.ForHandlerPipeline(), _serviceProvider);
+                var borrowed = AmbientScopeQuery.Ask(_scopeProvider, _scopeAffinityPolicy.ForHandlerPipeline(), _serviceProvider, _diagnostics);
                 if (borrowed is not null) return borrowed;
             }
 
