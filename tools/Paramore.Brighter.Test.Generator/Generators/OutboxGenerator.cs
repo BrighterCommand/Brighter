@@ -91,26 +91,26 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
 
         if (configuration.Outbox != null)
         {
-            suites.AddRange(SuitesFor(configuration.Outbox, configuration.Outbox.Prefix));
+            suites.AddRange(SuitesFor(
+                configuration.Outbox,
+                folderName: configuration.Outbox.Prefix,
+                modelPrefix: configuration.Outbox.Prefix));
         }
         else if (configuration.Outboxes != null)
         {
             foreach (var (key, outboxConfiguration) in configuration.Outboxes)
             {
                 logger.LogInformation("Generating outbox test for {OutboxName}", key);
-                var prefix = outboxConfiguration.Prefix;
-                if (string.IsNullOrEmpty(prefix))
-                {
-                    prefix = key;
-                }
+                var folderName = string.IsNullOrEmpty(outboxConfiguration.Prefix)
+                    ? key
+                    : outboxConfiguration.Prefix;
 
-                // The model carries a dot-qualified prefix so that templates can build a namespace
-                // suffix from it. Trimming first keeps this idempotent, so that walking the suites
-                // more than once - to generate and to plan - yields the same prefix each time.
-                prefix = prefix.TrimStart('.');
-                outboxConfiguration.Prefix = $".{prefix}";
-
-                suites.AddRange(SuitesFor(outboxConfiguration, prefix));
+                // Templates build a namespace suffix from the model's prefix, which is dot-qualified
+                // where the destination folder name is not.
+                suites.AddRange(SuitesFor(
+                    outboxConfiguration,
+                    folderName: folderName,
+                    modelPrefix: $".{folderName}"));
             }
         }
         else
@@ -125,17 +125,26 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
     /// The three suites - Sync, Async and Causation - rendered for a single outbox.
     /// </summary>
     /// <param name="outboxConfiguration">The outbox whose suites are described.</param>
-    /// <param name="prefix">The destination folder name for this outbox.</param>
+    /// <param name="folderName">The destination folder name for this outbox.</param>
+    /// <param name="modelPrefix">The prefix the templates should read from the model.</param>
     /// <returns>The suites for the outbox.</returns>
-    private static IEnumerable<GenerationSuite> SuitesFor(OutboxConfiguration outboxConfiguration, string prefix)
+    /// <remarks>
+    /// All three suites share one copy of the configuration, carrying the prefix the templates need.
+    /// The caller's own configuration object is left alone, so describing the work does not perform
+    /// part of it.
+    /// </remarks>
+    private static IEnumerable<GenerationSuite> SuitesFor(
+        OutboxConfiguration outboxConfiguration, string folderName, string modelPrefix)
     {
+        var model = outboxConfiguration.WithPrefix(modelPrefix);
+
         foreach (var variant in new[] { "Sync", "Async", "Causation" })
         {
             yield return new GenerationSuite(
-                Path.Combine("Outbox", prefix, "Generated", variant),
+                Path.Combine("Outbox", folderName, "Generated", variant),
                 Path.Combine("Outbox", variant),
-                outboxConfiguration,
-                filename => SkipTest(outboxConfiguration, filename)
+                model,
+                filename => SkipTest(model, filename)
             );
         }
     }

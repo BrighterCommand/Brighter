@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
@@ -42,8 +43,12 @@ public class WhenOutboxConfigurationMissingMessageFactoryShouldUseParentFactory 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert - message factory should be inherited from parent configuration
-        Assert.Equal("TestMessageBuilder", configuration.Outbox.MessageBuilder);
+        // Assert - the parent's message builder is what the templates rendered. Asserted through
+        // the generated file rather than through the configuration object, because the generator no
+        // longer writes its per-render values back onto the caller's configuration.
+        var generated = File.ReadAllText(Directory.EnumerateFiles(
+            Path.Combine(_testDirectory, "Outbox", "SqlServer", "Generated", "Sync"), "*.cs").First());
+        Assert.Contains("TestMessageBuilder", generated);
     }
 
     public void Dispose()

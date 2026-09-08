@@ -69,4 +69,22 @@ public class OutboxConfiguration
     /// Gets or sets the xUnit collection name to apply to generated test classes.
     /// </summary>
     public string? CollectionName { get; set; }
+
+    /// <summary>
+    /// Returns a copy of this configuration carrying <paramref name="prefix"/>.
+    /// </summary>
+    /// <param name="prefix">The prefix the copy should carry.</param>
+    /// <returns>A copy; this instance is unchanged.</returns>
+    /// <remarks>
+    /// Templates read <see cref="Prefix"/> to build a namespace suffix, and the value they need is
+    /// not always the one the configuration file declares. Handing each rendering its own copy keeps
+    /// that difference out of the caller's object, so planning what would be generated can be asked
+    /// as a question rather than performed as an edit.
+    /// </remarks>
+    internal OutboxConfiguration WithPrefix(string prefix)
+    {
+        var copy = (OutboxConfiguration)MemberwiseClone();
+        copy.Prefix = prefix;
+        return copy;
+    }
 }

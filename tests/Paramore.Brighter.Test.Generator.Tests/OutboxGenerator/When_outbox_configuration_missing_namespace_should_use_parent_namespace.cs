@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
@@ -42,8 +43,12 @@ public class WhenOutboxConfigurationMissingNamespaceShouldUseParentNamespace : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert - namespace should be inherited from parent configuration
-        Assert.Equal("MyApp.Tests", configuration.Outbox.Namespace);
+        // Assert - the parent's namespace is what the templates rendered. Asserted through the
+        // generated file rather than through the configuration object, because the generator no
+        // longer writes its per-render values back onto the caller's configuration.
+        var generated = File.ReadAllText(Directory.EnumerateFiles(
+            Path.Combine(_testDirectory, "Outbox", "SqlServer", "Generated", "Sync"), "*.cs").First());
+        Assert.Contains("namespace MyApp.Tests.Outbox", generated);
     }
 
     public void Dispose()
