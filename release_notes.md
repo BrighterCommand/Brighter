@@ -2,6 +2,34 @@
 
 ## Master
 
+### Azure Service Bus: relative CloudEvents `source` and `dataschema` (#4310)
+
+CloudEvents defines both `source` and `dataschema` as URI-*references*, which may be relative.
+`AzureServiceBusMessageCreator` parsed them with the absolute-only `new Uri(string)` overload, so any
+message carrying a relative `source` threw `UriFormatException` inside the consumer's receive loop and
+was undeliverable. Azure Service Bus was the only gateway affected — every other transport already
+parsed wire URIs with `Uri.TryCreate(..., UriKind.RelativeOrAbsolute, ...)`.
+
+Fixed on both sides. The publisher also wrote `dataschema` as a `Uri` object rather than a string; the
+Service Bus SDK serialises a `Uri` application property via `Uri.AbsoluteUri`, which throws for a
+relative URI, so publishing one failed at send time.
+
+#### Behaviour change: `Header.DataSchema` may now be `null` on messages received over Azure Service Bus
+
+Previously, a message received over Azure Service Bus with no `dataschema` on the wire was given a
+fabricated `http://goparamore.io` value. That is the documented default for `Source`, not for
+`DataSchema`; `MessageHeader.DataSchema` is nullable and every other Brighter backend yields `null`.
+Azure Service Bus now does too.
+
+**If you read `Header.DataSchema` off an Azure Service Bus message without a null check, add one** —
+you will now get `null` where you previously got a meaningless URI. Code that already treats the
+property as nullable (as its type declares) is unaffected. This also stops Brighter re-publishing the
+invented value on every requeue.
+
+A relative `dataschema` stored in a relational Outbox is also now read back correctly:
+`RelationDatabaseOutbox` read it with `UriKind.Absolute` and silently dropped it to `null`,
+inconsistent with the `Source` reader in the same class and with every other Outbox implementation.
+
 ## 10.7.0
 
 ### Azure Service Bus: dead-letter reason and description (#4196)
