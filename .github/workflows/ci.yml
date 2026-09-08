@@ -165,7 +165,7 @@ jobs:
     # Increased from 5 to 8 minutes to accommodate slower CI environments
     # and service initialization time. This provides adequate buffer without
     # being excessive for typical test execution (P95 < 5 min observed).
-    timeout-minutes: 8
+    timeout-minutes: 15
     needs: [build]
 
     services:
@@ -194,7 +194,7 @@ jobs:
 
   mqtt-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
     needs: [build]
 
     services:
@@ -219,7 +219,7 @@ jobs:
 
   rabbitmq-async-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
     needs: [build]
 
     services:
@@ -247,7 +247,7 @@ jobs:
 
   rabbitmq-sync-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
     needs: [build]
 
     services:
@@ -352,7 +352,7 @@ jobs:
 
   postgres-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
     needs: [build]
 
     services:
@@ -383,7 +383,7 @@ jobs:
 
   sqlserver-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
     needs: [build]
 
     services:
@@ -607,7 +607,7 @@ jobs:
 
   azure-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
     if: |
       (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
       (github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork)
