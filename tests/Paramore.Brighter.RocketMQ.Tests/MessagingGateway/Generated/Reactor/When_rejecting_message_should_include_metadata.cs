@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 
 using Xunit;
 
@@ -71,6 +72,7 @@ public class WhenRejectingMessageShouldIncludeMetadata : IDisposable
             {
                 break;
             }
+            Thread.Sleep(500);
         }
 
         Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);

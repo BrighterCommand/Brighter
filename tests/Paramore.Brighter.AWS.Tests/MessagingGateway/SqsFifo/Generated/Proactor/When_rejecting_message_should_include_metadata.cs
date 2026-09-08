@@ -77,6 +77,7 @@ public class WhenRejectingMessageShouldIncludeMetadataAsync : IAsyncLifetime
             {
                 break;
             }
+            await Task.Delay(500);
         }
 
         Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);

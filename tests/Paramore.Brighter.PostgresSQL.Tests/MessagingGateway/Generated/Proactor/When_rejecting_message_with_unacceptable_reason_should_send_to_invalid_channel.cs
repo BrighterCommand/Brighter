@@ -76,6 +76,7 @@ public class WhenRejectingMessageWithUnacceptableReasonShouldSendToInvalidChanne
             {
                 break;
             }
+            await Task.Delay(500);
         }
 
         Assert.NotEqual(MessageType.MT_NONE, invalidMessage.Header.MessageType);

@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 
 using Xunit;
 
@@ -70,6 +71,7 @@ public class WhenRejectingMessageWithUnacceptableReasonShouldSendToInvalidChanne
             {
                 break;
             }
+            Thread.Sleep(500);
         }
 
         Assert.NotEqual(MessageType.MT_NONE, invalidMessage.Header.MessageType);
