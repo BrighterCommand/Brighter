@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -48,24 +49,51 @@ public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger
     /// <param name="configuration">The root test configuration containing messaging gateway settings and destination folder.</param>
     public async Task GenerateAsync(TestConfiguration configuration)
     {
+        foreach (var suite in Suites(configuration))
+        {
+            await GenerateAsync(
+                configuration,
+                suite.Prefix,
+                suite.TemplateFolderName,
+                suite.Model,
+                suite.Ignore
+            );
+        }
+    }
+
+    /// <summary>
+    /// Computes every file <see cref="GenerateAsync(TestConfiguration)"/> would write for
+    /// <paramref name="configuration"/>, without writing any of them.
+    /// </summary>
+    /// <param name="configuration">The root test configuration containing messaging gateway settings and destination folder.</param>
+    /// <returns>The messaging gateway test files this configuration owns.</returns>
+    public IReadOnlyList<PlannedFile> Plan(TestConfiguration configuration)
+    {
+        var planned = new List<PlannedFile>();
+        foreach (var suite in Suites(configuration))
+        {
+            planned.AddRange(Plan(configuration, suite.Prefix, suite.TemplateFolderName, suite.Ignore));
+        }
+
+        return planned;
+    }
+
+    /// <summary>
+    /// Describes every rendering this generator performs for <paramref name="configuration"/>:
+    /// the Reactor and Proactor suites of each configured gateway.
+    /// </summary>
+    /// <remarks>
+    /// Both <see cref="GenerateAsync(TestConfiguration)"/> and <see cref="Plan(TestConfiguration)"/>
+    /// walk this list, so the files the generator writes and the files it claims to own are one
+    /// description rather than two that can drift apart.
+    /// </remarks>
+    private IReadOnlyList<GenerationSuite> Suites(TestConfiguration configuration)
+    {
+        var suites = new List<GenerationSuite>();
+
         if (configuration.MessagingGateway != null)
         {
-            var prefix = configuration.MessagingGateway.Prefix;
-            await GenerateAsync(
-                configuration,
-                Path.Combine("MessagingGateway", prefix, "Generated", "Reactor"),
-                Path.Combine("MessagingGateway", "Reactor"),
-                configuration.MessagingGateway,
-                filename => SkipTest(configuration.MessagingGateway, filename)
-            );
-
-            await GenerateAsync(
-                configuration,
-                Path.Combine("MessagingGateway", prefix, "Generated", "Proactor"),
-                Path.Combine("MessagingGateway", "Proactor"),
-                configuration.MessagingGateway,
-                filename => SkipTest(configuration.MessagingGateway, filename)
-            );
+            suites.AddRange(SuitesFor(configuration.MessagingGateway, configuration.MessagingGateway.Prefix));
         }
         else if (configuration.MessagingGateways != null)
         {
@@ -78,28 +106,40 @@ public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger
                     prefix = key;
                 }
 
+                // The model carries a dot-qualified prefix so that templates can build a namespace
+                // suffix from it. Trimming first keeps this idempotent, so that walking the suites
+                // more than once - to generate and to plan - yields the same prefix each time.
+                prefix = prefix.TrimStart('.');
                 messagingGatewayConfiguration.Prefix = $".{prefix}";
 
-                await GenerateAsync(
-                    configuration,
-                    Path.Combine("MessagingGateway", prefix, "Generated", "Reactor"),
-                    Path.Combine("MessagingGateway", "Reactor"),
-                    messagingGatewayConfiguration,
-                    filename => SkipTest(messagingGatewayConfiguration, filename)
-                );
-
-                await GenerateAsync(
-                    configuration,
-                    Path.Combine("MessagingGateway", prefix, "Generated", "Proactor"),
-                    Path.Combine("MessagingGateway", "Proactor"),
-                    messagingGatewayConfiguration,
-                    filename => SkipTest(messagingGatewayConfiguration, filename)
-                );
+                suites.AddRange(SuitesFor(messagingGatewayConfiguration, prefix));
             }
         }
         else
         {
             logger.LogInformation("No messaging gateway configured");
+        }
+
+        return suites;
+    }
+
+    /// <summary>
+    /// The two suites - Reactor and Proactor - rendered for a single messaging gateway.
+    /// </summary>
+    /// <param name="messagingGatewayConfiguration">The gateway whose suites are described.</param>
+    /// <param name="prefix">The destination folder name for this gateway.</param>
+    /// <returns>The suites for the gateway.</returns>
+    private static IEnumerable<GenerationSuite> SuitesFor(
+        MessagingGatewayConfiguration messagingGatewayConfiguration, string prefix)
+    {
+        foreach (var variant in new[] { "Reactor", "Proactor" })
+        {
+            yield return new GenerationSuite(
+                Path.Combine("MessagingGateway", prefix, "Generated", variant),
+                Path.Combine("MessagingGateway", variant),
+                messagingGatewayConfiguration,
+                filename => SkipTest(messagingGatewayConfiguration, filename)
+            );
         }
     }
 

@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -46,32 +47,51 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
     /// <param name="configuration">The root test configuration containing outbox settings and destination folder.</param>
     public async Task GenerateAsync(TestConfiguration configuration)
     {
+        foreach (var suite in Suites(configuration))
+        {
+            await GenerateAsync(
+                configuration,
+                suite.Prefix,
+                suite.TemplateFolderName,
+                suite.Model,
+                suite.Ignore
+            );
+        }
+    }
+
+    /// <summary>
+    /// Computes every file <see cref="GenerateAsync(TestConfiguration)"/> would write for
+    /// <paramref name="configuration"/>, without writing any of them.
+    /// </summary>
+    /// <param name="configuration">The root test configuration containing outbox settings and destination folder.</param>
+    /// <returns>The outbox test files this configuration owns.</returns>
+    public IReadOnlyList<PlannedFile> Plan(TestConfiguration configuration)
+    {
+        var planned = new List<PlannedFile>();
+        foreach (var suite in Suites(configuration))
+        {
+            planned.AddRange(Plan(configuration, suite.Prefix, suite.TemplateFolderName, suite.Ignore));
+        }
+
+        return planned;
+    }
+
+    /// <summary>
+    /// Describes every rendering this generator performs for <paramref name="configuration"/>:
+    /// the Sync, Async and Causation suites of each configured outbox.
+    /// </summary>
+    /// <remarks>
+    /// Both <see cref="GenerateAsync(TestConfiguration)"/> and <see cref="Plan(TestConfiguration)"/>
+    /// walk this list, so the files the generator writes and the files it claims to own are one
+    /// description rather than two that can drift apart.
+    /// </remarks>
+    private IReadOnlyList<GenerationSuite> Suites(TestConfiguration configuration)
+    {
+        var suites = new List<GenerationSuite>();
+
         if (configuration.Outbox != null)
         {
-            var prefix = configuration.Outbox.Prefix;
-            await GenerateAsync(
-                configuration,
-                Path.Combine("Outbox", prefix, "Generated", "Sync"),
-                Path.Combine("Outbox", "Sync"),
-                configuration.Outbox,
-                filename => SkipTest(configuration.Outbox, filename)
-            );
-
-            await GenerateAsync(
-                configuration,
-                Path.Combine("Outbox", prefix, "Generated", "Async"),
-                Path.Combine("Outbox", "Async"),
-                configuration.Outbox,
-                filename => SkipTest(configuration.Outbox, filename)
-            );
-
-            await GenerateAsync(
-                configuration,
-                Path.Combine("Outbox", prefix, "Generated", "Causation"),
-                Path.Combine("Outbox", "Causation"),
-                configuration.Outbox,
-                filename => SkipTest(configuration.Outbox, filename)
-            );
+            suites.AddRange(SuitesFor(configuration.Outbox, configuration.Outbox.Prefix));
         }
         else if (configuration.Outboxes != null)
         {
@@ -84,35 +104,39 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
                     prefix = key;
                 }
 
+                // The model carries a dot-qualified prefix so that templates can build a namespace
+                // suffix from it. Trimming first keeps this idempotent, so that walking the suites
+                // more than once - to generate and to plan - yields the same prefix each time.
+                prefix = prefix.TrimStart('.');
                 outboxConfiguration.Prefix = $".{prefix}";
-                await GenerateAsync(
-                    configuration,
-                    Path.Combine("Outbox", prefix, "Generated", "Sync"),
-                    Path.Combine("Outbox", "Sync"),
-                    outboxConfiguration,
-                    filename => SkipTest(outboxConfiguration, filename)
-                );
 
-                await GenerateAsync(
-                    configuration,
-                    Path.Combine("Outbox", prefix, "Generated", "Async"),
-                    Path.Combine("Outbox", "Async"),
-                    outboxConfiguration,
-                    filename => SkipTest(outboxConfiguration, filename)
-                );
-
-                await GenerateAsync(
-                    configuration,
-                    Path.Combine("Outbox", prefix, "Generated", "Causation"),
-                    Path.Combine("Outbox", "Causation"),
-                    outboxConfiguration,
-                    filename => SkipTest(outboxConfiguration, filename)
-                );
+                suites.AddRange(SuitesFor(outboxConfiguration, prefix));
             }
         }
         else
         {
             logger.LogInformation("No outbox configured");
+        }
+
+        return suites;
+    }
+
+    /// <summary>
+    /// The three suites - Sync, Async and Causation - rendered for a single outbox.
+    /// </summary>
+    /// <param name="outboxConfiguration">The outbox whose suites are described.</param>
+    /// <param name="prefix">The destination folder name for this outbox.</param>
+    /// <returns>The suites for the outbox.</returns>
+    private static IEnumerable<GenerationSuite> SuitesFor(OutboxConfiguration outboxConfiguration, string prefix)
+    {
+        foreach (var variant in new[] { "Sync", "Async", "Causation" })
+        {
+            yield return new GenerationSuite(
+                Path.Combine("Outbox", prefix, "Generated", variant),
+                Path.Combine("Outbox", variant),
+                outboxConfiguration,
+                filename => SkipTest(outboxConfiguration, filename)
+            );
         }
     }
 

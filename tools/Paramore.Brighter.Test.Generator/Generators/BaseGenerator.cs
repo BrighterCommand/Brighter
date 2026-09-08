@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -51,16 +52,55 @@ public abstract class BaseGenerator(ILogger logger)
         string prefix, string templateFolderName,
         object model, Func<string, bool>? ignore = null)
     {
+        var destinationFolder = Path.Combine(configuration.DestinationFolder, prefix);
+        logger.LogInformation("Base destination folder {FileCount}", destinationFolder);
+
+        foreach (var plannedFile in Plan(configuration, prefix, templateFolderName, ignore))
+        {
+            var destinationTemplateFile = new FileInfo(plannedFile.DestinationPath);
+            if (destinationTemplateFile.Directory == null)
+            {
+                logger.LogError("Destination folder {DestinationFolder} does not exist", destinationFolder);
+                continue;
+            }
+            
+            destinationTemplateFile.Directory.Create();
+            
+            logger.LogInformation("Generating file from {TemplatePath} to {DestinationPath}", plannedFile.TemplatePath, plannedFile.DestinationPath);
+            
+            await _parser.ParseAsync(new ParseContext(plannedFile.TemplatePath,
+                plannedFile.DestinationPath,
+                model));
+        }
+    }
+
+    /// <summary>
+    /// Computes the files that rendering <paramref name="templateFolderName"/> into
+    /// <paramref name="prefix"/> would write, without writing any of them.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="GenerateAsync(TestConfiguration,string,string,object,Func{string,bool})"/> renders
+    /// exactly this list, so an audit can ask what the generator owns without running it.
+    /// </remarks>
+    /// <param name="configuration">The root test configuration containing the destination folder and shared settings.</param>
+    /// <param name="prefix">A relative path prefix appended to <see cref="TestConfiguration.DestinationFolder"/> for the output directory.</param>
+    /// <param name="templateFolderName">The name of the subfolder within the Templates directory that contains the Liquid templates.</param>
+    /// <param name="ignore">An optional predicate that, when returning <c>true</c> for a template file name, causes that template to be skipped.</param>
+    /// <returns>The files the rendering would write, in template enumeration order.</returns>
+    protected IReadOnlyList<PlannedFile> Plan(TestConfiguration configuration,
+        string prefix, string templateFolderName,
+        Func<string, bool>? ignore = null)
+    {
         var templatePath = Path.Combine(AppContext.BaseDirectory, "Templates", templateFolderName);
         var fileNames = Directory.GetFiles(templatePath , "*.liquid", SearchOption.TopDirectoryOnly);
         
         logger.LogInformation("Found {FileCount} liquid files", fileNames.Length);
         
         var destinationFolder = Path.Combine(configuration.DestinationFolder, prefix);
-        logger.LogInformation("Base destination folder {FileCount}", destinationFolder);
         
         ignore  ??= _ => false;
 
+        var planned = new List<PlannedFile>();
         foreach (var fileName in fileNames)
         {
             if (ignore(fileName))
@@ -70,20 +110,11 @@ public abstract class BaseGenerator(ILogger logger)
             }
             
             var file = new FileInfo(fileName);
-            var destinationTemplateFile = new FileInfo(Path.Combine(destinationFolder, file.Name.Replace(".liquid", string.Empty)));
-            if (destinationTemplateFile.Directory == null)
-            {
-                logger.LogError("Destination folder {DestinationFolder} does not exist", destinationFolder);
-                continue;
-            }
-            
-            destinationTemplateFile.Directory.Create();
-            
-            logger.LogInformation("Generating file from {TemplatePath} to {DestinationPath}", file.FullName, destinationTemplateFile.FullName);
-            
-            await _parser.ParseAsync(new ParseContext(file.FullName,
-                destinationTemplateFile.FullName,
-                model));
+            planned.Add(new PlannedFile(
+                file.FullName,
+                Path.Combine(destinationFolder, file.Name.Replace(".liquid", string.Empty))));
         }
+
+        return planned;
     }
 }
