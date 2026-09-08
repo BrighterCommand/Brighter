@@ -64,6 +64,17 @@ public sealed record CellAgreementResult(
     IReadOnlyList<CellAgreementViolation> Violations);
 
 /// <summary>
+/// The aggregate result of a ledger-resolution run.
+/// </summary>
+/// <param name="ConfigurationsResolved">Declared LedgerKeys that found a row in the ledger.</param>
+/// <param name="CellsChecked">Canonical (LedgerKey x FR column) cells read and understood.</param>
+/// <param name="Violations">Every configuration whose ledger lookup would fail open.</param>
+public sealed record LedgerResolutionResult(
+    int ConfigurationsResolved,
+    int CellsChecked,
+    IReadOnlyList<LedgerCrossCheckViolation> Violations);
+
+/// <summary>
 /// Read-only, network-free cross-check audit between in-tree Deferred Skip markers and the
 /// conformance ledger (ADR 0067, FR-13, FR-21).
 ///
@@ -310,6 +321,110 @@ public static class LedgerSkipCrossCheckAudit
 
         return new CellAgreementResult(
             ledgerKeysResolved, filesChecked, expectedSkip, expectedNoSkip, violations);
+    }
+
+    /// <summary>
+    /// Checks that every wired configuration's ledger lookup can actually resolve, so that the
+    /// cell-agreement audit which shares that lookup cannot silently be checking nothing.
+    /// </summary>
+    /// <param name="repoRoot">The repository root holding <c>tests/</c>.</param>
+    /// <param name="ledgerPath">The conformance ledger to resolve against.</param>
+    /// <returns>The configurations resolved, cells understood, and any violations.</returns>
+    /// <remarks>
+    /// <see cref="ConformanceLedger.GetSkip"/> answers with the empty string - meaning <em>run,
+    /// no Skip</em> - for an absent row, an absent column and an unrecognised cell alike, and
+    /// <see cref="CheckCellAgreement"/> derives its expectation from that same call. So a
+    /// misspelled <c>LedgerKey</c>, a renamed row or a hand-typed cell makes both sides agree on
+    /// "no Skip" and the drift is invisible. This is the mirror invariant: no silent un-skips.
+    /// </remarks>
+    public static LedgerResolutionResult CheckLedgerResolution(string repoRoot, string ledgerPath)
+    {
+        var violations = new List<LedgerCrossCheckViolation>();
+        var ledger = new ConformanceLedger(ledgerPath);
+        var configurationsResolved = 0;
+        var cellsChecked = 0;
+
+        foreach (var (projectName, prefix, gateway) in EnumerateConfiguredGateways(repoRoot))
+        {
+            if (string.IsNullOrEmpty(gateway.LedgerKey))
+            {
+                violations.Add(new LedgerCrossCheckViolation("MissingLedgerKey",
+                    $"{projectName} gateway '{prefix}' declares no LedgerKey, so its whole canonical "
+                    + "suite drops out of the cell-agreement audit unnoticed"));
+                continue;
+            }
+
+            if (!ledger.HasRow(gateway.LedgerKey))
+            {
+                violations.Add(new LedgerCrossCheckViolation("UnresolvedLedgerKey",
+                    $"{projectName} gateway '{prefix}' declares LedgerKey '{gateway.LedgerKey}', "
+                    + "which matches no row in the ledger - every lookup against it returns no Skip"));
+                continue;
+            }
+
+            configurationsResolved++;
+
+            foreach (var frColumn in CanonicalBehaviours.TEMPLATE_FR_COLUMNS.Values.Distinct())
+            {
+                if (!ledger.TryGetCell(gateway.LedgerKey, frColumn, out var cellValue))
+                {
+                    violations.Add(new LedgerCrossCheckViolation("MissingFrColumn",
+                        $"'{gateway.LedgerKey}' has no {frColumn} column, so the "
+                        + $"{CanonicalBehaviours.BehaviourFor(frColumn)} behaviour resolves to no Skip"));
+                    continue;
+                }
+
+                cellsChecked++;
+
+                if (!ConformanceLedger.IsRecognisedCellValue(cellValue))
+                {
+                    violations.Add(new LedgerCrossCheckViolation("UnrecognisedCellValue",
+                        $"'{gateway.LedgerKey}' {frColumn} reads '{cellValue}', which is none of "
+                        + "Pass, Fixed, Unknown or 'Deferred ->' and so is read as no Skip"));
+                }
+            }
+        }
+
+        return new LedgerResolutionResult(configurationsResolved, cellsChecked, violations);
+    }
+
+    /// <summary>
+    /// Yields every messaging gateway declared by a test project's configuration, whether or not
+    /// it names a ledger row and whether or not its Generated directory exists yet.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately wider than <see cref="EnumerateGeneratedDirectories"/>, which skips a gateway
+    /// with no LedgerKey - the very case that has to be reported here rather than passed over.
+    /// </remarks>
+    private static IEnumerable<(string ProjectName, string Prefix, MessagingGatewayConfiguration Gateway)>
+        EnumerateConfiguredGateways(string repoRoot)
+    {
+        var testsRoot = Path.Combine(repoRoot, "tests");
+        if (!Directory.Exists(testsRoot))
+            yield break;
+
+        foreach (var projectDir in Directory.EnumerateDirectories(testsRoot, "Paramore.Brighter.*.Tests"))
+        {
+            var configPath = Path.Combine(projectDir, "test-configuration.json");
+            if (!File.Exists(configPath))
+                continue;
+
+            TestConfiguration? configuration;
+            try
+            {
+                configuration = JsonSerializer.Deserialize<TestConfiguration>(File.ReadAllText(configPath));
+            }
+            catch (JsonException)
+            {
+                continue; // a malformed configuration is the generator's problem to report, not ours
+            }
+
+            if (configuration == null)
+                continue;
+
+            foreach (var (prefix, gateway) in EnumerateGateways(configuration))
+                yield return (Path.GetFileName(projectDir), prefix, gateway);
+        }
     }
 
     /// <summary>

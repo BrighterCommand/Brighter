@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -86,6 +86,55 @@ public sealed class ConformanceLedger : IAmAConformanceLedger
         if (!_cells.TryGetValue(ledgerKey, out var row)) return string.Empty;
         if (!row.TryGetValue(frColumn, out var cellValue)) return string.Empty;
         return ComputeSkip(cellValue, ledgerKey, behaviourName);
+    }
+
+    /// <summary>
+    /// Reports whether the ledger carries a row for <paramref name="ledgerKey"/>.
+    /// </summary>
+    /// <param name="ledgerKey">The configuration row key, for example <c>AWS / SqsFifo</c>.</param>
+    /// <returns><c>true</c> when the row exists.</returns>
+    /// <remarks>
+    /// <see cref="GetSkip"/> answers "no Skip" for a row it cannot find, which is indistinguishable
+    /// from a row that says Pass. An audit that needs to tell those apart asks here first.
+    /// </remarks>
+    public bool HasRow(string ledgerKey) => _cells.ContainsKey(ledgerKey);
+
+    /// <summary>
+    /// Reads the raw cell at (<paramref name="ledgerKey"/>, <paramref name="frColumn"/>) without
+    /// interpreting it.
+    /// </summary>
+    /// <param name="ledgerKey">The configuration row key.</param>
+    /// <param name="frColumn">The behaviour column, for example <c>FR-16</c>.</param>
+    /// <param name="cellValue">The cell's text when both row and column exist.</param>
+    /// <returns><c>true</c> when the cell exists.</returns>
+    public bool TryGetCell(string ledgerKey, string frColumn, out string cellValue)
+    {
+        cellValue = string.Empty;
+        if (!_cells.TryGetValue(ledgerKey, out var row)) return false;
+        if (!row.TryGetValue(frColumn, out var value)) return false;
+
+        cellValue = value;
+        return true;
+    }
+
+    /// <summary>
+    /// Reports whether <paramref name="cellValue"/> is one of the vocabulary tokens
+    /// <see cref="ComputeSkip"/> understands: Pass, Fixed, Unknown, or <c>Deferred -&gt;</c>.
+    /// </summary>
+    /// <param name="cellValue">The raw cell text.</param>
+    /// <returns><c>true</c> when the value carries a meaning rather than being read as "no Skip" by default.</returns>
+    /// <remarks>
+    /// Anything else - an empty cell, a bare "Deferred" with no issue arrow, or a hand-typed note -
+    /// falls through <see cref="ComputeSkip"/> to the empty string and so silently runs the
+    /// behaviour. That is the one outcome a ledger cell should never be able to mean by accident.
+    /// </remarks>
+    public static bool IsRecognisedCellValue(string cellValue)
+    {
+        var value = cellValue.Trim();
+        return value.StartsWith("Pass", StringComparison.OrdinalIgnoreCase)
+               || value.StartsWith("Fixed", StringComparison.OrdinalIgnoreCase)
+               || value.StartsWith("Unknown", StringComparison.OrdinalIgnoreCase)
+               || value.StartsWith("Deferred ->", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
