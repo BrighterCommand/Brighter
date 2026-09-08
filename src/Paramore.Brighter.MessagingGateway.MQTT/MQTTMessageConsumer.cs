@@ -25,8 +25,17 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         private readonly string _topic;
         private readonly MqttMessagingGatewayConsumerConfiguration _configuration;
         private readonly ConcurrentQueue<Message> _messageQueue = new();
+
+        // Released once per message the MQTT event handler enqueues, so that a caller waiting for
+        // work is woken by the arrival itself rather than by a poll interval expiring. Its count
+        // can run ahead of the queue when a drain takes several messages at once; that only costs
+        // a waiter one immediate, empty pass.
+        private readonly SemaphoreSlim _messageArrived = new(0);
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MqttMessageConsumer>();
         private readonly Message _noopMessage = new();
+
+        /// <summary>How long a receive waits for a message when the caller does not say.</summary>
+        private static readonly TimeSpan DefaultTimeout = TimeSpan.FromMilliseconds(300);
         private readonly IMqttClient _mqttClient;
         private readonly MqttClientOptions _mqttClientOptions;
         private readonly RoutingKey? _deadLetterRoutingKey;
@@ -110,6 +119,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                 var message = JsonSerializer.Deserialize<Message>(e.ApplicationMessage.PayloadSegment.ToArray(), JsonSerialisationOptions.Options);
 
                 _messageQueue.Enqueue(message!);
+                _messageArrived.Release();
                 return Task.CompletedTask;
             };
 
@@ -161,6 +171,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         {
             _requeueProducer?.Dispose();
             _mqttClient.Dispose();
+            _messageArrived.Dispose();
         }
 
 
@@ -169,6 +180,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             if (_requeueProducer != null) await _requeueProducer.DisposeAsync();
             // IMqttClient only implements IDisposable, not IAsyncDisposable (MQTTnet 4.3)
             _mqttClient.Dispose();
+            _messageArrived.Dispose();
         }
 
         /// <summary>
@@ -193,8 +205,8 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// Retrieves all currently buffered messages, waiting up to <paramref name="timeOut"/>
         /// for at least one to arrive if the buffer is empty.
         /// Messages arrive asynchronously via the MQTT <see cref="IMqttClient.ApplicationMessageReceivedAsync"/>
-        /// event handler. If the internal queue is empty on entry, this method polls in 10 ms
-        /// increments until the deadline so that callers do not need an external sleep before
+        /// event handler, which signals each arrival, so a caller is woken by the message itself
+        /// rather than by a poll interval expiring and does not need an external sleep before
         /// every <c>Receive</c> call.
         /// </summary>
         /// <param name="timeOut">
@@ -209,25 +221,30 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// </remarks>
         public Message[] Receive(TimeSpan? timeOut = null)
         {
-            timeOut ??= TimeSpan.FromMilliseconds(300);
+            _messageArrived.Wait(timeOut ?? DefaultTimeout);
+            return DrainQueue();
+        }
 
-            // Block until at least one message arrives in the async event-driven queue, or the
-            // timeout expires. Polling in short increments avoids busy-waiting while still
-            // reacting quickly to the first message.
-            var deadline = DateTime.UtcNow + timeOut.Value;
-            while (_messageQueue.IsEmpty && DateTime.UtcNow < deadline)
-            {
-                Thread.Sleep(10);
-            }
 
+        /// <inheritdoc />
+        public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default)
+        {
+            await _messageArrived.WaitAsync(timeOut ?? DefaultTimeout, cancellationToken)
+                .ConfigureAwait(false);
+            return DrainQueue();
+        }
+
+        /// <summary>
+        /// Takes every message currently buffered, or the no-op message when there are none.
+        /// </summary>
+        /// <returns>The buffered messages, or a single no-op message.</returns>
+        private Message[] DrainQueue()
+        {
             if (_messageQueue.IsEmpty)
             {
                 return [_noopMessage];
             }
 
-            // Drain all available messages accumulated during the wait. Channel callers must
-            // set subscription.BufferSize >= the maximum number of messages that can accumulate
-            // between polls (the MQTT provider sets BufferSize = 5 by default).
             var messages = new List<Message>();
             while (_messageQueue.TryDequeue(out var message))
             {
@@ -235,12 +252,6 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             }
 
             return messages.ToArray();
-        }
-
-        /// <inheritdoc />
-        public Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(Receive(timeOut));
         }
 
         /// <summary>
