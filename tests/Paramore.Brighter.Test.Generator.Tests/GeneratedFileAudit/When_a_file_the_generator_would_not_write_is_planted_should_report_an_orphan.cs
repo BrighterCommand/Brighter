@@ -28,7 +28,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Test.Generator.Configuration;
 using Xunit;
 
@@ -39,33 +39,61 @@ namespace Paramore.Brighter.Test.Generator.Tests.GeneratedFileAudit;
 /// the repository has to be shown catching something. These canaries generate a small tree with
 /// the real generators, then break it in each of the two ways the audit exists to notice.
 /// </summary>
+/// <remarks>
+/// Each case runs against both the singular and the plural configuration forms. The singular form
+/// is the one with the history: dropping the Sync call from its branch of the outbox generator is
+/// what orphaned 37 files, and seven checked-in projects go through it. It is also the form whose
+/// empty prefix collapses <c>MessagingGateway/{prefix}/Generated</c> to <c>MessagingGateway/Generated</c>,
+/// so the audit's path model has to agree with the generator's about a segment that is not there.
+/// </remarks>
 public class AuditCanaryTests : IDisposable
 {
-    private const string GATEWAY_NAME = "Sample";
-
-    private static readonly string SAMPLE_CONFIGURATION =
-        $$"""
-          {
-            "Namespace": "Sample.Tests",
-            "MessagingGateways": {
-              "{{GATEWAY_NAME}}": {
-                "Publication": "Sample.SamplePublication",
-                "Subscription": "Sample.SampleSubscription",
-                "MessageGatewayProvider": "Sample.Tests.SampleMessageGatewayProvider",
-                "Category": "Sample",
-                "CollectionName": "Sample"
-              }
-            },
-            "Outboxes": {
-              "{{GATEWAY_NAME}}": {
-                "Transaction": "System.Data.Common.DbTransaction",
-                "OutboxProvider": "SampleOutboxProvider",
-                "Category": "Sample",
-                "CollectionName": "SampleOutbox"
-              }
+    // The plural form - MSSQL, Kafka, AWS and the rest - whose destination folder is the entry key.
+    private const string PLURAL_CONFIGURATION =
+        """
+        {
+          "Namespace": "Sample.Tests",
+          "MessagingGateways": {
+            "Sample": {
+              "Publication": "Sample.SamplePublication",
+              "Subscription": "Sample.SampleSubscription",
+              "MessageGatewayProvider": "Sample.Tests.SampleMessageGatewayProvider",
+              "Category": "Sample",
+              "CollectionName": "Sample"
+            }
+          },
+          "Outboxes": {
+            "Sample": {
+              "Transaction": "System.Data.Common.DbTransaction",
+              "OutboxProvider": "SampleOutboxProvider",
+              "Category": "Sample",
+              "CollectionName": "SampleOutbox"
             }
           }
-          """;
+        }
+        """;
+
+    // The singular form - DynamoDB, MongoDb, PostgresSQL, Redis and the rest - which has no key and
+    // so no folder segment of its own.
+    private const string SINGULAR_CONFIGURATION =
+        """
+        {
+          "Namespace": "Sample.Tests",
+          "MessagingGateway": {
+            "Publication": "Sample.SamplePublication",
+            "Subscription": "Sample.SampleSubscription",
+            "MessageGatewayProvider": "Sample.Tests.SampleMessageGatewayProvider",
+            "Category": "Sample",
+            "CollectionName": "Sample"
+          },
+          "Outbox": {
+            "Transaction": "System.Data.Common.DbTransaction",
+            "OutboxProvider": "SampleOutboxProvider",
+            "Category": "Sample",
+            "CollectionName": "SampleOutbox"
+          }
+        }
+        """;
 
     private readonly string _root;
     private readonly string _testsRoot;
@@ -77,18 +105,20 @@ public class AuditCanaryTests : IDisposable
         _testsRoot = Path.Combine(_root, "tests");
         _projectFolder = Path.Combine(_testsRoot, "Sample.Tests");
         Directory.CreateDirectory(_projectFolder);
-        File.WriteAllText(Path.Combine(_projectFolder, "test-configuration.json"), SAMPLE_CONFIGURATION);
     }
 
-    [Fact]
-    public async Task When_a_file_the_generator_would_not_write_is_planted_should_report_an_orphan()
+    [Theory]
+    [InlineData(PLURAL_CONFIGURATION, "Sample")]
+    [InlineData(SINGULAR_CONFIGURATION, "")]
+    public async Task When_a_file_the_generator_would_not_write_is_planted_should_report_an_orphan(
+        string configuration, string gatewayFolder)
     {
         // Arrange - a tree the generators have just written, which the audit agrees with
-        await GenerateAsync();
+        await GenerateAsync(configuration);
         Assert.Empty(new GeneratedTreeAudit(_testsRoot).Orphans);
 
         // Act - a file no template produces, in a directory the generator owns
-        var planted = Path.Combine(_projectFolder, "MessagingGateway", GATEWAY_NAME, "Generated",
+        var planted = Path.Combine(_projectFolder, "MessagingGateway", gatewayFolder, "Generated",
             "Reactor", "When_no_template_produces_this_should_be_reported.cs");
         File.WriteAllText(planted, "// hand-written, under an <auto-generated> roof");
         var audit = new GeneratedTreeAudit(_testsRoot);
@@ -98,16 +128,20 @@ public class AuditCanaryTests : IDisposable
         Assert.Empty(audit.Missing);
     }
 
-    [Fact]
-    public async Task When_a_file_the_generator_would_write_is_deleted_should_report_it_missing()
+    [Theory]
+    [InlineData(PLURAL_CONFIGURATION, "Sample")]
+    [InlineData(SINGULAR_CONFIGURATION, "")]
+    public async Task When_a_file_the_generator_would_write_is_deleted_should_report_it_missing(
+        string configuration, string outboxFolder)
     {
         // Arrange - a tree the generators have just written, which the audit agrees with
-        await GenerateAsync();
+        await GenerateAsync(configuration);
         Assert.Empty(new GeneratedTreeAudit(_testsRoot).Missing);
 
-        // Act - one generated file goes away, as a dropped generation code path would leave it
+        // Act - one generated file goes away, as a dropped generation code path would leave it.
+        // The Sync suite is the one #4300 dropped from the singular branch.
         var deleted = Directory
-            .EnumerateFiles(Path.Combine(_projectFolder, "Outbox", GATEWAY_NAME, "Generated", "Sync"), "*.cs")
+            .EnumerateFiles(Path.Combine(_projectFolder, "Outbox", outboxFolder, "Generated", "Sync"), "*.cs")
             .OrderBy(file => file, StringComparer.Ordinal)
             .First();
         File.Delete(deleted);
@@ -118,16 +152,21 @@ public class AuditCanaryTests : IDisposable
         Assert.Empty(audit.Orphans);
     }
 
-    private async Task GenerateAsync()
+    /// <summary>
+    /// Writes the configuration into the sample project and runs the real generators over it, so
+    /// that a clean audit afterwards is evidence the expected set agrees with what was written.
+    /// </summary>
+    /// <param name="configurationJson">The test-configuration.json contents to generate from.</param>
+    private async Task GenerateAsync(string configurationJson)
     {
-        var factory = LoggerFactory.Create(builder => builder.AddConsole());
-        var configuration = JsonSerializer.Deserialize<TestConfiguration>(
-            File.ReadAllText(Path.Combine(_projectFolder, "test-configuration.json")))!;
+        File.WriteAllText(Path.Combine(_projectFolder, "test-configuration.json"), configurationJson);
+
+        var configuration = JsonSerializer.Deserialize<TestConfiguration>(configurationJson)!;
         configuration.DestinationFolder = _projectFolder;
 
-        await new Generators.OutboxGenerator(factory.CreateLogger<Generators.OutboxGenerator>())
+        await new Generators.OutboxGenerator(NullLogger<Generators.OutboxGenerator>.Instance)
             .GenerateAsync(configuration);
-        await new Generators.MessagingGatewayGenerator(factory.CreateLogger<Generators.MessagingGatewayGenerator>())
+        await new Generators.MessagingGatewayGenerator(NullLogger<Generators.MessagingGatewayGenerator>.Instance)
             .GenerateAsync(configuration);
     }
 
