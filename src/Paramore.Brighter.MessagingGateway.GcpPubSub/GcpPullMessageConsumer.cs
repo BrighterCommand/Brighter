@@ -189,12 +189,15 @@ public partial class GcpPullMessageConsumer(
     }
 
     // Bounds a Pull to the caller's timeout so an empty subscription returns after the requested
-    // window (as DeadlineExceeded) instead of long-polling. A null/non-positive timeout leaves the
-    // call unbounded, preserving the prior default behaviour.
-    private static CallSettings BuildPullCallSettings(TimeSpan? timeOut) =>
+    // window (as DeadlineExceeded) instead of long-polling. A null or non-positive timeout returns
+    // null, which leaves the client's own per-method expiration from SubscriberServiceApiSettings
+    // in force - the behaviour of the PullAsync(request, cancellationToken) overload this replaced.
+    // Returning Expiration.None here instead would override that default with no deadline at all,
+    // which is not what the caller who omitted a timeout asked for.
+    private static CallSettings? BuildPullCallSettings(TimeSpan? timeOut) =>
         timeOut is { } window && window > TimeSpan.Zero
             ? CallSettings.FromExpiration(Expiration.FromTimeout(window))
-            : CallSettings.FromExpiration(Expiration.None);
+            : null;
 
     
     /// <summary>
