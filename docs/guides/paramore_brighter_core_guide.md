@@ -144,9 +144,13 @@ public class MyCommandHandler: RequestHandler<MyCommand>
 ```
 
 There is no `[Retry]` or `[CircuitBreaker]` attribute. Retry and circuit breaker are Polly
-policies named by key, and `[UsePolicy]` resolves them from the registry — `[UsePolicy]` and
-`[UseResiliencePipeline]` are the two attributes that do this. See
-[Attribute ordering example](#pipeline-design) for the full set and the migration between them.
+policies named by key, and `[UsePolicy]` resolves them from the registry.
+
+**`[UsePolicy]` and `[TimeoutPolicy]` are both `[Obsolete]`**, in favour of Polly v8 resilience
+pipelines: `[UseResiliencePipeline("MyPipeline", step)]` is the current form, and it reads from
+`Context.ResiliencePipeline` rather than `Context.Policies`. Pasting either of the older two
+gives you `CS0618`. They are shown here because both are still live and existing code
+overwhelmingly uses them. See [Attribute ordering example](#pipeline-design) for the full set.
 
 **Attribute Properties:**
 - **Step** - Execution order within timing group
@@ -439,12 +443,13 @@ The four collaborators that chain needs, and where each comes from:
 | `handlerConfiguration` | `new HandlerConfiguration(subscriberRegistry, handlerFactory)` |
 | `bus` | an `IAmAnOutboxProducerMediator` — build one as `OutboxProducerMediator<Message, TTransaction>(...)`, as under *Testing Message Publishing* below, or let `AddProducers` build it for you when you configure Brighter through DI |
 | `replyChannelFactory` | your transport's `IAmAChannelFactory`, which creates the channel replies arrive on |
-| `replySubscriptions` | one `Subscription` per reply topic, of the transport's own subscription type |
+| `replySubscriptions` | one `Subscription` per reply topic, of the transport's own subscription type. **Matched on the response type**, not the request: `Call` looks for `s.RequestType == typeof(TResponse)` and throws `InvalidOperationException` when nothing matches |
 
 **Characteristics:**
 - Synchronous request-reply pattern
-- Returns typed response (`TResponse`)
-- Can work in-memory or via external bus
+- Returns typed response (`TResponse?` — nullable)
+- **Requires RPC wiring.** There is no in-memory path: without a response channel factory,
+  `Call` throws `InvalidOperationException("No ResponseChannelFactory registered")`
 - Timeout support for external calls to prevent blocking
 - Reply channel management for external scenarios
 - Supports same middleware pipeline as Send/Publish
@@ -1064,6 +1069,8 @@ public void When_Sending_Command_Should_Execute_Pipeline()
     var registry = new SubscriberRegistry();
     registry.Register<CreateCustomerCommand, CreateCustomerHandler>();
     
+    // customerRepository is your test double; the discard lambda is safe because
+    // CreateCustomerHandler carries no attributes, so the pipeline is one long
     var handlerFactory = new SimpleHandlerFactorySync(_ => new CreateCustomerHandler(customerRepository));
     var commandProcessor = CommandProcessorBuilder.StartNew()
         .Handlers(new HandlerConfiguration(registry, handlerFactory))
@@ -1123,7 +1130,7 @@ public void When_Publishing_Event_Should_Store_In_Outbox()
     // configuration, so an empty registry is enough here
     var commandProcessor = CommandProcessorBuilder.StartNew()
         .Handlers(new HandlerConfiguration(new SubscriberRegistry(),
-            new SimpleHandlerFactorySync(_ => new CreateCustomerHandler(customerRepository))))
+            new SimpleHandlerFactorySync(_ => new CreateCustomerHandler(customerRepository)))) // your test double
         .Resilience(resiliencePipelineRegistry)
         .ExternalBus(ExternalBusType.FireAndForget, bus, typeof(CommittableTransaction))
         .NoInstrumentation()
@@ -1179,7 +1186,9 @@ Three things that block gets right and a hand-written version usually does not:
 
 - **The factory constructs by the type it is handed.** `PipelineBuilder` asks the factory for
   the *middleware* handlers as well as yours, so a `_ => new TestHandlerWithAttributes()` lambda
-  returns a pipeline of three identical handlers.
+  returns your handler once per pipeline position instead of the middleware. A discard lambda is
+  safe only where the handler carries no attributes and the pipeline is therefore one long — which
+  is why the `CreateCustomerHandler` examples above can use one and this one cannot.
 - **The interface is named explicitly.** `PipelineBuilder<T>` has two two-argument constructors
   differing only in `IAmAHandlerFactorySync` versus `IAmAHandlerFactoryAsync`, and
   `SimpleHandlerFactory` implements both, so passing one of those is `CS0121`.
@@ -1240,6 +1249,7 @@ var inMemoryOutbox = new InMemoryOutbox(TimeProvider.System);
 For basic handler instantiation. You supply the function that creates a handler for a requested
 type; there is no convention-based fallback:
 ```csharp
+// customerRepository is whatever the handler needs; you supply it
 var handlerFactory = new SimpleHandlerFactorySync(_ => new CreateCustomerHandler(customerRepository));
 ```
 Use `SimpleHandlerFactory` instead where a sync and an async factory are both needed — it takes
@@ -1353,9 +1363,10 @@ public class ProcessOrderHandler : RequestHandler<ProcessOrderCommand>
 public class ProcessPaymentHandler : RequestHandler<ProcessPaymentCommand>
 {
     [RequestLogging(step: 1, timing: HandlerTiming.Before)]
-    [UsePolicy(new[] { "RetryPolicy", "CircuitBreakerPolicy" }, step: 2)]
-    [TimeoutPolicy(milliseconds: 30000, step: 3)]
-    [FallbackPolicy(backstop: true, circuitBreaker: true, step: 4)]
+    [ValidateRequest(step: 2)]
+    [UsePolicy(new[] { "RetryPolicy", "CircuitBreakerPolicy" }, step: 3)]
+    [TimeoutPolicy(milliseconds: 30000, step: 4)]
+    [FallbackPolicy(backstop: true, circuitBreaker: true, step: 5)]
     public override ProcessPaymentCommand Handle(ProcessPaymentCommand command)
     {
         // Business logic here
@@ -1364,22 +1375,27 @@ public class ProcessPaymentHandler : RequestHandler<ProcessPaymentCommand>
 }
 ```
 
-`RequestLogging` is in `Paramore.Brighter.Logging.Attributes`; the other three are in
+`RequestLogging` is in `Paramore.Brighter.Logging.Attributes`, `ValidateRequest` in
+`Paramore.Brighter.RequestValidation.Attributes`, and the other three in
 `Paramore.Brighter.Policies.Attributes`.
 
 Three things about that block are easy to get wrong:
 
-- **Steps run ascending on the way in and unwind in reverse on the way out**, so a single
-  `[RequestLogging]` covers both entry and completion. `RequestHandlerAttribute` is
+- **Each attribute appears once per method.** `RequestHandlerAttribute` is
   `[AttributeUsage(AttributeTargets.Method)]` and leaves `AllowMultiple` at its default of
-  `false`, so each attribute appears **once** per method.
+  `false`. `RequestLoggingHandler` logs **once**, at its own position in the chain, and
+  `HandlerTiming.After` moves that position past the target rather than adding a second log —
+  so a pair of `[RequestLogging]` attributes for "entry" and "completion" is not a thing you
+  can write.
 - **Retry and circuit breaker are Polly policies, not attributes.** You name them by key and
   `[UsePolicy]` resolves them from the registry; that is why it takes a `string[]` overload,
   since it cannot be applied twice. `CommandProcessor.RETRYPOLICY` and
   `CommandProcessor.CIRCUITBREAKER` are the well-known keys for the Outbox's own policies.
-- **There is no validation middleware in the box.** Validation is a custom attribute — derive
-  from `RequestHandlerAttribute`, return your handler's type from `GetHandlerType()`, and give
-  it a step like any other.
+- **Validation is `[ValidateRequest]`.** It ships in the core package, alongside
+  `ValidateRequestAsyncAttribute`, and contributes the open generic `ValidateRequestHandler<>`.
+  The concrete validator comes from a provider package: `Paramore.Brighter.Validation.FluentValidation`
+  (`UseFluentValidation()`), `Paramore.Brighter.Validation.DataAnnotations` (`UseDataAnnotations()`)
+  or `Paramore.Brighter.Validation.Specification` (`UseSpecification()`).
 
 `[UsePolicy]` and `Context.Policies` are `[Obsolete]` in favour of Polly v8 resilience
 pipelines: `[UseResiliencePipeline("MyPipeline", step)]` is the current form, reading from
