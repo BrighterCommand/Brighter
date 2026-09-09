@@ -98,7 +98,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 return null;
             }
 
-            return new ServiceProviderPipelineScope(ServiceProviderLifetimeScope.CreateBorrowed(src.Services));
+            return new ServiceProviderPipelineScope(ServiceProviderLifetimeScope.CreateBorrowed(src.Services, scopeProvider.GetType()));
         }
     }
 }

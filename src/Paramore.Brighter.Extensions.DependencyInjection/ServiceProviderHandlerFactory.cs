@@ -97,7 +97,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (_handlerLifetime == ServiceLifetime.Singleton)
                 return _singletonScope.GetOrCreate<IHandleRequests>(handlerType);
 
-            return ResolvePipelineScope(lifetime).GetOrCreate<IHandleRequests>(handlerType);
+            return ResolvePipelineScope(lifetime).Create<IHandleRequests>(handlerType);
         }
 
         /// <summary>
@@ -112,22 +112,25 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (_handlerLifetime == ServiceLifetime.Singleton)
                 return _singletonScope.GetOrCreate<IHandleRequestsAsync>(handlerType);
 
-            return ResolvePipelineScope(lifetime).GetOrCreate<IHandleRequestsAsync>(handlerType);
+            return ResolvePipelineScope(lifetime).Create<IHandleRequestsAsync>(handlerType);
         }
 
         /// <summary>
-        /// Resolves the <see cref="ServiceProviderLifetimeScope"/> backing the pipeline scope handle a
-        /// <c>Scoped</c> or <c>Transient</c> handler must have been supplied via <see cref="CreatePipelineScope"/>.
+        /// Resolves the <see cref="ServiceProviderPipelineScope"/> handle a <c>Scoped</c> or
+        /// <c>Transient</c> handler must have been supplied via <see cref="CreatePipelineScope"/>. Returns
+        /// the pipeline scope itself, not its inner <see cref="ServiceProviderLifetimeScope"/>, so
+        /// resolution goes through <see cref="ServiceProviderPipelineScope.Create{T}(Type)"/> - the one
+        /// site that translates a borrowed ambient's disposal into a <see cref="ConfigurationException"/>.
         /// </summary>
         /// <exception cref="ConfigurationException">
         /// Thrown when <paramref name="lifetime"/> (or its <see cref="IAmALifetime.PipelineScope"/>) carries
         /// no handle this factory recognises — the caller did not pass this factory's own
         /// <see cref="CreatePipelineScope"/> result through to the <see cref="IAmALifetime"/> it created.
         /// </exception>
-        private static ServiceProviderLifetimeScope ResolvePipelineScope(IAmALifetime lifetime)
+        private static ServiceProviderPipelineScope ResolvePipelineScope(IAmALifetime lifetime)
         {
             if (lifetime?.PipelineScope is ServiceProviderPipelineScope pipelineScope)
-                return pipelineScope.LifetimeScope;
+                return pipelineScope;
 
             throw new ConfigurationException(
                 "No pipeline scope was supplied for a Scoped or Transient handler lifetime. Pass this " +

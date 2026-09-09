@@ -54,6 +54,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         //when true, this scope resolves everything directly from _serviceProvider - an ambient the
         //caller owns - rather than creating and owning an IServiceScope of its own. See CreateBorrowed.
         private readonly bool _borrowed;
+        //the IAmAScopeProvider implementation type that offered the borrowed ambient - null unless
+        //_borrowed. Named in the ConfigurationException ServiceProviderPipelineScope.Create translates
+        //an ObjectDisposedException into, when the ambient's owner disposes it mid-pipeline (see
+        //ServiceProviderPipelineScope), so an operator is pointed at the provider responsible rather
+        //than left to guess.
+        private readonly Type? _ambientProviderType;
         //every Transient resolution's own scope is tracked here by the scope's own reference identity, NOT by
         //the instance it produced. A resolution IS its scope, so a shared instance (a Singleton resolved under a
         //Transient lifetime) has one distinct entry per resolution rather than several stacked under one key —
@@ -86,16 +92,17 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// disposed with this lifetime scope (the pre-#4254 handler behaviour).
         /// </param>
         public ServiceProviderLifetimeScope(IServiceProvider serviceProvider, ServiceLifetime lifetime, bool isolateTransientScopes = true)
-            : this(serviceProvider, lifetime, isolateTransientScopes, borrowed: false)
+            : this(serviceProvider, lifetime, isolateTransientScopes, borrowed: false, ambientProviderType: null)
         {
         }
 
-        private ServiceProviderLifetimeScope(IServiceProvider serviceProvider, ServiceLifetime lifetime, bool isolateTransientScopes, bool borrowed)
+        private ServiceProviderLifetimeScope(IServiceProvider serviceProvider, ServiceLifetime lifetime, bool isolateTransientScopes, bool borrowed, Type? ambientProviderType)
         {
             _serviceProvider = serviceProvider;
             _lifetime = lifetime;
             _isolateTransientScopes = isolateTransientScopes;
             _borrowed = borrowed;
+            _ambientProviderType = ambientProviderType;
         }
 
         /// <summary>
@@ -107,13 +114,29 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="borrowedProvider">The ambient's own resolution source, already known to pass
         /// <see cref="AmbientScopeProbe.CanResolveFrom"/>.</param>
-        internal static ServiceProviderLifetimeScope CreateBorrowed(IServiceProvider borrowedProvider) =>
-            new(borrowedProvider, ServiceLifetime.Scoped, isolateTransientScopes: true, borrowed: true);
+        /// <param name="ambientProviderType">The <see cref="IAmAScopeProvider"/> implementation type that
+        /// offered this ambient, named in the <see cref="ConfigurationException"/>
+        /// <see cref="ServiceProviderPipelineScope"/> translates an <see cref="ObjectDisposedException"/>
+        /// into if the ambient's owner disposes it while a pipeline is still resolving from it.</param>
+        internal static ServiceProviderLifetimeScope CreateBorrowed(IServiceProvider borrowedProvider, Type ambientProviderType) =>
+            new(borrowedProvider, ServiceLifetime.Scoped, isolateTransientScopes: true, borrowed: true, ambientProviderType);
 
         /// <summary>
         /// Gets the configured lifetime for objects created by this scope
         /// </summary>
         public ServiceLifetime Lifetime => _lifetime;
+
+        /// <summary>
+        /// Whether this scope resolves from a borrowed ambient rather than a scope it owns. See
+        /// <see cref="CreateBorrowed"/>.
+        /// </summary>
+        internal bool IsBorrowed => _borrowed;
+
+        /// <summary>
+        /// The <see cref="IAmAScopeProvider"/> implementation type that offered this borrowed ambient, or
+        /// <see langword="null"/> when this scope is not borrowed. See <see cref="CreateBorrowed"/>.
+        /// </summary>
+        internal Type? AmbientProviderType => _ambientProviderType;
 
         /// <summary>
         /// Creates or retrieves an object of the specified type according to the configured lifetime.

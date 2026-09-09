@@ -87,7 +87,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             if (scope is ServiceProviderPipelineScope pipelineScope && _lifetimeScope.Lifetime == ServiceLifetime.Scoped)
             {
-                var scopedTransform = pipelineScope.LifetimeScope.GetOrCreate<IAmAMessageTransform>(transformerType, out var scopedReleaseToken);
+                var scopedTransform = pipelineScope.Create<IAmAMessageTransform>(transformerType, out var scopedReleaseToken);
                 return scopedTransform is null ? null : new Lease<IAmAMessageTransform>(scopedTransform, scopedReleaseToken);
             }
 

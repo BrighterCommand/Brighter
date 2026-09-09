@@ -88,7 +88,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             if (scope is ServiceProviderPipelineScope pipelineScope && _lifetimeScope.Lifetime == ServiceLifetime.Scoped)
             {
-                var scopedMapper = pipelineScope.LifetimeScope.GetOrCreate<IAmAMessageMapperAsync>(messageMapperType, out var scopedReleaseToken);
+                var scopedMapper = pipelineScope.Create<IAmAMessageMapperAsync>(messageMapperType, out var scopedReleaseToken);
                 return scopedMapper is null ? null : new Lease<IAmAMessageMapperAsync>(scopedMapper, scopedReleaseToken);
             }
 
