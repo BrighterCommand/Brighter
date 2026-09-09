@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
@@ -45,9 +44,11 @@ public class WhenOutboxConfigurationMissingMessageFactoryShouldUseParentFactory 
 
         // Assert - the parent's message builder is what the templates rendered. Asserted through
         // the generated file rather than through the configuration object, because the generator no
-        // longer writes its per-render values back onto the caller's configuration.
-        var generated = File.ReadAllText(Directory.EnumerateFiles(
-            Path.Combine(_testDirectory, "Outbox", "SqlServer", "Generated", "Sync"), "*.cs").First());
+        // longer writes its per-render values back onto the caller's configuration. The file is
+        // named rather than picked out of an enumeration, whose order the filesystem chooses:
+        // IAmAnOutboxProviderSync.cs is the one Sync template that never mentions MessageBuilder.
+        var generated = File.ReadAllText(Path.Combine(_testDirectory, "Outbox", "SqlServer",
+            "Generated", "Sync", "When_Adding_A_Message_It_Should_Be_Stored_With_All_Properties.cs"));
         Assert.Contains("TestMessageBuilder", generated);
     }
 
