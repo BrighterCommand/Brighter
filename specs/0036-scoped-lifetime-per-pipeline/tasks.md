@@ -656,7 +656,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T4.9 (Phase 4 complete)
   - **References**: FR-9(a), AC-24 (general clause); ADR 0075 step 2
 
-- [ ] **TEST + IMPLEMENT: T5.2 — core expresses scoping only through the seam, with the correct affinity mix (bracket 1, resolution time)**
+- [x] **TEST + IMPLEMENT: T5.2 — core expresses scoping only through the seam, with the correct affinity mix (bracket 1, resolution time)**
   - **USE COMMAND**: `/test-first a Send a three subscriber Publish and a Post produce exactly five adoption decisions with AlwaysNew for each subscriber`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_send_a_publish_and_a_post_run_the_recorder_should_show_five_adoption_decisions.cs`
