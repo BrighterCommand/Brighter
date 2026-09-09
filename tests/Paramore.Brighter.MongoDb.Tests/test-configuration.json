@@ -1,5 +1,12 @@
 {
   "Namespace": "Paramore.Brighter.MongoDB.Tests",
+  "Inbox": {
+    "InboxProvider": "MongoDbInboxProvider",
+    "InboxProviderAsync": "MongoDbInboxProvider",
+    "Category": "MongoDB",
+    "CollectionName": "MongoDbInbox",
+    "Prefix": "MongoDb"
+  },
   "Outbox": {
     "Transaction": "global::MongoDB.Driver.IClientSessionHandle",
     "OutboxProvider": "Paramore.Brighter.MongoDb.Tests.Outbox.MongoDbOutboxProvider",
