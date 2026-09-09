@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using MQTTnet;
@@ -24,13 +24,18 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
     {
         private readonly string _topic;
         private readonly MqttMessagingGatewayConsumerConfiguration _configuration;
-        private readonly ConcurrentQueue<Message> _messageQueue = new();
+        // Buffers arrivals and signals waiters from the same piece of state, so the two cannot
+        // drift apart: a reader is woken by the message itself, and there is no separate count to
+        // run ahead of the buffer when a receive takes several messages at once.
+        private readonly Channel<Message> _messages =
+            System.Threading.Channels.Channel.CreateUnbounded<Message>(
+                new UnboundedChannelOptions { SingleReader = false, SingleWriter = false });
 
-        // Released once per message the MQTT event handler enqueues, so that a caller waiting for
-        // work is woken by the arrival itself rather than by a poll interval expiring. Its count
-        // can run ahead of the queue when a drain takes several messages at once; that only costs
-        // a waiter one immediate, empty pass.
-        private readonly SemaphoreSlim _messageArrived = new(0);
+        // The most messages one receive may hand back, or null for no limit. The Brighter Channel
+        // wrapper throws when handed more than its BufferSize, so consumers built by the factory
+        // are capped at the subscription's BufferSize. A directly-constructed consumer is not
+        // behind a Channel and keeps the uncapped behaviour it has always had.
+        private readonly int? _batchSize;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MqttMessageConsumer>();
         private readonly Message _noopMessage = new();
 
@@ -60,6 +65,12 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// </param>
         /// <param name="deadLetterRoutingKey">The routing key for the dead letter queue, if using Brighter-managed DLQ.</param>
         /// <param name="invalidMessageRoutingKey">The routing key for the invalid message queue, if using Brighter-managed invalid message handling.</param>
+        /// <param name="batchSize">
+        /// The most messages one <see cref="Receive(TimeSpan?)"/> may return. Pass the
+        /// subscription's <c>BufferSize</c> when the consumer sits behind a Brighter
+        /// <see cref="Channel"/>, which throws if handed more messages than it can buffer.
+        /// Null, the default, returns everything buffered.
+        /// </param>
         /// <exception cref="ArgumentNullException">
         /// Thrown when the <paramref name="configuration.TopicPrefix"/> is null.
         /// </exception>
@@ -74,9 +85,17 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             MqttMessagingGatewayConsumerConfiguration configuration,
             IAmAMessageScheduler? scheduler = null,
             RoutingKey? deadLetterRoutingKey = null,
-            RoutingKey? invalidMessageRoutingKey = null)
+            RoutingKey? invalidMessageRoutingKey = null,
+            int? batchSize = null)
         {
             _configuration = configuration;
+            if (batchSize is <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(batchSize), batchSize,
+                    "A receive must be allowed to return at least one message.");
+            }
+
+            _batchSize = batchSize;
             _scheduler = scheduler;
             _deadLetterRoutingKey = deadLetterRoutingKey;
             _invalidMessageRoutingKey = invalidMessageRoutingKey;
@@ -118,8 +137,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                 Log.MqttMessageConsumerReceivedMessage(s_logger, configuration.TopicPrefix);
                 var message = JsonSerializer.Deserialize<Message>(e.ApplicationMessage.PayloadSegment.ToArray(), JsonSerialisationOptions.Options);
 
-                _messageQueue.Enqueue(message!);
-                _messageArrived.Release();
+                _messages.Writer.TryWrite(message!);
                 return Task.CompletedTask;
             };
 
@@ -169,18 +187,20 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
         public void Dispose()
         {
+            // Wake anything parked in a receive before the client goes away, so shutdown returns
+            // an empty read rather than tearing down state a waiter is still sitting on.
+            _messages.Writer.TryComplete();
             _requeueProducer?.Dispose();
             _mqttClient.Dispose();
-            _messageArrived.Dispose();
         }
 
 
         public async ValueTask DisposeAsync()
         {
+            _messages.Writer.TryComplete();
             if (_requeueProducer != null) await _requeueProducer.DisposeAsync();
             // IMqttClient only implements IDisposable, not IAsyncDisposable (MQTTnet 4.3)
             _mqttClient.Dispose();
-            _messageArrived.Dispose();
         }
 
         /// <summary>
@@ -188,7 +208,9 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// </summary>
         public void Purge()
         {
-            _messageQueue.Clear();
+            while (_messages.Reader.TryRead(out _))
+            {
+            }
         }
 
         /// <summary>
@@ -213,45 +235,59 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// How long to wait for at least one message to arrive. Defaults to 300 ms.
         /// </param>
         /// <remarks>
-        /// Callers that go through a Brighter <see cref="Channel"/> wrapper must ensure the
-        /// Channel's buffer size (set on the subscription's <c>BufferSize</c>) is large enough
-        /// to accommodate the number of messages that can accumulate between calls — the Channel
-        /// will throw <see cref="InvalidOperationException"/> if more messages are returned than
-        /// its internal buffer can hold.
+        /// A consumer built by <see cref="MqttMessageConsumerFactory"/> returns at most the
+        /// subscription's <c>BufferSize</c> messages, which is what that setting means: the number
+        /// of messages to retrieve at once. Anything still buffered is left for the next call, so a
+        /// burst cannot overflow the Brighter <see cref="Channel"/> wrapper.
         /// </remarks>
         public Message[] Receive(TimeSpan? timeOut = null)
         {
-            _messageArrived.Wait(timeOut ?? DefaultTimeout);
-            return DrainQueue();
+            using var timeout = new CancellationTokenSource(timeOut ?? DefaultTimeout);
+            try
+            {
+                _messages.Reader.WaitToReadAsync(timeout.Token).AsTask().GetAwaiter().GetResult();
+            }
+            catch (OperationCanceledException)
+            {
+                // Nothing arrived inside the timeout.
+            }
+
+            return TakeBatch();
         }
 
 
         /// <inheritdoc />
         public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default)
         {
-            await _messageArrived.WaitAsync(timeOut ?? DefaultTimeout, cancellationToken)
-                .ConfigureAwait(false);
-            return DrainQueue();
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(timeOut ?? DefaultTimeout);
+            try
+            {
+                await _messages.Reader.WaitToReadAsync(timeout.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                // Nothing arrived inside the timeout; the caller's own cancellation still throws.
+            }
+
+            return TakeBatch();
         }
 
         /// <summary>
-        /// Takes every message currently buffered, or the no-op message when there are none.
+        /// Takes up to the configured batch size of buffered messages - all of them when no batch
+        /// size is configured - or the no-op message when there are none.
         /// </summary>
-        /// <returns>The buffered messages, or a single no-op message.</returns>
-        private Message[] DrainQueue()
+        /// <returns>The messages taken, or a single no-op message.</returns>
+        private Message[] TakeBatch()
         {
-            if (_messageQueue.IsEmpty)
-            {
-                return [_noopMessage];
-            }
-
             var messages = new List<Message>();
-            while (_messageQueue.TryDequeue(out var message))
+            while ((_batchSize is null || messages.Count < _batchSize)
+                   && _messages.Reader.TryRead(out var message))
             {
                 messages.Add(message);
             }
 
-            return messages.ToArray();
+            return messages.Count == 0 ? [_noopMessage] : messages.ToArray();
         }
 
         /// <summary>
