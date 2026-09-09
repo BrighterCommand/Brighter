@@ -45,6 +45,7 @@ namespace Paramore.Brighter
         private readonly IAmAHandlerFactorySync? _syncHandlerFactory;
         private readonly InboxConfiguration? _inboxConfiguration;
         private readonly IAmAHandlerFactoryAsync? _asyncHandlerFactory;
+        private readonly bool _isolateSubscribers;
         private readonly List<IAmALifetime> _instanceScopes = new List<IAmALifetime>();
         //GLOBAL! cache of handler attributes - won't change post-startup so avoid re-calculation. Method to clear cache below (if a broken test brought you here)
         private static readonly ConcurrentDictionary<Type, IOrderedEnumerable<RequestHandlerAttribute>> s_preAttributesMemento = new ConcurrentDictionary<Type, IOrderedEnumerable<RequestHandlerAttribute>>();
@@ -57,14 +58,17 @@ namespace Paramore.Brighter
         /// <param name="subscriberRegistry">A <see cref="IAmASubscriberRegistry"/> subscriber registry</param>
         /// <param name="syncHandlerFactory">An <see cref="IAmAHandlerFactoryAsync"/>providing a callback to the user code to create instances of handlers</param>
         /// <param name="inboxConfiguration">Do we have a global attribute to add an inbox</param>
+        /// <param name="isolateSubscribers">Does this build isolate each subscriber's pipeline from the others (a Publish dispatch) rather than a single dispatch (a Send)</param>
         public PipelineBuilder(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactorySync syncHandlerFactory,
-            InboxConfiguration? inboxConfiguration = null) 
+            InboxConfiguration? inboxConfiguration = null,
+            bool isolateSubscribers = false)
         {
             _subscriberRegistry = subscriberRegistry;
             _syncHandlerFactory = syncHandlerFactory;
             _inboxConfiguration = inboxConfiguration;
+            _isolateSubscribers = isolateSubscribers;
         }
 
         /// <summary>
@@ -74,14 +78,17 @@ namespace Paramore.Brighter
         /// <param name="subscriberRegistry">A <see cref="IAmASubscriberRegistry"/> subscriber registry</param>
         /// <param name="asyncHandlerFactory">An <see cref="IAmAHandlerFactoryAsync"/>providing a callback to the user code to create instances of handlers</param>
         /// <param name="inboxConfiguration">Do we have a global attribute to add an inbox</param>
+        /// <param name="isolateSubscribers">Does this build isolate each subscriber's pipeline from the others (a Publish dispatch) rather than a single dispatch (a Send)</param>
         public PipelineBuilder(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactoryAsync asyncHandlerFactory,
-            InboxConfiguration? inboxConfiguration = null)
+            InboxConfiguration? inboxConfiguration = null,
+            bool isolateSubscribers = false)
         {
             _subscriberRegistry = subscriberRegistry;
             _asyncHandlerFactory = asyncHandlerFactory;
             _inboxConfiguration = inboxConfiguration;
+            _isolateSubscribers = isolateSubscribers;
         }
 
         /// <summary>
