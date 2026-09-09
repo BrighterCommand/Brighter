@@ -81,6 +81,34 @@ public sealed class ConformanceLedger : IAmAConformanceLedger
         return null;
     }
 
+    /// <summary>
+    /// Loads the conformance ledger by walking up from <paramref name="startDirectory"/>.
+    /// </summary>
+    /// <param name="startDirectory">The directory to begin the upward search from.</param>
+    /// <returns>The loaded ledger.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when no ledger is found above <paramref name="startDirectory"/>.
+    /// </exception>
+    /// <remarks>
+    /// Failing is the point. A caller handed a null ledger generates the canonical suite with no
+    /// Skip values assigned at all, and a model whose Skip stays null renders
+    /// <c>[Fact(Skip = "")]</c> - Liquid treats <c>nil != empty</c> as TRUE - so every canonical
+    /// test on every transport is reported skipped and the suite goes green having run nothing.
+    /// A gate that cannot find its own criteria has to stop, not wave the build through.
+    /// </remarks>
+    public static ConformanceLedger LoadFrom(string startDirectory)
+    {
+        var path = FindLedgerPath(startDirectory)
+                   ?? throw new InvalidOperationException(
+                       $"Could not locate the conformance ledger '{RELATIVE_LEDGER_PATH}' by walking up "
+                       + $"from '{startDirectory}'. The generator will not emit the canonical suite "
+                       + "without it: with no ledger every canonical test renders as skipped and the "
+                       + "conformance run proves nothing. Run the generator from within the repository, "
+                       + "or update the ledger path if the spec directory has moved.");
+
+        return new ConformanceLedger(path);
+    }
+
     public string GetSkip(string ledgerKey, string frColumn, string behaviourName)
     {
         if (!_cells.TryGetValue(ledgerKey, out var row)) return string.Empty;

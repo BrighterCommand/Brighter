@@ -49,11 +49,11 @@ public class MessagingGatewayGenerator(
     IAmAConformanceLedger? ledger = null)
     : BaseGenerator(logger)
 {
-    // Canonical-template base name → conformance-ledger FR column (FR-21 / ADR 0067).
-    // Only templates whose names appear here receive the ledger-driven Deferred Skip.
-    // This list is authoritative: a template absent from it is treated as non-canonical.
-    // Resolved once per GenerateAsync(TestConfiguration) call.
-    private IAmAConformanceLedger? _ledger;
+    // The conformance ledger driving the canonical Deferred Skips, resolved once per
+    // GenerateAsync(TestConfiguration) call. Never null once resolved: LoadLedgerFromFileSystem
+    // throws rather than handing back a null that would silently skip the whole suite.
+    // The canonical-template → FR-column map lives in CanonicalBehaviours.
+    private IAmAConformanceLedger _ledger = null!;
 
     /// <summary>
     /// Generates messaging gateway test files for the configured gateway(s) in the provided <paramref name="configuration"/>.
@@ -62,13 +62,14 @@ public class MessagingGatewayGenerator(
     /// <param name="configuration">The root test configuration containing messaging gateway settings and destination folder.</param>
     public async Task GenerateAsync(TestConfiguration configuration)
     {
-        // Resolve the conformance ledger once for this generation run.
+        // Resolve the conformance ledger once for this generation run. Throws rather than
+        // returning null: see ConformanceLedger.LoadFrom.
         _ledger = ledger ?? LoadLedgerFromFileSystem();
 
         if (configuration.MessagingGateway != null)
         {
             var prefix = configuration.MessagingGateway.Prefix;
-            var prepareModel = _ledger != null ? (Action<string, object>)SetCanonicalSkip : null;
+            var prepareModel = (Action<string, object>)SetCanonicalSkip;
 
             await GenerateAsync(
                 configuration,
@@ -107,7 +108,7 @@ public class MessagingGatewayGenerator(
                 }
 
                 messagingGatewayConfiguration.Prefix = $".{prefix}";
-                var prepareModel = _ledger != null ? (Action<string, object>)SetCanonicalSkip : null;
+                var prepareModel = (Action<string, object>)SetCanonicalSkip;
 
                 await GenerateAsync(
                     configuration,
@@ -228,13 +229,13 @@ public class MessagingGatewayGenerator(
     /// <summary>
     /// Loads the conformance ledger by walking up from <see cref="AppContext.BaseDirectory"/>
     /// until <c>specs/0036-…/conformance-status.md</c> is found.
-    /// Returns null when the ledger cannot be located (no Skip is applied).
     /// </summary>
-    private static IAmAConformanceLedger? LoadLedgerFromFileSystem()
-    {
-        var path = ConformanceLedger.FindLedgerPath(AppContext.BaseDirectory);
-        return path != null ? new ConformanceLedger(path) : null;
-    }
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the ledger cannot be located. See <see cref="ConformanceLedger.LoadFrom"/> for
+    /// why this fails rather than generating an ungated suite.
+    /// </exception>
+    private static IAmAConformanceLedger LoadLedgerFromFileSystem()
+        => ConformanceLedger.LoadFrom(AppContext.BaseDirectory);
 
     /// <summary>
     /// Sets the <see cref="MessagingGatewayConfiguration.Skip"/> property on the model before
@@ -252,9 +253,7 @@ public class MessagingGatewayGenerator(
 
         var frColumn = CanonicalBehaviours.FrColumnFor(baseName);
 
-        if (frColumn != null
-            && !string.IsNullOrEmpty(config.LedgerKey)
-            && _ledger != null)
+        if (frColumn != null && !string.IsNullOrEmpty(config.LedgerKey))
         {
             config.Skip = _ledger.GetSkip(config.LedgerKey, frColumn, CanonicalBehaviours.BehaviourFor(frColumn));
         }
