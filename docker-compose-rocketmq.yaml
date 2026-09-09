@@ -32,6 +32,9 @@ services:
       - BROKER_NAME=broker-a
       - BROKER_ID=0
       - AUTO_CREATE_TOPIC_ENABLE=true  # Auto-create topics
+      # Local-only: rocketmq-ci is commented out in .github/workflows/ci.yml, so nothing in CI
+      # runs this file. Broker 2g + proxy 1g asks roughly 3.5 GB of a dev machine; turn these
+      # down if that is too much locally.
       - JAVA_OPT_EXT=-Xms2g -Xmx2g -Xmn512m -XX:MaxDirectMemorySize=1g -XX:MaxMetaspaceSize=256m
     command: sh mqbroker
     depends_on:

@@ -1,6 +1,9 @@
 version: '3.8'
 
 services:
+  # Matches the image rabbitmq-async-ci runs. Note that rabbitmq-sync-ci is still on
+  # brightercommand/rabbitmq:3.13-management-delay, so this file no longer mirrors that job:
+  # a sync-only failure in CI may not reproduce against this broker.
   rabbitmq:
     image: brightercommand/rabbitmq:4.2-management-delay
     hostname: rabbitmq-server
