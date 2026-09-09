@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
 {
@@ -47,7 +48,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <summary>
         /// Returns the single instance of <paramref name="type"/> this cache holds, resolving it
         /// through <paramref name="factory"/> on first ask. Concurrent first-resolvers of one type
-        /// produce one instance; the losers see the winner's.
+        /// produce one instance; the losers see the winner's. A resolution that throws is not
+        /// remembered: it is evicted before the exception is rethrown, so a later ask for the same
+        /// type tries <paramref name="factory"/> again instead of replaying the same failure forever.
         /// </summary>
         /// <param name="type">The artefact type to resolve.</param>
         /// <param name="factory">Resolves one instance of <paramref name="type"/>.</param>
@@ -55,7 +58,19 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public object? GetOrAdd(Type type, Func<object?> factory)
         {
             var lazy = _cache.GetOrAdd(type, _ => new Lazy<object?>(factory));
-            return lazy.Value;
+            try
+            {
+                return lazy.Value;
+            }
+            catch
+            {
+                //remove only this call's own (now faulted) Lazy, and only if it is still the entry
+                //at type - a concurrent resolver may already have evicted it and published a fresh,
+                //healthy Lazy in its place, which this must not delete
+                ((ICollection<KeyValuePair<Type, Lazy<object?>>>)_cache).Remove(
+                    new KeyValuePair<Type, Lazy<object?>>(type, lazy));
+                throw;
+            }
         }
 
         /// <summary>
