@@ -646,7 +646,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
 
 ## Phase 5 — ADR 0075: publish and pump scope suppression
 
-- [ ] **STRUCTURAL: T5.1 — `PipelineBuilder`'s two dispatch constructors learn which kind of build it is**
+- [x] **STRUCTURAL: T5.1 — `PipelineBuilder`'s two dispatch constructors learn which kind of build it is**
   - **USE COMMAND**: `/tidy-first add a defaulted isolateSubscribers flag to PipelineBuilder's two dispatch constructors`
   - Files: `src/Paramore.Brighter/PipelineBuilder.cs` — `bool isolateSubscribers = false` on the two dispatch constructors (`:59` sync, `:76` async), stored and not yet read
   - The **describe-only** constructor (`:92`) does **not** take it: it resolves nothing and can adopt nothing. The two validation-time construction sites (`BrighterPipelineValidationExtensions.cs:75`, `:116`) use that constructor and are unaffected either way
