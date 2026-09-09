@@ -622,7 +622,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T4.7
   - **References**: FR-23, FR-12; ADR 0072 steps 2d, 4
 
-- [ ] **TEST + IMPLEMENT: T4.9 — design-owed: the `Scoped` artefact cache evicts a faulted resolution instead of publishing it**
+- [x] **TEST + IMPLEMENT: T4.9 — design-owed: the `Scoped` artefact cache evicts a faulted resolution instead of publishing it**
   - **USE COMMAND**: `/test-first a Scoped artefact resolution that throws is not remembered and a later resolution of the same type resolves again`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_scoped_artefact_resolution_throws_the_cache_should_not_retain_the_fault.cs`
