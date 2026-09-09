@@ -469,7 +469,7 @@ namespace Paramore.Brighter
                 if (_subscriberRegistry is null)
                     throw new ArgumentException("A subscriberRegistry must be configured.");
                 
-                using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);
+                using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration, isolateSubscribers: true);
                 Log.BuildingSendPipelineForEvent(s_logger, @event.GetType(), @event.Id.Value);
                 var handlerChain = builder.Build(@event, context);
 
@@ -572,7 +572,7 @@ namespace Paramore.Brighter
             if (_subscriberRegistry is null)
                 throw new ArgumentException("A subscriberRegistry must be configured.");
             
-            using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration);
+            using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration, isolateSubscribers: true);
             var handlerSpans = new ConcurrentDictionary<string, Activity>();
             try
             {

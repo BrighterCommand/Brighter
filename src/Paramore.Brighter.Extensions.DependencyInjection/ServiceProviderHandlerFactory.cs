@@ -76,7 +76,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             if (_handlerLifetime == ServiceLifetime.Scoped)
             {
-                var borrowed = AmbientScopeQuery.Ask(_scopeProvider, _scopeAffinityPolicy.ForHandlerPipeline(), _serviceProvider, _diagnostics);
+                var affinity = AmbientScopeSuppression.IsSuppressed ? ScopeAffinity.AlwaysNew : _scopeAffinityPolicy.ForHandlerPipeline();
+                var borrowed = AmbientScopeQuery.Ask(_scopeProvider, affinity, _serviceProvider, _diagnostics);
                 if (borrowed is not null) return borrowed;
             }
 

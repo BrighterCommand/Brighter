@@ -195,13 +195,16 @@ namespace Paramore.Brighter
                 observerTypes.Each(observer =>
                 {
                     var context = observerTypes.Length == 1 ? requestContext : requestContext.CreateCopy();
+
+                    using var suppression = _isolateSubscribers ? AmbientScopeSuppression.Suppress() : null;
+
                     var instanceScope = GetSyncInstanceScope();
                     var handler = (RequestHandler<TRequest>?)_syncHandlerFactory.Create(observer, instanceScope);
                     if (handler is null)
                         throw new ConfigurationException($"Handler Factory could not construct handler of type {observer}");
                     var pipeline = BuildPipeline(handler, context, instanceScope);
                     pipeline.AddToLifetime(instanceScope);
-                    
+
                     pipelines.Add(pipeline);
                 });
 
@@ -245,14 +248,17 @@ namespace Paramore.Brighter
                 observerTypes.Each(observer =>
                 {
                     var context = observerTypes.Length == 1 ? requestContext : requestContext.CreateCopy();
+
+                    using var suppression = _isolateSubscribers ? AmbientScopeSuppression.Suppress() : null;
+
                     var instanceScope = GetAsyncInstanceScope();
                     var handler = (RequestHandlerAsync<TRequest>?)_asyncHandlerFactory.Create(observer, instanceScope);
                     if (handler is null)
-                        throw new ConfigurationException($"Handler Factory could not construct handler of type {observer}"); 
+                        throw new ConfigurationException($"Handler Factory could not construct handler of type {observer}");
                     var pipeline = BuildAsyncPipeline(handler, context, instanceScope,
                         continueOnCapturedContext);
                     pipeline.AddToLifetime(instanceScope);
-                    
+
                     pipelines.Add(pipeline);
                 });
 
