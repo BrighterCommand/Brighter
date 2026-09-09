@@ -53,7 +53,7 @@ void Send<T>(T command) where T : class, IRequest
 void Publish<T>(T @event) where T : class, IRequest
 
 // Synchronous request-reply
-TResponse Call<T, TResponse>(T query) where T : class, ICall<TResponse>
+TResponse? Call<T, TResponse>(T request) where T : class, ICall where TResponse : class, IResponse
 
 // Asynchronous via external queue
 void Post<T>(T request) where T : class, IRequest
@@ -133,9 +133,8 @@ Handlers use attributes to declaratively add middleware to their pipeline:
 ```csharp
 public class MyCommandHandler: RequestHandler<MyCommand>
 {
-    [RequestLogging(1, HandlerTiming.Before)]
-    [Retry(2, HandlerTiming.Before)] 
-    [CircuitBreaker(3, HandlerTiming.Before)]
+    [RequestLogging(step: 1, timing: HandlerTiming.Before)]
+    [UsePolicy(new[] { "RetryPolicy", "CircuitBreakerPolicy" }, step: 2)]
     public override MyCommand Handle(MyCommand command)
     {
         // Business logic here
@@ -143,6 +142,11 @@ public class MyCommandHandler: RequestHandler<MyCommand>
     }
 }
 ```
+
+There is no `[Retry]` or `[CircuitBreaker]` attribute. Retry and circuit breaker are Polly
+policies named by key, and `[UsePolicy]` resolves them from the registry — `[UsePolicy]` and
+`[UseResiliencePipeline]` are the two attributes that do this. See
+[Attribute ordering example](#pipeline-design) for the full set and the migration between them.
 
 **Attribute Properties:**
 - **Step** - Execution order within timing group
@@ -407,22 +411,9 @@ The Call operation supports a blocking RPC-style interaction:
 
 ```csharp
 // Similar to Post but returns a response
-TResponse? result = commandProcessor.Call<MyQuery, MyResponse>(query);
+MyResponse? result = commandProcessor.Call<MyQuery, MyResponse>(query);
 
-// External call setup requires reply channels. Request-reply is not a step of its
-// own: it is ExternalBusType.RPC on the ExternalBus step, which is what sets the
-// builder's request-reply mode and takes the reply channel factory and subscriptions.
-//
-// The four collaborators this chain needs, and where each comes from:
-//   handlerConfiguration — new HandlerConfiguration(subscriberRegistry, handlerFactory)
-//   bus                  — an IAmAnOutboxProducerMediator. Build one as
-//                          OutboxProducerMediator<Message, TTransaction>(...), as under
-//                          "Testing Message Publishing" below, or let AddProducers build
-//                          it for you when you configure Brighter through DI
-//   replyChannelFactory  — your transport's IAmAChannelFactory, which is what creates
-//                          the channel replies arrive on
-//   replySubscriptions   — one Subscription per reply topic, of the transport's own
-//                          subscription type
+// External call setup requires reply channels
 var commandProcessor = CommandProcessorBuilder.StartNew()
     .Handlers(handlerConfiguration)
     .DefaultResilience()
@@ -436,6 +427,19 @@ var commandProcessor = CommandProcessorBuilder.StartNew()
     .RequestSchedulerFactory(new InMemorySchedulerFactory())
     .Build();
 ```
+
+**Request-reply is not a step of its own.** It is `ExternalBusType.RPC` on the `ExternalBus`
+step, which is what sets the builder's request-reply mode and takes the reply channel factory
+and the reply subscriptions.
+
+The four collaborators that chain needs, and where each comes from:
+
+| Collaborator | Where it comes from |
+|---|---|
+| `handlerConfiguration` | `new HandlerConfiguration(subscriberRegistry, handlerFactory)` |
+| `bus` | an `IAmAnOutboxProducerMediator` — build one as `OutboxProducerMediator<Message, TTransaction>(...)`, as under *Testing Message Publishing* below, or let `AddProducers` build it for you when you configure Brighter through DI |
+| `replyChannelFactory` | your transport's `IAmAChannelFactory`, which creates the channel replies arrive on |
+| `replySubscriptions` | one `Subscription` per reply topic, of the transport's own subscription type |
 
 **Characteristics:**
 - Synchronous request-reply pattern
@@ -1060,7 +1064,7 @@ public void When_Sending_Command_Should_Execute_Pipeline()
     var registry = new SubscriberRegistry();
     registry.Register<CreateCustomerCommand, CreateCustomerHandler>();
     
-    var handlerFactory = new SimpleHandlerFactorySync(_ => new CreateCustomerHandler());
+    var handlerFactory = new SimpleHandlerFactorySync(_ => new CreateCustomerHandler(customerRepository));
     var commandProcessor = CommandProcessorBuilder.StartNew()
         .Handlers(new HandlerConfiguration(registry, handlerFactory))
         .DefaultResilience()
@@ -1119,7 +1123,7 @@ public void When_Publishing_Event_Should_Store_In_Outbox()
     // configuration, so an empty registry is enough here
     var commandProcessor = CommandProcessorBuilder.StartNew()
         .Handlers(new HandlerConfiguration(new SubscriberRegistry(),
-            new SimpleHandlerFactorySync(_ => new CreateCustomerHandler())))
+            new SimpleHandlerFactorySync(_ => new CreateCustomerHandler(customerRepository))))
         .Resilience(resiliencePipelineRegistry)
         .ExternalBus(ExternalBusType.FireAndForget, bus, typeof(CommittableTransaction))
         .NoInstrumentation()
@@ -1127,7 +1131,8 @@ public void When_Publishing_Event_Should_Store_In_Outbox()
         .RequestSchedulerFactory(new InMemorySchedulerFactory())
         .Build();
 
-    var @event = new CustomerCreated(Guid.NewGuid(), "John");
+    var @event = new CustomerCreated(
+        Guid.NewGuid(), "John", "john@example.com", DateTimeOffset.UtcNow);
     
     // Act
     var messageId = commandProcessor.DepositPost(@event);
@@ -1151,12 +1156,6 @@ public void When_Handler_Has_Attributes_Should_Build_Correct_Pipeline()
     var registry = new SubscriberRegistry();
     registry.Register<TestCommand, TestHandlerWithAttributes>();
     
-    // Two traps in one line. The factory must construct by the type it is handed, because
-    // PipelineBuilder asks it for the middleware handlers too — a `_ => new TestHandler...()`
-    // lambda builds a pipeline of three identical handlers. And name the interface
-    // explicitly: PipelineBuilder<T> has two two-argument constructors differing only in
-    // IAmAHandlerFactorySync vs IAmAHandlerFactoryAsync, and SimpleHandlerFactory implements
-    // both, so handing it one of those is CS0121. (Activator is System, First() is System.Linq.)
     var handlerFactory = new SimpleHandlerFactorySync(
         type => (IHandleRequests)Activator.CreateInstance(type)!);
     var builder = new PipelineBuilder<TestCommand>(registry, handlerFactory);
@@ -1168,20 +1167,32 @@ public void When_Handler_Has_Attributes_Should_Build_Correct_Pipeline()
     var tracer = new PipelineTracer();
     pipeline.First().DescribePath(tracer);
     
-    // Middleware handlers are named for their types, so assert on those: [RequestLogging]
-    // contributes RequestLoggingHandler`1. There is no type called "RetryHandler" —
-    // [UsePolicy] contributes ExceptionPolicyHandler`1
     var description = tracer.ToString();
     Assert.Contains("RequestLoggingHandler", description);
     Assert.Contains("TestHandlerWithAttributes", description);
 }
 ```
 
+`Activator` is `System`, `First()` is `System.Linq`.
+
+Three things that block gets right and a hand-written version usually does not:
+
+- **The factory constructs by the type it is handed.** `PipelineBuilder` asks the factory for
+  the *middleware* handlers as well as yours, so a `_ => new TestHandlerWithAttributes()` lambda
+  returns a pipeline of three identical handlers.
+- **The interface is named explicitly.** `PipelineBuilder<T>` has two two-argument constructors
+  differing only in `IAmAHandlerFactorySync` versus `IAmAHandlerFactoryAsync`, and
+  `SimpleHandlerFactory` implements both, so passing one of those is `CS0121`.
+- **Middleware is named for its type.** Assert on `RequestLoggingHandler`, not on a "RetryHandler"
+  — no such type exists. `[UsePolicy]` contributes `ExceptionPolicyHandler`.
+
 The example uses `[RequestLogging]` because it composes with nothing else. A handler carrying
 `[UsePolicy]` needs more: `ExceptionPolicyHandler` reads its policies from
 `Context.Policies` while the pipeline is being built, so building one against a bare
 `new RequestContext()` throws `ConfigurationException` wrapping a `NullReferenceException`.
 Give the context a policy registry, or let `CommandProcessor` build the pipeline for you.
+`[UseResiliencePipeline]`, the current form, guards its context
+(`Context is { ResiliencePipeline: not null }`) and does not have this problem.
 
 ### Test Double Support
 Brighter provides several test doubles for different scenarios:
@@ -1200,16 +1211,10 @@ var commandProcessor = CommandProcessorBuilder.StartNew()
     .Build();
 ```
 
-`NoExternalBus()` does not wire an in-memory transport — it leaves the mediator unset, so
-`Post` and `DepositPost` currently throw `NullReferenceException` on a processor built this way —
-a missing guard clause, not a documented contract. The dereference is `_mediator!` in
-`CommandProcessor.DepositPost<TRequest, TTransaction>`, which `Post` reaches through
-`CallDepositPost`; the `HasOutbox()` check a few lines below it, throwing
-`InvalidOperationException("No outbox defined.")`, is the shape a fix would take. Tracked as
-[#4307](https://github.com/BrighterCommand/Brighter/issues/4307) — **when that guard lands, this
-paragraph should go.** To test
-publishing, use the `InMemoryMessageProducer` and `InternalBus` recipe under *Testing Message
-Publishing* above, which is what gives you messages to read back.
+`NoExternalBus()` does not wire an in-memory transport — it leaves the mediator unset, so `Post`
+and `DepositPost` throw `NullReferenceException` on a processor built this way rather than
+reporting a missing bus. To test publishing, use the `InMemoryMessageProducer` and `InternalBus`
+recipe under *Testing Message Publishing* above, which is what gives you messages to read back.
 
 #### InMemoryMessageProducer
 For verifying message production. Messages go to an `InternalBus`, and you read them back from
@@ -1235,7 +1240,7 @@ var inMemoryOutbox = new InMemoryOutbox(TimeProvider.System);
 For basic handler instantiation. You supply the function that creates a handler for a requested
 type; there is no convention-based fallback:
 ```csharp
-var handlerFactory = new SimpleHandlerFactorySync(_ => new CreateCustomerHandler());
+var handlerFactory = new SimpleHandlerFactorySync(_ => new CreateCustomerHandler(customerRepository));
 ```
 Use `SimpleHandlerFactory` instead where a sync and an async factory are both needed — it takes
 one of each.
@@ -1306,8 +1311,8 @@ public class ProcessOrderHandler : RequestHandler<ProcessOrderCommand>
     }
 
     [RequestLogging(1, HandlerTiming.Before)]
-    [Retry("OrderProcessingRetryPolicy", 2)]
-    [Timeout(30000, 3)]
+    [UsePolicy("OrderProcessingRetryPolicy", 2)]
+    [TimeoutPolicy(30000, 3)]
     public override ProcessOrderCommand Handle(ProcessOrderCommand command)
     {
         var order = _repository.GetById(command.OrderId);
@@ -1345,15 +1350,42 @@ public class ProcessOrderHandler : RequestHandler<ProcessOrderCommand>
 
 **Attribute ordering example:**
 ```csharp
-[RequestLogging(1, HandlerTiming.Before)]      // Log entry
-[Validation(2, HandlerTiming.Before)]          // Validate input  
-[Retry("RetryPolicy", 3, HandlerTiming.Before)] // Retry on failure
-[Timeout(30000, 4, HandlerTiming.Before)]      // Timeout protection
-[CircuitBreaker("CBPolicy", 5, HandlerTiming.Before)] // Circuit breaker
-// Business logic here
-[RequestLogging(1, HandlerTiming.After)]       // Log completion
-public override MyCommand Handle(MyCommand command) { ... }
+public class ProcessPaymentHandler : RequestHandler<ProcessPaymentCommand>
+{
+    [RequestLogging(step: 1, timing: HandlerTiming.Before)]
+    [UsePolicy(new[] { "RetryPolicy", "CircuitBreakerPolicy" }, step: 2)]
+    [TimeoutPolicy(milliseconds: 30000, step: 3)]
+    [FallbackPolicy(backstop: true, circuitBreaker: true, step: 4)]
+    public override ProcessPaymentCommand Handle(ProcessPaymentCommand command)
+    {
+        // Business logic here
+        return base.Handle(command);
+    }
+}
 ```
+
+`RequestLogging` is in `Paramore.Brighter.Logging.Attributes`; the other three are in
+`Paramore.Brighter.Policies.Attributes`.
+
+Three things about that block are easy to get wrong:
+
+- **Steps run ascending on the way in and unwind in reverse on the way out**, so a single
+  `[RequestLogging]` covers both entry and completion. `RequestHandlerAttribute` is
+  `[AttributeUsage(AttributeTargets.Method)]` and leaves `AllowMultiple` at its default of
+  `false`, so each attribute appears **once** per method.
+- **Retry and circuit breaker are Polly policies, not attributes.** You name them by key and
+  `[UsePolicy]` resolves them from the registry; that is why it takes a `string[]` overload,
+  since it cannot be applied twice. `CommandProcessor.RETRYPOLICY` and
+  `CommandProcessor.CIRCUITBREAKER` are the well-known keys for the Outbox's own policies.
+- **There is no validation middleware in the box.** Validation is a custom attribute — derive
+  from `RequestHandlerAttribute`, return your handler's type from `GetHandlerType()`, and give
+  it a step like any other.
+
+`[UsePolicy]` and `Context.Policies` are `[Obsolete]` in favour of Polly v8 resilience
+pipelines: `[UseResiliencePipeline("MyPipeline", step)]` is the current form, reading from
+`Context.ResiliencePipeline` and contributing `ResilienceExceptionPolicyHandler` to the
+pipeline. Both are documented here because both are live, and existing code overwhelmingly
+uses the first.
 
 ### Message Design
 1. **Implement IAmAMessageMapper&lt;T&gt;** - Enable external bus usage and proper serialization
@@ -1364,36 +1396,35 @@ public override MyCommand Handle(MyCommand command) { ... }
 
 **Message mapper example:**
 ```csharp
+public record CustomerCreatedPayload(
+    Guid CustomerId, string Name, string Email, DateTimeOffset CreatedAt);
+
 public class CustomerCreatedMessageMapper : IAmAMessageMapper<CustomerCreated>
 {
-    public Message MapToMessage(CustomerCreated request)
+    public IRequestContext? Context { get; set; }
+
+    public Message MapToMessage(CustomerCreated request, Publication publication)
     {
         var header = new MessageHeader(
             messageId: request.Id,
-            topic: "customer.created.v1", // Versioned topic
+            topic: publication.Topic ?? new RoutingKey("customer.created.v1"),
             messageType: MessageType.MT_EVENT,
             correlationId: request.CorrelationId,
-            timestamp: DateTime.UtcNow);
+            timeStamp: DateTimeOffset.UtcNow);
 
-        var body = new MessageBody(JsonSerializer.Serialize(new
-        {
-            CustomerId = request.CustomerId,
-            Name = request.Name,
-            Email = request.Email,
-            CreatedAt = request.CreatedAt
-        }));
+        var body = new MessageBody(JsonSerializer.Serialize(new CustomerCreatedPayload(
+            request.CustomerId, request.Name, request.Email, request.CreatedAt)));
 
         return new Message(header, body);
     }
 
     public CustomerCreated MapToRequest(Message message)
     {
-        var data = JsonSerializer.Deserialize<dynamic>(message.Body.Value);
+        var payload = JsonSerializer.Deserialize<CustomerCreatedPayload>(message.Body.Value)
+            ?? throw new ArgumentException($"Could not deserialize {nameof(CustomerCreated)}");
+
         return new CustomerCreated(
-            data.CustomerId,
-            data.Name, 
-            data.Email,
-            data.CreatedAt)
+            payload.CustomerId, payload.Name, payload.Email, payload.CreatedAt)
         {
             Id = message.Id,
             CorrelationId = message.Header.CorrelationId
@@ -1401,6 +1432,22 @@ public class CustomerCreatedMessageMapper : IAmAMessageMapper<CustomerCreated>
     }
 }
 ```
+
+`JsonSerializer` is `System.Text.Json`; everything else is `Paramore.Brighter`.
+
+Four points that a mapper written from memory usually gets wrong:
+
+- **`MapToMessage` takes two arguments.** The `Publication` for the channel being written to
+  arrives with the request, which is where the topic and any CloudEvents metadata come from —
+  taking it from the publication is what lets one mapper serve more than one channel.
+- **`Context` is part of the interface.** You declare it; the pipeline assigns it.
+- **The `MessageHeader` parameter is `timeStamp`, not `timestamp`**, and it is a
+  `DateTimeOffset?`. The wrong casing is a `CS1739`, which is at least a compile error.
+- **Deserialize to a type, not to `dynamic`.** `Deserialize<dynamic>` compiles and then throws
+  at run time, because what comes back is a `JsonElement` with no `CustomerId` member on it.
+
+For a payload that needs no hand-written mapping, `JsonMessageMapper<T>` in
+`Paramore.Brighter.MessageMappers` does exactly this, and is registered by default.
 
 ### Performance Considerations
 1. **Use async handlers for I/O operations** - Don't block threads unnecessarily

@@ -62,18 +62,8 @@ You specify the connection string to the database, and the name of the table tha
 #### Configure a producer (DI)
 
 This example configures the SQL Server messaging gateway for sending. It never touches
-`CommandProcessorBuilder`: the producer side is registered through dependency injection, so it needs the
-`Paramore.Brighter.Extensions.DependencyInjection` package alongside this one — and two using
-directives the block does not print: `Microsoft.Extensions.DependencyInjection` for
-`ServiceCollection`, `BuildServiceProvider` and `GetRequiredService`, and
-`Paramore.Brighter.Extensions.DependencyInjection` for `AddBrighter`, `AddProducers` and
-`AutoFromAssemblies`. `AddProducers`
-takes a producer registry, and `MsSqlProducerRegistryFactory` builds one from the connection
-string, the queue table, and a `Publication` per topic you send to. The `RequestType` on the
-publication is what Brighter matches a request against when you `Post` it — with the default
-publication finder and no `[PublicationTopic]` attribute, since `RequestContext.Destination` and
-that attribute are both consulted first — so a publication without one produces
-`ConfigurationException: No producer found for request type`.
+`CommandProcessorBuilder` — the producer side is registered through dependency injection, so it
+needs the `Paramore.Brighter.Extensions.DependencyInjection` package alongside this one.
 
 ```csharp
         var serviceCollection = new ServiceCollection();
@@ -84,7 +74,6 @@ that attribute are both consulted first — so a publication without one produce
                 configure.ProducerRegistry = new MsSqlProducerRegistryFactory(
                         new RelationalDatabaseConfiguration(
                             @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;",
-                            databaseName: "BrighterSqlQueue",
                             queueStoreTable: "QueueData"),
                         new[]
                         {
@@ -104,14 +93,21 @@ that attribute are both consulted first — so a publication without one produce
         commandProcessor.Post(new GreetingEvent("Ian"));
 ```
 
+Two using directives the block does not print: `Microsoft.Extensions.DependencyInjection` for
+`ServiceCollection`, `BuildServiceProvider` and `GetRequiredService`, and
+`Paramore.Brighter.Extensions.DependencyInjection` for `AddBrighter`, `AddProducers` and
+`AutoFromAssemblies`.
+
+`MsSqlProducerRegistryFactory` builds the registry `AddProducers` takes, from the connection
+string, the queue table, and a `Publication` per topic you send to. **Give every publication a
+`RequestType`.** It is what Brighter matches a request against when you `Post` it, so a
+publication without one produces `ConfigurationException: No producer found for request type`.
+(`RequestContext.Destination` and a `[PublicationTopic]` attribute are both consulted ahead of
+it, if you use either.)
+
 A runnable version of this is `samples/TaskQueue/MsSqlMessagingGateway/GreetingsSender`, and its
 receiver is the counterpart to the dispatcher below. The consumer side that follows is wired by
 hand rather than through DI, so that the dispatcher and its subscriptions are visible.
-
-Both blocks pass the same three arguments, as both runnable samples do. `DatabaseName` is in fact
-inert here — nothing in this gateway reads it, and the queue table comes from `queueStoreTable`
-and the database from the connection string — so the value of spelling it identically in the two
-blocks is that neither form looks significant.
 
 #### Configure the dispatcher with a message consumer factory
 
@@ -124,7 +120,6 @@ The following is an example of how to specify the configuration for the SQL Serv
         var messagingConfiguration =
             new RelationalDatabaseConfiguration(
                 @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;",
-                databaseName: "BrighterSqlQueue",
                 queueStoreTable: "QueueData");
         var messageConsumerFactory = new MsSqlMessageConsumerFactory(messagingConfiguration);
 
