@@ -60,25 +60,34 @@ namespace Paramore.Brighter.Test.Generator.Tests.GeneratedFileAudit;
 public sealed class GeneratedTreeAudit
 {
     private const string GENERATED_FOLDER_NAME = "Generated";
+    private const string SOLUTION_FILE_NAME = "Brighter.slnx";
 
     // Directories whose contents are build output rather than source, and so are never audited.
     private static readonly string[] BUILD_OUTPUT_FOLDER_NAMES = ["bin", "obj"];
 
+    private GeneratedTreeAudit(IReadOnlySet<string> expected, IReadOnlySet<string> onDisk)
+    {
+        Expected = expected;
+        OnDisk = onDisk;
+
+        Orphans = Sorted(onDisk.Except(expected, StringComparer.Ordinal));
+        Missing = Sorted(expected.Except(onDisk, StringComparer.Ordinal));
+    }
+
     /// <summary>
     /// Audits the test projects that are direct children of <paramref name="testsRoot"/>.
     /// </summary>
+    /// <remarks>
+    /// The reading of configurations and the walk of the tree happen here rather than in a
+    /// constructor, so that a failure in either is attributable to an operation with a name.
+    /// </remarks>
     /// <param name="testsRoot">
     /// The directory holding the test projects - the repository's <c>tests</c> folder, which is
     /// what <c>generate-test.sh</c> walks.
     /// </param>
-    public GeneratedTreeAudit(string testsRoot)
-    {
-        Expected = ExpectedFilesUnder(testsRoot);
-        OnDisk = GeneratedFilesUnder(testsRoot);
-
-        Orphans = Sorted(OnDisk.Except(Expected, StringComparer.Ordinal));
-        Missing = Sorted(Expected.Except(OnDisk, StringComparer.Ordinal));
-    }
+    /// <returns>The audit of that tree.</returns>
+    public static GeneratedTreeAudit Of(string testsRoot) =>
+        new(ExpectedFilesUnder(testsRoot), GeneratedFilesUnder(testsRoot));
 
     /// <summary>
     /// The files the checked-in configurations would have the generators write into a
@@ -105,6 +114,11 @@ public sealed class GeneratedTreeAudit
     /// <summary>
     /// Finds the repository's <c>tests</c> folder by walking up from the running assembly.
     /// </summary>
+    /// <remarks>
+    /// The marker is the solution file, which is what makes a directory the repository root. A
+    /// particular test project would be a marker that someone could retire or rename without ever
+    /// meaning to move the root, and the audit would then throw rather than audit.
+    /// </remarks>
     /// <returns>The absolute path of the <c>tests</c> folder.</returns>
     /// <exception cref="InvalidOperationException">The folder could not be found.</exception>
     public static string LocateTestsRoot()
@@ -114,7 +128,8 @@ public sealed class GeneratedTreeAudit
              directory = directory.Parent)
         {
             var testsRoot = Path.Combine(directory.FullName, "tests");
-            if (Directory.Exists(Path.Combine(testsRoot, "Paramore.Brighter.Kafka.Tests")))
+            if (File.Exists(Path.Combine(directory.FullName, SOLUTION_FILE_NAME))
+                && Directory.Exists(testsRoot))
             {
                 return testsRoot;
             }
@@ -122,8 +137,8 @@ public sealed class GeneratedTreeAudit
 
         throw new InvalidOperationException(
             $"Could not locate the repository's tests folder by walking up from " +
-            $"{AppContext.BaseDirectory}; expected to find one containing " +
-            $"Paramore.Brighter.Kafka.Tests.");
+            $"{AppContext.BaseDirectory}; expected to find a directory holding both " +
+            $"{SOLUTION_FILE_NAME} and a tests folder.");
     }
 
     /// <summary>
@@ -180,24 +195,47 @@ public sealed class GeneratedTreeAudit
     private static IReadOnlySet<string> GeneratedFilesUnder(string testsRoot)
     {
         var onDisk = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var generatedFolder in Directory.EnumerateDirectories(
-                     testsRoot, GENERATED_FOLDER_NAME, SearchOption.AllDirectories))
+        Collect(new DirectoryInfo(testsRoot), underGeneratedFolder: false, onDisk);
+        return onDisk;
+    }
+
+    /// <summary>
+    /// Adds every C# file at or below <paramref name="directory"/> that sits under a
+    /// <c>Generated/</c> directory, descending past build output rather than into it.
+    /// </summary>
+    /// <remarks>
+    /// Pruning on the way down rather than filtering the results is what keeps the walk cheap: a
+    /// Release build leaves a copy of much of the tree under <c>bin</c> and <c>obj</c>, and the
+    /// audit runs after one in CI.
+    /// </remarks>
+    private static void Collect(DirectoryInfo directory, bool underGeneratedFolder, ISet<string> onDisk)
+    {
+        foreach (var child in directory.EnumerateDirectories())
         {
-            onDisk.UnionWith(Directory
-                .EnumerateFiles(generatedFolder, "*.cs", SearchOption.AllDirectories)
-                .Select(Path.GetFullPath)
-                .Where(file => !IsBuildOutput(file, testsRoot)));
+            if (BUILD_OUTPUT_FOLDER_NAMES.Contains(child.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            Collect(child,
+                underGeneratedFolder
+                || string.Equals(child.Name, GENERATED_FOLDER_NAME, StringComparison.Ordinal),
+                onDisk);
         }
 
-        return onDisk;
+        if (!underGeneratedFolder)
+        {
+            return;
+        }
+
+        foreach (var file in directory.EnumerateFiles("*.cs"))
+        {
+            onDisk.Add(Path.GetFullPath(file.FullName));
+        }
     }
 
     private static bool IsUnderAGeneratedFolder(string path) =>
         Segments(path).SkipLast(1).Contains(GENERATED_FOLDER_NAME, StringComparer.Ordinal);
-
-    private static bool IsBuildOutput(string path, string testsRoot) =>
-        Segments(path[testsRoot.Length..]).Any(segment =>
-            BUILD_OUTPUT_FOLDER_NAMES.Contains(segment, StringComparer.OrdinalIgnoreCase));
 
     private static string[] Segments(string path) =>
         path.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],

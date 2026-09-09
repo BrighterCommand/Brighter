@@ -34,13 +34,14 @@ namespace Paramore.Brighter.Test.Generator.Tests.GeneratedFileAudit;
 /// on disk that still compiles and still runs, while no longer being anything the configuration
 /// asks for. This audit is what notices.
 /// </summary>
-public class GeneratedTreeOrphanAuditTests
+[Collection(RepositoryTreeAuditCollection.NAME)]
+public class GeneratedTreeOrphanAuditTests(RepositoryTreeAudit repository)
 {
     [Fact]
     public void When_auditing_the_generated_tree_should_find_no_orphans()
     {
         // Arrange
-        var audit = new GeneratedTreeAudit(GeneratedTreeAudit.LocateTestsRoot());
+        var audit = repository.Audit;
 
         // Act
         var orphans = audit.Orphans;

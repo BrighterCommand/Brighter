@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -23,32 +23,34 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Linq;
 using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.GeneratedFileAudit;
 
 /// <summary>
-/// The other direction. A generation code path that is dropped, or a project that is never
-/// regenerated after the generator changes, leaves files the configuration asks for absent from
-/// the tree - and absent tests raise no alarm of their own, because nothing runs to notice.
+/// One audit of this repository's own tree, shared by the tests that read it.
 /// </summary>
-[Collection(RepositoryTreeAuditCollection.NAME)]
-public class GeneratedTreeMissingFileAuditTests(RepositoryTreeAudit repository)
+/// <remarks>
+/// Orphans and missing files are two questions about the same audit, asked by two tests. Reading
+/// every configuration and walking the tree twice to answer them would say the same thing twice
+/// and cost twice as much.
+/// </remarks>
+public sealed class RepositoryTreeAudit
 {
-    [Fact]
-    public void When_auditing_the_generated_tree_should_find_no_missing_files()
-    {
-        // Arrange
-        var audit = repository.Audit;
+    /// <summary>
+    /// The audit of the repository's <c>tests</c> folder.
+    /// </summary>
+    public GeneratedTreeAudit Audit { get; } = GeneratedTreeAudit.Of(GeneratedTreeAudit.LocateTestsRoot());
+}
 
-        // Act
-        var missing = audit.Missing;
-
-        // Assert - every file the generator would write is on disk
-        Assert.True(missing.Count == 0,
-            "File(s) the current configuration would produce that are absent from the tree. " +
-            "Run ./generate-test.sh and commit the result:\n" +
-            string.Join("\n", missing.Select(file => $"  {file}")));
-    }
+/// <summary>
+/// Groups the tests that read the repository's own audit, so that they share one.
+/// </summary>
+[CollectionDefinition(NAME)]
+public sealed class RepositoryTreeAuditCollection : ICollectionFixture<RepositoryTreeAudit>
+{
+    /// <summary>
+    /// The collection name the tests sharing the audit are attributed with.
+    /// </summary>
+    public const string NAME = "Repository tree audit";
 }
