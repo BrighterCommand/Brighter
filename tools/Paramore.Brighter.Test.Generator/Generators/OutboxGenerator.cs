@@ -100,7 +100,7 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
         {
             foreach (var (key, outboxConfiguration) in configuration.Outboxes)
             {
-                logger.LogInformation("Generating outbox test for {OutboxName}", key);
+                logger.LogInformation("Planning outbox test for {OutboxName}", key);
                 var folderName = string.IsNullOrEmpty(outboxConfiguration.Prefix)
                     ? key
                     : outboxConfiguration.Prefix;

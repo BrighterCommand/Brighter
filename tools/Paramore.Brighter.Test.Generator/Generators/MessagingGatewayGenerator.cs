@@ -102,7 +102,7 @@ public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger
         {
             foreach (var (key, messagingGatewayConfiguration) in configuration.MessagingGateways)
             {
-                logger.LogInformation("Generating messaging gateway test for {GatewayName}", key);
+                logger.LogInformation("Planning messaging gateway test for {GatewayName}", key);
                 var folderName = string.IsNullOrEmpty(messagingGatewayConfiguration.Prefix)
                     ? key
                     : messagingGatewayConfiguration.Prefix;
