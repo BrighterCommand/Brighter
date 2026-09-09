@@ -26,7 +26,6 @@ THE SOFTWARE. */
 using System;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Test.Generator.Configuration;
@@ -159,10 +158,14 @@ public class AuditCanaryTests : IDisposable
     /// <param name="configurationJson">The test-configuration.json contents to generate from.</param>
     private async Task GenerateAsync(string configurationJson)
     {
-        File.WriteAllText(Path.Combine(_projectFolder, "test-configuration.json"), configurationJson);
+        var configurationFile = Path.Combine(
+            _projectFolder, TestConfigurationLoader.ConfigurationFileName);
+        File.WriteAllText(configurationFile, configurationJson);
 
-        var configuration = JsonSerializer.Deserialize<TestConfiguration>(configurationJson)!;
-        configuration.DestinationFolder = _projectFolder;
+        // Read back through the loader the audit uses, so the canary generates from exactly the
+        // configuration the audit will later expect files from.
+        var configuration = TestConfigurationLoader.Load(
+            configurationFile, defaultDestinationFolder: _projectFolder)!;
 
         await new Generators.OutboxGenerator(NullLogger<Generators.OutboxGenerator>.Instance)
             .GenerateAsync(configuration);

@@ -27,7 +27,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using Paramore.Brighter.Test.Generator.Configuration;
 
@@ -61,7 +60,6 @@ namespace Paramore.Brighter.Test.Generator.Tests.GeneratedFileAudit;
 public sealed class GeneratedTreeAudit
 {
     private const string GENERATED_FOLDER_NAME = "Generated";
-    private const string CONFIGURATION_FILE_NAME = "test-configuration.json";
 
     // Directories whose contents are build output rather than source, and so are never audited.
     private static readonly string[] BUILD_OUTPUT_FOLDER_NAMES = ["bin", "obj"];
@@ -143,22 +141,23 @@ public sealed class GeneratedTreeAudit
         var expected = new HashSet<string>(StringComparer.Ordinal);
         foreach (var projectFolder in Directory.EnumerateDirectories(testsRoot))
         {
-            var configurationFile = Path.Combine(projectFolder, CONFIGURATION_FILE_NAME);
+            var configurationFile = Path.Combine(
+                projectFolder, TestConfigurationLoader.ConfigurationFileName);
             if (!File.Exists(configurationFile))
             {
                 continue;
             }
 
-            var configuration = JsonSerializer.Deserialize<TestConfiguration>(
-                File.ReadAllText(configurationFile));
+            // generate-test.sh runs the generator from the project folder, so the folder the
+            // generator would default its destination to is that project's folder. Loaded through
+            // the generator's own loader, so that the audit cannot read a configuration by
+            // different rules from the run it is auditing.
+            var configuration = TestConfigurationLoader.Load(
+                configurationFile, defaultDestinationFolder: projectFolder);
             if (configuration == null)
             {
                 continue;
             }
-
-            // generate-test.sh runs the generator from the project folder, and the generator
-            // defaults its destination to the working directory.
-            configuration.DestinationFolder = projectFolder;
 
             expected.UnionWith(outboxGenerator.Plan(configuration)
                 .Concat(messagingGatewayGenerator.Plan(configuration))
