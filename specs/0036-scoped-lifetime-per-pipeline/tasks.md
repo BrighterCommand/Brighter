@@ -603,7 +603,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T4.6
   - **References**: AC-54 (FR-23, D19); ADR 0072 steps 2a, 2d
 
-- [ ] **TEST + IMPLEMENT: T4.8 — design-owed: an ambient disposed after the probe surfaces as a `ConfigurationException` naming the provider**
+- [x] **TEST + IMPLEMENT: T4.8 — design-owed: an ambient disposed after the probe surfaces as a `ConfigurationException` naming the provider**
   - **USE COMMAND**: `/test-first an ambient disposed while a pipeline is still resolving from it surfaces a ConfigurationException naming the provider type`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_borrowed_ambient_is_disposed_mid_pipeline_it_should_surface_a_configuration_error.cs`
