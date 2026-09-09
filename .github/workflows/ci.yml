@@ -34,9 +34,8 @@ env:
 
 jobs:
   build:
-    # Increased from 30 to 40 minutes to prevent cancellations during test execution.
-    # The build includes compilation + running 3 test suites (Core.Tests, Extensions.Tests,
-    # Transforms.Adaptors.Tests) which can take 20-30 minutes in slower CI environments.
+    # Compilation plus four test suites: Core.Tests, Extensions.Tests, Transforms.Adaptors.Tests
+    # and Test.Generator.Tests. 60 minutes leaves room for a cold NuGet cache on a slow runner.
     timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
@@ -167,9 +166,8 @@ jobs:
 
   redis-ci:
     runs-on: ubuntu-latest
-    # Increased from 5 to 8 minutes to accommodate slower CI environments
-    # and service initialization time. This provides adequate buffer without
-    # being excessive for typical test execution (P95 < 5 min observed).
+    # Raised from 8 to 15 when the generated conformance suite landed. Run 34214484655 measured
+    # this job at 7.0 minutes against the old 8-minute cap - the closest of any job to timing out.
     timeout-minutes: 15
     needs: [build]
 

@@ -142,7 +142,11 @@ public partial class GcpPullMessageConsumer(
     /// <summary>
     /// Asynchronously receives a batch of messages from the subscription using the Pull API.
     /// </summary>
-    /// <param name="timeOut">A timeout value (not strictly used by the underlying Google Pub/Sub client, but part of the Brighter interface).</param>
+    /// <param name="timeOut">
+    /// How long to wait for messages. Bounds the Pull call, so an empty subscription returns after
+    /// this window rather than long-polling until a message arrives. When null the client's own
+    /// default expiration applies.
+    /// </param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A task that returns an array of received Brighter messages. Returns an array containing a single empty message if no messages are available.</returns>
     public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default)
@@ -203,7 +207,11 @@ public partial class GcpPullMessageConsumer(
     /// <summary>
     /// Synchronously receives a batch of messages from the subscription using the Pull API.
     /// </summary>
-    /// <param name="timeOut">A timeout value (not strictly used by the underlying Google Pub/Sub client).</param>
+    /// <param name="timeOut">
+    /// How long to wait for messages. Bounds the Pull call, so an empty subscription returns after
+    /// this window rather than long-polling until a message arrives. When null the client's own
+    /// default expiration applies.
+    /// </param>
     /// <returns>An array of received Brighter messages. Returns an array containing a single empty message if no messages are available.</returns>
 
     public Message[] Receive(TimeSpan? timeOut = null)

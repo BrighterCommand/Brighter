@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Text.Json.Serialization;
+
 namespace Paramore.Brighter.Test.Generator.Configuration;
 
 /// <summary>
@@ -133,5 +135,12 @@ public class MessagingGatewayConfiguration
     /// Set by <see cref="Generators.MessagingGatewayGenerator"/> before each canonical template
     /// render; empty when the ledger cell is Pass/Fixed (test runs without a Skip).
     /// </summary>
-    public string? Skip { get; set; }
+    /// <remarks>
+    /// Render state, not configuration: it is never read from the JSON files, so it is not bound
+    /// from them either. Defaults to empty rather than null because Liquid treats
+    /// <c>nil != empty</c> as TRUE, so a null would render <c>[Fact(Skip = "")]</c> and silently
+    /// skip the test.
+    /// </remarks>
+    [JsonIgnore]
+    public string Skip { get; set; } = string.Empty;
 }
