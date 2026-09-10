@@ -713,7 +713,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T5.3
   - **References**: FR-19, C-14, NFR-7 (AC-20, AC-55 discharge it at Phase 6); ADR 0075 step 4a
 
-- [ ] **DOC: T5.5 — `docs/guides/lifetimes-and-scoping.md` part 1: the lifetime model, the `IAmAScope`/`IAmALifetime` distinction and NFR-9's truth table**
+- [x] **DOC: T5.5 — `docs/guides/lifetimes-and-scoping.md` part 1: the lifetime model, the `IAmAScope`/`IAmALifetime` distinction and NFR-9's truth table**
   - No test. Documentation whose substance is fixed by ADRs 0070, 0071, 0072 and 0075 and is not re-decided here
   - **Verified by**: a line on the PR checklist, and re-checked by **T7.15**, which re-verifies every truth-table row's AC citation once Phase 6 has landed and the forward references close
   - File: `docs/guides/lifetimes-and-scoping.md` (new — re-derived: no such page exists; the only lifetime prose in the repository is inside ADRs 0066 and 0067)
