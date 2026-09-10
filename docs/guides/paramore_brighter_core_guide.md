@@ -47,12 +47,12 @@ The `CommandProcessor` class serves as the central orchestrator, implementing bo
 **Core dispatch methods:**
 ```csharp
 // Point-to-point command
-void Send<T>(T command, RequestContext? requestContext = null)
-    where T : class, IRequest
+void Send<TRequest>(TRequest command, RequestContext? requestContext = null)
+    where TRequest : class, IRequest
 
 // Pub-sub event  
-void Publish<T>(T @event, RequestContext? requestContext = null)
-    where T : class, IRequest
+void Publish<TRequest>(TRequest @event, RequestContext? requestContext = null)
+    where TRequest : class, IRequest
 
 // Synchronous request-reply
 TResponse? Call<T, TResponse>(T request, RequestContext? requestContext = null, TimeSpan? timeOut = null)
@@ -64,9 +64,11 @@ void Post<TRequest>(TRequest request, RequestContext? requestContext = null,
     where TRequest : class, IRequest
 ```
 
-Those are the full signatures rather than an abridgement, because the optional parameter they
-share is the one worth knowing about: **`requestContext` is how you pass your own
+Those are the four immediate overloads in full, rather than abridged, because the optional
+parameter they share is the one worth knowing about: **`requestContext` is how you pass your own
 `RequestContext` through the pipeline** instead of letting the processor create one per call.
+`Send` and `Publish` each have two scheduled overloads besides — one taking a `DateTimeOffset at`
+and one a `TimeSpan delay`, both returning the scheduled job's id.
 
 `Send`, `Publish` and `Post` each have an `…Async` counterpart taking `bool
 continueOnCapturedContext` and a `CancellationToken` (`CommandProcessor.SendAsync`, `PublishAsync`,
@@ -348,7 +350,9 @@ note right: Post = DepositPost + ClearOutbox\nin single operation\nfor fire-and-
 @enduml
 ```
 
-**Implementation Details:**
+**Implementation Details** — *abridged from `CommandProcessor`; illustrative, not
+copy-pasteable*:
+
 ```csharp
 public void Post<TRequest>(TRequest request, RequestContext? requestContext = null, 
     Dictionary<string, object>? args = null) where TRequest: class, IRequest
@@ -1258,8 +1262,8 @@ Three things that block gets right and a hand-written version usually does not:
   returns your handler once per pipeline position instead of the middleware. A discard lambda is
   safe only where the handler carries no attributes and the pipeline is therefore one long — which
   is why the `CreateCustomerHandler` examples above can use one and this one cannot.
-- **The interface is named explicitly.** `PipelineBuilder<T>` has two two-argument constructors
-  differing only in `IAmAHandlerFactorySync` versus `IAmAHandlerFactoryAsync`, and
+- **The interface is named explicitly.** `PipelineBuilder<T>` has two constructors taking a
+  handler factory, differing only in `IAmAHandlerFactorySync` versus `IAmAHandlerFactoryAsync`, and
   `SimpleHandlerFactory` implements both, so passing one of those is `CS0121`.
 - **Middleware is named for its type.** Assert on `RequestLoggingHandler`, not on a "RetryHandler"
   — no such type exists. `[UsePolicy]` contributes `ExceptionPolicyHandler`.
@@ -1270,7 +1274,18 @@ The example uses `[RequestLogging]` because it composes with nothing else. A han
 `new RequestContext()` throws `ConfigurationException` wrapping a `NullReferenceException`.
 Give the context a policy registry, or let `CommandProcessor` build the pipeline for you.
 `[UseResiliencePipeline]`, the current form, guards its context
-(`Context is { ResiliencePipeline: not null }`) and does not have this problem.
+(`Context is { ResiliencePipeline: not null }`) — and `CommandProcessor` always assigns that
+registry, so the guard passes on every dispatch and the handler never silently runs unprotected.
+
+**A pipeline key that is not in the registry still fails, and loudly.** Naming a key nothing
+registered throws `ConfigurationException("Error when building pipeline, see inner Exception for
+details")` wrapping the registry's `KeyNotFoundException`, while the pipeline is being built — so
+the target handler is not invoked at all. Measured, with the registered case as its control:
+
+```text
+key absent from the registry  : handler invocations 0, ConfigurationException from Build
+key registered with 2 retries : handler invocations 3, the target's own exception escapes
+```
 
 #### 5. Builder Configuration for Tests: No External Bus
 For testing handler pipelines without external dependencies. This is a builder recipe rather

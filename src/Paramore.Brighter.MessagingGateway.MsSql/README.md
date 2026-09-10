@@ -111,7 +111,7 @@ hand rather than through DI, so that the dispatcher and its subscriptions are vi
 
 #### Configure the dispatcher with a message consumer factory
 
-The following is an example of how to specify the configuration for the SQL Server messaging gateway to the message dispatcher.
+The following is an example of how to specify the configuration for the SQL Server messaging gateway to the message dispatcher. It is *abridged* — `subscriberRegistry`, `handlerFactory` and `messageMapperRegistry` are the same collaborators the producer example above describes, and the block is illustrative rather than copy-pasteable.
 
 ```csharp
         ...
