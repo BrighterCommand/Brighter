@@ -22,9 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-
-namespace Events;
+namespace SampleInfrastructure;
 
 /// <summary>
 /// The one database these four applications share, and the names of the three tables in it.

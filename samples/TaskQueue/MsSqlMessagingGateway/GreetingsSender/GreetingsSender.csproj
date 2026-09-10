@@ -19,6 +19,7 @@
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Outbox.MsSql\Paramore.Brighter.Outbox.MsSql.csproj" />
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.BoxProvisioning.MsSql\Paramore.Brighter.BoxProvisioning.MsSql.csproj" />
     <ProjectReference Include="..\Events\Events.csproj" />
+    <ProjectReference Include="..\SampleInfrastructure\SampleInfrastructure.csproj" />
   </ItemGroup>
 
 </Project>

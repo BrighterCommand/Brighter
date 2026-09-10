@@ -1,0 +1,101 @@
+#region Licence
+/* The MIT License (MIT)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+#endregion
+
+using System;
+using System.Threading.Tasks;
+using Paramore.Brighter.MessagingGateway.MsSql;
+using Xunit;
+
+namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway;
+
+/// <summary>
+/// The MSSQL <see cref="ChannelFactory"/> downcasts the subscription it is handed, so a plain
+/// <c>Subscription&lt;T&gt;</c> compiles, configures, and then fails as the Dispatcher builds its
+/// channels. Nothing in the type system says so; these tests are what says so.
+/// </summary>
+/// <remarks>
+/// No database is needed. The factory throws before it constructs a consumer, and the positive
+/// control gets a channel because <c>MsSqlMessageConsumer</c> opens no connection in its
+/// constructor — so this sits beside the other connection-free tests in this folder.
+/// </remarks>
+[Trait("Category", "MSSQL")]
+public class When_a_subscription_is_not_an_mssql_subscription
+{
+    private readonly RelationalDatabaseConfiguration _configuration =
+        new("Server=localhost;Database=test;Trusted_Connection=True;");
+
+    private static Subscription<MyEvent> PlainSubscription() =>
+        new(new SubscriptionName("plain"),
+            new ChannelName("test.topic"),
+            new RoutingKey("test.topic"));
+
+    private static MsSqlSubscription<MyEvent> MsSqlSubscription() =>
+        new(new SubscriptionName("mssql"),
+            new ChannelName("test.topic"),
+            new RoutingKey("test.topic"));
+
+    private ChannelFactory ChannelFactory() =>
+        new(new MsSqlMessageConsumerFactory(_configuration));
+
+    [Fact]
+    public void Should_throw_when_creating_a_sync_channel()
+    {
+        var exception = Assert.Throws<ConfigurationException>(
+            () => ChannelFactory().CreateSyncChannel(PlainSubscription()));
+
+        Assert.Contains("MsSqlSubscription", exception.Message);
+    }
+
+    [Fact]
+    public void Should_throw_when_creating_an_async_channel()
+    {
+        var exception = Assert.Throws<ConfigurationException>(
+            () => ChannelFactory().CreateAsyncChannel(PlainSubscription()));
+
+        Assert.Contains("MsSqlSubscription", exception.Message);
+    }
+
+    [Fact]
+    public async Task Should_throw_when_creating_an_async_channel_asynchronously()
+    {
+        var exception = await Assert.ThrowsAsync<ConfigurationException>(
+            () => ChannelFactory().CreateAsyncChannelAsync(PlainSubscription()));
+
+        Assert.Contains("MsSqlSubscription", exception.Message);
+    }
+
+    // The control. Without it these tests would also pass against a factory that threw for
+    // everything, which would tell us nothing about the downcast.
+    [Fact]
+    public void Should_create_a_channel_for_an_mssql_subscription()
+    {
+        var channel = ChannelFactory().CreateSyncChannel(MsSqlSubscription());
+
+        Assert.NotNull(channel);
+        Assert.Equal(new ChannelName("test.topic"), channel.Name);
+    }
+
+    private class MyEvent : Event
+    {
+        public MyEvent() : base(Guid.NewGuid().ToString()) { }
+    }
+}

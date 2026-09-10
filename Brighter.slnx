@@ -90,6 +90,7 @@
     <Project Path="samples/TaskQueue/MsSqlMessagingGateway/Events/Events.csproj" />
     <Project Path="samples/TaskQueue/MsSqlMessagingGateway/GreetingsReceiverConsole/GreetingsReceiverConsole.csproj" />
     <Project Path="samples/TaskQueue/MsSqlMessagingGateway/GreetingsSender/GreetingsSender.csproj" />
+    <Project Path="samples/TaskQueue/MsSqlMessagingGateway/SampleInfrastructure/SampleInfrastructure.csproj" />
   </Folder>
   <Folder Name="/samples/TaskQueue/MultiBus/">
     <Project Path="samples/TaskQueue/MultiBus/Greetings/Greetings.csproj" />

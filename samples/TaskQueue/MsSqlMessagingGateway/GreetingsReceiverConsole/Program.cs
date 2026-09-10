@@ -37,6 +37,7 @@ using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
+using SampleInfrastructure;
 
 var builder = Host.CreateApplicationBuilder(args);
 

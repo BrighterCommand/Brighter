@@ -10,6 +10,7 @@ using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.MsSql;
+using SampleInfrastructure;
 
 if (args.Length != 1)
 {

@@ -37,6 +37,7 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.MsSql;
 using Paramore.Brighter.Outbox.MsSql;
+using SampleInfrastructure;
 using Serilog;
 using Serilog.Extensions.Logging;
 

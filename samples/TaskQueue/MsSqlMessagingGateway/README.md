@@ -27,6 +27,11 @@ accepted on a publication or subscription and then never acted on, unlike the Po
 `MsSqlQueueBuilder` is public precisely so callers can run the DDL themselves, and
 `QueueTableProvisioner` is this sample doing that.
 
+It lives in **`SampleInfrastructure`**, alongside `SampleDatabase` — the connection string and the
+table names. `Events` stays what its name says: the commands, their mappers and the handler, with
+no database dependency. That is the split the sample is trying to teach, and it is also practical,
+because `Events` is the assembly every application hands to `AutoFromAssemblies`.
+
 Because both the sender and the receiver provision what they need, **either can be started
 first** against a database with no tables in it.
 
@@ -39,7 +44,16 @@ instance. Nothing needs editing to run against a container:
 export ConnectionStrings__Brighter='Server=localhost,1433;Database=BrighterSqlQueue;User Id=sa;Password=<password>;Encrypt=false'
 ```
 
+**Neither `Encrypt=false` here nor `TrustServerCertificate=True` in the default connection string
+belongs in production.** Both turn off a check that exists to stop you talking to the wrong
+server: the first drops TLS altogether, the second keeps it and accepts any certificate. They are
+here because a local SQL Express instance and a bare container both present a self-signed
+certificate. Against a server with a certificate your clients trust, drop them.
+
 ## The applications
+
+**Start with the greetings pair** — it is the path that round-trips end to end. The competing pair
+demonstrates the subscription and provisioning fixes, but does not yet deliver its messages.
 
 | Run | With | What you should see |
 |---|---|---|
