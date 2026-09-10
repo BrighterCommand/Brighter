@@ -166,16 +166,46 @@ public partial class SnsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
         delay ??= TimeSpan.Zero;
         if (delay != TimeSpan.Zero)
         {
+            // Prefer the half of the scheduler pair that matches the call we are on, but accept
+            // the other: a host that configures only one of the two should not have a delayed
+            // send fail on a cast. This is the shape Redis, Kafka, MsSql, MQTT and the in-memory
+            // reference implementation already use.
             if (useAsyncScheduler)
             {
-                var schedulerAsync = (IAmAMessageSchedulerAsync)Scheduler!;
-                await schedulerAsync.ScheduleAsync(message, delay.Value, cancellationToken);
-                return;
+                if (Scheduler is IAmAMessageSchedulerAsync schedulerAsync)
+                {
+                    await schedulerAsync.ScheduleAsync(message, delay.Value, cancellationToken);
+                    return;
+                }
+
+                if (Scheduler is IAmAMessageSchedulerSync schedulerSync)
+                {
+                    schedulerSync.Schedule(message, delay.Value);
+                    return;
+                }
+            }
+            else
+            {
+                if (Scheduler is IAmAMessageSchedulerSync schedulerSync)
+                {
+                    schedulerSync.Schedule(message, delay.Value);
+                    return;
+                }
+
+                if (Scheduler is IAmAMessageSchedulerAsync schedulerAsync)
+                {
+                    // Already running inside BrighterAsyncContext.Run from SendWithDelay, so
+                    // awaiting here does not add a second sync-over-async pump.
+                    await schedulerAsync.ScheduleAsync(message, delay.Value, cancellationToken);
+                    return;
+                }
             }
 
-            var schedulerSync = (IAmAMessageSchedulerSync)Scheduler!;
-            schedulerSync.Schedule(message, delay.Value);
-            return;
+            // Reached only when no scheduler is configured at all. Until SendWithDelay was fixed
+            // to pass its delay through, the sync arm above could not run and this cast raised
+            // NullReferenceException from inside a send instead of naming the missing setting.
+            throw new ConfigurationException(
+                $"SnsMessageProducer: delay of {delay} was requested but no scheduler is configured; configure a scheduler via MessageSchedulerFactory.");
         }
 
         BrighterTracer.WriteProducerEvent(Span, "aws_sns", message, _options);
