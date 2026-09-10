@@ -376,10 +376,27 @@ redelivered for ever would pass every other DLQ behaviour in this suite.
 - **The other 23 remain `Deferred`.** CI on #4297 is the evidence that moves them, one transport at a
   time.
 
-Redis reaches this behaviour through the Brighter-managed fallback rather than natively:
-`RequeueTrackingChannel` converts the Nth `Requeue` into a `Reject`, which routes to the DLQ. That is
-the harness half of FR-23, and it is why retiring the old template left it wired into eight providers
-with nothing exercising it.
+### What counts the budget, per configuration
+
+An FR-23 `Pass` does not mean the same thing everywhere, so the mechanism is recorded rather than
+left for a reader to infer from a green cell:
+
+| Mechanism | Configurations |
+|---|---|
+| **Broker-side redrive** — the broker counts deliveries and dead-letters on its own | AWS (SNS/SQS, Standard and FIFO, V3 and V4), Azure Service Bus (`MaxDeliveryCount`), GCP (dead-letter policy) |
+| **Brighter-managed, counted by the harness** — `RequeueTrackingChannel{Sync,Async}` turns the Nth `Requeue` into a `Reject`, which routes to the DLQ | Redis, MQTT, MSSQL, PostgreSQL, RMQ.Async (Classic and Quorum), RMQ.Sync, RocketMQ |
+| **Nothing counts it** | **Kafka** (Classic, Consumer, PartitionKey) |
+
+⚠️ **Kafka is expected to fail FR-23, and that is a product gap rather than a test gap.** Kafka's DLQ
+is Brighter-managed — [ADR 0046](../../docs/adr/0046-kafka-dlq-producer-for-requeue.md) gives it a DLQ
+*producer* — but that producer fires on `Reject`. `KafkaMessageConsumer.Requeue` republishes the
+message, acknowledges the offset and returns `true` without ever consulting a delivery budget, and
+Kafka has no broker-side delivery counter to consult (its redelivery is offset-based). Kafka is also
+the one configuration whose provider does **not** wrap its channel in `RequeueTrackingChannel`, so
+nothing counts the budget on either side. A message requeued under Kafka is requeued for ever.
+
+This is the coverage gap that retiring the legacy template concealed: the behaviour was untested, so
+nothing reported that one of the twelve transports does not implement it at all.
 
 ## Conformance Matrix
 
