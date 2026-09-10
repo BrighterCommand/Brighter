@@ -486,7 +486,10 @@ namespace Paramore.Brighter
                         handlerSpans[handlerName] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event, span, options: _instrumentationOptions)!;
                         if(handleRequests.Context is not null)
                             handleRequests.Context.Span = handlerSpans[handlerName];
-                        handleRequests.Handle(@event);
+                        using (AmbientScopeSuppression.Suppress())
+                        {
+                            handleRequests.Handle(@event);
+                        }
                         if(handleRequests.Context is not null)
                             handleRequests.Context.Span = span;
                     }
@@ -593,7 +596,10 @@ namespace Paramore.Brighter
                         handlerSpans[handleRequests.Name.ToString()] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event, span, options: _instrumentationOptions)!;
                         if(handleRequests.Context is not null)
                             handleRequests.Context.Span = handlerSpans[handleRequests.Name.ToString()];
-                        tasks.Add(handleRequests.HandleAsync(@event, cancellationToken));
+                        using (AmbientScopeSuppression.Suppress())
+                        {
+                            tasks.Add(handleRequests.HandleAsync(@event, cancellationToken));
+                        }
                         if(handleRequests.Context is not null)
                             handleRequests.Context.Span = span;
                     }
