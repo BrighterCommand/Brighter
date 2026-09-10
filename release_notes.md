@@ -2,6 +2,119 @@
 
 ## Master
 
+### Replay Outbox Messages on Inbox Duplicate (spec 0027)
+
+When an inbox detects a duplicate request, Brighter can now optionally **replay** the outbox messages that were produced under that request's causation, rather than silently dropping the duplicate. The feature is opt-in (`OnceOnlyAction.Replay` on the inbox attribute) and non-breaking: it requires a causation-tracking inbox and outbox (`IAmACausationTrackingInbox` / `IAmACausationTrackingOutbox`), and the relational stores gate the causation-aware write on a memoized column probe so un-migrated schemas keep depositing unchanged. Startup pipeline validation fails fast if a `Replay` pipeline is configured without causation tracking. See [ADR 0057](docs/adr/0057-replay-outbox-on-inbox-duplicate.md) and [spec 0027](specs/0027-replay-matching-outbox-events-when-inbox-has-already-seen/) for full details.
+
+#### Usage requirement: thread your `RequestContext` through `Post` / `DepositPost`
+
+Replay links a duplicate back to its original outbox messages through the **causation id**. `[UseInbox]` stamps that id into the pipeline's `RequestContext.Bag`, and the outbox `Add` reads it back from the bag — **but only if the handler that deposits the outbox message passes its own `Context` down**. If a handler calls the idiomatic `_commandProcessor.Post(evt)` (or `DepositPost`) *without* a request context, `CommandProcessor` creates a fresh context, the causation id is lost, the message is stored with a `null` `CausationId`, and a later `Replay` finds nothing to replay — a **silent no-op** with no error.
+
+To use Replay, every handler that produces outbox messages must forward its handler `Context`:
+
+```csharp
+// ❌ Silent no-op under Replay — fresh context, causation id lost
+public override MyCommand Handle(MyCommand command)
+{
+    _commandProcessor.Post(new DownstreamEvent(...));
+    return base.Handle(command);
+}
+
+// ✅ Threads the causation id so Replay can match
+public override MyCommand Handle(MyCommand command)
+{
+    _commandProcessor.Post(new DownstreamEvent(...), Context);
+    return base.Handle(command);
+}
+```
+
+This applies to the async equivalents (`PostAsync` / `DepositPostAsync`) as well.
+
+#### Source-breaking change: `IRequestContext.InstrumentationOptions`
+
+`IRequestContext` gains a new required `InstrumentationOptions InstrumentationOptions { get; set; }` member. It carries the instrumentation options configured for the pipeline that created the context, so middleware handlers can gate their own telemetry (for example on `InstrumentationOptions.Brighter`) without taking a dependency on how the processor was configured. `Paramore.Brighter` targets `netstandard2.0`, which does not support default interface members, so — as with the spec-0027/0029 box-provisioning interface additions — this is exposed as a plain abstract member.
+
+The change is **source-breaking** for any third-party or test type that implements `IRequestContext`: such types will fail to compile until they add the new member. It affects more consumers than just those adopting Replay, hence its call-out here. The shipped `RequestContext` already implements it and defaults to `InstrumentationOptions.All`, so call sites that use the shipped context require no change.
+
+```csharp
+// Custom IRequestContext implementations must add:
+public InstrumentationOptions InstrumentationOptions { get; set; } = InstrumentationOptions.All;
+```
+
+### Kafka: classify or suppress the log level of consumer error-callback events (#4264)
+
+`librdkafka` reports transport conditions — a broker briefly unreachable, a coordinator failover, a metadata
+refresh — through the consumer's error callback. Brighter logged every one of them at a fixed level: fatal at
+`Error`, everything else at `Warning`. A busy or lossy network therefore produces a stream of `Warning`
+entries for conditions the client recovers from unaided, and the only way to quieten them was to turn the level
+down for the whole gateway — losing the warnings that did matter.
+
+`KafkaSubscription` now takes an optional `ErrorLogLevel` hook — `Func<Error, LogLevel>?`, settable through the
+constructor or as a property:
+
+```csharp
+var subscription = new KafkaSubscription<MyEvent>(
+    new SubscriptionName("my-subscription"),
+    channelName: new ChannelName("my-channel"),
+    routingKey: new RoutingKey("my-topic"),
+    groupId: "my-group",
+    errorLogLevel: error => error.Code switch
+    {
+        // Recovered from without intervention; do not log it at all
+        ErrorCode.Local_AllBrokersDown => LogLevel.None,
+        // Transport churn is expected here, so keep it out of the warning stream
+        ErrorCode.Local_Transport => LogLevel.Debug,
+        _ => error.IsFatal ? LogLevel.Error : LogLevel.Warning
+    });
+```
+
+The hook is passed each error the consumer receives and returns the level to log it at; returning
+`LogLevel.None` suppresses the entry entirely. When no hook is supplied the previous behaviour is preserved
+exactly.
+
+**The hook affects logging only.** Fatal handling is unchanged and `Error.IsFatal` remains authoritative: a
+fatal error latches the consumer as unrecoverable whatever level the hook returns, so suppressing a fatal
+error's *log entry* does not suppress the *error*.
+
+One internal consequence: because the level is now chosen per error, the two fixed-level `[LoggerMessage]`
+sources for consumer errors are replaced by a single `ILogger.Log` call. The message template and its named
+placeholders (`{ErrorCode}`, `{ErrorMessage}`, `{FatalError}`) are unchanged, so structured-logging queries
+over those fields keep working.
+
+### Kafka: message timestamps no longer lose their time zone (#4283, closes #4253)
+
+`KafkaDefaultMessageHeaderBuilder` wrote the Brighter `timestamp` header from `Header.TimeStamp.DateTime` — the
+offset-less component of a `DateTimeOffset` — formatted with the invariant culture. The offset never reached
+the wire, so the reader had to guess, and `KafkaMessageCreator` guessed *host-local*: it parsed with
+`DateTime.TryParse(..., AssumeUniversal)` and let the result be re-anchored to the consumer's local zone. On a
+producer or consumer running anywhere other than UTC, `Header.TimeStamp` drifted by the host's UTC offset — and
+drifted again on every hop.
+
+The producer now writes RFC 3339 normalised to UTC (`yyyy-MM-ddTHH:mm:ss.fffZ`), matching the CloudEvents
+`ce_time` header — which already round-tripped correctly — and the legacy timestamp header written by the other
+gateways. The reader parses offset-aware with `DateTimeOffset.TryParse` under
+`AssumeUniversal | AdjustToUniversal`, so an offset on the wire is honoured and the result stays anchored to
+UTC.
+
+The Unix-milliseconds fallback had the same defect by a different route: it truncated
+`DateTimeOffset.FromUnixTimeMilliseconds(...)` through `.DateTime`, which yields a `DateTimeKind.Unspecified`
+value that converts back to a `DateTimeOffset` at the *host* offset. It now returns the `DateTimeOffset`
+directly.
+
+#### Mixed-version rollout
+
+The wire format of the `timestamp` header changes, so it is worth knowing what happens while producers and
+consumers are on different versions:
+
+* **New consumer, old producer** — handled explicitly and test-covered. `AssumeUniversal` covers the legacy
+  offset-less format, so a message in flight from an older producer is read as UTC rather than as local time.
+* **Old consumer, new producer** — the legacy reader parses with the same invariant `DateTime.TryParse`, which
+  accepts RFC 3339 and honours the trailing `Z`, so the instant is read correctly.
+
+If you were compensating for the drift downstream — adding the host offset back onto `Header.TimeStamp`, say —
+remove that correction when you upgrade.
+
+
 ### Azure Service Bus: relative CloudEvents `source` and `dataschema` (#4310)
 
 CloudEvents defines both `source` and `dataschema` as URI-*references*, which may be relative.
@@ -328,45 +441,6 @@ While applying the value-type pattern we corrected a latent null-safety bug in n
   No call-site fix is needed unless your code both has NRT enabled and treats warnings as errors.
 
 > Note: `Tenant` (in `Paramore.Brighter.Transformers.JustSaying`) is a `readonly record struct`, not a reference type — its receiver can never be null, so its `operator string` is intentionally left non-nullable.
-
-### Replay Outbox Messages on Inbox Duplicate (spec 0027)
-
-When an inbox detects a duplicate request, Brighter can now optionally **replay** the outbox messages that were produced under that request's causation, rather than silently dropping the duplicate. The feature is opt-in (`OnceOnlyAction.Replay` on the inbox attribute) and non-breaking: it requires a causation-tracking inbox and outbox (`IAmACausationTrackingInbox` / `IAmACausationTrackingOutbox`), and the relational stores gate the causation-aware write on a memoized column probe so un-migrated schemas keep depositing unchanged. Startup pipeline validation fails fast if a `Replay` pipeline is configured without causation tracking. See [ADR 0057](docs/adr/0057-replay-outbox-on-inbox-duplicate.md) and [spec 0027](specs/0027-replay-matching-outbox-events-when-inbox-has-already-seen/) for full details.
-
-#### Usage requirement: thread your `RequestContext` through `Post` / `DepositPost`
-
-Replay links a duplicate back to its original outbox messages through the **causation id**. `[UseInbox]` stamps that id into the pipeline's `RequestContext.Bag`, and the outbox `Add` reads it back from the bag — **but only if the handler that deposits the outbox message passes its own `Context` down**. If a handler calls the idiomatic `_commandProcessor.Post(evt)` (or `DepositPost`) *without* a request context, `CommandProcessor` creates a fresh context, the causation id is lost, the message is stored with a `null` `CausationId`, and a later `Replay` finds nothing to replay — a **silent no-op** with no error.
-
-To use Replay, every handler that produces outbox messages must forward its handler `Context`:
-
-```csharp
-// ❌ Silent no-op under Replay — fresh context, causation id lost
-public override MyCommand Handle(MyCommand command)
-{
-    _commandProcessor.Post(new DownstreamEvent(...));
-    return base.Handle(command);
-}
-
-// ✅ Threads the causation id so Replay can match
-public override MyCommand Handle(MyCommand command)
-{
-    _commandProcessor.Post(new DownstreamEvent(...), Context);
-    return base.Handle(command);
-}
-```
-
-This applies to the async equivalents (`PostAsync` / `DepositPostAsync`) as well.
-
-#### Source-breaking change: `IRequestContext.InstrumentationOptions`
-
-`IRequestContext` gains a new required `InstrumentationOptions InstrumentationOptions { get; set; }` member. It carries the instrumentation options configured for the pipeline that created the context, so middleware handlers can gate their own telemetry (for example on `InstrumentationOptions.Brighter`) without taking a dependency on how the processor was configured. `Paramore.Brighter` targets `netstandard2.0`, which does not support default interface members, so — as with the spec-0027/0029 box-provisioning interface additions — this is exposed as a plain abstract member.
-
-The change is **source-breaking** for any third-party or test type that implements `IRequestContext`: such types will fail to compile until they add the new member. It affects more consumers than just those adopting Replay, hence its call-out here. The shipped `RequestContext` already implements it and defaults to `InstrumentationOptions.All`, so call sites that use the shipped context require no change.
-
-```csharp
-// Custom IRequestContext implementations must add:
-public InstrumentationOptions InstrumentationOptions { get; set; } = InstrumentationOptions.All;
-```
 
 ### Per-message factory scope leak fix; transient handler lifetime now isolates its DI scope (#4252, #4254)
 
