@@ -774,7 +774,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T6.2, T3.6
   - **References**: AC-15 (FR-17, FR-14, D1, D13); ADR 0073 steps 1, 2
 
-- [ ] **TEST + IMPLEMENT: T6.4 — Brighter does not dispose a borrowed scope**
+- [x] **TEST + IMPLEMENT: T6.4 — Brighter does not dispose a borrowed scope**
   - **USE COMMAND**: `/test-first the request scoped DbContext a handler used is still usable after Send returns and is disposed once by ASP.NET`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_send_returns_the_borrowed_request_scope_should_not_be_disposed.cs`
