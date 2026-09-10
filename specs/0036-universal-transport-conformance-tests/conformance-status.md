@@ -351,31 +351,48 @@ cell remains `Unknown`.
     `KafkaMessageProducerHeaderBytesSendTests` arms on `Connection refused (localhost:8081)` — they need
     the schema registry; that is infra, not conformance.
 
+## FR-23 — requeue budget exhausted to DLQ
+
+Added after review of PR #4297 noticed a coverage regression: retiring the legacy
+`When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue` template removed the only
+coverage of a message reaching the dead-letter queue by **exhausting its delivery budget**, and none
+of the other canonical behaviours replaced it.
+
+That is distinct from FR-4. FR-4 is an explicit `Reject`; FR-23 never rejects anything — the budget
+runs out on its own, which is the behaviour [ADR 0040](../../docs/adr/0040-mssql-dlq-brighter-managed.md)
+and [ADR 0046](../../docs/adr/0046-kafka-dlq-producer-for-requeue.md) actually specify. A gateway that
+redelivered for ever would pass every other DLQ behaviour in this suite.
+
+**All 24 cells open as `Deferred`.** No transport's exhaustion behaviour has been observed against a
+broker since the column was introduced, and a `Pass` recorded without that evidence is exactly what
+this ledger exists to prevent. CI results on #4297 are the evidence that will move them; each cell is
+repointed to `Pass` or `Fixed` only once its run is green.
+
 ## Conformance Matrix
 
-| Configuration | FR-2 | FR-4 | FR-5 | FR-6 | FR-7 | FR-8 | FR-9 | FR-15 | FR-16 | FR-17 | FR-22 |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| AWS / SnsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass |
-| AWS / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass |
-| AWS / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
-| AWS / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass |
-| AWS.V4 / SnsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass |
-| AWS.V4 / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass |
-| AWS.V4 / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
-| AWS.V4 / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass |
-| GCP / Pull | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Pass | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass |
-| GCP / PullOrdering | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Pass | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass |
-| GCP / Stream | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) |
-| GCP / StreamOrdering | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) |
-| Kafka / Classic | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
-| Kafka / Consumer | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
-| Kafka / PartitionKey | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
-| MSSQL / MSSQLMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass |
-| PostgresSQL / PostgresMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
-| Redis / RedisMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass |
-| RMQ.Async / Classic | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
-| RMQ.Async / Quorum | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
-| RocketMQ / RocketMQMessagingGateway | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) |
-| AzureServiceBus / AzureServiceBusMessagingGateway | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass |
-| MQTT / MqttMessagingGateway | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) |
-| RMQ.Sync / RmqSyncMessagingGateway | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) |
+| Configuration | FR-2 | FR-4 | FR-5 | FR-6 | FR-7 | FR-8 | FR-9 | FR-15 | FR-16 | FR-17 | FR-22 | FR-23 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| AWS / SnsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
+| AWS / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
+| AWS / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
+| AWS / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
+| AWS.V4 / SnsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
+| AWS.V4 / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
+| AWS.V4 / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
+| AWS.V4 / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
+| GCP / Pull | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Pass | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Deferred -> #4240 (sign-off: @maintainer) |
+| GCP / PullOrdering | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Pass | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Deferred -> #4240 (sign-off: @maintainer) |
+| GCP / Stream | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) |
+| GCP / StreamOrdering | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) |
+| Kafka / Classic | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
+| Kafka / Consumer | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
+| Kafka / PartitionKey | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
+| MSSQL / MSSQLMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
+| PostgresSQL / PostgresMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
+| Redis / RedisMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
+| RMQ.Async / Classic | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
+| RMQ.Async / Quorum | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
+| RocketMQ / RocketMQMessagingGateway | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) |
+| AzureServiceBus / AzureServiceBusMessagingGateway | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
+| MQTT / MqttMessagingGateway | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) |
+| RMQ.Sync / RmqSyncMessagingGateway | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) |

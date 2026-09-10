@@ -18,16 +18,23 @@ namespace Paramore.Brighter.Test.Generator.Tests.Cleanup;
 /// </summary>
 public class WhenLegacyTemplatesDeletedShouldLeaveNoTemplateOrGeneratedCopy
 {
-    // The four legacy gated template base names — exactly this closed list (ADR 0066 "Step C").
+    // The legacy gated template base names — exactly this closed list (ADR 0066 "Step C").
     // IMPORTANT: match these exactly. The substring-matching hazard (ADR 0066) means
     // a glob like *with_delay* would also match the canonical FR-2 template
     // (When_requeuing_a_failed_message_with_delay_should_redeliver_after_delay).
+    //
+    // ADR 0066 listed four. The fourth,
+    // When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue, is deliberately
+    // NOT here: retiring it removed the only coverage of requeue-budget exhaustion reaching the
+    // dead-letter queue, which is a behaviour distinct from an explicit Reject and the one ADR 0040
+    // and ADR 0046 actually specify. It has returned as the canonical FR-23 behaviour - ledger
+    // gated like every other, rather than gated on a per-transport capability flag - so asserting
+    // its absence would now assert the coverage gap rather than the cleanup.
     private static readonly string[] LEGACY_TEMPLATE_NAMES =
     [
         "When_reading_a_delayed_message_via_the_messaging_gateway_should_delay_delivery",
         "When_requeuing_a_failed_message_should_receive_message_again",
         "When_requeuing_a_failed_message_with_delay_should_receive_message_again",
-        "When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue",
     ];
 
     // Substrings in a template name that indicate it purports to exercise delayed requeue.

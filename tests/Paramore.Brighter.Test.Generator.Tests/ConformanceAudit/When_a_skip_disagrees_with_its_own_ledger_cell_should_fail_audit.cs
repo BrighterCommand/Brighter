@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using Paramore.Brighter.Test.Generator;
 using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
@@ -22,9 +23,19 @@ namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 /// </summary>
 public class LedgerCellAgreementAuditTests
 {
-    private const string LEDGER_HEADER =
-        "| Configuration | FR-2 | FR-4 | FR-5 | FR-6 | FR-7 | FR-8 | FR-9 | FR-15 | FR-16 | FR-17 | FR-22 |\n" +
-        "|---|---|---|---|---|---|---|---|---|---|---|---|\n";
+    // Built from CanonicalBehaviours rather than written out, so that adding a canonical
+    // behaviour cannot leave these fixtures describing a ledger the audit no longer expects -
+    // which is exactly the drift the audit exists to report.
+    private static readonly string[] s_frColumns = CanonicalColumns();
+
+    private static readonly string LEDGER_HEADER =
+        "| Configuration | " + string.Join(" | ", s_frColumns) + " |\n"
+        + "|---" + string.Concat(Enumerable.Repeat("|---", s_frColumns.Length)) + "|\n";
+
+    private static string[] CanonicalColumns() =>
+        CanonicalBehaviours.FR_COLUMN_BEHAVIOURS.Keys
+            .OrderBy(column => int.Parse(column.Substring(3)))
+            .ToArray();
 
     // FR-16 is the "Nack redelivers" column — the 9th behaviour column in the matrix.
     private const string NACK_TEMPLATE = "When_nacking_a_message_it_should_be_redelivered";
@@ -145,13 +156,15 @@ public class LedgerCellAgreementAuditTests
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private static string AllPass() => string.Join(" | ", Enumerable.Repeat("Pass", 11));
+    private static string AllPass() =>
+        string.Join(" | ", Enumerable.Repeat("Pass", s_frColumns.Length));
 
     private static string DeferFr16()
     {
-        // Column order: FR-2, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, FR-15, FR-16, FR-17, FR-22
-        var cells = Enumerable.Repeat("Pass", 11).ToArray();
-        cells[8] = "Deferred -> #4240 (sign-off: @maintainer)";
+        // Positioned by column name, not a hard-coded index, so the fixture keeps deferring the
+        // column it means to when the canonical set changes.
+        var cells = Enumerable.Repeat("Pass", s_frColumns.Length).ToArray();
+        cells[Array.IndexOf(s_frColumns, "FR-16")] = "Deferred -> #4240 (sign-off: @maintainer)";
         return string.Join(" | ", cells);
     }
 

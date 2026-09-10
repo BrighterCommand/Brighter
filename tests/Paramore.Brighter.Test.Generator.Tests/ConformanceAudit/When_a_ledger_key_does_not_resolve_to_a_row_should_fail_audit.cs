@@ -18,12 +18,38 @@ namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 /// </summary>
 public class LedgerResolutionAuditTests
 {
-    private const string LEDGER_HEADER =
-        "| Configuration | FR-2 | FR-4 | FR-5 | FR-6 | FR-7 | FR-8 | FR-9 | FR-15 | FR-16 | FR-17 | FR-22 |\n" +
-        "|---|---|---|---|---|---|---|---|---|---|---|---|\n";
+    // Built from CanonicalBehaviours rather than written out, so that adding a canonical
+    // behaviour cannot leave these fixtures describing a ledger the audit no longer expects -
+    // which is exactly the drift the audit exists to report.
+    private static readonly string[] s_frColumns =
+        CanonicalBehaviours.FR_COLUMN_BEHAVIOURS.Keys
+            .OrderBy(column => int.Parse(column.Substring(3)))
+            .ToArray();
+
+    private static readonly string LEDGER_HEADER =
+        "| Configuration | " + string.Join(" | ", s_frColumns) + " |\n"
+        + "|---" + string.Concat(Enumerable.Repeat("|---", s_frColumns.Length)) + "|\n";
 
     // Every column Pass — the shape of a row that resolves cleanly.
-    private const string ALL_PASS = "Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass";
+    private static readonly string ALL_PASS =
+        string.Join(" | ", Enumerable.Repeat("Pass", s_frColumns.Length));
+
+    /// <summary>Every column Pass, except FR-16 which carries <paramref name="cellValue"/>.</summary>
+    private static string AllPassExceptFr16(string cellValue)
+    {
+        var cells = Enumerable.Repeat("Pass", s_frColumns.Length).ToArray();
+        cells[Array.IndexOf(s_frColumns, "FR-16")] = cellValue;
+        return string.Join(" | ", cells);
+    }
+
+    /// <summary>A header and matching row with <paramref name="omitted"/> left out.</summary>
+    private static (string Header, string Cells) MatrixWithout(string omitted)
+    {
+        var kept = s_frColumns.Where(column => column != omitted).ToArray();
+        return ("| Configuration | " + string.Join(" | ", kept) + " |\n"
+                + "|---" + string.Concat(Enumerable.Repeat("|---", kept.Length)) + "|\n",
+            string.Join(" | ", Enumerable.Repeat("Pass", kept.Length)));
+    }
 
     // ── 1. Synthetic cases ────────────────────────────────────────────────────
 
@@ -51,13 +77,12 @@ public class LedgerResolutionAuditTests
     public void When_a_canonical_fr_column_is_absent_from_the_matrix_should_fail_audit()
     {
         // Arrange — FR-16 has gone from the header, so every FR-16 cell resolves to nothing
+        var (header, cells) = MatrixWithout("FR-16");
         using var tree = SyntheticLedgerTree.Create(
             declaredLedgerKey: "Canary / CanaryGateway",
             ledgerRowKey: "Canary / CanaryGateway",
-            cellValues: "Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass",
-            header:
-                "| Configuration | FR-2 | FR-4 | FR-5 | FR-6 | FR-7 | FR-8 | FR-9 | FR-15 | FR-17 | FR-22 |\n" +
-                "|---|---|---|---|---|---|---|---|---|---|---|\n");
+            cellValues: cells,
+            header: header);
 
         // Act
         var result = LedgerSkipCrossCheckAudit.CheckLedgerResolution(tree.RepoRoot, tree.LedgerPath);
@@ -76,7 +101,7 @@ public class LedgerResolutionAuditTests
         using var tree = SyntheticLedgerTree.Create(
             declaredLedgerKey: "Canary / CanaryGateway",
             ledgerRowKey: "Canary / CanaryGateway",
-            cellValues: "Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | probably fine | Pass | Pass");
+            cellValues: AllPassExceptFr16("probably fine"));
 
         // Act
         var result = LedgerSkipCrossCheckAudit.CheckLedgerResolution(tree.RepoRoot, tree.LedgerPath);

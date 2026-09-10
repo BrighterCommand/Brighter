@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace Paramore.Brighter.Test.Generator;
 
@@ -203,6 +204,19 @@ public sealed class ConformanceLedger : IAmAConformanceLedger
         return end > start ? cellValue[start..end] : "NNNN";
     }
 
+    /// <summary>
+    /// Reads the conformance matrix out of the ledger's markdown table.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the matrix cannot be found, or is found but holds no rows.
+    /// </exception>
+    /// <remarks>
+    /// Throws for the same reason <see cref="LoadFrom"/> does, one level down. Returning an empty
+    /// dictionary here is not "no criteria found" but "every cell means run without a Skip", which
+    /// is the single answer a ledger should never be able to give by accident: reformat the header
+    /// row and the whole deferral mechanism silently switches off. The cross-check audit would
+    /// report every key unresolved, but that is defence-in-depth doing the primary check's job.
+    /// </remarks>
     private static Dictionary<string, Dictionary<string, string>> ParseLedger(string path)
     {
         var cells = new Dictionary<string, Dictionary<string, string>>();
@@ -214,14 +228,24 @@ public sealed class ConformanceLedger : IAmAConformanceLedger
         for (var i = 0; i < lines.Length; i++)
         {
             var line = lines[i].Trim();
-            if (line.StartsWith('|') && line.Contains("FR-2") && line.Contains("FR-4"))
+            // Anchored on the whole cell rather than a substring: "FR-2" as a substring also
+            // matches a header carrying only FR-22 or FR-20, and FR-22 is a real column here.
+            if (line.StartsWith('|') && HasColumn(line, "FR-2") && HasColumn(line, "FR-4"))
             {
                 headerLineIndex = i;
                 break;
             }
         }
 
-        if (headerLineIndex < 0) return cells;
+        if (headerLineIndex < 0)
+        {
+            throw new InvalidOperationException(
+                $"Could not find the conformance matrix in the ledger at '{path}': no table header "
+                + "row carrying both an FR-2 and an FR-4 column. The generator will not emit the "
+                + "canonical suite from a ledger it cannot read: every cell would resolve to no "
+                + "Skip, so every deferred behaviour would be reported as running. Restore the "
+                + "matrix header, or update the parser if the table's shape has changed.");
+        }
 
         // Parse column headers (skip the first cell which is "Configuration").
         var headerCells = SplitTableRow(lines[headerLineIndex]);
@@ -246,8 +270,22 @@ public sealed class ConformanceLedger : IAmAConformanceLedger
             cells[rowKey] = rowData;
         }
 
+        if (cells.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"Found the conformance matrix in the ledger at '{path}' but it holds no data rows. "
+                + "An empty matrix means every cell resolves to no Skip, so every deferred "
+                + "behaviour would be reported as running against a ledger that claims nothing.");
+        }
+
         return cells;
     }
+
+    /// <summary>
+    /// Whether a markdown table row carries <paramref name="columnName"/> as a whole cell.
+    /// </summary>
+    private static bool HasColumn(string line, string columnName) =>
+        SplitTableRow(line).Any(cell => cell.Trim() == columnName);
 
     private static List<string> SplitTableRow(string line)
     {

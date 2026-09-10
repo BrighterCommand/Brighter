@@ -58,6 +58,7 @@ public static class CanonicalBehaviours
             ["When_rejecting_message_should_include_metadata"]                                 = "FR-8",
             ["When_sending_a_delayed_message_should_deliver_after_delay"]                      = "FR-9",
             ["When_nacking_a_message_it_should_be_redelivered"]                                = "FR-16",
+            ["When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue"]       = "FR-23",
         };
 
     /// <summary>
@@ -77,6 +78,7 @@ public static class CanonicalBehaviours
             ["FR-16"] = "Nack redelivers",
             ["FR-17"] = "reject with None reason to DLQ",
             ["FR-22"] = "canonical plain requeue",
+            ["FR-23"] = "requeue budget exhausted to DLQ",
         };
 
     /// <summary>
