@@ -285,6 +285,7 @@
   <Project Path="src/Paramore.Brighter.Dapper/Paramore.Brighter.Dapper.csproj" />
   <Project Path="src/Paramore.Brighter.DynamoDb.V4/Paramore.Brighter.DynamoDb.V4.csproj" />
   <Project Path="src/Paramore.Brighter.DynamoDb/Paramore.Brighter.DynamoDb.csproj" />
+  <Project Path="src/Paramore.Brighter.Extensions.AspNetCore/Paramore.Brighter.Extensions.AspNetCore.csproj" />
   <Project Path="src/Paramore.Brighter.Extensions.DependencyInjection/Paramore.Brighter.Extensions.DependencyInjection.csproj" />
   <Project Path="src/Paramore.Brighter.Extensions.Diagnostics/Paramore.Brighter.Extensions.Diagnostics.csproj" />
   <Project Path="src/Paramore.Brighter.Extensions.OpenTelemetry/Paramore.Brighter.Extensions.OpenTelemetry.csproj" />
