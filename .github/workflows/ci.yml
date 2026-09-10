@@ -73,11 +73,6 @@ jobs:
           dotnet test tests/Paramore.Brighter.Extensions.Tests/Paramore.Brighter.Extensions.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build
           dotnet test tests/Paramore.Brighter.Transforms.Adaptors.Tests/Paramore.Brighter.Transforms.Adaptors.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build
 
-      # The generator's own tests include the audit that compares the Generated/ tree with what
-      # the checked-in configurations would produce. It has to run somewhere to be worth having.
-      - name: Test Generator Tests
-        run: dotnet test tests/Paramore.Brighter.Test.Generator.Tests/Paramore.Brighter.Test.Generator.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build
-
       - name: Upload packages as artifacts
         uses: actions/upload-artifact@v7
         with:

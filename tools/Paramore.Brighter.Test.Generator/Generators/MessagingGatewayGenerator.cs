@@ -257,11 +257,13 @@ public class MessagingGatewayGenerator(
     /// Deferred Skip string is emitted. For all other templates the property is set to the empty
     /// string (not null) so that `{% if Skip != empty %}` evaluates to false in the template.
     /// </summary>
-    private void SetCanonicalSkip(string templateFileName, object model)
+    private void SetCanonicalSkip(string templatePath, object model)
     {
         if (model is not MessagingGatewayConfiguration config) return;
 
-        var baseName = Path.GetFileName(templateFileName).Replace(".cs.liquid", "");
+        // The full template path, not a bare name: unlike the Ignore predicate, prepareModel
+        // is handed the path the plan resolved, so take the name from it.
+        var baseName = Path.GetFileName(templatePath).Replace(".cs.liquid", "");
 
         var frColumn = CanonicalBehaviours.FrColumnFor(baseName);
 
