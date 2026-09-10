@@ -50,7 +50,8 @@ public class WhenOutboxConfigurationMissingMessageFactoryShouldUseParentFactory 
         // the one Sync template that never mentions MessageBuilder, would not have been.
         var generated = File.ReadAllText(Path.Combine(_testDirectory, "Outbox", "SqlServer",
             "Generated", "Sync", "When_Adding_A_Message_It_Should_Be_Stored_With_All_Properties.cs"));
-        Assert.Contains("TestMessageBuilder", generated);
+        // The construction site, not the bare name, which would match a comment or a using
+        Assert.Contains("new TestMessageBuilder()", generated);
     }
 
     public void Dispose()

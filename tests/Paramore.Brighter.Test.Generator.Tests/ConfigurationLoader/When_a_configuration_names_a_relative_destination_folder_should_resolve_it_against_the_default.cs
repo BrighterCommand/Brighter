@@ -36,7 +36,9 @@ namespace Paramore.Brighter.Test.Generator.Tests.ConfigurationLoader;
 /// generator in the project folder, while the audit runs wherever the test host does - so a
 /// destination folder left relative would mean the same configuration naming two different
 /// folders depending on who read it, and the audit would report a project's whole tree as
-/// orphaned and the same files as missing.
+/// orphaned and the same files as missing. The base is therefore the configuration file's own
+/// folder, which is the one thing both readers agree on without having to run from the same
+/// directory.
 /// </summary>
 public class DestinationFolderResolutionTests : IDisposable
 {
@@ -59,11 +61,56 @@ public class DestinationFolderResolutionTests : IDisposable
         // Act
         var configuration = Loader.Load(configurationFile, defaultDestinationFolder: _projectFolder);
 
-        // Assert - resolved against the project folder, not the directory the test host runs in
+        // Assert - resolved, not left relative for the caller's current directory to decide
         Assert.NotNull(configuration);
         Assert.Equal(
             Path.GetFullPath(Path.Combine(_projectFolder, "..", "Sibling.Tests")),
             configuration.DestinationFolder);
+    }
+
+    [Fact]
+    public void When_the_default_folder_is_not_the_configurations_own_folder_should_resolve_against_the_configuration()
+    {
+        // Arrange - the two bases pulled apart, which is what running the generator from the
+        // repository root against tests/Foo/test-configuration.json does
+        var configurationFile = WriteConfiguration("""
+            {
+              "Namespace": "Sample.Tests",
+              "DestinationFolder": "../Sibling.Tests"
+            }
+            """);
+        // Nested inside the project folder rather than beside it: two sibling temp folders both
+        // resolve "../Sibling.Tests" to the same place, so a test using one would pass either way
+        var elsewhere = Path.Combine(_projectFolder, "nested", "deeper");
+
+        // Act
+        var configuration = Loader.Load(configurationFile, defaultDestinationFolder: elsewhere);
+
+        // Assert - the configuration's own folder wins, so two callers running from different
+        // directories read the same configuration the same way
+        Assert.NotNull(configuration);
+        Assert.Equal(
+            Path.GetFullPath(Path.Combine(_projectFolder, "..", "Sibling.Tests")),
+            configuration.DestinationFolder);
+    }
+
+    [Fact]
+    public void When_the_default_folder_is_relative_should_still_return_an_absolute_folder()
+    {
+        // Arrange - the loader documents that what it hands back is always absolute
+        var configurationFile = WriteConfiguration("""
+            {
+              "Namespace": "Sample.Tests"
+            }
+            """);
+
+        // Act
+        var configuration = Loader.Load(configurationFile, defaultDestinationFolder: "relative/output");
+
+        // Assert
+        Assert.NotNull(configuration);
+        Assert.True(Path.IsPathRooted(configuration.DestinationFolder));
+        Assert.Equal(Path.GetFullPath("relative/output"), configuration.DestinationFolder);
     }
 
     [Fact]

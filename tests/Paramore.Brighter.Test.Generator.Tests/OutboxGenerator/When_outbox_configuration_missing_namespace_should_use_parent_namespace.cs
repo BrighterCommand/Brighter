@@ -48,7 +48,9 @@ public class WhenOutboxConfigurationMissingNamespaceShouldUseParentNamespace : I
         // named rather than picked out of an enumeration, whose order the filesystem chooses.
         var generated = File.ReadAllText(Path.Combine(_testDirectory, "Outbox", "SqlServer",
             "Generated", "Sync", "When_Adding_A_Message_It_Should_Be_Stored_With_All_Properties.cs"));
-        Assert.Contains("namespace MyApp.Tests.Outbox", generated);
+        // The whole line, not a prefix of it: the singular branch does not dot-qualify, so
+        // "namespace MyApp.Tests.Outbox" would match MyApp.Tests.OutboxAnythingElse too
+        Assert.Contains("namespace MyApp.Tests.OutboxSqlServer.Sync;", generated);
     }
 
     public void Dispose()

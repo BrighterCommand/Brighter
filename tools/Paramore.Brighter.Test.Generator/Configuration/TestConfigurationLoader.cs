@@ -39,8 +39,10 @@ namespace Paramore.Brighter.Test.Generator.Configuration;
 /// whether an explicit <see cref="TestConfiguration.DestinationFolder"/> is honoured.
 /// </remarks>
 /// <remarks>
-/// The <see cref="TestConfiguration.DestinationFolder"/> a caller receives is always absolute, so
-/// that the paths built from it are too, whichever directory the caller happens to run in.
+/// The <see cref="TestConfiguration.DestinationFolder"/> a caller receives is always absolute -
+/// including the defaulted one, which is why the default is put through
+/// <see cref="Path.GetFullPath(string)"/> rather than trusted - so that the paths built from it are
+/// absolute too, whichever directory the caller happens to run in.
 /// </remarks>
 public static class TestConfigurationLoader
 {
@@ -58,9 +60,10 @@ public static class TestConfigurationLoader
     /// </summary>
     /// <param name="configurationFilePath">The path of the JSON configuration file to read.</param>
     /// <param name="defaultDestinationFolder">
-    /// The folder generated files are written to when the configuration does not name one, and the
-    /// folder a relative <see cref="TestConfiguration.DestinationFolder"/> is resolved against. Must
-    /// be an absolute path.
+    /// The folder generated files are written to when the configuration does not name one. A
+    /// relative <see cref="TestConfiguration.DestinationFolder"/> is resolved against the
+    /// configuration file's own folder instead, so that two callers running from different
+    /// directories read the same configuration the same way.
     /// </param>
     /// <returns>
     /// The configuration, or <c>null</c> if the file holds the JSON literal <c>null</c>.
@@ -80,9 +83,18 @@ public static class TestConfigurationLoader
         // generator, which generate-test.sh cd's into, and the test host's folder for the audit.
         // Those are different folders, and the audit would then report a project's whole tree as
         // orphaned and an equal number of files as missing.
+        //
+        // The base is the configuration file's own folder, not the caller-supplied default. Those
+        // coincide whenever the tool is run the way generate-test.sh runs it, but only the file's
+        // own folder makes the two readers agree by construction: run the generator from the
+        // repository root against tests/Foo/test-configuration.json and the default is the root,
+        // while the audit's is always tests/Foo.
+        var configurationFolder =
+            Path.GetDirectoryName(Path.GetFullPath(configurationFilePath)) ?? defaultDestinationFolder;
+
         configuration.DestinationFolder = string.IsNullOrEmpty(configuration.DestinationFolder)
-            ? defaultDestinationFolder
-            : Path.GetFullPath(configuration.DestinationFolder, defaultDestinationFolder);
+            ? Path.GetFullPath(defaultDestinationFolder)
+            : Path.GetFullPath(configuration.DestinationFolder, configurationFolder);
 
         return configuration;
     }
