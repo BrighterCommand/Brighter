@@ -363,10 +363,23 @@ runs out on its own, which is the behaviour [ADR 0040](../../docs/adr/0040-mssql
 and [ADR 0046](../../docs/adr/0046-kafka-dlq-producer-for-requeue.md) actually specify. A gateway that
 redelivered for ever would pass every other DLQ behaviour in this suite.
 
-**All 24 cells open as `Deferred`.** No transport's exhaustion behaviour has been observed against a
-broker since the column was introduced, and a `Pass` recorded without that evidence is exactly what
-this ledger exists to prevent. CI results on #4297 are the evidence that will move them; each cell is
-repointed to `Pass` or `Fixed` only once its run is green.
+**The column opened with all 24 cells `Deferred`**, and cells move to `Pass` only on evidence — a
+`Pass` recorded without a broker run is exactly what this ledger exists to prevent.
+
+- **`Redis / RedisMessagingGateway` is `Pass`.** Both variants were run against a live Redis
+  (`docker-compose-redis.yaml`) and are green, repeated four times with no flake, satisfying the
+  both-variants rule (FR-14). Non-vacuity was checked the way this spec checks it everywhere else:
+  forcing `RequeueTrackingChannel{Sync,Async}`'s budget to `int.MaxValue` — a gateway that never
+  exhausts — turns **both** variants red. The first attempt only patched the sync path and the
+  Proactor test stayed green, which is worth recording: the two channel factories carry separate
+  budget logic, so a probe has to touch both to mean anything.
+- **The other 23 remain `Deferred`.** CI on #4297 is the evidence that moves them, one transport at a
+  time.
+
+Redis reaches this behaviour through the Brighter-managed fallback rather than natively:
+`RequeueTrackingChannel` converts the Nth `Requeue` into a `Reject`, which routes to the DLQ. That is
+the harness half of FR-23, and it is why retiring the old template left it wired into eight providers
+with nothing exercising it.
 
 ## Conformance Matrix
 
@@ -389,7 +402,7 @@ repointed to `Pass` or `Fixed` only once its run is green.
 | Kafka / PartitionKey | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
 | MSSQL / MSSQLMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
 | PostgresSQL / PostgresMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
-| Redis / RedisMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
+| Redis / RedisMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass |
 | RMQ.Async / Classic | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
 | RMQ.Async / Quorum | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
 | RocketMQ / RocketMQMessagingGateway | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) |

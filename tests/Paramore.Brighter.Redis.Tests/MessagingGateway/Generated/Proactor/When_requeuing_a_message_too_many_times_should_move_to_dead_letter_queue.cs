@@ -52,7 +52,7 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync :
     /// budget runs out on its own, which is the behaviour ADR 0040 and ADR 0046 specify. A gateway
     /// that redelivered for ever would pass every other DLQ behaviour in this suite.
     /// </remarks>
-    [Fact(Skip = "Deferred: #4240 — requeue budget exhausted to DLQ not yet conformant for Redis / RedisMessagingGateway (maintainer sign-off)")]
+    [Fact]
     public async Task When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue_async()
     {
         // Arrange
