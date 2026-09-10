@@ -740,7 +740,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T5.5 (Phase 5 complete), T3.5 (`ScopeAffinityOverride`), T3.1 (`IAmAScopeProvider`, `ScopeAffinity`) — ADR 0073 step 2: *"Nothing in this package compiles before both"*
   - **References**: FR-17, NFR-2, D1; ADR 0073 steps 1, 2
 
-- [ ] **PROJECT: T6.2 — build `tests/Paramore.Brighter.Extensions.AspNetCore.Tests`**
+- [x] **PROJECT: T6.2 — build `tests/Paramore.Brighter.Extensions.AspNetCore.Tests`**
   - No test of its own. **Done when**: the new test project restores and builds on `$(BrighterTestTargetFrameworks)`, `dotnet test` on it succeeds with zero tests, it appears in `Brighter.slnx`, and T1.2's `DependencyBoundaryTests` still passes — confirming the ASP.NET reference reached only this project and the new package
   - Re-derived: the repository has **37** test projects and **zero** reference `Microsoft.AspNetCore.*`, `Microsoft.AspNetCore.Mvc.Testing` or `WebApplicationFactory`; `Brighter.slnx` has no ASP.NET **test** entry. **The ADR's claim holds**
   - A `Microsoft.NET.Sdk.Web`-hosted `WebApplicationFactory` fixture, targeting `$(BrighterTestTargetFrameworks)` — re-derived at `tests/Directory.Build.props:4`: `net9.0;net10.0`
