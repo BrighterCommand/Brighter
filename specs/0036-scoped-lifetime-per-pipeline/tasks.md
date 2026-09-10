@@ -757,7 +757,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T6.1
   - **References**: AC-15, AC-16, AC-17, AC-18, AC-19, AC-34, AC-48, AC-49, AC-14 (spy half); ADR 0073 steps 4a, 4c
 
-- [ ] **TEST + IMPLEMENT: T6.3 — opted in, a `Send` from a controller shares the request scope**
+- [x] **TEST + IMPLEMENT: T6.3 — opted in, a `Send` from a controller shares the request scope**
   - **USE COMMAND**: `/test-first an opted in controller action and the handler it Sends to resolve the same Scoped DbContext`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_a_controller_sends_in_an_opted_in_host_the_handler_should_share_the_request_scope.cs`
