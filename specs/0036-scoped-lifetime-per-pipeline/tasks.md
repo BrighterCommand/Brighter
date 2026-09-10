@@ -788,7 +788,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T6.3
   - **References**: AC-16 (FR-12, C-7); ADR 0072 step 4, ADR 0073 (*Why `HttpRequestScope`'s disposal is a no-op*)
 
-- [ ] **TEST + IMPLEMENT: T6.5 — two `Post`s in one request share the request scope, and one mapper instance**
+- [x] **TEST + IMPLEMENT: T6.5 — two `Post`s in one request share the request scope, and one mapper instance**
   - **USE COMMAND**: `/test-first two Posts in one HTTP request resolve the same Scoped mapper instance disposed only when ASP.NET disposes the request scope`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_two_posts_run_in_one_request_they_should_share_one_scoped_mapper.cs`
