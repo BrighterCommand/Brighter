@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -73,6 +74,13 @@ public sealed class PlaceOrderWebApplicationFactory : WebApplicationFactory<Plac
             services.AddControllers().AddApplicationPart(typeof(PlaceOrderController).Assembly);
             services.AddScoped<IOrderDbContext, OrderDbContext>();
             services.AddSingleton<OrderDbContextRecorder>();
+            services.AddSingleton<PostedOrderMapperRecorder>();
+
+            var routingKey = new RoutingKey("posted-order");
+            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
+            {
+                { routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = routingKey, RequestType = typeof(PostedOrderCommand) }) }
+            });
 
             services.AddBrighterRequestScope();
             services.AddBrighter(options =>
@@ -80,7 +88,8 @@ public sealed class PlaceOrderWebApplicationFactory : WebApplicationFactory<Plac
                 options.HandlerLifetime = ServiceLifetime.Scoped;
                 options.MapperLifetime = ServiceLifetime.Scoped;
                 options.TransformerLifetime = ServiceLifetime.Scoped;
-            });
+            })
+            .AddProducers(cfg => cfg.ProducerRegistry = producerRegistry);
         });
 
         builder.Configure(app =>
