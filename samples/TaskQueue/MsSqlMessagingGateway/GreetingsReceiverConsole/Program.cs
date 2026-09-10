@@ -44,10 +44,14 @@ var builder = Host.CreateApplicationBuilder(args);
 // de-duplicates against. GreetingsSender builds the matching configuration for the queue and
 // the Outbox — the connection string and the table names have to agree across the two files.
 // There is no outBoxTableName here because this process has no Outbox.
-// Set ConnectionStrings:Brighter to point this somewhere other than the SQLEXPRESS default.
-// It must match whatever GreetingsSender is using.
-var connectionString = builder.Configuration.GetConnectionString("Brighter")
-    ?? @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;";
+// Set ConnectionStrings__Brighter in the environment to point this somewhere other than the
+// SQLEXPRESS default. It must match whatever GreetingsSender is using.
+// GetConnectionString returns "" — not null — when the key exists but is blank, which an
+// environment variable makes easy, so test for whitespace rather than null.
+var configured = builder.Configuration.GetConnectionString("Brighter");
+var connectionString = string.IsNullOrWhiteSpace(configured)
+    ? @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;"
+    : configured;
 
 var configuration = new RelationalDatabaseConfiguration(
     connectionString,
@@ -82,7 +86,9 @@ builder.Services.AddConsumers(options =>
 // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
 .UseScheduler(new InMemorySchedulerFactory())
 // Each process provisions the box it owns, so the receiver can be started on its own. This
-// registers a hosted service, which runs because this IS a host.
+// registers a hosted service, and the ORDER matters: it must be registered before
+// AddHostedService<ServiceActivatorHostedService>() below, or the pump starts consuming
+// against an InboxMessages table that does not exist yet.
 .UseBoxProvisioning(options => options.AddMsSqlInbox(configuration))
 .AutoFromAssemblies();
 

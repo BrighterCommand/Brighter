@@ -44,8 +44,15 @@ namespace GreetingsReceiverConsole
         //
         // The handler lives HERE rather than in the shared Events project because the other
         // three apps in this sample also call AutoFromAssemblies() and none of them registers
-        // an inbox — they would each register a handler whose pipeline cannot be built.
-        [UseInbox(step: 0, contextKey: nameof(GreetingEventHandler), onceOnly: true,
+        // an inbox. Pipelines build lazily per request type, so that breakage is latent rather
+        // than certain — it would surface for the first of them to dispatch a GreetingEvent, or
+        // immediately under ValidatePipelines().
+        //
+        // Keeping InboxConfiguration registered alongside this attribute is safe rather than
+        // merely redundant: PipelineBuilder skips the global inbox attribute for any handler
+        // that already carries [UseInbox] (HasExistingUseInboxAttributesInPipeline), so adding
+        // a producer to this process later will not double up the inbox handler.
+        [UseInbox(step: 0, contextKey: typeof(GreetingEventHandler), onceOnly: true,
             onceOnlyAction: OnceOnlyAction.Warn)]
         public override GreetingEvent Handle(GreetingEvent greetingEvent)
         {

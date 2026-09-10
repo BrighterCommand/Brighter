@@ -22,7 +22,11 @@ var subscriptions = new Subscription[]
         new SubscriptionName("paramore.example.multipleconsumer.command"),
         new ChannelName("multipleconsumer.command"),
         new RoutingKey("multipleconsumer.command"),
-        timeOut: TimeSpan.FromMilliseconds(200))
+        timeOut: TimeSpan.FromMilliseconds(200),
+        // Reactor, because CompetingConsumerCommandHandler is a sync RequestHandler<T>. The
+        // default is Proactor, which calls SendAsync and finds an empty async chain — an Error
+        // under Brighter's own ConsumerValidationRules.PumpHandlerMatch.
+        messagePumpType: MessagePumpType.Reactor)
 };
 
 var messagingConfiguration = new RelationalDatabaseConfiguration(

@@ -32,7 +32,13 @@ var messagingConfiguration = new RelationalDatabaseConfiguration(
 
 var producerRegistry = new MsSqlProducerRegistryFactory(
         messagingConfiguration,
-        [new Publication()])
+        // A Publication with no Topic throws ConfigurationException from
+        // MsSqlMessageProducerFactory.Create(); the routing key must match the subscription
+        // CompetingReceiverConsole declares.
+        [new Publication<CompetingConsumerCommand>
+        {
+            Topic = new RoutingKey("multipleconsumer.command")
+        }])
     .Create();
 
 builder.Services.AddBrighter()
