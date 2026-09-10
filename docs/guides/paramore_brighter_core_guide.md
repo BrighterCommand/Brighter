@@ -421,9 +421,6 @@ CP -> Client: Return Response
 The Call operation supports a blocking RPC-style interaction:
 
 ```csharp
-// Similar to Post but returns a response
-MyResponse? result = commandProcessor.Call<MyQuery, MyResponse>(query);
-
 // External call setup requires reply channels
 var commandProcessor = CommandProcessorBuilder.StartNew()
     .Handlers(handlerConfiguration)
@@ -437,6 +434,9 @@ var commandProcessor = CommandProcessorBuilder.StartNew()
     .RequestContextFactory(new InMemoryRequestContextFactory())
     .RequestSchedulerFactory(new InMemorySchedulerFactory())
     .Build();
+
+// Similar to Post, but it blocks and returns a response
+MyResponse? result = commandProcessor.Call<MyQuery, MyResponse>(query);
 ```
 
 **Request-reply is not a step of its own.** It is `ExternalBusType.RPC` on the `ExternalBus`
@@ -455,8 +455,13 @@ The four collaborators that chain needs, and where each comes from:
 **Characteristics:**
 - Synchronous request-reply pattern
 - Returns typed response (`TResponse?` — nullable)
-- **Requires RPC wiring.** There is no in-memory path: without a response channel factory,
-  `Call` throws `InvalidOperationException("No ResponseChannelFactory registered")`
+- **Requires RPC wiring**, and there is no in-memory path. `Call` guards in this order
+  (`CommandProcessor.cs:1426-1432`): **the reply subscription first**, throwing
+  `InvalidOperationException("No Subscription registered fpr replies of type …")` — the typo is
+  the message's own — and **the response channel factory second**, throwing
+  `InvalidOperationException("No ResponseChannelFactory registered")`. So a processor with no RPC
+  wiring at all reports the missing *subscription*; you only reach the second message once the
+  subscription is registered
 - Timeout support for external calls to prevent blocking
 - Reply channel management for external scenarios
 - Supports same middleware pipeline as Send/Publish
@@ -863,7 +868,7 @@ obsolete: it routes to your handler's `Fallback` method rather than running a Po
 
 #### 1. Retry Handler (`UsePolicyAttribute`)
 ```csharp
-[UsePolicy("RetryPolicy", 1)]
+[UsePolicy(policy: "RetryPolicy", step: 1)]
 public override MyCommand Handle(MyCommand command)
 {
     // This handler will be wrapped with retry logic
@@ -879,7 +884,7 @@ public override MyCommand Handle(MyCommand command)
 
 #### 2. Circuit Breaker Handler
 ```csharp
-[UsePolicy("CircuitBreakerPolicy", 2)]
+[UsePolicy(policy: "CircuitBreakerPolicy", step: 2)]
 public override MyCommand Handle(MyCommand command)
 {
     // Protected by circuit breaker
@@ -894,7 +899,7 @@ public override MyCommand Handle(MyCommand command)
 
 #### 3. Timeout Handler (`TimeoutPolicyAttribute`)
 ```csharp
-[TimeoutPolicy(30000, 1)] // 30 second timeout
+[TimeoutPolicy(milliseconds: 30000, step: 1)] // 30 second timeout
 public override MyCommand Handle(MyCommand command)
 {
     // Will timeout if execution exceeds 30 seconds
@@ -1140,10 +1145,10 @@ public void When_Publishing_Event_Should_Store_In_Outbox()
         fakeOutbox);
 
     // DepositPost runs no handler pipeline, but the builder still requires a handler
-    // configuration, so an empty registry is enough here
+    // configuration — so an empty registry and a factory that is never called are enough
     var commandProcessor = CommandProcessorBuilder.StartNew()
         .Handlers(new HandlerConfiguration(new SubscriberRegistry(),
-            new SimpleHandlerFactorySync(_ => new CreateCustomerHandler(customerRepository)))) // your test double
+            new SimpleHandlerFactorySync(_ => throw new NotImplementedException())))
         .Resilience(resiliencePipelineRegistry)
         .ExternalBus(ExternalBusType.FireAndForget, bus, typeof(CommittableTransaction))
         .NoInstrumentation()
@@ -1216,12 +1221,9 @@ Give the context a policy registry, or let `CommandProcessor` build the pipeline
 `[UseResiliencePipeline]`, the current form, guards its context
 (`Context is { ResiliencePipeline: not null }`) and does not have this problem.
 
-### Test Double Support
-Brighter provides several test doubles for different scenarios:
-
-#### Builder configuration: no external bus
-For testing handler pipelines without external dependencies. This gives you `Send` and
-`Publish` only:
+### Builder Configuration for Tests: No External Bus
+For testing handler pipelines without external dependencies. This is a builder recipe rather
+than a test double, and it gives you `Send` and `Publish` only:
 ```csharp
 var commandProcessor = CommandProcessorBuilder.StartNew()
     .Handlers(handlerConfiguration)
@@ -1237,6 +1239,9 @@ var commandProcessor = CommandProcessorBuilder.StartNew()
 and `DepositPost` throw `NullReferenceException` on a processor built this way rather than
 reporting a missing bus. To test publishing, use the `InMemoryMessageProducer` and `InternalBus`
 recipe under *Testing Message Publishing* above, which is what gives you messages to read back.
+
+### Test Double Support
+Brighter provides several test doubles for different scenarios:
 
 #### InMemoryMessageProducer
 For verifying message production. Messages go to an `InternalBus`, and you read them back from
@@ -1333,8 +1338,8 @@ public class ProcessOrderHandler : RequestHandler<ProcessOrderCommand>
         _logger = logger;
     }
 
-    [RequestLogging(1, HandlerTiming.Before)]
-    [UseResiliencePipeline("OrderProcessingPipeline", 2)]
+    [RequestLogging(step: 1, timing: HandlerTiming.Before)]
+    [UseResiliencePipeline("OrderProcessingPipeline", step: 2)]
     public override ProcessOrderCommand Handle(ProcessOrderCommand command)
     {
         var order = _repository.GetById(command.OrderId);
@@ -1376,8 +1381,8 @@ public class ProcessPaymentHandler : RequestHandler<ProcessPaymentCommand>
 {
     [RequestLogging(step: 1, timing: HandlerTiming.Before)]
     [ValidateRequest(step: 2)]
-    [UseResiliencePipeline("PaymentPipeline", step: 3)]
-    [FallbackPolicy(backstop: true, circuitBreaker: true, step: 4)]
+    [FallbackPolicy(backstop: false, circuitBreaker: true, step: 3)]
+    [UseResiliencePipeline("PaymentPipeline", step: 4)]
     public override ProcessPaymentCommand Handle(ProcessPaymentCommand command)
     {
         // Business logic here
@@ -1391,7 +1396,43 @@ public class ProcessPaymentHandler : RequestHandler<ProcessPaymentCommand>
 `Paramore.Brighter.Policies.Attributes`. None of the four is `[Obsolete]`, so the block pastes
 without a `CS0618`.
 
-Three things about that block are easy to get wrong:
+**The lowest step is the outermost handler.** `BuildPipeline` sorts the attributes
+`OrderByDescending(attribute => attribute.Step)` (`PipelineBuilder.cs:289`) and `PushOntoPipeline`
+wraps each new decorator *around* the chain built so far (`PipelineBuilder.cs:499-523`), so the
+highest step is pushed first and ends up innermost. The block above therefore assembles as:
+
+```text
+RequestLoggingHandler (1)
+  → ValidateRequestHandler (2)
+    → FallbackPolicyHandler (3)
+      → ResilienceExceptionPolicyHandler (4)
+        → ProcessPaymentHandler
+```
+
+That ordering is the point of the example, and it is chosen rather than incidental. Validation
+sits outside the resilience pipeline so a request that is invalid fails once instead of being
+retried; the fallback sits outside the resilience handler because that is the only position from
+which it can see what the resilience handler throws.
+
+**`[FallbackPolicy]` must have a *lower* step than `[UseResiliencePipeline]`.** A circuit-breaker
+fallback exists to catch the `BrokenCircuitException` that the resilience handler raises. Give it
+a higher step and it is nested *inside* that handler, the exception propagates outward past it,
+and the fallback is dead code that still reads as a safety net.
+
+**The inverse trap is just as real**, and it is the fix a reader reaches for first: a
+`backstop: true` fallback nested inside the resilience handler catches the exception the retry
+strategy was about to act on, so retries silently stop happening. A backstop belongs outside the
+resilience pipeline too — the two failure modes point in opposite directions and the step number
+is the whole of the difference.
+
+**The two flags are not additive.** `FallbackPolicyHandler.InitializeFromAttributeParams` tests
+`circuitBreaker` first and `backstop` only in its `else` branch
+(`Policies/Handlers/FallbackPolicyHandler.cs:44-60`), so
+`[FallbackPolicy(backstop: true, circuitBreaker: true, …)]` discards `backstop` without saying so
+and routes only `BrokenCircuitException` to `Fallback`. Pick one: `circuitBreaker: true` to catch
+a broken circuit, `backstop: true` to catch everything.
+
+Three further things about that block are easy to get wrong:
 
 - **Each attribute appears once per method.** `RequestHandlerAttribute` is
   `[AttributeUsage(AttributeTargets.Method)]` and leaves `AllowMultiple` at its default of
