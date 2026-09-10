@@ -28,6 +28,8 @@ using Events.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
+using Paramore.Brighter.Inbox;
+using Paramore.Brighter.Inbox.MsSql;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
@@ -35,11 +37,22 @@ using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 
 var builder = Host.CreateApplicationBuilder(args);
 
+// The same three tables the sender names, in the same database.
+var configuration = new RelationalDatabaseConfiguration(
+    @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;",
+    databaseName: "BrighterSqlQueue",
+    outBoxTableName: "Outbox",
+    inboxTableName: "InboxMessages",
+    queueStoreTable: "QueueData");
+
 builder.Services.AddConsumers(options =>
 {
     options.Subscriptions =
     [
-        new Subscription<GreetingEvent>(
+        // MsSqlSubscription, NOT Subscription: the MSSQL ChannelFactory casts what it is
+        // given down to MsSqlSubscription and throws ConfigurationException when the cast
+        // fails. A plain Subscription<T> compiles and then dies as the Dispatcher starts.
+        new MsSqlSubscription<GreetingEvent>(
             new SubscriptionName("paramore.example.greeting"),
             new ChannelName("greeting.event"),
             new RoutingKey("greeting.event"),
@@ -47,14 +60,16 @@ builder.Services.AddConsumers(options =>
             messagePumpType: MessagePumpType.Reactor)
     ];
     options.DefaultChannelFactory = new ChannelFactory(
-        new MsSqlMessageConsumerFactory(
-            new RelationalDatabaseConfiguration(
-        @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;",
-                databaseName: "BrighterSqlQueue",
-                queueStoreTable: "QueueData"
-            )
-        )
+        new MsSqlMessageConsumerFactory(configuration)
     );
+
+    // The Inbox makes the consumer idempotent: a redelivered message is recognised rather
+    // than reprocessed. Warn rather than Throw, so a duplicate logs instead of raising.
+    options.InboxConfiguration = new InboxConfiguration(
+        new MsSqlInbox(configuration),
+        scope: InboxScope.All,
+        onceOnly: true,
+        actionOnExists: OnceOnlyAction.Warn);
 })
 // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
 // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.

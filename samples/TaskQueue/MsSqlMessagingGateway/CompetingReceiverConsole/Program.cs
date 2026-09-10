@@ -16,7 +16,9 @@ var builder = Host.CreateApplicationBuilder(args);
 
 var subscriptions = new Subscription[]
 {
-    new Subscription<CompetingConsumerCommand>(
+    // MsSqlSubscription, NOT Subscription: the MSSQL ChannelFactory casts what it is given
+    // down to MsSqlSubscription and throws ConfigurationException when the cast fails.
+    new MsSqlSubscription<CompetingConsumerCommand>(
         new SubscriptionName("paramore.example.multipleconsumer.command"),
         new ChannelName("multipleconsumer.command"),
         new RoutingKey("multipleconsumer.command"),
