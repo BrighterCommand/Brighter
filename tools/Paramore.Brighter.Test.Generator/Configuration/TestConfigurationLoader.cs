@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -38,6 +38,10 @@ namespace Paramore.Brighter.Test.Generator.Configuration;
 /// statements of it would agree until one of them was changed - which had already happened, over
 /// whether an explicit <see cref="TestConfiguration.DestinationFolder"/> is honoured.
 /// </remarks>
+/// <remarks>
+/// The <see cref="TestConfiguration.DestinationFolder"/> a caller receives is always absolute, so
+/// that the paths built from it are too, whichever directory the caller happens to run in.
+/// </remarks>
 public static class TestConfigurationLoader
 {
     /// <summary>
@@ -54,8 +58,9 @@ public static class TestConfigurationLoader
     /// </summary>
     /// <param name="configurationFilePath">The path of the JSON configuration file to read.</param>
     /// <param name="defaultDestinationFolder">
-    /// The folder generated files are written to when the configuration does not name one. A
-    /// configuration that names a <see cref="TestConfiguration.DestinationFolder"/> keeps it.
+    /// The folder generated files are written to when the configuration does not name one, and the
+    /// folder a relative <see cref="TestConfiguration.DestinationFolder"/> is resolved against. Must
+    /// be an absolute path.
     /// </param>
     /// <returns>
     /// The configuration, or <c>null</c> if the file holds the JSON literal <c>null</c>.
@@ -70,10 +75,14 @@ public static class TestConfigurationLoader
             return null;
         }
 
-        if (string.IsNullOrEmpty(configuration.DestinationFolder))
-        {
-            configuration.DestinationFolder = defaultDestinationFolder;
-        }
+        // Resolved here rather than left to each caller, because a relative value would otherwise
+        // resolve against whatever the current directory happened to be: the project folder for the
+        // generator, which generate-test.sh cd's into, and the test host's folder for the audit.
+        // Those are different folders, and the audit would then report a project's whole tree as
+        // orphaned and an equal number of files as missing.
+        configuration.DestinationFolder = string.IsNullOrEmpty(configuration.DestinationFolder)
+            ? defaultDestinationFolder
+            : Path.GetFullPath(configuration.DestinationFolder, defaultDestinationFolder);
 
         return configuration;
     }
