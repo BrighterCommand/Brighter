@@ -190,7 +190,7 @@ public sealed class GeneratedTreeAudit
     }
 
     /// <summary>
-    /// Every C# file on disk under a <c>Generated/</c> directory, anywhere beneath
+    /// Every file on disk under a <c>Generated/</c> directory, anywhere beneath
     /// <paramref name="testsRoot"/>.
     /// </summary>
     /// <remarks>
@@ -206,7 +206,7 @@ public sealed class GeneratedTreeAudit
     }
 
     /// <summary>
-    /// Adds every C# file at or below <paramref name="directory"/> that sits under a
+    /// Adds every file at or below <paramref name="directory"/> that sits under a
     /// <c>Generated/</c> directory, descending past build output rather than into it.
     /// </summary>
     /// <remarks>
@@ -234,7 +234,11 @@ public sealed class GeneratedTreeAudit
             return;
         }
 
-        foreach (var file in directory.EnumerateFiles("*.cs"))
+        // Every file, not only *.cs: the expected set admits whatever extension a template
+        // produces, and the first *.json.liquid or *.sql.liquid template would otherwise be
+        // reported missing for ever - including immediately after a successful regeneration,
+        // with a message telling the reader to run the thing they just ran.
+        foreach (var file in directory.EnumerateFiles())
         {
             onDisk.Add(Path.GetFullPath(file.FullName));
         }

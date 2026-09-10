@@ -47,7 +47,7 @@ public abstract class BaseGenerator(ILogger logger)
     /// <param name="prefix">A relative path prefix appended to <see cref="TestConfiguration.DestinationFolder"/> for the output directory.</param>
     /// <param name="templateFolderName">The name of the subfolder within the Templates directory that contains the Liquid templates.</param>
     /// <param name="model">The model object whose properties are available to the templates during rendering.</param>
-    /// <param name="ignore">An optional predicate that, when returning <c>true</c> for a template file name, causes that template to be skipped.</param>
+    /// <param name="ignore">An optional predicate that, when returning <c>true</c> for a template's file name, causes that template to be skipped. The predicate receives the file name only, never the path.</param>
     protected virtual async Task GenerateAsync(TestConfiguration configuration, 
         string prefix, string templateFolderName,
         object model, Func<string, bool>? ignore = null)
@@ -85,7 +85,7 @@ public abstract class BaseGenerator(ILogger logger)
     /// <param name="configuration">The root test configuration containing the destination folder and shared settings.</param>
     /// <param name="prefix">A relative path prefix appended to <see cref="TestConfiguration.DestinationFolder"/> for the output directory.</param>
     /// <param name="templateFolderName">The name of the subfolder within the Templates directory that contains the Liquid templates.</param>
-    /// <param name="ignore">An optional predicate that, when returning <c>true</c> for a template file name, causes that template to be skipped.</param>
+    /// <param name="ignore">An optional predicate that, when returning <c>true</c> for a template's file name, causes that template to be skipped. The predicate receives the file name only, never the path.</param>
     /// <returns>The files the rendering would write, in template enumeration order.</returns>
     protected IReadOnlyList<PlannedFile> Plan(TestConfiguration configuration,
         string prefix, string templateFolderName,
@@ -103,13 +103,19 @@ public abstract class BaseGenerator(ILogger logger)
         var planned = new List<PlannedFile>();
         foreach (var fileName in fileNames)
         {
-            if (ignore(fileName))
+            var file = new FileInfo(fileName);
+
+            // The predicate is handed the file's name, not the absolute path Directory.GetFiles
+            // returns. Every predicate is a substring match, and the generator and the audit run
+            // from different bin directories, so passing the whole path would let a checkout
+            // located under a directory named for one of those substrings silently drop templates
+            // in one of the two - which is the drift the generated-tree audit exists to catch.
+            if (ignore(file.Name))
             {
-                logger.LogInformation("Skipping {FileName}", fileName);
+                logger.LogInformation("Skipping {FileName}", file.Name);
                 continue;
             }
-            
-            var file = new FileInfo(fileName);
+
             planned.Add(new PlannedFile(
                 file.FullName,
                 Path.Combine(destinationFolder, file.Name.Replace(".liquid", string.Empty))));

@@ -126,16 +126,18 @@ public class MessagingGatewayConfiguration
     /// <param name="prefix">The prefix the copy should carry.</param>
     /// <returns>A copy; this instance is unchanged.</returns>
     /// <remarks>
+    /// <para>
     /// Templates read <see cref="Prefix"/> to build a namespace suffix, and the value they need is
     /// not always the one the configuration file declares. Handing each rendering its own copy keeps
     /// that difference out of the caller's object, so planning what would be generated can be asked
     /// as a question rather than performed as an edit.
-    /// </remarks>
-    /// <remarks>
+    /// </para>
+    /// <para>
     /// The copy is a <see cref="object.MemberwiseClone"/>, which is a deep copy only because every
     /// property here is a string or a value type. A property holding a list or a dictionary would be
     /// shared with the caller's object, and the purity this method exists for would be lost without
     /// anything failing to compile.
+    /// </para>
     /// </remarks>
     internal MessagingGatewayConfiguration WithPrefix(string prefix)
     {
