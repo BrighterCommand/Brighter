@@ -33,8 +33,8 @@ public static class SampleDatabase
 {
     public const string Name = "BrighterSqlQueue";
 
-    /// <summary>The queue the transport reads and writes. BrighterSqlQueue.sql creates it, and
-    /// so does <c>EnsureQueueTable</c> at startup — the MSSQL gateway never will.</summary>
+    /// <summary>The queue the transport reads and writes, created by <c>EnsureQueueTable</c>
+    /// because the MSSQL gateway will not.</summary>
     public const string QueueTable = "QueueData";
 
     public const string OutboxTable = "Outbox";
@@ -48,11 +48,9 @@ public static class SampleDatabase
     /// in the environment to point it somewhere else — a container, say — without editing source.
     /// </summary>
     /// <remarks>
-    /// TrustServerCertificate is not optional here. Microsoft.Data.SqlClient defaults
-    /// <c>Encrypt</c> to <c>true</c> from 4.0 onward — this repository pins 7.0.2 — and a default
-    /// SQL Express instance presents a self-signed certificate, so without it login fails
-    /// certificate validation before it reaches the database. Every other MSSQL connection
-    /// string in this repository carries the same opt-out.
+    /// TrustServerCertificate is required against SQL Express, which presents a self-signed
+    /// certificate: Microsoft.Data.SqlClient defaults <c>Encrypt</c> to true from 4.0. See the
+    /// README before carrying it into production.
     /// </remarks>
     public const string DefaultConnectionString =
         @"Database=" + Name + @";Server=.\sqlexpress;Integrated Security=SSPI;TrustServerCertificate=True;";

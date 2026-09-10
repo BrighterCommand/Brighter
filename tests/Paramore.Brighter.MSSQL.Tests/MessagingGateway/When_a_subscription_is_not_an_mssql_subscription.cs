@@ -59,27 +59,42 @@ public class When_a_subscription_is_not_an_mssql_subscription
     [Fact]
     public void Should_throw_when_creating_a_sync_channel()
     {
-        var exception = Assert.Throws<ConfigurationException>(
-            () => ChannelFactory().CreateSyncChannel(PlainSubscription()));
+        // Arrange
+        var channelFactory = ChannelFactory();
 
+        // Act
+        var exception = Assert.Throws<ConfigurationException>(
+            () => channelFactory.CreateSyncChannel(PlainSubscription()));
+
+        // Assert
         Assert.Contains("MsSqlSubscription", exception.Message);
     }
 
     [Fact]
     public void Should_throw_when_creating_an_async_channel()
     {
-        var exception = Assert.Throws<ConfigurationException>(
-            () => ChannelFactory().CreateAsyncChannel(PlainSubscription()));
+        // Arrange
+        var channelFactory = ChannelFactory();
 
+        // Act
+        var exception = Assert.Throws<ConfigurationException>(
+            () => channelFactory.CreateAsyncChannel(PlainSubscription()));
+
+        // Assert
         Assert.Contains("MsSqlSubscription", exception.Message);
     }
 
     [Fact]
     public async Task Should_throw_when_creating_an_async_channel_asynchronously()
     {
-        var exception = await Assert.ThrowsAsync<ConfigurationException>(
-            () => ChannelFactory().CreateAsyncChannelAsync(PlainSubscription()));
+        // Arrange
+        var channelFactory = ChannelFactory();
 
+        // Act
+        var exception = await Assert.ThrowsAsync<ConfigurationException>(
+            () => channelFactory.CreateAsyncChannelAsync(PlainSubscription()));
+
+        // Assert
         Assert.Contains("MsSqlSubscription", exception.Message);
     }
 
@@ -88,8 +103,13 @@ public class When_a_subscription_is_not_an_mssql_subscription
     [Fact]
     public void Should_create_a_channel_for_an_mssql_subscription()
     {
-        var channel = ChannelFactory().CreateSyncChannel(MsSqlSubscription());
+        // Arrange
+        var channelFactory = ChannelFactory();
 
+        // Act
+        var channel = channelFactory.CreateSyncChannel(MsSqlSubscription());
+
+        // Assert
         Assert.NotNull(channel);
         Assert.Equal(new ChannelName("test.topic"), channel.Name);
     }

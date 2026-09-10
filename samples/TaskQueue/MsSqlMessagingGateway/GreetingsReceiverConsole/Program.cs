@@ -24,7 +24,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Events;
 using Events.Ports.Commands;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -77,15 +76,12 @@ builder.Services.AddConsumers(options =>
 // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
 // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
 .UseScheduler(new InMemorySchedulerFactory())
-// Registered BEFORE AddHostedService<ServiceActivatorHostedService>() below, and that order is
-// load-bearing: hosted services start in registration order, so reversing these two starts the
-// pump against an InboxMessages table that does not exist yet.
+// Before AddHostedService<ServiceActivatorHostedService>(): hosted services start in
+// registration order, so reversing these two starts the pump against a missing Inbox table.
 .UseBoxProvisioning(options => options.AddMsSqlInbox(configuration))
 .AutoFromAssemblies()
-// Runs the consumer validation specs at startup, including PumpHandlerMatch — the rule the
-// subscription comment above cites. Without this the specs are registered and never executed,
-// and a Proactor/sync mismatch is a runtime pump failure rather than a named startup error.
-// ValidatePipelines extends IBrighterBuilder, so it chains here rather than off IServiceCollection.
+// Runs the consumer validation specs at startup; without it a Proactor/sync mismatch is a
+// runtime pump failure rather than a named startup error.
 .ValidatePipelines();
 
 builder.Services.AddHostedService<ServiceActivatorHostedService>();

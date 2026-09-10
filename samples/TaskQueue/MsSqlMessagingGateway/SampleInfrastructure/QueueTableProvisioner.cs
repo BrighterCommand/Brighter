@@ -22,56 +22,55 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using System.Text.RegularExpressions;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.MessagingGateway.MsSql;
 
 namespace SampleInfrastructure;
 
 /// <summary>
-/// Creates the queue table and its index if either is missing.
+/// Creates the queue table and its topic index if either is missing.
 /// </summary>
 /// <remarks>
-/// Box Provisioning covers the Outbox and the Inbox, but nothing covers the queue: the MSSQL
-/// gateway has no provisioning path at all, so <c>OnMissingChannel.Create</c> is accepted on a
-/// publication or subscription and then never acted on. Without this, the first thing any of
-/// these applications does is fail with <c>Invalid object name 'QueueData'</c> from inside the
-/// pump.
-///
-/// The DDL is Brighter's own, from <see cref="MsSqlQueueBuilder"/> — which is public precisely
-/// because callers have to run it themselves.
+/// Box Provisioning covers the Outbox and the Inbox; nothing covers the queue, because the MSSQL
+/// gateway has no provisioning path — <c>OnMissingChannel.Create</c> is accepted and then never
+/// acted on. The DDL is Brighter's own, from <see cref="MsSqlQueueBuilder"/>, which is public so
+/// that callers can run it.
 /// </remarks>
 public static class QueueTableProvisioner
 {
-    // 2714 = "There is already an object named '...'", 1913 = the index equivalent. All four
-    // applications run this against one shared database, so two starting together can both pass
-    // the IF NOT EXISTS and race to CREATE. Box Provisioning avoids this with an advisory lock;
-    // there is no equivalent for the queue, so the loser is caught and treated as success.
-    private const int ObjectAlreadyExists = 2714;
-    private const int IndexAlreadyExists = 1913;
+    // SQL Server: "there is already an object named ...", and its index equivalent.
+    private const int OBJECT_ALREADY_EXISTS = 2714;
+    private const int INDEX_ALREADY_EXISTS = 1913;
+
+    private static readonly Regex s_identifier = new("^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.Compiled);
 
     /// <summary>
-    /// Creates the queue table and its topic index if they are absent, and does nothing if they
-    /// are present. Safe to run on every start, and safe to run concurrently.
+    /// Creates the queue table and its topic index if they are absent. Safe to run on every start,
+    /// and safe to run concurrently.
     /// </summary>
+    /// <param name="connectionString">The database holding the queue table.</param>
+    /// <param name="queueTableName">The queue table, which must be a plain SQL identifier.</param>
     public static void EnsureQueueTable(string connectionString, string queueTableName)
     {
+        // GetDDL formats the name into CREATE TABLE [{0}], where a ']' would close the bracket.
+        if (!s_identifier.IsMatch(queueTableName))
+            throw new ArgumentException($"'{queueTableName}' is not a plain SQL identifier", nameof(queueTableName));
+
         using var connection = new SqlConnection(connectionString);
         connection.Open();
 
-        // One batch rather than a read followed by a write, and each object guarded separately
-        // so a table that exists without its index still gets one. The guards test
-        // SCHEMA_NAME() rather than a literal 'dbo': MsSqlQueueBuilder.GetDDL emits an
-        // unqualified CREATE TABLE, which lands in the caller's default schema, so a login whose
-        // default is not dbo would otherwise never match its own table and would re-attempt the
-        // create on every start. (MsSqlQueueBuilder.GetExistsQuery defaults to dbo for the same
-        // reason it cannot know better.)
-        //
-        // The catalog lookups take the names as PARAMETERS. Here they come from a constant, so
-        // there is nothing to inject — but a sample is a copy-paste source, and a reader who
-        // wires the table name to configuration would otherwise inherit an injection point in
-        // code holding DDL rights. Only the DDL itself interpolates, because an object name
-        // cannot be a parameter, and that DDL is Brighter's own. MsSqlBoxMigrationRunner:244
-        // parameterizes the same kind of catalog check.
+        CreateTable(connection, queueTableName);
+        CreateIndex(connection, queueTableName);
+    }
+
+    // Two commands rather than one batch: a swallowed error abandons the rest of its batch, so a
+    // table create that loses the race would take the index statement down with it.
+    private static void CreateTable(SqlConnection connection, string queueTableName)
+    {
+        // SCHEMA_NAME() rather than a literal 'dbo': GetDDL emits an unqualified CREATE TABLE, so
+        // a login whose default schema is not dbo would never match its own table.
         var sql = $"""
                    IF NOT EXISTS (SELECT 1 FROM sys.tables t
                                   INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
@@ -79,41 +78,35 @@ public static class QueueTableProvisioner
                    BEGIN
                        {MsSqlQueueBuilder.GetDDL(queueTableName)}
                    END;
-
-                   IF NOT EXISTS (SELECT 1 FROM sys.indexes
-                                  WHERE name = @indexName
-                                    AND object_id = OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + '.' + QUOTENAME(@queueTable)))
-                   BEGIN
-                       {MsSqlQueueBuilder.GetIndexDDL(queueTableName)}
-                   END;
                    """;
 
+        // The lookup is parameterized although the name here is a constant, because a sample is a
+        // copy-paste source and the reader who binds it to configuration inherits this code.
+        Execute(connection, sql, queueTableName, OBJECT_ALREADY_EXISTS);
+    }
+
+    // Unguarded, because the only way to guard it is to duplicate the index name that
+    // MsSqlQueueBuilder owns — and a guard that silently stops matching leaves a permanently
+    // failing statement looking like success.
+    private static void CreateIndex(SqlConnection connection, string queueTableName) =>
+        Execute(connection, MsSqlQueueBuilder.GetIndexDDL(queueTableName), queueTableName, INDEX_ALREADY_EXISTS);
+
+    // All four applications share one database, so two starting together can both pass a guard and
+    // race to create. Box Provisioning takes an advisory lock; there is no equivalent for the
+    // queue, so the loser treats "already exists" as the outcome it wanted.
+    private static void Execute(SqlConnection connection, string sql, string queueTableName, int alreadyExists)
+    {
         try
         {
             using var command = connection.CreateCommand();
             command.CommandText = sql;
-            command.Parameters.AddWithValue("@queueTable", queueTableName);
-            command.Parameters.AddWithValue("@indexName", IndexName(queueTableName));
+            if (sql.Contains("@queueTable"))
+                command.Parameters.AddWithValue("@queueTable", queueTableName);
+
             command.ExecuteNonQuery();
         }
-        catch (SqlException ex) when (ex.Number is ObjectAlreadyExists or IndexAlreadyExists)
+        catch (SqlException ex) when (ex.Number == alreadyExists)
         {
-            // Another instance won the race and created it between our check and our create.
-            // That is the outcome we wanted anyway.
         }
     }
-
-    /// <summary>
-    /// The name <see cref="MsSqlQueueBuilder.GetIndexDDL"/> gives the topic index.
-    /// </summary>
-    /// <remarks>
-    /// This duplicates a convention that lives in Brighter — <c>QUEUE_TABLE_INDEX_DDL</c> in
-    /// <c>MsSqlQueueBuilder</c>, which formats <c>IX_{0}_Topic</c> — and the builder exposes no
-    /// <c>GetIndexName</c> to ask instead. That duplication fails SILENTLY if the convention ever
-    /// changes: the guard stops matching, every start re-attempts the CREATE INDEX, it fails with
-    /// 1913, the catch above swallows it, and a permanently failing statement looks exactly like
-    /// success. It is here as a named method rather than inline so there is one place to change,
-    /// and so the dependency on Brighter's naming is stated rather than buried in a string.
-    /// </remarks>
-    private static string IndexName(string queueTableName) => $"IX_{queueTableName}_Topic";
 }

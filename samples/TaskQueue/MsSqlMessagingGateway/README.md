@@ -28,9 +28,16 @@ accepted on a publication or subscription and then never acted on, unlike the Po
 `QueueTableProvisioner` is this sample doing that.
 
 It lives in **`SampleInfrastructure`**, alongside `SampleDatabase` — the connection string and the
-table names. `Events` stays what its name says: the commands, their mappers and the handler, with
+table names. `Events` keeps the commands, their mappers and `CompetingConsumerCommandHandler`, with
 no database dependency. That is the split the sample is trying to teach, and it is also practical,
 because `Events` is the assembly every application hands to `AutoFromAssemblies`.
+
+**`GreetingEventHandler` is the exception, and it sits in `GreetingsReceiverConsole` rather than in
+`Events`.** It carries `[UseInbox]`, and every application here scans `Events`, so in the shared
+project all four would register a handler whose pipeline needs an inbox that only one of them
+configures. Nothing fails at startup if you move it back — pipelines are built lazily and no other
+application sends a `GreetingEvent` — so the hazard is latent rather than fatal. It lives with the
+process that owns the policy because that is where the policy is true.
 
 Because both the sender and the receiver provision what they need, **either can be started
 first** against a database with no tables in it.
@@ -52,13 +59,23 @@ certificate. Against a server with a certificate your clients trust, drop them.
 
 ## The applications
 
-**Start with the greetings pair** — it is the path that round-trips end to end. The competing pair
-demonstrates the subscription and provisioning fixes, but does not yet deliver its messages.
-
 | Run | With | What you should see |
 |---|---|---|
 | `GreetingsSender` | `GreetingsReceiverConsole` | the sender provisions the Outbox, deposits and clears; the receiver prints the greeting once, and prints nothing on a redelivery of the same message id |
-| `CompetingSender <count>` | two or more `CompetingReceiverConsole` | intended to show competing consumers dividing a queue — **currently does not round-trip, see [#4338](https://github.com/BrighterCommand/Brighter/issues/4338)** |
+| `CompetingSender <count>` | two or more `CompetingReceiverConsole` | the count divided between the consumers — five messages across two receivers came out 2 and 3 |
+
+### `Post` joins your transaction when the broker is your database
+
+`CompetingSender` sends inside a `TransactionScope`, and **it completes that scope**. It used to
+abandon it, on the stated grounds that a message is queued whether the transaction commits or
+aborts. That is true of a broker outside your database and false here: `Post` opens a
+`SqlConnection`, `Enlist` defaults to `true`, and the insert into the queue table joins the ambient
+transaction — so abandoning the scope rolled the message back with it. Measured: three sends, no
+errors, **0 rows** without `Complete()` and **3 rows** with it.
+
+This is the argument for the Outbox rather than a defect. `GreetingsSender` shows the answer:
+`DepositPost` writes to the Outbox inside your transaction, and `ClearOutbox` dispatches once it
+has committed.
 
 ### Idempotence
 
@@ -81,6 +98,12 @@ warn: Paramore.Brighter.Inbox.Handlers.UseInboxHandler
 fails, so a plain `Subscription<T>` compiles and then dies as the Dispatcher builds its channels.
 Both receivers call `.ValidatePipelines()`, which surfaces the related pump/handler mismatch as a
 startup error rather than a per-message failure.
+
+### A note on log levels
+
+`MsSqlMessageQueue` logs its connection string at `Debug`. It does not reach the console in these
+applications as they stand, but the connection string above carries an `sa` password — so raise
+the log level on a shared machine only with that in mind.
 
 ## Further reading
 

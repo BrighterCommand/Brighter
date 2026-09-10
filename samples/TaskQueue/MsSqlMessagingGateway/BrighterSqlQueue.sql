@@ -1,13 +1,6 @@
--- Creates the database these four sample applications share.
---
--- The TABLES are not here. The Outbox and Inbox are created at startup by Box Provisioning,
--- and the queue table by QueueTableProvisioner.EnsureQueueTable, which runs Brighter's own
--- MsSqlQueueBuilder DDL. A database cannot create itself, which is why this file still exists.
---
--- Runs on SQL Server anywhere -- Windows, Linux, or a container. The previous version of this
--- script was a 2018 SQLEXPRESS dump: UTF-16, and with the data files pinned to
--- C:\Program Files\Microsoft SQL Server\MSSQL12.SQLEXPRESS\..., so it could not run off Windows.
--- Letting SQL Server choose the file locations is what makes it portable.
+-- Creates the database these four sample applications share; the tables create themselves at
+-- startup, so they are not here. Letting SQL Server choose the file locations is what lets this
+-- run on Windows, Linux or a container.
 --
 --   sqlcmd -S <server> -U sa -P <password> -C -i BrighterSqlQueue.sql
 --
@@ -17,7 +10,4 @@ IF DB_ID('BrighterSqlQueue') IS NULL
 BEGIN
     CREATE DATABASE [BrighterSqlQueue];
 END
-GO
-
-USE [BrighterSqlQueue];
 GO

@@ -2,7 +2,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
-using Events;
 using Events.Ports.Commands;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -76,7 +75,15 @@ internal sealed class RunCommandProcessor : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        using (new TransactionScope(TransactionScopeOption.RequiresNew,
+        // The scope IS completed, and the comment that used to say otherwise was wrong for this
+        // transport. Post opens a SqlConnection, Enlist defaults to true, so the INSERT into the
+        // queue table joins the ambient transaction: abandoning the scope rolls the message back
+        // with it. Measured — three Posts, no errors, and QueueData held 0 rows without
+        // Complete() and 3 with it. That is not a Brighter defect; it is what a database broker
+        // means. Post is only decoupled from your transaction when the broker is not your
+        // database. See GreetingsSender for the answer: DepositPost writes to the Outbox inside
+        // your transaction and ClearOutbox dispatches after it commits.
+        using (var scope = new TransactionScope(TransactionScopeOption.RequiresNew,
             new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
             TransactionScopeAsyncFlowOption.Enabled))
         {
@@ -86,8 +93,8 @@ internal sealed class RunCommandProcessor : IHostedService
             {
                 _commandProcessor.Post(new CompetingConsumerCommand(sequenceNumber++));
             }
-            // We do NOT complete the transaction here to show that a message is
-            // always queued, whether the transaction commits or aborts!
+
+            scope.Complete();
         }
 
         await Task.CompletedTask;
