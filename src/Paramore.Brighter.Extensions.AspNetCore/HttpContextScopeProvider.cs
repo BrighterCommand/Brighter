@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Extensions.AspNetCore
     /// <remarks>
     /// Registered by <see cref="BrighterAspNetCoreExtensions.AddBrighterRequestScope"/>; takes
     /// <see cref="IHttpContextAccessor"/> as a constructor dependency, not a static, so it can be
-    /// substituted in a test. No behaviour yet - lands with the T6.3 implementation.
+    /// substituted in a test.
     /// </remarks>
     public sealed class HttpContextScopeProvider : IAmAScopeProvider
     {
@@ -49,6 +49,20 @@ namespace Paramore.Brighter.Extensions.AspNetCore
         }
 
         /// <inheritdoc />
-        public IAmAScope? GetAmbient(ScopeAffinity affinity) => null;
+        public IAmAScope? GetAmbient(ScopeAffinity affinity)
+        {
+            if (affinity != ScopeAffinity.JoinAmbient)
+                return null;
+
+            var context = _accessor.HttpContext;
+            if (context == null)
+                return null;
+
+            var services = context.RequestServices;
+            if (services == null)
+                return null;
+
+            return new HttpRequestScope(services);
+        }
     }
 }

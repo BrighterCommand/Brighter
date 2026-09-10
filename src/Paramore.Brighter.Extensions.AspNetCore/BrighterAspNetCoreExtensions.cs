@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Extensions.AspNetCore
 {
@@ -38,7 +39,8 @@ namespace Paramore.Brighter.Extensions.AspNetCore
         /// ambient scope for an opted-in <c>Scoped</c> pipeline.
         /// </summary>
         /// <remarks>
-        /// No behaviour yet - registration lands with the T6.3 implementation.
+        /// Reads nothing from <paramref name="services"/> and removes nothing; it never throws on
+        /// ordering relative to <c>AddBrighter</c>/<c>AddConsumers</c> and never alters a lifetime.
         /// </remarks>
         /// <param name="services">The service collection to register against.</param>
         /// <param name="affinity">The affinity this opt-in gesture selects. Defaults to
@@ -49,6 +51,11 @@ namespace Paramore.Brighter.Extensions.AspNetCore
             ScopeAffinity affinity = ScopeAffinity.JoinAmbient)
         {
             ArgumentNullException.ThrowIfNull(services);
+
+            services.AddHttpContextAccessor();
+            services.AddSingleton<IAmAScopeProvider, HttpContextScopeProvider>();
+            services.AddSingleton(new ScopeAffinityOverride(affinity));
+
             return services;
         }
     }
