@@ -92,6 +92,7 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
         if (configuration.Outbox != null)
         {
             suites.AddRange(SuitesFor(
+                configuration,
                 configuration.Outbox,
                 folderName: configuration.Outbox.Prefix,
                 modelPrefix: configuration.Outbox.Prefix));
@@ -100,7 +101,7 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
         {
             foreach (var (key, outboxConfiguration) in configuration.Outboxes)
             {
-                logger.LogInformation("Planning outbox test for {OutboxName}", key);
+                logger.LogInformation("Describing outbox test suites for {OutboxName}", key);
                 var folderName = string.IsNullOrEmpty(outboxConfiguration.Prefix)
                     ? key
                     : outboxConfiguration.Prefix;
@@ -108,6 +109,7 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
                 // Templates build a namespace suffix from the model's prefix, which is dot-qualified
                 // where the destination folder name is not.
                 suites.AddRange(SuitesFor(
+                    configuration,
                     outboxConfiguration,
                     folderName: folderName,
                     modelPrefix: $".{folderName}"));
@@ -124,19 +126,22 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
     /// <summary>
     /// The three suites - Sync, Async and Causation - rendered for a single outbox.
     /// </summary>
+    /// <param name="configuration">The root configuration the model inherits unset values from.</param>
     /// <param name="outboxConfiguration">The outbox whose suites are described.</param>
     /// <param name="folderName">The destination folder name for this outbox.</param>
     /// <param name="modelPrefix">The prefix the templates should read from the model.</param>
     /// <returns>The suites for the outbox.</returns>
     /// <remarks>
-    /// All three suites share one copy of the configuration, carrying the prefix the templates need.
-    /// The caller's own configuration object is left alone, so describing the work does not perform
-    /// part of it.
+    /// All three suites share one copy of the configuration, carrying the prefix the templates need
+    /// and the values inherited from the root. The caller's own configuration object is left alone,
+    /// so describing the work does not perform part of it - and because the inheritance happens
+    /// here, the model a plan reasons about is the model a generation renders.
     /// </remarks>
     private static IEnumerable<GenerationSuite> SuitesFor(
+        TestConfiguration configuration,
         OutboxConfiguration outboxConfiguration, string folderName, string modelPrefix)
     {
-        var model = outboxConfiguration.WithPrefix(modelPrefix);
+        var model = outboxConfiguration.WithPrefix(modelPrefix).WithDefaultsFrom(configuration);
 
         foreach (var variant in new[] { "Sync", "Async", "Causation" })
         {
@@ -168,33 +173,4 @@ public class OutboxGenerator(ILogger<OutboxGenerator> logger) : BaseGenerator(lo
         return false;
     }
 
-    /// <inheritdoc />
-    /// <remarks>
-    /// Applies default values from the root <paramref name="configuration"/> to the
-    /// <see cref="OutboxConfiguration"/> model when its own values are not set,
-    /// including <see cref="OutboxConfiguration.MessageBuilder"/> and <see cref="OutboxConfiguration.Namespace"/>.
-    /// </remarks>
-    protected override Task GenerateAsync(
-        TestConfiguration configuration,
-        string prefix,
-        string templateFolderName,
-        object model,
-        Func<string, bool>? ignore = null
-    )
-    {
-        if (model is OutboxConfiguration outboxConfiguration)
-        {
-            if (string.IsNullOrEmpty(outboxConfiguration.MessageBuilder))
-            {
-                outboxConfiguration.MessageBuilder = configuration.MessageBuilder;
-            }
-
-            if (string.IsNullOrEmpty(outboxConfiguration.Namespace))
-            {
-                outboxConfiguration.Namespace = configuration.Namespace;
-            }
-        }
-
-        return base.GenerateAsync(configuration, prefix, templateFolderName, model, ignore);
-    }
 }

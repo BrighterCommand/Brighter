@@ -94,6 +94,7 @@ public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger
         if (configuration.MessagingGateway != null)
         {
             suites.AddRange(SuitesFor(
+                configuration,
                 configuration.MessagingGateway,
                 folderName: configuration.MessagingGateway.Prefix,
                 modelPrefix: configuration.MessagingGateway.Prefix));
@@ -102,7 +103,7 @@ public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger
         {
             foreach (var (key, messagingGatewayConfiguration) in configuration.MessagingGateways)
             {
-                logger.LogInformation("Planning messaging gateway test for {GatewayName}", key);
+                logger.LogInformation("Describing messaging gateway test suites for {GatewayName}", key);
                 var folderName = string.IsNullOrEmpty(messagingGatewayConfiguration.Prefix)
                     ? key
                     : messagingGatewayConfiguration.Prefix;
@@ -110,6 +111,7 @@ public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger
                 // Templates build a namespace suffix from the model's prefix, which is dot-qualified
                 // where the destination folder name is not.
                 suites.AddRange(SuitesFor(
+                    configuration,
                     messagingGatewayConfiguration,
                     folderName: folderName,
                     modelPrefix: $".{folderName}"));
@@ -126,19 +128,22 @@ public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger
     /// <summary>
     /// The two suites - Reactor and Proactor - rendered for a single messaging gateway.
     /// </summary>
+    /// <param name="configuration">The root configuration the model inherits unset values from.</param>
     /// <param name="messagingGatewayConfiguration">The gateway whose suites are described.</param>
     /// <param name="folderName">The destination folder name for this gateway.</param>
     /// <param name="modelPrefix">The prefix the templates should read from the model.</param>
     /// <returns>The suites for the gateway.</returns>
     /// <remarks>
-    /// Both suites share one copy of the configuration, carrying the prefix the templates need. The
-    /// caller's own configuration object is left alone, so describing the work does not perform part
-    /// of it.
+    /// Both suites share one copy of the configuration, carrying the prefix the templates need and
+    /// the values inherited from the root. The caller's own configuration object is left alone, so
+    /// describing the work does not perform part of it - and because the inheritance happens here,
+    /// the model a plan reasons about is the model a generation renders.
     /// </remarks>
     private static IEnumerable<GenerationSuite> SuitesFor(
+        TestConfiguration configuration,
         MessagingGatewayConfiguration messagingGatewayConfiguration, string folderName, string modelPrefix)
     {
-        var model = messagingGatewayConfiguration.WithPrefix(modelPrefix);
+        var model = messagingGatewayConfiguration.WithPrefix(modelPrefix).WithDefaultsFrom(configuration);
 
         foreach (var variant in new[] { "Reactor", "Proactor" })
         {
@@ -204,41 +209,5 @@ public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger
         }
 
         return false;
-    }
-
-    /// <inheritdoc />
-    /// <remarks>
-    /// Applies default values from the root <paramref name="configuration"/> to the
-    /// <see cref="MessagingGatewayConfiguration"/> model when its own values are not set,
-    /// including <see cref="MessagingGatewayConfiguration.MessageBuilder"/>,
-    /// <see cref="MessagingGatewayConfiguration.Namespace"/>, and <see cref="MessagingGatewayConfiguration.MessageAssertion"/>.
-    /// </remarks>
-    protected override Task GenerateAsync(
-        TestConfiguration configuration,
-        string prefix,
-        string templateFolderName,
-        object model,
-        Func<string, bool>? ignore = null
-    )
-    {
-        if (model is MessagingGatewayConfiguration messagingGatewayConfiguration)
-        {
-            if (string.IsNullOrEmpty(messagingGatewayConfiguration.MessageBuilder))
-            {
-                messagingGatewayConfiguration.MessageBuilder = configuration.MessageBuilder;
-            }
-
-            if (string.IsNullOrEmpty(messagingGatewayConfiguration.Namespace))
-            {
-                messagingGatewayConfiguration.Namespace = configuration.Namespace;
-            }
-
-            if (string.IsNullOrEmpty(messagingGatewayConfiguration.MessageAssertion))
-            {
-                messagingGatewayConfiguration.MessageAssertion = configuration.MessageAssertion;
-            }
-        }
-
-        return base.GenerateAsync(configuration, prefix, templateFolderName, model, ignore);
     }
 }

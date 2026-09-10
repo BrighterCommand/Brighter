@@ -131,10 +131,50 @@ public class MessagingGatewayConfiguration
     /// that difference out of the caller's object, so planning what would be generated can be asked
     /// as a question rather than performed as an edit.
     /// </remarks>
+    /// <remarks>
+    /// The copy is a <see cref="object.MemberwiseClone"/>, which is a deep copy only because every
+    /// property here is a string or a value type. A property holding a list or a dictionary would be
+    /// shared with the caller's object, and the purity this method exists for would be lost without
+    /// anything failing to compile.
+    /// </remarks>
     internal MessagingGatewayConfiguration WithPrefix(string prefix)
     {
         var copy = (MessagingGatewayConfiguration)MemberwiseClone();
         copy.Prefix = prefix;
+        return copy;
+    }
+
+    /// <summary>
+    /// Returns a copy of this configuration with values it does not set taken from the root
+    /// <paramref name="configuration"/>.
+    /// </summary>
+    /// <param name="configuration">The root configuration to inherit unset values from.</param>
+    /// <returns>A copy; this instance is unchanged.</returns>
+    /// <remarks>
+    /// Applied where the model a rendering reads is built, so that describing the work and
+    /// performing it see the same model. Applying it on only one of those paths is how the
+    /// generator's expected set and its output would come to disagree - which is the drift the
+    /// generated-tree audit exists to catch, and so the last place it should be reintroduced.
+    /// </remarks>
+    internal MessagingGatewayConfiguration WithDefaultsFrom(TestConfiguration configuration)
+    {
+        var copy = (MessagingGatewayConfiguration)MemberwiseClone();
+
+        if (string.IsNullOrEmpty(copy.MessageBuilder))
+        {
+            copy.MessageBuilder = configuration.MessageBuilder;
+        }
+
+        if (string.IsNullOrEmpty(copy.Namespace))
+        {
+            copy.Namespace = configuration.Namespace;
+        }
+
+        if (string.IsNullOrEmpty(copy.MessageAssertion))
+        {
+            copy.MessageAssertion = configuration.MessageAssertion;
+        }
+
         return copy;
     }
 }
