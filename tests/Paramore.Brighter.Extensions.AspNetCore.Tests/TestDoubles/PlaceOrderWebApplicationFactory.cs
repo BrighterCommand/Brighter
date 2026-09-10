@@ -73,13 +73,17 @@ public sealed class PlaceOrderWebApplicationFactory : WebApplicationFactory<Plac
         {
             services.AddControllers().AddApplicationPart(typeof(PlaceOrderController).Assembly);
             services.AddScoped<IOrderDbContext, OrderDbContext>();
+            services.AddScoped<IMarker, Marker>();
             services.AddSingleton<OrderDbContextRecorder>();
             services.AddSingleton<PostedOrderMapperRecorder>();
+            services.AddSingleton<SharedDependencyRecorder>();
 
             var routingKey = new RoutingKey("posted-order");
+            var sharedMarkerRoutingKey = new RoutingKey("shared-marker");
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = routingKey, RequestType = typeof(PostedOrderCommand) }) }
+                { routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = routingKey, RequestType = typeof(PostedOrderCommand) }) },
+                { sharedMarkerRoutingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = sharedMarkerRoutingKey, RequestType = typeof(SharedMarkerPostedCommand) }) }
             });
 
             services.AddBrighterRequestScope();
