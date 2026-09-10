@@ -66,80 +66,128 @@ public class MessagingGatewayGenerator(
         // returning null: see ConformanceLedger.LoadFrom.
         _ledger = ledger ?? LoadLedgerFromFileSystem();
 
+        foreach (var suite in Suites(configuration))
+        {
+            await GenerateAsync(
+                configuration,
+                suite.Prefix,
+                suite.TemplateFolderName,
+                suite.Model,
+                suite.Ignore,
+                suite.PrepareModel
+            );
+        }
+    }
+
+    /// <summary>
+    /// Computes every file <see cref="GenerateAsync(TestConfiguration)"/> would write for
+    /// <paramref name="configuration"/>, without writing any of them.
+    /// </summary>
+    /// <param name="configuration">The root test configuration containing messaging gateway settings and destination folder.</param>
+    /// <returns>The messaging gateway test files this configuration owns.</returns>
+    public IReadOnlyList<PlannedFile> Plan(TestConfiguration configuration)
+    {
+        var planned = new List<PlannedFile>();
+        foreach (var suite in Suites(configuration))
+        {
+            planned.AddRange(Plan(configuration, suite.Prefix, suite.TemplateFolderName, suite.Ignore));
+        }
+
+        return planned;
+    }
+
+    /// <summary>
+    /// Describes every rendering this generator performs for <paramref name="configuration"/>:
+    /// the Reactor, Proactor and Shared suites of each configured gateway.
+    /// </summary>
+    /// <remarks>
+    /// Both <see cref="GenerateAsync(TestConfiguration)"/> and <see cref="Plan(TestConfiguration)"/>
+    /// walk this list, so the files the generator writes and the files it claims to own are one
+    /// description rather than two that can drift apart.
+    /// </remarks>
+    private IReadOnlyList<GenerationSuite> Suites(TestConfiguration configuration)
+    {
+        var suites = new List<GenerationSuite>();
+
         if (configuration.MessagingGateway != null)
         {
-            var prefix = configuration.MessagingGateway.Prefix;
-            var prepareModel = (Action<string, object>)SetCanonicalSkip;
-
-            await GenerateAsync(
+            suites.AddRange(SuitesFor(
                 configuration,
-                Path.Combine("MessagingGateway", prefix, "Generated", "Reactor"),
-                Path.Combine("MessagingGateway", "Reactor"),
                 configuration.MessagingGateway,
-                filename => SkipTest(configuration.MessagingGateway, filename),
-                prepareModel
-            );
-
-            await GenerateAsync(
-                configuration,
-                Path.Combine("MessagingGateway", prefix, "Generated", "Proactor"),
-                Path.Combine("MessagingGateway", "Proactor"),
-                configuration.MessagingGateway,
-                filename => SkipTest(configuration.MessagingGateway, filename),
-                prepareModel
-            );
-
-            await GenerateAsync(
-                configuration,
-                Path.Combine("MessagingGateway", prefix, "Generated"),
-                Path.Combine("MessagingGateway", "Shared"),
-                configuration.MessagingGateway
-            );
+                folderName: configuration.MessagingGateway.Prefix,
+                modelPrefix: configuration.MessagingGateway.Prefix));
         }
         else if (configuration.MessagingGateways != null)
         {
             foreach (var (key, messagingGatewayConfiguration) in configuration.MessagingGateways)
             {
-                logger.LogInformation("Generating messaging gateway test for {GatewayName}", key);
-                var prefix = messagingGatewayConfiguration.Prefix;
-                if (string.IsNullOrEmpty(prefix))
-                {
-                    prefix = key;
-                }
+                logger.LogInformation("Describing messaging gateway test suites for {GatewayName}", key);
+                var folderName = string.IsNullOrEmpty(messagingGatewayConfiguration.Prefix)
+                    ? key
+                    : messagingGatewayConfiguration.Prefix;
 
-                messagingGatewayConfiguration.Prefix = $".{prefix}";
-                var prepareModel = (Action<string, object>)SetCanonicalSkip;
-
-                await GenerateAsync(
+                // Templates build a namespace suffix from the model's prefix, which is dot-qualified
+                // where the destination folder name is not.
+                suites.AddRange(SuitesFor(
                     configuration,
-                    Path.Combine("MessagingGateway", prefix, "Generated", "Reactor"),
-                    Path.Combine("MessagingGateway", "Reactor"),
                     messagingGatewayConfiguration,
-                    filename => SkipTest(messagingGatewayConfiguration, filename),
-                    prepareModel
-                );
-
-                await GenerateAsync(
-                    configuration,
-                    Path.Combine("MessagingGateway", prefix, "Generated", "Proactor"),
-                    Path.Combine("MessagingGateway", "Proactor"),
-                    messagingGatewayConfiguration,
-                    filename => SkipTest(messagingGatewayConfiguration, filename),
-                    prepareModel
-                );
-
-                await GenerateAsync(
-                    configuration,
-                    Path.Combine("MessagingGateway", prefix, "Generated"),
-                    Path.Combine("MessagingGateway", "Shared"),
-                    messagingGatewayConfiguration
-                );
+                    folderName: folderName,
+                    modelPrefix: $".{folderName}"));
             }
         }
         else
         {
             logger.LogInformation("No messaging gateway configured");
         }
+
+        return suites;
+    }
+
+    /// <summary>
+    /// The three suites - Reactor, Proactor and Shared - rendered for a single messaging gateway.
+    /// </summary>
+    /// <param name="configuration">The root configuration the model inherits unset values from.</param>
+    /// <param name="messagingGatewayConfiguration">The gateway whose suites are described.</param>
+    /// <param name="folderName">The destination folder name for this gateway.</param>
+    /// <param name="modelPrefix">The prefix the templates should read from the model.</param>
+    /// <returns>The suites for the gateway.</returns>
+    /// <remarks>
+    /// <para>
+    /// All three suites share one copy of the configuration, carrying the prefix the templates need
+    /// and the values inherited from the root. The caller's own configuration object is left alone,
+    /// so describing the work does not perform part of it - and because the inheritance happens
+    /// here, the model a plan reasons about is the model a generation renders.
+    /// </para>
+    /// <para>
+    /// The Shared suite renders support types the Reactor and Proactor tests both reference, so it
+    /// lands in the gateway's <c>Generated</c> folder rather than a variant folder beneath it, and
+    /// takes neither the capability-flag <c>ignore</c> nor the ledger's per-template
+    /// <c>prepareModel</c>: its templates are not conformance behaviours, so there is no capability
+    /// that could withdraw one and no ledger cell that could defer one.
+    /// </para>
+    /// </remarks>
+    private IEnumerable<GenerationSuite> SuitesFor(
+        TestConfiguration configuration,
+        MessagingGatewayConfiguration messagingGatewayConfiguration, string folderName, string modelPrefix)
+    {
+        var model = messagingGatewayConfiguration.WithPrefix(modelPrefix).WithDefaultsFrom(configuration);
+
+        foreach (var variant in new[] { "Reactor", "Proactor" })
+        {
+            yield return new GenerationSuite(
+                Path.Combine("MessagingGateway", folderName, "Generated", variant),
+                Path.Combine("MessagingGateway", variant),
+                model,
+                filename => SkipTest(model, filename),
+                SetCanonicalSkip
+            );
+        }
+
+        yield return new GenerationSuite(
+            Path.Combine("MessagingGateway", folderName, "Generated"),
+            Path.Combine("MessagingGateway", "Shared"),
+            model
+        );
     }
 
     /// <summary>
@@ -186,42 +234,6 @@ public class MessagingGatewayGenerator(
         }
 
         return false;
-    }
-
-    /// <inheritdoc />
-    /// <remarks>
-    /// Applies default values from the root <paramref name="configuration"/> to the
-    /// <see cref="MessagingGatewayConfiguration"/> model when its own values are not set,
-    /// including <see cref="MessagingGatewayConfiguration.MessageBuilder"/>,
-    /// <see cref="MessagingGatewayConfiguration.Namespace"/>, and <see cref="MessagingGatewayConfiguration.MessageAssertion"/>.
-    /// </remarks>
-    protected override Task GenerateAsync(
-        TestConfiguration configuration,
-        string prefix,
-        string templateFolderName,
-        object model,
-        Func<string, bool>? ignore = null,
-        Action<string, object>? prepareModel = null)
-    {
-        if (model is MessagingGatewayConfiguration messagingGatewayConfiguration)
-        {
-            if (string.IsNullOrEmpty(messagingGatewayConfiguration.MessageBuilder))
-            {
-                messagingGatewayConfiguration.MessageBuilder = configuration.MessageBuilder;
-            }
-
-            if (string.IsNullOrEmpty(messagingGatewayConfiguration.Namespace))
-            {
-                messagingGatewayConfiguration.Namespace = configuration.Namespace;
-            }
-
-            if (string.IsNullOrEmpty(messagingGatewayConfiguration.MessageAssertion))
-            {
-                messagingGatewayConfiguration.MessageAssertion = configuration.MessageAssertion;
-            }
-        }
-
-        return base.GenerateAsync(configuration, prefix, templateFolderName, model, ignore, prepareModel);
     }
 
     // ── Ledger integration ───────────────────────────────────────────────────

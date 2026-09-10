@@ -104,11 +104,6 @@ public class RocketMqMessageProducer(
         {
             builder.AddProperty(HeaderNames.DataSchema, message.Header.DataSchema.ToString());
         }
-        
-        if (!string.IsNullOrEmpty(message.Header.Type))
-        {
-            builder.AddProperty(HeaderNames.Type, message.Header.Type);
-        }
 
         builder.AddProperty(HeaderNames.ContentType, message.Header.ContentType.ToString());
         builder.AddProperty(HeaderNames.DataContentType, message.Header.ContentType.ToString());

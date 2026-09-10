@@ -14,31 +14,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Templates\*">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-
-    <None Update="Templates\Outbox\*">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    
-    <None Update="Templates\Outbox\Sync\*">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-
-    <None Update="Templates\Outbox\Async\*">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-
-    <None Update="Templates\Outbox\Causation\*">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-
-    <None Update="Templates\MessagingGateway\Proactor\*">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-
-    <None Update="Templates\MessagingGateway\Reactor\*">
+    <!-- Every template folder, so that adding a suite does not also mean remembering to list it
+         here. The generator's own tests audit the tree against what these templates plan, and a
+         folder missing from the output directory fails that audit rather than the build. -->
+    <None Update="Templates\**\*.liquid">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
 
