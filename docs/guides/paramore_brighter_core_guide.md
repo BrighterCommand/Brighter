@@ -134,7 +134,7 @@ Handlers use attributes to declaratively add middleware to their pipeline:
 public class MyCommandHandler: RequestHandler<MyCommand>
 {
     [RequestLogging(step: 1, timing: HandlerTiming.Before)]
-    [UsePolicy(new[] { "RetryPolicy", "CircuitBreakerPolicy" }, step: 2)]
+    [UseResiliencePipeline("MyCommandPipeline", step: 2)]
     public override MyCommand Handle(MyCommand command)
     {
         // Business logic here
@@ -143,14 +143,21 @@ public class MyCommandHandler: RequestHandler<MyCommand>
 }
 ```
 
-There is no `[Retry]` or `[CircuitBreaker]` attribute. Retry and circuit breaker are Polly
-policies named by key, and `[UsePolicy]` resolves them from the registry.
+There is no `[Retry]`, `[CircuitBreaker]` or `[Timeout]` attribute, and there is no attribute
+per strategy. Retry, circuit breaker and timeout are *strategies composed inside one Polly v8
+resilience pipeline*, and `[UseResiliencePipeline]` names that pipeline by key —
+`Context.ResiliencePipeline` is where it is resolved from, and
+`ResilienceExceptionPolicyHandler<>` is the middleware it contributes.
 
-**`[UsePolicy]` and `[TimeoutPolicy]` are both `[Obsolete]`**, in favour of Polly v8 resilience
-pipelines: `[UseResiliencePipeline("MyPipeline", step)]` is the current form, and it reads from
-`Context.ResiliencePipeline` rather than `Context.Policies`. Pasting either of the older two
-gives you `CS0618`. They are shown here because both are still live and existing code
-overwhelmingly uses them. See [Attribute ordering example](#pipeline-design) for the full set.
+Set `UseTypePipeline = true` on the attribute to scope the lookup by handler type as well as by
+key, which is what you want when each handler needs its own circuit breaker rather than sharing
+one.
+
+**The older form still works and you will meet it in existing code**: `[UsePolicy(key, step)]`
+reads Polly v7 policies from `Context.Policies`, and `[TimeoutPolicy(ms, step)]` wraps the
+handler in a timeout. Both are `[Obsolete]`, so pasting either gives you `CS0618`; both are
+still live, and `[UsePolicy]` takes a `string[]` overload because an attribute cannot be applied
+twice. Prefer the pipeline in new code.
 
 **Attribute Properties:**
 - **Step** - Execution order within timing group
@@ -846,7 +853,13 @@ end
 ```
 
 ### Built-in Resilience Handlers
-Brighter provides several built-in middleware handlers for quality-of-service concerns:
+Brighter provides several built-in middleware handlers for quality-of-service concerns.
+
+**The first three below are the Polly v7 form and are `[Obsolete]`.** They still work, and they
+are documented here because you will meet them in existing code, but new handlers should name a
+Polly v8 pipeline with `[UseResiliencePipeline]` instead — see
+[Middleware Attribute System](#middleware-attribute-system). `[FallbackPolicy]` is not
+obsolete: it routes to your handler's `Fallback` method rather than running a Polly strategy.
 
 #### 1. Retry Handler (`UsePolicyAttribute`)
 ```csharp
@@ -891,7 +904,7 @@ public override MyCommand Handle(MyCommand command)
 
 #### 4. Fallback Handler (`FallbackPolicyAttribute`)
 ```csharp
-[FallbackPolicy("FallbackPolicy", 3)]
+[FallbackPolicy(backstop: true, circuitBreaker: false, step: 3)]
 public override MyCommand Handle(MyCommand command)
 {
     // Has fallback behavior for failures
@@ -1321,8 +1334,7 @@ public class ProcessOrderHandler : RequestHandler<ProcessOrderCommand>
     }
 
     [RequestLogging(1, HandlerTiming.Before)]
-    [UsePolicy("OrderProcessingRetryPolicy", 2)]
-    [TimeoutPolicy(30000, 3)]
+    [UseResiliencePipeline("OrderProcessingPipeline", 2)]
     public override ProcessOrderCommand Handle(ProcessOrderCommand command)
     {
         var order = _repository.GetById(command.OrderId);
@@ -1364,9 +1376,8 @@ public class ProcessPaymentHandler : RequestHandler<ProcessPaymentCommand>
 {
     [RequestLogging(step: 1, timing: HandlerTiming.Before)]
     [ValidateRequest(step: 2)]
-    [UsePolicy(new[] { "RetryPolicy", "CircuitBreakerPolicy" }, step: 3)]
-    [TimeoutPolicy(milliseconds: 30000, step: 4)]
-    [FallbackPolicy(backstop: true, circuitBreaker: true, step: 5)]
+    [UseResiliencePipeline("PaymentPipeline", step: 3)]
+    [FallbackPolicy(backstop: true, circuitBreaker: true, step: 4)]
     public override ProcessPaymentCommand Handle(ProcessPaymentCommand command)
     {
         // Business logic here
@@ -1376,8 +1387,9 @@ public class ProcessPaymentHandler : RequestHandler<ProcessPaymentCommand>
 ```
 
 `RequestLogging` is in `Paramore.Brighter.Logging.Attributes`, `ValidateRequest` in
-`Paramore.Brighter.RequestValidation.Attributes`, and the other three in
-`Paramore.Brighter.Policies.Attributes`.
+`Paramore.Brighter.RequestValidation.Attributes`, and the other two in
+`Paramore.Brighter.Policies.Attributes`. None of the four is `[Obsolete]`, so the block pastes
+without a `CS0618`.
 
 Three things about that block are easy to get wrong:
 
@@ -1387,21 +1399,21 @@ Three things about that block are easy to get wrong:
   `HandlerTiming.After` moves that position past the target rather than adding a second log —
   so a pair of `[RequestLogging]` attributes for "entry" and "completion" is not a thing you
   can write.
-- **Retry and circuit breaker are Polly policies, not attributes.** You name them by key and
-  `[UsePolicy]` resolves them from the registry; that is why it takes a `string[]` overload,
-  since it cannot be applied twice. `CommandProcessor.RETRYPOLICY` and
-  `CommandProcessor.CIRCUITBREAKER` are the well-known keys for the Outbox's own policies.
+- **Retry, circuit breaker and timeout are one pipeline, not three attributes.** They are
+  strategies composed inside a Polly v8 resilience pipeline, and `[UseResiliencePipeline]` names
+  that pipeline by key. `[FallbackPolicy]` stays a separate attribute because it is not a Polly
+  strategy — it routes to your handler's `Fallback` method.
 - **Validation is `[ValidateRequest]`.** It ships in the core package, alongside
   `ValidateRequestAsyncAttribute`, and contributes the open generic `ValidateRequestHandler<>`.
   The concrete validator comes from a provider package: `Paramore.Brighter.Validation.FluentValidation`
   (`UseFluentValidation()`), `Paramore.Brighter.Validation.DataAnnotations` (`UseDataAnnotations()`)
   or `Paramore.Brighter.Validation.Specification` (`UseSpecification()`).
 
-`[UsePolicy]` and `Context.Policies` are `[Obsolete]` in favour of Polly v8 resilience
-pipelines: `[UseResiliencePipeline("MyPipeline", step)]` is the current form, reading from
-`Context.ResiliencePipeline` and contributing `ResilienceExceptionPolicyHandler` to the
-pipeline. Both are documented here because both are live, and existing code overwhelmingly
-uses the first.
+The legacy equivalents are `[UsePolicy(key, step)]` and `[TimeoutPolicy(ms, step)]`, reading
+Polly v7 policies from `Context.Policies`. Both are `[Obsolete]`, along with the well-known keys
+`CommandProcessor.RETRYPOLICY` and `CommandProcessor.CIRCUITBREAKER`. They still work, and you
+will meet them in code written before Polly v8 — but a paste of them is two `CS0618`s, which is
+why they are not what this guide leads with.
 
 ### Message Design
 1. **Implement IAmAMessageMapper&lt;T&gt;** - Enable external bus usage and proper serialization
