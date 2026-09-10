@@ -66,8 +66,13 @@ void Post<TRequest>(TRequest request, RequestContext? requestContext = null,
 
 Those are the full signatures rather than an abridgement, because the optional parameter they
 share is the one worth knowing about: **`requestContext` is how you pass your own
-`RequestContext` through the pipeline** instead of letting the processor create one per call. Each
-has an `…Async` counterpart taking `bool continueOnCapturedContext` and a `CancellationToken`.
+`RequestContext` through the pipeline** instead of letting the processor create one per call.
+
+`Send`, `Publish` and `Post` each have an `…Async` counterpart taking `bool
+continueOnCapturedContext` and a `CancellationToken` (`CommandProcessor.SendAsync`, `PublishAsync`,
+`PostAsync`).
+**`Call` does not.** There is no `CallAsync` on `CommandProcessor` or `IAmACommandProcessor`: it
+blocks by design, which is what the `timeOut` parameter is for.
 
 ### Handler Interface Hierarchy
 
@@ -466,18 +471,16 @@ The four collaborators that chain needs, and where each comes from:
 - Synchronous request-reply pattern
 - Returns typed response (`TResponse?` — nullable)
 - **Requires RPC wiring**, and there is no in-memory path. `Call` guards in this order
-  (`CommandProcessor.cs:1426-1432`): **the reply subscription first**, throwing
-  `InvalidOperationException("No Subscription registered fpr replies of type …")` — the typo is
-  the message's own — and **the response channel factory second**, throwing
+  (`CommandProcessor`, `Call`): **the reply subscription first**, throwing
+  `InvalidOperationException("No Subscription registered … for replies of type …")`, and **the
+  response channel factory second**, throwing
   `InvalidOperationException("No ResponseChannelFactory registered")`. So a processor with no RPC
   wiring at all reports the missing *subscription*; you only reach the second message once the
   subscription is registered
-- **That first message also names the wrong type, and the spelling is the lesser problem.** The
-  lookup matches `s.RequestType == typeof(TResponse)`; the message interpolates `typeof(T)`, the
-  **request** type. So the exception you hit for registering a subscription against the wrong type
-  reports the type you did *not* need to match, which sends you to fix the thing that was already
-  right. Read it as *"no reply subscription whose `RequestType` is your response type"*. Filed as
-  [#4337](https://github.com/BrighterCommand/Brighter/issues/4337)
+- **The subscription that message is looking for is matched on `TResponse`.** Whatever type the
+  exception names, the lookup is `s.RequestType == typeof(TResponse)` — so read it as *"no reply
+  subscription whose `RequestType` is your response type"*, and register the subscription against
+  the response
 - Timeout support for external calls to prevent blocking
 - Reply channel management for external scenarios
 - Supports same middleware pipeline as Send/Publish
@@ -1209,7 +1212,9 @@ public void When_Publishing_Event_Should_Store_In_Outbox()
     
     // Assert: DepositPost writes to the outbox and does not send
     var storedMessage = fakeOutbox.Get(messageId, new RequestContext());
-    Assert.NotNull(storedMessage);
+    // Assert the id, not just non-null: InMemoryOutbox.Get returns an empty Message on a miss,
+    // so Assert.NotNull(storedMessage) can never fail
+    Assert.Equal(messageId, storedMessage.Id);
     Assert.Equal(routingKey, storedMessage.Header.Topic);
     Assert.Empty(internalBus.Stream(routingKey));
 }
@@ -1267,7 +1272,7 @@ Give the context a policy registry, or let `CommandProcessor` build the pipeline
 `[UseResiliencePipeline]`, the current form, guards its context
 (`Context is { ResiliencePipeline: not null }`) and does not have this problem.
 
-### Builder Configuration for Tests: No External Bus
+#### 5. Builder Configuration for Tests: No External Bus
 For testing handler pipelines without external dependencies. This is a builder recipe rather
 than a test double, and it gives you `Send` and `Publish` only:
 ```csharp
@@ -1443,8 +1448,8 @@ public class ProcessPaymentHandler : RequestHandler<ProcessPaymentCommand>
 without a `CS0618`.
 
 **The lowest step is the outermost handler.** `BuildPipeline` sorts the attributes
-`OrderByDescending(attribute => attribute.Step)` (`PipelineBuilder.cs:289`) and `PushOntoPipeline`
-wraps each new decorator *around* the chain built so far (`PipelineBuilder.cs:499-523`), so the
+`OrderByDescending(attribute => attribute.Step)` (`PipelineBuilder.BuildPipeline`) and
+`PipelineBuilder.PushOntoPipeline` wraps each new decorator *around* the chain built so far, so the
 highest step is pushed first and ends up innermost. The block above therefore assembles as:
 
 ```text
@@ -1473,7 +1478,7 @@ is the whole of the difference.
 
 **The two flags are not additive.** `FallbackPolicyHandler.InitializeFromAttributeParams` tests
 `circuitBreaker` first and `backstop` only in its `else` branch
-(`Policies/Handlers/FallbackPolicyHandler.cs:45-62`), so
+(`Policies/Handlers/FallbackPolicyHandler.InitializeFromAttributeParams`), so
 `[FallbackPolicy(backstop: true, circuitBreaker: true, …)]` discards `backstop` without saying so
 and routes only `BrokenCircuitException` to `Fallback`. Pick one: `circuitBreaker: true` to catch
 a broken circuit, `backstop: true` to catch everything.

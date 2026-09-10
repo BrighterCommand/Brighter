@@ -134,7 +134,7 @@ namespace Paramore.Brighter
         /// Supplies the specified feature switching configuration, so we can use feature switches on user-defined request handlers
         /// </summary>
         /// <param name="featureSwitchRegistry">The feature switch config provider</param>
-        /// <returns>INeedResilience</returns>
+        /// <returns>INeedAHandlers.</returns>
         public INeedAHandlers ConfigureFeatureSwitches(IAmAFeatureSwitchRegistry featureSwitchRegistry)
         {
             _featureSwitchRegistry = featureSwitchRegistry;
@@ -221,9 +221,9 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Use to indicate that you are not using Task Queues.
+        /// Use to indicate that this Command Processor does not send messages out of process.
         /// </summary>
-        /// <returns>INeedARequestContext.</returns>
+        /// <returns>INeedInstrumentation.</returns>
         public INeedInstrumentation NoExternalBus()
         {
             return this;
@@ -263,7 +263,7 @@ namespace Paramore.Brighter
         /// provide <see cref="InMemoryRequestContextFactory"/>.
         /// </summary>
         /// <param name="requestContextFactory">The request context factory.</param>
-        /// <returns>IAmACommandProcessorBuilder.</returns>
+        /// <returns>INeedARequestSchedulerFactory.</returns>
         public INeedARequestSchedulerFactory RequestContextFactory(IAmARequestContextFactory requestContextFactory)
         {
             _requestContextFactory = requestContextFactory;
@@ -424,7 +424,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// We don't send messages out of process
         /// </summary>
-        /// <returns>INeedARequestContext.</returns>
+        /// <returns>INeedInstrumentation.</returns>
         INeedInstrumentation NoExternalBus();
     }
 
@@ -462,7 +462,7 @@ namespace Paramore.Brighter
         /// Sets the context factory, which is used to create context for the pipeline.
         /// </summary>
         /// <param name="requestContextFactory">The request context factory.</param>
-        /// <returns>IAmACommandProcessorBuilder.</returns>
+        /// <returns>INeedARequestSchedulerFactory.</returns>
         INeedARequestSchedulerFactory RequestContextFactory(IAmARequestContextFactory requestContextFactory);
     }
 
