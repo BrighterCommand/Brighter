@@ -179,7 +179,5 @@ public class AuditCanaryTests : IDisposable
         {
             Directory.Delete(_root, recursive: true);
         }
-
-        GC.SuppressFinalize(this);
     }
 }

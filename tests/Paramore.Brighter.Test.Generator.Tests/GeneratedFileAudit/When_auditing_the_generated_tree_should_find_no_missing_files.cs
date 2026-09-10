@@ -45,6 +45,10 @@ public class GeneratedTreeMissingFileAuditTests(RepositoryTreeAudit repository)
         // Act
         var missing = audit.Missing;
 
+        // Assert - an audit that walked nothing would satisfy the emptiness below trivially, so
+        // pin that it found a tree to read before reading its answer
+        Assert.NotEmpty(audit.OnDisk);
+
         // Assert - every file the generator would write is on disk
         Assert.True(missing.Count == 0,
             "File(s) the current configuration would produce that are absent from the tree. " +

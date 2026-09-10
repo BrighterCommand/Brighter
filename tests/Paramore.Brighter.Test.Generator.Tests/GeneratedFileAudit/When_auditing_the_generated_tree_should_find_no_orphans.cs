@@ -46,6 +46,10 @@ public class GeneratedTreeOrphanAuditTests(RepositoryTreeAudit repository)
         // Act
         var orphans = audit.Orphans;
 
+        // Assert - an audit that planned nothing would satisfy the emptiness below trivially, so
+        // pin that it found work to do before reading its answer
+        Assert.NotEmpty(audit.Expected);
+
         // Assert - every file under a Generated/ directory is one the generator would write
         Assert.True(orphans.Count == 0,
             "File(s) under a Generated/ directory that the current configuration would not " +

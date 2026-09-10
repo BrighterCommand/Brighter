@@ -56,6 +56,12 @@ namespace Paramore.Brighter.Test.Generator.Tests.GeneratedFileAudit;
 /// Scope is the <c>Generated/</c> tree, which is generator-owned in full. The shared files a
 /// generator writes to a project root sit alongside hand-written code and are not audited.
 /// </para>
+/// <para>
+/// Both questions are about the presence of a file and neither is about its contents. A template
+/// that changed without the tree being regenerated leaves every file present and every name
+/// correct, and this audit is green - so a reader should not take a green audit to mean the tree
+/// is up to date, only that it holds the files the configuration names.
+/// </para>
 /// </remarks>
 public sealed class GeneratedTreeAudit
 {
@@ -63,7 +69,7 @@ public sealed class GeneratedTreeAudit
     private const string SOLUTION_FILE_NAME = "Brighter.slnx";
 
     // Directories whose contents are build output rather than source, and so are never audited.
-    private static readonly string[] BUILD_OUTPUT_FOLDER_NAMES = ["bin", "obj"];
+    private static readonly string[] s_buildOutputFolderNames = ["bin", "obj"];
 
     private GeneratedTreeAudit(IReadOnlySet<string> expected, IReadOnlySet<string> onDisk)
     {
@@ -212,7 +218,7 @@ public sealed class GeneratedTreeAudit
     {
         foreach (var child in directory.EnumerateDirectories())
         {
-            if (BUILD_OUTPUT_FOLDER_NAMES.Contains(child.Name, StringComparer.OrdinalIgnoreCase))
+            if (s_buildOutputFolderNames.Contains(child.Name, StringComparer.OrdinalIgnoreCase))
             {
                 continue;
             }

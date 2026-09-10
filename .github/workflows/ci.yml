@@ -63,7 +63,10 @@ jobs:
       # and it runs first: it needs no infrastructure and takes seconds, so generator drift is
       # reported before the long suites rather than after them - or not at all, if one fails.
       - name: Test Generator Tests
-        run: dotnet test tests/Paramore.Brighter.Test.Generator.Tests/Paramore.Brighter.Test.Generator.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build
+        # One framework rather than both: the audit walks the repository tree, and neither the walk
+        # nor the generator it plans with is framework-sensitive, so the second run re-answers a
+        # question already answered. net10.0 matches what generate-test.sh runs.
+        run: dotnet test tests/Paramore.Brighter.Test.Generator.Tests/Paramore.Brighter.Test.Generator.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build -f net10.0
 
       - name: Core Tests
         run: |

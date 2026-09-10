@@ -53,7 +53,7 @@ public abstract class BaseGenerator(ILogger logger)
         object model, Func<string, bool>? ignore = null)
     {
         var destinationFolder = Path.Combine(configuration.DestinationFolder, prefix);
-        logger.LogInformation("Base destination folder {FileCount}", destinationFolder);
+        logger.LogInformation("Base destination folder {DestinationFolder}", destinationFolder);
 
         foreach (var plannedFile in Plan(configuration, prefix, templateFolderName, ignore))
         {
