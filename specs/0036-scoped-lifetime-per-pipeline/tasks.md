@@ -731,7 +731,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
 
 ## Phase 6 — ADR 0073: the ASP.NET Core request-scope package and its test project
 
-- [ ] **PROJECT: T6.1 — build `src/Paramore.Brighter.Extensions.AspNetCore`**
+- [x] **PROJECT: T6.1 — build `src/Paramore.Brighter.Extensions.AspNetCore`**
   - No test of its own. **Done when**: `dotnet build` succeeds for the new project on every framework in `$(BrighterCoreTargetFrameworks)`, the solution still builds end to end, and T1.2's `DependencyBoundaryTests` still passes — that last is the NFR-2 gate, and this is the commit where its ASP.NET clause first becomes falsifiable
   - A `Microsoft.NET.Sdk` **class library** targeting `$(BrighterCoreTargetFrameworks)` — re-derived at `src/Directory.Build.props:45`: `net8.0;net9.0;net10.0` — with a `ProjectReference` to `Paramore.Brighter.Extensions.DependencyInjection` and one `<FrameworkReference Include="Microsoft.AspNetCore.App"/>` for `IHttpContextAccessor` and `AddHttpContextAccessor`
   - ⚠ **No `Directory.Packages.props` entry** — a framework reference is not a package reference and central package management has nothing to manage. `netstandard2.0` is deliberately dropped
