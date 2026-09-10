@@ -143,6 +143,41 @@ A relative `dataschema` stored in a relational Outbox is also now read back corr
 `RelationDatabaseOutbox` read it with `UriKind.Absolute` and silently dropped it to `null`,
 inconsistent with the `Source` reader in the same class and with every other Outbox implementation.
 
+### MQTT: `ReceiveAsync` waits for a message, and honours the caller's cancellation token (#4240)
+
+`MqttMessageConsumer` buffered arrivals in a queue and returned whatever happened to be in it at the
+moment of the call. An empty buffer returned immediately with a single `MT_NONE` message, so a caller
+who wanted to wait for a message had to sleep before every `Receive` and hope the sleep was long
+enough - the timeout argument bounded how long the *drain* was allowed to take, not how long to wait
+for a message to arrive. `ReceiveAsync` was `Task.FromResult(Receive(timeOut))`: synchronous, and it
+ignored its `cancellationToken` entirely.
+
+Both now wait up to `timeOut` (300 ms if unspecified) for at least one message to arrive, and are
+woken by the arrival itself rather than by an interval expiring. A receive that finds nothing inside
+the window still returns the single `MT_NONE` message, unchanged.
+
+#### Behaviour change: a cancelled `ReceiveAsync` now throws
+
+`ReceiveAsync` now observes the `cancellationToken` you pass it and throws `OperationCanceledException`
+when you cancel, which is the contract the interface declares and the behaviour the other async
+gateways already have. Previously the token was accepted and ignored, so a cancelled receive returned
+an empty result instead.
+
+**This does not affect the Brighter pump.** `Proactor` calls `Channel.ReceiveAsync(TimeOut)` without a
+token and stops on an `MT_QUIT` message, not by cancelling a receive in flight, so shutdown is a clean
+stop exactly as before. The change is visible only to code calling
+`IAmAMessageConsumerAsync.ReceiveAsync` directly with a token it cancels - most often a test. **If you
+have such a call and relied on it returning empty, catch `OperationCanceledException`.** A timeout
+elapsing is not cancellation and still returns `MT_NONE`.
+
+#### `BufferSize` is now honoured on MQTT
+
+A consumer built by `MqttMessageConsumerFactory` returns at most the subscription's `BufferSize`
+messages per receive, which is what that setting means. Previously a receive drained the whole buffer,
+so a burst larger than `BufferSize` overflowed the Brighter `Channel` wrapper and threw. Anything still
+buffered is left for the next call. A directly-constructed `MqttMessageConsumer` does not sit behind a
+`Channel` and keeps its uncapped behaviour unless you pass the new optional `batchSize` argument.
+
 ## 10.7.0
 
 ### Azure Service Bus: dead-letter reason and description (#4196)

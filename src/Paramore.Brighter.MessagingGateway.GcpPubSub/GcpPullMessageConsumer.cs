@@ -152,29 +152,41 @@ public partial class GcpPullMessageConsumer(
     public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default)
     {
         PullResponse response;
+        // Honour the caller's timeout: bound the Pull so it returns after the requested window
+        // rather than long-polling until a message arrives (which would block the pump and, for a
+        // delayed send, surface a scheduled message inside a shorter negative-observation window).
+        // Held outside the try so the catch filter below can ask whether the deadline that elapsed
+        // is the one we set.
+        var pullWindow = BuildPullCallSettings(timeOut);
         try
         {
             var client = await connection.CreateSubscriberServiceApiClientAsync();
-            // Honour the caller's timeout: bound the Pull so it returns after the requested window
-            // rather than long-polling until a message arrives (which would block the pump and, for a
-            // delayed send, surface a scheduled message inside a shorter negative-observation window).
-            var callSettings = BuildPullCallSettings(timeOut).WithCancellationToken(cancellationToken);
             response = await client.PullAsync(
                 new PullRequest
                 {
                     SubscriptionAsSubscriptionName = subscriptionName,
                     MaxMessages = batchSize,
                 },
-                callSettings);
+                pullWindow.WithCancellationToken(cancellationToken));
 
             if (response.ReceivedMessages.Count == 0)
             {
                 return [new Message()];
             }
         }
-        catch (RpcException rcpException) when (rcpException.Status.StatusCode == StatusCode.DeadlineExceeded)
+        catch (RpcException rcpException)
+            when (rcpException.Status.StatusCode == StatusCode.DeadlineExceeded && pullWindow != null)
         {
-            // The Pull window elapsed with no messages available — a normal empty receive.
+            // The window this call asked for elapsed with no messages available - a normal empty
+            // receive, and the only way a bounded Pull reports one.
+            //
+            // Only when we bounded it. With no timeout the deadline in force is the client's own
+            // per-method expiration, and a DeadlineExceeded then means a Pull took longer than the
+            // library expects rather than that the subscription is empty. Reporting that as an
+            // empty receive would turn a Pub/Sub that has become too slow to answer into a
+            // consumer that quietly reports no work, for ever. It falls through to the general
+            // handler below and is logged and rethrown, which is what it did before this call
+            // carried a deadline of ours at all.
             return [new Message()];
         }
         catch (RpcException rcpException) when (rcpException.Status.StatusCode == StatusCode.Unavailable)
@@ -217,24 +229,27 @@ public partial class GcpPullMessageConsumer(
     public Message[] Receive(TimeSpan? timeOut = null)
     {
         PullResponse response;
+        // Honour the caller's timeout (see ReceiveAsync) so an empty subscription returns after
+        // the requested window rather than long-polling until a message arrives.
+        var pullWindow = BuildPullCallSettings(timeOut);
         try
         {
             var client = connection.GetOrCreateSubscriberServiceApiClient();
-            // Honour the caller's timeout (see ReceiveAsync) so an empty subscription returns after
-            // the requested window rather than long-polling until a message arrives.
             response = client.Pull(new PullRequest
             {
                 SubscriptionAsSubscriptionName = subscriptionName, MaxMessages = batchSize
-            }, BuildPullCallSettings(timeOut));
+            }, pullWindow);
 
             if (response.ReceivedMessages.Count == 0)
             {
                 return [new Message()];
             }
         }
-        catch (RpcException rcpException) when (rcpException.Status.StatusCode == StatusCode.DeadlineExceeded)
+        catch (RpcException rcpException)
+            when (rcpException.Status.StatusCode == StatusCode.DeadlineExceeded && pullWindow != null)
         {
-            // The Pull window elapsed with no messages available — a normal empty receive.
+            // The window this call asked for elapsed with no messages available. See ReceiveAsync
+            // for why an unbounded Pull's DeadlineExceeded is not treated the same way.
             return [new Message()];
         }
         catch (RpcException rcpException) when (rcpException.Status.StatusCode == StatusCode.Unavailable)
