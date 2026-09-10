@@ -29,13 +29,15 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
 /// <summary>
 /// Captures its own <see cref="IOrderDbContext"/> and <c>Send</c>s a <see cref="PlaceOrder"/> command
 /// (AC-15), recording its own instance into an injected <see cref="OrderDbContextRecorder"/> so a test
-/// can compare it against what the handler resolved.
+/// can compare it against what the handler resolved. Uses its own <see cref="IOrderDbContext"/> again
+/// after <c>Send</c> returns (AC-16), so a test can prove Brighter left it usable.
 /// </summary>
 [ApiController]
 [Route("api/orders")]
 public sealed class PlaceOrderController : ControllerBase
 {
     private readonly IAmACommandProcessor _commandProcessor;
+    private readonly IOrderDbContext _orderDbContext;
     private readonly OrderDbContextRecorder _recorder;
 
     public PlaceOrderController(
@@ -44,6 +46,7 @@ public sealed class PlaceOrderController : ControllerBase
         OrderDbContextRecorder recorder)
     {
         _commandProcessor = commandProcessor;
+        _orderDbContext = orderDbContext;
         _recorder = recorder;
         _recorder.RecordController(orderDbContext);
     }
@@ -52,6 +55,7 @@ public sealed class PlaceOrderController : ControllerBase
     public IActionResult Place()
     {
         _commandProcessor.Send(new PlaceOrder());
+        _orderDbContext.EnsureUsable();
         return Ok();
     }
 }

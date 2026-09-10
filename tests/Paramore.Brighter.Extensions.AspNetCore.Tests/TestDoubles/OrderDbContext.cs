@@ -22,11 +22,33 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using System.Threading;
+
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
 
 /// <summary>
 /// The concrete <see cref="IOrderDbContext"/> registered <c>AddScoped</c> in a test's container.
 /// </summary>
-public sealed class OrderDbContext : IOrderDbContext
+public sealed class OrderDbContext : IOrderDbContext, IDisposable
 {
+    private int _disposeCount;
+    private bool _disposed;
+
+    /// <inheritdoc />
+    public int DisposeCount => _disposeCount;
+
+    /// <inheritdoc />
+    public void EnsureUsable()
+    {
+        if (_disposed)
+            throw new ObjectDisposedException(nameof(OrderDbContext));
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        _disposed = true;
+        Interlocked.Increment(ref _disposeCount);
+    }
 }

@@ -31,4 +31,14 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
 /// </summary>
 public interface IOrderDbContext
 {
+    /// <summary>
+    /// How many times the container has disposed this instance.
+    /// </summary>
+    int DisposeCount { get; }
+
+    /// <summary>
+    /// Throws if this instance has already been disposed, mirroring how a real <c>DbContext</c> behaves
+    /// once its scope has torn it down, so a test can prove a caller could still use it.
+    /// </summary>
+    void EnsureUsable();
 }
