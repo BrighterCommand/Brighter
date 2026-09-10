@@ -1,5 +1,7 @@
+using System.Threading.Tasks;
 using Events.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 using Paramore.Brighter.BoxProvisioning;
@@ -11,76 +13,70 @@ using Paramore.Brighter.Outbox.MsSql;
 using Serilog;
 using Serilog.Extensions.Logging;
 
-namespace GreetingsSender
-{
-    static class Program
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Debug()
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .CreateLogger();
+
+var builder = Host.CreateApplicationBuilder(args);
+builder.Services.AddSingleton<ILoggerFactory>(new SerilogLoggerFactory());
+
+// One configuration object names the tables this process uses: the queue the transport writes
+// to, and the Outbox. They live in the same database, which is the point of this sample.
+// GreetingsReceiverConsole builds the matching configuration for the queue and the Inbox —
+// the connection string and the table names have to agree across the two files.
+var configuration = new RelationalDatabaseConfiguration(
+    @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;",
+    databaseName: "BrighterSqlQueue",
+    outBoxTableName: "Outbox",
+    queueStoreTable: "QueueData");
+
+// AddProducers is given MsSqlTransactionProvider as a TYPE, so the container activates it, and
+// its constructor asks for exactly this interface. Without this line the first attempt to
+// resolve a command processor throws, naming a type this file never mentions.
+builder.Services.AddSingleton<IAmARelationalDatabaseConfiguration>(configuration);
+
+builder.Services.AddBrighter()
+    // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
+    // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
+    .UseScheduler(new InMemorySchedulerFactory())
+    .AddProducers((configure) =>
     {
-        static void Main()
-        {
-            Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Debug()
-                .Enrich.FromLogContext()
-                .WriteTo.Console()
-                .CreateLogger();
+        configure.ProducerRegistry = new MsSqlProducerRegistryFactory(
+                configuration,
+                [new Publication{Topic = new RoutingKey("greeting.event"), RequestType = typeof(GreetingEvent)}]
+            )
+            .Create();
 
-            var serviceCollection = new ServiceCollection();
-            serviceCollection.AddSingleton<ILoggerFactory>(new SerilogLoggerFactory());
+        // Without these three the message goes straight to the queue. With them it lands in the
+        // Outbox first, so it can share a transaction with your own write.
+        configure.Outbox = new MsSqlOutbox(configuration);
+        configure.ConnectionProvider = typeof(MsSqlConnectionProvider);
+        configure.TransactionProvider = typeof(MsSqlTransactionProvider);
+    })
+    // Registers a hosted service that creates and migrates the Outbox table. It only runs when
+    // the HOST starts — see StartAsync below. The QUEUE table is not covered: the MSSQL gateway
+    // has no provisioning path, so OnMissingChannel.Create is inert there and
+    // BrighterSqlQueue.sql is what creates it. MsSqlQueueBuilder gives the same DDL from code.
+    .UseBoxProvisioning(options => options.AddMsSqlOutbox(configuration))
+    .AutoFromAssemblies();
 
-            // One configuration object names all three tables: the queue the transport reads
-            // and writes, the Outbox, and the Inbox the receiver de-duplicates against. They
-            // all live in the same database, which is the point of this sample.
-            var configuration = new RelationalDatabaseConfiguration(
-                @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;",
-                databaseName: "BrighterSqlQueue",
-                outBoxTableName: "Outbox",
-                inboxTableName: "InboxMessages",
-                queueStoreTable: "QueueData");
+var host = builder.Build();
 
-            // The transaction provider needs this registration: AddProducers is given
-            // MsSqlTransactionProvider as a TYPE, so the container activates it, and its
-            // constructor asks for exactly this interface.
-            serviceCollection.AddSingleton<IAmARelationalDatabaseConfiguration>(configuration);
+// StartAsync rather than RunAsync, because we have work to do between starting the host and
+// waiting on it. Starting is what runs the box provisioning above, so it has to happen before
+// the send rather than after.
+await host.StartAsync();
 
-            serviceCollection.AddBrighter()
-                // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
-                // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-                .UseScheduler(new InMemorySchedulerFactory())
-                .AddProducers((configure) =>
-                {
-                    configure.ProducerRegistry = new MsSqlProducerRegistryFactory(
-                            configuration,
-                            [new Publication{Topic = new RoutingKey("greeting.event"), RequestType = typeof(GreetingEvent)}]
-                        )
-                        .Create();
+var commandProcessor = host.Services.GetRequiredService<IAmACommandProcessor>();
 
-                    // Without these three the message goes straight to the queue. With them it
-                    // lands in the Outbox first, so it can share a transaction with your own write.
-                    configure.Outbox = new MsSqlOutbox(configuration);
-                    configure.ConnectionProvider = typeof(MsSqlConnectionProvider);
-                    configure.TransactionProvider = typeof(MsSqlTransactionProvider);
-                })
-                // Creates and migrates the Outbox and Inbox tables at startup. The QUEUE table is
-                // not covered: the MSSQL transport has no provisioning path, so BrighterSqlQueue.sql
-                // creates that one. See MsSqlQueueBuilder for the same DDL from code.
-                .UseBoxProvisioning(options =>
-                {
-                    options.AddMsSqlOutbox(configuration);
-                    options.AddMsSqlInbox(configuration);
-                })
-                .AutoFromAssemblies();
+// DepositPost writes to the Outbox and sends nothing. In a real handler this call shares a
+// transaction with your own write, so the row and the message commit together or not at all.
+var messageId = commandProcessor.DepositPost(new GreetingEvent("Ian"));
 
-            var serviceProvider = serviceCollection.BuildServiceProvider();
+// ClearOutbox then dispatches it onto the queue. A long-running host would let the Outbox
+// Sweeper (UseOutboxSweeper) do this on a timer instead.
+commandProcessor.ClearOutbox([messageId]);
 
-            var commandProcessor = serviceProvider.GetRequiredService<IAmACommandProcessor>();
-
-            // DepositPost writes to the Outbox and sends nothing. In a real handler this call
-            // shares a transaction with your own write, so the row and the message commit
-            // together or not at all.
-            var messageId = commandProcessor.DepositPost(new GreetingEvent("Ian"));
-
-            // ClearOutbox then dispatches it onto the queue. A long-running host would let the
-            // Outbox Sweeper (UseOutboxSweeper) do this on a timer instead.
-            commandProcessor.ClearOutbox([messageId]);
-        }
-    }
-}
+await host.StopAsync();

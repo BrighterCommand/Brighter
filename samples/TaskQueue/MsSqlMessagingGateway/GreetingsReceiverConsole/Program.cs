@@ -28,6 +28,8 @@ using Events.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
+using Paramore.Brighter.BoxProvisioning;
+using Paramore.Brighter.BoxProvisioning.MsSql;
 using Paramore.Brighter.Inbox;
 using Paramore.Brighter.Inbox.MsSql;
 using Paramore.Brighter.MessagingGateway.MsSql;
@@ -37,11 +39,13 @@ using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-// The same three tables the sender names, in the same database.
+// The tables this process uses: the queue the transport reads, and the Inbox it
+// de-duplicates against. GreetingsSender builds the matching configuration for the queue and
+// the Outbox — the connection string and the table names have to agree across the two files.
+// There is no outBoxTableName here because this process has no Outbox.
 var configuration = new RelationalDatabaseConfiguration(
     @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;",
     databaseName: "BrighterSqlQueue",
-    outBoxTableName: "Outbox",
     inboxTableName: "InboxMessages",
     queueStoreTable: "QueueData");
 
@@ -63,17 +67,17 @@ builder.Services.AddConsumers(options =>
         new MsSqlMessageConsumerFactory(configuration)
     );
 
-    // The Inbox makes the consumer idempotent: a redelivered message is recognised rather
-    // than reprocessed. Warn rather than Throw, so a duplicate logs instead of raising.
-    options.InboxConfiguration = new InboxConfiguration(
-        new MsSqlInbox(configuration),
-        scope: InboxScope.All,
-        onceOnly: true,
-        actionOnExists: OnceOnlyAction.Warn);
+    // The Inbox instance the [UseInbox] attribute on GreetingEventHandler writes to. The
+    // attribute carries the policy (context key, once-only, what a duplicate does); this
+    // registration is only what supplies the store.
+    options.InboxConfiguration = new InboxConfiguration(new MsSqlInbox(configuration));
 })
 // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
 // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
 .UseScheduler(new InMemorySchedulerFactory())
+// Each process provisions the box it owns, so the receiver can be started on its own. This
+// registers a hosted service, which runs because this IS a host.
+.UseBoxProvisioning(options => options.AddMsSqlInbox(configuration))
 .AutoFromAssemblies();
 
 builder.Services.AddHostedService<ServiceActivatorHostedService>();

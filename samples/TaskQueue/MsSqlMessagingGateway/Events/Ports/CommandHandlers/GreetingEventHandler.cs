@@ -25,11 +25,24 @@ THE SOFTWARE. */
 using System;
 using Events.Ports.Commands;
 using Paramore.Brighter;
+using Paramore.Brighter.Inbox;
+using Paramore.Brighter.Inbox.Attributes;
 
 namespace Events.Ports.CommandHandlers
 {
     public class GreetingEventHandler : RequestHandler<GreetingEvent>
     {
+        // The Inbox makes this handler idempotent: a redelivered message is recognised rather
+        // than reprocessed. OnceOnlyAction.Warn logs the duplicate and drops it without calling
+        // this method; Throw is what you want when the caller needs to know one arrived.
+        //
+        // This is the ATTRIBUTE route rather than AddConsumers' global InboxConfiguration,
+        // because the global one is only handed to the pipeline when the process also has an
+        // external bus (ServiceCollectionExtensions.cs:657-666 takes the NoExternalBus branch
+        // when no producers are registered, and that overload takes no inbox). This receiver
+        // has no producers, so the global configuration would be silently ignored.
+        [UseInbox(step: 0, contextKey: nameof(GreetingEventHandler), onceOnly: true,
+            onceOnlyAction: OnceOnlyAction.Warn)]
         public override GreetingEvent Handle(GreetingEvent greetingEvent)
         {
             Console.WriteLine("Received Greeting. Message Follows");
