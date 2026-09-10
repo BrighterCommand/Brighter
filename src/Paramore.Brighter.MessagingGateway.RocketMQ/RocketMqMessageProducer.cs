@@ -76,63 +76,8 @@ public class RocketMqMessageProducer(
             .SetBody(message.Body.ToByteArray())
             .SetTopic(mqPublication.Topic!.Value);
 
-        builder.AddProperty(HeaderNames.MessageId, message.Id)
-            .AddProperty(HeaderNames.Topic, message.Header.Topic.Value)
-            .AddProperty(HeaderNames.HandledCount, message.Header.HandledCount.ToString())
-            .AddProperty(HeaderNames.MessageType, message.Header.MessageType.ToString())
-            .AddProperty(HeaderNames.TimeStamp, message.Header.TimeStamp.ToRfc3339())
-            .AddProperty(HeaderNames.Source, message.Header.Source.ToString())
-            .AddProperty(HeaderNames.SpecVersion, message.Header.SpecVersion);
+        AddHeaderProperties(builder, message.Id, message.Header);
 
-        var baggage = message.Header.Baggage.ToString();
-        if (!string.IsNullOrEmpty(baggage))
-        {
-            builder.AddProperty(HeaderNames.Baggage, baggage);
-        }
-
-        if (message.Header.Type != CloudEventsType.Empty)
-        {
-            builder.AddProperty(HeaderNames.Type, message.Header.Type);
-        }
-        
-        if (!string.IsNullOrEmpty(message.Header.Subject))
-        {
-            builder.AddProperty(HeaderNames.Subject, message.Header.Subject);
-        }
-
-        if (message.Header.DataSchema != null)
-        {
-            builder.AddProperty(HeaderNames.DataSchema, message.Header.DataSchema.ToString());
-        }
-
-        builder.AddProperty(HeaderNames.ContentType, message.Header.ContentType.ToString());
-        builder.AddProperty(HeaderNames.DataContentType, message.Header.ContentType.ToString());
-
-        if (!string.IsNullOrEmpty(message.Header.CorrelationId))
-        {
-            builder.AddProperty(HeaderNames.CorrelationId, message.Header.CorrelationId);
-        }
-        
-        if (!RoutingKey.IsNullOrEmpty(message.Header.ReplyTo))
-        {
-            builder.AddProperty(HeaderNames.ReplyTo, message.Header.ReplyTo);
-        }
-
-        if (!string.IsNullOrEmpty(message.Header.DataRef))
-        {
-            builder.AddProperty(HeaderNames.DataRef, message.Header.DataRef);
-        }
-        
-        if (!TraceParent.IsNullOrEmpty(message.Header.TraceParent))
-        {
-            builder.AddProperty(HeaderNames.TraceParent, message.Header.TraceParent.Value);
-        }
-
-        if (!TraceState.IsNullOrEmpty(message.Header.TraceState))
-        {
-            builder.AddProperty(HeaderNames.TraceState, message.Header.TraceState.Value);
-        }
-        
         if (mqPublication.TopicType == TopicType.Delay || delay.HasValue && delay.Value != TimeSpan.Zero)
         {
             delay ??= TimeSpan.Zero;
@@ -191,4 +136,78 @@ public class RocketMqMessageProducer(
     {
         return new ValueTask();
     }
+
+    /// <summary>
+    /// Copies <paramref name="header"/> onto <paramref name="builder"/> as RocketMQ properties.
+    /// </summary>
+    /// <remarks>
+    /// Extracted from the send path so the guards below can be tested without a broker. RocketMQ's
+    /// <c>AddProperty</c> rejects an empty value with <see cref="ArgumentException"/>, so every
+    /// optional header has to be checked before it is written - a header that simply is not set
+    /// would otherwise fail the send rather than be omitted.
+    /// </remarks>
+    /// <param name="builder">The RocketMQ message under construction.</param>
+    /// <param name="messageId">The Brighter message id.</param>
+    /// <param name="header">The header whose values are copied.</param>
+    internal static void AddHeaderProperties(
+        Org.Apache.Rocketmq.Message.Builder builder, Id messageId, MessageHeader header)
+    {
+        builder.AddProperty(HeaderNames.MessageId, messageId)
+            .AddProperty(HeaderNames.Topic, header.Topic.Value)
+            .AddProperty(HeaderNames.HandledCount, header.HandledCount.ToString())
+            .AddProperty(HeaderNames.MessageType, header.MessageType.ToString())
+            .AddProperty(HeaderNames.TimeStamp, header.TimeStamp.ToRfc3339())
+            .AddProperty(HeaderNames.Source, header.Source.ToString())
+            .AddProperty(HeaderNames.SpecVersion, header.SpecVersion);
+
+        var baggage = header.Baggage.ToString();
+        if (!string.IsNullOrEmpty(baggage))
+        {
+            builder.AddProperty(HeaderNames.Baggage, baggage);
+        }
+
+        if (header.Type != CloudEventsType.Empty)
+        {
+            builder.AddProperty(HeaderNames.Type, header.Type);
+        }
+        
+        if (!string.IsNullOrEmpty(header.Subject))
+        {
+            builder.AddProperty(HeaderNames.Subject, header.Subject);
+        }
+
+        if (header.DataSchema != null)
+        {
+            builder.AddProperty(HeaderNames.DataSchema, header.DataSchema.ToString());
+        }
+
+        builder.AddProperty(HeaderNames.ContentType, header.ContentType.ToString());
+        builder.AddProperty(HeaderNames.DataContentType, header.ContentType.ToString());
+
+        if (!string.IsNullOrEmpty(header.CorrelationId))
+        {
+            builder.AddProperty(HeaderNames.CorrelationId, header.CorrelationId);
+        }
+        
+        if (!RoutingKey.IsNullOrEmpty(header.ReplyTo))
+        {
+            builder.AddProperty(HeaderNames.ReplyTo, header.ReplyTo);
+        }
+
+        if (!string.IsNullOrEmpty(header.DataRef))
+        {
+            builder.AddProperty(HeaderNames.DataRef, header.DataRef);
+        }
+        
+        if (!TraceParent.IsNullOrEmpty(header.TraceParent))
+        {
+            builder.AddProperty(HeaderNames.TraceParent, header.TraceParent.Value);
+        }
+
+        if (!TraceState.IsNullOrEmpty(header.TraceState))
+        {
+            builder.AddProperty(HeaderNames.TraceState, header.TraceState.Value);
+        }
+    }
+
 }

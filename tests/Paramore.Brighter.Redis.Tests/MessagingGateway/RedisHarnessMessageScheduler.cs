@@ -133,10 +133,16 @@ internal sealed class RedisHarnessMessageScheduler
 
             producer.Send(message);
         }
-        catch
+        catch (Exception ex)
         {
-            // Best-effort redelivery for the conformance harness; a broker error surfaces as the
-            // conformance test's after-delay arm timing out rather than an unobserved exception.
+            // Redelivery is best-effort, so a broker error does not fail the harness - but it must
+            // not be silent either. Unlogged, a scheduler that failed to republish and a transport
+            // that ignored the delay produce the same red test: the after-delay arm timing out with
+            // no message and no exception. The FR-2 and FR-9 verdicts in the conformance ledger are
+            // read off those results, so the two have to be tellable apart.
+            Console.Error.WriteLine(
+                $"RedisHarnessMessageScheduler: republish of {message.Id} to {message.Header.Topic} failed; "
+                + $"the after-delay arm will time out. {ex.GetType().Name}: {ex.Message}");
         }
     }
 
