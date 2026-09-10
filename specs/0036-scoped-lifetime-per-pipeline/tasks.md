@@ -676,7 +676,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T5.1, T3.3
   - **References**: AC-13 (FR-10, FR-8, FR-27.1, NFR-6, D16); ADR 0075 steps 2, 3, 6
 
-- [ ] **TEST + IMPLEMENT: T5.3 — bracket 2: a pipeline created while a subscriber runs does not adopt, and the caller's flow is unsuppressed after the publish**
+- [x] **TEST + IMPLEMENT: T5.3 — bracket 2: a pipeline created while a subscriber runs does not adopt, and the caller's flow is unsuppressed after the publish**
   - **USE COMMAND**: `/test-first a Post issued from inside a Publish subscriber does not adopt the ambient and a Send after the publish does`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_subscriber_issues_a_nested_pipeline_it_should_not_adopt_the_ambient.cs`
