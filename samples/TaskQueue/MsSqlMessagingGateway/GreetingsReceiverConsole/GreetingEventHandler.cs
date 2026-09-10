@@ -28,7 +28,7 @@ using Paramore.Brighter;
 using Paramore.Brighter.Inbox;
 using Paramore.Brighter.Inbox.Attributes;
 
-namespace Events.Ports.CommandHandlers
+namespace GreetingsReceiverConsole
 {
     public class GreetingEventHandler : RequestHandler<GreetingEvent>
     {
@@ -36,11 +36,15 @@ namespace Events.Ports.CommandHandlers
         // than reprocessed. OnceOnlyAction.Warn logs the duplicate and drops it without calling
         // this method; Throw is what you want when the caller needs to know one arrived.
         //
-        // This is the ATTRIBUTE route rather than AddConsumers' global InboxConfiguration,
-        // because the global one is only handed to the pipeline when the process also has an
-        // external bus (ServiceCollectionExtensions.cs:657-666 takes the NoExternalBus branch
-        // when no producers are registered, and that overload takes no inbox). This receiver
-        // has no producers, so the global configuration would be silently ignored.
+        // This is the ATTRIBUTE route rather than AddConsumers' global InboxConfiguration.
+        // AddEventBus hands that configuration to the pipeline only on its ExternalBus arms;
+        // with no producers registered it calls NoExternalBus() instead, and that overload
+        // takes no inbox. This receiver has no producers, so the global configuration would be
+        // silently ignored.
+        //
+        // The handler lives HERE rather than in the shared Events project because the other
+        // three apps in this sample also call AutoFromAssemblies() and none of them registers
+        // an inbox — they would each register a handler whose pipeline cannot be built.
         [UseInbox(step: 0, contextKey: nameof(GreetingEventHandler), onceOnly: true,
             onceOnlyAction: OnceOnlyAction.Warn)]
         public override GreetingEvent Handle(GreetingEvent greetingEvent)

@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using Events.Ports.Commands;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
@@ -43,8 +44,13 @@ var builder = Host.CreateApplicationBuilder(args);
 // de-duplicates against. GreetingsSender builds the matching configuration for the queue and
 // the Outbox — the connection string and the table names have to agree across the two files.
 // There is no outBoxTableName here because this process has no Outbox.
+// Set ConnectionStrings:Brighter to point this somewhere other than the SQLEXPRESS default.
+// It must match whatever GreetingsSender is using.
+var connectionString = builder.Configuration.GetConnectionString("Brighter")
+    ?? @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;";
+
 var configuration = new RelationalDatabaseConfiguration(
-    @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;",
+    connectionString,
     databaseName: "BrighterSqlQueue",
     inboxTableName: "InboxMessages",
     queueStoreTable: "QueueData");

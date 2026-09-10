@@ -1,5 +1,5 @@
-using System.Threading.Tasks;
 using Events.Ports.Commands;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -26,8 +26,14 @@ builder.Services.AddSingleton<ILoggerFactory>(new SerilogLoggerFactory());
 // to, and the Outbox. They live in the same database, which is the point of this sample.
 // GreetingsReceiverConsole builds the matching configuration for the queue and the Inbox —
 // the connection string and the table names have to agree across the two files.
+// The default is the SQLEXPRESS instance this sample was written against. Set
+// ConnectionStrings:Brighter (appsettings or the environment) to point it somewhere else —
+// a container, say — without editing this file.
+var connectionString = builder.Configuration.GetConnectionString("Brighter")
+    ?? @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;";
+
 var configuration = new RelationalDatabaseConfiguration(
-    @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;",
+    connectionString,
     databaseName: "BrighterSqlQueue",
     outBoxTableName: "Outbox",
     queueStoreTable: "QueueData");
