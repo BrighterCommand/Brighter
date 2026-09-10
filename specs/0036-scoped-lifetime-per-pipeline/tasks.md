@@ -803,7 +803,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T6.4, T4.4
   - **References**: AC-17 (FR-16a, FR-14, D7); ADR 0072 *`ScopedArtefactCache`*
 
-- [ ] **TEST + IMPLEMENT: T6.6 — a mapper and a handler in one request share a `Scoped` dependency**
+- [x] **TEST + IMPLEMENT: T6.6 — a mapper and a handler in one request share a `Scoped` dependency**
   - **USE COMMAND**: `/test-first a Post's mapper and a Send's handler in one request resolve the same Scoped IMarker`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_a_post_and_a_send_run_in_one_request_the_mapper_and_handler_should_share_a_scoped_dependency.cs`
