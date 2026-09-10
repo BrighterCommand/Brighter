@@ -243,6 +243,7 @@
     <Project Path="tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.DynamoDB.Tests/Paramore.Brighter.DynamoDB.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.DynamoDB.V4.Tests/Paramore.Brighter.DynamoDB.V4.Tests.csproj" />
+    <Project Path="tests/Paramore.Brighter.Extensions.AspNetCore.Tests/Paramore.Brighter.Extensions.AspNetCore.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.Extensions.Tests/Paramore.Brighter.Extensions.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.Gcp.Tests/Paramore.Brighter.Gcp.Tests.csproj" />
     <Project Path="tests/Paramore.Brighter.Hangfire.Tests/Paramore.Brighter.Hangfire.Tests.csproj" />
