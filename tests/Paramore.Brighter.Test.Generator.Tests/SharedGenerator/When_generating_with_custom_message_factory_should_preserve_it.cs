@@ -24,20 +24,25 @@ public class WhenGeneratingWithCustomMessageFactoryShouldPreserveIt : IDisposabl
     [Fact]
     public async Task When_generating_with_custom_message_factory_should_preserve_it()
     {
-        // Arrange
-        var configuration = new TestConfiguration
-        {
-            Namespace = "MyApp.Tests",
-            DestinationFolder = _testDirectory,
-            MessageBuilder = "TestMessageBuilder",
-        };
+        // Arrange - through the loader, so that this asserts the defaulting leaves a configured
+        // value alone rather than asserting a property nothing writes to
+        var configurationFile = Path.Combine(_testDirectory, TestConfigurationLoader.ConfigurationFileName);
+        File.WriteAllText(configurationFile, """
+            {
+              "Namespace": "MyApp.Tests",
+              "MessageBuilder": "TestMessageBuilder"
+            }
+            """);
+        var configuration = TestConfigurationLoader.Load(
+            configurationFile, defaultDestinationFolder: _testDirectory)!;
         var generator = new Generators.SharedGenerator(_logger);
 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert
+        // Assert - the configured builder survives, and only the unset assertion is defaulted
         Assert.Equal("TestMessageBuilder", configuration.MessageBuilder);
+        Assert.Equal("DefaultMessageAssertion", configuration.MessageAssertion);
     }
 
     public void Dispose()

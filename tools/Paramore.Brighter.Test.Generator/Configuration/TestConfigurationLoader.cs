@@ -96,6 +96,8 @@ public static class TestConfigurationLoader
             ? Path.GetFullPath(defaultDestinationFolder)
             : Path.GetFullPath(configuration.DestinationFolder, configurationFolder);
 
+        configuration.ApplySharedDefaults();
+
         return configuration;
     }
 }

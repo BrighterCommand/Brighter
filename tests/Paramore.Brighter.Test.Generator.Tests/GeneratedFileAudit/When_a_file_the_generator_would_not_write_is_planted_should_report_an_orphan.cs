@@ -151,6 +151,98 @@ public class AuditCanaryTests : IDisposable
         Assert.Empty(audit.Orphans);
     }
 
+    [Theory]
+    [InlineData(PLURAL_CONFIGURATION)]
+    [InlineData(SINGULAR_CONFIGURATION)]
+    public async Task When_a_capability_flag_is_turned_off_should_report_the_skipped_files_as_orphans(
+        string configuration)
+    {
+        // Arrange - a tree generated while the outbox still supported transactions
+        await GenerateAsync(configuration);
+        Assert.Empty(GeneratedTreeAudit.Of(_testsRoot).Orphans);
+
+        // Act - the flag goes off, which is the case #4305 is about: the generator writes files and
+        // never removes one, so the templates it now skips stay on disk
+        WriteConfiguration(WithoutTransactionSupport(configuration));
+        var audit = GeneratedTreeAudit.Of(_testsRoot);
+
+        // Assert - the transaction tests are reported, and nothing is thought missing
+        Assert.NotEmpty(audit.Orphans);
+        Assert.All(audit.Orphans, orphan =>
+            Assert.Contains("Transaction", Path.GetFileName(orphan), StringComparison.InvariantCultureIgnoreCase));
+        Assert.Empty(audit.Missing);
+    }
+
+    [Theory]
+    [InlineData(PLURAL_CONFIGURATION)]
+    [InlineData(SINGULAR_CONFIGURATION)]
+    public async Task When_a_capability_flag_is_turned_on_should_report_the_new_files_as_missing(
+        string configuration)
+    {
+        // Arrange - a tree generated while the gateway had no publish-confirmation support, so
+        // the confirming_posting templates were skipped. That flag is chosen because it is the
+        // only rule matching that substring: the dead-letter template's name also carries
+        // "requeuing", so turning its own flag on would leave it skipped by a second rule.
+        await GenerateAsync(configuration);
+        Assert.Empty(GeneratedTreeAudit.Of(_testsRoot).Missing);
+
+        // Act - the flag goes on. This is the other half of the same seam, and it is the direction
+        // that runs the ignore predicate through Plan rather than through GenerateAsync.
+        WriteConfiguration(WithPublishConfirmationSupport(configuration));
+        var audit = GeneratedTreeAudit.Of(_testsRoot);
+
+        // Assert - the newly expected tests are reported, and nothing on disk is orphaned
+        Assert.NotEmpty(audit.Missing);
+        Assert.All(audit.Missing, file =>
+            Assert.Contains("confirming_posting", Path.GetFileName(file), StringComparison.Ordinal));
+        Assert.Empty(audit.Orphans);
+    }
+
+    [Theory]
+    [InlineData(PLURAL_CONFIGURATION)]
+    [InlineData(SINGULAR_CONFIGURATION)]
+    public async Task When_a_configuration_is_deleted_should_report_its_whole_tree_as_orphans(
+        string configuration)
+    {
+        // Arrange - a tree the generators have just written, which the audit agrees with
+        await GenerateAsync(configuration);
+        var generated = GeneratedTreeAudit.Of(_testsRoot).OnDisk;
+        Assert.NotEmpty(generated);
+
+        // Act - the configuration goes away. GeneratedFilesUnder walks the whole tree rather than
+        // only the projects that carry a configuration precisely so that this is reported, and
+        // until now that reasoning lived only in a comment.
+        File.Delete(Path.Combine(_projectFolder, TestConfigurationLoader.ConfigurationFileName));
+        var audit = GeneratedTreeAudit.Of(_testsRoot);
+
+        // Assert - everything the generator had written is now owned by nothing
+        Assert.Empty(audit.Expected);
+        Assert.Equal(generated.OrderBy(file => file, StringComparer.Ordinal), audit.Orphans);
+        Assert.Empty(audit.Missing);
+    }
+
+    // The outbox's own flag, which gates every template whose name carries "Transaction".
+    private static string WithoutTransactionSupport(string configurationJson) =>
+        configurationJson.Replace(
+            "\"OutboxProvider\": \"SampleOutboxProvider\",",
+            "\"OutboxProvider\": \"SampleOutboxProvider\", \"SupportsTransactions\": false,",
+            StringComparison.Ordinal);
+
+    // The gateway flag defaults to false, so turning it on adds templates rather than removing them.
+    private static string WithPublishConfirmationSupport(string configurationJson) =>
+        configurationJson.Replace(
+            "\"MessageGatewayProvider\": \"Sample.Tests.SampleMessageGatewayProvider\",",
+            "\"MessageGatewayProvider\": \"Sample.Tests.SampleMessageGatewayProvider\", \"HasSupportToPublishConfirmation\": true,",
+            StringComparison.Ordinal);
+
+    private string WriteConfiguration(string configurationJson)
+    {
+        var configurationFile = Path.Combine(
+            _projectFolder, TestConfigurationLoader.ConfigurationFileName);
+        File.WriteAllText(configurationFile, configurationJson);
+        return configurationFile;
+    }
+
     /// <summary>
     /// Writes the configuration into the sample project and runs the real generators over it, so
     /// that a clean audit afterwards is evidence the expected set agrees with what was written.
@@ -158,9 +250,7 @@ public class AuditCanaryTests : IDisposable
     /// <param name="configurationJson">The test-configuration.json contents to generate from.</param>
     private async Task GenerateAsync(string configurationJson)
     {
-        var configurationFile = Path.Combine(
-            _projectFolder, TestConfigurationLoader.ConfigurationFileName);
-        File.WriteAllText(configurationFile, configurationJson);
+        var configurationFile = WriteConfiguration(configurationJson);
 
         // Read back through the loader the audit uses, so the canary generates from exactly the
         // configuration the audit will later expect files from.
