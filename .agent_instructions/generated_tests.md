@@ -432,7 +432,35 @@ If you change a template pattern that also exists in these base classes, update 
 
 The generator only creates or overwrites files — it **never deletes** existing generated files. If you change a feature flag from `true` to `false` (e.g. disabling `HasSupportToDelayedMessages`), you must **manually delete** the previously-generated test files that are no longer wanted. Otherwise stale tests will remain and may fail.
 
-Similarly, if you rename or remove a template, the old generated files remain on disk. Always check for stale files after template changes.
+Similarly, if you rename or remove a template, the old generated files remain on disk.
+
+**You no longer have to check by hand — CI does it, and it will fail the build.** The `build` job runs
+the generated-tree audit, which compares the files the checked-in configurations *would* produce with
+the files actually on disk under a `Generated/` directory, in both directions:
+
+```bash
+dotnet test tests/Paramore.Brighter.Test.Generator.Tests/Paramore.Brighter.Test.Generator.Tests.csproj -f net10.0
+```
+
+- **Missing** — a file a configuration asks for that is not on disk. Run `./generate-test.sh` and
+  commit the result.
+- **Orphan** — a file on disk that no configuration asks for. This is the flipped-flag and
+  deleted-template case above. **The audit cannot tell you which side is wrong**: it reports that the
+  configuration and the tree disagree, not whether the flag or the file is the mistake. Decide that
+  first, then delete by hand — the generator will not do it for you.
+
+The audit reports names, not contents. A template you edited without regenerating leaves every file
+present and every name correct, and the audit stays green — so a green audit means the tree holds the
+files the configuration names, not that it is up to date.
+
+Two things to know when changing the generator itself:
+
+- The expected set comes from `OutboxGenerator.Plan` / `MessagingGatewayGenerator.Plan`, which walk
+  the same `Suites(...)` description `GenerateAsync` walks. **A new suite must be added to
+  `SuitesFor(...)`, not just to the generate path** — a suite that only the generate path knows about
+  is written to disk and then reported as an orphan by the audit.
+- Anything that prepares the model a template renders from belongs in `SuitesFor(...)` too (see
+  `WithPrefix` / `WithDefaultsFrom`), so that planning and generating see the same model.
 
 ## CI Flakiness Guidelines
 

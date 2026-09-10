@@ -42,8 +42,15 @@ public class WhenOutboxConfigurationMissingNamespaceShouldUseParentNamespace : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert - namespace should be inherited from parent configuration
-        Assert.Equal("MyApp.Tests", configuration.Outbox.Namespace);
+        // Assert - the parent's namespace is what the templates rendered. Asserted through the
+        // generated file rather than through the configuration object, because the generator no
+        // longer writes its per-render values back onto the caller's configuration. The file is
+        // named rather than picked out of an enumeration, whose order the filesystem chooses.
+        var generated = File.ReadAllText(Path.Combine(_testDirectory, "Outbox", "SqlServer",
+            "Generated", "Sync", "When_Adding_A_Message_It_Should_Be_Stored_With_All_Properties.cs"));
+        // The whole line, not a prefix of it: the singular branch does not dot-qualify, so
+        // "namespace MyApp.Tests.Outbox" would match MyApp.Tests.OutboxAnythingElse too
+        Assert.Contains("namespace MyApp.Tests.OutboxSqlServer.Sync;", generated);
     }
 
     public void Dispose()

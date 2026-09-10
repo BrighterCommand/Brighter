@@ -58,6 +58,16 @@ jobs:
             Linux-nuget-
       - name: Build
         run: dotnet build --configuration Release
+      # The generator's own tests include the audit that compares the Generated/ tree with what
+      # the checked-in configurations would produce. It has to run somewhere to be worth having,
+      # and it runs first: it needs no infrastructure and takes seconds, so generator drift is
+      # reported before the long suites rather than after them - or not at all, if one fails.
+      - name: Test Generator Tests
+        # One framework rather than both: the audit walks the repository tree, and neither the walk
+        # nor the generator it plans with is framework-sensitive, so the second run re-answers a
+        # question already answered. net10.0 matches what generate-test.sh runs.
+        run: dotnet test tests/Paramore.Brighter.Test.Generator.Tests/Paramore.Brighter.Test.Generator.Tests.csproj -c Release --no-restore --logger GitHubActions --no-build -f net10.0
+
       - name: Core Tests
         run: |
           dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --filter "Fragile!=CI" -c Release --logger GitHubActions --no-restore --no-build

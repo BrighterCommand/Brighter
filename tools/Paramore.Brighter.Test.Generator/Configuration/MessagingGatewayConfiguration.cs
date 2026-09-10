@@ -119,4 +119,64 @@ public class MessagingGatewayConfiguration
     /// Gets or sets the maximum time to wait for a message publish confirmation in milliseconds.
     /// </summary>
     public int MessageConfirmationTimeoutInMilliseconds { get; set; } = 1000;
+
+    /// <summary>
+    /// Returns a copy of this configuration carrying <paramref name="prefix"/>.
+    /// </summary>
+    /// <param name="prefix">The prefix the copy should carry.</param>
+    /// <returns>A copy; this instance is unchanged.</returns>
+    /// <remarks>
+    /// <para>
+    /// Templates read <see cref="Prefix"/> to build a namespace suffix, and the value they need is
+    /// not always the one the configuration file declares. Handing each rendering its own copy keeps
+    /// that difference out of the caller's object, so planning what would be generated can be asked
+    /// as a question rather than performed as an edit.
+    /// </para>
+    /// <para>
+    /// The copy is a <see cref="object.MemberwiseClone"/>, which is a deep copy only because every
+    /// property here is a string or a value type. A property holding a list or a dictionary would be
+    /// shared with the caller's object, and the purity this method exists for would be lost without
+    /// anything failing to compile.
+    /// </para>
+    /// </remarks>
+    internal MessagingGatewayConfiguration WithPrefix(string prefix)
+    {
+        var copy = (MessagingGatewayConfiguration)MemberwiseClone();
+        copy.Prefix = prefix;
+        return copy;
+    }
+
+    /// <summary>
+    /// Returns a copy of this configuration with values it does not set taken from the root
+    /// <paramref name="configuration"/>.
+    /// </summary>
+    /// <param name="configuration">The root configuration to inherit unset values from.</param>
+    /// <returns>A copy; this instance is unchanged.</returns>
+    /// <remarks>
+    /// Applied where the model a rendering reads is built, so that describing the work and
+    /// performing it see the same model. Applying it on only one of those paths is how the
+    /// generator's expected set and its output would come to disagree - which is the drift the
+    /// generated-tree audit exists to catch, and so the last place it should be reintroduced.
+    /// </remarks>
+    internal MessagingGatewayConfiguration WithDefaultsFrom(TestConfiguration configuration)
+    {
+        var copy = (MessagingGatewayConfiguration)MemberwiseClone();
+
+        if (string.IsNullOrEmpty(copy.MessageBuilder))
+        {
+            copy.MessageBuilder = configuration.MessageBuilder;
+        }
+
+        if (string.IsNullOrEmpty(copy.Namespace))
+        {
+            copy.Namespace = configuration.Namespace;
+        }
+
+        if (string.IsNullOrEmpty(copy.MessageAssertion))
+        {
+            copy.MessageAssertion = configuration.MessageAssertion;
+        }
+
+        return copy;
+    }
 }
