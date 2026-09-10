@@ -2,7 +2,9 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
+using Events;
 using Events.Ports.Commands;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
@@ -25,10 +27,14 @@ if (!int.TryParse(args[0], out int repeatCount))
 var builder = Host.CreateApplicationBuilder(args);
 
 //create the gateway
+var connectionString = SampleDatabase.ConnectionString(
+    builder.Configuration.GetConnectionString("Brighter"));
+
+QueueTableProvisioner.EnsureQueueTable(connectionString, SampleDatabase.QueueTable);
+
 var messagingConfiguration = new RelationalDatabaseConfiguration(
-    @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;",
-    databaseName: "BrighterSqlQueue",
-    queueStoreTable: "QueueData");
+    connectionString,
+    queueStoreTable: SampleDatabase.QueueTable);
 
 var producerRegistry = new MsSqlProducerRegistryFactory(
         messagingConfiguration,
@@ -37,7 +43,7 @@ var producerRegistry = new MsSqlProducerRegistryFactory(
         // CompetingReceiverConsole declares.
         [new Publication<CompetingConsumerCommand>
         {
-            Topic = new RoutingKey("multipleconsumer.command")
+            Topic = new RoutingKey(SampleDatabase.CompetingTopic)
         }])
     .Create();
 

@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Events;
 using Events.Ports.Commands;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,7 +32,6 @@ using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
 using Paramore.Brighter.BoxProvisioning;
 using Paramore.Brighter.BoxProvisioning.MsSql;
-using Paramore.Brighter.Inbox;
 using Paramore.Brighter.Inbox.MsSql;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.Extensions.DependencyInjection;
@@ -40,36 +40,29 @@ using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-// The tables this process uses: the queue the transport reads, and the Inbox it
-// de-duplicates against. GreetingsSender builds the matching configuration for the queue and
-// the Outbox — the connection string and the table names have to agree across the two files.
-// There is no outBoxTableName here because this process has no Outbox.
-// Set ConnectionStrings__Brighter in the environment to point this somewhere other than the
-// SQLEXPRESS default. It must match whatever GreetingsSender is using.
-// GetConnectionString returns "" — not null — when the key exists but is blank, which an
-// environment variable makes easy, so test for whitespace rather than null.
-var configured = builder.Configuration.GetConnectionString("Brighter");
-var connectionString = string.IsNullOrWhiteSpace(configured)
-    ? @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;"
-    : configured;
+var connectionString = SampleDatabase.ConnectionString(
+    builder.Configuration.GetConnectionString("Brighter"));
 
+// The queue table is not provisioned by anything in Brighter — see QueueTableProvisioner.
+// Running it here as well as in the sender is what lets either process be started first.
+QueueTableProvisioner.EnsureQueueTable(connectionString, SampleDatabase.QueueTable);
+
+// The two tables this process uses: the queue it reads, and the Inbox it de-duplicates
+// against. No outBoxTableName, because this process has no Outbox.
 var configuration = new RelationalDatabaseConfiguration(
     connectionString,
-    databaseName: "BrighterSqlQueue",
-    inboxTableName: "InboxMessages",
-    queueStoreTable: "QueueData");
+    inboxTableName: SampleDatabase.InboxTable,
+    queueStoreTable: SampleDatabase.QueueTable);
 
 builder.Services.AddConsumers(options =>
 {
     options.Subscriptions =
     [
-        // MsSqlSubscription, NOT Subscription: the MSSQL ChannelFactory casts what it is
-        // given down to MsSqlSubscription and throws ConfigurationException when the cast
-        // fails. A plain Subscription<T> compiles and then dies as the Dispatcher starts.
+        // MsSqlSubscription, not Subscription — the MSSQL ChannelFactory downcasts.
         new MsSqlSubscription<GreetingEvent>(
             new SubscriptionName("paramore.example.greeting"),
-            new ChannelName("greeting.event"),
-            new RoutingKey("greeting.event"),
+            new ChannelName(SampleDatabase.GreetingTopic),
+            new RoutingKey(SampleDatabase.GreetingTopic),
             timeOut: TimeSpan.FromMilliseconds(200),
             messagePumpType: MessagePumpType.Reactor)
     ];
@@ -77,18 +70,15 @@ builder.Services.AddConsumers(options =>
         new MsSqlMessageConsumerFactory(configuration)
     );
 
-    // The Inbox instance the [UseInbox] attribute on GreetingEventHandler writes to. The
-    // attribute carries the policy (context key, once-only, what a duplicate does); this
-    // registration is only what supplies the store.
+    // Supplies the Inbox store. The policy lives on GreetingEventHandler's [UseInbox].
     options.InboxConfiguration = new InboxConfiguration(new MsSqlInbox(configuration));
 })
 // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
 // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
 .UseScheduler(new InMemorySchedulerFactory())
-// Each process provisions the box it owns, so the receiver can be started on its own. This
-// registers a hosted service, and the ORDER matters: it must be registered before
-// AddHostedService<ServiceActivatorHostedService>() below, or the pump starts consuming
-// against an InboxMessages table that does not exist yet.
+// Registered BEFORE AddHostedService<ServiceActivatorHostedService>() below, and that order is
+// load-bearing: hosted services start in registration order, so reversing these two starts the
+// pump against an InboxMessages table that does not exist yet.
 .UseBoxProvisioning(options => options.AddMsSqlInbox(configuration))
 .AutoFromAssemblies();
 

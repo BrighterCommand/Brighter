@@ -1,6 +1,6 @@
 #region Licence
 /* The MIT License (MIT)
-Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,9 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using System.Threading.Tasks;
+using Events;
 using Events.Ports.Commands;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -43,74 +46,80 @@ Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .CreateLogger();
 
-var builder = Host.CreateApplicationBuilder(args);
-builder.Services.AddSingleton<ILoggerFactory>(new SerilogLoggerFactory());
+try
+{
+    var builder = Host.CreateApplicationBuilder(args);
+    builder.Services.AddSingleton<ILoggerFactory>(new SerilogLoggerFactory());
 
-// One configuration object names the tables this process uses: the queue the transport writes
-// to, and the Outbox. They live in the same database, which is the point of this sample.
-// GreetingsReceiverConsole builds the matching configuration for the queue and the Inbox —
-// the connection string and the table names have to agree across the two files.
-// The default is the SQLEXPRESS instance this sample was written against. Set
-// ConnectionStrings__Brighter in the environment to point it somewhere else — a container,
-// say — without editing this file. There is no appsettings.json in this sample.
-// GetConnectionString returns "" — not null — when the key exists but is blank, which an
-// environment variable makes easy, so test for whitespace rather than null.
-var configured = builder.Configuration.GetConnectionString("Brighter");
-var connectionString = string.IsNullOrWhiteSpace(configured)
-    ? @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;"
-    : configured;
+    var connectionString = SampleDatabase.ConnectionString(
+        builder.Configuration.GetConnectionString("Brighter"));
 
-var configuration = new RelationalDatabaseConfiguration(
-    connectionString,
-    databaseName: "BrighterSqlQueue",
-    outBoxTableName: "Outbox",
-    queueStoreTable: "QueueData");
+    // Nothing else will: the MSSQL gateway has no provisioning path, so OnMissingChannel.Create
+    // is inert and the first send would fail with Invalid object name 'QueueData'.
+    QueueTableProvisioner.EnsureQueueTable(connectionString, SampleDatabase.QueueTable);
 
-// AddProducers is given MsSqlTransactionProvider as a TYPE, so the container activates it, and
-// its constructor asks for exactly this interface. Without this line the first attempt to
-// resolve a command processor throws, naming a type this file never mentions.
-builder.Services.AddSingleton<IAmARelationalDatabaseConfiguration>(configuration);
+    // One object, both the tables this process uses. GreetingsReceiverConsole builds the
+    // matching pair for the queue and the Inbox from the same constants.
+    var configuration = new RelationalDatabaseConfiguration(
+        connectionString,
+        outBoxTableName: SampleDatabase.OutboxTable,
+        queueStoreTable: SampleDatabase.QueueTable);
 
-builder.Services.AddBrighter()
-    // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
-    // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-    .UseScheduler(new InMemorySchedulerFactory())
-    .AddProducers((configure) =>
+    // AddProducers is given MsSqlTransactionProvider as a TYPE, so the container activates it,
+    // and its constructor asks for exactly this interface.
+    builder.Services.AddSingleton<IAmARelationalDatabaseConfiguration>(configuration);
+
+    builder.Services.AddBrighter()
+        // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
+        // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
+        .UseScheduler(new InMemorySchedulerFactory())
+        .AddProducers((configure) =>
+        {
+            configure.ProducerRegistry = new MsSqlProducerRegistryFactory(
+                    configuration,
+                    [new Publication<GreetingEvent> { Topic = new RoutingKey(SampleDatabase.GreetingTopic) }]
+                )
+                .Create();
+
+            // Without these three the message goes straight to the queue. With them it lands in
+            // the Outbox first, so it can share a transaction with your own write.
+            configure.Outbox = new MsSqlOutbox(configuration);
+            configure.ConnectionProvider = typeof(MsSqlConnectionProvider);
+            configure.TransactionProvider = typeof(MsSqlTransactionProvider);
+        })
+        // Creates and migrates the Outbox table — but only once the HOST starts, because it
+        // registers a hosted service. See StartAsync below.
+        .UseBoxProvisioning(options => options.AddMsSqlOutbox(configuration))
+        .AutoFromAssemblies();
+
+    var host = builder.Build();
+
+    // StartAsync rather than RunAsync, because we have work to do between starting the host and
+    // waiting on it. Starting is what runs the box provisioning above, so it has to happen
+    // before the send rather than after.
+    await host.StartAsync();
+
+    try
     {
-        configure.ProducerRegistry = new MsSqlProducerRegistryFactory(
-                configuration,
-                [new Publication{Topic = new RoutingKey("greeting.event"), RequestType = typeof(GreetingEvent)}]
-            )
-            .Create();
+        var commandProcessor = host.Services.GetRequiredService<IAmACommandProcessor>();
+        var transactionProvider = host.Services.GetRequiredService<IAmATransactionConnectionProvider>();
 
-        // Without these three the message goes straight to the queue. With them it lands in the
-        // Outbox first, so it can share a transaction with your own write.
-        configure.Outbox = new MsSqlOutbox(configuration);
-        configure.ConnectionProvider = typeof(MsSqlConnectionProvider);
-        configure.TransactionProvider = typeof(MsSqlTransactionProvider);
-    })
-    // Registers a hosted service that creates and migrates the Outbox table. It only runs when
-    // the HOST starts — see StartAsync below. The QUEUE table is not covered: the MSSQL gateway
-    // has no provisioning path, so OnMissingChannel.Create is inert there and
-    // BrighterSqlQueue.sql is what creates it. MsSqlQueueBuilder gives the same DDL from code.
-    .UseBoxProvisioning(options => options.AddMsSqlOutbox(configuration))
-    .AutoFromAssemblies();
+        // DepositPost writes to the Outbox and sends nothing. Passing the transaction provider
+        // is what lets the Outbox write share a transaction with your own — in a real handler
+        // your INSERT would go on the same connection, and the two would commit together.
+        var messageId = commandProcessor.DepositPost(
+            new GreetingEvent("Ian"), transactionProvider);
 
-var host = builder.Build();
-
-// StartAsync rather than RunAsync, because we have work to do between starting the host and
-// waiting on it. Starting is what runs the box provisioning above, so it has to happen before
-// the send rather than after.
-await host.StartAsync();
-
-var commandProcessor = host.Services.GetRequiredService<IAmACommandProcessor>();
-
-// DepositPost writes to the Outbox and sends nothing. In a real handler this call shares a
-// transaction with your own write, so the row and the message commit together or not at all.
-var messageId = commandProcessor.DepositPost(new GreetingEvent("Ian"));
-
-// ClearOutbox then dispatches it onto the queue. A long-running host would let the Outbox
-// Sweeper (UseOutboxSweeper) do this on a timer instead.
-commandProcessor.ClearOutbox([messageId]);
-
-await host.StopAsync();
+        // ClearOutbox then dispatches it onto the queue. A long-running host would let the
+        // Outbox Sweeper (UseOutboxSweeper) do this on a timer instead.
+        commandProcessor.ClearOutbox([messageId]);
+    }
+    finally
+    {
+        await host.StopAsync();
+    }
+}
+finally
+{
+    await Log.CloseAndFlushAsync();
+}

@@ -33,25 +33,11 @@ namespace GreetingsReceiverConsole
     public class GreetingEventHandler : RequestHandler<GreetingEvent>
     {
         // The Inbox makes this handler idempotent: a redelivered message is recognised rather
-        // than reprocessed. OnceOnlyAction.Warn logs the duplicate and drops it without calling
-        // this method; Throw is what you want when the caller needs to know one arrived.
+        // than reprocessed, and Warn logs the duplicate and drops it without calling this method.
         //
-        // This is the ATTRIBUTE route rather than AddConsumers' global InboxConfiguration.
-        // AddEventBus hands that configuration to the pipeline only on its ExternalBus arms;
-        // with no producers registered it calls NoExternalBus() instead, and that overload
-        // takes no inbox. This receiver has no producers, so the global configuration would be
-        // silently ignored.
-        //
-        // The handler lives HERE rather than in the shared Events project because the other
-        // three apps in this sample also call AutoFromAssemblies() and none of them registers
-        // an inbox. Pipelines build lazily per request type, so that breakage is latent rather
-        // than certain — it would surface for the first of them to dispatch a GreetingEvent, or
-        // immediately under ValidatePipelines().
-        //
-        // Keeping InboxConfiguration registered alongside this attribute is safe rather than
-        // merely redundant: PipelineBuilder skips the global inbox attribute for any handler
-        // that already carries [UseInbox] (HasExistingUseInboxAttributesInPipeline), so adding
-        // a producer to this process later will not double up the inbox handler.
+        // The attribute rather than AddConsumers' global InboxConfiguration, because the global
+        // one is not passed to the pipeline when a process registers no producers — which this
+        // receiver does not. The guide accompanying this sample explains why.
         [UseInbox(step: 0, contextKey: typeof(GreetingEventHandler), onceOnly: true,
             onceOnlyAction: OnceOnlyAction.Warn)]
         public override GreetingEvent Handle(GreetingEvent greetingEvent)

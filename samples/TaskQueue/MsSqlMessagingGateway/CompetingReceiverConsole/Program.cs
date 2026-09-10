@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using CompetingReceiverConsole;
 using Events;
 using Events.Ports.Commands;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
@@ -20,8 +21,8 @@ var subscriptions = new Subscription[]
     // down to MsSqlSubscription and throws ConfigurationException when the cast fails.
     new MsSqlSubscription<CompetingConsumerCommand>(
         new SubscriptionName("paramore.example.multipleconsumer.command"),
-        new ChannelName("multipleconsumer.command"),
-        new RoutingKey("multipleconsumer.command"),
+        new ChannelName(SampleDatabase.CompetingTopic),
+        new RoutingKey(SampleDatabase.CompetingTopic),
         timeOut: TimeSpan.FromMilliseconds(200),
         // Reactor, because CompetingConsumerCommandHandler is a sync RequestHandler<T>. The
         // default is Proactor, which calls SendAsync and finds an empty async chain — an Error
@@ -29,10 +30,14 @@ var subscriptions = new Subscription[]
         messagePumpType: MessagePumpType.Reactor)
 };
 
+var connectionString = SampleDatabase.ConnectionString(
+    builder.Configuration.GetConnectionString("Brighter"));
+
+QueueTableProvisioner.EnsureQueueTable(connectionString, SampleDatabase.QueueTable);
+
 var messagingConfiguration = new RelationalDatabaseConfiguration(
-    @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;",
-    databaseName: "BrighterSqlQueue",
-    queueStoreTable: "QueueData");
+    connectionString,
+    queueStoreTable: SampleDatabase.QueueTable);
 var messageConsumerFactory = new MsSqlMessageConsumerFactory(messagingConfiguration);
 
 builder.Services.AddConsumers(options =>
