@@ -696,7 +696,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T5.2
   - **References**: FR-8, FR-9(b), NFR-4, D6, OOS-14 (AC-12, AC-39, AC-47 discharge it at Phase 6); ADR 0075 steps 4, 5, 5a
 
-- [ ] **TEST + IMPLEMENT: T5.4 — bracket 3: the consumer pump's own flow is suppressed, so FR-19 is an invariant rather than an assumption**
+- [x] **TEST + IMPLEMENT: T5.4 — bracket 3: the consumer pump's own flow is suppressed, so FR-19 is an invariant rather than an assumption**
   - **USE COMMAND**: `/test-first a consumer pipeline asks with AlwaysNew and adopts nothing whatever flow the pump was started on`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_pump_is_started_on_a_flow_carrying_an_ambient_the_consumer_should_not_adopt.cs`
