@@ -92,7 +92,7 @@ try
         .UseBoxProvisioning(options => options.AddMsSqlOutbox(configuration))
         .AutoFromAssemblies();
 
-    var host = builder.Build();
+    using var host = builder.Build();
 
     // StartAsync rather than RunAsync, because we have work to do between starting the host and
     // waiting on it. Starting is what runs the box provisioning above, so it has to happen

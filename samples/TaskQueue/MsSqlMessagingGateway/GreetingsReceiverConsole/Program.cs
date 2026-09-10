@@ -80,7 +80,12 @@ builder.Services.AddConsumers(options =>
 // load-bearing: hosted services start in registration order, so reversing these two starts the
 // pump against an InboxMessages table that does not exist yet.
 .UseBoxProvisioning(options => options.AddMsSqlInbox(configuration))
-.AutoFromAssemblies();
+.AutoFromAssemblies()
+// Runs the consumer validation specs at startup, including PumpHandlerMatch — the rule the
+// subscription comment above cites. Without this the specs are registered and never executed,
+// and a Proactor/sync mismatch is a runtime pump failure rather than a named startup error.
+// ValidatePipelines extends IBrighterBuilder, so it chains here rather than off IServiceCollection.
+.ValidatePipelines();
 
 builder.Services.AddHostedService<ServiceActivatorHostedService>();
 

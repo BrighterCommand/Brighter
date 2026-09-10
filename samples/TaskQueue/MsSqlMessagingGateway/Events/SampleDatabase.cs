@@ -49,8 +49,15 @@ public static class SampleDatabase
     /// The SQLEXPRESS instance this sample was written against. Set ConnectionStrings__Brighter
     /// in the environment to point it somewhere else — a container, say — without editing source.
     /// </summary>
+    /// <remarks>
+    /// TrustServerCertificate is not optional here. Microsoft.Data.SqlClient defaults
+    /// <c>Encrypt</c> to <c>true</c> from 4.0 onward — this repository pins 7.0.2 — and a default
+    /// SQL Express instance presents a self-signed certificate, so without it login fails
+    /// certificate validation before it reaches the database. Every other MSSQL connection
+    /// string in this repository carries the same opt-out.
+    /// </remarks>
     public const string DefaultConnectionString =
-        @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;";
+        @"Database=" + Name + @";Server=.\sqlexpress;Integrated Security=SSPI;TrustServerCertificate=True;";
 
     /// <summary>
     /// Reads the connection string from configuration, falling back to <see cref="DefaultConnectionString"/>.
