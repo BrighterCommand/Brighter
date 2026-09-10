@@ -47,17 +47,27 @@ The `CommandProcessor` class serves as the central orchestrator, implementing bo
 **Core dispatch methods:**
 ```csharp
 // Point-to-point command
-void Send<T>(T command) where T : class, IRequest
+void Send<T>(T command, RequestContext? requestContext = null)
+    where T : class, IRequest
 
 // Pub-sub event  
-void Publish<T>(T @event) where T : class, IRequest
+void Publish<T>(T @event, RequestContext? requestContext = null)
+    where T : class, IRequest
 
 // Synchronous request-reply
-TResponse? Call<T, TResponse>(T request) where T : class, ICall where TResponse : class, IResponse
+TResponse? Call<T, TResponse>(T request, RequestContext? requestContext = null, TimeSpan? timeOut = null)
+    where T : class, ICall where TResponse : class, IResponse
 
 // Asynchronous via external queue
-void Post<T>(T request) where T : class, IRequest
+void Post<TRequest>(TRequest request, RequestContext? requestContext = null,
+    Dictionary<string, object>? args = null)
+    where TRequest : class, IRequest
 ```
+
+Those are the full signatures rather than an abridgement, because the optional parameter they
+share is the one worth knowing about: **`requestContext` is how you pass your own
+`RequestContext` through the pipeline** instead of letting the processor create one per call. Each
+has an `…Async` counterpart taking `bool continueOnCapturedContext` and a `CancellationToken`.
 
 ### Handler Interface Hierarchy
 
@@ -462,6 +472,12 @@ The four collaborators that chain needs, and where each comes from:
   `InvalidOperationException("No ResponseChannelFactory registered")`. So a processor with no RPC
   wiring at all reports the missing *subscription*; you only reach the second message once the
   subscription is registered
+- **That first message also names the wrong type, and the spelling is the lesser problem.** The
+  lookup matches `s.RequestType == typeof(TResponse)`; the message interpolates `typeof(T)`, the
+  **request** type. So the exception you hit for registering a subscription against the wrong type
+  reports the type you did *not* need to match, which sends you to fix the thing that was already
+  right. Read it as *"no reply subscription whose `RequestType` is your response type"*. Filed as
+  [#4337](https://github.com/BrighterCommand/Brighter/issues/4337)
 - Timeout support for external calls to prevent blocking
 - Reply channel management for external scenarios
 - Supports same middleware pipeline as Send/Publish
@@ -606,27 +622,46 @@ catch
 
 ### Outbox Sweeper Pattern
 
-For high-reliability scenarios, implement an outbox sweeper that periodically processes undispatched messages:
+For high-reliability scenarios you want a sweeper: something that periodically finds messages
+sitting in the Outbox undispatched and clears them. **Brighter ships one — do not write your
+own.** `TimedOutboxSweeper` is in `Paramore.Brighter.Outbox.Hosting`, and `UseOutboxSweeper`
+registers it as a hosted service:
 
 ```csharp
-// Background service that runs periodically
-public class OutboxSweeper : BackgroundService
-{
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+using Paramore.Brighter.Outbox.Hosting;
+
+services.AddBrighter()
+    .AddProducers(configure =>
     {
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            var undispatchedMessages = await outbox.GetUndispatchedMessages();
-            if (undispatchedMessages.Any())
-            {
-                await commandProcessor.ClearOutboxAsync(
-                    undispatchedMessages.Select(m => m.Id));
-            }
-            await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
-        }
-    }
-}
+        // ... your producer registry, outbox and transaction provider
+    })
+    .UseOutboxSweeper(options =>
+    {
+        options.TimerInterval = 5;                              // seconds between sweeps
+        options.MinimumMessageAge = TimeSpan.FromSeconds(5);    // leave newer messages alone
+        options.BatchSize = 100;
+        options.UseBulk = false;
+    })
+    .AutoFromAssemblies();
 ```
+
+**Why not hand-roll it.** A `BackgroundService` looping over the Outbox is missing the two things
+that make sweeping safe:
+
+- **A distributed lock.** `TimedOutboxSweeper` takes an `IDistributedLock` and holds it for the
+  sweep, so a second instance skips the run rather than dispatching the same messages again.
+  `AddProducers` registers one for you, but it defaults to `InMemoryLock` — which coordinates
+  threads in *one* process and nothing between processes. **Running more than one instance means
+  setting `configure.DistributedLock`** to a real implementation (`MsSqlLockingProvider`,
+  `PostgresLockingProvider` and the rest).
+- **Batching and an age floor.** `MinimumMessageAge` is what stops the sweeper racing the
+  `ClearOutbox` call that is about to happen anyway on the request thread, and `BatchSize` is what
+  stops one sweep pulling an entire backlog into memory.
+
+The API a hand-rolled sweeper reaches for does not exist, either: there is no
+`GetUndispatchedMessages()`. The real query is `OutstandingMessagesAsync(dispatchedSince,
+requestContext, pageSize, pageNumber, trippedTopics, args)` on `IAmAnOutboxAsync`, and its
+`dispatchedSince` argument is the age floor above.
 
 **Benefits:**
 - **Guarantees delivery** - Messages won't be lost even if ClearOutbox fails
@@ -663,10 +698,20 @@ note right: Transforms can include:\n- Compression\n- Encryption\n- Format conve
 The `MessageMapperRegistry` provides bi-directional mapping:
 
 ```csharp
-public interface IAmAMessageMapper<T> where T : class, IRequest
+// The non-generic base is a marker, used where the closed type is not known
+public interface IAmAMessageMapper;
+
+public interface IAmAMessageMapper<TRequest> : IAmAMessageMapper
+    where TRequest : class, IRequest
 {
-    Message MapToMessage(T request);
-    T MapToRequest(Message message);
+    // Set by the pipeline; you rarely assign it yourself
+    IRequestContext? Context { get; set; }
+
+    // MapToMessage takes the Publication as well as the request — that is where
+    // Topic, RoutingKey and the CloudEvents metadata come from
+    Message MapToMessage(TRequest request, Publication publication);
+
+    TRequest MapToRequest(Message message);
 }
 ```
 
@@ -1183,7 +1228,8 @@ public void When_Handler_Has_Attributes_Should_Build_Correct_Pipeline()
     
     var handlerFactory = new SimpleHandlerFactorySync(
         type => (IHandleRequests)Activator.CreateInstance(type)!);
-    var builder = new PipelineBuilder<TestCommand>(registry, handlerFactory);
+    // using, because PipelineBuilder owns the handler lifetime scope and releases it on Dispose
+    using var builder = new PipelineBuilder<TestCommand>(registry, handlerFactory);
     
     // Act
     var pipeline = builder.Build(new TestCommand(), new RequestContext());
@@ -1427,7 +1473,7 @@ is the whole of the difference.
 
 **The two flags are not additive.** `FallbackPolicyHandler.InitializeFromAttributeParams` tests
 `circuitBreaker` first and `backstop` only in its `else` branch
-(`Policies/Handlers/FallbackPolicyHandler.cs:44-60`), so
+(`Policies/Handlers/FallbackPolicyHandler.cs:45-62`), so
 `[FallbackPolicy(backstop: true, circuitBreaker: true, …)]` discards `backstop` without saying so
 and routes only `BrokenCircuitException` to `Fallback`. Pick one: `circuitBreaker: true` to catch
 a broken circuit, `backstop: true` to catch everything.
