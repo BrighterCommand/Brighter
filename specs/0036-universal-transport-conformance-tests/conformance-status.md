@@ -370,8 +370,19 @@ redelivered for ever would pass every other DLQ behaviour in this suite.
   (`docker-compose-redis.yaml`), satisfying the both-variants rule (FR-14).
 - **All three `Kafka` configurations are `Pass`**, both variants each, against a live broker
   (`docker-compose-kafka.yaml`).
-- **The other 20 remain `Deferred`.** CI on #4297 is the evidence that moves them, one transport at a
+- **`MSSQL / MSSQLMessagingGateway` and `PostgresSQL / PostgresMessagingGateway` are `Pass`**, both
+  variants each, against `docker-compose-mssql.yaml` and `docker-compose-postgres.yaml`.
+- **`RMQ.Async / Classic` and `RMQ.Async / Quorum` are `Pass`**, both variants each, against
+  `docker-compose-rmq.yaml`. These two are the first configurations to reach the DLQ by the
+  **broker's** own dead-lettering rather than a Brighter-side republish, and they are what exposed
+  the two transport-specific assumptions described below.
+- **The other 16 remain `Deferred`.** CI on #4297 is the evidence that moves them, one transport at a
   time.
+
+Every cell above was also checked for vacuity the same way: force the pump's budget to `int.MaxValue`
+so it can never be exhausted, and confirm the test goes red. Both variants were probed separately —
+`CreateChannel` and `CreateChannelAsync` are different paths, and a probe that touches one proves
+nothing about the other.
 
 ### The budget is enforced by the pump, and FR-23 drives the pump
 
@@ -400,6 +411,64 @@ declared `requeueCount`, so they took `Subscription`'s default of `-1`. The pump
 `DiscardRequeuedMessagesEnabled() == false` and never rejects, which left the behaviour untestable
 rather than failing. They now declare a budget like every other provider.
 
+### What the dead-lettered message may be expected to carry
+
+Running RMQ made two of FR-23's assertions visible as assumptions about *how* a message reaches the
+DLQ rather than *whether* it does. Both were written against Brighter-side republish, which was the
+only mechanism the column had seen. Neither is a defect in RMQ.
+
+**Identity.** The original assertion was `dlqMessage.Header.MessageId == message.Header.MessageId`.
+Most transports carry the id through a requeue untouched. RabbitMQ does not: `RmqMessagePublisher`
+mints a fresh id on republish (`Uuid.NewAsString()`) and records the first one in the
+`x-original-message-id` header. That is deliberate, and the product already depends on it —
+`Reactor.cs:500` and `Proactor.cs:506` read exactly that header when they log a dropped message. The
+assertion now accepts **either** the message id or `x-original-message-id`, and nothing else; an
+unrelated message matches neither.
+
+**Delivery count.** The original assertion was `HandledCount >= RequeueCount`. The pump increments
+the count and *then* tests it, so the delivery that exhausts the budget is the one never republished.
+Where the harness puts the message on the DLQ itself, it sends that final in-memory header and the
+count reads `RequeueCount`. Where the broker dead-letters natively — `RmqMessageConsumer.RejectAsync`
+calls `BasicRejectAsync` and the broker's DLX moves the copy it already holds — the stored copy was
+written by the last republish, so it reads one less. Both spent the same budget; they differ only in
+which copy gets recorded. The assertion is now `>= RequeueCount - 1`, the strongest bound true of
+both mechanisms, and it still fails anything dead-lettered before the budget ran down.
+
+Both changes live in the shared templates, so every configuration is held to the same rule. The four
+configurations that were already `Pass` were re-run against the revised assertions and stay green.
+
+### Why the eight AWS cells stay `Deferred`: the budget is inert on SQS
+
+`AWS` and `AWS.V4` were run against LocalStack and are **not** promoted. The test does not fail on a
+timing wobble or a harness gap — it fails because **Brighter's delivery budget cannot be exhausted on
+SQS**, and the message reaches the dead-letter queue by a different mechanism entirely.
+
+The measurement. The dead-lettered message arrives carrying `handled-count=0`, the original message
+id, and **no rejection metadata at all**. Rejection metadata is stamped by `RefreshMetadata` inside
+`SqsMessageConsumer.RejectAsync`, so its absence says plainly that Brighter never rejected this
+message: SQS's own redrive policy moved its stored copy.
+
+The cause is structural. `SqsMessageConsumer.RequeueAsync` requeues by calling
+`ChangeMessageVisibilityAsync` — it makes the stored message visible again and never rewrites it.
+`handled-count` is written only on *send* (`SqsMessageSender`, `SnsMessagePublisher`). So the count
+does not survive a requeue: every redelivery arrives reading 0, the pump increments it to 1 in
+memory, `HandledCountReached(3)` is false, and it requeues again. The budget never runs down, however
+many times the message is delivered. What eventually dead-letters it is the queue's `maxReceiveCount`.
+
+This is consistent with how the AWS suite already treats the question:
+`When_throwing_defer_action_respect_redrive` sets `requeueCount: -1` and relies on `maxReceiveCount`,
+which is the supported route to a DLQ on SQS and has its own coverage.
+
+Raising the harness's `maxReceiveCount` above `requeueCount` was tried, to stop the broker answering
+for the pump. It does not help, and could not: with the count resetting on every delivery there is no
+budget to exhaust, so the only effect is that redrive takes longer to fire. That change was reverted
+rather than left in place looking like a fix.
+
+⚠️ **The consequence is that `requeueCount` is silently inert on SQS** — configured, accepted, and
+without effect. A user who sets it gets unbounded redelivery bounded only by `maxReceiveCount`.
+Whether that is a defect to fix or a limitation to document is a product decision, so it is **raised
+rather than assumed**; these eight cells stay `Deferred` until it is answered.
+
 ## Conformance Matrix
 
 | Configuration | FR-2 | FR-4 | FR-5 | FR-6 | FR-7 | FR-8 | FR-9 | FR-15 | FR-16 | FR-17 | FR-22 | FR-23 |
@@ -419,11 +488,11 @@ rather than failing. They now declare a budget like every other provider.
 | Kafka / Classic | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | Kafka / Consumer | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | Kafka / PartitionKey | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
-| MSSQL / MSSQLMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
-| PostgresSQL / PostgresMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
+| MSSQL / MSSQLMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass |
+| PostgresSQL / PostgresMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | Redis / RedisMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass |
-| RMQ.Async / Classic | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
-| RMQ.Async / Quorum | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
+| RMQ.Async / Classic | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
+| RMQ.Async / Quorum | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | RocketMQ / RocketMQMessagingGateway | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) |
 | AzureServiceBus / AzureServiceBusMessagingGateway | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
 | MQTT / MqttMessagingGateway | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) |

@@ -11,6 +11,7 @@ using Paramore.Brighter.Actions;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 using Polly.Registry;
+using Xunit;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Consumer;
 
@@ -159,5 +160,38 @@ public static class ConformanceDeferredPump
         {
             Channel = channel, TimeOut = timeOut, RequeueCount = requeueCount
         };
+    }
+
+    /// <summary>
+    /// Asserts that <paramref name="deadLettered"/> is the message that was sent.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Identity survives a requeue in one of two ways, and which one a transport uses is its own
+    /// business. Most carry the message id through untouched. Others - RabbitMQ, for one -
+    /// republish under a fresh id and record the first one in the
+    /// <c>x-original-message-id</c> header, which is why <see cref="Message.OriginalMessageIdHeaderName"/>
+    /// exists and why the pump reads it when it logs a dropped message.
+    /// </para>
+    /// <para>
+    /// So either answer counts, and nothing else does: an unrelated message matches on neither.
+    /// </para>
+    /// </remarks>
+    public static void AssertIsTheMessageSent(Message sent, Message deadLettered)
+    {
+        var sentId = sent.Header.MessageId.Value;
+        var deadLetteredId = deadLettered.Header.MessageId.Value;
+
+        var republishedFrom = deadLettered.Header.Bag.TryGetValue(
+            Message.OriginalMessageIdHeaderName, out object? value) ? value?.ToString() : null;
+
+        Assert.True(deadLetteredId == sentId || republishedFrom == sentId,
+            $"the dead-lettered message should be the one that was sent ({sentId}), but it "
+            + $"reports id {deadLetteredId}"
+            + (string.IsNullOrEmpty(republishedFrom)
+                ? " and carries no " + Message.OriginalMessageIdHeaderName + " header"
+                : $" and was republished from {republishedFrom}"));
+
+        Assert.Equal(sent.Body.Value, deadLettered.Body.Value);
     }
 }
