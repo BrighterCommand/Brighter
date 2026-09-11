@@ -83,7 +83,7 @@ public static class QueueTableProvisioner
 
         // The lookup is parameterized although the name here is a constant, because a sample is a
         // copy-paste source and the reader who binds it to configuration inherits this code.
-        Execute(connection, sql, OBJECT_ALREADY_EXISTS, new SqlParameter("@queueTable", queueTableName));
+        Execute(connection, sql, OBJECT_ALREADY_EXISTS, queueTableName);
     }
 
     // Guarded on what the index IS, not what it is called: any index whose leading column is
@@ -107,28 +107,29 @@ public static class QueueTableProvisioner
                    END;
                    """;
 
-        Execute(connection, sql, INDEX_ALREADY_EXISTS, new SqlParameter("@queueTable", queueTableName));
+        Execute(connection, sql, INDEX_ALREADY_EXISTS, queueTableName);
     }
 
     // All four applications share one database, so two starting together can both pass a guard and
     // race to create. Box Provisioning takes an advisory lock; there is no equivalent for the
     // queue, so the loser treats "already exists" as the outcome it wanted. A deadlock victim is
-    // retried once, because concurrent DDL surfaces as 1205 as readily as 2714 or 1913.
-    private static void Execute(SqlConnection connection, string sql, int alreadyExists, params SqlParameter[] parameters)
+    // retried once — concurrent DDL surfaces as 1205 as readily as 2714 or 1913 — and a second
+    // 1205 propagates, because a database deadlocking twice on one CREATE is not a race any more.
+    private static void Execute(SqlConnection connection, string sql, int alreadyExists, string queueTableName)
     {
         try
         {
-            ExecuteOnce(connection, sql, parameters);
+            ExecuteOnce(connection, sql, queueTableName);
         }
         catch (SqlException ex) when (ex.Number == DEADLOCK_VICTIM)
         {
             try
             {
-                ExecuteOnce(connection, sql, parameters);
+                ExecuteOnce(connection, sql, queueTableName);
             }
             catch (SqlException retry) when (retry.Number == alreadyExists)
             {
-                // The process we deadlocked with created it while we were backing off.
+                // The process we deadlocked with created it first.
             }
         }
         catch (SqlException ex) when (ex.Number == alreadyExists)
@@ -137,11 +138,15 @@ public static class QueueTableProvisioner
         }
     }
 
-    private static void ExecuteOnce(SqlConnection connection, string sql, SqlParameter[] parameters)
+    // The parameter is built here rather than passed in, because SqlCommand.Dispose does not
+    // detach parameters: a retry that re-used the instance would throw ArgumentException — "the
+    // SqlParameter is already contained by another SqlParameterCollection" — out of the one path
+    // that exists to survive a race.
+    private static void ExecuteOnce(SqlConnection connection, string sql, string queueTableName)
     {
         using var command = connection.CreateCommand();
         command.CommandText = sql;
-        command.Parameters.AddRange(parameters);
+        command.Parameters.AddWithValue("@queueTable", queueTableName);
         command.ExecuteNonQuery();
     }
 }

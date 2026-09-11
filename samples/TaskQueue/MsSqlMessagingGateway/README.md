@@ -81,8 +81,8 @@ certificate. Against a server with a certificate your clients trust, drop them.
 
 | Run | With | What you should see |
 |---|---|---|
-| `GreetingsSender` | `GreetingsReceiverConsole` | the sender provisions the Outbox, deposits and clears; the receiver prints the greeting once, and prints nothing on a redelivery of the same message id |
-| `CompetingSender <count>` | two or more `CompetingReceiverConsole` | the count divided between the consumers — six messages across two receivers came out 2 and 4. Both the sender and the receivers are hosts, so Ctrl-C when you have seen enough |
+| `GreetingsSender` | `GreetingsReceiverConsole` | the sender provisions the Outbox, deposits and clears; the receiver prints the greeting once. Redelivery of the same id is de-duplicated, but you have to force one — see *Idempotence* |
+| `CompetingSender <count>` | two or more `CompetingReceiverConsole` | the count divided between the consumers — six messages across two receivers came out 5 and 1. The sender exits on its own; the receivers are hosts, so Ctrl-C when you have seen enough |
 
 ### What the competing demo looks like from outside
 
@@ -97,12 +97,11 @@ route avoids, by keeping the message and your own write on one connection.
 
 ### `Post` joins your transaction when the broker is your database
 
-`CompetingSender` sends inside a `TransactionScope`, and **it completes that scope**. It used to
-abandon it, on the stated grounds that a message is queued whether the transaction commits or
-aborts. That is true of a broker outside your database and false here: `Post` opens a
-`SqlConnection`, `Enlist` defaults to `true`, and the insert into the queue table joins the ambient
-transaction — so abandoning the scope rolled the message back with it. Measured: three sends, no
-errors, **0 rows** without `Complete()` and **3 rows** with it.
+`CompetingSender` sends inside a `TransactionScope` and **completes it**, because with a database
+as the broker the send is not decoupled from your transaction: `Post` opens a `SqlConnection`,
+`Enlist` defaults to `true`, and the insert into the queue table joins the ambient transaction.
+Abandon the scope and the message rolls back with it. Measured: three sends, no errors, **0 rows**
+without `Complete()` and **3 rows** with it.
 
 This is the argument for the Outbox rather than a defect. `GreetingsSender` shows the answer:
 `DepositPost` writes to the Outbox inside your transaction, and `ClearOutbox` dispatches once it
@@ -116,7 +115,20 @@ pipeline when a process also registers producers — and this receiver registers
 `InboxConfiguration` registration remains, because it is what supplies the store. See
 [#4335](https://github.com/BrighterCommand/Brighter/issues/4335).
 
-Send the same message twice and the second delivery logs:
+**Running `GreetingsSender` twice will not show you this**, and that is worth knowing before you
+conclude the Inbox is broken: `new GreetingEvent("Ian")` takes a fresh `Id` each time, so two runs
+are two different messages and both are handled. The Inbox de-duplicates by message id, so you
+need the *same* id delivered twice.
+
+To force one, stop the receiver, run the sender, and duplicate the queued row before starting the
+receiver again:
+
+```sql
+INSERT INTO QueueData (Topic, MessageType, Payload)
+SELECT Topic, MessageType, Payload FROM QueueData;
+```
+
+The receiver then handles the message once and logs the second delivery:
 
 ```text
 warn: Paramore.Brighter.Inbox.Handlers.UseInboxHandler

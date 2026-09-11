@@ -90,9 +90,8 @@ try
         // Creates and migrates the Outbox table — but only once the HOST starts, because it
         // registers a hosted service. See StartAsync below.
         .UseBoxProvisioning(options => options.AddMsSqlOutbox(configuration))
-        // Naming Events GUARANTEES it is scanned whatever the load order; loaded assemblies are
-        // still scanned as well, since the list is additive rather than an allow-list. Without it
-        // this works only because a generic over an Events type was constructed above.
+        // Naming Events guarantees it is scanned whatever the load order. The list is additive,
+        // not an allow-list: loaded assemblies are scanned as well.
         .AutoFromAssemblies([typeof(GreetingEvent).Assembly])
         // Producer-side validation: RequestType set, RequestType implements IRequest, and wrap
         // transforms resolvable. A missing Topic is NOT among them — that throws earlier, out of
@@ -115,10 +114,13 @@ try
         // attaches one only when the provider already has an open transaction, so passing the
         // provider without opening one deposits on its own auto-committed connection and shares
         // nothing.
-        transactionProvider.GetTransaction();
         Id messageId;
         try
         {
+            // Inside the try: GetTransaction opens the connection and begins the transaction, so
+            // a failure here still has to reach the Close below.
+            transactionProvider.GetTransaction();
+
             // DepositPost writes to the Outbox and sends nothing. Your own INSERT would go here,
             // on transactionProvider.GetConnection() and the same transaction, so the message and
             // the state it describes commit or roll back together.

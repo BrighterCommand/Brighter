@@ -57,8 +57,8 @@ builder.Services.AddBrighter()
     })
     .AutoFromAssemblies([typeof(CompetingConsumerCommand).Assembly])
     // Producer-side validation: RequestType set and implementing IRequest, wrap transforms
-    // resolvable. Not the missing Topic that used to break this application — MsSqlProducerRegistryFactory
-    // .Create throws that above, before AddBrighter is reached.
+    // resolvable. A missing Topic is not among them — MsSqlProducerRegistryFactory.Create throws
+    // that above, before AddBrighter is reached.
     .ValidatePipelines();
 
 builder.Services.AddHostedService<RunCommandProcessor>(provider => new RunCommandProcessor(
@@ -84,7 +84,7 @@ internal sealed class RunCommandProcessor : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        // The scope has to complete: Post opens a SqlConnection, Enlist defaults to true, so the
+        // The scope must complete: Post opens a SqlConnection, Enlist defaults to true, so the
         // insert joins this transaction and an abandoned scope rolls the message back with it.
         // See the README, and GreetingsSender for the Outbox answer.
         using (var scope = new TransactionScope(TransactionScopeOption.RequiresNew,
