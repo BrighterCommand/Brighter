@@ -37,8 +37,7 @@ namespace GreetingsReceiverConsole
         //
         // The attribute rather than AddConsumers' global InboxConfiguration: the global one
         // reaches the pipeline only through the external-bus arms, and this receiver registers
-        // no producers. See the README. TODO(#4335): when that is fixed, the global route works
-        // here and this attribute — and the README section explaining it — can go.
+        // no producers. See the README.
         [UseInbox(step: 0, contextKey: typeof(GreetingEventHandler), onceOnly: true,
             onceOnlyAction: OnceOnlyAction.Warn)]
         public override GreetingEvent Handle(GreetingEvent greetingEvent)

@@ -97,9 +97,9 @@ try
         // Naming Events guarantees it is scanned whatever the load order. The list is additive,
         // not an allow-list: loaded assemblies are scanned as well.
         .AutoFromAssemblies([typeof(GreetingEvent).Assembly])
-        // Producer-side validation: RequestType set, RequestType implements IRequest, and wrap
-        // transforms resolvable. A missing Topic is NOT among them — that throws earlier, out of
-        // MsSqlMessageProducerFactory.Create. Last in the chain, as its doc asks.
+        // Producer-side validation of what has been registered above, so a misconfigured
+        // publication fails at startup rather than on the first send. Last in the chain, as its
+        // doc asks.
         .ValidatePipelines();
 
     using var host = builder.Build();
@@ -136,9 +136,7 @@ try
                 new GreetingEvent("Ian"), transactionProvider);
 
             // Through the provider, not the raw DbTransaction: Commit clears the provider's
-            // transaction, which is what keeps the Rollback below a no-op. Close does NOT release
-            // the connection — IsSharedConnection is true — so it is the scope's disposal that
-            // does; Close earns its place on the rollback path.
+            // transaction, which is what keeps the Rollback below a no-op.
             transactionProvider.Commit();
         }
         catch

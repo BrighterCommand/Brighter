@@ -56,9 +56,8 @@ builder.Services.AddBrighter()
         configure.ProducerRegistry = producerRegistry;
     })
     .AutoFromAssemblies([typeof(CompetingConsumerCommand).Assembly])
-    // Producer-side validation: RequestType set and implementing IRequest, wrap transforms
-    // resolvable. A missing Topic is not among them — MsSqlProducerRegistryFactory.Create throws
-    // that above, before AddBrighter is reached.
+    // Producer-side validation of what has been registered above, so a misconfigured publication
+    // fails at startup rather than on the first send.
     .ValidatePipelines();
 
 builder.Services.AddHostedService<RunCommandProcessor>(provider => new RunCommandProcessor(

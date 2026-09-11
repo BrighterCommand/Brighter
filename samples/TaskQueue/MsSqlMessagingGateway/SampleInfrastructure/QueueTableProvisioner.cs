@@ -1,6 +1,6 @@
 #region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -38,10 +38,9 @@ namespace SampleInfrastructure;
 /// acted on. The DDL is Brighter's own, from <see cref="MsSqlQueueBuilder"/>, which is public so
 /// that callers can run it.
 ///
-/// The existence check is not <see cref="MsSqlQueueBuilder.GetExistsQuery"/>, although that ships
-/// too: it formats both names into the SQL and defaults the schema to a literal <c>dbo</c>, which
-/// a login with a different default schema would not match. The version here binds the name as a
-/// parameter and asks <c>SCHEMA_NAME()</c>.
+/// The existence check asks <c>SCHEMA_NAME()</c> rather than a literal <c>dbo</c>, because the
+/// <c>CREATE TABLE</c> it guards is unqualified and so is every statement the gateway then issues:
+/// all of them resolve through the caller's default schema, and the guard has to agree.
 /// </remarks>
 public static class QueueTableProvisioner
 {
@@ -50,7 +49,9 @@ public static class QueueTableProvisioner
     private const int INDEX_ALREADY_EXISTS = 1913;
     private const int DEADLOCK_VICTIM = 1205;
 
-    private static readonly Regex s_identifier = new("^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.Compiled);
+    // 127 after the first character: SQL Server's own limit is 128, and without the bound an
+    // over-long name passes this guard and fails later inside the CREATE with a worse message.
+    private static readonly Regex s_identifier = new("^[A-Za-z_][A-Za-z0-9_]{0,127}$", RegexOptions.Compiled);
 
     // Written once each, and used by both the IF NOT EXISTS guard and the post-create re-probe:
     // if the two ever drifted apart, the re-probe would throw against a table it had just created.
@@ -82,7 +83,9 @@ public static class QueueTableProvisioner
     {
         // GetDDL formats the name into CREATE TABLE [{0}], where a ']' would close the bracket.
         if (!s_identifier.IsMatch(queueTableName))
-            throw new ArgumentException($"'{queueTableName}' is not a plain SQL identifier", nameof(queueTableName));
+            throw new ArgumentException(
+                $"'{queueTableName}' is not a plain SQL identifier of 128 characters or fewer",
+                nameof(queueTableName));
 
         using var connection = Connect(connectionString, queueTableName);
 
