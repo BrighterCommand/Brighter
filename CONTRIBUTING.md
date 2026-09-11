@@ -21,6 +21,8 @@ Use this file to follow our coding guidelines when submitting to Brighter.
   - [Commit Messages](#commit-messages)
   - [Repository Branching Strategy](#repository-branching-strategy)
   - [Submitting Changes](#submitting-changes)
+- [Support for Agentic Coding](#support-for-agentic-coding)
+  - [Requesting an AI Code Review](#requesting-an-ai-code-review)
 - [Project Structure](#project-structure)
 
 ---
@@ -506,6 +508,23 @@ To avoid agents reward hacking, we are trialing [SlopWatch](https://github.com/A
   - we have a post-hook installed for Claude Code to ensure it runs after the agent generates code
 
 We are open to receiving code that has been authored by agents. However, you are responsible for the code that you submit and should review the code and ensure that the agent follows our guidelines.
+
+### Requesting an AI Code Review
+
+We run a Claude review on pull requests, but it is **opt-in** rather than automatic. Reviewing every push to every pull request turned out to be expensive for the value it added, so we ask for a review when one will be useful.
+
+**If you are a maintainer**, there are two ways to ask for one:
+
+| How | What it does |
+| --- | --- |
+| Add the `claude-review` label to the pull request | Reviews the pull request and posts the review as a comment |
+| Comment `@claude` followed by what you want | Runs Claude against your instruction, on a pull request or an issue |
+
+The label clears itself once the review finishes, so add it again whenever you want another pass, for example after pushing fixes. On a pull request raised from a fork the label cannot be cleared automatically, because GitHub issues workflows a read-only token when they run against a fork; remove it by hand before re-adding it.
+
+**If you are a contributor**, you do not need to do anything. Both triggers are restricted to people with write access to the repository, so the `claude-review` label will not appear in your pull request and commenting `@claude` will not start a review. A maintainer may request a review on your work, in which case Claude will comment on the pull request. Treat that comment as you would any other review: useful, occasionally wrong, and never a substitute for a human reviewer signing off.
+
+The review is pinned to a specific model in `.github/workflows/claude-code-review.yml` rather than tracking whatever the current default model is, which keeps its cost predictable. Change it there if a particular piece of work needs a more capable review.
 
 ### Contributor Code of Conduct
 
