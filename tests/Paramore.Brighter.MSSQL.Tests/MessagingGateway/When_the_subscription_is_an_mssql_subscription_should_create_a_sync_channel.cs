@@ -20,8 +20,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
 using System.Threading.Tasks;
+using Paramore.Brighter.Base.Test.Requests;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Xunit;
 
@@ -115,13 +115,13 @@ public class MsSqlChannelFactorySubscriptionTypeTests
     }
 
     [Fact]
-    public void When_the_subscription_is_an_mssql_subscription_should_create_an_async_channel()
+    public async Task When_the_subscription_is_an_mssql_subscription_should_create_an_async_channel()
     {
         // Arrange
         var channelFactory = CreateChannelFactory();
 
         // Act
-        using var channel = channelFactory.CreateAsyncChannel(AnMsSqlSubscription());
+        await using var channel = channelFactory.CreateAsyncChannel(AnMsSqlSubscription());
 
         // Assert
         Assert.NotNull(channel);
@@ -135,7 +135,7 @@ public class MsSqlChannelFactorySubscriptionTypeTests
         var channelFactory = CreateChannelFactory();
 
         // Act
-        using var channel = await channelFactory.CreateAsyncChannelAsync(AnMsSqlSubscription());
+        await using var channel = await channelFactory.CreateAsyncChannelAsync(AnMsSqlSubscription());
 
         // Assert
         Assert.NotNull(channel);
@@ -161,10 +161,5 @@ public class MsSqlChannelFactorySubscriptionTypeTests
         // Assert
         Assert.NotNull(channel);
         Assert.Equal(new ChannelName("test.topic"), channel.Name);
-    }
-
-    private class MyEvent : Event
-    {
-        public MyEvent() : base(Guid.NewGuid().ToString()) { }
     }
 }

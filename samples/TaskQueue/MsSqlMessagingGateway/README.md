@@ -125,8 +125,11 @@ receiver again:
 
 ```sql
 INSERT INTO QueueData (Topic, MessageType, Payload)
-SELECT Topic, MessageType, Payload FROM QueueData;
+SELECT TOP 1 Topic, MessageType, Payload FROM QueueData;
 ```
+
+`TOP 1` matters: without it the statement doubles whatever is in the queue, which against the
+competing demo's backlog is not what you want.
 
 The receiver then handles the message once and logs the second delivery:
 

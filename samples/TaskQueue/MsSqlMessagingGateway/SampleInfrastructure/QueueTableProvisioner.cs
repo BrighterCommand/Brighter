@@ -37,6 +37,11 @@ namespace SampleInfrastructure;
 /// gateway has no provisioning path — <c>OnMissingChannel.Create</c> is accepted and then never
 /// acted on. The DDL is Brighter's own, from <see cref="MsSqlQueueBuilder"/>, which is public so
 /// that callers can run it.
+///
+/// The existence check is not <see cref="MsSqlQueueBuilder.GetExistsQuery"/>, although that ships
+/// too: it formats both names into the SQL and defaults the schema to a literal <c>dbo</c>, which
+/// a login with a different default schema would not match. The version here binds the name as a
+/// parameter and asks <c>SCHEMA_NAME()</c>.
 /// </remarks>
 public static class QueueTableProvisioner
 {
@@ -59,11 +64,23 @@ public static class QueueTableProvisioner
         if (!s_identifier.IsMatch(queueTableName))
             throw new ArgumentException($"'{queueTableName}' is not a plain SQL identifier", nameof(queueTableName));
 
-        using var connection = new SqlConnection(connectionString);
-        connection.Open();
+        // This runs before the host exists, so there is no logging to fail into: three of the four
+        // applications would show a bare stack trace for the commonest first-run mistake.
+        try
+        {
+            using var connection = new SqlConnection(connectionString);
+            connection.Open();
 
-        CreateTable(connection, queueTableName);
-        CreateIndex(connection, queueTableName);
+            CreateTable(connection, queueTableName);
+            CreateIndex(connection, queueTableName);
+        }
+        catch (SqlException ex)
+        {
+            throw new InvalidOperationException(
+                $"Could not provision '{queueTableName}'. Check the server is reachable and that " +
+                "BrighterSqlQueue.sql has been run; set ConnectionStrings__Brighter to point " +
+                $"somewhere else. SQL Server said: {ex.Message}", ex);
+        }
     }
 
     // Two commands rather than one batch: a swallowed error abandons the rest of its batch, so a

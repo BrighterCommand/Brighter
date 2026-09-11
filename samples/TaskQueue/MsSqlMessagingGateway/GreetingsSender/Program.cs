@@ -107,8 +107,12 @@ try
 
     try
     {
-        var commandProcessor = host.Services.GetRequiredService<IAmACommandProcessor>();
-        var transactionProvider = host.Services.GetRequiredService<IAmATransactionConnectionProvider>();
+        // From a scope, not the root provider: AddProducers registers the transaction provider
+        // Transient, so resolving it at the root leaves a disposable tracked until shutdown — and
+        // in an application where it is scoped to a DbContext, the scope is the only correct place.
+        using var scope = host.Services.CreateScope();
+        var commandProcessor = scope.ServiceProvider.GetRequiredService<IAmACommandProcessor>();
+        var transactionProvider = scope.ServiceProvider.GetRequiredService<IAmATransactionConnectionProvider>();
 
         // The transaction has to be opened here for the Outbox write to join it: the Outbox
         // attaches one only when the provider already has an open transaction, so passing the
