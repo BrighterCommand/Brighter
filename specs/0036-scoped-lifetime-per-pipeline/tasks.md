@@ -818,7 +818,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T6.5
   - **References**: AC-34 (FR-16b, C-3's exception); ADR 0072 step 4
 
-- [ ] **TEST + IMPLEMENT: T6.7 — no `HttpContext` means a new, Brighter-owned scope, with exactly one `Warning`**
+- [x] **TEST + IMPLEMENT: T6.7 — no `HttpContext` means a new, Brighter-owned scope, with exactly one `Warning`**
   - **USE COMMAND**: `/test-first a hosted service and a background thread with no HttpContext each get a fresh Brighter owned scope and the host records one warning in total`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_there_is_no_http_context_the_pipeline_should_create_its_own_scope.cs`
