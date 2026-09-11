@@ -1,27 +1,27 @@
 name: Claude Code Review
 
+# Opt-in only: a maintainer adds the `claude-review` label to a pull request.
+# This workflow does NOT run automatically on open or on push — reviews cost
+# real money, so they are requested rather than assumed. A maintainer can also
+# invoke Claude ad hoc by commenting `@claude review this PR` (see claude.yml).
 on:
   pull_request:
-    types: [opened, synchronize]
-    # Optional: Only run on specific file changes
-    # paths:
-    #   - "src/**/*.ts"
-    #   - "src/**/*.tsx"
-    #   - "src/**/*.js"
-    #   - "src/**/*.jsx"
+    types: [labeled]
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   claude-review:
-    # Optional: Filter by PR author
-    # if: |
-    #   github.event.pull_request.user.login == 'external-contributor' ||
-    #   github.event.pull_request.user.login == 'new-developer' ||
-    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
+    # Only the `claude-review` label triggers a review. Labelling a draft is a
+    # deliberate request, so drafts are not blocked — nothing runs unlabelled.
+    if: github.event.label.name == 'claude-review'
 
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: write
       issues: read
       id-token: write
 
@@ -53,5 +53,31 @@ jobs:
 
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://docs.claude.com/en/docs/claude-code/cli-reference for available options
-          claude_args: '--allowed-tools "Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"'
+          #
+          # --model is pinned deliberately. Left unset, the action follows the
+          # Claude Code default, which drifts to newer, more expensive models as
+          # they ship. Sonnet 5 is $2/$10 per 1M tokens; Fable 5.1 is $10/$50.
+          # --max-turns caps a runaway review.
+          claude_args: >-
+            --model claude-sonnet-5
+            --max-turns 15
+            --allowed-tools "Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"
 
+      # A `labeled` trigger only fires on the add transition, so the label has to
+      # come off again for the next request to fire. `always()` so a failed or
+      # cancelled review still clears it — otherwise re-adding the label is a
+      # no-op and the review can never be re-run.
+      #
+      # On a pull request from a fork, GITHUB_TOKEN is read-only no matter what
+      # the permissions block asks for, so this will 403 and the label has to be
+      # removed by hand. The step never fails the build either way.
+      - name: Clear the claude-review label
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          gh api -X DELETE \
+            "repos/${GITHUB_REPOSITORY}/issues/${PR}/labels/claude-review" \
+            && echo "Label cleared; re-add it to request another review." \
+            || echo "Could not clear the label (fork PR, or already removed) - remove it manually to re-run."
