@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Paramore.Brighter;
+
 namespace SampleInfrastructure;
 
 /// <summary>
@@ -31,6 +33,11 @@ namespace SampleInfrastructure;
 /// </summary>
 public static class SampleDatabase
 {
+    /// <summary>
+    /// The database BrighterSqlQueue.sql creates, and the one <see cref="DefaultConnectionString"/>
+    /// points at. It is NOT "the database we are connected to": set ConnectionStrings__Brighter and
+    /// the connection string wins while this constant stays as it is.
+    /// </summary>
     public const string Name = "BrighterSqlQueue";
 
     /// <summary>The queue the transport reads and writes, created by <c>EnsureQueueTable</c>
@@ -38,6 +45,10 @@ public static class SampleDatabase
     public const string QueueTable = "QueueData";
 
     public const string OutboxTable = "Outbox";
+
+    /// <summary>The Inbox. Named for what it holds rather than taking
+    /// <see cref="RelationalDatabaseConfiguration"/>'s default of "Inbox", so that a database
+    /// holding both boxes reads as two tables of messages rather than one table and one box.</summary>
     public const string InboxTable = "InboxMessages";
 
     public const string GreetingTopic = "greeting.event";

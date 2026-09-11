@@ -52,9 +52,12 @@ from an IDE profile fails at `host.Build()` with **`Unable to resolve service fo
 'IAmACommandCounter'`**, in an application that has nothing to do with competing consumers.
 Measured, before and after the move.
 
-**Each application names the assemblies it scans** — `AutoFromAssemblies([...])` rather than the
-no-argument overload, which scans *loaded* assemblies and therefore works only as long as
-something happens to have forced `Events` to load first.
+**Each application names `Events` when it scans** — `AutoFromAssemblies([typeof(GreetingEvent).Assembly])`
+rather than the no-argument overload. That **guarantees** `Events` is scanned whatever the load
+order; it is not an allow-list, and every loaded assembly is still scanned as well. Without it the
+sample works only as long as something happens to have forced `Events` to load first. It is not
+what fixes the trap above — **only the handler move does that**, precisely because everything
+loaded gets scanned regardless.
 
 Because both the sender and the receiver provision what they need, **either can be started
 first** against a database with no tables in it.
@@ -80,6 +83,17 @@ certificate. Against a server with a certificate your clients trust, drop them.
 |---|---|---|
 | `GreetingsSender` | `GreetingsReceiverConsole` | the sender provisions the Outbox, deposits and clears; the receiver prints the greeting once, and prints nothing on a redelivery of the same message id |
 | `CompetingSender <count>` | two or more `CompetingReceiverConsole` | the count divided between the consumers — six messages across two receivers came out 2 and 4. Both the sender and the receivers are hosts, so Ctrl-C when you have seen enough |
+
+### What the competing demo looks like from outside
+
+All the posts land inside one completed `TransactionScope`, so the receivers see nothing until the
+batch commits and then take it in a burst — with the shipped profile's count of 250, that is one
+commit of 250 rows. They never block on the open transaction: the dequeue uses
+`with (rowlock, readpast)`.
+
+**If you add your own `INSERT` on a second connection inside that scope, the transaction promotes
+to MSDTC**, which on .NET is Windows-only. That promotion is the thing `GreetingsSender`'s Outbox
+route avoids, by keeping the message and your own write on one connection.
 
 ### `Post` joins your transaction when the broker is your database
 

@@ -43,6 +43,7 @@ public static class QueueTableProvisioner
     // SQL Server: "there is already an object named ...", and its index equivalent.
     private const int OBJECT_ALREADY_EXISTS = 2714;
     private const int INDEX_ALREADY_EXISTS = 1913;
+    private const int DEADLOCK_VICTIM = 1205;
 
     private static readonly Regex s_identifier = new("^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.Compiled);
 
@@ -85,29 +86,62 @@ public static class QueueTableProvisioner
         Execute(connection, sql, OBJECT_ALREADY_EXISTS, new SqlParameter("@queueTable", queueTableName));
     }
 
-    // Unguarded, because the only way to guard it is to duplicate the index name that
-    // MsSqlQueueBuilder owns — and a guard that silently stops matching leaves a permanently
-    // failing statement looking like success. The cost is a caught 1913 on every start after the
-    // first, which is deliberate: do not "fix" it by adding a guard. It also means an index of
-    // that name but a different definition is accepted rather than corrected.
-    private static void CreateIndex(SqlConnection connection, string queueTableName) =>
-        Execute(connection, MsSqlQueueBuilder.GetIndexDDL(queueTableName), INDEX_ALREADY_EXISTS);
+    // Guarded on what the index IS, not what it is called: any index whose leading column is
+    // Topic on this table. A name guard would have to duplicate the convention MsSqlQueueBuilder
+    // owns, and would then silently stop matching if that convention ever moved. The catch stays
+    // as the race backstop it is described as.
+    private static void CreateIndex(SqlConnection connection, string queueTableName)
+    {
+        var sql = $"""
+                   IF NOT EXISTS (SELECT 1 FROM sys.indexes i
+                                  INNER JOIN sys.index_columns ic
+                                      ON i.object_id = ic.object_id AND i.index_id = ic.index_id
+                                  INNER JOIN sys.columns c
+                                      ON c.object_id = ic.object_id AND c.column_id = ic.column_id
+                                  WHERE i.object_id = OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + '.' + QUOTENAME(@queueTable))
+                                    AND i.is_primary_key = 0
+                                    AND ic.key_ordinal = 1
+                                    AND c.name = 'Topic')
+                   BEGIN
+                       {MsSqlQueueBuilder.GetIndexDDL(queueTableName)}
+                   END;
+                   """;
+
+        Execute(connection, sql, INDEX_ALREADY_EXISTS, new SqlParameter("@queueTable", queueTableName));
+    }
 
     // All four applications share one database, so two starting together can both pass a guard and
     // race to create. Box Provisioning takes an advisory lock; there is no equivalent for the
-    // queue, so the loser treats "already exists" as the outcome it wanted.
+    // queue, so the loser treats "already exists" as the outcome it wanted. A deadlock victim is
+    // retried once, because concurrent DDL surfaces as 1205 as readily as 2714 or 1913.
     private static void Execute(SqlConnection connection, string sql, int alreadyExists, params SqlParameter[] parameters)
     {
         try
         {
-            using var command = connection.CreateCommand();
-            command.CommandText = sql;
-            command.Parameters.AddRange(parameters);
-            command.ExecuteNonQuery();
+            ExecuteOnce(connection, sql, parameters);
+        }
+        catch (SqlException ex) when (ex.Number == DEADLOCK_VICTIM)
+        {
+            try
+            {
+                ExecuteOnce(connection, sql, parameters);
+            }
+            catch (SqlException retry) when (retry.Number == alreadyExists)
+            {
+                // The process we deadlocked with created it while we were backing off.
+            }
         }
         catch (SqlException ex) when (ex.Number == alreadyExists)
         {
             // Lost the create race; the other process made it, which is the outcome we wanted.
         }
+    }
+
+    private static void ExecuteOnce(SqlConnection connection, string sql, SqlParameter[] parameters)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        command.Parameters.AddRange(parameters);
+        command.ExecuteNonQuery();
     }
 }

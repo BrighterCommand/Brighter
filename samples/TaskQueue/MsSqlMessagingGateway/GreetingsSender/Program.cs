@@ -90,8 +90,9 @@ try
         // Creates and migrates the Outbox table — but only once the HOST starts, because it
         // registers a hosted service. See StartAsync below.
         .UseBoxProvisioning(options => options.AddMsSqlOutbox(configuration))
-        // Named explicitly: AutoFromAssemblies() with no arguments scans LOADED assemblies, so
-        // it finds Events only because a generic over one of its types was constructed above.
+        // Naming Events GUARANTEES it is scanned whatever the load order; loaded assemblies are
+        // still scanned as well, since the list is additive rather than an allow-list. Without it
+        // this works only because a generic over an Events type was constructed above.
         .AutoFromAssemblies([typeof(GreetingEvent).Assembly])
         // Producer-side validation: RequestType set, RequestType implements IRequest, and wrap
         // transforms resolvable. A missing Topic is NOT among them — that throws earlier, out of

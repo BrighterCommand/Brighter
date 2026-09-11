@@ -48,7 +48,7 @@ builder.Services.AddConsumers(options =>
 // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
 // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
 .UseScheduler(new InMemorySchedulerFactory())
-.AutoFromAssemblies([typeof(CompetingConsumerCommand).Assembly, typeof(Program).Assembly])
+.AutoFromAssemblies([typeof(CompetingConsumerCommand).Assembly])
 // Surfaces a pump/handler mismatch as a named startup error rather than a per-message failure.
 .ValidatePipelines();
 

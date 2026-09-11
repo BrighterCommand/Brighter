@@ -79,7 +79,7 @@ builder.Services.AddConsumers(options =>
 // Before AddHostedService<ServiceActivatorHostedService>(): hosted services start in
 // registration order, so reversing these two starts the pump against a missing Inbox table.
 .UseBoxProvisioning(options => options.AddMsSqlInbox(configuration))
-.AutoFromAssemblies([typeof(GreetingEvent).Assembly, typeof(Program).Assembly])
+.AutoFromAssemblies([typeof(GreetingEvent).Assembly])
 // Runs the consumer validation specs at startup; without it a Proactor/sync mismatch is a
 // runtime pump failure rather than a named startup error.
 .ValidatePipelines();

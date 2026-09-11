@@ -1,4 +1,3 @@
-
 namespace CompetingReceiverConsole
 {
     public class CommandCounter : IAmACommandCounter
