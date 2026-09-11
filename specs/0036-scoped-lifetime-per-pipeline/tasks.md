@@ -849,7 +849,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T6.3
   - **References**: FR-10 (the provider's obligation), D16; ADR 0073 step 3
 
-- [ ] **TEST + IMPLEMENT: T6.9 — the opt-in reaches the object the factories read, on all four registration paths**
+- [x] **TEST + IMPLEMENT: T6.9 — the opt-in reaches the object the factories read, on all four registration paths**
   - **USE COMMAND**: `/test-first the registration extension's affinity reaches the resolved IBrighterOptions and adoption works on all four Brighter entry points`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_the_extension_is_called_on_each_entry_point_the_affinity_should_reach_the_resolved_options.cs`
