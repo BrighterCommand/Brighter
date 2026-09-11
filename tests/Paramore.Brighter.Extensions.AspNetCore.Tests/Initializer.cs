@@ -75,9 +75,11 @@ internal static class Initializer
 
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<PlaceOrder>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<SharedMarkerSentCommand>).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<NoHttpContextCommand>).TypeHandle);
 
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<PlaceOrder>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<SharedMarkerSentCommand>).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<NoHttpContextCommand>).TypeHandle);
 
         RuntimeHelpers.RunClassConstructor(typeof(WrapPipeline<PostedOrderCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(WrapPipeline<SharedMarkerPostedCommand>).TypeHandle);
