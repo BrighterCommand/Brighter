@@ -25,41 +25,64 @@ THE SOFTWARE. */
 
 using System;
 using Events.Ports.Commands;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
+using Paramore.Brighter.BoxProvisioning;
+using Paramore.Brighter.BoxProvisioning.MsSql;
+using Paramore.Brighter.Inbox.MsSql;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
+using SampleInfrastructure;
 
 var builder = Host.CreateApplicationBuilder(args);
+
+var connectionString = SampleDatabase.ConnectionString(
+    builder.Configuration.GetConnectionString("Brighter"));
+
+// The queue table is not provisioned by anything in Brighter — see QueueTableProvisioner.
+// Running it here as well as in the sender is what lets either process be started first.
+QueueTableProvisioner.EnsureQueueTable(connectionString, SampleDatabase.QueueTable);
+
+// The two tables this process uses: the queue it reads, and the Inbox it de-duplicates
+// against. No outBoxTableName, because this process has no Outbox.
+var configuration = new RelationalDatabaseConfiguration(
+    connectionString,
+    inboxTableName: SampleDatabase.InboxTable,
+    queueStoreTable: SampleDatabase.QueueTable);
 
 builder.Services.AddConsumers(options =>
 {
     options.Subscriptions =
     [
-        new Subscription<GreetingEvent>(
+        // MsSqlSubscription, not Subscription — the MSSQL ChannelFactory downcasts.
+        new MsSqlSubscription<GreetingEvent>(
             new SubscriptionName("paramore.example.greeting"),
-            new ChannelName("greeting.event"),
-            new RoutingKey("greeting.event"),
+            new ChannelName(SampleDatabase.GreetingTopic),
+            new RoutingKey(SampleDatabase.GreetingTopic),
             timeOut: TimeSpan.FromMilliseconds(200),
             messagePumpType: MessagePumpType.Reactor)
     ];
     options.DefaultChannelFactory = new ChannelFactory(
-        new MsSqlMessageConsumerFactory(
-            new RelationalDatabaseConfiguration(
-        @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;",
-                databaseName: "BrighterSqlQueue",
-                queueStoreTable: "QueueData"
-            )
-        )
+        new MsSqlMessageConsumerFactory(configuration)
     );
+
+    // Supplies the Inbox store. The policy lives on GreetingEventHandler's [UseInbox].
+    options.InboxConfiguration = new InboxConfiguration(new MsSqlInbox(configuration));
 })
 // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
 // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
 .UseScheduler(new InMemorySchedulerFactory())
-.AutoFromAssemblies();
+// Before AddHostedService<ServiceActivatorHostedService>(): hosted services start in
+// registration order, so reversing these two starts the pump against a missing Inbox table.
+.UseBoxProvisioning(options => options.AddMsSqlInbox(configuration))
+.AutoFromAssemblies([typeof(GreetingEvent).Assembly])
+// Runs the consumer validation specs at startup; without it a Proactor/sync mismatch is a
+// runtime pump failure rather than a named startup error.
+.ValidatePipelines();
 
 builder.Services.AddHostedService<ServiceActivatorHostedService>();
 

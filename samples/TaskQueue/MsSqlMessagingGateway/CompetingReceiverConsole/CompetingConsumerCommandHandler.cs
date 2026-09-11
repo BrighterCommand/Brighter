@@ -3,7 +3,7 @@ using Events.Ports.Commands;
 using Paramore.Brighter;
 using Paramore.Brighter.Actions;
 
-namespace Events.Ports.CommandHandlers
+namespace CompetingReceiverConsole
 {
     public class CompetingConsumerCommandHandler : RequestHandler<CompetingConsumerCommand>
     {
