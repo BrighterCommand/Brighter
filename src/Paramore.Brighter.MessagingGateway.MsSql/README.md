@@ -157,6 +157,13 @@ The following is an example of how to specify the configuration for the SQL Serv
         ...
 ```
 
+To wire the same consumer through DI instead, call `AddConsumers` and set the two things
+`DispatchBuilder` takes above: `options.Subscriptions` to the same `MsSqlSubscription<T>` list, and
+`options.DefaultChannelFactory` to the same `ChannelFactory`. `AddConsumers` registers the
+dispatcher but does not start it, so register `ServiceActivatorHostedService` alongside it —
+`services.AddHostedService<ServiceActivatorHostedService>()`, from
+`Paramore.Brighter.ServiceActivator.Extensions.Hosting`.
+
 ## Queuing details
 
 #### FIFO

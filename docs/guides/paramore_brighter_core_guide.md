@@ -1057,7 +1057,7 @@ Each step of the chain offers alternatives:
 
 - `.DefaultResilience()` supplies Brighter's own retry pipelines. To supply your own, use
   `.Resilience(resiliencePipelineRegistry)`; `policyRegistry` is an optional second parameter.
-  Three things bite here:
+  Three constraints apply:
   - The registry must contain `CommandProcessor.OutboxProducer`, or `Resilience` throws
     `ConfigurationException`. Get it from
     `new ResiliencePipelineRegistry<string>().AddBrighterDefault()` — `AddBrighterDefault` is an
@@ -1303,8 +1303,8 @@ The example uses `[RequestLogging]` because it composes with nothing else. A han
 Give the context a policy registry, or let `CommandProcessor` build the pipeline for you.
 `[UseResiliencePipeline]`, the current form, guards its context
 (`Context is { ResiliencePipeline: not null }`) — **and that guard is why it fails differently
-rather than better.** Which way it fails depends on how the pipeline was built, and the recipe
-above is the quiet one:
+rather than better.** Which way it fails depends on how the pipeline was built, and the direct
+build above is the silent case:
 
 | How the pipeline is built | `[UsePolicy]` | `[UseResiliencePipeline]` |
 |---|---|---|
