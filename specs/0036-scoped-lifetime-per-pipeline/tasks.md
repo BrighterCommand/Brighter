@@ -866,7 +866,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T6.8, T3.6
   - **References**: AC-45 (FR-17, FR-14, C-12a, D13, D18); ADR 0076 step 3, ADR 0073 step 2
 
-- [ ] **TEST + IMPLEMENT: T6.10 — the extension's affinity argument decides adoption, and order is irrelevant**
+- [x] **TEST + IMPLEMENT: T6.10 — the extension's affinity argument decides adoption, and order is irrelevant**
   - **USE COMMAND**: `/test-first the affinity passed to the registration extension decides adoption whichever value the application assigned and whatever the registration order`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_the_extension_carries_an_affinity_argument_it_should_decide_adoption.cs`
