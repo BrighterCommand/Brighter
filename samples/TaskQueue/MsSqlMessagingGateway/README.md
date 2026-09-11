@@ -65,11 +65,8 @@ first** against a database with no tables in it.
 ## Pointing it at something other than SQL Express
 
 Every application reads `ConnectionStrings:Brighter`, falling back to the local SQL Express
-instance. Nothing needs editing to run against a container:
-
-```bash
-export ConnectionStrings__Brighter='Server=localhost,1433;Database=BrighterSqlQueue;User Id=sa;Password=<password>;Encrypt=false'
-```
+instance, so the `export` in step 1 above is all it takes to run against a container — nothing
+needs editing.
 
 **Neither `Encrypt=false` here nor `TrustServerCertificate=True` in the default connection string
 belongs in production.** Both turn off a check that exists to stop you talking to the wrong
@@ -82,7 +79,7 @@ certificate. Against a server with a certificate your clients trust, drop them.
 | Run | With | What you should see |
 |---|---|---|
 | `GreetingsSender` | `GreetingsReceiverConsole` | the sender provisions the Outbox, deposits and clears; the receiver prints the greeting once. Redelivery of the same id is de-duplicated, but you have to force one — see *Idempotence* |
-| `CompetingSender <count>` | two or more `CompetingReceiverConsole` | the count divided between the consumers — six messages across two receivers came out 5 and 1. The sender exits on its own; the receivers are hosts, so Ctrl-C when you have seen enough |
+| `CompetingSender <count>` | two or more `CompetingReceiverConsole` | the count divided between the consumers — the split is arbitrary, and six messages across two receivers came out 3 and 3, 5 and 1, and 2 and 4 on three runs. The sender exits on its own; the receivers are hosts, so Ctrl-C when you have seen enough |
 
 ### What the competing demo looks like from outside
 
@@ -100,8 +97,23 @@ route avoids, by keeping the message and your own write on one connection.
 `CompetingSender` sends inside a `TransactionScope` and **completes it**, because with a database
 as the broker the send is not decoupled from your transaction: `Post` opens a `SqlConnection`,
 `Enlist` defaults to `true`, and the insert into the queue table joins the ambient transaction.
-Abandon the scope and the message rolls back with it. Measured: three sends, no errors, **0 rows**
-without `Complete()` and **3 rows** with it.
+Abandon the scope and the message rolls back with it.
+
+**Run the experiment rather than taking that on trust.** Comment out `scope.Complete()` and send:
+nothing reaches `QueueData`, with no error anywhere. Then add `Enlist=False` to the connection
+string and send again with the scope still abandoned — the messages arrive, because the insert is
+no longer part of your transaction. Measured, three sends each way:
+
+| | `Complete()` | rows in `QueueData` |
+|---|---|---|
+| default connection string | no | **0** |
+| default connection string | yes | **3** |
+| `…;Enlist=False` | no | **3** |
+
+That third row is the decoupling a broker outside your database gives you for free, bought back by
+opting out of enlistment — and losing, in exchange, any guarantee that the message and your own
+write agree. **The Outbox is the version that keeps both**, which is what `GreetingsSender` shows:
+`DepositPost` inside your transaction, `ClearOutbox` after it commits.
 
 This is the argument for the Outbox rather than a defect. `GreetingsSender` shows the answer:
 `DepositPost` writes to the Outbox inside your transaction, and `ClearOutbox` dispatches once it

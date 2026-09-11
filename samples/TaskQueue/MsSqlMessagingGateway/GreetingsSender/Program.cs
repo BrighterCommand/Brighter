@@ -49,7 +49,7 @@ Log.Logger = new LoggerConfiguration()
 try
 {
     var builder = Host.CreateApplicationBuilder(args);
-    builder.Services.AddSingleton<ILoggerFactory>(new SerilogLoggerFactory());
+    builder.Logging.AddSerilog();
 
     var connectionString = SampleDatabase.ConnectionString(
         builder.Configuration.GetConnectionString("Brighter"));

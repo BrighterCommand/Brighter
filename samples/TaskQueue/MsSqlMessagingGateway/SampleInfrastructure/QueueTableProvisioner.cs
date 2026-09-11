@@ -74,12 +74,15 @@ public static class QueueTableProvisioner
             CreateTable(connection, queueTableName);
             CreateIndex(connection, queueTableName);
         }
-        catch (SqlException ex)
+        catch (Exception ex) when (ex is SqlException or ArgumentException)
         {
+            // ArgumentException as well as SqlException: a malformed connection string throws it
+            // from the SqlConnection constructor, and that is as common a first-run mistake as an
+            // unreachable server.
             throw new InvalidOperationException(
-                $"Could not provision '{queueTableName}'. Check the server is reachable and that " +
-                "BrighterSqlQueue.sql has been run; set ConnectionStrings__Brighter to point " +
-                $"somewhere else. SQL Server said: {ex.Message}", ex);
+                $"Could not provision '{queueTableName}'. Check the connection string, that the " +
+                "server is reachable, and that BrighterSqlQueue.sql has been run; set " +
+                $"ConnectionStrings__Brighter to point somewhere else. The provider said: {ex.Message}", ex);
         }
     }
 
