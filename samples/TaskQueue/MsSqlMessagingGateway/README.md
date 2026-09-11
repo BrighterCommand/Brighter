@@ -62,7 +62,7 @@ certificate. Against a server with a certificate your clients trust, drop them.
 | Run | With | What you should see |
 |---|---|---|
 | `GreetingsSender` | `GreetingsReceiverConsole` | the sender provisions the Outbox, deposits and clears; the receiver prints the greeting once, and prints nothing on a redelivery of the same message id |
-| `CompetingSender <count>` | two or more `CompetingReceiverConsole` | the count divided between the consumers — five messages across two receivers came out 2 and 3 |
+| `CompetingSender <count>` | two or more `CompetingReceiverConsole` | the count divided between the consumers — six messages across two receivers came out 2 and 4. Both the sender and the receivers are hosts, so Ctrl-C when you have seen enough |
 
 ### `Post` joins your transaction when the broker is your database
 

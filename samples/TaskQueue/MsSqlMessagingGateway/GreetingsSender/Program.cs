@@ -104,15 +104,34 @@ try
         var commandProcessor = host.Services.GetRequiredService<IAmACommandProcessor>();
         var transactionProvider = host.Services.GetRequiredService<IAmATransactionConnectionProvider>();
 
-        // DepositPost writes to the Outbox and sends nothing. Passing the transaction provider
-        // is what lets the Outbox write share a transaction with your own — in a real handler
-        // your INSERT would go on the same connection, and the two would commit together.
-        var messageId = commandProcessor.DepositPost(
-            new GreetingEvent("Ian"), transactionProvider);
+        // The transaction has to be opened here for the Outbox write to join it: the Outbox
+        // attaches one only when the provider already has an open transaction, so passing the
+        // provider without opening one deposits on its own auto-committed connection and shares
+        // nothing.
+        var transaction = transactionProvider.GetTransaction();
+        try
+        {
+            // DepositPost writes to the Outbox and sends nothing. Your own INSERT would go here,
+            // on transactionProvider.GetConnection() and the same transaction, so the message and
+            // the state it describes commit or roll back together.
+            var messageId = commandProcessor.DepositPost(
+                new GreetingEvent("Ian"), transactionProvider);
 
-        // ClearOutbox then dispatches it onto the queue. A long-running host would let the
-        // Outbox Sweeper (UseOutboxSweeper) do this on a timer instead.
-        commandProcessor.ClearOutbox([messageId]);
+            transaction.Commit();
+
+            // Dispatches onto the queue, after the commit rather than inside it. A long-running
+            // host would let the Outbox Sweeper (UseOutboxSweeper) do this on a timer.
+            commandProcessor.ClearOutbox([messageId]);
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
+        finally
+        {
+            transactionProvider.Close();
+        }
     }
     finally
     {

@@ -38,7 +38,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway;
 /// constructor — so this sits beside the other connection-free tests in this folder.
 /// </remarks>
 [Trait("Category", "MSSQL")]
-public class When_a_subscription_is_not_an_mssql_subscription
+public class MsSqlChannelFactorySubscriptionTypeTests
 {
     private readonly RelationalDatabaseConfiguration _configuration =
         new("Server=localhost;Database=test;Trusted_Connection=True;");
@@ -48,19 +48,19 @@ public class When_a_subscription_is_not_an_mssql_subscription
             new ChannelName("test.topic"),
             new RoutingKey("test.topic"));
 
-    private static MsSqlSubscription<MyEvent> MsSqlSubscription() =>
+    private static MsSqlSubscription<MyEvent> AnMsSqlSubscription() =>
         new(new SubscriptionName("mssql"),
             new ChannelName("test.topic"),
             new RoutingKey("test.topic"));
 
-    private ChannelFactory ChannelFactory() =>
+    private ChannelFactory CreateChannelFactory() =>
         new(new MsSqlMessageConsumerFactory(_configuration));
 
     [Fact]
     public void Should_throw_when_creating_a_sync_channel()
     {
         // Arrange
-        var channelFactory = ChannelFactory();
+        var channelFactory = CreateChannelFactory();
 
         // Act
         var exception = Assert.Throws<ConfigurationException>(
@@ -74,7 +74,7 @@ public class When_a_subscription_is_not_an_mssql_subscription
     public void Should_throw_when_creating_an_async_channel()
     {
         // Arrange
-        var channelFactory = ChannelFactory();
+        var channelFactory = CreateChannelFactory();
 
         // Act
         var exception = Assert.Throws<ConfigurationException>(
@@ -88,7 +88,7 @@ public class When_a_subscription_is_not_an_mssql_subscription
     public async Task Should_throw_when_creating_an_async_channel_asynchronously()
     {
         // Arrange
-        var channelFactory = ChannelFactory();
+        var channelFactory = CreateChannelFactory();
 
         // Act
         var exception = await Assert.ThrowsAsync<ConfigurationException>(
@@ -98,16 +98,65 @@ public class When_a_subscription_is_not_an_mssql_subscription
         Assert.Contains("MsSqlSubscription", exception.Message);
     }
 
-    // The control. Without it these tests would also pass against a factory that threw for
-    // everything, which would tell us nothing about the downcast.
+    // The controls. Without one per creation method, any of the three could regress to an
+    // unconditional throw and every test above would stay green.
     [Fact]
-    public void Should_create_a_channel_for_an_mssql_subscription()
+    public void Should_create_a_sync_channel_for_an_mssql_subscription()
     {
         // Arrange
-        var channelFactory = ChannelFactory();
+        var channelFactory = CreateChannelFactory();
 
         // Act
-        var channel = channelFactory.CreateSyncChannel(MsSqlSubscription());
+        var channel = channelFactory.CreateSyncChannel(AnMsSqlSubscription());
+
+        // Assert
+        Assert.NotNull(channel);
+        Assert.Equal(new ChannelName("test.topic"), channel.Name);
+    }
+
+    [Fact]
+    public void Should_create_an_async_channel_for_an_mssql_subscription()
+    {
+        // Arrange
+        var channelFactory = CreateChannelFactory();
+
+        // Act
+        var channel = channelFactory.CreateAsyncChannel(AnMsSqlSubscription());
+
+        // Assert
+        Assert.NotNull(channel);
+        Assert.Equal(new ChannelName("test.topic"), channel.Name);
+    }
+
+    [Fact]
+    public async Task Should_create_an_async_channel_asynchronously_for_an_mssql_subscription()
+    {
+        // Arrange
+        var channelFactory = CreateChannelFactory();
+
+        // Act
+        var channel = await channelFactory.CreateAsyncChannelAsync(AnMsSqlSubscription());
+
+        // Assert
+        Assert.NotNull(channel);
+        Assert.Equal(new ChannelName("test.topic"), channel.Name);
+    }
+
+    // The error message offers "MsSqlSubscription or MsSqlSubscription<T>", so the non-generic
+    // form has to be accepted for the message to be true.
+    [Fact]
+    public void Should_create_a_channel_for_a_non_generic_mssql_subscription()
+    {
+        // Arrange
+        var channelFactory = CreateChannelFactory();
+        var subscription = new MsSqlSubscription(
+            new SubscriptionName("non-generic"),
+            new ChannelName("test.topic"),
+            new RoutingKey("test.topic"),
+            typeof(MyEvent));
+
+        // Act
+        var channel = channelFactory.CreateSyncChannel(subscription);
 
         // Assert
         Assert.NotNull(channel);

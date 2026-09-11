@@ -82,27 +82,26 @@ public static class QueueTableProvisioner
 
         // The lookup is parameterized although the name here is a constant, because a sample is a
         // copy-paste source and the reader who binds it to configuration inherits this code.
-        Execute(connection, sql, queueTableName, OBJECT_ALREADY_EXISTS);
+        Execute(connection, sql, OBJECT_ALREADY_EXISTS, new SqlParameter("@queueTable", queueTableName));
     }
 
     // Unguarded, because the only way to guard it is to duplicate the index name that
     // MsSqlQueueBuilder owns — and a guard that silently stops matching leaves a permanently
-    // failing statement looking like success.
+    // failing statement looking like success. The cost is a caught 1913 on every start after the
+    // first, which is deliberate: do not "fix" it by adding a guard.
     private static void CreateIndex(SqlConnection connection, string queueTableName) =>
-        Execute(connection, MsSqlQueueBuilder.GetIndexDDL(queueTableName), queueTableName, INDEX_ALREADY_EXISTS);
+        Execute(connection, MsSqlQueueBuilder.GetIndexDDL(queueTableName), INDEX_ALREADY_EXISTS);
 
     // All four applications share one database, so two starting together can both pass a guard and
     // race to create. Box Provisioning takes an advisory lock; there is no equivalent for the
     // queue, so the loser treats "already exists" as the outcome it wanted.
-    private static void Execute(SqlConnection connection, string sql, string queueTableName, int alreadyExists)
+    private static void Execute(SqlConnection connection, string sql, int alreadyExists, params SqlParameter[] parameters)
     {
         try
         {
             using var command = connection.CreateCommand();
             command.CommandText = sql;
-            if (sql.Contains("@queueTable"))
-                command.Parameters.AddWithValue("@queueTable", queueTableName);
-
+            command.Parameters.AddRange(parameters);
             command.ExecuteNonQuery();
         }
         catch (SqlException ex) when (ex.Number == alreadyExists)
