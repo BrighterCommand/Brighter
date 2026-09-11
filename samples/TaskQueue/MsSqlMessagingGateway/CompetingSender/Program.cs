@@ -69,7 +69,7 @@ builder.Services.AddHostedService<RunCommandProcessor>(provider => new RunComman
 var host = builder.Build();
 await host.RunAsync();
 
-internal sealed class RunCommandProcessor : IHostedService
+internal sealed class RunCommandProcessor : BackgroundService
 {
     private readonly IAmACommandProcessor _commandProcessor;
     private readonly IHostApplicationLifetime _lifetime;
@@ -82,7 +82,9 @@ internal sealed class RunCommandProcessor : IHostedService
         _repeatCount = repeatCount;
     }
 
-    public async Task StartAsync(CancellationToken cancellationToken)
+    // ExecuteAsync rather than StartAsync: work belongs after the host has started, not inside
+    // the call that starts it.
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
         // The scope must complete: Post opens a SqlConnection, Enlist defaults to true, so the
         // insert joins this transaction and an abandoned scope rolls the message back with it.
@@ -104,8 +106,6 @@ internal sealed class RunCommandProcessor : IHostedService
         // Nothing left to do: stop rather than leaving the reader to find Ctrl-C.
         _lifetime.StopApplication();
 
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
-
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }

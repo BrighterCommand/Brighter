@@ -71,7 +71,17 @@ public static class QueueTableProvisioner
             using var connection = new SqlConnection(connectionString);
             connection.Open();
 
-            CreateTable(connection, queueTableName);
+                CreateTable(connection, queueTableName);
+
+            // The 2714 the create may have swallowed means "an object of that name exists", not
+            // "the table exists" — a view or a procedure holding the name would look identical.
+            // Re-probe so a name collision stops resembling a lost race, and fails here with a
+            // readable message rather than deep inside the gateway on the first send.
+            if (!TableExists(connection, queueTableName))
+                throw new InvalidOperationException(
+                    $"'{queueTableName}' was not created and does not exist as a table. Something " +
+                    "else in this database owns that name.");
+
             CreateIndex(connection, queueTableName);
         }
         catch (Exception ex) when (ex is SqlException or ArgumentException)
@@ -84,6 +94,18 @@ public static class QueueTableProvisioner
                 "server is reachable, and that BrighterSqlQueue.sql has been run; set " +
                 $"ConnectionStrings__Brighter to point somewhere else. The provider said: {ex.Message}", ex);
         }
+    }
+
+    private static bool TableExists(SqlConnection connection, string queueTableName)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+                              SELECT COUNT(*) FROM sys.tables t
+                              INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
+                              WHERE t.name = @queueTable AND s.name = SCHEMA_NAME();
+                              """;
+        command.Parameters.AddWithValue("@queueTable", queueTableName);
+        return (int)command.ExecuteScalar() > 0;
     }
 
     // Two commands rather than one batch: a swallowed error abandons the rest of its batch, so a

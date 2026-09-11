@@ -52,8 +52,11 @@ builder.Services.AddConsumers(options =>
 // Surfaces a pump/handler mismatch as a named startup error rather than a per-message failure.
 .ValidatePipelines();
 
-builder.Services.AddHostedService<ServiceActivatorHostedService>();
+// RunStuff FIRST: hosted services stop in reverse registration order, so registering it after the
+// dispatcher would print the count while the pump was still draining — and the count is the whole
+// output of this demo.
 builder.Services.AddHostedService<RunStuff>();
+builder.Services.AddHostedService<ServiceActivatorHostedService>();
 
 builder.Services.AddSingleton<IAmACommandCounter, CommandCounter>();
 

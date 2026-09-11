@@ -18,7 +18,7 @@ built-in default is `Server=.\sqlexpress;Integrated Security=SSPI`, which off Wi
 `Named Pipes Provider` error:
 
 ```bash
-export ConnectionStrings__Brighter='Server=localhost,1433;Database=BrighterSqlQueue;User Id=sa;Password=<password>;Encrypt=false'
+export ConnectionStrings__Brighter='Server=localhost,1433;Database=BrighterSqlQueue;User Id=sa;Password=<password>;Encrypt=True;TrustServerCertificate=True'
 ```
 
 **2. Run the applications.** Each creates the tables it owns, on every start:
@@ -68,11 +68,13 @@ Every application reads `ConnectionStrings:Brighter`, falling back to the local 
 instance, so the `export` in step 1 above is all it takes to run against a container — nothing
 needs editing.
 
-**Neither `Encrypt=false` here nor `TrustServerCertificate=True` in the default connection string
-belongs in production.** Both turn off a check that exists to stop you talking to the wrong
-server: the first drops TLS altogether, the second keeps it and accepts any certificate. They are
-here because a local SQL Express instance and a bare container both present a self-signed
-certificate. Against a server with a certificate your clients trust, drop them.
+**`TrustServerCertificate=True` does not belong in production**, and nor does the `Encrypt=false`
+you will meet in older examples. They are not the same concession: `Encrypt=false` drops TLS
+altogether, while `TrustServerCertificate=True` keeps the encryption and skips only the check that
+the certificate belongs to the server you meant to reach. The second is the lesser of the two,
+which is why both the default connection string and the export above use it — a local SQL Express
+instance and a bare container both present a self-signed certificate. Against a server with a
+certificate your clients trust, drop it.
 
 ## The applications
 
@@ -112,12 +114,11 @@ no longer part of your transaction. Measured, three sends each way:
 
 That third row is the decoupling a broker outside your database gives you for free, bought back by
 opting out of enlistment — and losing, in exchange, any guarantee that the message and your own
-write agree. **The Outbox is the version that keeps both**, which is what `GreetingsSender` shows:
-`DepositPost` inside your transaction, `ClearOutbox` after it commits.
+write agree. **The Outbox is the version that keeps both**, and `GreetingsSender` is where to see
+it.
 
-This is the argument for the Outbox rather than a defect. `GreetingsSender` shows the answer:
-`DepositPost` writes to the Outbox inside your transaction, and `ClearOutbox` dispatches once it
-has committed.
+This is the argument for the Outbox rather than a defect: `DepositPost` writes to the Outbox
+inside your transaction, and `ClearOutbox` dispatches once it has committed.
 
 ### Idempotence
 
