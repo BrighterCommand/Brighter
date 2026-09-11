@@ -90,9 +90,12 @@ try
         // Creates and migrates the Outbox table — but only once the HOST starts, because it
         // registers a hosted service. See StartAsync below.
         .UseBoxProvisioning(options => options.AddMsSqlOutbox(configuration))
-        .AutoFromAssemblies()
-        // The producer-side guard: PublicationRequestTypeSet is what catches a Publication with
-        // no Topic, which is how CompetingSender used to fail. Last in the chain, as its doc asks.
+        // Named explicitly: AutoFromAssemblies() with no arguments scans LOADED assemblies, so
+        // it finds Events only because a generic over one of its types was constructed above.
+        .AutoFromAssemblies([typeof(GreetingEvent).Assembly])
+        // Producer-side validation: RequestType set, RequestType implements IRequest, and wrap
+        // transforms resolvable. A missing Topic is NOT among them — that throws earlier, out of
+        // MsSqlMessageProducerFactory.Create. Last in the chain, as its doc asks.
         .ValidatePipelines();
 
     using var host = builder.Build();

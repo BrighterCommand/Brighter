@@ -1,4 +1,3 @@
-﻿using Events;
 
 namespace CompetingReceiverConsole
 {

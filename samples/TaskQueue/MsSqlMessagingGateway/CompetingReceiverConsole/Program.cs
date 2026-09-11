@@ -2,7 +2,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using CompetingReceiverConsole;
-using Events;
 using Events.Ports.Commands;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,7 +48,7 @@ builder.Services.AddConsumers(options =>
 // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
 // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
 .UseScheduler(new InMemorySchedulerFactory())
-.AutoFromAssemblies()
+.AutoFromAssemblies([typeof(CompetingConsumerCommand).Assembly, typeof(Program).Assembly])
 // Surfaces a pump/handler mismatch as a named startup error rather than a per-message failure.
 .ValidatePipelines();
 

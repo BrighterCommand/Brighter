@@ -13,6 +13,14 @@ sender deposits into, and an Inbox the receiver de-duplicates against.
 sqlcmd -S localhost,1433 -U sa -P '<password>' -C -i BrighterSqlQueue.sql
 ```
 
+**Unless you are on Windows with SQL Express, point the applications at that same server** — the
+built-in default is `Server=.\sqlexpress;Integrated Security=SSPI`, which off Windows fails with a
+`Named Pipes Provider` error:
+
+```bash
+export ConnectionStrings__Brighter='Server=localhost,1433;Database=BrighterSqlQueue;User Id=sa;Password=<password>;Encrypt=false'
+```
+
 **2. Run the applications.** Each creates the tables it owns, on every start:
 
 | Table | Created by |
@@ -28,16 +36,25 @@ accepted on a publication or subscription and then never acted on, unlike the Po
 `QueueTableProvisioner` is this sample doing that.
 
 It lives in **`SampleInfrastructure`**, alongside `SampleDatabase` — the connection string and the
-table names. `Events` keeps the commands, their mappers and `CompetingConsumerCommandHandler`, with
-no database dependency. That is the split the sample is trying to teach, and it is also practical,
-because `Events` is the assembly every application hands to `AutoFromAssemblies`.
+table names. **`Events` is contracts only**: the commands and their mappers, which every
+application needs, with no database dependency and no handlers.
 
-**`GreetingEventHandler` is the exception, and it sits in `GreetingsReceiverConsole` rather than in
-`Events`.** It carries `[UseInbox]`, and every application here scans `Events`, so in the shared
-project all four would register a handler whose pipeline needs an inbox that only one of them
-configures. Nothing fails at startup if you move it back — pipelines are built lazily and no other
-application sends a `GreetingEvent` — so the hazard is latent rather than fatal. It lives with the
-process that owns the policy because that is where the policy is true.
+**Handlers live with the process that owns their dependencies**, and both of them earn it:
+
+- `GreetingEventHandler` carries `[UseInbox]`, a policy only `GreetingsReceiverConsole` configures.
+- `CompetingConsumerCommandHandler` takes `IAmACommandCounter`, which only
+  `CompetingReceiverConsole` registers.
+
+That is not tidiness. `AutoFromAssemblies` registers every handler it finds, and
+`Host.CreateApplicationBuilder` turns on `ValidateOnBuild` when `DOTNET_ENVIRONMENT=Development` —
+so with the counter-dependent handler in the shared project, running *`GreetingsReceiverConsole`*
+from an IDE profile fails at `host.Build()` with **`Unable to resolve service for type
+'IAmACommandCounter'`**, in an application that has nothing to do with competing consumers.
+Measured, before and after the move.
+
+**Each application names the assemblies it scans** — `AutoFromAssemblies([...])` rather than the
+no-argument overload, which scans *loaded* assemblies and therefore works only as long as
+something happens to have forced `Events` to load first.
 
 Because both the sender and the receiver provision what they need, **either can be started
 first** against a database with no tables in it.
@@ -109,9 +126,12 @@ either.
 
 ### A note on log levels
 
-`MsSqlMessageQueue` logs its connection string at `Debug`. It does not reach the console in these
-applications as they stand, but the connection string above carries an `sa` password — so raise
-the log level on a shared machine only with that in mind.
+`MsSqlMessageQueue` logs its connection string at `Debug`, and the connection string above carries
+an `sa` password. It does not reach the console as the sample stands — but in `GreetingsSender`
+that is an accident of ordering rather than a property of the configuration. That application does
+set `MinimumLevel.Debug()` with a console sink; the producer registry is simply built inside the
+`AddProducers` callback, which runs before Brighter swaps your `ILoggerFactory` into
+`ApplicationLogging`. Move that construction after `Build()` and the password lands on stdout.
 
 ## Further reading
 

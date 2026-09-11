@@ -88,7 +88,8 @@ public static class QueueTableProvisioner
     // Unguarded, because the only way to guard it is to duplicate the index name that
     // MsSqlQueueBuilder owns — and a guard that silently stops matching leaves a permanently
     // failing statement looking like success. The cost is a caught 1913 on every start after the
-    // first, which is deliberate: do not "fix" it by adding a guard.
+    // first, which is deliberate: do not "fix" it by adding a guard. It also means an index of
+    // that name but a different definition is accepted rather than corrected.
     private static void CreateIndex(SqlConnection connection, string queueTableName) =>
         Execute(connection, MsSqlQueueBuilder.GetIndexDDL(queueTableName), INDEX_ALREADY_EXISTS);
 

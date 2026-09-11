@@ -85,6 +85,7 @@
   </Folder>
   <Folder Name="/samples/TaskQueue/MsSqlMessagingGateway/">
     <File Path="samples/TaskQueue/MsSqlMessagingGateway/BrighterSqlQueue.sql" />
+    <File Path="samples/TaskQueue/MsSqlMessagingGateway/README.md" />
     <Project Path="samples/TaskQueue/MsSqlMessagingGateway/CompetingReceiverConsole/CompetingReceiverConsole.csproj" />
     <Project Path="samples/TaskQueue/MsSqlMessagingGateway/CompetingSender/CompetingSender.csproj" />
     <Project Path="samples/TaskQueue/MsSqlMessagingGateway/Events/Events.csproj" />

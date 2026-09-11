@@ -57,7 +57,7 @@ public class MsSqlChannelFactorySubscriptionTypeTests
         new(new MsSqlMessageConsumerFactory(_configuration));
 
     [Fact]
-    public void Should_throw_when_creating_a_sync_channel()
+    public void When_the_subscription_is_not_an_mssql_subscription_should_throw_creating_a_sync_channel()
     {
         // Arrange
         var channelFactory = CreateChannelFactory();
@@ -71,7 +71,7 @@ public class MsSqlChannelFactorySubscriptionTypeTests
     }
 
     [Fact]
-    public void Should_throw_when_creating_an_async_channel()
+    public void When_the_subscription_is_not_an_mssql_subscription_should_throw_creating_an_async_channel()
     {
         // Arrange
         var channelFactory = CreateChannelFactory();
@@ -85,7 +85,7 @@ public class MsSqlChannelFactorySubscriptionTypeTests
     }
 
     [Fact]
-    public async Task Should_throw_when_creating_an_async_channel_asynchronously()
+    public async Task When_the_subscription_is_not_an_mssql_subscription_should_throw_creating_an_async_channel_asynchronously()
     {
         // Arrange
         var channelFactory = CreateChannelFactory();
@@ -101,7 +101,7 @@ public class MsSqlChannelFactorySubscriptionTypeTests
     // The controls. Without one per creation method, any of the three could regress to an
     // unconditional throw and every test above would stay green.
     [Fact]
-    public void Should_create_a_sync_channel_for_an_mssql_subscription()
+    public void When_the_subscription_is_an_mssql_subscription_should_create_a_sync_channel()
     {
         // Arrange
         var channelFactory = CreateChannelFactory();
@@ -115,7 +115,7 @@ public class MsSqlChannelFactorySubscriptionTypeTests
     }
 
     [Fact]
-    public void Should_create_an_async_channel_for_an_mssql_subscription()
+    public void When_the_subscription_is_an_mssql_subscription_should_create_an_async_channel()
     {
         // Arrange
         var channelFactory = CreateChannelFactory();
@@ -129,7 +129,7 @@ public class MsSqlChannelFactorySubscriptionTypeTests
     }
 
     [Fact]
-    public async Task Should_create_an_async_channel_asynchronously_for_an_mssql_subscription()
+    public async Task When_the_subscription_is_an_mssql_subscription_should_create_an_async_channel_asynchronously()
     {
         // Arrange
         var channelFactory = CreateChannelFactory();
@@ -145,7 +145,7 @@ public class MsSqlChannelFactorySubscriptionTypeTests
     // The error message offers "MsSqlSubscription or MsSqlSubscription<T>", so the non-generic
     // form has to be accepted for the message to be true.
     [Fact]
-    public void Should_create_a_channel_for_a_non_generic_mssql_subscription()
+    public void When_the_subscription_is_a_non_generic_mssql_subscription_should_create_a_channel()
     {
         // Arrange
         var channelFactory = CreateChannelFactory();

@@ -55,12 +55,16 @@ builder.Services.AddBrighter()
     {
         configure.ProducerRegistry = producerRegistry;
     })
-    .AutoFromAssemblies()
-    // Catches a Publication with no Topic at startup — which is exactly how this application
-    // used to fail, one ConfigurationException deep into the send.
+    .AutoFromAssemblies([typeof(CompetingConsumerCommand).Assembly])
+    // Producer-side validation: RequestType set and implementing IRequest, wrap transforms
+    // resolvable. Not the missing Topic that used to break this application — MsSqlProducerRegistryFactory
+    // .Create throws that above, before AddBrighter is reached.
     .ValidatePipelines();
 
-builder.Services.AddHostedService<RunCommandProcessor>(provider => new RunCommandProcessor(provider.GetRequiredService<IAmACommandProcessor>(), repeatCount));
+builder.Services.AddHostedService<RunCommandProcessor>(provider => new RunCommandProcessor(
+    provider.GetRequiredService<IAmACommandProcessor>(),
+    provider.GetRequiredService<IHostApplicationLifetime>(),
+    repeatCount));
 
 var host = builder.Build();
 await host.RunAsync();
@@ -68,11 +72,13 @@ await host.RunAsync();
 internal sealed class RunCommandProcessor : IHostedService
 {
     private readonly IAmACommandProcessor _commandProcessor;
+    private readonly IHostApplicationLifetime _lifetime;
     private readonly int _repeatCount;
 
-    public RunCommandProcessor(IAmACommandProcessor commandProcessor, int repeatCount)
+    public RunCommandProcessor(IAmACommandProcessor commandProcessor, IHostApplicationLifetime lifetime, int repeatCount)
     {
         _commandProcessor = commandProcessor;
+        _lifetime = lifetime;
         _repeatCount = repeatCount;
     }
 
@@ -94,6 +100,9 @@ internal sealed class RunCommandProcessor : IHostedService
 
             scope.Complete();
         }
+
+        // Nothing left to do: stop rather than leaving the reader to find Ctrl-C.
+        _lifetime.StopApplication();
 
         await Task.CompletedTask;
     }
