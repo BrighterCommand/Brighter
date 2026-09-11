@@ -44,7 +44,7 @@ The `CommandProcessor` class serves as the central orchestrator, implementing bo
 - Handle request/reply messaging
 - Provide instrumentation and telemetry hooks
 
-**Core dispatch methods:**
+**Core dispatch methods** — *signatures, not a pasteable example*:
 ```csharp
 // Point-to-point command
 void Send<TRequest>(TRequest command, RequestContext? requestContext = null)
@@ -605,6 +605,8 @@ public void ClearOutbox(Id[] ids, RequestContext? requestContext = null,
 ### Transactional Integration
 
 **Database Transaction Example:**
+*Abridged — `transactionProvider`, `customer` and `newEmail` are yours; illustrative, not copy-pasteable:*
+
 ```csharp
 // Within your application service/command handler:
 using var transaction = transactionProvider.BeginTransaction();
@@ -708,6 +710,8 @@ note right: Transforms can include:\n- Compression\n- Encryption\n- Format conve
 ### Message Mapper Registry
 The `MessageMapperRegistry` provides bi-directional mapping:
 
+*The interface as Brighter declares it — a declaration, not an example to paste:*
+
 ```csharp
 // The non-generic base is a marker, used where the closed type is not known
 public interface IAmAMessageMapper;
@@ -803,7 +807,7 @@ public class AsyncCommandHandler : RequestHandlerAsync<MyCommand>
         CancellationToken cancellationToken = default)
     {
         // Async operations automatically use BrighterSynchronizationContext
-        await SomeAsyncOperation();
+        await Task.Delay(10);   // your async work here
         
         // Context is preserved across awaits
         var userId = Context.Bag["UserId"]; // Still available
@@ -834,14 +838,17 @@ public class CustomRequestContextFactory : IAmARequestContextFactory
 Brighter's synchronization context integrates seamlessly with ASP.NET Core:
 
 ```csharp
-// In startup configuration
+// In startup configuration — nothing extra is required
 services.AddBrighter(options =>
 {
-    // Brighter automatically configures sync context
-    // to work with ASP.NET Core's context
+    // Brighter installs BrighterSynchronizationContext around the handler
+    // it invokes; ASP.NET Core's own context is restored afterwards
 })
-.UseCustomSynchronizationContext(); // Optional: override default behavior
+.AutoFromAssemblies([typeof(CreateCustomerCommand).Assembly]);
 ```
+
+There is **no** opt-out or override method: the context is applied by `BrighterAsyncContext`
+around the call, not configured on the builder.
 
 **Benefits in web scenarios:**
 - Prevents deadlocks when mixing sync/async code
@@ -853,6 +860,8 @@ services.AddBrighter(options =>
 
 ### Request Context Factory
 The `IAmARequestContextFactory` creates request contexts:
+
+*The interface as Brighter declares it — a declaration, not an example to paste:*
 
 ```csharp
 public interface IAmARequestContextFactory  
@@ -1083,6 +1092,8 @@ Brighter integrates with .NET's dependency injection:
 ### Pipeline Tracing
 The `PipelineTracer` enables pipeline introspection for both debugging and testing:
 
+*The interface as Brighter declares it — a declaration, not an example to paste:*
+
 ```csharp
 public interface IAmAPipelineTracer
 {
@@ -1116,19 +1127,32 @@ Assert.Contains("MyBusinessHandler", pipelineDescription);
 Test individual handlers in isolation:
 
 ```csharp
-[Fact]
-public void When_Handling_Valid_Command_Should_Process_Successfully()
+// A hand-written stub, not a mocking library: this repository uses none, and a test
+// double you can read beats one you have to configure
+public class SpyCustomerRepository : ICustomerRepository
 {
-    // Arrange
-    var handler = new CreateCustomerHandler(mockRepository.Object);
-    var command = new CreateCustomerCommand("John", "john@example.com");
-    
-    // Act
-    var result = handler.Handle(command);
-    
-    // Assert
-    Assert.Equal(command.Id, result.Id);
-    mockRepository.Verify(r => r.Save(It.IsAny<Customer>()), Times.Once);
+    public List<Customer> Saved { get; } = new();
+
+    public void Save(Customer customer) => Saved.Add(customer);
+}
+
+public class CreateCustomerHandlerTests
+{
+    [Fact]
+    public void When_Handling_Valid_Command_Should_Process_Successfully()
+    {
+        // Arrange
+        var repository = new SpyCustomerRepository();
+        var handler = new CreateCustomerHandler(repository);
+        var command = new CreateCustomerCommand("John", "john@example.com");
+
+        // Act
+        var result = handler.Handle(command);
+
+        // Assert
+        Assert.Equal(command.Id, result.Id);
+        Assert.Single(repository.Saved);
+    }
 }
 ```
 
