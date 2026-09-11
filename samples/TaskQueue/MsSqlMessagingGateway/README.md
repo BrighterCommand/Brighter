@@ -99,6 +99,14 @@ fails, so a plain `Subscription<T>` compiles and then dies as the Dispatcher bui
 Both receivers call `.ValidatePipelines()`, which surfaces the related pump/handler mismatch as a
 startup error rather than a per-message failure.
 
+### Why no `databaseName:`
+
+The `RelationalDatabaseConfiguration` calls name the tables but not the database — it is already
+in the connection string, and nothing in the MSSQL gateway, Outbox, Inbox or Box Provisioning
+reads `DatabaseName`. It is not inert everywhere, though: the MySQL migration runner and the
+MongoDB adapters do read it, and it defaults to `"Brighter"`, so put it back if you adapt this to
+either.
+
 ### A note on log levels
 
 `MsSqlMessageQueue` logs its connection string at `Debug`. It does not reach the console in these

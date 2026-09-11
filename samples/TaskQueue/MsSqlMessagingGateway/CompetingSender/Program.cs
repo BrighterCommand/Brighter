@@ -55,7 +55,10 @@ builder.Services.AddBrighter()
     {
         configure.ProducerRegistry = producerRegistry;
     })
-    .AutoFromAssemblies();
+    .AutoFromAssemblies()
+    // Catches a Publication with no Topic at startup — which is exactly how this application
+    // used to fail, one ConfigurationException deep into the send.
+    .ValidatePipelines();
 
 builder.Services.AddHostedService<RunCommandProcessor>(provider => new RunCommandProcessor(provider.GetRequiredService<IAmACommandProcessor>(), repeatCount));
 
@@ -75,14 +78,9 @@ internal sealed class RunCommandProcessor : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        // The scope IS completed, and the comment that used to say otherwise was wrong for this
-        // transport. Post opens a SqlConnection, Enlist defaults to true, so the INSERT into the
-        // queue table joins the ambient transaction: abandoning the scope rolls the message back
-        // with it. Measured — three Posts, no errors, and QueueData held 0 rows without
-        // Complete() and 3 with it. That is not a Brighter defect; it is what a database broker
-        // means. Post is only decoupled from your transaction when the broker is not your
-        // database. See GreetingsSender for the answer: DepositPost writes to the Outbox inside
-        // your transaction and ClearOutbox dispatches after it commits.
+        // The scope has to complete: Post opens a SqlConnection, Enlist defaults to true, so the
+        // insert joins this transaction and an abandoned scope rolls the message back with it.
+        // See the README, and GreetingsSender for the Outbox answer.
         using (var scope = new TransactionScope(TransactionScopeOption.RequiresNew,
             new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
             TransactionScopeAsyncFlowOption.Enabled))

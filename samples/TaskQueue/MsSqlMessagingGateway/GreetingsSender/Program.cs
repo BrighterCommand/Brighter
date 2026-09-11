@@ -90,7 +90,10 @@ try
         // Creates and migrates the Outbox table — but only once the HOST starts, because it
         // registers a hosted service. See StartAsync below.
         .UseBoxProvisioning(options => options.AddMsSqlOutbox(configuration))
-        .AutoFromAssemblies();
+        .AutoFromAssemblies()
+        // The producer-side guard: PublicationRequestTypeSet is what catches a Publication with
+        // no Topic, which is how CompetingSender used to fail. Last in the chain, as its doc asks.
+        .ValidatePipelines();
 
     using var host = builder.Build();
 
@@ -108,30 +111,35 @@ try
         // attaches one only when the provider already has an open transaction, so passing the
         // provider without opening one deposits on its own auto-committed connection and shares
         // nothing.
-        var transaction = transactionProvider.GetTransaction();
+        transactionProvider.GetTransaction();
+        Id messageId;
         try
         {
             // DepositPost writes to the Outbox and sends nothing. Your own INSERT would go here,
             // on transactionProvider.GetConnection() and the same transaction, so the message and
             // the state it describes commit or roll back together.
-            var messageId = commandProcessor.DepositPost(
+            messageId = commandProcessor.DepositPost(
                 new GreetingEvent("Ian"), transactionProvider);
 
-            transaction.Commit();
-
-            // Dispatches onto the queue, after the commit rather than inside it. A long-running
-            // host would let the Outbox Sweeper (UseOutboxSweeper) do this on a timer.
-            commandProcessor.ClearOutbox([messageId]);
+            // Through the provider, not the raw DbTransaction: Commit clears the provider's
+            // transaction, which is what lets Rollback stay a no-op afterwards and Close actually
+            // dispose.
+            transactionProvider.Commit();
         }
         catch
         {
-            transaction.Rollback();
+            transactionProvider.Rollback();
             throw;
         }
         finally
         {
             transactionProvider.Close();
         }
+
+        // Outside the try: the commit has happened, so a dispatch failure here must not reach a
+        // rollback. Rolling back a committed transaction throws over the real exception and loses
+        // it. A long-running host would let the Outbox Sweeper (UseOutboxSweeper) dispatch instead.
+        commandProcessor.ClearOutbox([messageId]);
     }
     finally
     {

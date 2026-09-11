@@ -106,6 +106,7 @@ public static class QueueTableProvisioner
         }
         catch (SqlException ex) when (ex.Number == alreadyExists)
         {
+            // Lost the create race; the other process made it, which is the outcome we wanted.
         }
     }
 }

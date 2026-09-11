@@ -107,7 +107,7 @@ public class MsSqlChannelFactorySubscriptionTypeTests
         var channelFactory = CreateChannelFactory();
 
         // Act
-        var channel = channelFactory.CreateSyncChannel(AnMsSqlSubscription());
+        using var channel = channelFactory.CreateSyncChannel(AnMsSqlSubscription());
 
         // Assert
         Assert.NotNull(channel);
@@ -121,7 +121,7 @@ public class MsSqlChannelFactorySubscriptionTypeTests
         var channelFactory = CreateChannelFactory();
 
         // Act
-        var channel = channelFactory.CreateAsyncChannel(AnMsSqlSubscription());
+        using var channel = channelFactory.CreateAsyncChannel(AnMsSqlSubscription());
 
         // Assert
         Assert.NotNull(channel);
@@ -135,7 +135,7 @@ public class MsSqlChannelFactorySubscriptionTypeTests
         var channelFactory = CreateChannelFactory();
 
         // Act
-        var channel = await channelFactory.CreateAsyncChannelAsync(AnMsSqlSubscription());
+        using var channel = await channelFactory.CreateAsyncChannelAsync(AnMsSqlSubscription());
 
         // Assert
         Assert.NotNull(channel);
@@ -156,7 +156,7 @@ public class MsSqlChannelFactorySubscriptionTypeTests
             typeof(MyEvent));
 
         // Act
-        var channel = channelFactory.CreateSyncChannel(subscription);
+        using var channel = channelFactory.CreateSyncChannel(subscription);
 
         // Assert
         Assert.NotNull(channel);
