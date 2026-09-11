@@ -64,35 +64,46 @@ public static class QueueTableProvisioner
         if (!s_identifier.IsMatch(queueTableName))
             throw new ArgumentException($"'{queueTableName}' is not a plain SQL identifier", nameof(queueTableName));
 
-        // This runs before the host exists, so there is no logging to fail into: three of the four
-        // applications would show a bare stack trace for the commonest first-run mistake.
+        using var connection = Connect(connectionString, queueTableName);
+
+        CreateTable(connection, queueTableName);
+
+        // The 2714 the create may have swallowed means "an object of that name exists", not "the
+        // table exists" — a view or a procedure holding the name would look identical. Re-probe so
+        // a name collision stops resembling a lost race, and fails here rather than deep inside
+        // the gateway on the first send.
+        if (!TableExists(connection, queueTableName))
+            throw new InvalidOperationException(
+                $"'{queueTableName}' was not created and does not exist as a table. Something " +
+                "else in this database owns that name.");
+
+        CreateIndex(connection, queueTableName);
+
+        // The same hazard: 1913 means "an index of that name exists", while the guard asks about
+        // the leading column. An index named IX_..._Topic over some other column satisfies neither.
+        if (!TopicIndexExists(connection, queueTableName))
+            throw new InvalidOperationException(
+                $"No index leading on Topic exists for '{queueTableName}', and one could not be " +
+                "created. An index of that name over different columns already exists.");
+    }
+
+    // Only the connect is wrapped, and deliberately: this runs before the host exists, so there is
+    // no logging to fail into and the commonest first-run mistakes — script not run, wrong server,
+    // malformed string — would be a bare stack trace. Everything after it reports itself.
+    private static SqlConnection Connect(string connectionString, string queueTableName)
+    {
         try
         {
-            using var connection = new SqlConnection(connectionString);
+            var connection = new SqlConnection(connectionString);
             connection.Open();
-
-                CreateTable(connection, queueTableName);
-
-            // The 2714 the create may have swallowed means "an object of that name exists", not
-            // "the table exists" — a view or a procedure holding the name would look identical.
-            // Re-probe so a name collision stops resembling a lost race, and fails here with a
-            // readable message rather than deep inside the gateway on the first send.
-            if (!TableExists(connection, queueTableName))
-                throw new InvalidOperationException(
-                    $"'{queueTableName}' was not created and does not exist as a table. Something " +
-                    "else in this database owns that name.");
-
-            CreateIndex(connection, queueTableName);
+            return connection;
         }
-        catch (Exception ex) when (ex is SqlException or ArgumentException)
+        catch (Exception ex) when (ex is SqlException or ArgumentException or InvalidOperationException)
         {
-            // ArgumentException as well as SqlException: a malformed connection string throws it
-            // from the SqlConnection constructor, and that is as common a first-run mistake as an
-            // unreachable server.
             throw new InvalidOperationException(
-                $"Could not provision '{queueTableName}'. Check the connection string, that the " +
-                "server is reachable, and that BrighterSqlQueue.sql has been run; set " +
-                $"ConnectionStrings__Brighter to point somewhere else. The provider said: {ex.Message}", ex);
+                $"Could not connect in order to provision '{queueTableName}'. Check the connection " +
+                "string, that the server is reachable, and that BrighterSqlQueue.sql has been run; " +
+                $"set ConnectionStrings__Brighter to point somewhere else. The provider said: {ex.Message}", ex);
         }
     }
 
@@ -105,7 +116,25 @@ public static class QueueTableProvisioner
                               WHERE t.name = @queueTable AND s.name = SCHEMA_NAME();
                               """;
         command.Parameters.AddWithValue("@queueTable", queueTableName);
-        return (int)command.ExecuteScalar() > 0;
+        return Convert.ToInt32(command.ExecuteScalar()) > 0;
+    }
+
+    private static bool TopicIndexExists(SqlConnection connection, string queueTableName)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+                              SELECT COUNT(*) FROM sys.indexes i
+                              INNER JOIN sys.index_columns ic
+                                  ON i.object_id = ic.object_id AND i.index_id = ic.index_id
+                              INNER JOIN sys.columns c
+                                  ON c.object_id = ic.object_id AND c.column_id = ic.column_id
+                              WHERE i.object_id = OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + '.' + QUOTENAME(@queueTable))
+                                AND i.is_primary_key = 0
+                                AND ic.key_ordinal = 1
+                                AND c.name = 'Topic';
+                              """;
+        command.Parameters.AddWithValue("@queueTable", queueTableName);
+        return Convert.ToInt32(command.ExecuteScalar()) > 0;
     }
 
     // Two commands rather than one batch: a swallowed error abandons the rest of its batch, so a

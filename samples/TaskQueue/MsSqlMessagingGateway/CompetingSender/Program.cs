@@ -82,10 +82,13 @@ internal sealed class RunCommandProcessor : BackgroundService
         _repeatCount = repeatCount;
     }
 
-    // ExecuteAsync rather than StartAsync: work belongs after the host has started, not inside
-    // the call that starts it.
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    // ExecuteAsync rather than StartAsync, and the Yield is what makes that true: without an
+    // await, BackgroundService.StartAsync runs this to completion inside the call that starts
+    // the host.
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        await Task.Yield();
+
         // The scope must complete: Post opens a SqlConnection, Enlist defaults to true, so the
         // insert joins this transaction and an abandoned scope rolls the message back with it.
         // See the README, and GreetingsSender for the Outbox answer.
@@ -95,7 +98,7 @@ internal sealed class RunCommandProcessor : BackgroundService
         {
             Console.WriteLine($"Sending {_repeatCount} command messages");
             var sequenceNumber = 1;
-            for (int i = 0; i < _repeatCount; i++)
+            for (int i = 0; i < _repeatCount && !stoppingToken.IsCancellationRequested; i++)
             {
                 _commandProcessor.Post(new CompetingConsumerCommand(sequenceNumber++));
             }
@@ -105,7 +108,5 @@ internal sealed class RunCommandProcessor : BackgroundService
 
         // Nothing left to do: stop rather than leaving the reader to find Ctrl-C.
         _lifetime.StopApplication();
-
-        return Task.CompletedTask;
     }
 }
