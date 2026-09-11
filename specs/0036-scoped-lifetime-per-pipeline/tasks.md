@@ -833,7 +833,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T6.6, T4.5
   - **References**: AC-19 (FR-18, FR-13, FR-24.2, D19); ADR 0073 step 1
 
-- [ ] **TEST + IMPLEMENT: T6.8 — the provider itself declines an `AlwaysNew` ask without consulting the accessor**
+- [x] **TEST + IMPLEMENT: T6.8 — the provider itself declines an `AlwaysNew` ask without consulting the accessor**
   - **USE COMMAND**: `/test-first HttpContextScopeProvider returns null on an AlwaysNew ask without touching IHttpContextAccessor`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_the_ask_carries_always_new_the_provider_should_not_consult_the_accessor.cs`
