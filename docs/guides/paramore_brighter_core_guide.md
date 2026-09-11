@@ -67,8 +67,9 @@ void Post<TRequest>(TRequest request, RequestContext? requestContext = null,
 Those are the four immediate overloads in full, rather than abridged, because the optional
 parameter they share is the one worth knowing about: **`requestContext` is how you pass your own
 `RequestContext` through the pipeline** instead of letting the processor create one per call.
-`Send` and `Publish` each have two scheduled overloads besides — one taking a `DateTimeOffset at`
-and one a `TimeSpan delay`, both returning the scheduled job's id.
+`Send`, `Publish` and `Post` each have two scheduled overloads besides — one taking a
+`DateTimeOffset at` and one a `TimeSpan delay`, both returning the scheduled job's id, and each
+with an async twin.
 
 `Send`, `Publish` and `Post` each have an `…Async` counterpart taking `bool
 continueOnCapturedContext` and a `CancellationToken` (`CommandProcessor.SendAsync`, `PublishAsync`,
@@ -351,7 +352,9 @@ note right: Post = DepositPost + ClearOutbox\nin single operation\nfor fire-and-
 ```
 
 **Implementation Details** — *abridged from `CommandProcessor`; illustrative, not
-copy-pasteable*:
+copy-pasteable. This section describes private members (`s_boundDepositCalls`, `_transactionType`,
+`[DepositCallSite]`) as of **10.7**: they are internals rather than contract, and nothing checks
+that this description is still true.*
 
 ```csharp
 public void Post<TRequest>(TRequest request, RequestContext? requestContext = null, 
@@ -476,8 +479,9 @@ The four collaborators that chain needs, and where each comes from:
 - Returns typed response (`TResponse?` — nullable)
 - **Requires RPC wiring**, and there is no in-memory path. `Call` guards in this order
   (`CommandProcessor`, `Call`): **the reply subscription first**, throwing
-  `InvalidOperationException("No Subscription registered … for replies of type …")`, and **the
-  response channel factory second**, throwing
+  `InvalidOperationException("No Subscription registered fpr replies of type …")` — `fpr` is
+  verbatim [sic], so search for it as spelled — and **the response channel factory second**,
+  throwing
   `InvalidOperationException("No ResponseChannelFactory registered")`. So a processor with no RPC
   wiring at all reports the missing *subscription*; you only reach the second message once the
   subscription is registered
@@ -1274,18 +1278,29 @@ The example uses `[RequestLogging]` because it composes with nothing else. A han
 `new RequestContext()` throws `ConfigurationException` wrapping a `NullReferenceException`.
 Give the context a policy registry, or let `CommandProcessor` build the pipeline for you.
 `[UseResiliencePipeline]`, the current form, guards its context
-(`Context is { ResiliencePipeline: not null }`) — and `CommandProcessor` always assigns that
-registry, so the guard passes on every dispatch and the handler never silently runs unprotected.
+(`Context is { ResiliencePipeline: not null }`) — **and that guard is why it fails differently
+rather than better.** Which way it fails depends on how the pipeline was built, and the recipe
+above is the quiet one:
 
-**A pipeline key that is not in the registry still fails, and loudly.** Naming a key nothing
-registered throws `ConfigurationException("Error when building pipeline, see inner Exception for
-details")` wrapping the registry's `KeyNotFoundException`, while the pipeline is being built — so
-the target handler is not invoked at all. Measured, with the registered case as its control:
+| How the pipeline is built | `[UsePolicy]` | `[UseResiliencePipeline]` |
+|---|---|---|
+| `PipelineBuilder` + `new RequestContext()`, as above | `ConfigurationException` wrapping a `NullReferenceException`, at build | **silent**: builds, the target runs **once**, unprotected, and its own exception escapes |
+| through `CommandProcessor` | — | `ConfigurationException` at build; the target is never invoked |
+
+Both rows are measured:
 
 ```text
-key absent from the registry  : handler invocations 0, ConfigurationException from Build
-key registered with 2 retries : handler invocations 3, the target's own exception escapes
+direct build, key absent  : [UseResiliencePipeline] invocations 1, InvalidOperationException escaped
+direct build, key absent  : [UsePolicy]             invocations 0, ConfigurationException at Build
+via CommandProcessor, key absent   : invocations 0, ConfigurationException at Build
+via CommandProcessor, key registered with 2 retries : invocations 3, the target's exception escapes
 ```
+
+**So a test written from the recipe above, asserting that retries happen, passes for the wrong
+reason** — no pipeline ran at all. Give the context a registry, or let `CommandProcessor` build the
+pipeline, and the failure becomes loud in both forms. Through `CommandProcessor`
+`Context.ResiliencePipeline` is always assigned (`CommandProcessor.InitRequestContext`), so the
+silent path is reachable only when you build the pipeline yourself.
 
 #### 5. Builder Configuration for Tests: No External Bus
 For testing handler pipelines without external dependencies. This is a builder recipe rather

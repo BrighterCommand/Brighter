@@ -178,8 +178,8 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Post{TRequest}"/> or <see cref="CommandProcessor.ClearOutbox"/> using an external bus.
-        /// You need to provide a policy to specify how QoS issues, specifically <see cref="CommandProcessor.RETRYPOLICY "/> or <see cref="CommandProcessor.CIRCUITBREAKER "/> 
-        /// are handled by adding appropriate resilience via <see cref="Resilience"/> or <see cref="DefaultResilience"/> when choosing this option.
+        /// You need to provide a resilience pipeline registered under <see cref="CommandProcessor.OutboxProducer"/>, which is what
+        /// <see cref="Resilience"/> validates and <see cref="DefaultResilience"/> supplies, to specify how QoS issues are handled when choosing this option.
         /// </summary>
         /// <param name="busType">The type of Bus: In-memory, Db, or RPC</param>
         /// <param name="bus">The service bus that we need to use to send messages externally</param>
@@ -403,8 +403,8 @@ namespace Paramore.Brighter
     {
         /// <summary>
         /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Post{TRequest}"/> or <see cref="CommandProcessor.ClearOutbox"/> using an external bus.
-        /// You need to provide a policy to specify how QoS issues, specifically <see cref="CommandProcessor.RETRYPOLICY "/> or <see cref="CommandProcessor.CIRCUITBREAKER "/> 
-        /// are handled by adding appropriate resilience via <see cref="INeedResilience.Resilience"/> or <see cref="INeedResilience.DefaultResilience"/> when choosing this option.
+        /// You need to provide a resilience pipeline registered under <see cref="CommandProcessor.OutboxProducer"/>, which is what
+        /// <see cref="INeedResilience.Resilience"/> validates and <see cref="INeedResilience.DefaultResilience"/> supplies, to specify how QoS issues are handled when choosing this option.
         /// </summary>
         /// <param name="busType">The type of Bus: In-memory, Db, or RPC</param>
         /// <param name="bus">The bus that we wish to use</param>
