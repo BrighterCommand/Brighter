@@ -52,6 +52,26 @@ public static class QueueTableProvisioner
 
     private static readonly Regex s_identifier = new("^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.Compiled);
 
+    // Written once each, and used by both the IF NOT EXISTS guard and the post-create re-probe:
+    // if the two ever drifted apart, the re-probe would throw against a table it had just created.
+    private const string TABLE_PREDICATE = """
+                                           SELECT 1 FROM sys.tables t
+                                           INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
+                                           WHERE t.name = @queueTable AND s.name = SCHEMA_NAME()
+                                           """;
+
+    private const string TOPIC_INDEX_PREDICATE = """
+                                                 SELECT 1 FROM sys.indexes i
+                                                 INNER JOIN sys.index_columns ic
+                                                     ON i.object_id = ic.object_id AND i.index_id = ic.index_id
+                                                 INNER JOIN sys.columns c
+                                                     ON c.object_id = ic.object_id AND c.column_id = ic.column_id
+                                                 WHERE i.object_id = OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + '.' + QUOTENAME(@queueTable))
+                                                   AND i.is_primary_key = 0
+                                                   AND ic.key_ordinal = 1
+                                                   AND c.name = 'Topic'
+                                                 """;
+
     /// <summary>
     /// Creates the queue table and its topic index if they are absent. Safe to run on every start,
     /// and safe to run concurrently.
@@ -107,32 +127,16 @@ public static class QueueTableProvisioner
         }
     }
 
-    private static bool TableExists(SqlConnection connection, string queueTableName)
-    {
-        using var command = connection.CreateCommand();
-        command.CommandText = """
-                              SELECT COUNT(*) FROM sys.tables t
-                              INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
-                              WHERE t.name = @queueTable AND s.name = SCHEMA_NAME();
-                              """;
-        command.Parameters.AddWithValue("@queueTable", queueTableName);
-        return Convert.ToInt32(command.ExecuteScalar()) > 0;
-    }
+    private static bool TableExists(SqlConnection connection, string queueTableName) =>
+        Exists(connection, TABLE_PREDICATE, queueTableName);
 
-    private static bool TopicIndexExists(SqlConnection connection, string queueTableName)
+    private static bool TopicIndexExists(SqlConnection connection, string queueTableName) =>
+        Exists(connection, TOPIC_INDEX_PREDICATE, queueTableName);
+
+    private static bool Exists(SqlConnection connection, string predicate, string queueTableName)
     {
         using var command = connection.CreateCommand();
-        command.CommandText = """
-                              SELECT COUNT(*) FROM sys.indexes i
-                              INNER JOIN sys.index_columns ic
-                                  ON i.object_id = ic.object_id AND i.index_id = ic.index_id
-                              INNER JOIN sys.columns c
-                                  ON c.object_id = ic.object_id AND c.column_id = ic.column_id
-                              WHERE i.object_id = OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + '.' + QUOTENAME(@queueTable))
-                                AND i.is_primary_key = 0
-                                AND ic.key_ordinal = 1
-                                AND c.name = 'Topic';
-                              """;
+        command.CommandText = $"SELECT COUNT(*) FROM ({predicate}) AS found(one);";
         command.Parameters.AddWithValue("@queueTable", queueTableName);
         return Convert.ToInt32(command.ExecuteScalar()) > 0;
     }
@@ -144,9 +148,7 @@ public static class QueueTableProvisioner
         // SCHEMA_NAME() rather than a literal 'dbo': GetDDL emits an unqualified CREATE TABLE, so
         // a login whose default schema is not dbo would never match its own table.
         var sql = $"""
-                   IF NOT EXISTS (SELECT 1 FROM sys.tables t
-                                  INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
-                                  WHERE t.name = @queueTable AND s.name = SCHEMA_NAME())
+                   IF NOT EXISTS ({TABLE_PREDICATE})
                    BEGIN
                        {MsSqlQueueBuilder.GetDDL(queueTableName)}
                    END;
@@ -160,19 +162,11 @@ public static class QueueTableProvisioner
     // Guarded on what the index IS, not what it is called: any index whose leading column is
     // Topic on this table. A name guard would have to duplicate the convention MsSqlQueueBuilder
     // owns, and would then silently stop matching if that convention ever moved. The catch stays
-    // as the race backstop it is described as.
+    // as the backstop for a concurrent create.
     private static void CreateIndex(SqlConnection connection, string queueTableName)
     {
         var sql = $"""
-                   IF NOT EXISTS (SELECT 1 FROM sys.indexes i
-                                  INNER JOIN sys.index_columns ic
-                                      ON i.object_id = ic.object_id AND i.index_id = ic.index_id
-                                  INNER JOIN sys.columns c
-                                      ON c.object_id = ic.object_id AND c.column_id = ic.column_id
-                                  WHERE i.object_id = OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + '.' + QUOTENAME(@queueTable))
-                                    AND i.is_primary_key = 0
-                                    AND ic.key_ordinal = 1
-                                    AND c.name = 'Topic')
+                   IF NOT EXISTS ({TOPIC_INDEX_PREDICATE})
                    BEGIN
                        {MsSqlQueueBuilder.GetIndexDDL(queueTableName)}
                    END;

@@ -136,8 +136,9 @@ try
                 new GreetingEvent("Ian"), transactionProvider);
 
             // Through the provider, not the raw DbTransaction: Commit clears the provider's
-            // transaction, which is what lets Rollback stay a no-op afterwards and Close actually
-            // dispose.
+            // transaction, which is what keeps the Rollback below a no-op. Close does NOT release
+            // the connection — IsSharedConnection is true — so it is the scope's disposal that
+            // does; Close earns its place on the rollback path.
             transactionProvider.Commit();
         }
         catch

@@ -89,11 +89,17 @@ internal sealed class RunCommandProcessor : BackgroundService
     {
         await Task.Yield();
 
-        // The scope must complete: Post opens a SqlConnection, Enlist defaults to true, so the
-        // insert joins this transaction and an abandoned scope rolls the message back with it.
-        // See the README, and GreetingsSender for the Outbox answer.
+        // Post opens a SqlConnection and Enlist defaults to true, so each insert joins this
+        // transaction: an abandoned scope rolls the messages back with it.
+        // An explicit timeout: every Post is a round trip, and the shipped profile sends 250 of
+        // them inside this one scope. The default of 60 seconds is reachable against a remote
+        // container, and it aborts with a TransactionAbortedException that explains nothing.
         using (var scope = new TransactionScope(TransactionScopeOption.RequiresNew,
-            new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
+            new TransactionOptions
+            {
+                IsolationLevel = IsolationLevel.ReadCommitted,
+                Timeout = TimeSpan.FromMinutes(5)
+            },
             TransactionScopeAsyncFlowOption.Enabled))
         {
             Console.WriteLine($"Sending {_repeatCount} command messages");
@@ -103,7 +109,10 @@ internal sealed class RunCommandProcessor : BackgroundService
                 _commandProcessor.Post(new CompetingConsumerCommand(sequenceNumber++));
             }
 
-            scope.Complete();
+            // Only on a full run: completing a cancelled one would commit however many messages
+            // it reached, which is not what Ctrl-C means.
+            if (!stoppingToken.IsCancellationRequested)
+                scope.Complete();
         }
 
         // Nothing left to do: stop rather than leaving the reader to find Ctrl-C.

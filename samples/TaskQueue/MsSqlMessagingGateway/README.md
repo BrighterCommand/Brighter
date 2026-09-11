@@ -13,6 +13,10 @@ sender deposits into, and an Inbox the receiver de-duplicates against.
 sqlcmd -S localhost,1433 -U sa -P '<password>' -C -i BrighterSqlQueue.sql
 ```
 
+**A note on that password before you paste it:** an `export` puts it in your shell history and in
+the environment of every child process, and `sqlcmd -P` puts it in the process table. For anything
+but a throwaway local container, `SQLCMDPASSWORD` and `dotnet user-secrets` are the better homes.
+
 **Unless you are on Windows with SQL Express, point the applications at that same server** — the
 built-in default is `Server=.\sqlexpress;Integrated Security=SSPI`, which off Windows fails with a
 `Named Pipes Provider` error:
@@ -50,7 +54,6 @@ That is not tidiness. `AutoFromAssemblies` registers every handler it finds, and
 so with the counter-dependent handler in the shared project, running *`GreetingsReceiverConsole`*
 from an IDE profile fails at `host.Build()` with **`Unable to resolve service for type
 'IAmACommandCounter'`**, in an application that has nothing to do with competing consumers.
-Measured, before and after the move.
 
 **Each application names `Events` when it scans** — `AutoFromAssemblies([typeof(GreetingEvent).Assembly])`
 rather than the no-argument overload. That **guarantees** `Events` is scanned whatever the load
@@ -101,7 +104,7 @@ as the broker the send is not decoupled from your transaction: `Post` opens a `S
 `Enlist` defaults to `true`, and the insert into the queue table joins the ambient transaction.
 Abandon the scope and the message rolls back with it.
 
-**Run the experiment rather than taking that on trust.** Comment out `scope.Complete()` and send:
+**The experiment is worth running yourself.** Comment out `scope.Complete()` and send:
 nothing reaches `QueueData`, with no error anywhere. Then add `Enlist=False` to the connection
 string and send again with the scope still abandoned — the messages arrive, because the insert is
 no longer part of your transaction. Measured, three sends each way:
