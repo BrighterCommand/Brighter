@@ -366,37 +366,39 @@ redelivered for ever would pass every other DLQ behaviour in this suite.
 **The column opened with all 24 cells `Deferred`**, and cells move to `Pass` only on evidence — a
 `Pass` recorded without a broker run is exactly what this ledger exists to prevent.
 
-- **`Redis / RedisMessagingGateway` is `Pass`.** Both variants were run against a live Redis
-  (`docker-compose-redis.yaml`) and are green, repeated four times with no flake, satisfying the
-  both-variants rule (FR-14). Non-vacuity was checked the way this spec checks it everywhere else:
-  forcing `RequeueTrackingChannel{Sync,Async}`'s budget to `int.MaxValue` — a gateway that never
-  exhausts — turns **both** variants red. The first attempt only patched the sync path and the
-  Proactor test stayed green, which is worth recording: the two channel factories carry separate
-  budget logic, so a probe has to touch both to mean anything.
-- **The other 23 remain `Deferred`.** CI on #4297 is the evidence that moves them, one transport at a
+- **`Redis / RedisMessagingGateway` is `Pass`**, both variants green against a live Redis
+  (`docker-compose-redis.yaml`), satisfying the both-variants rule (FR-14).
+- **All three `Kafka` configurations are `Pass`**, both variants each, against a live broker
+  (`docker-compose-kafka.yaml`).
+- **The other 20 remain `Deferred`.** CI on #4297 is the evidence that moves them, one transport at a
   time.
 
-### What counts the budget, per configuration
+### The budget is enforced by the pump, and FR-23 drives the pump
 
-An FR-23 `Pass` does not mean the same thing everywhere, so the mechanism is recorded rather than
-left for a reader to infer from a green cell:
+`Reactor` and `Proactor` own this rule: they call `UpdateHandledCount`, test
+`HandledCountReached(RequeueCount)`, and reject with `RejectionReason.DeliveryError` when the budget
+is spent. Nothing else does. A test that calls `Requeue` on a channel never reaches that code, so it
+cannot answer the question FR-23 is named for however green it goes.
 
-| Mechanism | Configurations |
-|---|---|
-| **Broker-side redrive** — the broker counts deliveries and dead-letters on its own | AWS (SNS/SQS, Standard and FIFO, V3 and V4), Azure Service Bus (`MaxDeliveryCount`), GCP (dead-letter policy) |
-| **Brighter-managed, counted by the harness** — `RequeueTrackingChannel{Sync,Async}` turns the Nth `Requeue` into a `Reject`, which routes to the DLQ | Redis, MQTT, MSSQL, PostgreSQL, RMQ.Async (Classic and Quorum), RMQ.Sync, RocketMQ |
-| **Nothing counts it** | **Kafka** (Classic, Consumer, PartitionKey) |
+So FR-23 starts a real pump over the channel and routes it to a handler that always defers, using
+the `ConformanceDeferredPump` scaffolding generated into each configuration's `Generated` folder.
 
-⚠️ **Kafka is expected to fail FR-23, and that is a product gap rather than a test gap.** Kafka's DLQ
-is Brighter-managed — [ADR 0046](../../docs/adr/0046-kafka-dlq-producer-for-requeue.md) gives it a DLQ
-*producer* — but that producer fires on `Reject`. `KafkaMessageConsumer.Requeue` republishes the
-message, acknowledges the offset and returns `true` without ever consulting a delivery budget, and
-Kafka has no broker-side delivery counter to consult (its redelivery is offset-based). Kafka is also
-the one configuration whose provider does **not** wrap its channel in `RequeueTrackingChannel`, so
-nothing counts the budget on either side. A message requeued under Kafka is requeued for ever.
+⚠️ **This replaced a harness that stood in for the product.** `RequeueTrackingChannel{Sync,Async}`
+re-implemented the budget rule at channel level in eight providers, converting the Nth `Requeue` into
+a `Reject`. Every `Pass` it produced certified the harness's copy of the rule, not Brighter's, and
+would have kept certifying it after the two diverged. The substituting branch is gone; the wrapper
+now only stamps `x-original-message-id`, which is bookkeeping rather than behaviour.
 
-This is the coverage gap that retiring the legacy template concealed: the behaviour was untested, so
-nothing reported that one of the twelve transports does not implement it at all.
+The distinction is not academic. Measured on this branch, the channel-level version reported Kafka as
+non-conformant — the message kept being delivered after the budget was spent — and the pump-driven
+version passes on all three Kafka configurations. **The apparent defect was the test bypassing the
+code under test.** Kafka's DLQ is Brighter-managed ([ADR 0046](../../docs/adr/0046-kafka-dlq-producer-for-requeue.md)
+gives it a DLQ producer, which fires on the `Reject` the pump issues), and it works.
+
+Kafka's one real gap was in the harness: its three providers were the only ones of the 21 that never
+declared `requeueCount`, so they took `Subscription`'s default of `-1`. The pump reads that as
+`DiscardRequeuedMessagesEnabled() == false` and never rejects, which left the behaviour untestable
+rather than failing. They now declare a budget like every other provider.
 
 ## Conformance Matrix
 
@@ -414,9 +416,9 @@ nothing reported that one of the twelve transports does not implement it at all.
 | GCP / PullOrdering | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Pass | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Deferred -> #4240 (sign-off: @maintainer) |
 | GCP / Stream | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) |
 | GCP / StreamOrdering | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) |
-| Kafka / Classic | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
-| Kafka / Consumer | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
-| Kafka / PartitionKey | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
+| Kafka / Classic | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
+| Kafka / Consumer | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
+| Kafka / PartitionKey | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | MSSQL / MSSQLMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
 | PostgresSQL / PostgresMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
 | Redis / RedisMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass |

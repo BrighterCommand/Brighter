@@ -227,6 +227,11 @@ public class KafkaConsumerMessageGatewayProvider
             replicationFactor: 1,
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: makeChannel,
+            // Every other provider declares a budget; Kafka's three did not, so they took the
+            // Subscription default of -1 ("requeue for ever"). The pump reads that as
+            // DiscardRequeuedMessagesEnabled() == false and never rejects, which left FR-23
+            // untestable here rather than failing.
+            requeueCount: 3,
             deadLetterRoutingKey: deadLetterRoutingKey,
             invalidMessageRoutingKey: invalidMessageRoutingKey
         )

@@ -144,14 +144,7 @@ public class RedisMessageGatewayProvider
             _invalidConsumer.Receive(TimeSpan.FromMilliseconds(1000));
         }
 
-        // Always wrap with requeue tracking to ensure x-original-message-id is set.
-        // When DLQ is configured, uses the subscription's requeue count for DLQ routing.
-        // Otherwise, uses int.MaxValue so DLQ routing never triggers.
-        var maxRequeue = subscription.DeadLetterRoutingKey != null && subscription.RequeueCount > 0
-            ? subscription.RequeueCount
-            : int.MaxValue;
-
-        return new RequeueTrackingChannelSync(channel, maxRequeue);
+        return new RequeueTrackingChannelSync(channel);
     }
 
     public async Task<IAmAChannelAsync> CreateChannelAsync(
@@ -190,11 +183,7 @@ public class RedisMessageGatewayProvider
             _invalidConsumer.Receive(TimeSpan.FromMilliseconds(1000));
         }
 
-        var maxRequeue = subscription.DeadLetterRoutingKey != null && subscription.RequeueCount > 0
-            ? subscription.RequeueCount
-            : int.MaxValue;
-
-        return new RequeueTrackingChannelAsync(channel, maxRequeue);
+        return new RequeueTrackingChannelAsync(channel);
     }
 
     public IAmAMessageProducerSync CreateProducer(RedisMessagePublication publication)
@@ -415,13 +404,11 @@ public class RedisMessageGatewayProvider
     private class RequeueTrackingChannelAsync : IAmAChannelAsync
     {
         private readonly IAmAChannelAsync _inner;
-        private readonly int _maxRequeueCount;
         private readonly Dictionary<string, int> _requeueCounts = new();
 
-        public RequeueTrackingChannelAsync(IAmAChannelAsync inner, int maxRequeueCount)
+        public RequeueTrackingChannelAsync(IAmAChannelAsync inner)
         {
             _inner = inner;
-            _maxRequeueCount = maxRequeueCount;
         }
 
         public ChannelName Name => _inner.Name;
@@ -463,11 +450,13 @@ public class RedisMessageGatewayProvider
             count++;
             _requeueCounts[originalId] = count;
 
-            if (count >= _maxRequeueCount)
-            {
-                await _inner.RejectAsync(message, cancellationToken: cancellationToken);
-                return false;
-            }
+            // The delivery budget is NOT enforced here. Reactor and Proactor own it: they call
+            // UpdateHandledCount, test HandledCountReached(RequeueCount), and reject with
+            // DeliveryError when it is spent. This wrapper used to do the same thing at channel
+            // level, which meant the FR-23 conformance behaviour could pass on the harness's copy
+            // of the rule while the product's copy was untested - and would have kept passing had
+            // the two diverged. Tracking the original message id is harness bookkeeping, so it
+            // stays; deciding when a message dies is production behaviour, so it does not.
 
             return await _inner.RequeueAsync(message, timeOut, cancellationToken);
         }
@@ -487,13 +476,11 @@ public class RedisMessageGatewayProvider
     private class RequeueTrackingChannelSync : IAmAChannelSync
     {
         private readonly IAmAChannelSync _inner;
-        private readonly int _maxRequeueCount;
         private readonly Dictionary<string, int> _requeueCounts = new();
 
-        public RequeueTrackingChannelSync(IAmAChannelSync inner, int maxRequeueCount)
+        public RequeueTrackingChannelSync(IAmAChannelSync inner)
         {
             _inner = inner;
-            _maxRequeueCount = maxRequeueCount;
         }
 
         public ChannelName Name => _inner.Name;
@@ -522,11 +509,13 @@ public class RedisMessageGatewayProvider
             count++;
             _requeueCounts[originalId] = count;
 
-            if (count >= _maxRequeueCount)
-            {
-                _inner.Reject(message);
-                return false;
-            }
+            // The delivery budget is NOT enforced here. Reactor and Proactor own it: they call
+            // UpdateHandledCount, test HandledCountReached(RequeueCount), and reject with
+            // DeliveryError when it is spent. This wrapper used to do the same thing at channel
+            // level, which meant the FR-23 conformance behaviour could pass on the harness's copy
+            // of the rule while the product's copy was untested - and would have kept passing had
+            // the two diverged. Tracking the original message id is harness bookkeeping, so it
+            // stays; deciding when a message dies is production behaviour, so it does not.
 
             return _inner.Requeue(message, timeOut);
         }

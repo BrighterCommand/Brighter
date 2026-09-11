@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+using System.Threading.Tasks;
 
 using Xunit;
 
@@ -16,7 +17,6 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDis
 {
     private readonly IAmAMessageGatewayReactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
-    private readonly IAmAMessageAssertion _messageAssertion;
 
     private List<Message> _sentMessages = [];
 
@@ -30,7 +30,6 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDis
     {
         _messageGatewayProvider = new Paramore.Brighter.Kafka.Tests.MessagingGateway.KafkaConsumerMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
-        _messageAssertion = new KafkaMessageAssertion();
     }
 
     public void Dispose()
@@ -39,16 +38,24 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDis
     }
 
     /// <summary>
-    /// FR-23: a message requeued until its delivery budget is exhausted lands on the dead-letter
-    /// queue, and stops being redelivered.
+    /// FR-23: a message whose handler keeps deferring is requeued until its delivery budget is
+    /// exhausted, and then lands on the dead-letter queue.
     /// </summary>
     /// <remarks>
-    /// Distinct from FR-4, which is an explicit Reject. Here nothing ever rejects the message: the
-    /// budget runs out on its own, which is the behaviour ADR 0040 and ADR 0046 specify. A gateway
-    /// that redelivered for ever would pass every other DLQ behaviour in this suite.
+    /// <para>
+    /// Distinct from FR-4, which is an explicit Reject. Nothing here ever rejects the message: the
+    /// budget runs out on its own, which is the behaviour ADR 0040 and ADR 0046 specify.
+    /// </para>
+    /// <para>
+    /// This behaviour drives a real Brighter pump rather than calling Requeue on the channel. The
+    /// budget is enforced in the pump - it calls UpdateHandledCount, tests
+    /// HandledCountReached(RequeueCount), and rejects with DeliveryError when spent - and nowhere
+    /// else. A test that requeues the channel directly never reaches that code and so cannot answer
+    /// the question it is named for, however green it goes.
+    /// </para>
     /// </remarks>
-    [Fact(Skip = "Deferred: #4240 — requeue budget exhausted to DLQ not yet conformant for Kafka / Consumer (maintainer sign-off)")]
-    public void When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue()
+    [Fact]
+    public async Task When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue()
     {
         // Arrange
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
@@ -60,31 +67,27 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDis
         _producer = _messageGatewayProvider.CreateProducer(_publication);
         _channel = _messageGatewayProvider.CreateChannel(_subscription);
 
-        // A budget of at least one requeue, or the loop below never runs and the test proves nothing.
-        Assert.True(_subscription.RequeueCount > 0);
+        // A budget the pump can exhaust. -1 means "requeue for ever" and the pump would never
+        // reject, so the behaviour is untestable rather than failing.
+        Assert.True(_subscription.RequeueCount > 0,
+            "FR-23 needs a positive RequeueCount on the subscription; the provider declares none.");
 
-        var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
+        var message = _messageBuilder
+            .SetTopic(_publication.Topic!)
+            .SetMessageType(MessageType.MT_COMMAND)
+            .SetBody(ConformanceDeferredPump.CommandBody())
+            .Build();
         _sentMessages.Add(message);
 
         _producer.Send(message);
 
-        // Act — spend the whole delivery budget, never rejecting
-        for (var attempt = 0; attempt < _subscription.RequeueCount; attempt++)
-        {
-            var inFlight = _channel.Receive(TimeSpan.FromMilliseconds(15000));
-            Assert.NotEqual(MessageType.MT_NONE, inFlight.Header.MessageType);
+        // Act — the production pump owns the budget; the handler defers every time
+        var pump = ConformanceDeferredPump.CreateReactor(_channel, _subscription.RequeueCount,
+            TimeSpan.FromMilliseconds(15000));
 
-            _channel.Requeue(inFlight);
+        var pumping = Task.Factory.StartNew(() => pump.Run(), TaskCreationOptions.LongRunning);
 
-            
-        }
-
-        // Assert — the budget is spent, so the message is no longer offered to this consumer
-        var afterBudget = _channel.Receive(TimeSpan.FromMilliseconds(15000));
-        Assert.Equal(MessageType.MT_NONE, afterBudget.Header.MessageType);
-
-        // Assert — and it went to the dead letter queue rather than simply vanishing.
-        // Bounded retry loop: 500 ms poll, 30 s ceiling (NFR-2, AC-20, AC-25)
+        // Assert — bounded retry loop: 500 ms poll, 30 s ceiling (NFR-2, AC-20, AC-25)
         var dlqMessage = new Message();
         var stopwatch = Stopwatch.StartNew();
         while (stopwatch.Elapsed < TimeSpan.FromSeconds(30))
@@ -97,7 +100,21 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDis
             Thread.Sleep(500);
         }
 
+        _channel.Enqueue(MessageFactory.CreateQuitMessage(_subscription.RoutingKey));
+        await pumping;
+
         Assert.NotEqual(MessageType.MT_NONE, dlqMessage.Header.MessageType);
-        _messageAssertion.Assert(message, dlqMessage);
+
+        // Identity, asserted here rather than through IAmAMessageAssertion: the shared assertion
+        // compares HandledCount, and for this behaviour it necessarily differs - the pump stamps
+        // each delivery on the way past. That difference is the evidence, not a mismatch.
+        Assert.Equal(message.Header.MessageId, dlqMessage.Header.MessageId);
+        Assert.Equal(message.Body.Value, dlqMessage.Body.Value);
+
+        // The pump spent the budget, and nothing else routed the message: it arrives carrying at
+        // least as many deliveries as the subscription allowed.
+        Assert.True(dlqMessage.Header.HandledCount >= _subscription.RequeueCount,
+            $"expected at least {_subscription.RequeueCount} deliveries before dead-lettering, "
+            + $"but the dead-lettered message reports {dlqMessage.Header.HandledCount}");
     }
 }

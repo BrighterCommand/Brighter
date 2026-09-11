@@ -221,7 +221,7 @@ public class RocketMqMessageGatewayProvider
 
         if (subscription.DeadLetterRoutingKey != null && subscription.RequeueCount > 0)
         {
-            return new RequeueTrackingChannelSync(channel, subscription.RequeueCount);
+            return new RequeueTrackingChannelSync(channel);
         }
 
         return channel;
@@ -236,7 +236,7 @@ public class RocketMqMessageGatewayProvider
 
         if (subscription.DeadLetterRoutingKey != null && subscription.RequeueCount > 0)
         {
-            return new RequeueTrackingChannelAsync(channel, subscription.RequeueCount);
+            return new RequeueTrackingChannelAsync(channel);
         }
 
         return channel;
@@ -393,13 +393,11 @@ public class RocketMqMessageGatewayProvider
     private class RequeueTrackingChannelAsync : IAmAChannelAsync
     {
         private readonly IAmAChannelAsync _inner;
-        private readonly int _maxRequeueCount;
         private readonly Dictionary<string, int> _requeueCounts = new();
 
-        public RequeueTrackingChannelAsync(IAmAChannelAsync inner, int maxRequeueCount)
+        public RequeueTrackingChannelAsync(IAmAChannelAsync inner)
         {
             _inner = inner;
-            _maxRequeueCount = maxRequeueCount;
         }
 
         public ChannelName Name => _inner.Name;
@@ -432,11 +430,13 @@ public class RocketMqMessageGatewayProvider
             count++;
             _requeueCounts[originalId] = count;
 
-            if (count >= _maxRequeueCount)
-            {
-                await _inner.RejectAsync(message, cancellationToken: cancellationToken);
-                return false;
-            }
+            // The delivery budget is NOT enforced here. Reactor and Proactor own it: they call
+            // UpdateHandledCount, test HandledCountReached(RequeueCount), and reject with
+            // DeliveryError when it is spent. This wrapper used to do the same thing at channel
+            // level, which meant the FR-23 conformance behaviour could pass on the harness's copy
+            // of the rule while the product's copy was untested - and would have kept passing had
+            // the two diverged. Tracking the original message id is harness bookkeeping, so it
+            // stays; deciding when a message dies is production behaviour, so it does not.
 
             return await _inner.RequeueAsync(message, timeOut, cancellationToken);
         }
@@ -456,13 +456,11 @@ public class RocketMqMessageGatewayProvider
     private class RequeueTrackingChannelSync : IAmAChannelSync
     {
         private readonly IAmAChannelSync _inner;
-        private readonly int _maxRequeueCount;
         private readonly Dictionary<string, int> _requeueCounts = new();
 
-        public RequeueTrackingChannelSync(IAmAChannelSync inner, int maxRequeueCount)
+        public RequeueTrackingChannelSync(IAmAChannelSync inner)
         {
             _inner = inner;
-            _maxRequeueCount = maxRequeueCount;
         }
 
         public ChannelName Name => _inner.Name;
@@ -488,11 +486,13 @@ public class RocketMqMessageGatewayProvider
             count++;
             _requeueCounts[originalId] = count;
 
-            if (count >= _maxRequeueCount)
-            {
-                _inner.Reject(message);
-                return false;
-            }
+            // The delivery budget is NOT enforced here. Reactor and Proactor own it: they call
+            // UpdateHandledCount, test HandledCountReached(RequeueCount), and reject with
+            // DeliveryError when it is spent. This wrapper used to do the same thing at channel
+            // level, which meant the FR-23 conformance behaviour could pass on the harness's copy
+            // of the rule while the product's copy was untested - and would have kept passing had
+            // the two diverged. Tracking the original message id is harness bookkeeping, so it
+            // stays; deciding when a message dies is production behaviour, so it does not.
 
             return _inner.Requeue(message, timeOut);
         }
