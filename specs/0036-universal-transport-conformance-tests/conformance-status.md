@@ -437,7 +437,7 @@ both mechanisms, and it still fails anything dead-lettered before the budget ran
 Both changes live in the shared templates, so every configuration is held to the same rule. The four
 configurations that were already `Pass` were re-run against the revised assertions and stay green.
 
-### Why the eight AWS cells stay `Deferred`: the budget is inert on SQS
+### Why the eight AWS cells stay `Deferred`: the budget is inert on SQS (#4341)
 
 `AWS` and `AWS.V4` were run against LocalStack and are **not** promoted. The test does not fail on a
 timing wobble or a harness gap — it fails because **Brighter's delivery budget cannot be exhausted on
@@ -464,23 +464,32 @@ for the pump. It does not help, and could not: with the count resetting on every
 budget to exhaust, so the only effect is that redrive takes longer to fire. That change was reverted
 rather than left in place looking like a fix.
 
+This is not a quarrel with SQS's DLQ strategy. [ADR 0038](../../docs/adr/0038-aws-sqs-dlq-direct-send.md)
+already settled that: when `DeadLetterRoutingKey` is configured, `Reject` sends directly to the
+Brighter DLQ and deletes the original, and the ADR explicitly considered and rejected leaning on
+redrive instead. That path is healthy — FR-4, an explicit `Reject`, is `Pass` on all eight AWS
+configurations. What is unreachable is getting there by spending the budget.
+
 ⚠️ **The consequence is that `requeueCount` is silently inert on SQS** — configured, accepted, and
-without effect. A user who sets it gets unbounded redelivery bounded only by `maxReceiveCount`.
-Whether that is a defect to fix or a limitation to document is a product decision, so it is **raised
-rather than assumed**; these eight cells stay `Deferred` until it is answered.
+without effect. A user who sets it gets unbounded redelivery bounded only by `maxReceiveCount`, and
+messages arriving by redrive carry none of ADR 0036's rejection metadata. Raised as
+[#4341](https://github.com/BrighterCommand/Brighter/issues/4341), which also notes the cooperative
+fix: `ApproximateReceiveCount` is already requested on every receive
+(`MessageSystemAttributeNames = ["All"]`) and read nowhere in `src`. These eight cells stay
+`Deferred` until that is answered.
 
 ## Conformance Matrix
 
 | Configuration | FR-2 | FR-4 | FR-5 | FR-6 | FR-7 | FR-8 | FR-9 | FR-15 | FR-16 | FR-17 | FR-22 | FR-23 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| AWS / SnsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
-| AWS / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
-| AWS / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
-| AWS / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
-| AWS.V4 / SnsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
-| AWS.V4 / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
-| AWS.V4 / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
-| AWS.V4 / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
+| AWS / SnsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @maintainer) |
+| AWS / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @maintainer) |
+| AWS / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @maintainer) |
+| AWS / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @maintainer) |
+| AWS.V4 / SnsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @maintainer) |
+| AWS.V4 / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @maintainer) |
+| AWS.V4 / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @maintainer) |
+| AWS.V4 / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @maintainer) |
 | GCP / Pull | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Pass | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Deferred -> #4240 (sign-off: @maintainer) |
 | GCP / PullOrdering | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Pass | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Deferred -> #4240 (sign-off: @maintainer) |
 | GCP / Stream | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) |
