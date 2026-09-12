@@ -88,30 +88,26 @@ certificate your clients trust, drop it.
 | Run | With | What you should see |
 |---|---|---|
 | `GreetingsSender` | `GreetingsReceiverConsole` | the sender provisions the Outbox, deposits and clears; the receiver prints the greeting once. Redelivery of the same id is de-duplicated, but you have to force one — see *Idempotence* |
-| `CompetingSender <count>` | two or more `CompetingReceiverConsole` | the count divided between the consumers — the split is arbitrary, and six messages across two receivers came out 3 and 3, 5 and 1, and 2 and 4 on three runs. The sender exits on its own; the receivers are hosts, so Ctrl-C when you have seen enough |
+| `CompetingSender <count>` | two or more `CompetingReceiverConsole` | the count divided between the consumers — the split is arbitrary, and six messages across two receivers came out 3 and 3, 4 and 2, and 3 and 3 on three runs. The sender exits on its own; the receivers are hosts, so Ctrl-C when you have seen enough |
 
 ### What the competing demo looks like from outside
 
-All the posts land inside one completed `TransactionScope`, so the receivers see nothing until the
-batch commits and then take it in a burst — with the shipped profile's count of 250, that is one
-commit of 250 rows. They never block on the open transaction: the dequeue uses
+Each `Post` commits on its own, so the receivers start taking messages while the sender is still
+sending. Polling `QueueData` through the shipped profile's count of 250, the rows arrive steadily
+rather than in one batch — first row to last in about 420 ms, nothing waiting on a commit at the
+end. Neither receiver blocks on the row the other is handling: the dequeue uses
 `with (rowlock, readpast)`.
 
-**If you add your own `INSERT` on a second connection inside that scope, the transaction promotes
-to MSDTC**, which on .NET is Windows-only. That promotion is the thing `GreetingsSender`'s Outbox
-route avoids, by keeping the message and your own write on one connection.
+### Do not wrap `Post` in a `TransactionScope`
 
-### `Post` joins your transaction when the broker is your database
+**When the broker is your database, `Post` joins your ambient transaction.** It opens a
+`SqlConnection`, `Enlist` defaults to `true`, and the insert into the queue table enlists like any
+other write. Abandon the scope and the messages roll back with it, silently. That is the opposite
+of what a `TransactionScope` around a send is usually reaching for — with a broker outside your
+database the message is queued whether your transaction commits or aborts, and it is easy to carry
+that assumption across.
 
-`CompetingSender` sends inside a `TransactionScope` and **completes it**, because with a database
-as the broker the send is not decoupled from your transaction: `Post` opens a `SqlConnection`,
-`Enlist` defaults to `true`, and the insert into the queue table joins the ambient transaction.
-Abandon the scope and the message rolls back with it.
-
-**The experiment is worth running yourself.** Comment out `scope.Complete()` and send:
-nothing reaches `QueueData`, with no error anywhere. Then add `Enlist=False` to the connection
-string and send again with the scope still abandoned — the messages arrive, because the insert is
-no longer part of your transaction. Measured, three sends each way:
+Wrap `CompetingSender`'s loop in a scope and send three, and the rows follow the transaction:
 
 | | `Complete()` | rows in `QueueData` |
 |---|---|---|
@@ -121,11 +117,26 @@ no longer part of your transaction. Measured, three sends each way:
 
 That third row is the decoupling a broker outside your database gives you for free, bought back by
 opting out of enlistment — and losing, in exchange, any guarantee that the message and your own
-write agree. **The Outbox is the version that keeps both**, and `GreetingsSender` is where to see
-it.
+write agree.
 
-This is the argument for the Outbox rather than a defect: `DepositPost` writes to the Outbox
-inside your transaction, and `ClearOutbox` dispatches once it has committed.
+**The scope is safe here only because it guards nothing, and that is the warning.** `Post` opens
+and closes one connection at a time, so the transaction stays lightweight. Add the business write
+that would give the scope something to be atomic *between* — a second connection open at the same
+time — and .NET escalates to a distributed transaction:
+
+```text
+A. sequential connections in one scope
+   ok -- stayed a lightweight transaction, no escalation
+B. two connections open at once in one scope
+   PlatformNotSupportedException: This platform does not support distributed transactions.
+```
+
+MSDTC is Windows-only on .NET, so the pattern becomes a platform failure at the moment it starts
+meaning something.
+
+**The Outbox is the version that works**, and it is why Brighter has one: `DepositPost` writes to
+the Outbox inside your transaction, on your connection, and `ClearOutbox` dispatches once that
+transaction has committed. `GreetingsSender` is where to see it.
 
 ### Idempotence
 
