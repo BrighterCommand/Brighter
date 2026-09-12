@@ -1047,7 +1047,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T6.19, T5.4
   - **References**: AC-20 (FR-19, C-12, C-14, D18); ADR 0075 step 4a
 
-- [ ] **TEST + IMPLEMENT: T6.21 — a consumer pipeline does not adopt, whatever flow started the `Dispatcher`**
+- [x] **TEST + IMPLEMENT: T6.21 — a consumer pipeline does not adopt, whatever flow started the `Dispatcher`**
   - **USE COMMAND**: `/test-first a Dispatcher started from inside a live request still gives every consumer pipeline an AlwaysNew ask and zero adoptions`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_a_dispatcher_is_started_from_inside_a_request_the_consumer_should_not_adopt.cs`
