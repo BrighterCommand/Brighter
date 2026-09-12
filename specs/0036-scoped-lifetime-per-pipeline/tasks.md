@@ -916,7 +916,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T6.11
   - **References**: AC-26 (FR-21, D5); ADR 0072 step 3
 
-- [ ] **TEST + IMPLEMENT: T6.13 — `Publish` subscribers do not adopt even when opted in, and a provider that ignores the affinity cannot change that**
+- [x] **TEST + IMPLEMENT: T6.13 — `Publish` subscribers do not adopt even when opted in, and a provider that ignores the affinity cannot change that**
   - **USE COMMAND**: `/test-first Publish subscribers in an opted in host never resolve the request's instance and an affinity ignoring provider is warned about once per container`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_publishing_from_an_opted_in_controller_the_subscribers_should_not_adopt.cs`
