@@ -387,6 +387,56 @@ redelivered for ever would pass every other DLQ behaviour in this suite.
   seven (`MQTT`, `GCP` ×4, `RocketMQ`, `AzureServiceBus`) still need a broker run; CI on #4297 is the
   evidence that moves them, one transport at a time.
 
+### `MQTT` was attempted and stays `Deferred` — the Proactor pump deadlocks on the first requeue
+
+Measured 2026-09-12 against `docker-compose-mqtt.yaml`. The two variants disagree, and FR-14's
+both-variants rule is what holds the cell:
+
+| variant | result |
+|---|---|
+| `Reactor` | **passes in 5 s** — the message reaches the DLQ |
+| `Proactor` | **hangs indefinitely** — killed at 18 minutes, and again by `--blame-hang` at 180 s |
+
+Instrumenting the Proactor run locates it exactly. The handler is invoked **once**, and nothing
+happens after that: no redelivery, no second invocation, no dead-lettering, and the pump never sees
+the quit message the test enqueues.
+
+The cause is a sync-over-async deadlock in the transport, not in the harness.
+`MqttMessagePublisher`'s **constructor** blocks on its own connect
+(`MQTTMessagePublisher.cs:54`, `ConnectAsync().GetAwaiter().GetResult()`), and
+`MqttMessageConsumer` creates its requeue producer **lazily inside `RequeueAsync`**
+(`EnsureRequeueProducer()`). A `Proactor` runs its event loop inside `BrighterAsyncContext.Run(...)`
+(`Proactor.cs:99`), which is single-threaded. So the first deferral constructs the publisher on the
+pump's only thread, that thread blocks, and MQTTnet's continuation is posted back to the context it
+is blocking. The `Reactor` survives the identical path because `Requeue` runs on an ordinary
+thread-pool thread, where the continuation has somewhere to go.
+
+Isolated, so the mechanism is not inferred from the symptom: constructing the publisher on a
+thread-pool thread completes; constructing the same publisher inside `BrighterAsyncContext.Run`
+times out at 15 s. One passes, one fails, same broker, same configuration.
+
+⭐ **This is a product defect on a production path.** Any `Proactor` consumer on MQTT deadlocks the
+first time a handler defers. It is also the first defect FR-23 has found that no other behaviour in
+this suite could: FR-22 requeues from the *test's* thread, so it never constructs the producer under
+the pump's context and passes — which is exactly the composition FR-23 exists to test.
+
+[#4082](https://github.com/BrighterCommand/Brighter/issues/4082) named `MQTTMessagePublisher.cs:54`
+as candidate 4 and carried a checklist item for it, but was closed as **COMPLETED** on 2026-04-27
+with the file untouched since `b42887af4`, which predates it. The item was missed.
+
+Either half of the fix unblocks the cell: stop connecting in the constructor (an async factory, or
+lazy connect on first publish), or create the requeue producer eagerly with the consumer so it is
+never built on the pump thread.
+
+### A harness note the MQTT run exposed: the 30 s ceiling is not enforced for MQTT
+
+`MqttMessageGatewayProvider.GetMessageFromDeadLetterQueue{,Async}` loops 10 times over a 5 s
+`Receive` plus a 1 s `Thread.Sleep`, so a single call takes ~60 s. The FR-23 retry loop wraps it in a
+30 s stopwatch, which therefore cannot bound anything: one call already overruns it. The async
+overload is also `Thread.Sleep`-based inside an `async` method. Neither affects the verdict above —
+the Proactor deadlock is upstream of the DLQ poll — but the ceiling documented in NFR-2 is not the
+ceiling MQTT observes.
+
 Every cell above was also checked for vacuity the same way: force the pump's budget to `int.MaxValue`
 so it can never be exhausted, and confirm the test goes red. Both variants were probed separately —
 `CreateChannel` and `CreateChannelAsync` are different paths, and a probe that touches one proves
