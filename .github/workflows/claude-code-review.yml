@@ -36,6 +36,17 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          # Posts a tracking comment up front and keeps the review in it as the
+          # review proceeds, so a run that dies half way still shows what it got
+          # through. It also forces tag mode, which hands Claude the pull request
+          # context (title, body, comments, changed files) without it having to
+          # spend turns fetching them, and delivers the review through
+          # `update_claude_comment` rather than a shell quote that has to survive
+          # the Bash allow-list. Only some events support it; `pull_request` with
+          # the `labeled` action is one of them.
+          track_progress: true
+
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
@@ -49,7 +60,19 @@ jobs:
 
             Use the repository's CLAUDE.md for guidance on style and conventions. Be constructive and helpful in your feedback.
 
-            Use `gh pr comment` with your Bash tool to leave your review as a comment on the PR.
+            Review only. Do not edit files, commit, or push - the review is the
+            deliverable, and the author decides what to change.
+
+            Put findings that belong to a specific line inline with
+            `mcp__github_inline_comment__create_inline_comment`, and the summary
+            and general observations in your tracking comment via
+            `mcp__github_comment__update_claude_comment`.
+
+            Only if updating the tracking comment fails, fall back to
+            `gh pr comment`, and pass the body as a single quoted `--body`
+            argument. Do not build it with a heredoc or `$(...)`: the allow-list
+            matches command prefixes, so a command substitution is refused and
+            the turn is wasted.
 
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://docs.claude.com/en/docs/claude-code/cli-reference for available options
@@ -57,11 +80,26 @@ jobs:
           # --model is pinned deliberately. Left unset, the action follows the
           # Claude Code default, which drifts to newer, more expensive models as
           # they ship. Sonnet 5 is $2/$10 per 1M tokens; Fable 5.1 is $10/$50.
-          # --max-turns caps a runaway review.
+          #
+          # --max-turns is a runaway guard, not the cost lever - the label gate
+          # and the model pin are. It has to leave room for the actual work: a
+          # review reads the diff, then the files around it, then CLAUDE.md and
+          # whichever .agent_instructions/* pages that sends it to, and only
+          # then writes the comment. At 15 it ran out mid-review on a 19-file
+          # pull request and posted nothing, which bills for the reading and
+          # delivers none of the review.
+          #
+          # --allowed-tools accumulates with the list tag mode sets for itself
+          # (Read/Grep/Glob, the comment and CI servers), it does not replace it.
+          # Naming the inline comment tool here is also what installs its MCP
+          # server. --disallowed-tools claws back the write access tag mode grants
+          # by default: it runs with --permission-mode acceptEdits and git
+          # add/commit, and a label asking for a review is not a licence to commit.
           claude_args: >-
             --model claude-sonnet-5
-            --max-turns 15
-            --allowed-tools "Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"
+            --max-turns 40
+            --allowed-tools "mcp__github_inline_comment__create_inline_comment,Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"
+            --disallowed-tools "Edit,MultiEdit,Write,NotebookEdit,Bash(git add:*),Bash(git commit:*)"
 
       # A `labeled` trigger only fires on the add transition, so the label has to
       # come off again for the next request to fire. `always()` so a failed or
