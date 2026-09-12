@@ -982,7 +982,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T6.15
   - **References**: AC-47 (FR-27.3, FR-8, D6); ADR 0075 step 4
 
-- [ ] **TEST + IMPLEMENT: T6.17 — borrowed-scope state does not accumulate across requests**
+- [x] **TEST + IMPLEMENT: T6.17 — borrowed-scope state does not accumulate across requests**
   - **USE COMMAND**: `/test-first Brighter held per scope associations are unreachable after a request completes and their peak count tracks concurrency not throughput`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_serving_many_requests_borrowed_scope_state_should_not_accumulate.cs`
