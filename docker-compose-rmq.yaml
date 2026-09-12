@@ -1,11 +1,25 @@
 version: '3.8'
 
 services:
-  # Matches the image rabbitmq-async-ci runs. Note that rabbitmq-sync-ci is still on
-  # brightercommand/rabbitmq:3.13-management-delay, so this file no longer mirrors that job:
-  # a sync-only failure in CI may not reproduce against this broker.
+  # Stock image, not brightercommand/rabbitmq:*-management-delay. The delayed-message-exchange plugin
+  # is being retired upstream and the suite never used it: the RMQ providers present a plain exchange
+  # so RmqMessageProducer reports DelaySupported == false and routes a non-zero delay to
+  # IAmAMessageProducer.Scheduler, which is the path the conformance tests exercise.
+  #
+  # Matches the image rabbitmq-async-ci runs. Note that rabbitmq-sync-ci is on rabbitmq:3.13-management,
+  # so this file does not mirror that job: a sync-only failure in CI may not reproduce against this
+  # broker. The 4.2 pin is deliberate - RabbitMQ 4.3 rejects the transient non-exclusive queues the
+  # gateway declares (INTERNAL_ERROR - Feature 'transient_nonexcl_queues' is deprecated), see #4355.
+  #
+  # If you have an existing rabbitmq_data volume from the old brightercommand image, delete it before
+  # the first run: that image runs as root and leaves a root-owned, mode-400 .erlang.cookie behind,
+  # which the stock image (uid 999) cannot read, so the container crash-loops on
+  # "Error when reading /var/lib/rabbitmq/.erlang.cookie: eacces".
+  #   docker-compose -f docker-compose-rmq.yaml down
+  #   docker volume rm generator-transport-tests_rabbitmq_data generator-transport-tests_rabbitmq_logs
+  # CI is unaffected - GitHub Actions services mount no volume.
   rabbitmq:
-    image: brightercommand/rabbitmq:4.2-management-delay
+    image: rabbitmq:4.2-management
     hostname: rabbitmq-server
     ports:
       - "5672:5672"

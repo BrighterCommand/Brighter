@@ -107,9 +107,14 @@ cell remains `Unknown`.
   at `rabbitmq:management` (now RabbitMQ 4.3), which **hard-rejects the transient non-exclusive queues the
   gateway declares** (`INTERNAL_ERROR - Feature 'transient_nonexcl_queues' is deprecated`) — every test
   failed at queue declaration. Pinned it to the CI/reference image
-  `brightercommand/rabbitmq:4.2-management-delay` (RabbitMQ 4.2, matching CI and the root
-  `docker-compose.yaml`); a fresh data volume is required (downgrading 4.3→4.2 over a stale volume crashes
-  the broker on boot). **Requeue/redeliver + no-channel ack (FR-7/15/16/22) `Pass` natively** — notably
+  (RabbitMQ 4.2, matching CI and the root `docker-compose.yaml`); a fresh data volume is required
+  (downgrading 4.3→4.2 over a stale volume crashes the broker on boot). That image is now the **stock**
+  `rabbitmq:4.2-management` rather than `brightercommand/rabbitmq:4.2-management-delay`: the
+  delayed-message plugin is being retired upstream and the suite never asked for it, so the pins moved to
+  stock images and the one plugin-dependent test was retired (see "The delay plugin is retired" below).
+  The 4.2 pin itself is unchanged and still deliberate — the `transient_nonexcl_queues` rejection on 4.3 is
+  a product forward-compatibility defect, now tracked as
+  [#4355](https://github.com/BrighterCommand/Brighter/issues/4355). **Requeue/redeliver + no-channel ack (FR-7/15/16/22) `Pass` natively** — notably
   **FR-16** (`RmqMessageConsumer.NackAsync` → `BasicNackAsync(requeue: true)` → the broker redelivers,
   contrast Redis/MSSQL `Deferred`). **Delay (FR-2/FR-9) `Pass` via a wired `RmqHarnessMessageScheduler`** —
   the gateway delegates a non-zero delay to `IAmAMessageProducer.Scheduler` when `DelaySupported == false`
@@ -700,6 +705,52 @@ messages arriving by redrive carry none of ADR 0036's rejection metadata. Raised
 fix: `ApproximateReceiveCount` is already requested on every receive
 (`MessageSystemAttributeNames = ["All"]`) and read nowhere in `src`. These eight cells stay
 `Deferred` until that is answered.
+
+## The delay plugin is retired — all three RMQ configurations run on stock images
+
+The RabbitMQ delayed-message-exchange plugin is being retired upstream, so the CI and compose pins moved
+off `brightercommand/rabbitmq:*-management-delay` onto stock `rabbitmq:4.2-management` and
+`rabbitmq:3.13-management`. **The RabbitMQ versions are unchanged** — only the plugin is gone.
+
+**The suite never used the plugin.** The RMQ providers present a plain (non-delay) exchange, so
+`RmqMessageProducer` reports `DelaySupported == false` and routes a non-zero delay to
+`IAmAMessageProducer.Scheduler` — the same scheduler seam proven for Kafka, Redis and MSSQL. The native
+`x-delayed-message` path is deliberately not exercised because it is not yet conformant (see the
+`RMQ.Async / Classic` note above).
+
+**One test required the plugin and was retired**:
+`tests/Paramore.Brighter.RMQ.Sync.Tests/MessagingGateway/Reactor/When_reading_a_delayed_message_via_the_messaging_gateway.cs`
+— the only `supportDelay: true` in the repository. Re-pointing it at the scheduler seam would have made it
+a hand-written duplicate of generated coverage that already exists six times over
+(`When_sending_a_delayed_message_should_deliver_after_delay` and
+`When_requeuing_a_failed_message_with_delay_should_redeliver_after_delay`, across `RMQ.Sync`,
+`RMQ.Async / Classic` and `RMQ.Async / Quorum`, Reactor and Proactor), so it was deleted instead. What is
+no longer covered is `ExchangeConfigurationHelper`'s `SupportDelay` branch, which is the path being retired.
+
+**Measured, not assumed.** Against a stock, plugin-free broker (`rabbitmq:4.2-management`, RabbitMQ 4.2.9,
+zero delayed-message plugins installed):
+
+| suite | result |
+|---|---|
+| `Paramore.Brighter.RMQ.Sync.Tests` | 81 passed, 3 skipped, **0 failed** (84 total) |
+| `Paramore.Brighter.RMQ.Async.Tests` | 142 passed, 6 skipped, **0 failed** (148 total) |
+
+Both run under the CI filter `Fragile!=CI&Requires!=Docker-mTLS`. Every delay behaviour passes in both
+variants. Before the retirement, the two facts in the deleted file failed on that broker in **1 ms** with
+`PRECONDITION_FAILED - unknown exchange type 'x-delayed-message'`, which is what made them the whole
+blocker to stock images.
+
+⚠️ **Switching an existing local volume needs one manual step.** The old `brightercommand` image runs as
+root and leaves a root-owned, mode-400 `.erlang.cookie` in `rabbitmq_data`; the stock image runs as uid 999
+and cannot read it, so the container crash-loops on
+`Error when reading /var/lib/rabbitmq/.erlang.cookie: eacces`. Delete the volumes before the first run:
+
+```bash
+docker-compose -f docker-compose-rmq.yaml down
+docker volume rm generator-transport-tests_rabbitmq_data generator-transport-tests_rabbitmq_logs
+```
+
+CI is unaffected — GitHub Actions `services:` mount no volume.
 
 ## Conformance Matrix
 

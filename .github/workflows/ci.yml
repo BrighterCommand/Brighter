@@ -232,7 +232,7 @@ jobs:
 
     services:
       rabbitmq:
-        image: brightercommand/rabbitmq:4.2-management-delay
+        image: rabbitmq:4.2-management
         ports:
         - 5672:5672 
         # needed because the rabbitmq container does not provide a healthcheck
@@ -260,7 +260,7 @@ jobs:
 
     services:
       rabbitmq:
-        image: brightercommand/rabbitmq:3.13-management-delay
+        image: rabbitmq:3.13-management
         ports:
         - 5672:5672 
         # needed because the rabbitmq container does not provide a healthcheck
