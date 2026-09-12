@@ -1030,7 +1030,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T6.18
   - **References**: AC-52 (FR-16c, FR-15, C-21); ADR 0072 step 2c
 
-- [ ] **TEST + IMPLEMENT: T6.20 — the affinity flag is inert on the consumer side**
+- [x] **TEST + IMPLEMENT: T6.20 — the affinity flag is inert on the consumer side**
   - **USE COMMAND**: `/test-first a mixed producer and consumer host consumes a hundred messages identically under both affinity settings and records no ambient warnings`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_a_mixed_host_consumes_messages_the_affinity_flag_should_be_inert.cs`
