@@ -94,6 +94,7 @@ internal static class Initializer
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<AccumulationSentCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<DepositEntityCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<MixedHostConsumerCommand>).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<DispatcherFromRequestCommand>).TypeHandle);
 
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<PlaceOrder>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<SharedMarkerSentCommand>).TypeHandle);
@@ -108,6 +109,7 @@ internal static class Initializer
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<AccumulationSentCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<DepositEntityCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<MixedHostConsumerCommand>).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<DispatcherFromRequestCommand>).TypeHandle);
 
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandlerAsync<PublishScopeOrderPlaced>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandlerAsync<ConcurrentPublishOrderPlaced>).TypeHandle);
