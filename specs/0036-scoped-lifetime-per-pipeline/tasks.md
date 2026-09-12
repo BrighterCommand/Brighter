@@ -966,7 +966,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T6.14, T5.3
   - **References**: AC-39 (FR-8, FR-9, NFR-4, D6, OOS-14); ADR 0075 steps 3, 4, 5, 5a
 
-- [ ] **TEST + IMPLEMENT: T6.16 — suppression fires for subscriber pipelines only, and fires even when the subscriber's own pipeline takes no scope**
+- [x] **TEST + IMPLEMENT: T6.16 — suppression fires for subscriber pipelines only, and fires even when the subscriber's own pipeline takes no scope**
   - **USE COMMAND**: `/test-first a nested Post adopts under a Send but not under a Publish subscriber whose own pipeline takes no scope`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_a_subscriber_takes_no_pipeline_scope_it_should_still_suppress_the_ambient.cs`
