@@ -884,7 +884,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T6.9
   - **References**: AC-18 (FR-15, FR-17, FR-24.3, C-10, D13, D16, D18); ADR 0076 step 3, ADR 0073 step 2
 
-- [ ] **TEST + IMPLEMENT: T6.11 — the extension's argument wins over an affinity the application assigned itself, symmetrically and in either order**
+- [x] **TEST + IMPLEMENT: T6.11 — the extension's argument wins over an affinity the application assigned itself, symmetrically and in either order**
   - **USE COMMAND**: `/test-first the extension's affinity argument overrides an affinity the application assigned, in both directions and in both registration orders, with no validation finding`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_the_application_assigns_an_affinity_and_calls_the_extension_the_argument_should_win.cs`
