@@ -28,6 +28,7 @@ using System.Transactions;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.ServiceActivator;
 
 namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 
@@ -37,7 +38,7 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 /// touch (<see cref="PipelineBuilder{TRequest}"/>, <see cref="RequestHandler{TRequest}"/>,
 /// <see cref="RequestHandlerAsync{TRequest}"/>, <see cref="WrapPipeline{TRequest}"/>,
 /// <see cref="OutboxProducerMediator{TMessage,TTransaction}"/>) plus <see cref="TransformPipelineBuilder"/>,
-/// to bind to it.
+/// <see cref="Dispatcher"/> and <see cref="MessagePump"/>, to bind to it.
 /// </summary>
 /// <remarks>
 /// Every <c>PlaceOrderWebApplicationFactory</c> a test constructs builds its own <c>CommandProcessor</c>
@@ -92,6 +93,7 @@ internal static class Initializer
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<TransientHandlerSendCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<AccumulationSentCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<DepositEntityCommand>).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<MixedHostConsumerCommand>).TypeHandle);
 
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<PlaceOrder>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<SharedMarkerSentCommand>).TypeHandle);
@@ -105,6 +107,7 @@ internal static class Initializer
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<TransientHandlerSendCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<AccumulationSentCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<DepositEntityCommand>).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<MixedHostConsumerCommand>).TypeHandle);
 
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandlerAsync<PublishScopeOrderPlaced>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandlerAsync<ConcurrentPublishOrderPlaced>).TypeHandle);
@@ -122,5 +125,10 @@ internal static class Initializer
 
         RuntimeHelpers.RunClassConstructor(typeof(OutboxProducerMediator<Message, CommittableTransaction>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(OutboxProducerMediator<Message, DbTransaction>).TypeHandle);
+
+        // Non-generic, so each is only ever first-touched once per process - but this project's earlier
+        // tasks never drove a real consumer message pump, so nothing had warmed them before T6.20 did
+        RuntimeHelpers.RunClassConstructor(typeof(Dispatcher).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(MessagePump).TypeHandle);
     }
 }
