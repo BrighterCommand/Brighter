@@ -388,9 +388,10 @@ redelivered for ever would pass every other DLQ behaviour in this suite.
   until the defect is fixed. Of the remaining six, **`GCP` ×4 and `AzureServiceBus` cannot be run
   against local infrastructure at all** — GCP's emulator implements neither of the two APIs the DLQ
   path needs (see below), and ASB has no emulator — so `gcp-ci` and `azure-ci`, which run against real
-  cloud projects, are the only evidence that can move those five. Only **`RocketMQ`** is still a
-  broker run somebody can do locally. So the ceiling reachable by *local* broker runs alone is
-  **10**, and CI on #4297 is what moves the other five.
+  cloud projects, are the only evidence that can move those five. **`RocketMQ` was then run locally
+  and is blocked on a transport defect of its own** (see below), which leaves **no** FR-23 cell that a
+  broker run alone can still move: all 15 are now either blocked on a product defect (10) or reachable
+  only through CI against real cloud infrastructure (5).
 
 ### `MQTT` was attempted and stays `Deferred` — the Proactor pump deadlocks on the first requeue
 
@@ -478,6 +479,60 @@ application creating a DLQ-backed channel must hold `resourcemanager.projects.ge
 DLQ is usually provisioned by infrastructure-as-code. Tolerating `Unimplemented` and
 `PermissionDenied` there (log and continue, as the binding may already exist) would both fix that and
 make the emulator path usable.
+
+### `RocketMQ` was attempted and stays `Deferred` — `Requeue` is a no-op, so the budget never runs down
+
+Measured 2026-09-12 against `docker-compose-rocketmq.yaml`. Both variants fail the same way: the
+dead-letter poll returns `MT_NONE` for the whole window. The message is never dead-lettered.
+
+**It is not a timing problem, and that was measured rather than argued.** RocketMQ redelivers only
+when its 10 s invisibility lease expires, so a budget of 3 could plausibly need more than the 30 s
+ceiling. Re-running the Reactor variant with the ceiling widened to **150 s** — roughly fifteen
+redeliveries against a budget of three — still ends in `MT_NONE`. The widened ceiling was a probe on
+the generated file, restored with `./generate-test.sh`; it is recorded here, not committed.
+
+**The cause is in the transport.** `RocketMessageConsumer.Requeue` (`:179`) does nothing at all: it
+resolves the `MessageView` from the bag and returns `true`, with the one call that would act on the
+broker commented out —
+
+```csharp
+// Waiting for next RocketMQ C# version, due an issue on ChangeInvisibleDuration
+// consumer.ChangeInvisibleDuration(view, TimeSpan.Zero);
+```
+
+so the message simply stays invisible until its lease lapses and the broker re-serves the **stored**
+copy. `HandledCount` is read from the message's published properties (`ReadHandledCount`, `:422`) and
+written only on send (`RocketMqMessageProducer`, `:157`), so every redelivery arrives reading the
+value that was originally published. The pump bumps it to 1, `HandledCountReached(RequeueCount)` is
+never true, no `Reject` is ever issued, and nothing reaches the DLQ — for ever, not merely for 150 s.
+
+⭐ **This is the third instance of one defect family, and the most complete.** `AWS`
+([#4341](https://github.com/BrighterCommand/Brighter/issues/4341)) requeues with
+`ChangeMessageVisibility` and `GCP` with `ModifyAckDeadline(0)`; neither rewrites the stored message,
+so neither can spend a Brighter-side budget either. But both of those have a broker-side redrive
+(`maxReceiveCount`, `MaxDeliveryAttempts`) that dead-letters the message anyway, which is why their
+FR-23 tests reach the DLQ and fail on the *count*. RocketMQ has no such policy wired, so its message
+is never dead-lettered by anyone. **The common requirement this column keeps finding: a transport
+whose requeue does not persist the delivery count cannot exhaust the pump's budget.**
+
+### ⚠️ Running `RocketMQ` locally needs four infrastructure facts the compose file does not supply
+
+Recording these because the FR-23 attempt cost four failed runs before a single one measured the
+behaviour, and `rocketmq-ci` has been commented out since #3696, so local is the only place this runs.
+
+1. **`docker-compose-rocketmq.yaml`'s `create-topic` service silently creates nothing.** It invokes
+   `/home/rocketmq/rocketmq-5.4.0/bin/mqadmin`, but `apache/rocketmq:latest` now ships **5.5.0**, so
+   every line fails with `sh: 9: .../rocketmq-5.4.0/bin/mqadmin: not found`. The service still exits
+   and nothing downstream checks it.
+2. **RocketMQ 5.x does not auto-create topics through the gRPC proxy** — a producer on an unknown
+   topic fails with `No topic route info in name server`. Combined with (1), a freshly recreated
+   stack has *no* topics at all.
+3. **The conformance topics are not in that list even when it runs.** FR-23 needs `gen_r_exhaust`,
+   `gen_p_exhaust` and their `_DLQ` / `_Invalid` companions, none of which the compose file mentions;
+   they have to be created with `mqadmin updateTopic`.
+4. **`rmqproxy` caches topic routes at startup** — a topic created after the proxy started stays
+   invisible to clients until the proxy is restarted. It also needs port **8081**, which the Kafka
+   suite's `schema-registry` container also binds, so the two cannot be up at once.
 
 ### A harness note the MQTT run exposed: the 30 s ceiling is not enforced for MQTT
 
