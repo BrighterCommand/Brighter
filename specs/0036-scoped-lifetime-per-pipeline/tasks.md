@@ -900,7 +900,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T6.10
   - **References**: AC-48 (FR-17, C-10, D18); ADR 0076 steps 3, 5
 
-- [ ] **TEST + IMPLEMENT: T6.12 — affinity is inert outside `Scoped`**
+- [x] **TEST + IMPLEMENT: T6.12 — affinity is inert outside `Scoped`**
   - **USE COMMAND**: `/test-first only an all Scoped host under JoinAmbient shares a container Scoped dependency with the controller`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_the_lifetimes_are_not_scoped_the_affinity_should_be_inert.cs`
