@@ -37,12 +37,20 @@ namespace Paramore.Brighter
     public interface IAmAMessageMapperRegistryAsync
     {
         /// <summary>
+        /// Offers a DI scope for the transform pipeline being built, forwarded from the mapper factory this
+        /// registry owns. A registry with no such factory, or whose factory offers none, returns <c>null</c>.
+        /// </summary>
+        /// <returns>A pipeline scope handle, or <c>null</c> if none is offered.</returns>
+        IAmAScope? CreatePipelineScope();
+
+        /// <summary>
         /// Gets an async mapper for <typeparamref name="T"/>, wrapped in a <see cref="Lease{T}"/> that
         /// identifies this resolution so it can later be released back to the factory that created it.
         /// </summary>
         /// <typeparam name="T"></typeparam>
+        /// <param name="scope">The pipeline scope to resolve from, if one was offered.</param>
         /// <returns>A lease over the mapper, or <c>null</c> if none is registered.</returns>
-        Lease<IAmAMessageMapperAsync<T>>? GetAsync<T>() where T : class, IRequest;
+        Lease<IAmAMessageMapperAsync<T>>? GetAsync<T>(IAmAScope? scope = null) where T : class, IRequest;
         /// <summary>
         /// Resolves the mapper type that <see cref="GetAsync{T}"/> would create for <paramref name="requestType"/>,
         /// without creating an instance — so a caller that only needs to know whether a mapper exists (e.g.

@@ -4,6 +4,8 @@ namespace Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 
 internal sealed class QuickHandlerFactoryAsync(Func<IHandleRequestsAsync> handlerAction) : IAmAHandlerFactoryAsync
 {
+    public IAmAScope? CreatePipelineScope() => null;
+
     public IHandleRequestsAsync Create(Type handlerType, IAmALifetime lifetime)
     {
         return handlerAction();

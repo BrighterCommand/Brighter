@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(cat:*), Bash(test:*), Bash(touch:*), Bash(ls:*), Bash(echo:*), Bash(git:*), Bash(awk:*), Bash(date:*), Bash(basename:*), Read, Write, Edit, Glob, Agent, AskUserQuestion, Skill
+allowed-tools: Bash(cat:*), Bash(test:*), Bash(touch:*), Bash(ls:*), Bash(echo:*), Bash(git:*), Bash(awk:*), Bash(date:*), Bash(basename:*), Bash(grep:*), Bash(mkdir:*), Bash(npx:*), Bash(python3:*), Read, Write, Edit, Glob, Agent, AskUserQuestion, Skill
 description: Create technical design specification (ADR)
 argument-hint: [adr-focus-area]
 ---
@@ -99,6 +99,8 @@ Gather (read) the inputs it needs so you can pass their text or paths:
   so the new ADR stays focused on a *distinct* decision and references siblings correctly.
 - The **prior-art candidates from Step 4** (`id` + `title` + `summary`) — so the sub-agent
   references related decisions correctly and does not contradict or silently duplicate one.
+- `.agent_instructions/documentation.md` — **read it yourself**; you paste four of its sections
+  into the sub-agent prompt in Step 6 (see *Readability and diagram requirements*).
 - `.agent_instructions/design_principles.md` — pass the path; the sub-agent reads it itself.
 - `.agent_instructions/adr_frontmatter.md` — pass the path; the sub-agent reads the tag taxonomy
   from it to propose `tags`.
@@ -121,14 +123,19 @@ prompt MUST include all of the following:
 
 1. The full text of `requirements.md` (or its path if too large to inline).
 2. The full text of each existing ADR for this spec (or their paths), and an instruction
-   that the new ADR addresses a DISTINCT decision: **{focus-area}**.
+   that the new ADR addresses a DISTINCT decision: **{focus-area}**. Also pass **one line per
+   sibling ADR stating the single thing it decides** — the sub-agent needs those to build the
+   `### Where this ADR sits` map table, and a map built from a summary it inferred will drift
+   from the one the sibling states about itself.
 3. The **prior-art candidates from Step 4** (`id` + `title` + `summary`), with an instruction to
    reference related ones under `Related ADRs`, and to state explicitly if this ADR supersedes any
    of them (so the main agent can mark the old one `Superseded` in Step 7).
 4. The proposed number and filename (`{NNNN}-{focus-area}.md`) and today's date — so the
    header and `Related ADRs` references are correct.
 5. The ADR template (below) — the sub-agent fills it in.
-6. The "Drafting guidance" and "Grounding requirements" blocks below.
+6. The **Drafting guidance** and **Grounding requirements** blocks below, verbatim, plus the four
+   `documentation.md` sections named under **Readability and diagram requirements** — pasted in,
+   not referenced by path.
 7. An explicit instruction: **RETURN the completed ADR as markdown text. Do NOT write any
    file.** Use Read/Glob/Grep to verify references; do not use Write/Edit.
 8. An explicit instruction to **also return, clearly separated from the ADR body, a proposed
@@ -150,42 +157,94 @@ Proposed
 
 ## Context
 
-{Describe the specific architectural problem this ADR addresses}
+{2–4 sentences, in plain language: what exists today, what is wrong with it, and why that
+matters. Do NOT open by naming four interfaces — a reader cannot hold type names before they
+know what the problem is. Name the defect in terms a user would recognise.}
 
 **Parent Requirement**: [specs/{spec-dir}/requirements.md](../../specs/{spec-dir}/requirements.md)
 
-**Scope**: This ADR focuses specifically on {the architectural decision area}. {If there are other ADRs for this requirement, mention them here}
+**Scope**: This ADR decides one thing — {the decision, in one bold clause}. It discharges {FR/NFR/constraint ids}.
 
-{Describe the problem and context}:
-- What specific aspect of the requirement needs an architectural decision?
-- What are the forces at play (technical, political, social, project)?
-- Why is this decision important?
-- What constraints exist?
+{What this ADR deliberately does NOT decide, and which sibling ADR decides each of those things.}
+
+### Where this ADR sits
+
+{INCLUDE THIS SECTION ONLY IF THE SPEC HAS MORE THAN ONE ADR. A table mapping every ADR for
+this spec to the one thing it decides — this one bolded and marked *(this one)*:}
+
+| ADR | Decides |
+| --- | --- |
+| 00NN | {the one thing it decides} |
+| **00NN** *(this one)* | {the one thing THIS ADR decides} |
+
+{Then, if the ADRs share one, the single sentence that unifies them — stated identically in
+every sibling that applies it. If you cannot write it in one sentence, they are not one story.}
+
+### {The problem, named as a behaviour rather than as a structure}
+
+{Lead with the artefact that orients — a comparison table or a diagram — then state the
+consequences that follow from it, and only then the mechanism that produces them. A reader
+wants to know what goes wrong before they want to know which class does it.}
+
+### The forces
+
+{Bulleted. Each force is one constraint that narrows the solution space, and the reader should
+be able to see why the Decision below is the shape it is. Keep `file:line` citations to the
+minimum that makes the force checkable — density belongs in Implementation Approach.}
 
 ## Decision
 
-{Describe the specific architectural decision that was made}
+**{The decision, in one bold sentence. A reader who reads only this sentence should know what
+was decided and be able to recognise it in the code.}**
 
-- What approach are we taking for this aspect?
-- What are the key technical choices?
-- What patterns or practices will we follow?
+{One short paragraph on the shape that takes, and why. Still no type signatures, still no file
+paths.}
 
-### Architecture Overview
+### The mechanism, end to end
 
-{Describe the architecture for this specific decision}
-{Use ASCII art or mermaid diagrams where helpful}
+{BEHAVIOUR FIRST. What happens, in what order, at run time or at registration time. Lead with
+the orienting artefact — a mermaid `sequenceDiagram`, a `flowchart`, or a decision-ladder table
+— then two or three sentences reading the load-bearing invariants off it. This section is the
+one a human reviewer will actually read; it is why the ADR exists.}
+
+### Where the pieces live
+
+{STRUCTURE SECOND. A mermaid `flowchart` with one `subgraph` per assembly or package, showing
+what is new, what changes, and which way the dependencies point.}
 
 ### Key Components
 
-{List and describe the main components affected by this decision}
+#### The roles, and what each is responsible for
+
+{A table, per Responsibility-Driven Design — this is where the design principles become an
+artefact rather than an aspiration:}
+
+| Role | Type | Stereotype | Responsibility |
+| --- | --- | --- | --- |
+| {role} | {type} ({where it lives}) | **knowing** / **doing** / **deciding** | {what it is answerable for} |
+
+{Follow the table with a sentence on the split that matters most — usually the one a reader
+would otherwise collapse.}
+
+#### {Each significant type}
+
+{The signature, then a contract table: Member | Input | Output | Error conditions.}
+
+#### Where each type is touched
+
+{A table: Assembly | Type | Change. Then a paragraph naming what is deliberately UNCHANGED,
+so a reviewer does not read an omission as an oversight.}
 
 ### Technology Choices
 
-{Document specific technology/library choices for this aspect and why}
+{Why this mechanism and not the obvious one. Each as a bolded question — "Why X rather than
+Y." These are the paragraphs a future maintainer comes back for.}
 
 ### Implementation Approach
 
-{Outline how this specific aspect will be implemented}
+{The implementor's section, and the ONLY place where `file:line` citation density belongs.
+Numbered steps, in the order they would be committed, with structural changes separated from
+behavioural ones per Tidy First.}
 
 ## Consequences
 
@@ -221,7 +280,7 @@ Proposed
 When creating the ADR:
 - Focus on **one specific architectural decision** - keep it focused
 - Focus on the **why** of decisions, not just the **what**
-- Use ASCII art or mermaid diagrams where helpful for architecture
+- Use mermaid diagrams (see *Diagram requirements* below) — prefer them to ASCII art
 - Consider:
   - Data model and schema changes
   - API design (public interfaces)
@@ -237,6 +296,24 @@ When creating the ADR:
 - Allocate responsibilities into roles, focusing on cohesion.
 - Roles are interfaces or abstract types.
 - A class can implement one or more roles. If it implements multiple roles, they should be related.
+
+#### Readability and diagram requirements (include in the sub-agent prompt)
+
+These live in [`.agent_instructions/documentation.md`](../../../.agent_instructions/documentation.md)
+§ *Architecture Decision Records*, which is the single source shared with the standalone `/adr`
+command so the two cannot drift. **Read that file yourself and paste these sections into the
+sub-agent prompt verbatim** — do not paraphrase them, and do not merely pass the path, because the
+shape of what the sub-agent returns depends on them:
+
+- § *ADR structure* — the skeleton, and what belongs under each heading
+- § *ADR readability* — general to specific, behaviour before structure, lead with the orienting
+  artefact, concentrate `file:line` citations, name what is unchanged
+- § *Diagrams in ADRs* — which diagram form to use, when a decision-ladder table beats a
+  flowchart, and the mermaid traps that pass review and then fail to render
+- § *Writing tone for design documents* — write for a future reader, not for this conversation
+
+The template above is that skeleton as a fill-in form. If the two ever disagree,
+`documentation.md` is authoritative and the template is what needs fixing.
 
 #### Grounding requirements (include in the sub-agent prompt)
 
@@ -267,11 +344,29 @@ After the sub-agent returns:
    - Spot-check at least one codebase reference the sub-agent cited (Glob/Grep) — if a
      referenced file/class doesn't exist, send it back to the sub-agent to fix rather than
      writing a misleading ADR.
+   - **The headings match the template** — same wording, same order, same nesting level. Drift
+     here is what makes a corpus unnavigable, and it is free to fix before the file is written.
    - If anything is missing or wrong, ask the sub-agent to revise, or fix it yourself before writing.
 
 2. **Write** the validated ADR body to `docs/adr/{NNNN}-{focus-area}.md` using the Write tool.
 
-3. **Stamp frontmatter** with the `write_adr_metadata` skill
+3. **Run the mechanical checks** — specified in
+   [`.agent_instructions/documentation.md`](../../../.agent_instructions/documentation.md)
+   § *Before an ADR is committed*. Both, every time; they catch defects that survive a careful
+   read. Roughly one diagram in six fails to render on first draft, and a diagram that does not
+   render is a broken ADR that looked fine in review.
+
+   ```bash
+   npx -y -p @mermaid-js/mermaid-cli@11 mmdc -i diagram.mmd -o diagram.svg
+   grep -c '&lt;\|&gt;\|&amp;' docs/adr/{NNNN}-{focus-area}.md   # must be 0
+   ```
+
+   Render the most complex diagram to PNG (`-o diagram.png -w 1600 -b white`) and actually *look*
+   at it with Read — a diagram can parse cleanly and still be unreadable, which is the signal to
+   convert it to a decision-ladder table. If the render check cannot run (no network for `npx`),
+   say so plainly rather than reporting the diagrams as verified.
+
+4. **Stamp frontmatter** with the `write_adr_metadata` skill
    (`.claude/commands/adr/write_adr_metadata.md`), passing the sub-agent's proposed summary and tags:
 
    ```
@@ -289,7 +384,7 @@ After the sub-agent returns:
    write_adr_metadata docs/adr/{old-id}.md supersede --by {NNNN}-{focus-area}
    ```
 
-4. **Regenerate the ADR index** so `docs/adr/index.md` reflects the new ADR (and any supersession).
+5. **Regenerate the ADR index** so `docs/adr/index.md` reflects the new ADR (and any supersession).
    This is the single canonical command (documented in
    [`.agent_instructions/adr_frontmatter.md`](../../../.agent_instructions/adr_frontmatter.md)):
 
@@ -299,13 +394,23 @@ After the sub-agent returns:
 
    `docs/adr/index.md` is a regenerable cache — never hand-edit it; always regenerate from frontmatter.
 
-5. **Update tracking**: `echo "{NNNN}-{focus-area}.md" >> specs/{current-spec}/.adr-list`
+6. **Update tracking**: `echo "{NNNN}-{focus-area}.md" >> specs/{current-spec}/.adr-list`
+
+7. **Back-fill the sibling map.** If `.adr-list` now holds more than one ADR, every *earlier*
+   ADR's `### Where this ADR sits` table is stale — it does not list the one you just wrote.
+   Add the new row to each, keeping each file's own row bolded and marked *(this one)*. Where
+   an earlier ADR was written before this section existed, add the whole section.
+
+   This costs one table row per file and it is the step that decides whether the map is worth
+   anything: a map that is right for the newest ADR and wrong for all the others is worse than
+   no map, because a reader who checks it once and finds it stale will not check it again.
 
 ### Step 8: Next Steps
 
 1. Remind user to:
    - Review and complete the ADR with technical details
-   - Commit the ADR and regenerated index: `git add docs/adr/{NNNN}-{focus-area}.md docs/adr/index.md && git commit -m "docs: add ADR for {focus-area}"`
+   - Commit the ADR, the regenerated index, and any sibling ADRs whose map you back-filled in
+     Step 7.7: `git add docs/adr/{NNNN}-{focus-area}.md docs/adr/index.md {back-filled siblings} && git commit -m "docs: add ADR for {focus-area}"`
    - The first ADR should typically be the first commit on the feature branch
    - Can create/update draft PR with ADR for early feedback
 2. Multiple ADRs:

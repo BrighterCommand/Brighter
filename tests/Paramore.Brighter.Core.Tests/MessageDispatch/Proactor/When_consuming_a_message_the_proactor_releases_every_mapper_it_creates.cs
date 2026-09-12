@@ -86,7 +86,9 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             public int CreateCount => Volatile.Read(ref _createCount);
             public int ReleaseCount => Volatile.Read(ref _releaseCount);
 
-            public Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType)
+            public IAmAScope? CreatePipelineScope() => null;
+
+            public Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType, IAmAScope? scope = null)
             {
                 Interlocked.Increment(ref _createCount);
                 return new Lease<IAmAMessageMapperAsync>(new MyEventMessageMapperAsync());

@@ -84,7 +84,7 @@ public class FactoryThreadSafetyTests
 
         var provider = services.BuildServiceProvider();
         var factory = new ServiceProviderHandlerFactory(provider);
-        var sharedLifetime = new TestLifetimeScope();
+        var sharedLifetime = new TestLifetimeScope(factory.CreatePipelineScope());
         var handlers = new ConcurrentBag<IHandleRequests>();
 
         // Act - Resolve scoped from multiple threads with SAME lifetime
@@ -124,7 +124,7 @@ public class FactoryThreadSafetyTests
         var tasks = new Task[50];
         for (int i = 0; i < 50; i++)
         {
-            var lifetime = new TestLifetimeScope();
+            var lifetime = new TestLifetimeScope(factory.CreatePipelineScope());
             tasks[i] = Task.Run(() =>
             {
                 var handler = ((IAmAHandlerFactorySync)factory).Create(typeof(ThreadSafetyTestHandler), lifetime);
@@ -204,8 +204,10 @@ public class FactoryThreadSafetyTests
 
     private class TestLifetimeScope : IAmALifetime
     {
+        public TestLifetimeScope(IAmAScope? pipelineScope = null) => PipelineScope = pipelineScope;
+        public IAmAScope? PipelineScope { get; }
         public void Add(IHandleRequests instance) { }
         public void Add(IHandleRequestsAsync instance) { }
-        public void Dispose() { }
+        public void Dispose() => PipelineScope?.Dispose();
     }
 }

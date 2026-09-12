@@ -14,6 +14,8 @@ namespace Paramore.Brighter.ServiceActivator.Ports
             _commandProcessorFactory = commandProcessorFactory;
         }
 
+        public IAmAScope? CreatePipelineScope() => null;
+
         /// <summary>
         /// Creates the specified handler type.
         /// </summary>

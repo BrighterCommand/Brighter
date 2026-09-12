@@ -6,15 +6,14 @@ using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
-public class ScopedMapperReleaseReuseTests
+public class ScopedMapperDirectReleaseTests
 {
     [Fact]
-    public void When_releasing_a_scoped_mapper_it_should_stay_usable_for_later_resolutions()
+    public void When_releasing_a_scoped_mapper_created_outside_a_pipeline_it_should_dispose_it_and_the_next_resolution_is_fresh()
     {
-        // Arrange — MapperLifetime.Scoped, a supported configuration. Under Scoped the factory shares one
-        // long-lived IServiceScope and caches the resolved mapper, so every message reuses one instance
-        // until the factory itself is disposed. Releasing a mapper per message must therefore be a no-op:
-        // disposing the cached instance would hand message #2 a disposed mapper.
+        // Arrange — MapperLifetime.Scoped, called directly with no pipeline scope (T1.14, ADR 0070 step 9:
+        // the factory-wide Scoped cache no longer serves a direct call — each resolution is isolated in
+        // its own DI scope, reclaimed only when the caller releases it).
         var disposals = new DisposalLog();
 
         var collection = new ServiceCollection();
@@ -25,20 +24,20 @@ public class ScopedMapperReleaseReuseTests
 
         var factory = new ServiceProviderMapperFactory(provider);
 
-        // Act — resolve, release (as a pipeline now does every message), then resolve again.
+        // Act — resolve, release, then resolve again.
         var first = factory.Create(typeof(DisposableMapper));
         factory.Release(first!);
         var second = factory.Create(typeof(DisposableMapper));
 
-        // Assert — the release did not dispose the cached scoped mapper, and the second resolution returns
-        // the same live instance. A Scoped resolution carries a null release token, so releasing its lease
-        // drains nothing.
-        Assert.Equal(0, disposals.Count);
-        Assert.Same(first!.Instance, second!.Instance);
-
-        // The factory still owns the scoped instance and disposes it exactly once at shutdown.
-        factory.Dispose();
+        // Assert — releasing the first isolated resolution disposed it immediately, and the second
+        // resolution is a fresh, distinct instance rather than a cached one.
         Assert.Equal(1, disposals.Count);
+        Assert.NotSame(first!.Instance, second!.Instance);
+
+        // The factory disposes only what it still holds outstanding at shutdown — the released first
+        // resolution is already gone, so disposing the factory only reclaims the still-live second.
+        factory.Dispose();
+        Assert.Equal(2, disposals.Count);
     }
 
     private sealed class MinimalCommand : Command

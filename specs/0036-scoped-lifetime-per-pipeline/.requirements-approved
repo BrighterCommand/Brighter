@@ -1,0 +1,631 @@
+APPROVED: revision 30 (27 FRs / 10 NFRs / 55 ACs / 124 normative bullets), 2026-08-27.
+
+The owner approved the DESIGN PHASE as a whole on 2026-08-27 — "Approved — the ADRs and requirements
+both" — which is the single approval §21.6's process reserved for the end of the phase, taken over
+the requirements and the seven ADRs TOGETHER. Revisions 22, 23, 24, 25, 26, 27, 28 and 29 were
+carried to this approval and are approved with it; NOTHING FURTHER IS OWED ON ANY OF THEM. Revision
+21 (FR-16(c), C-21, AC-52) was likewise pending and is approved here too.
+
+The seven ADRs went to status Accepted in the same commit — 0070, 0071, 0072, 0073, 0074, 0075 and
+0076 — and docs/adr/index.md was regenerated from their frontmatter. Each of the seven records that
+it "supersedes no prior ADR", so nothing was superseded or deprecated; ADR 0033's CommandProcessor
+singleton and ADR 0039's per-subscriber scope stand untouched, which is D0c and OOS-6.
+
+WHAT APPROVAL DOES NOT MEAN. It does not settle the three shape questions again — they were resolved
+on their own terms before approval (see the resolution block below) and none of them changed the
+document. It does not license implementation to depart from a criterion: the ACs are the contract
+the tasks phase is written against.
+
+THE THREE FLAGGED QUESTIONS WERE PUT TO THE OWNER ON 2026-08-27 AND ALL THREE ARE RESOLVED. Every
+one confirms what is already landed, so NO REQUIREMENTS TEXT CHANGED, NO COUNT MOVED, and the
+document stays at revision 30 (27 / 10 / 55 / 124). The three, in the order they were reviewed:
+
+  1. AC-55 STANDS. The two sources differed in force - round-6 decision 5 said the invariant "may
+     deserve its own criterion", ADR 0075's Risks row said it "is owed" - and the owner confirmed
+     the second reading, which is the one revision 26 was written on. The deciding ground: C-14
+     spent four rounds as an ASSUMPTION the requirements could not make good, and revision 26 made
+     it an invariant; an invariant with no criterion over it is the shape that let it go wrong
+     unnoticed. AC-20 does not reach this flow, its pump threads carrying no HttpContext. Striking
+     AC-55 would have returned ADR 0075's Risks row to "guarded by review only".
+
+  2. AC-14's SPY HALF STAYS AN "And given" BRANCH. Not lifted into a criterion of its own, so the
+     count does NOT move to 56. The sources say branch - ADR 0073's "acquires a criterion" is
+     satisfied by a branch OF a criterion, and all eight ADR passages call it an amendment to
+     AC-14 - and so does the house form: "And given" has 30 uses, AC-42 is one criterion built over
+     several hosts, and the "How to read a Warning count in a Then" preamble states in terms that a
+     branch changing the configuration builds its own host. The substantive ground: the two halves
+     JOINTLY EXHAUST "not opted in" (no package at all; package referenced, extension never
+     called), and the closing Note - that the spy is asserted from that project because it can only
+     fail there - is only intelligible with both halves present.
+
+  3. THE gap A #7 DECLINE IS UPHELD. AC-9 keeps its FR-11 tag and its "Why this also discharges
+     FR-11(b)" note, and does NOT acquire the recommended clause requiring the handler's
+     container-Scoped dependency to resolve without InvalidOperationException under a provider built
+     with ValidateScopes = true. Two grounds were already recorded below: the finding's own ground
+     ("nothing in the document asserts (b)") is false, since BOTH of AC-9's Then clauses fail
+     without a real owned IServiceScope; and a sharper instrument is not missing coverage. A THIRD
+     ground was established at the review and is the strongest: ValidateScopes is NOT a neutral
+     hardening flag in this document. AC-54's Given builds its container WITHOUT it deliberately -
+     "the only configuration in which the borrow would otherwise succeed, since scope validation
+     makes the probe's own resolution throw and the ambient is declined for that reason instead" -
+     and FR-22.3's captive-dependency graphs throw under validation by design. A blanket clause on
+     AC-9 would sit against a criterion that requires the opposite, for a stated reason.
+
+NOTHING IS NOW FLAGGED. The two "FLAGGED FOR THE OWNER" paragraphs below are marked RESOLVED in
+place and are kept as the record of what was asked and why.
+
+THE PROCESS CHANGED AT REVISION 22, AND THE CHANGE GOVERNS EVERY REVISION FROM HERE. The requirement
+owner, 2026-08-24: "Let's make them atomic changes. We originally deferred for efficiency as we kept
+re-reviewing the requirements mid-ADR edit. Let's just make them atomic commits. At this point I am
+not interested in a stand-alone requirements review, only ensuring it is in line with the work the
+ADRs reveal."
+
+Two rulings. FIRST, every decided requirements change now lands in the SAME COMMIT as the ADR work
+that reveals it - no deferral, no accumulation, and no future-tense "an amendment is owed" left
+standing in an ADR while the criterion it names says something else. SECOND, THERE IS NO END-OF-PHASE
+REQUIREMENTS TRUE-UP AND NO STAND-ALONE REQUIREMENTS REVIEW. This document is not reviewed as a
+document in its own right before approval; the only test it has to pass is "is it in line with what
+the ADRs reveal", which each atomic commit establishes for its own change at the moment it lands.
+Approval is the design phase's, taken once at the end, over the requirements and the ADRs together.
+
+WHAT THAT MEANS FOR REVISIONS 20 AND 21, WHICH THIS FILE RECORDS AS AWAITING THAT TRUE-UP: NOTHING
+FURTHER IS OWED ON EITHER. Their content shipped (revision 21's at fa937a739) and the review they
+were carried to no longer exists. The deferral was not a mistake - it bought efficiency while each
+change was triggering a fresh mid-edit requirements review, and abolishing that review removes the
+cost that made deferral worth paying. The paragraphs below are kept as the record of what each
+revision changed, and their "carried to the end-of-phase true-up" sentences are spent.
+
+
+Revision 30 was made during the design phase and lands the eight FREESTANDING requirements findings
+of design review round 7 - the ones that name no ADR work and so could ride no ADR batch (gap A #1,
+#2, #4, #5, #7, #10, #11, #12, and 0075 #10, which is gap A #1's drift at two of its own sites). It
+is the LAST batch of the round that does not ride Phase 5, and it is the only batch of the round
+with no ADR half of its own; one ADR line moved with it, and only because it quotes a constraint
+title this revision changes (see below).
+
+WHAT CHANGED, AND WHY NONE OF IT CHANGES THE DESIGN. (1) Citation drift, ONE defect at SIX sites:
+the PipelineBuilder build-loop citations were seven lines stale in FR-9, in AC-11's note, in the
+Terms "pipeline" row and in the Highest-risk-area note, and forty-four lines stale in the lifetime
+model's Scoped row and the "What is already correct" note. Re-derived against source and each opened
+at the line: the sync loop is :190 scope, :191 handler, :194 decorators; the async twin is :235,
+:236, :239-240; Build is declared at :174, not :167; the two HandlerLifetimeScope constructions are
+:572 and :583, not :528 and :539. The prose was correct at every one of the six; only the numerals
+were wrong. (2) NFR-1(b) said "the four container-backed factories, the six core factories ... and
+every test double". A class-declaration scan over src/ for implementations of NFR-1's six interfaces
+finds SIXTEEN, in THREE assemblies: five in Paramore.Brighter.Extensions.DependencyInjection (the
+four mapper/transform ones plus ServiceProviderHandlerFactory), nine in Paramore.Brighter (the six
+named plus SimpleHandlerFactory, SimpleHandlerFactorySync and SimpleHandlerFactoryAsync), and two in
+Paramore.Brighter.ServiceActivator (ControlBusMessageMapperFactory and ControlBusHandlerFactorySync)
+- an assembly the clause named nowhere, though NFR-3 freezes its dependency set and OOS-5 five of
+its types. The two counts are replaced by the three assemblies rather than by larger numerals, so
+the clause cannot drift again. (3) AC-52's negative control read "with the affinity set to
+AlwaysNew". Under D18 the extension's argument wins UNCONDITIONALLY over an affinity assigned on the
+options object, so an implementer taking that phrase as an option assignment gets JoinAmbient and the
+negative control silently becomes a SECOND POSITIVE - the defect AC-20 and AC-26 were amended against
+at revisions 8 and 16, which AC-52 (added at revision 21) was never swept for. It now calls
+AddBrighterRequestScope(ScopeAffinity.AlwaysNew), in AC-20's and AC-26's own words. (4) FR-22.3 said
+ServiceCollectionTransformerResolvabilityProbe has "no constructor"; it has a public one at :49-53,
+INSIDE the :40-56 range the same sentence cites, which null-checks and snapshots the service types.
+The surrounding argument survives untouched; the stated fact did not. (5) C-20's heading said the
+detection is "bounded in two ways, both deliberate" while its body lists (i) through (iv) and closes
+"All four are accepted gaps" - items (iii) and (iv) were added at revisions 8 and 9 without the
+heading being swept. (6) C-2's heading claimed "The message pump is untouched" while its body names
+five types, and ADR 0075 places a bracket in Performer.Run() and argues C-2 by the ENUMERATION,
+saying in terms that "Performer is not one of those five named types". The heading now states the
+enumeration, D0b's table cell matches, and a sentence says the constraint is the enumeration rather
+than the broader claim. (7) FR-11(b) - which C-17 makes load-bearing - had no criterion naming it.
+
+WHAT WAS NOT DONE, AND WHY, ON FR-11(b). ⚠ UPHELD BY THE OWNER ON 2026-08-27, on a third ground
+established at that review: ValidateScopes is not a neutral flag here, and AC-54 builds without it
+deliberately. See the resolution block at the head of this file. The finding's stated ground is that
+"nothing in the document asserts (b)", and that ground is FALSE. AC-9 already discriminates: its Given is FR-11's own
+precondition (not opted in), and an implementation that resolved the handler from the root provider
+would leave a container-Scoped dependency UNDISPOSED when Send returned and would hand the second
+Send the SAME instance - so BOTH of AC-9's Then clauses fail without a real owned IServiceScope. The
+finding's recommendation was to add a clause requiring the dependency to resolve without
+InvalidOperationException under a provider built with ValidateScopes = true. That was NOT adopted: it
+imposes a new obligation on the test host to close a gap AC-9's existing Then already closes, and a
+sharper instrument is not the same thing as missing coverage. What IS true, and is what landed, is
+that AC-9 did not NAME FR-11, while the Acceptance Criteria preamble states "Each AC names the FR(s)
+or NFR(s) it discharges. Every FR and NFR is covered." So AC-9's tag gains FR-11 and a "Why this
+also discharges FR-11(b)" note in the house form AC-11 and AC-26 already use. NO new obligation, NO
+new criterion, NO count movement.
+
+THE ONE ADR LINE THAT MOVED WITH THIS REVISION. 0071:140 restates C-2 by its title - "C-2 - the
+message pump is untouched" - and then names the same five types. Retitling C-2 leaves that line
+quoting a title that no longer exists, so both ends went in one commit; the line's argument is
+unchanged and only its lead was synchronised. No other ADR restates any claim this revision changes:
+swept for C-2's heading, C-20's bound count, the probe's "no constructor", NFR-1(b)'s two counts,
+AC-52's negative control and FR-11(b), and the only other hits were ADR 0074's "bounded in four ways,
+all deliberate" (which is RIGHT, and whose words C-20's new heading adopts rather than composing a
+third phrasing) and the container-backed factory counts, which are correct in every ADR once read
+with their qualifiers - "four" where the subject is the mapper/transform factories, "five" where it
+is all of them including the handler factory. NFR-1(b) was wrong precisely because its subject is all
+six interfaces and it used the four.
+
+COUNTS UNCHANGED at 27 FRs / 10 NFRs / 55 ACs / 124 normative bullets: no criterion was added and no
+normative bullet was added. Re-derived rather than incremented - the lead-bullet scan gives 27, 10
+and 55, with no gap in AC-1..AC-55 or FR-1..FR-27. The PROMPT-reference section 7 script still
+reports 128 and is still left alone per revision 26's note; the two count different things.
+
+Why no review round: the stand-alone requirements review was abolished at revision 22 and the test
+this revision has to pass is "is it in line with what the ADRs reveal". Every change above is a
+correction of the document TO source or TO an ADR that was already right, not a change of substance.
+
+NO NEW CODEBASE CLAIMS beyond the re-derived line numbers, and every one of those was opened at the
+line: PipelineBuilder.cs :174, :190, :191, :194, :235, :236, :239-240, :572, :583; the sixteen
+factory implementations and their three assemblies; and
+ServiceCollectionTransformerResolvabilityProbe.cs:49-53.
+
+
+Revision 29 was made during the design phase and lands the split owed to AC-14, together with the
+eight ADR passages that said it was owed (batch REQ-row1). It is section 19.9 row 1 of the plan of
+record - THE LAST OF THAT SECTION'S ROWS. Every atomic requirements batch the design phase owed is
+now landed, and no requirements change is outstanding.
+
+WHAT CHANGED AND WHY - TWO HALVES OF ONE CRITERION, EACH FOR ITS OWN REASON.
+
+FIRST, THE SPY CLAUSE. AC-14 asserted, in one Given, both that the existing Brighter test suite
+passes unchanged and that an IHttpContextAccessor spy records zero accesses. The second assertion
+cannot fail where the first one runs. IHttpContextAccessor lives in
+Microsoft.AspNetCore.Http.Abstractions; no Brighter test project references that assembly, and
+NFR-2 forbids the DI package to acquire it, so a spy registered beside that suite records zero
+whatever the ASP.NET package does. The clause is only about something in a project that TAKES the
+new package's reference and never calls its extension. AC-14 therefore now has two halves in two
+projects: the regression half stays where those tests live, with its exclusions and its named pair
+unchanged in place, and the spy half is a new "And given" branch naming
+tests/Paramore.Brighter.Extensions.AspNetCore.Tests - the reference taken, the extension never
+called, and NO WEB HOST, because that half needs the reference rather than a host.
+
+SECOND, THE "EXPLICITLY NOT EXCLUDED" PAIR. The criterion named two FactoryLifetimeTests tests and
+required them to keep passing UNCHANGED as regression guards for AC-9. They resolve through a
+hand-rolled TestLifetimeScope over a per-lifetime dictionary entry, and the design removes that
+carrier - how a pipeline scope reaches the factories is design work (C-13). They cannot pass
+unchanged, so the designation MIGRATES with them onto the replacement carrier rather than attaching
+to a duplicate: the same two tests, asserting the same within-pipeline handler identity, over what
+replaces the dictionary. Duplicating instead would leave the originals pinning a carrier the design
+removes, which is a guard on a path nothing ships. "Must keep passing unchanged" becomes "in that
+form they must keep passing", and nothing else about the criterion moves.
+
+FLAGGED FOR THE OWNER - RESOLVED 2026-08-27: THE OWNER CONFIRMED THE BRANCH. Nothing changes and
+the count stays at 55; see the resolution block at the head of this file. The original flag read:
+because the shape was a judgement and not an instruction. The spy half is
+landed as a BRANCH of AC-14, not as a new criterion. ADR 0073 says the package-inertness half
+"acquires a criterion" and names AC-14's spy clause as that criterion, and the ADRs call this an
+AMENDMENT to AC-14 in all eight passages, so a branch is the reading that follows the source. If the
+owner would rather FR-15's package-inertness half hold a criterion of its own, the branch lifts out
+as a new AC verbatim and the AC count moves 55 -> 56. Nothing else would change.
+
+WHAT WAS DELIBERATELY NOT DONE. The exclusion list, its three named files and its "floor, not a
+closed enumeration" clause are untouched: the split is about where two assertions run, not about
+which tests are in scope. The regression half's When still names the same five verbs. Neither half
+states a lifetime triple, and the "How to read the lifetime configuration in a Given" preamble was
+NOT amended to admit them - AC-14 was already outside that rule before this change, its subject
+being a suite of hosts that each set their own configuration, and fixing a neighbouring sentence
+this amendment does not falsify is scope this batch has no call for.
+
+Why no review round: the stand-alone requirements review was abolished at revision 22 and the test
+is "is it in line with what the ADRs reveal". This is that - ADR 0071 states the migration under
+Negative and in step 6, ADR 0073 states the split in step 4a, and all eight passages saying the
+amendment was owed are re-tensed in the same commit. Counts unchanged at 27/10/55/124 - a branch is
+not a criterion and a redesignation is not a bullet; the section 7 script's divergent 128 is left
+alone per revision 26's note. NO NEW CODEBASE CLAIMS: every fact above was already carried by ADR
+0071 or ADR 0073.
+
+Revision 28 was made during the design phase and lands the FR-27.1 / AC-46 definition that round-6
+decision 17 left owed, together with the five ADR passages that said it was owed (batch REQ-row4).
+It is section 19.9 row 4 of the plan of record - the seventh requirements change made under the
+atomic process above, and the last of that section's rows apart from row 1 (AC-14's split).
+
+WHAT CHANGED AND WHY. FR-27.1 says a pipeline none of whose participating factories is Scoped
+"takes no pipeline scope and asks nothing", and AC-46's first Then asserts "zero adoption decisions
+and no pipeline scope taken". Both assert the right thing. Neither said what "no pipeline scope
+taken" is MEASURED over, and that omission is what ADR 0071 makes dangerous: it gives a Transient
+handler pipeline a scope object anyway, because ADR 0067's per-resolution isolation has to ride on
+something, so the object is non-null on exactly the host AC-46's first branch describes. An
+implementation reaching for that object to assert the criterion tests the wrong thing and fails a
+conformant design - the same shape as AC-29 and AC-20 before them, a criterion unsatisfiable by an
+implementation that has done nothing wrong.
+
+Both are now defined over the SEAM: no ambient ask and no adoption decision, never the presence or
+absence of a scope object. FR-27.1 states it as a property of the rule, and AC-46's first Then
+names the instrument - the recorder's zero asks IS the "no pipeline scope taken" assertion, which
+follows from FR-27.1's own "asks exactly once" rather than from anything new. Nothing about the
+substance moves: a {Transient, Transient, Transient} host recorded zero adoption decisions before
+the amendment and records zero after it.
+
+WHAT WAS DELIBERATELY NOT DONE. The Terms table's "pipeline scope" row was left as written. It
+defines the term as "the DI scope a pipeline resolves from, whether adopted or created", which is
+true of a Transient pipeline both before and after - such a pipeline resolves from a fresh inner DI
+scope PER RESOLUTION and from no single scope at all, so the row never asserted the thing the wrong
+instrument reads. The collision is between FR-27.1's words and an ADR-level property name, not
+between two requirements, and this document does not name that property (its only two occurrences
+of the string are a rejected interface name at :378 and a factory member in revision 26's own
+history row). Correcting the term would have been redesigning a definition the amendment does not
+reach. AC-47's "took no scope of its own" was checked and stands: it is the same seam reading, and
+it is now backed by the rule instead of resting on it.
+
+Why no review round: the stand-alone requirements review was abolished at revision 22 and the test
+is "is it in line with what the ADRs reveal". This is that - ADR 0071 states the amendment beneath
+its contract table and ADR 0072 states it with the ladder, and both said the requirements carried
+it. Counts unchanged at 27/10/55/124 - no criterion added, no bullet added, and the section 7
+script's divergent 128 is left alone per revision 26's note. NO NEW CODEBASE CLAIMS: the amendment
+cites no source file.
+
+Revision 27 was made during the design phase and lands the Post branch that round-6 decision 11
+left owed to AC-30, together with the four ADR passages written against the old reach (batch
+REQ-row3) - two of which called the branch owed, while two simply stated AC-30 as a Send.
+It is section 19.9 row 3 of the plan of record - the sixth requirements change made under the
+atomic process above, and it also closes round 7's gap A #13, which found the same defect
+independently from the requirements side and scored it 60.
+
+WHAT CHANGED AND WHY. FR-24.1 states its rule over "the caller of Send/Publish/Post"; AC-30's When
+was a Send only. The asymmetry that makes this matter is in source rather than in wording.
+PipelineBuilder's two catch blocks (PipelineBuilder.cs:202, :248) do nothing but wrap the failure
+in a ConfigurationException - no cleanup - so on a Send the criterion's second conjunct, "no
+pipeline scope is leaked", is discharged by the pre-existing PipelineBuilder.Dispose()
+(:269-270) firing from the using var at each dispatch site, and NOT by anything this design adds.
+TransformPipelineBuilder.cs:116 and :157 sit above CleanUpAfterFailedBuild calls (:122, :163), and
+that is the path the ambient-fault clause ADR 0072 adds actually cleans up on. So the one entry
+point AC-30 exercised was the one whose no-leak property this work does not touch.
+
+AC-30 now carries a second branch, in the house "And when ... Then" form the other multi-branch
+criteria use (AC-11, AC-31), over the SAME host and the SAME throwing provider: Post is called,
+the caller observes the same unwrapped InvalidOperationException, and no pipeline scope is leaked.
+Its Given now names both pipelines it reaches, per the "How to read the lifetime configuration in
+a Given" preamble. A one-sentence reason is stated in AC-31's precedent form - without the second
+branch, an implementation that leaked on the transform-pipeline build path would pass.
+
+WHAT WAS DELIBERATELY NOT DONE. No rule moved: FR-24.1 already stated all three verbs, so this is
+alignment of a criterion to a requirement that was always wider than it. The residue - Publish and
+the async twins of both builder families stay uncovered, because identical code at six sites is
+not a criterion - is NOT restated here; it is a coverage judgement and both ADR 0070 and ADR 0072
+continue to state it at their own ends. The reviewer's suggested "lettered branch at the end" was
+not followed either: no acceptance criterion in this document letters its branches, and the house
+form is And when / And given.
+
+Why no review round: the stand-alone requirements review was abolished at revision 22 and the test
+is "is it in line with what the ADRs reveal". This is that, in both directions. Counts unchanged at
+27/10/55/124 - no criterion added, no bullet added, and the section 7 script's divergent 128 is
+left alone per revision 26's note. NO NEW CODEBASE CLAIMS: every source citation above was already
+carried by ADR 0070 or ADR 0072, and each was re-verified against source in this session.
+
+Revision 26 was made during the design phase and lands the FR-19 / AC-20 / C-14 correction that
+round-6 decision 5 left owed, together with the four ADR passages that said it was owed and the
+two that stated C-14 as a live assumption (batch REQ-row5). It is section 19.9 row 5 of the plan
+of record - the fifth requirements change made under the atomic process above, and the second to
+arrive from something other than a round-7 owner call.
+
+WHAT CHANGED AND WHY. Round-6 decision 5 put a suppression bracket on the consumer pump's own flow,
+so a consumer pipeline's ask carries AlwaysNew however the affinity option is set. FR-24.2 and
+FR-23 are both evaluated on JoinAmbient asks only, so neither condition is reachable on the
+consumer side and a host with a conforming ambient source records nothing there at all. FR-19 said
+"Where an ambient source is registered there are exactly two" log entries and named FR-24.2 as one
+such a host DOES emit; AC-20 asserted the JoinAmbient run "records exactly one". AC-20 was
+therefore UNSATISFIABLE BY A CONFORMING IMPLEMENTATION - the AC-29 defect shape revision 18 fixed,
+found again by round 7 (gap A #3, score 70).
+
+FR-19 now states the one true bound: no permitted difference in log entries either, and the only
+entry a consumer host can record is FR-24.4's, from a NON-conforming provider that returns an
+ambient for an AlwaysNew ask. AC-20 asserts zero in both runs. Its "second run of 100 messages"
+clause went with the latch it pinned, so D19's "where it lands" column loses AC-20 and the
+Acceptance Criteria preamble loses that example. C-14 stops being an assumption and states the
+invariant: the case it assumed away is one the requirements could not make good, because an
+inherited HttpContext is LIVE rather than stale and FR-23 would not govern it. FR-18 loses "a
+consumer running in the same host" from its no-HttpContext enumeration - a case its own Warning
+clause can no longer reach.
+
+NEW: AC-55 (FR-19, C-14), the criterion the invariant was owed. A Dispatcher started from inside a
+live request, ten messages consumed while it is open, every ask carrying AlwaysNew, zero adoptions
+and no entry. ADR 0075's Risks table had recorded that no acceptance criterion asserted the
+pump-flow bracket and that it was guarded by review only; that row now cites AC-55.
+
+FLAGGED FOR THE OWNER - RESOLVED 2026-08-27: THE OWNER CONFIRMED AC-55. It stands as written and
+the count stays at 55; see the resolution block at the head of this file. The original flag read:
+because the instruction was hedged. Round-6 decision 5's row says the
+invariant "MAY deserve its own criterion", while ADR 0075's Risks row says the criterion "is owed".
+AC-55 is written on the second reading. It adds no rule - it pins FR-19's existing inertness over
+the flow that made C-14 necessary - and it is one criterion to strike if the owner prefers the
+first reading. It deliberately does NOT license starting a Dispatcher from inside a request; its
+Note says so, matching ADR 0075's "erroneous use of the library rather than a configuration this
+design supports".
+
+Why no review round: the stand-alone requirements review was abolished at revision 22 and the test
+is "is it in line with what the ADRs reveal". This is that, in both directions: the ADRs revealed
+the defect and the ADR passages saying the amendment was owed are re-tensed in the same commit.
+Counts move from 54 ACs to 55; FRs, NFRs and normative bullets unchanged at 27/10/124. NOTE ON THAT
+LAST FIGURE: the reference script in the plan file's section 7 counts AC lead bullets and now
+reports 128, while the maintained figure has excluded criteria since revision 20 (AC-51 was
+recorded as leaving 122 unchanged, and AC-54 as leaving 124 unchanged). The maintained convention
+is followed here - a criterion does not move the bullet count. NO NEW CODEBASE CLAIMS.
+
+Revision 25 was made during the design phase and lands the ADR 0074 slice of round 7 together with
+its ADR half in one commit (batch O-0074) - the fourth requirements change made under the atomic
+process above, and the first to arrive from an ordinary slice rather than an owner call. It removes
+a false ground from AC-42's rationale and changes no obligation.
+
+AC-42's last pair - the same Paramore.Brighter.Extensions.Tests assembly, a transform excluded and a
+mapper reported - explained why it is built as two hosts by asserting that "no single triple could
+serve both halves". Gap B #5 falsifies it: {HandlerLifetime = Transient, MapperLifetime = Singleton,
+TransformerLifetime = Singleton} governs a Singleton mapper and a Singleton transform at the same
+time and is FR-22.2-conformant by FR-22's own rule 2 - discard the Singletons, and the remainder
+{Transient} is uniform. {Singleton, Singleton, Singleton} under AlwaysNew serves both as well. The
+true reason the triple moves is narrower and is what the clause now says: the artefact kind selects
+which of the three settings governs it, so moving the Singleton between MapperLifetime and
+TransformerLifetime is what moves the candidate between kinds.
+
+WHAT DELIBERATELY DID NOT CHANGE: the pair's construction. Two hosts, the assembly as the controlled
+variable, the same two outcomes, and the same C-20(iv) asymmetry it exists to pin. A one-host
+construction over {Transient, Singleton, Singleton} is now visibly available and was NOT taken -
+the criterion's content was never at stake, only the reason given for its shape, and rewriting a
+criterion that is correct to take a construction the ADRs do not need is scope this batch has no
+call for. The word "necessarily" went with the false clause, for the same reason.
+
+Why no review round: this is alignment. It adds no rule, no criterion and no scope, and removes a
+statement the design work proved false. Counts unchanged at 27/10/54/124. ADR 0074 carried the same
+claim as a property of its own rule table, which read as derived rather than cited; the ADR
+half of this commit replaces that sentence too, so both ends land together as the atomic process
+requires.
+
+
+Revision 24 was made during the design phase and lands round-7 owner call 7 together with its ADR
+half in one commit (batch S-f) - the third requirements change made under the atomic process above.
+It widens FR-23's population and adds AC-54. The finding (gap B #4) is that a provider offering the
+container's ROOT provider as its resolution source passes all three of the adoption probe's positive
+tests: it is live, it is Microsoft-shaped, and it answers for ScopedArtefactCache. Probed against the
+pinned MEDI 10.0.10 - on a container built WITHOUT ValidateScopes a Scoped service resolves from the
+root and returns one instance for the life of the process, disposed by nothing, so a pipeline that
+borrowed it would defeat FR-1 and FR-2 while nothing complained. Where ValidateScopes is on the same
+resolution throws and the probe's existing exception outcome already declines, so the gap is silent
+on exactly the hosts that have validation off.
+
+The owner's call was to ADD THE REFERENCE TEST rather than leave the case to the ADR's residue prose,
+and the finding's own premise - that the probe cannot cheaply distinguish a root provider - is wrong:
+each container-backed factory is a singleton and is constructed with the root IServiceProvider, so
+one reference comparison per pipeline settles it.
+
+TWO THINGS ABOUT THE SHAPE OF THE AMENDMENT, BOTH DELIBERATE. FIRST, the obligation is stated over
+OBJECT IDENTITY - "the same object as the root provider the container package holds" - and not over
+"the root provider". That is what makes it satisfiable by a conforming implementation, which is the
+defect shape revision 18 fixed for AC-29 and round 7 found again in AC-20. Probed: MS DI injects the
+root ServiceProviderEngineScope into a singleton, and the ServiceProvider object BuildServiceProvider()
+returns is a DIFFERENT object with the same resolutions - so a provider handing back the sp it was
+constructed with is caught, and one handing back IHost.Services is not. The rule does not ask an
+implementation to detect the second; ADR 0072's residue paragraph states it as the third part of what
+adoption does not close, which is what the owner's call required ("do not let the new test delete the
+sentence"). SECOND, this is a population widening and not a new rule, so the normative-bullet count
+stays at 124 - the same accounting revision 18 used when it moved this rule's population.
+
+AC-54 builds its host WITHOUT ValidateScopes on purpose: with validation on, the ambient is declined
+for a different reason and the criterion would not discriminate. It asserts two Sends in two requests
+resolving DIFFERENT Scoped dependencies, which is precisely what borrowing the root would have
+destroyed, plus FR-23's single latched Warning across both calls.
+
+Revision 23 was made during the design phase and lands round-7 owner calls 1 and 8 together with
+their ADR halves in one commit (batch S-a) - the second requirements change made under the atomic
+process above. Call 1 is a correction to a mechanism the document stated four times; call 8 adds one
+rule and one criterion.
+
+CALL 1 - "the last descriptor" is not what MS DI resolves. FR-22.4, FR-24.3, FR-17 and C-12 all
+described MS DI's resolution as taking the LAST descriptor for a service type. Probed against the
+pinned Microsoft.Extensions.DependencyInjection 10.0.10, that is false whenever a KEYED descriptor
+exists: GetService<T>() resolves the last UNKEYED descriptor and ignores keyed registrations, and a
+keyed descriptor reads null for ImplementationType while carrying the type on KeyedImplementationType.
+Under the old wording FR-22.4 raised a startup-failing Error against a host with a keyed
+IBrighterOptions registration - a multi-tenant shape ADR 0076 supports by name, and whose write-through
+runs correctly. The owner chose (b) WIDEN THE RULES TO KEYED rather than (a) declare keyed
+registrations out of subject, which is what both reviewers recommended. Every rule now names the
+population it reads. FR-22.4 and FR-24.3 read the UNKEYED population, and the mechanism forces that
+rather than taste choosing it: Brighter's factories resolve IBrighterOptions unkeyed
+(ServiceProviderMapperFactory.cs:44) and ADR 0072 fixes IAmAScopeProvider's registration model as a
+plain unkeyed AddSingleton, so a keyed descriptor for either is never effective. FR-22.3's candidate
+scan reads keyed and unkeyed artefacts alike, and its per-parameter read gains the
+[FromKeyedServices] clause. That clause is load-bearing rather than a refinement, and the probe is
+the reason it is stated: a Singleton artefact taking [FromKeyedServices("k")] on a service type that
+ALSO carries an unkeyed Scoped registration builds cleanly, so a rule reading the unkeyed descriptor
+would report a captive dependency the container never creates.
+
+CALL 8 - the seventh diagnostic, and why the message was not weakened instead. FR-22.4's message row
+requires "the affinity the override carries", and ADR 0074 declares the delegate-registered path
+reachable while stating that such an override cannot be compared and therefore cannot be reported.
+The reviewer's fix was to make the value optional in FR-22.4's message. The owner chose (c) REPORT
+THE REGISTRATION SHAPE ITSELF. FR-17 therefore gains a SECOND rule: where the collection holds an
+affinity-carrying descriptor supplying no ImplementationInstance, validation reports a Warning naming
+the registration shape - which is readable, unlike the value - and the remedy of registering a
+constructed instance, an obligation ADR 0076 already places on every registrar. It is a Warning and
+not an Error because nothing about such a host is broken: the override still takes effect, and what
+is lost is the ability of FR-17's repeat rule to see it. FR-22.4's message row is unchanged.
+
+WHERE THE NEW RULE LIVES, AND WHY IT IS NOT A FIFTH FR-22 RULE. This was a design detail for the
+landing session rather than an owner call. It sits under FR-17 because its subject is the override
+descriptor family FR-17 already reads, the residue it closes is FR-17's own, and the remedy it names
+is an obligation on the registrar - which is FR-17's territory, FR-17 being the requirement that
+demands every call's descriptor stay visible to validation. FR-22 is about unworkable lifetime and
+opt-in CONFIGURATIONS; this rule is about a registration SHAPE. Siting it here also leaves FR-22's
+"Four rules" lead correct and untouched.
+
+SEVEN RULES, SIX CONFIGURATIONS. The count of validation messages moves from six to seven and the
+severity split from three errors and three warnings to three errors and FOUR warnings - in FR-25.10,
+AC-25, AC-43 and AC-44. The count of silent CONFIGURATIONS stays at six, and that is not an
+oversight: the first six rules each describe a host whose behaviour departs from its configuration,
+while the seventh describes a host that behaves exactly as configured and has merely made one of the
+other rules blind. ADR 0074 states the distinction rather than absorbing it.
+
+AN ACCEPTED SILENCE, DECIDED BY THE OWNER RATHER THAN ASSUMED. Widening to keyed descriptors makes a
+keyed IBrighterOptions registration detectable for the first time, so whether to report it was raised
+as a call of its own. The answer was NO NEW RULE: such a host works, ADR 0076 names the keyed
+registration as a supported multi-tenant shape, and a warning would fire against hosts that are
+behaving as intended. ADR 0074's Failure modes table carries it as an enumerated silence.
+
+Counts move from 52 ACs to 53 (AC-53) and from 123 normative bullets to 124 (FR-17 gains its second
+rule). No FR or NFR is added. One new codebase claim, probed and recorded above.
+
+
+Revision 22 was made during the design phase and lands round-6 decisions 10 and 14 together with
+their ADR halves in one commit - the first requirements change made under the atomic process above.
+It is NOT new scope: it amends one existing criterion, AC-24, in the two ways the design review
+established were owed, and adds no rule, no constraint and no criterion.
+
+DECISION 10 - AC-24's last clause counted rather than enumerated. It asked for a migration "for each
+of the six FACTORY interfaces whose signature changed", and under this design no set of six answers
+to that description: four of NFR-1's six change by their own signature (the two mapper factories and
+the two transformer factories) and two through the shared base that ADR 0071 puts
+CreatePipelineScope() on, while IAmAHandlerFactory and IAmALifetime break and are not on NFR-1's list
+at all. The clause now names the eight interfaces outright - NFR-1's six together with
+IAmAHandlerFactory and IAmALifetime. The two mapper registries stay outside it, exactly as before,
+and are covered by extension of NFR-1(b) and NFR-1(c) on identical reasoning.
+
+THE OWNER ACCEPTED THE BREAK RATHER THAN NARROWING IT, and that ruling is what replaces the ADRs'
+arithmetic about whether the numeral had a referent: "As there is only one published implementer (MS
+DI), we consider this an acceptable break for anyone who has their own DI implementation." The only
+published implementations of these interfaces are the container-backed ones Brighter ships over
+Microsoft's DI, so an application that hand-rolled its own takes a source and binary break on
+netstandard2.0 and follows the migration the release-note entry states.
+
+DECISION 14 - AC-24's four clauses reached four of the thirteen items in the single release_notes.md
+entry, and its verifier ("one line per Then clause above") inherited the same four-clause reach, so
+nine breaking changes could ship with nothing checking that they were written down. AC-24 gains a
+general clause requiring that entry to contain one item per breaking change the work introduces, and
+its verifier takes one line per item in that entry rather than one line for the clause. The other
+three ACs sharing that verifier line - AC-25, AC-36 and AC-43 - keep one line per Then clause, and
+so do AC-24's own first three clauses, which also govern the guidance page and would otherwise lose
+their checks. Rejected: a new criterion enumerating one Then per break. The entry has grown 4 -> 7
+-> 9 -> 10 -> 11 -> 12 -> 13 across six review rounds and the readability programme, so a hard-coded
+count moves that drift into this document, where it costs more to correct.
+
+No FR, NFR or constraint changes; no other AC changes. Counts unchanged at 27/10/52/123 - an AC
+gaining a Then clause does not move the normative-bullet count, which counts FR and NFR clauses.
+
+Why it needs no review of its own: beyond the process change above, it adds nothing. Both amendments
+were decided in design review round 6 (decisions 10 and 14, ADR halves landed at 0932ed558 and
+a8f8fe518 and deliberately left future-tense until this commit), and this revision states in the
+criterion what those decisions settled.
+
+
+Revision 21 was made during the design phase, in response to item S6 of the owner's manual
+readability review of ADRs 0070-0076. It is NEW SCOPE, not alignment, and under the process
+recorded for revision 20 it is carried to the end-of-phase true-up rather than reviewed on its own.
+
+S6 asked whether Brighter's registrations - many of them factory functions - still resolve from an
+ambient scope borrowed from a non-Brighter parent. THEY DO, and ADR 0072 already argued why: every
+registration is Singleton or Transient, Singletons are built in the root scope whatever scope
+asked, and the artefact types are Transient descriptors in the same IServiceCollection the borrowed
+scope's container was built from. That half needed no change.
+
+THE GAP THE QUESTION EXPOSED IS A DIFFERENT ONE, and the owner judged it a real design gap rather
+than a documentation miss: reports of bugs around the flow of a transaction to an Outbox may have
+this as their cause (NOT VERIFIED - the mechanism below is verified; no specific report was
+checked). Every statement in the specification about joining a caller's transaction was NEGATIVE -
+C-4 and OOS-10, both about Publish subscribers - and the positive case a Send handler depends on
+was stated nowhere. Nor was the mechanism that defeats it today: a relational transaction provider
+wraps a DbContext taken by constructor injection, so which transaction it hands out is decided by
+the scope that resolved it, and every non-Singleton handler resolution is made from a scope
+Brighter created rather than the caller's. A handler that deposits to the outbox therefore writes
+on a different connection inside a different transaction from the caller's own writes, and NOTHING
+REPORTS IT - the deposit succeeds and only atomicity is lost.
+
+What it added:
+  - FR-16(c), the normative statement that a Scoped dependency the caller has already resolved is
+    the same instance a handler reached by Send resolves. It is clause (b) extended across the call
+    boundary, not a second mechanism, and is stated separately because it is the clause
+    applications depend on and the only one whose failure is silent.
+  - C-21, recording the mechanism, the silence, and the three ways the fix is bounded: the outbox
+    mediator is a Singleton and never borrows; the container-side transaction-provider resolutions
+    are type discovery only; and DepositPost without an explicit provider still passes null, so
+    adoption does not make an outbox write transactional on its own.
+  - AC-52, which measures atomicity through a ROLLBACK rather than a commit, and carries an
+    AlwaysNew negative control asserting both today's behaviour and its SILENCE - so that an
+    implementation cannot satisfy the criterion by reporting the case instead of fixing it.
+
+No existing FR, NFR, constraint or criterion changes. C-4 and OOS-10 were checked against the new
+clause and are correctly scoped to Publish subscribers, which FR-8 suppresses and which this leaves
+untouched. Counts move from 51 ACs to 52 and from 122 normative bullets to 123 (FR-16 gains clause
+(c)); FRs and NFRs are unchanged at 27/10.
+
+Why it owes a review, and why not yet: it adds a normative clause and a criterion that did not
+exist, so it is more than alignment. Under the process change recorded at revision 20 it is carried
+to the end-of-phase true-up.
+
+
+Revision 20 was made during the design phase, in response to round 5 of the design review, and
+carries design decision 4 of that round. It is NEW SCOPE, not alignment, and so it owes a
+requirements review - but NOT one of its own, and NOT now.
+
+THE OWNER CHANGED THE PROCESS AT THIS POINT, and the change governs every later revision too:
+requirements changes arising from design-review findings are ACCUMULATED and reviewed ONCE, in a
+single true-up at the end of the design phase, rather than each triggering its own round. The
+reason is that reviewing per change means reviewing text that is still moving - the design round
+that produced this change is not finished, and more requirements changes are likely - so a
+per-change round responds to flux and would be re-run against different text a few commits later.
+The standing alignment-vs-more-than-alignment rule is unchanged in substance; what changes is WHEN
+the round for a more-than-alignment change is run. PROMPT.md section 18.8 is the running ledger of
+what the true-up must cover.
+
+What it added: AC-51, the acceptance criterion for FR-13's handler-release half. ADR 0071 makes a
+handler-factory Release that throws logged at Error and swallowed rather than propagating - the one
+behavioural change that ADR calls observable to an application - and round 5 found the ADR citing
+AC-7 as its regression guard. AC-7's Given has a throwing HANDLER, not a throwing Release; it
+guards FR-6's release-exactly-once rule and says nothing about a failing teardown. So the rule had
+no criterion at all, and the mis-citation concealed the gap rather than declaring it.
+
+AC-51 has four clauses: the release failure is logged at Error and the caller's normal result is
+unchanged; a handler that throws has ITS OWN exception reach the caller rather than the release
+failure or an AggregateException composing the two (the clause that fails the natural wrong
+implementation, since the builder is disposed under `using var` and a rethrowing teardown replaces
+the handler's exception - FR-5 and FR-6 forbid it); a Release throwing on the first of three
+tracked handlers still releases the other two and still disposes the scope, with exactly one Error
+record; and the failure is not latched.
+
+AC-51 is the sibling of AC-33, which covers the same requirement's scope-disposal half. No FR, NFR
+or constraint changes, and no existing AC changes. Counts move from 50 ACs to 51; FRs, NFRs and
+normative bullets are unchanged at 27/10/122.
+
+Why it owes a review, and why not yet: the standing rule is that alignment needs none and an
+amendment that is more than alignment gets one. This adds a criterion that did not exist and
+imposes new obligations on the implementation, so it is more than alignment and owes one. Under
+the process change above it is carried to the end-of-phase true-up instead of being reviewed on its
+own. Round-2's revision 16 - which added FR-22.4 and AC-50 and had its own round - remains the
+precedent for the RULE; the change is only to when the round runs.
+
+Approved: revision 19, 2026-08-06 (27 FRs / 10 NFRs / 50 ACs / 122 normative bullets).
+
+Revision 19 was made during the design phase, in response to round 5 of the design review, and
+carries design decision 2 of that round. It is ALIGNMENT, not new scope, and was approved without
+an independent requirements review round under the requirement owner's standing rule.
+
+What it changed: FR-9(ii) named TWO ways of leaving the caller suppressed after Publish returns -
+establishing suppression around the loop in the caller's own flow, OR setting it inside a
+Parallel.ForEach body and never restoring it - and said AC-39's final clauses detect both. The
+round-5 reviewer of ADR 0075 built and ran a thirteen-case .NET probe. The second disjunct is
+mechanically FALSE: the runtime captures and restores ExecutionContext per REPLICA, including the
+replica Parallel.ForEach inlines on the calling thread, so a body-level write never reaches the
+caller. The probe measured a run in which the calling thread executed SEVEN of the bodies and the
+caller still read IsSuppressed = False.
+
+FR-9's rule, both brackets, their placement, their restore-on-every-exit-path obligation, AC-39 and
+AC-12 are ALL UNCHANGED, and no AC changes at all. Only the false disjunct is removed: FR-9(ii) now
+states that the caller-flow failure mode is the bracket's PLACEMENT, that a body-level write is
+confined to the worker, and that it therefore shows up only as FR-9(i)'s unobservable cross-body
+leak. The Design notes paragraph carried the same false claim in its fourth failure mode and is
+corrected to match - that mode is now stated as not detectable at all, which is what FR-9(i)
+already implied and what the probe establishes. FR-9(ii)'s reference to AC-39's clauses is also
+spelled as "leak clauses", matching AC-39's own wording; AC-39's actual final clause is the
+no-ordering, no-overlap constraint.
+
+Why no review round: the standing rule is that alignment needs none and an amendment that is more
+than alignment gets one. This adds no rule, no AC and no scope; it removes an empirically false
+claim about the .NET runtime and leaves every normative obligation in place. Counts unchanged at
+27/10/50/122. The probe output is recorded in review-design.md (reviewer 0075, finding 1, score 70,
+and the Verification log's probe section).
+
+Revision 18 (2026-08-04, round-4 decision 3) corrected FR-23's empirically false trigger - the
+built-in HttpContextAccessor clears its shared AsyncLocal holder at end of request, so the
+deferred-work case is FR-24.2 and not FR-23 - and re-sited FR-23's example and AC-29's Given onto a
+provider that CAPTURES a resolution source. It too was alignment and had no review round. It
+superseded the revision-17 approval, which this file recorded. Revisions 16 and 17 were made
+in response to round 2 of the design review: revision 16 carried the AddBrighterAspNetCoreScopes ->
+AddBrighterRequestScope rename (alignment) and FR-22.4 with its new AC-50 (new scope, and so it had
+its own review round - 11 findings, 9 at or above threshold, none Critical); revision 17 closed
+those nine plus two below-threshold items. That round's owner decision - FR-22.4 covers BOTH
+registration orderings, so a TryAddSingleton-time-only detector is not sufficient - still stands and
+is carried in FR-22.4 and in the design's sixth scope-configuration rule.

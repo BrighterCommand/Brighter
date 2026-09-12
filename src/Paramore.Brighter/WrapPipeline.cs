@@ -50,13 +50,15 @@ namespace Paramore.Brighter
         /// <param name="transformLeases">The leases over the transforms applied after the message mapper</param>
         /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
         /// <param name="mapperRegistry">The registry the message mapper came from, required to release it when the pipeline is disposed</param>
+        /// <param name="scope">The pipeline's own DI scope, if one was offered when the pipeline was built</param>
         public WrapPipeline(
             Lease<IAmAMessageMapper<TRequest>> messageMapperLease,
             IAmAMessageTransformerFactory? messageTransformerFactory,
             IEnumerable<Lease<IAmAMessageTransform>> transformLeases,
             InstrumentationOptions instrumentationOptions,
-            IAmAMessageMapperRegistry? mapperRegistry = null
-            ) : base(messageMapperLease, transformLeases, mapperRegistry)
+            IAmAMessageMapperRegistry? mapperRegistry = null,
+            IAmAScope? scope = null
+            ) : base(messageMapperLease, transformLeases, mapperRegistry, scope)
         {
             _instrumentationOptions = instrumentationOptions;
             if (messageTransformerFactory != null)

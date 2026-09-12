@@ -59,7 +59,9 @@ public class TransformPipelinePartialWrapBuildReleaseTests
         public List<IAmAMessageTransform> Created { get; } = new();
         public List<IAmAMessageTransform> Released { get; } = new();
 
-        public Lease<IAmAMessageTransform>? Create(Type transformerType)
+        public IAmAScope? CreatePipelineScope() => null;
+
+        public Lease<IAmAMessageTransform>? Create(Type transformerType, IAmAScope? scope = null)
         {
             //the factory can satisfy the first transform but not the second
             if (transformerType == typeof(MyParameterizedTransformAsync))
