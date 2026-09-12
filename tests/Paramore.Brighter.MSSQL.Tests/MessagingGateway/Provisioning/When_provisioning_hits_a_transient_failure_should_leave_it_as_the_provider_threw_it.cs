@@ -23,6 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Net;
+using System.Net.Sockets;
+using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Xunit;
@@ -97,6 +100,77 @@ public class MsSqlQueueProvisioningTransientTests : IDisposable
         finally
         {
             DropView(_queueTable);
+        }
+    }
+
+    [Fact]
+    public void When_the_connect_itself_is_transient_should_leave_it_as_the_provider_threw_it()
+    {
+        //Arrange -- the same rule on the other path, and this is the path that matters most: of the
+        //codes in the transient set, the majority are raised during login and can never come out of
+        //a command. A rule applied only to the DDL would exempt them in the one place they cannot
+        //appear and nowhere they can.
+        //
+        //A listener that accepts the TCP connection and then answers nothing: the pre-login
+        //handshake never completes and SqlClient gives up on its connect timeout. Measured,
+        //SqlException -2, "Connection Timeout Expired ... while attempting to consume the pre-login
+        //handshake acknowledgement". Deterministic, in-process, and nothing to install.
+        using var silent = new TcpListener(IPAddress.Loopback, 0);
+        silent.Start();
+        var port = ((IPEndPoint)silent.LocalEndpoint).Port;
+        _ = AcceptAndIgnore(silent);
+
+        var configuration = new RelationalDatabaseConfiguration(
+            $"Server=127.0.0.1,{port};Database=BrighterTests;User Id=sa;Password=Password123!;" +
+            "Connect Timeout=2;Encrypt=false",
+            queueStoreTable: _queueTable);
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
+
+        //Act
+        var exception = Record.Exception(() => channelFactory.CreateSyncChannel(Subscription()));
+
+        //Assert
+        var sqlException = Assert.IsType<SqlException>(exception);
+        Assert.Equal(-2, sqlException.Number);
+    }
+
+    [Fact]
+    public void When_the_connect_fails_for_a_reason_that_will_not_pass_should_wrap_it()
+    {
+        //Arrange -- the control for the fact above, and the reason 4060, 40615 and 11001 are
+        //deliberately absent from the transient set: a server that is not there at all is the
+        //commonest first-run mistake, and the message naming the queue table is worth most exactly
+        //then. Measured, it arrives as number 0 rather than as a timeout, so it stays wrapped.
+        var configuration = new RelationalDatabaseConfiguration(
+            MsSqlQueueProvisioningAssumeTests.UnreachableConnectionString, queueStoreTable: _queueTable);
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
+
+        //Act
+        var exception = Record.Exception(() => channelFactory.CreateSyncChannel(Subscription()));
+
+        //Assert
+        var configurationException = Assert.IsType<ConfigurationException>(exception);
+        Assert.Contains(_queueTable, configurationException.Message);
+    }
+
+    private static async Task AcceptAndIgnore(TcpListener listener)
+    {
+        try
+        {
+            while (true)
+            {
+                //Held open rather than disposed: closing it would give the client a reset, which is
+                //a different error from the silence this test is built on.
+                _ = await listener.AcceptTcpClientAsync();
+            }
+        }
+        catch (ObjectDisposedException)
+        {
+            //The test finished and disposed the listener.
+        }
+        catch (SocketException)
+        {
+            //Likewise.
         }
     }
 
