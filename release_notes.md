@@ -143,6 +143,59 @@ A relative `dataschema` stored in a relational Outbox is also now read back corr
 `RelationDatabaseOutbox` read it with `UriKind.Absolute` and silently dropped it to `null`,
 inconsistent with the `Source` reader in the same class and with every other Outbox implementation.
 
+### MSSQL transport provisions its queue table (#4343)
+
+`OnMissingChannel` on an `MsSqlSubscription` or a `Publication` is now honoured by the MSSQL
+messaging gateway, as it already was by PostgreSQL. It is read as a channel is opened and as a
+producer is built:
+
+| `MakeChannels` | Behaviour |
+|---|---|
+| `Create` (the default) | the queue table and its topic index are created if absent, idempotently and safely when several instances start at once |
+| `Validate` | the table is checked and a missing one throws `ConfigurationException` at startup, rather than failing on the first send |
+| `Assume` | nothing happens and no connection is opened |
+
+Before this, the setting was accepted and never read: `MsSqlMessageProducerFactory` and
+`ChannelFactory` provisioned nothing, so every MSSQL transport user ran the DDL themselves. That is
+why `MsSqlQueueBuilder` is public, and it remains public and unchanged.
+
+The queue table is resolved through `SCHEMA_NAME()` — the schema the login defaults to — and not
+through `RelationalDatabaseConfiguration.SchemaName`. `MsSqlMessageQueue` emits an unqualified
+`[{QueueStoreTable}]` in every statement it issues, so it reads through the default schema too;
+creating the table anywhere else would put it where the gateway never looks. `SchemaName` continues
+to apply to the Outbox and the Inbox, which do qualify their SQL.
+
+#### Behaviour change: `Create` is the default, so an existing application will now try to create its queue table
+
+**If your queue table is provisioned by a migration, a DBA, or anything other than Brighter, set
+`MakeChannels` to `Validate` or `Assume`.** Otherwise an application that has run happily for years
+will, on upgrade, run an existence probe at startup where nothing ran before — and where the
+application's login has DML rights but no DDL rights, SQL Server answers error 262,
+`CREATE TABLE permission denied in database`, out of channel open or producer construction.
+
+That case is now raised as a `ConfigurationException` naming the queue table, carrying the provider's
+own message, and naming the setting that avoids it. A login with no DDL rights can still use
+`Validate`, because checking is one `SELECT` over `sys.tables`.
+
+Errors that will pass on their own — command and lock timeouts, the transport-level family, and the
+Azure SQL unavailability and throttling codes — are deliberately left as the provider threw them, on
+both the connect and the DDL, because telling their author to reconfigure `MakeChannels` would send
+them to fix the wrong thing, and because typing a failover window as a `ConfigurationException`
+defeats any policy that retries on `SqlException.Number`.
+
+A wrong server, a malformed connection string and a misspelled database name are *not* in that set
+and stay wrapped: those are the first-run mistakes the message exists for.
+
+#### Under `Create`, the queue table name is bounded at 119 characters
+
+SQL Server's identifier limit is 128, but the topic index is named after the table —
+`IX_<table>_Topic` — so a longer name creates the table and then fails on the index with *"The
+identifier that starts with … is too long"*, leaving a queue table that can never gain its index.
+Provisioning refuses such a name up front with a message that explains the arithmetic.
+
+`Validate` builds no identifier and keeps the full 128, so a longer table that already exists can
+still be used.
+
 ## 10.7.0
 
 ### Azure Service Bus: dead-letter reason and description (#4196)

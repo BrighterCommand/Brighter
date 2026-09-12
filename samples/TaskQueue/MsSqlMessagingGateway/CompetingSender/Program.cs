@@ -30,8 +30,6 @@ var builder = Host.CreateApplicationBuilder(args);
 var connectionString = SampleDatabase.ConnectionString(
     builder.Configuration.GetConnectionString("Brighter"));
 
-QueueTableProvisioner.EnsureQueueTable(connectionString, SampleDatabase.QueueTable);
-
 var messagingConfiguration = new RelationalDatabaseConfiguration(
     connectionString,
     queueStoreTable: SampleDatabase.QueueTable);
