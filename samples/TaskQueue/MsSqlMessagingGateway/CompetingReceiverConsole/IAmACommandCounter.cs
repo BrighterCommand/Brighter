@@ -1,4 +1,4 @@
-﻿namespace Events
+﻿namespace CompetingReceiverConsole
 {
     public interface IAmACommandCounter
     {

@@ -1,5 +1,3 @@
-﻿using Events;
-
 namespace CompetingReceiverConsole
 {
     public class CommandCounter : IAmACommandCounter

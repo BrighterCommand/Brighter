@@ -59,58 +59,110 @@ You can use the following example as a reference for SQL Server:
 
 You specify the connection string to the database, and the name of the table that will hold the data.
 
-#### Configure the command processor with a message producer
+#### Configure a producer (DI)
 
-The following is an example of how to specify the configuration for the SQL Server messaging gateway to the command processor.
+This example configures the SQL Server messaging gateway for sending. It never touches
+`CommandProcessorBuilder` — the producer side is registered through dependency injection, so it
+needs the `Paramore.Brighter.Extensions.DependencyInjection` package alongside this one.
 
 ```csharp
-        var messagingConfiguration = new MsSqlMessagingGatewayConfiguration(@"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", "QueueData");
-        var producer = new MsSqlMessageProducer(messagingConfiguration);
+        var serviceCollection = new ServiceCollection();
 
-        var builder = CommandProcessorBuilder.With()
-            .Handlers(new HandlerConfiguration())
-            .DefaultPolicy()
-            .TaskQueues(new MessagingConfiguration(outbox, producer, messageMapperRegistry))
-            .RequestContextFactory(new InMemoryRequestContextFactory());
+        serviceCollection.AddBrighter()
+            .AddProducers(configure =>
+            {
+                configure.ProducerRegistry = new MsSqlProducerRegistryFactory(
+                        new RelationalDatabaseConfiguration(
+                            @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;",
+                            queueStoreTable: "QueueData"),
+                        new[]
+                        {
+                            new Publication
+                            {
+                                Topic = new RoutingKey("greeting.event"),
+                                RequestType = typeof(GreetingEvent)
+                            }
+                        })
+                    .Create();
+            })
+            .AutoFromAssemblies();
 
-        var commandProcessor = builder.Build();
+        var commandProcessor = serviceCollection.BuildServiceProvider()
+            .GetRequiredService<IAmACommandProcessor>();
+
+        commandProcessor.Post(new GreetingEvent("Ian"));
 ```
+
+Two using directives the block does not print: `Microsoft.Extensions.DependencyInjection` for
+`ServiceCollection`, `BuildServiceProvider` and `GetRequiredService`, and
+`Paramore.Brighter.Extensions.DependencyInjection` for `AddBrighter`, `AddProducers` and
+`AutoFromAssemblies`.
+
+`MsSqlProducerRegistryFactory` builds the registry `AddProducers` takes, from the connection
+string, the queue table, and a `Publication` per topic you send to. **Give every publication a
+`RequestType`.** It is what Brighter matches a request against when you `Post` it, so a
+publication without one produces `ConfigurationException: No producer found for request type`.
+(`RequestContext.Destination` and a `[PublicationTopic]` attribute are both consulted ahead of
+it, if you use either.)
+
+A runnable version of this is `samples/TaskQueue/MsSqlMessagingGateway/GreetingsSender`, and its
+receiver is the counterpart to the dispatcher below. The consumer side that follows is wired by
+hand rather than through DI, so that the dispatcher and its subscriptions are visible.
 
 #### Configure the dispatcher with a message consumer factory
 
-The following is an example of how to specify the configuration for the SQL Server messaging gateway to the message dispatcher.
+The following is an example of how to specify the configuration for the SQL Server messaging gateway to the message dispatcher. It is *abridged* — `subscriberRegistry`, `handlerFactory` and `messageMapperRegistry` are the same collaborators the producer example above describes, and the block is illustrative rather than copy-pasteable.
 
 ```csharp
         ...
 
         //create the gateway
         var messagingConfiguration =
-            new MsSqlMessagingGatewayConfiguration(
-                @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", "QueueData");
+            new RelationalDatabaseConfiguration(
+                @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;",
+                queueStoreTable: "QueueData");
         var messageConsumerFactory = new MsSqlMessageConsumerFactory(messagingConfiguration);
 
-        var dispatcher = DispatchBuilder.With()
-            .CommandProcessor(CommandProcessorBuilder.With()
-                .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
-                .Policies(policyRegistry)
-                .NoTaskQueues()
-                .RequestContextFactory(new InMemoryRequestContextFactory())
-                .Build())
-            .MessageMappers(messageMapperRegistry)
-            .DefaultChannelFactory(new MsSqlInputChannelFactory(messageConsumerFactory))
-            .Connections(new Connection[]
+        var commandProcessor = CommandProcessorBuilder.StartNew()
+            .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
+            .DefaultResilience()
+            .NoExternalBus()
+            .NoInstrumentation()
+            .RequestContextFactory(new InMemoryRequestContextFactory())
+            .RequestSchedulerFactory(new InMemorySchedulerFactory())
+            .Build();
+
+        var dispatcher = DispatchBuilder.StartNew()
+            .CommandProcessor(commandProcessor, new InMemoryRequestContextFactory())
+            .MessageMappers(messageMapperRegistry, null, null, null)
+            // ChannelFactory here is Paramore.Brighter.MessagingGateway.MsSql.ChannelFactory;
+            // every transport ships a type of that name, so mind the using directive
+            .ChannelFactory(new ChannelFactory(messageConsumerFactory))
+            .Subscriptions(new Subscription[]
             {
-                new Connection<GreetingEvent>(
-                    new ConnectionName("paramore.example.greeting"),
+                new MsSqlSubscription<GreetingEvent>(
+                    new SubscriptionName("paramore.example.greeting"),
                     new ChannelName("greeting.event"),
                     new RoutingKey("greeting.event"),
-                    timeoutInMilliseconds: 200)
-            }).Build();
+                    // Reactor, because MessageMappers above supplies no async registry.
+                    // The default is Proactor, which requires one and throws without it
+                    messagePumpType: MessagePumpType.Reactor,
+                    timeOut: TimeSpan.FromMilliseconds(200))
+            })
+            .NoInstrumentation()
+            .Build();
 
         dispatcher.Receive();
 
         ...
 ```
+
+To wire the same consumer through DI instead, call `AddConsumers` and set the two things
+`DispatchBuilder` takes above: `options.Subscriptions` to the same `MsSqlSubscription<T>` list, and
+`options.DefaultChannelFactory` to the same `ChannelFactory`. `AddConsumers` registers the
+dispatcher but does not start it, so register `ServiceActivatorHostedService` alongside it —
+`services.AddHostedService<ServiceActivatorHostedService>()`, from
+`Paramore.Brighter.ServiceActivator.Extensions.Hosting`.
 
 ## Queuing details
 
@@ -140,13 +192,12 @@ or newer.
 
 ## Examples
 
-See the samples\MsSqlMessagingGatewaySamples folders for examples on how to configure and use the SQL Server based messaging gateway.
+See the `samples/TaskQueue/MsSqlMessagingGateway` folder for examples on how to configure and use the SQL Server based messaging gateway.
 
 #### Simple post and receive
 
 - A console mode program to post a Greeting event (.NET Core)
 - A console mode program to receive and process Greeting events (.NET Core)
-- A Windows Service to receive and process Greeting events (.NET Framework)
 
 #### Competing consumers
 
