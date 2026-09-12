@@ -202,9 +202,27 @@ non-exclusive queues.
 
 #### Breaking: an existing transient queue will fail to redeclare
 
-RabbitMQ rejects a `QueueDeclare` whose durability differs from the queue that already exists. **If you are
-on RMQ.Async and your queues were created with the old default, upgrading will fail** with a
-`PRECONDITION_FAILED` channel error until you either keep the old behaviour explicitly:
+**Why this default had to move at all.** This is not Brighter changing its mind about a sensible default -
+it is **RabbitMQ changing what it supports**. Transient non-exclusive queues were a supported queue shape
+for the whole life of the 3.x line; 4.3 deprecates them and refuses to create them, and the deprecation
+notice is explicit that they will be removed in a future major version "regardless of the configuration".
+A default that a current broker will not accept is not a default we can keep. The cost of moving it is the
+migration below, and there is no version of this change that avoids that cost - a broker cannot hold one
+queue under two durabilities.
+
+**What goes wrong.** RabbitMQ rejects a `QueueDeclare` whose arguments differ from the queue that already
+exists, and durability is one of those arguments. **If you are on RMQ.Async and your queues were created
+under the old default, upgrading will fail** when Brighter reopens the channel:
+
+```
+PRECONDITION_FAILED - inequivalent arg 'durable' for queue 'my.queue' in vhost '/':
+received 'true' but current is 'false'
+```
+
+Brighter surfaces that as a `ChannelFailureException`. It happens on the first receive, not at startup, so
+it can look like a runtime fault rather than an upgrade step.
+
+**Two ways out.** Either keep the old behaviour explicitly:
 
 ```csharp
 new RmqSubscription<MyEvent>(
@@ -214,11 +232,23 @@ new RmqSubscription<MyEvent>(
     isDurable: false)          // opt back in to a transient queue
 ```
 
-or delete the existing queue and let Brighter recreate it as durable. A durable queue survives a broker
-restart, so this also changes what happens to queued messages across a restart - which is usually the
-behaviour you wanted.
+- which keeps you working on 3.x and on a 4.3 broker explicitly configured to permit the deprecated
+feature, but leaves you on a queue shape RabbitMQ intends to remove -
 
-Note the dead-letter queue is declared with the same durability as its subscription, so both move together.
+or **drain and delete the existing queue** and let Brighter recreate it as durable. Deleting a queue
+discards any messages still in it, so drain it first if that matters. This is the option that leaves you
+on a supported queue shape.
+
+**What changes once the queue is durable.** A durable queue survives a broker restart, so messages that
+would previously have been discarded with the queue now outlive it. For most deployments that is the
+behaviour you wanted; if you were relying on a restart to clear a backlog, you no longer get that.
+
+Note the dead-letter queue is declared with the same durability as its subscription, so both move together
+and a partially-migrated pair is not possible.
+
+We hit this inside Brighter's own test suite while making the change: two tests pre-created their queue as
+transient and then opened a subscription that now defaults to durable, and failed with exactly the error
+above. If it catches the suite that introduced the change, it will catch upgrades.
 
 ### MSSQL transport provisions its queue table (#4343)
 
