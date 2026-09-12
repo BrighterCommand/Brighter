@@ -381,17 +381,17 @@ redelivered for ever would pass every other DLQ behaviour in this suite.
   configurations, so it lands on the loosened identity and delivery-count bounds described below. It
   needed no broker the async pair did not already need: the conformance suite never asks for the
   delayed-message plugin, so a stock `rabbitmq:*-management` image serves all three RMQ cells.
-- **The other 15 remain `Deferred`, and two different things hold them.** Nine are blocked on a
+- **The other 15 remain `Deferred`, and two different things hold them.** **Ten** are blocked on a
   product defect rather than on a broker run: the eight `AWS` and `AWS.V4` cells on
-  [#4341](https://github.com/BrighterCommand/Brighter/issues/4341), and `MQTT` on
-  [#4351](https://github.com/BrighterCommand/Brighter/issues/4351). Re-running those changes nothing
+  [#4341](https://github.com/BrighterCommand/Brighter/issues/4341), `MQTT` on
+  [#4351](https://github.com/BrighterCommand/Brighter/issues/4351), and `RocketMQ` on
+  [#4353](https://github.com/BrighterCommand/Brighter/issues/4353). Re-running those changes nothing
   until the defect is fixed. Of the remaining six, **`GCP` ×4 and `AzureServiceBus` cannot be run
   against local infrastructure at all** — GCP's emulator implements neither of the two APIs the DLQ
   path needs (see below), and ASB has no emulator — so `gcp-ci` and `azure-ci`, which run against real
-  cloud projects, are the only evidence that can move those five. **`RocketMQ` was then run locally
-  and is blocked on a transport defect of its own** (see below), which leaves **no** FR-23 cell that a
-  broker run alone can still move: all 15 are now either blocked on a product defect (10) or reachable
-  only through CI against real cloud infrastructure (5).
+  cloud projects, are the only evidence that can move those five. So **no** FR-23 cell is still
+  reachable by a local broker run: all 15 are either blocked on a product defect (10) or reachable only
+  through CI against real cloud infrastructure (5).
 
 ### `MQTT` was attempted and stays `Deferred` — the Proactor pump deadlocks on the first requeue
 
@@ -472,7 +472,8 @@ budget cannot run down. What would dead-letter the message is the subscription's
 requeue has exactly this shape. It is recorded here as a source reading, not a measurement: the
 emulator blocker above stops the run that would confirm it.
 
-⭐ **A product observation worth separating from the cell.** `UpdateIAmRoleForDeadLetterAsync` makes
+⭐ **A product observation worth separating from the cell, filed as
+[#4354](https://github.com/BrighterCommand/Brighter/issues/4354).** `UpdateIAmRoleForDeadLetterAsync` makes
 channel creation *hard-fail* when the project's IAM cannot be read or written. That means an
 application creating a DLQ-backed channel must hold `resourcemanager.projects.get` and
 `pubsub.topics.{get,set}IamPolicy`, which an application service account frequently will not — the
@@ -482,7 +483,8 @@ make the emulator path usable.
 
 ### `RocketMQ` was attempted and stays `Deferred` — `Requeue` is a no-op, so the budget never runs down
 
-Measured 2026-09-12 against `docker-compose-rocketmq.yaml`. Both variants fail the same way: the
+Measured 2026-09-12 against `docker-compose-rocketmq.yaml`, and tracked as
+[#4353](https://github.com/BrighterCommand/Brighter/issues/4353). Both variants fail the same way: the
 dead-letter poll returns `MT_NONE` for the whole window. The message is never dead-lettered.
 
 **It is not a timing problem, and that was measured rather than argued.** RocketMQ redelivers only
@@ -515,24 +517,42 @@ FR-23 tests reach the DLQ and fail on the *count*. RocketMQ has no such policy w
 is never dead-lettered by anyone. **The common requirement this column keeps finding: a transport
 whose requeue does not persist the delivery count cannot exhaust the pump's budget.**
 
-### ⚠️ Running `RocketMQ` locally needs four infrastructure facts the compose file does not supply
+### ⚠️ Running `RocketMQ` locally — what the compose file now handles, and what it cannot
 
-Recording these because the FR-23 attempt cost four failed runs before a single one measured the
-behaviour, and `rocketmq-ci` has been commented out since #3696, so local is the only place this runs.
+The FR-23 attempt cost **four failed runs** before a single one measured the behaviour, and
+`rocketmq-ci` has been commented out since #3696, so local is the only place this ever runs. Two of
+the causes are now fixed in `docker-compose-rocketmq.yaml`; three remain facts about the broker.
 
-1. **`docker-compose-rocketmq.yaml`'s `create-topic` service silently creates nothing.** It invokes
+**Fixed in the compose file** (and verified end to end — the stack was torn down with `down -v`,
+rebuilt, and the FR-23 failure reproduced on infrastructure the compose file alone created):
+
+1. **`create-topic` used to silently create nothing.** It invoked
    `/home/rocketmq/rocketmq-5.4.0/bin/mqadmin`, but `apache/rocketmq:latest` now ships **5.5.0**, so
-   every line fails with `sh: 9: .../rocketmq-5.4.0/bin/mqadmin: not found`. The service still exits
-   and nothing downstream checks it.
-2. **RocketMQ 5.x does not auto-create topics through the gRPC proxy** — a producer on an unknown
-   topic fails with `No topic route info in name server`. Combined with (1), a freshly recreated
-   stack has *no* topics at all.
-3. **The conformance topics are not in that list even when it runs.** FR-23 needs `gen_r_exhaust`,
-   `gen_p_exhaust` and their `_DLQ` / `_Invalid` companions, none of which the compose file mentions;
-   they have to be created with `mqadmin updateTopic`.
-4. **`rmqproxy` caches topic routes at startup** — a topic created after the proxy started stays
-   invisible to clients until the proxy is restarted. It also needs port **8081**, which the Kafka
-   suite's `schema-registry` container also binds, so the two cannot be up at once.
+   every line failed with `not found` — and nothing checks the service's exit. The path is now
+   resolved at run time (`ls -d /home/rocketmq/rocketmq-*/bin/mqadmin`), so it survives the next
+   version bump.
+2. **The conformance topics were absent from its list.** `gen_r_exhaust`, `gen_p_exhaust` and their
+   `_DLQ` / `_Invalid` companions are now created with the rest.
+
+**Still true of the broker, and not fixable in compose:**
+
+3. **RocketMQ 5.x does not auto-create topics through the gRPC proxy** — a producer on an unknown
+   topic fails with `No topic route info in name server`. Any new generated topic must be added to
+   `create-topic`; nothing will conjure it at first publish.
+4. **`rmqproxy` caches topic routes at startup**, so a topic created after it started stays invisible
+   until `docker restart rmqproxy`. Because `create-topic` and the proxy come up together, **the proxy
+   generally needs one restart after a first `up -d`.** The proxy also fails outright if it beats the
+   broker's nameserver registration (`create system broadcast topic DefaultHeartBeatSyncerTopic
+   failed`); starting it again is enough.
+5. **`rmqproxy` needs port 8081, which the Kafka suite's `schema-registry` container also binds**, so
+   the two stacks cannot be up at once. Stop `schema-registry` first, and **restart it afterwards**.
+
+⛔ **The dead-letter topics are shared and persistent, and residue breaks the identity assertion.** The
+first two runs failed against a **~6-week-old** message. The DLQ read *acks* what it returns, but it
+uses a fresh GUID consumer group each time, so the ack moves only that group's offset and drains
+nothing; `mqadmin deleteTopic` and recreate does not help either, because the consumequeue files
+survive. **Only `docker-compose … down -v` followed by `up -d` gives a clean store** — RocketMQ's
+store lives inside the container filesystem, not in a named volume.
 
 ### A harness note the MQTT run exposed: the 30 s ceiling is not enforced for MQTT
 
@@ -705,7 +725,7 @@ fix: `ApproximateReceiveCount` is already requested on every receive
 | Redis / RedisMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass |
 | RMQ.Async / Classic | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | RMQ.Async / Quorum | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
-| RocketMQ / RocketMQMessagingGateway | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) |
+| RocketMQ / RocketMQMessagingGateway | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4353 (sign-off: @iancooper) |
 | AzureServiceBus / AzureServiceBusMessagingGateway | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) |
 | MQTT / MqttMessagingGateway | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4351 (sign-off: @iancooper) |
 | RMQ.Sync / RmqSyncMessagingGateway | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Pass |

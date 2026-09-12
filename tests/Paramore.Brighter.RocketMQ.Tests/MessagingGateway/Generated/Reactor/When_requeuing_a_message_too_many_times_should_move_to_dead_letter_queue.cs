@@ -54,7 +54,7 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDis
     /// the question it is named for, however green it goes.
     /// </para>
     /// </remarks>
-    [Fact(Skip = "Deferred: #4240 — requeue budget exhausted to DLQ not yet conformant for RocketMQ / RocketMQMessagingGateway (maintainer sign-off)")]
+    [Fact(Skip = "Deferred: #4353 — requeue budget exhausted to DLQ not yet conformant for RocketMQ / RocketMQMessagingGateway (maintainer sign-off)")]
     public async Task When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue()
     {
         // Arrange
