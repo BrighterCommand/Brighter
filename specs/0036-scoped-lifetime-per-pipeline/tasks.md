@@ -998,7 +998,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T6.16, T4.4
   - **References**: AC-37 (FR-26, NFR-5, NFR-6, D7); ADR 0072 *`ScopedArtefactCache`*
 
-- [ ] **TEST + IMPLEMENT: T6.18 — a failed build under `JoinAmbient` disposes nothing the caller owns**
+- [x] **TEST + IMPLEMENT: T6.18 — a failed build under `JoinAmbient` disposes nothing the caller owns**
   - **USE COMMAND**: `/test-first a hundred failing Posts in an opted in request leave the request scope usable and leak no Brighter owned scope`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_a_build_fails_under_join_ambient_the_request_scope_should_not_be_disposed.cs`
