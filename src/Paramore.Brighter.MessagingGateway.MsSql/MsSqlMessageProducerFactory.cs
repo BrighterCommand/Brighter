@@ -27,7 +27,7 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
 {
-    public class MsSqlMessageProducerFactory : IAmAMessageProducerFactory
+    public class MsSqlMessageProducerFactory : MsSqlMessagingGateway, IAmAMessageProducerFactory
     {
         private readonly RelationalDatabaseConfiguration _msSqlConfiguration;
         private readonly IEnumerable<Publication> _publications;
@@ -40,6 +40,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         public MsSqlMessageProducerFactory(
             RelationalDatabaseConfiguration msSqlConfiguration,
             IEnumerable<Publication> publications)
+            : base(msSqlConfiguration ?? throw new ArgumentNullException(nameof(msSqlConfiguration)))
         {
             _msSqlConfiguration = 
                 msSqlConfiguration ?? throw new ArgumentNullException(nameof(msSqlConfiguration));
@@ -60,6 +61,11 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             foreach (var publication in _publications)
             {
                 if (publication.Topic is null) throw new ConfigurationException("MS SQL Message Producer Factory: Topic is missing from the publication");
+
+                //A sender may be the first thing to run against a new database, so the producer
+                //side provisions too rather than waiting for a consumer to have done it.
+                EnsureQueueStoreExists(publication.MakeChannels);
+
                 var producer = new MsSqlMessageProducer(_msSqlConfiguration, publication);
                 producer.Publication = publication;
                 var producerKey = new ProducerKey(publication.Topic, publication.Type);

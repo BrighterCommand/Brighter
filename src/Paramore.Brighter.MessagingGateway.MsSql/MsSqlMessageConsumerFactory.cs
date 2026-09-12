@@ -12,6 +12,12 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         private IAmAMessageScheduler? _scheduler;
 
         /// <summary>
+        /// Gets the configuration for the MsSql database, so that a channel factory built on this
+        /// one can provision the queue store the consumers will read from.
+        /// </summary>
+        public RelationalDatabaseConfiguration Configuration => _msSqlConfiguration;
+
+        /// <summary>
         /// Gets or sets the message scheduler for delayed requeue support.
         /// Can be set after construction to allow channel factories to forward the scheduler from DI.
         /// </summary>

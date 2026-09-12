@@ -58,10 +58,6 @@ try
     var connectionString = SampleDatabase.ConnectionString(
         builder.Configuration.GetConnectionString("Brighter"));
 
-    // Nothing else will: the MSSQL gateway has no provisioning path, so OnMissingChannel.Create
-    // is inert and the first send would fail with Invalid object name 'QueueData'.
-    QueueTableProvisioner.EnsureQueueTable(connectionString, SampleDatabase.QueueTable);
-
     // One object, both the tables this process uses. GreetingsReceiverConsole builds the
     // matching pair for the queue and the Inbox from the same constants.
     var configuration = new RelationalDatabaseConfiguration(

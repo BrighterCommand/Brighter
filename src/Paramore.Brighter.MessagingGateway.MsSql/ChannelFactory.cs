@@ -9,7 +9,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql;
 /// <summary>
 /// Factory class for creating MS SQL channels.
 /// </summary>
-public partial class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWithScheduler
+public partial class ChannelFactory : MsSqlMessagingGateway, IAmAChannelFactory, IAmAChannelFactoryWithScheduler
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<ChannelFactory>();
     private readonly MsSqlMessageConsumerFactory _msSqlMessageConsumerFactory;
@@ -30,9 +30,10 @@ public partial class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWith
     /// <param name="msSqlMessageConsumerFactory">The factory for creating MS SQL message consumers.</param>
     /// <exception cref="ArgumentNullException">Thrown when the msSqlMessageConsumerFactory is null.</exception>
     public ChannelFactory(MsSqlMessageConsumerFactory msSqlMessageConsumerFactory)
+        : base((msSqlMessageConsumerFactory ??
+                throw new ArgumentNullException(nameof(msSqlMessageConsumerFactory))).Configuration)
     {
-        _msSqlMessageConsumerFactory = msSqlMessageConsumerFactory ??
-                                       throw new ArgumentNullException(nameof(msSqlMessageConsumerFactory));
+        _msSqlMessageConsumerFactory = msSqlMessageConsumerFactory;
     }
 
     /// <summary>
@@ -43,9 +44,11 @@ public partial class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWith
     /// <exception cref="ConfigurationException">Thrown when the subscription is not an MsSqlSubscription.</exception>
     public IAmAChannelSync CreateSyncChannel(Subscription subscription)
     {
-        MsSqlSubscription? rmqSubscription = subscription as MsSqlSubscription;
-        if (rmqSubscription == null)
+        MsSqlSubscription? msSqlSubscription = subscription as MsSqlSubscription;
+        if (msSqlSubscription == null)
             throw new ConfigurationException("MS SQL ChannelFactory We expect an MsSqlSubscription or MsSqlSubscription<T> as a parameter");
+
+        EnsureQueueStoreExists(msSqlSubscription.MakeChannels);
 
         Log.MsSqlInputChannelFactoryCreateInputChannel(s_logger, subscription.ChannelName, subscription.RoutingKey.Value);
         return new Channel(
@@ -63,9 +66,11 @@ public partial class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWith
     /// <exception cref="ConfigurationException">Thrown when the subscription is not an MsSqlSubscription.</exception>
     public IAmAChannelAsync CreateAsyncChannel(Subscription subscription)
     {
-        MsSqlSubscription? rmqSubscription = subscription as MsSqlSubscription;
-        if (rmqSubscription == null)
+        MsSqlSubscription? msSqlSubscription = subscription as MsSqlSubscription;
+        if (msSqlSubscription == null)
             throw new ConfigurationException("MS SQL ChannelFactory We expect an MsSqlSubscription or MsSqlSubscription<T> as a parameter");
+
+        EnsureQueueStoreExists(msSqlSubscription.MakeChannels);
 
         Log.MsSqlInputChannelFactoryCreateInputChannel(s_logger, subscription.ChannelName, subscription.RoutingKey.Value);
         return new ChannelAsync(
@@ -85,9 +90,11 @@ public partial class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWith
     /// <exception cref="ConfigurationException">Thrown when the subscription is not an MsSqlSubscription.</exception>
     public async Task<IAmAChannelAsync> CreateAsyncChannelAsync(Subscription subscription, CancellationToken ct = default)
     {
-        MsSqlSubscription? rmqSubscription = subscription as MsSqlSubscription;
-        if (rmqSubscription == null)
+        MsSqlSubscription? msSqlSubscription = subscription as MsSqlSubscription;
+        if (msSqlSubscription == null)
             throw new ConfigurationException("MS SQL ChannelFactory We expect an MsSqlSubscription or MsSqlSubscription<T> as a parameter");
+
+        await EnsureQueueStoreExistsAsync(msSqlSubscription.MakeChannels, ct);
 
         Log.MsSqlInputChannelFactoryCreateInputChannel(s_logger, subscription.ChannelName, subscription.RoutingKey.Value);
         var channel = new ChannelAsync(
@@ -96,7 +103,7 @@ public partial class ChannelFactory : IAmAChannelFactory, IAmAChannelFactoryWith
             _msSqlMessageConsumerFactory.CreateAsync(subscription),
             subscription.BufferSize);
 
-        return await Task.FromResult(channel);
+        return channel;
     }
 
     private static partial class Log

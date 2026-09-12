@@ -27,9 +27,25 @@ You need SQL Server 2005 or newer (see below as to why).
 
 To setup Brighter with a SQL Server based messaging gateway, some steps are required:
 
-#### Create a table with the schema as shown by the QueueStore.sql example
+#### Let the gateway create the queue table, or create it yourself
 
-You can use the following example as a reference for SQL Server:
+`OnMissingChannel` on the subscription and on the publication decides this, and it is honoured as a
+channel is opened and as a producer is built:
+
+| `MakeChannels` | What happens |
+|---|---|
+| `Create` (the default) | the queue table and its topic index are created if absent, idempotently and safely if several instances start at once |
+| `Validate` | the table is checked, and a missing one throws `ConfigurationException` at startup rather than failing on the first send |
+| `Assume` | nothing happens and no connection is opened; the DDL is someone else's job |
+
+The table is always resolved through `SCHEMA_NAME()` — the schema your login defaults to — and never
+through `RelationalDatabaseConfiguration.SchemaName`. That is deliberate: every statement this
+gateway issues against the queue is unqualified, so it reads through the default schema too, and
+creating the table anywhere else would put it where the gateway does not look. `SchemaName` still
+applies to the Outbox and the Inbox.
+
+To create the table yourself, use `MsSqlQueueBuilder.GetDDL` and `GetIndexDDL`, or the following as
+a reference for SQL Server:
 
 ```sql
         PRINT 'Creating Queue table'

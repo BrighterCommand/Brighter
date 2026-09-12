@@ -40,8 +40,7 @@ public static class SampleDatabase
     /// </summary>
     public const string Name = "BrighterSqlQueue";
 
-    /// <summary>The queue the transport reads and writes, created by <c>EnsureQueueTable</c>
-    /// because the MSSQL gateway will not.</summary>
+    /// <summary>The queue the transport reads and writes; the gateway provisions it.</summary>
     public const string QueueTable = "QueueData";
 
     public const string OutboxTable = "Outbox";

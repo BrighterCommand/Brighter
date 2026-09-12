@@ -29,19 +29,23 @@ export ConnectionStrings__Brighter='Server=localhost,1433;Database=BrighterSqlQu
 
 | Table | Created by |
 |---|---|
-| `QueueData` | `QueueTableProvisioner.EnsureQueueTable`, in both the sender and the receiver |
+| `QueueData` | the MSSQL gateway, from `OnMissingChannel.Create` on the subscription and the publication |
 | `Outbox` | Box Provisioning, in the sender |
 | `InboxMessages` | Box Provisioning, in the receiver |
 
-**The queue table is provisioned by the sample rather than by Brighter, and that is not an
-oversight.** The MSSQL gateway has no provisioning path at all: `OnMissingChannel.Create` is
-accepted on a publication or subscription and then never acted on, unlike the PostgreSQL gateway.
-`MsSqlQueueBuilder` is public precisely so callers can run the DDL themselves, and
-`QueueTableProvisioner` is this sample doing that.
+**The queue table needs no code in this sample.** `OnMissingChannel.Create` is the default on
+`MsSqlSubscription` and on `Publication`, and the gateway acts on it as it opens a channel or builds
+a producer — the same point in the lifecycle as the PostgreSQL gateway. Set `OnMissingChannel.Validate`
+to have a missing table fail at startup instead, or `OnMissingChannel.Assume` where the DDL is
+someone else's job.
 
-It lives in **`SampleInfrastructure`**, alongside `SampleDatabase` — the connection string and the
-table names. **`Events` is contracts only**: the commands and their mappers, which every
-application needs, with no database dependency and no handlers.
+An earlier version of this sample carried a `QueueTableProvisioner` of its own, because the gateway
+accepted `OnMissingChannel.Create` and then ignored it. That code is now in the gateway, where it
+can be tested.
+
+`SampleInfrastructure` holds `SampleDatabase` — the connection string and the table names.
+**`Events` is contracts only**: the commands and their mappers, which every application needs, with
+no database dependency and no handlers.
 
 **Handlers live with the process that owns their dependencies**, and both of them earn it:
 
