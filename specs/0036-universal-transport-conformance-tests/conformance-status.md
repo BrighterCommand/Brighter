@@ -119,9 +119,19 @@ cell remains `Unknown`.
   accept. **Measured against a real 4.3.5 broker: all 80 generated `RMQ.Async` conformance tests pass**, and
   the run is unchanged on 4.2 (145 passed, 6 skipped, 0 failed). `RMQ.Sync` keeps `isDurable: false` by
   decision — it targets the RabbitMQ 3.x line through `RabbitMQ.Client` 6.x, and 3.x permits transient
-  non-exclusive queues. ⚠️ **24 hand-written `RMQ.Async` tests still fail on 4.3** because they opt into a
-  transient queue explicitly (mostly `QueueFactory`'s own `isDurable: false` default in `TestHelpers.cs`);
-  they pass on 4.2, which is what CI runs, so the pin stays until someone decides to move those too. **Requeue/redeliver + no-channel ack (FR-7/15/16/22) `Pass` natively** — notably
+  non-exclusive queues. The **hand-written** `RMQ.Async` suite now runs clean on 4.3 as well. **22 of its
+  tests failed there**, every one on `transient_nonexcl_queues`, because they opted into a transient queue
+  explicitly rather than inheriting the product default: `QueueFactory`'s own `isDurable: false` default in
+  `TestHelpers.cs` fed 16 of them, and the rest passed `false` straight to `RmqMessageConsumer`. That default
+  and **23 consumer construction sites** now say durable. **Measured on a real 4.3.5 broker: 145 passed, 6
+  skipped, 0 failed** — the same numbers the suite has always had on 4.2, where it is unchanged (`RMQ.Async`
+  145/6/0, `RMQ.Sync` 81/3/0). Three of the 23 are mTLS acceptance tests the CI filter excludes: they carry
+  the identical defect and the identical fix, but **were not executed** (they need a separate mTLS broker and
+  `RMQ_MTLS_ACCEPTANCE_TESTS=true`). Two `isDurable: false` sites stay by design — the unit test asserting a
+  subscription can still opt out, and the quorum-queue validation test where a non-durable subscription *is*
+  the exception being asserted — and four `_receiver` sites keep theirs because their test doubles throw in
+  `EnsureChannelAsync` before any declare reaches the broker. ⚠️ **The 4.2 pin in `docker-compose-rmq.yaml` is
+  unchanged**: it matches what CI runs, and moving it is a separate decision. **Requeue/redeliver + no-channel ack (FR-7/15/16/22) `Pass` natively** — notably
   **FR-16** (`RmqMessageConsumer.NackAsync` → `BasicNackAsync(requeue: true)` → the broker redelivers,
   contrast Redis/MSSQL `Deferred`). **Delay (FR-2/FR-9) `Pass` via a wired `RmqHarnessMessageScheduler`** —
   the gateway delegates a non-zero delay to `IAmAMessageProducer.Scheduler` when `DelaySupported == false`

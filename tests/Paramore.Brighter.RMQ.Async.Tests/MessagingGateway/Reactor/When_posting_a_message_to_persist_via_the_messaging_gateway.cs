@@ -30,7 +30,7 @@ public class RmqMessageProducerSendPersistentMessageTests : IDisposable
         _messageProducer = new RmqMessageProducer(rmqConnection);
         var queueName = new ChannelName(Guid.NewGuid().ToString());
             
-        _messageConsumer = new RmqMessageConsumer(rmqConnection, queueName, _message.Header.Topic, false);
+        _messageConsumer = new RmqMessageConsumer(rmqConnection, queueName, _message.Header.Topic, isDurable: true);
 
         new QueueFactory(rmqConnection, queueName, new RoutingKeys( _message.Header.Topic))
             .CreateAsync()
