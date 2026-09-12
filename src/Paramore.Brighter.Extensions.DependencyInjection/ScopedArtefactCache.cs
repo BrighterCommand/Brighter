@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
 {
@@ -43,7 +44,17 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     /// </remarks>
     public sealed class ScopedArtefactCache : IDisposable
     {
+        private static int s_liveCount;
+
         private readonly ConcurrentDictionary<Type, Lazy<object?>> _cache = new();
+
+        public ScopedArtefactCache() => Interlocked.Increment(ref s_liveCount);
+
+        /// <summary>
+        /// The number of <see cref="ScopedArtefactCache"/> instances constructed but not yet disposed,
+        /// across the whole process. A test-visible instrument only: production code never reads it.
+        /// </summary>
+        public static int LiveCount => Volatile.Read(ref s_liveCount);
 
         /// <summary>
         /// Returns the single instance of <paramref name="type"/> this cache holds, resolving it
@@ -78,6 +89,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// tracks a disposable resolution against the scope that created it, and disposes it when that
         /// scope closes.
         /// </summary>
-        public void Dispose() => _cache.Clear();
+        public void Dispose()
+        {
+            _cache.Clear();
+            Interlocked.Decrement(ref s_liveCount);
+        }
     }
 }

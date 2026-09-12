@@ -89,6 +89,7 @@ internal static class Initializer
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<SyncPublishInnerCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<SyncPublishSendCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<TransientHandlerSendCommand>).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<AccumulationSentCommand>).TypeHandle);
 
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<PlaceOrder>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<SharedMarkerSentCommand>).TypeHandle);
@@ -100,6 +101,7 @@ internal static class Initializer
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<SyncPublishInnerCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<SyncPublishSendCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<TransientHandlerSendCommand>).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<AccumulationSentCommand>).TypeHandle);
 
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandlerAsync<PublishScopeOrderPlaced>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandlerAsync<ConcurrentPublishOrderPlaced>).TypeHandle);
@@ -112,6 +114,7 @@ internal static class Initializer
         RuntimeHelpers.RunClassConstructor(typeof(WrapPipeline<SyncPublishPostedCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(WrapPipeline<TransientHandlerSendPostedCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(WrapPipeline<TransientHandlerPublishPostedCommand>).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(WrapPipeline<AccumulationPostedCommand>).TypeHandle);
 
         RuntimeHelpers.RunClassConstructor(typeof(OutboxProducerMediator<Message, CommittableTransaction>).TypeHandle);
     }
