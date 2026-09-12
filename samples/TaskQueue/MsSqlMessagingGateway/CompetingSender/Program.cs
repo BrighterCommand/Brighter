@@ -1,7 +1,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Transactions;
 using Events.Ports.Commands;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -86,30 +85,11 @@ internal sealed class RunCommandProcessor : BackgroundService
     {
         await Task.Yield();
 
-        // Post opens a SqlConnection and Enlist defaults to true, so each insert joins this
-        // transaction: an abandoned scope rolls the messages back with it.
-        // An explicit timeout: every Post is a round trip, and the shipped profile sends 250 of
-        // them inside this one scope. The default of 60 seconds is reachable against a remote
-        // container, and it aborts with a TransactionAbortedException that explains nothing.
-        using (var scope = new TransactionScope(TransactionScopeOption.RequiresNew,
-            new TransactionOptions
-            {
-                IsolationLevel = IsolationLevel.ReadCommitted,
-                Timeout = TimeSpan.FromMinutes(5)
-            },
-            TransactionScopeAsyncFlowOption.Enabled))
+        Console.WriteLine($"Sending {_repeatCount} command messages");
+        var sequenceNumber = 1;
+        for (int i = 0; i < _repeatCount && !stoppingToken.IsCancellationRequested; i++)
         {
-            Console.WriteLine($"Sending {_repeatCount} command messages");
-            var sequenceNumber = 1;
-            for (int i = 0; i < _repeatCount && !stoppingToken.IsCancellationRequested; i++)
-            {
-                _commandProcessor.Post(new CompetingConsumerCommand(sequenceNumber++));
-            }
-
-            // Only on a full run: completing a cancelled one would commit however many messages
-            // it reached, which is not what Ctrl-C means.
-            if (!stoppingToken.IsCancellationRequested)
-                scope.Complete();
+            _commandProcessor.Post(new CompetingConsumerCommand(sequenceNumber++));
         }
 
         // Nothing left to do: stop rather than leaving the reader to find Ctrl-C.
