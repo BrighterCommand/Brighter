@@ -949,7 +949,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T6.13, T5.3
   - **References**: AC-12 (FR-8, FR-9, NFR-4, D6, D10); ADR 0075 steps 3, 4
 
-- [ ] **TEST + IMPLEMENT: T6.15 — synchronous `Publish` isolates each subscriber and leaves the caller's flow unsuppressed**
+- [x] **TEST + IMPLEMENT: T6.15 — synchronous `Publish` isolates each subscriber and leaves the caller's flow unsuppressed**
   - **USE COMMAND**: `/test-first a synchronous Publish isolates every subscriber and its nested Sends and leaves the controller able to adopt afterwards`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_publishing_synchronously_each_subscriber_should_be_isolated_and_the_caller_left_unsuppressed.cs`
