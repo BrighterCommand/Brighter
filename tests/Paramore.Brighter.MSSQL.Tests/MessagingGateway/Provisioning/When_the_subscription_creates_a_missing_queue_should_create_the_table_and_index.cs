@@ -61,7 +61,7 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
             makeChannels: OnMissingChannel.Create);
 
         //Act
-        channelFactory.CreateSyncChannel(subscription);
+        using var channel = channelFactory.CreateSyncChannel(subscription);
 
         //Assert
         Assert.True(QueueTableExists(_queueTable));
@@ -72,18 +72,25 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
     public void When_the_queue_is_created_twice_should_not_throw()
     {
         //Arrange -- idempotence is what makes this safe to run on every start, which is the whole
-        //premise of doing it at channel-open time rather than in a migration.
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
+        //premise of doing it at channel-open time rather than in a migration. Two factories rather
+        //than one call twice, because a gateway instance now remembers that it has provisioned:
+        //against a single factory this would prove nothing but that the second call returned early,
+        //and the claim under test is about a second *start*.
         var subscription = new MsSqlSubscription<MyCommand>(
             new SubscriptionName("create.subscription"),
             new ChannelName("create.channel"),
             new RoutingKey("create.topic"),
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Create);
-        channelFactory.CreateSyncChannel(subscription);
+        using (var first = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration))
+                   .CreateSyncChannel(subscription)) { }
 
         //Act
-        var exception = Record.Exception(() => channelFactory.CreateSyncChannel(subscription));
+        var exception = Record.Exception(() =>
+        {
+            using var second = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration))
+                .CreateSyncChannel(subscription);
+        });
 
         //Assert
         Assert.Null(exception);
@@ -116,8 +123,13 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
         //Arrange -- the DDL formats the name into CREATE TABLE [{0}] and escapes nothing, so a ']'
         //closes the bracket and everything after it is free SQL. The guard belongs here, beside
         //the string.Format, not in a caller.
+        //
+        //Pointed at a server that cannot be reached, so that "before touching the database" is what
+        //the test measures rather than something its name merely asserts: against a live connection
+        //string this would pass equally if the guard ran after the connect.
         var configuration = new RelationalDatabaseConfiguration(
-            Configuration.DefaultConnectingString, queueStoreTable: "Queue]; DROP TABLE Users--");
+            MsSqlQueueProvisioningAssumeTests.UnreachableConnectionString,
+            queueStoreTable: "Queue]; DROP TABLE Users--");
         var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
         var subscription = new MsSqlSubscription<MyCommand>(
             new SubscriptionName("create.subscription"),
@@ -148,7 +160,7 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
         try
         {
             //Act
-            channelFactory.CreateSyncChannel(new MsSqlSubscription<MyCommand>(
+            using var channel = channelFactory.CreateSyncChannel(new MsSqlSubscription<MyCommand>(
                 new SubscriptionName("create.subscription"),
                 new ChannelName("create.channel"),
                 new RoutingKey("create.topic"),
@@ -169,8 +181,10 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
     {
         //Arrange -- 129 characters; 128 is SQL Server's own identifier limit. Without a bound the
         //name reaches the CREATE and fails there with a message that never mentions configuration.
+        //Unreachable server for the same reason as the bracket test above.
         var configuration = new RelationalDatabaseConfiguration(
-            Configuration.DefaultConnectingString, queueStoreTable: new string('Q', 129));
+            MsSqlQueueProvisioningAssumeTests.UnreachableConnectionString,
+            queueStoreTable: new string('Q', 129));
         var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
         var subscription = new MsSqlSubscription<MyCommand>(
             new SubscriptionName("create.subscription"),
@@ -184,6 +198,79 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
 
         //Assert
         Assert.IsType<ConfigurationException>(exception);
+    }
+
+    [Fact]
+    public void When_the_queue_table_name_leaves_no_room_for_the_index_name_should_throw()
+    {
+        //Arrange -- 120 characters, which SQL Server accepts as a table name and rejects as the
+        //index name derived from it: CREATE NONCLUSTERED INDEX [IX_{table}_Topic] is nine
+        //characters longer, so 129 and error 103, "The identifier that starts with ... is too
+        //long". Measured against SQL Server, where the CREATE TABLE succeeds first and the index
+        //then fails, leaving a table that can never gain its index.
+        var configuration = new RelationalDatabaseConfiguration(
+            MsSqlQueueProvisioningAssumeTests.UnreachableConnectionString,
+            queueStoreTable: new string('Q', 120));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
+
+        //Act
+        var exception = Record.Exception(() => channelFactory.CreateSyncChannel(
+            new MsSqlSubscription<MyCommand>(
+                new SubscriptionName("create.subscription"),
+                new ChannelName("create.channel"),
+                new RoutingKey("create.topic"),
+                messagePumpType: MessagePumpType.Reactor,
+                makeChannels: OnMissingChannel.Create)));
+
+        //Assert
+        var configurationException = Assert.IsType<ConfigurationException>(exception);
+        Assert.Contains("119", configurationException.Message);
+    }
+
+    [Fact]
+    public void When_the_queue_table_name_is_as_long_as_the_index_name_allows_should_provision_it()
+    {
+        //Arrange -- the control for the fact above, and the one that stops the bound from being
+        //tightened arbitrarily: 119 characters yields an index name of exactly 128, which SQL
+        //Server accepts. A guard that rejected this would be refusing a name the database takes.
+        var longest = "Q" + new string('q', 118);
+        var configuration = new RelationalDatabaseConfiguration(
+            Configuration.DefaultConnectingString, queueStoreTable: longest);
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
+
+        try
+        {
+            //Act
+            using var channel = channelFactory.CreateSyncChannel(new MsSqlSubscription<MyCommand>(
+                new SubscriptionName("create.subscription"),
+                new ChannelName("create.channel"),
+                new RoutingKey("create.topic"),
+                messagePumpType: MessagePumpType.Reactor,
+                makeChannels: OnMissingChannel.Create));
+
+            //Assert
+            Assert.True(QueueTableExists(longest));
+            Assert.True(TopicIndexExists(longest));
+        }
+        finally
+        {
+            DropQueueTable(longest);
+        }
+    }
+
+    [Fact]
+    public void When_the_index_naming_convention_is_read_from_the_builder_should_still_be_the_one_the_guard_assumes()
+    {
+        //Arrange -- the guard above hard-codes "IX_" and "_Topic" because MsSqlQueueBuilder owns
+        //that convention and exposes only the finished DDL. If the convention ever moves, the bound
+        //silently stops matching the identifier it is bounding; this is what fails instead.
+        const string table = "SomeQueueTable";
+
+        //Act
+        var ddl = MsSqlQueueBuilder.GetIndexDDL(table);
+
+        //Assert
+        Assert.Contains($"[IX_{table}_Topic]", ddl);
     }
 
     internal static string UniqueQueueTableName() => "Queue_" + Guid.NewGuid().ToString("N");
@@ -202,7 +289,7 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
         return Convert.ToInt32(command.ExecuteScalar()) == 1;
     }
 
-    private static bool TopicIndexExists(string queueTable)
+    internal static bool TopicIndexExists(string queueTable)
     {
         //Guarded on what the index IS -- a non-primary-key index leading on Topic -- rather than on
         //what it is called, so a rename does not read as a missing index.

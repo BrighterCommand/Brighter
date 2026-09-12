@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Microsoft.Data.SqlClient;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Xunit;
 
@@ -68,14 +69,57 @@ public class MsSqlQueueProvisioningValidateTests : IDisposable
         //being that the table now exists. Without it, a Validate that threw unconditionally would
         //pass the test above.
         var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
-        channelFactory.CreateSyncChannel(Subscription(OnMissingChannel.Create));
+        using (var created = channelFactory.CreateSyncChannel(Subscription(OnMissingChannel.Create))) { }
 
-        //Act
-        var exception = Record.Exception(
-            () => channelFactory.CreateSyncChannel(Subscription(OnMissingChannel.Validate)));
+        //Act -- a second factory, because a gateway instance remembers that it has provisioned and
+        //the claim here is about Validate reaching the database and finding the table.
+        var validating = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
+        var exception = Record.Exception(() =>
+        {
+            using var channel = validating.CreateSyncChannel(Subscription(OnMissingChannel.Validate));
+        });
 
         //Assert
         Assert.Null(exception);
+    }
+
+    [Fact]
+    public void When_validating_a_queue_too_long_to_have_been_created_here_should_not_throw()
+    {
+        //Arrange -- 125 characters. Create refuses that name, because the index derived from it
+        //would be 134 and SQL Server's limit is 128; Validate builds no identifier at all, so a
+        //table of that name that already exists is one this gateway can legitimately be pointed at.
+        //Applying the Create bound to both would reject a working configuration.
+        var longName = "Q" + new string('v', 124);
+        CreateQueueTableDirectly(longName);
+        var configuration = new RelationalDatabaseConfiguration(
+            Configuration.DefaultConnectingString, queueStoreTable: longName);
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
+
+        try
+        {
+            //Act
+            var exception = Record.Exception(() =>
+            {
+                using var channel = channelFactory.CreateSyncChannel(Subscription(OnMissingChannel.Validate));
+            });
+
+            //Assert
+            Assert.Null(exception);
+        }
+        finally
+        {
+            MsSqlQueueProvisioningCreateTests.DropQueueTable(longName);
+        }
+    }
+
+    private static void CreateQueueTableDirectly(string queueTable)
+    {
+        using var connection = new SqlConnection(Configuration.DefaultConnectingString);
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = MsSqlQueueBuilder.GetDDL(queueTable);
+        command.ExecuteNonQuery();
     }
 
     private static MsSqlSubscription<MyCommand> Subscription(OnMissingChannel makeChannels) =>

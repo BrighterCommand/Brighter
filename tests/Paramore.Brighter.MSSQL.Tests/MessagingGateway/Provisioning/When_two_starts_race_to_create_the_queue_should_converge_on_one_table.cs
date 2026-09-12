@@ -24,7 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
-using System.Threading.Tasks;
+using System.Threading;
+using Microsoft.Data.SqlClient;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Xunit;
 
@@ -54,26 +55,57 @@ public class MsSqlQueueProvisioningConcurrencyTests : IDisposable
     }
 
     [Fact]
-    public async Task When_two_starts_race_to_create_the_queue_should_converge_on_one_table()
+    public void When_two_starts_race_to_create_the_queue_should_converge_on_one_table()
     {
         //Arrange -- separate factories, as separate instances would have, all released together.
+        //
+        //Two things make "together" mean something. Dedicated threads rather than Task.Run, because
+        //the thread pool injects threads at about one a second: eight queued work items need not be
+        //running at once, and a race whose participants never overlap passes without ever reaching
+        //2714 or 1205 — the paths this test exists to cover. And a barrier they all park at, after
+        //a throwaway connection each has warmed the pool, so that what follows the release is the
+        //DDL rather than eight staggered connection handshakes.
         var starts = Enumerable.Range(0, ConcurrentStarts)
             .Select(_ => new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration)))
             .ToArray();
+        var outcomes = new Exception?[ConcurrentStarts];
+
+        using var gate = new Barrier(ConcurrentStarts);
+        var threads = new Thread[ConcurrentStarts];
 
         //Act
-        var results = await Task.WhenAll(starts.Select(factory => Task.Run(() =>
-            Record.Exception(() => factory.CreateSyncChannel(
-                new MsSqlSubscription<MyCommand>(
-                    new SubscriptionName("race.subscription"),
-                    new ChannelName("race.channel"),
-                    new RoutingKey("race.topic"),
-                    messagePumpType: MessagePumpType.Reactor,
-                    makeChannels: OnMissingChannel.Create))))));
+        for (var i = 0; i < ConcurrentStarts; i++)
+        {
+            var index = i;
+            threads[index] = new Thread(() =>
+            {
+                WarmTheConnectionPool();
+                gate.SignalAndWait();
+                outcomes[index] = Record.Exception(() =>
+                {
+                    using var channel = starts[index].CreateSyncChannel(
+                        new MsSqlSubscription<MyCommand>(
+                            new SubscriptionName("race.subscription"),
+                            new ChannelName("race.channel"),
+                            new RoutingKey("race.topic"),
+                            messagePumpType: MessagePumpType.Reactor,
+                            makeChannels: OnMissingChannel.Create));
+                });
+            });
+            threads[index].Start();
+        }
+
+        foreach (var thread in threads) thread.Join();
 
         //Assert -- every start succeeds, and there is exactly one table at the end.
-        Assert.All(results, Assert.Null);
+        Assert.All(outcomes, Assert.Null);
         Assert.True(MsSqlQueueProvisioningCreateTests.QueueTableExists(_queueTable));
+    }
+
+    private static void WarmTheConnectionPool()
+    {
+        using var connection = new SqlConnection(Configuration.DefaultConnectingString);
+        connection.Open();
     }
 
     public void Dispose() => MsSqlQueueProvisioningCreateTests.DropQueueTable(_queueTable);

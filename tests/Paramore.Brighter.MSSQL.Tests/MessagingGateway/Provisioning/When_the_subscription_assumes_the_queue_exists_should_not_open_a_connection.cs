@@ -41,7 +41,9 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway.Provisioning;
 public class MsSqlQueueProvisioningAssumeTests
 {
     // A port nothing listens on, and a one second timeout so a failure is quick rather than hung.
-    private const string UnreachableConnectionString =
+    // Internal because it is the instrument for any test whose claim is "this throws before the
+    // gateway touches the database": pointed here, a test that reaches the database cannot pass.
+    internal const string UnreachableConnectionString =
         "Server=127.0.0.1,10;Database=NoSuchDatabase;User Id=sa;Password=Password123!;Connect Timeout=1;Encrypt=false";
 
     private readonly RelationalDatabaseConfiguration _configuration = new(
@@ -61,7 +63,10 @@ public class MsSqlQueueProvisioningAssumeTests
             makeChannels: OnMissingChannel.Assume);
 
         //Act
-        var exception = Record.Exception(() => channelFactory.CreateSyncChannel(subscription));
+        var exception = Record.Exception(() =>
+        {
+            using var channel = channelFactory.CreateSyncChannel(subscription);
+        });
 
         //Assert
         Assert.Null(exception);
@@ -81,10 +86,16 @@ public class MsSqlQueueProvisioningAssumeTests
             makeChannels: OnMissingChannel.Create);
 
         //Act
-        var exception = Record.Exception(() => channelFactory.CreateSyncChannel(subscription));
+        var exception = Record.Exception(() =>
+        {
+            using var channel = channelFactory.CreateSyncChannel(subscription);
+        });
 
-        //Assert
-        Assert.NotNull(exception);
+        //Assert -- the type matters as much as the throw: Connect exists to turn a provider error
+        //into a ConfigurationException naming the table, and Assert.NotNull would pass on the raw
+        //SqlException that would mean it had not.
+        var configurationException = Assert.IsType<ConfigurationException>(exception);
+        Assert.Contains("QueueThatIsManagedElsewhere", configurationException.Message);
     }
 
     [Fact]
@@ -120,7 +131,8 @@ public class MsSqlQueueProvisioningAssumeTests
         var exception = Record.Exception(() => producerFactory.Create());
 
         //Assert
-        Assert.NotNull(exception);
+        var configurationException = Assert.IsType<ConfigurationException>(exception);
+        Assert.Contains("QueueThatIsManagedElsewhere", configurationException.Message);
     }
 
     private class MyCommand : Command

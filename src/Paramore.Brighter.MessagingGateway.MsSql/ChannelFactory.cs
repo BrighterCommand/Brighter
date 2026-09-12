@@ -30,11 +30,17 @@ public partial class ChannelFactory : MsSqlMessagingGateway, IAmAChannelFactory,
     /// <param name="msSqlMessageConsumerFactory">The factory for creating MS SQL message consumers.</param>
     /// <exception cref="ArgumentNullException">Thrown when the msSqlMessageConsumerFactory is null.</exception>
     public ChannelFactory(MsSqlMessageConsumerFactory msSqlMessageConsumerFactory)
-        : base((msSqlMessageConsumerFactory ??
-                throw new ArgumentNullException(nameof(msSqlMessageConsumerFactory))).Configuration)
+        : base(ConfigurationOf(msSqlMessageConsumerFactory))
     {
         _msSqlMessageConsumerFactory = msSqlMessageConsumerFactory;
     }
+
+    // The base call has to run before the field is set, and it needs the configuration the consumer
+    // factory was built with; naming that here keeps the existing ArgumentNullException.
+    private static RelationalDatabaseConfiguration ConfigurationOf(
+        MsSqlMessageConsumerFactory msSqlMessageConsumerFactory) =>
+        (msSqlMessageConsumerFactory ??
+         throw new ArgumentNullException(nameof(msSqlMessageConsumerFactory))).Configuration;
 
     /// <summary>
     /// Creates a synchronous MS SQL channel.

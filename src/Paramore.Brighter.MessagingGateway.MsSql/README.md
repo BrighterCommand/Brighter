@@ -38,6 +38,19 @@ channel is opened and as a producer is built:
 | `Validate` | the table is checked, and a missing one throws `ConfigurationException` at startup rather than failing on the first send |
 | `Assume` | nothing happens and no connection is opened; the DDL is someone else's job |
 
+`Create` is the default, so an application that has always pointed at a queue table someone else
+manages now tries to create it. Where the application's login has DML rights and no DDL rights, SQL
+Server answers `CREATE TABLE permission denied in database` and Brighter raises that as a
+`ConfigurationException` naming the table and pointing at `Validate`; setting `MakeChannels` to
+`Validate` — or to `Assume` — restores the old behaviour. A login with no DDL rights can still
+validate, because that is one `SELECT` over `sys.tables`.
+
+Under `Create` the queue table name is bounded at **119 characters**, nine below SQL Server's own
+limit of 128, because the topic index is named after it: `IX_<table>_Topic`. A longer name than that
+would create the table and then fail on the index with *"The identifier that starts with … is too
+long"*. `Validate` builds no identifier and keeps the full 128, so a longer table that already exists
+can still be used.
+
 The table is always resolved through `SCHEMA_NAME()` — the schema your login defaults to — and never
 through `RelationalDatabaseConfiguration.SchemaName`. That is deliberate: every statement this
 gateway issues against the queue is unqualified, so it reads through the default schema too, and

@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
@@ -50,6 +51,21 @@ public class MsSqlMessagingGateway(IAmARelationalDatabaseConfiguration configura
 
     private const int MaxIdentifierLength = 128;
 
+    // The topic index is named after the table — MsSqlQueueBuilder.GetIndexDDL emits
+    // [IX_{table}_Topic] — so the table name's real ceiling on the Create path is nine characters
+    // lower than SQL Server's own. A 120 character table name is created and then its index fails
+    // with error 103, measured: "The identifier that starts with ... is too long."
+    private const string IndexNamePrefix = "IX_";
+    private const string IndexNameSuffix = "_Topic";
+    private static readonly int s_maxCreatableQueueTableLength =
+        MaxIdentifierLength - IndexNamePrefix.Length - IndexNameSuffix.Length;
+
+    // The queue table is configuration-level: nothing in this assembly varies it per publication or
+    // per subscription, so ensuring it once per gateway instance is enough. Without this a producer
+    // factory holding twenty publications opens twenty connections and runs twenty identical no-op
+    // DDL batches as the host starts, and a dispatcher repeats the probe once per performer.
+    private readonly ConcurrentDictionary<OnMissingChannel, bool> _ensured = new();
+
     // Written once each and used by both the IF NOT EXISTS guard and the post-create re-probe: if
     // the two ever drifted apart, the re-probe would throw against a table it had just created.
     private const string TablePredicate = """
@@ -73,7 +89,8 @@ public class MsSqlMessagingGateway(IAmARelationalDatabaseConfiguration configura
     /// <summary>
     /// Gets the configuration describing the database and the queue store table.
     /// </summary>
-    protected IAmARelationalDatabaseConfiguration Configuration { get; } = configuration;
+    protected IAmARelationalDatabaseConfiguration Configuration { get; } =
+        configuration ?? throw new ArgumentNullException(nameof(configuration));
 
     /// <summary>
     /// Ensures the queue store table and its topic index exist, according to
@@ -92,8 +109,9 @@ public class MsSqlMessagingGateway(IAmARelationalDatabaseConfiguration configura
     protected void EnsureQueueStoreExists(OnMissingChannel makeChannels)
     {
         if (makeChannels == OnMissingChannel.Assume) return;
+        if (_ensured.ContainsKey(makeChannels)) return;
 
-        var queueTable = ValidatedQueueTableName();
+        var queueTable = ValidatedQueueTableName(makeChannels);
         using var connection = Connect(queueTable);
 
         if (makeChannels == OnMissingChannel.Validate)
@@ -102,6 +120,8 @@ public class MsSqlMessagingGateway(IAmARelationalDatabaseConfiguration configura
                 throw new ConfigurationException(
                     $"The queue store table '{queueTable}' does not exist in the default schema of " +
                     $"database '{Configuration.DatabaseName}'.");
+
+            _ensured[makeChannels] = true;
             return;
         }
 
@@ -124,6 +144,8 @@ public class MsSqlMessagingGateway(IAmARelationalDatabaseConfiguration configura
             throw new ConfigurationException(
                 $"No index leading on Topic exists for '{queueTable}', and one could not be " +
                 "created. An index of that name over different columns already exists.");
+
+        _ensured[makeChannels] = true;
     }
 
     /// <summary>
@@ -137,8 +159,11 @@ public class MsSqlMessagingGateway(IAmARelationalDatabaseConfiguration configura
         OnMissingChannel makeChannels, CancellationToken cancellationToken = default)
     {
         if (makeChannels == OnMissingChannel.Assume) return;
+        if (_ensured.ContainsKey(makeChannels)) return;
 
-        var queueTable = ValidatedQueueTableName();
+        var queueTable = ValidatedQueueTableName(makeChannels);
+        // Not `await using`: this package targets net462, where SqlConnection does not implement
+        // IAsyncDisposable, and the async using is a compile error there (CS8417).
         using var connection = await ConnectAsync(queueTable, cancellationToken);
 
         if (makeChannels == OnMissingChannel.Validate)
@@ -147,11 +172,17 @@ public class MsSqlMessagingGateway(IAmARelationalDatabaseConfiguration configura
                 throw new ConfigurationException(
                     $"The queue store table '{queueTable}' does not exist in the default schema of " +
                     $"database '{Configuration.DatabaseName}'.");
+
+            _ensured[makeChannels] = true;
             return;
         }
 
         await CreateTableAsync(connection, queueTable, cancellationToken);
 
+        // The 2714 the create may have swallowed means "an object of that name exists", not "the
+        // table exists" — a view or a procedure holding the name would look identical. Re-probe so
+        // a name collision stops resembling a lost race, and fails here rather than deep inside
+        // the gateway on the first send.
         if (!await ExistsAsync(connection, TablePredicate, queueTable, cancellationToken))
             throw new ConfigurationException(
                 $"'{queueTable}' was not created and does not exist as a table. Something else in " +
@@ -159,10 +190,14 @@ public class MsSqlMessagingGateway(IAmARelationalDatabaseConfiguration configura
 
         await CreateIndexAsync(connection, queueTable, cancellationToken);
 
+        // The same hazard: 1913 means "an index of that name exists", while the guard asks about
+        // the leading column. An index named IX_..._Topic over some other column satisfies neither.
         if (!await ExistsAsync(connection, TopicIndexPredicate, queueTable, cancellationToken))
             throw new ConfigurationException(
                 $"No index leading on Topic exists for '{queueTable}', and one could not be " +
                 "created. An index of that name over different columns already exists.");
+
+        _ensured[makeChannels] = true;
     }
 
     // GetDDL formats the name into CREATE TABLE [{0}] and escapes nothing, so the one character
@@ -170,7 +205,7 @@ public class MsSqlMessagingGateway(IAmARelationalDatabaseConfiguration configura
     // else a bracketed identifier legally holds is allowed through, hyphens and spaces and dots
     // included: queue tables are routinely named after a GUID, and a stricter rule here would
     // reject names this gateway has always accepted.
-    private string ValidatedQueueTableName()
+    private string ValidatedQueueTableName(OnMissingChannel makeChannels)
     {
         var queueTable = Configuration.QueueStoreTable;
 
@@ -188,6 +223,18 @@ public class MsSqlMessagingGateway(IAmARelationalDatabaseConfiguration configura
             throw new ConfigurationException(
                 $"The queue store table name is {queueTable.Length} characters; SQL Server allows " +
                 $"at most {MaxIdentifierLength}.");
+
+        // The tighter bound belongs to Create alone. Validate runs one parameterised probe and
+        // builds no identifier, so a table of 120-128 characters that already exists is a table
+        // this gateway can legitimately be pointed at; only creating its index is out of reach.
+        if (makeChannels == OnMissingChannel.Create && queueTable.Length > s_maxCreatableQueueTableLength)
+            throw new ConfigurationException(
+                $"The queue store table name is {queueTable.Length} characters. Provisioning also " +
+                $"creates the index '{IndexNamePrefix}{queueTable}{IndexNameSuffix}', which is " +
+                $"{queueTable.Length + IndexNamePrefix.Length + IndexNameSuffix.Length} characters " +
+                $"and over SQL Server's {MaxIdentifierLength} character limit, so the name must be " +
+                $"at most {s_maxCreatableQueueTableLength} characters to be created here. A table " +
+                "of this name that already exists can still be used with MakeChannels = Validate.");
 
         return queueTable;
     }
@@ -300,10 +347,18 @@ public class MsSqlMessagingGateway(IAmARelationalDatabaseConfiguration configura
             {
                 // The process we deadlocked with created it first.
             }
+            catch (SqlException retry) when (retry.Number != DeadlockVictim)
+            {
+                throw CouldNotProvision(retry, queueTable);
+            }
         }
         catch (SqlException ex) when (ex.Number == alreadyExists)
         {
             // Lost the create race; the other process made it, which is the outcome we wanted.
+        }
+        catch (SqlException ex)
+        {
+            throw CouldNotProvision(ex, queueTable);
         }
     }
 
@@ -325,12 +380,31 @@ public class MsSqlMessagingGateway(IAmARelationalDatabaseConfiguration configura
             {
                 // The process we deadlocked with created it first.
             }
+            catch (SqlException retry) when (retry.Number != DeadlockVictim)
+            {
+                throw CouldNotProvision(retry, queueTable);
+            }
         }
         catch (SqlException ex) when (ex.Number == alreadyExists)
         {
             // Lost the create race; the other process made it, which is the outcome we wanted.
         }
+        catch (SqlException ex)
+        {
+            throw CouldNotProvision(ex, queueTable);
+        }
     }
+
+    // Create is the default, so the commonest way to meet this code is by upgrading into it: an
+    // application whose login has DML rights only gets error 262, "CREATE TABLE permission denied",
+    // thrown out of channel open or producer construction with nothing in it naming MakeChannels.
+    // Measured against a db_datareader + db_datawriter login; 262 is not 2714, 1913 or 1205, so
+    // without this it propagates raw.
+    private static ConfigurationException CouldNotProvision(SqlException ex, string queueTable) =>
+        new($"Could not provision the queue store '{queueTable}'. The provider said: {ex.Message} " +
+            "If this database is provisioned elsewhere — a migration, a DBA, an application login " +
+            "with no DDL rights — then set MakeChannels to Validate to check the table exists " +
+            "instead of creating it, or to Assume to skip the check entirely.", ex);
 
     // The parameter is built here rather than passed in, because SqlCommand.Dispose does not detach
     // parameters: a retry that re-used the instance would throw ArgumentException — "the
