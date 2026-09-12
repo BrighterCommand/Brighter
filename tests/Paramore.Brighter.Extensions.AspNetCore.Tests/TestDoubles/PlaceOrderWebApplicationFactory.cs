@@ -80,10 +80,12 @@ public sealed class PlaceOrderWebApplicationFactory : WebApplicationFactory<Plac
 
             var routingKey = new RoutingKey("posted-order");
             var sharedMarkerRoutingKey = new RoutingKey("shared-marker");
+            var concurrentPublishPostedRoutingKey = new RoutingKey("concurrent-publish-posted");
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = routingKey, RequestType = typeof(PostedOrderCommand) }) },
-                { sharedMarkerRoutingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = sharedMarkerRoutingKey, RequestType = typeof(SharedMarkerPostedCommand) }) }
+                { sharedMarkerRoutingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = sharedMarkerRoutingKey, RequestType = typeof(SharedMarkerPostedCommand) }) },
+                { concurrentPublishPostedRoutingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = concurrentPublishPostedRoutingKey, RequestType = typeof(ConcurrentPublishPostedCommand) }) }
             });
 
             services.AddBrighterRequestScope();
