@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Data.Common;
 using System.Runtime.CompilerServices;
 using System.Transactions;
 using Microsoft.Extensions.Logging;
@@ -90,6 +91,7 @@ internal static class Initializer
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<SyncPublishSendCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<TransientHandlerSendCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<AccumulationSentCommand>).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<DepositEntityCommand>).TypeHandle);
 
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<PlaceOrder>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<SharedMarkerSentCommand>).TypeHandle);
@@ -102,6 +104,7 @@ internal static class Initializer
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<SyncPublishSendCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<TransientHandlerSendCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<AccumulationSentCommand>).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<DepositEntityCommand>).TypeHandle);
 
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandlerAsync<PublishScopeOrderPlaced>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandlerAsync<ConcurrentPublishOrderPlaced>).TypeHandle);
@@ -115,7 +118,9 @@ internal static class Initializer
         RuntimeHelpers.RunClassConstructor(typeof(WrapPipeline<TransientHandlerSendPostedCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(WrapPipeline<TransientHandlerPublishPostedCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(WrapPipeline<AccumulationPostedCommand>).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(WrapPipeline<DepositEntityPostedCommand>).TypeHandle);
 
         RuntimeHelpers.RunClassConstructor(typeof(OutboxProducerMediator<Message, CommittableTransaction>).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(OutboxProducerMediator<Message, DbTransaction>).TypeHandle);
     }
 }
