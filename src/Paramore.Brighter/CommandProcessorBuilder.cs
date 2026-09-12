@@ -44,11 +44,12 @@ namespace Paramore.Brighter
     ///     </item>
     ///     <item>
     ///         <description>
-    ///             A <see cref="IPolicyRegistry{TKey}"/> containing a list of policies that you want to be accessible to the <see cref="CommandProcessor"/>. You can use
-    ///             <see cref="PolicyRegistry"/> to provide the <see cref="IPolicyRegistry{TKey}"/>. Policies are expected to be Polly <see cref="!:https://github.com/App-vNext/Polly"/> 
-    ///             <see cref="Paramore.Brighter.Policies"/> references.
-    ///             If you do not need any policies around quality of service (QoS) concerns - you do not have Work Queues and/or do not intend to use Polly Policies for 
-    ///             QoS concerns - you can use <see cref="DefaultPolicy"/> to indicate you do not need them or just want a simple retry.
+    ///             Resilience for quality of service (QoS) concerns, supplied through <see cref="INeedResilience.Resilience"/> with a Polly
+    ///             <see cref="ResiliencePipelineRegistry{TKey}"/> — and optionally an <see cref="IPolicyRegistry{TKey}"/>. The registry must contain
+    ///             <see cref="CommandProcessor.OutboxProducer"/>; <see cref="ResiliencePipelineRegistryExtensions.AddBrighterDefault"/> supplies it, along with
+    ///             <see cref="CommandProcessor.RequestReply"/> which <see cref="CommandProcessor.Call{T,TResponse}"/> needs.
+    ///             If you do not need to configure any of this, use <see cref="INeedResilience.DefaultResilience"/>, which applies Brighter's defaults
+    ///             including <see cref="DefaultPolicy"/>.
     ///         </description>
     ///      </item>
     ///     <item>
@@ -121,7 +122,7 @@ namespace Paramore.Brighter
         /// Supplies the specified handler configuration, so that we can register subscribers and the handler factory used to create instances of them
         /// </summary>
         /// <param name="handlerConfiguration">The handler configuration.</param>
-        /// <returns>INeedPolicy.</returns>
+        /// <returns>INeedResilience.</returns>
         public INeedResilience Handlers(HandlerConfiguration handlerConfiguration)
         {
             _registry = handlerConfiguration.SubscriberRegistry;
@@ -133,7 +134,7 @@ namespace Paramore.Brighter
         /// Supplies the specified feature switching configuration, so we can use feature switches on user-defined request handlers
         /// </summary>
         /// <param name="featureSwitchRegistry">The feature switch config provider</param>
-        /// <returns>INeedPolicy</returns>
+        /// <returns>INeedAHandlers.</returns>
         public INeedAHandlers ConfigureFeatureSwitches(IAmAFeatureSwitchRegistry featureSwitchRegistry)
         {
             _featureSwitchRegistry = featureSwitchRegistry;
@@ -177,8 +178,8 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Post{TRequest}"/> or <see cref="CommandProcessor.ClearOutbox"/> using an external bus.
-        /// You need to provide a policy to specify how QoS issues, specifically <see cref="CommandProcessor.RETRYPOLICY "/> or <see cref="CommandProcessor.CIRCUITBREAKER "/> 
-        /// are handled by adding appropriate <see cref="Policies"/> when choosing this option.
+        /// You need to provide a resilience pipeline registered under <see cref="CommandProcessor.OutboxProducer"/>, which is what
+        /// <see cref="Resilience"/> validates and <see cref="DefaultResilience"/> supplies, to specify how QoS issues are handled when choosing this option.
         /// </summary>
         /// <param name="busType">The type of Bus: In-memory, Db, or RPC</param>
         /// <param name="bus">The service bus that we need to use to send messages externally</param>
@@ -220,9 +221,9 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Use to indicate that you are not using Task Queues.
+        /// Use to indicate that this Command Processor does not send messages out of process.
         /// </summary>
-        /// <returns>INeedARequestContext.</returns>
+        /// <returns>INeedInstrumentation.</returns>
         public INeedInstrumentation NoExternalBus()
         {
             return this;
@@ -262,7 +263,7 @@ namespace Paramore.Brighter
         /// provide <see cref="InMemoryRequestContextFactory"/>.
         /// </summary>
         /// <param name="requestContextFactory">The request context factory.</param>
-        /// <returns>IAmACommandProcessorBuilder.</returns>
+        /// <returns>INeedARequestSchedulerFactory.</returns>
         public INeedARequestSchedulerFactory RequestContextFactory(IAmARequestContextFactory requestContextFactory)
         {
             _requestContextFactory = requestContextFactory;
@@ -363,7 +364,7 @@ namespace Paramore.Brighter
         /// Handlers the specified the registry.
         /// </summary>
         /// <param name="theRegistry">The registry.</param>
-        /// <returns>INeedPolicy.</returns>
+        /// <returns>INeedResilience.</returns>
         INeedResilience Handlers(HandlerConfiguration theRegistry);
 
         /// <summary>
@@ -402,8 +403,8 @@ namespace Paramore.Brighter
     {
         /// <summary>
         /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Post{TRequest}"/> or <see cref="CommandProcessor.ClearOutbox"/> using an external bus.
-        /// You need to provide a policy to specify how QoS issues, specifically <see cref="CommandProcessor.RETRYPOLICY "/> or <see cref="CommandProcessor.CIRCUITBREAKER "/> 
-        /// are handled by adding appropriate <see cref="CommandProcessorBuilder.Policies"/> when choosing this option.
+        /// You need to provide a resilience pipeline registered under <see cref="CommandProcessor.OutboxProducer"/>, which is what
+        /// <see cref="INeedResilience.Resilience"/> validates and <see cref="INeedResilience.DefaultResilience"/> supplies, to specify how QoS issues are handled when choosing this option.
         /// </summary>
         /// <param name="busType">The type of Bus: In-memory, Db, or RPC</param>
         /// <param name="bus">The bus that we wish to use</param>
@@ -423,7 +424,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// We don't send messages out of process
         /// </summary>
-        /// <returns>INeedARequestContext.</returns>
+        /// <returns>INeedInstrumentation.</returns>
         INeedInstrumentation NoExternalBus();
     }
 
@@ -461,7 +462,7 @@ namespace Paramore.Brighter
         /// Sets the context factory, which is used to create context for the pipeline.
         /// </summary>
         /// <param name="requestContextFactory">The request context factory.</param>
-        /// <returns>IAmACommandProcessorBuilder.</returns>
+        /// <returns>INeedARequestSchedulerFactory.</returns>
         INeedARequestSchedulerFactory RequestContextFactory(IAmARequestContextFactory requestContextFactory);
     }
 
