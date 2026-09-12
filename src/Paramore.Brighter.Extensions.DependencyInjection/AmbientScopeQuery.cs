@@ -78,7 +78,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 throw new AmbientScopeSourceException(e);
             }
 
-            if (affinity != ScopeAffinity.JoinAmbient) return null;
+            if (affinity != ScopeAffinity.JoinAmbient)
+            {
+                if (ambient is not null)
+                    diagnostics?.WarnOnce(AmbientScopeDiagnostics.Condition.AmbientIgnoredForAlwaysNew, scopeProvider.GetType());
+
+                return null;
+            }
 
             if (ambient is null)
             {

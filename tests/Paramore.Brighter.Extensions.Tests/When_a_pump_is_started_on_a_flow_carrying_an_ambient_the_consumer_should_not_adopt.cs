@@ -125,8 +125,12 @@ public class ConsumerPumpFlowSuppressionTests
         Assert.All(recorder.UnitsOfWork, unitOfWork => Assert.NotSame(ambientUnitOfWork, unitOfWork));
         Assert.All(recorder.UnitsOfWork, unitOfWork => Assert.True(unitOfWork.IsDisposed));
 
-        // Assert - no diagnostic fired: an AlwaysNew ask never reaches the code that would warn about a
-        // declined or unusable ambient
-        Assert.Empty(capturingLoggerProvider.Entries.Where(e => e.Level == LogLevel.Warning));
+        // Assert - exactly one warning: AsyncLocalScopeProvider ignores affinity and hands back its
+        // established ambient even for this AlwaysNew ask, which FR-24.4 requires Brighter to ignore and
+        // warn about once, naming the provider's own implementation type (T6.13)
+        var warnings = capturingLoggerProvider.Entries.Where(e => e.Level == LogLevel.Warning).ToList();
+        var warning = Assert.Single(warnings);
+        Assert.Contains("AmbientIgnoredForAlwaysNew", warning.Message);
+        Assert.Contains(nameof(AsyncLocalScopeProvider), warning.Message);
     }
 }

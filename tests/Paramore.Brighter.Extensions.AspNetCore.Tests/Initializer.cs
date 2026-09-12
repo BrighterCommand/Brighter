@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Runtime.CompilerServices;
+using System.Transactions;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
 using Paramore.Brighter.Logging;
@@ -33,7 +34,9 @@ namespace Paramore.Brighter.Extensions.AspNetCore.Tests;
 /// Fixes <see cref="ApplicationLogging.LoggerFactory"/> to one stable instance before any test runs, and
 /// forces the static <c>ILogger</c> fields of every closed generic Brighter type this assembly's tests
 /// touch (<see cref="PipelineBuilder{TRequest}"/>, <see cref="RequestHandler{TRequest}"/>,
-/// <see cref="WrapPipeline{TRequest}"/>) plus <see cref="TransformPipelineBuilder"/>, to bind to it.
+/// <see cref="RequestHandlerAsync{TRequest}"/>, <see cref="WrapPipeline{TRequest}"/>,
+/// <see cref="OutboxProducerMediator{TMessage,TTransaction}"/>) plus <see cref="TransformPipelineBuilder"/>,
+/// to bind to it.
 /// </summary>
 /// <remarks>
 /// Every <c>PlaceOrderWebApplicationFactory</c> a test constructs builds its own <c>CommandProcessor</c>
@@ -78,6 +81,7 @@ internal static class Initializer
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<NoHttpContextCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<PlaceSingletonOrder>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<RegistrationAffinityCommand>).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<PublishScopeOrderPlaced>).TypeHandle);
 
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<PlaceOrder>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<SharedMarkerSentCommand>).TypeHandle);
@@ -85,7 +89,11 @@ internal static class Initializer
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<PlaceSingletonOrder>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<RegistrationAffinityCommand>).TypeHandle);
 
+        RuntimeHelpers.RunClassConstructor(typeof(RequestHandlerAsync<PublishScopeOrderPlaced>).TypeHandle);
+
         RuntimeHelpers.RunClassConstructor(typeof(WrapPipeline<PostedOrderCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(WrapPipeline<SharedMarkerPostedCommand>).TypeHandle);
+
+        RuntimeHelpers.RunClassConstructor(typeof(OutboxProducerMediator<Message, CommittableTransaction>).TypeHandle);
     }
 }
