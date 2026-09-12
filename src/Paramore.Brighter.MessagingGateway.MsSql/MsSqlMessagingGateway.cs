@@ -64,6 +64,12 @@ public class MsSqlMessagingGateway(IAmARelationalDatabaseConfiguration configura
     // per subscription, so ensuring it once per gateway instance is enough. Without this a producer
     // factory holding twenty publications opens twenty connections and runs twenty identical no-op
     // DDL batches as the host starts, and a dispatcher repeats the probe once per performer.
+    //
+    // Two things this assumes. That the table name does not change over the instance's life —
+    // Configuration.QueueStoreTable has a protected setter, so a derived configuration that moved
+    // it would leave this memory pointing at the old name. And that the key is the mode, not a
+    // single flag: a successful Validate must not suppress a later Create, which would skip the
+    // index. Both are covered by tests; neither survives being "simplified".
     private readonly ConcurrentDictionary<OnMissingChannel, bool> _ensured = new();
 
     // Written once each and used by both the IF NOT EXISTS guard and the post-create re-probe: if
@@ -224,10 +230,14 @@ public class MsSqlMessagingGateway(IAmARelationalDatabaseConfiguration configura
                 $"The queue store table name is {queueTable.Length} characters; SQL Server allows " +
                 $"at most {MaxIdentifierLength}.");
 
-        // The tighter bound belongs to Create alone. Validate runs one parameterised probe and
+        // The tighter bound belongs to whatever creates. Validate runs one parameterised probe and
         // builds no identifier, so a table of 120-128 characters that already exists is a table
         // this gateway can legitimately be pointed at; only creating its index is out of reach.
-        if (makeChannels == OnMissingChannel.Create && queueTable.Length > s_maxCreatableQueueTableLength)
+        //
+        // Asked as "not Validate" rather than "is Create" so that this and the branch it guards ask
+        // the same question: the create path below is the else of `makeChannels == Validate`, so a
+        // fourth OnMissingChannel member would otherwise take that path while skipping this bound.
+        if (makeChannels != OnMissingChannel.Validate && queueTable.Length > s_maxCreatableQueueTableLength)
             throw new ConfigurationException(
                 $"The queue store table name is {queueTable.Length} characters. Provisioning also " +
                 $"creates the index '{IndexNamePrefix}{queueTable}{IndexNameSuffix}', which is " +
@@ -331,6 +341,10 @@ public class MsSqlMessagingGateway(IAmARelationalDatabaseConfiguration configura
     // as the outcome it wanted. A deadlock victim is retried once — concurrent DDL surfaces as 1205
     // as readily as 2714 or 1913 — and a second 1205 propagates, because a database deadlocking
     // twice on one CREATE is not a race any more.
+    //
+    // Anything else that is not transient becomes a ConfigurationException naming the table and the
+    // way out. The filters spell out what the clause order would otherwise carry silently: put the
+    // unfiltered arm ahead of a filtered one and it shadows it, and the compiler says nothing.
     private static void Execute(SqlConnection connection, string sql, int alreadyExists, string queueTable)
     {
         try
@@ -347,7 +361,9 @@ public class MsSqlMessagingGateway(IAmARelationalDatabaseConfiguration configura
             {
                 // The process we deadlocked with created it first.
             }
-            catch (SqlException retry) when (retry.Number != DeadlockVictim)
+            catch (SqlException retry)
+                when (retry.Number != DeadlockVictim && retry.Number != alreadyExists
+                      && !IsTransient(retry.Number))
             {
                 throw CouldNotProvision(retry, queueTable);
             }
@@ -356,7 +372,7 @@ public class MsSqlMessagingGateway(IAmARelationalDatabaseConfiguration configura
         {
             // Lost the create race; the other process made it, which is the outcome we wanted.
         }
-        catch (SqlException ex)
+        catch (SqlException ex) when (!IsTransient(ex.Number))
         {
             throw CouldNotProvision(ex, queueTable);
         }
@@ -380,7 +396,9 @@ public class MsSqlMessagingGateway(IAmARelationalDatabaseConfiguration configura
             {
                 // The process we deadlocked with created it first.
             }
-            catch (SqlException retry) when (retry.Number != DeadlockVictim)
+            catch (SqlException retry)
+                when (retry.Number != DeadlockVictim && retry.Number != alreadyExists
+                      && !IsTransient(retry.Number))
             {
                 throw CouldNotProvision(retry, queueTable);
             }
@@ -389,11 +407,33 @@ public class MsSqlMessagingGateway(IAmARelationalDatabaseConfiguration configura
         {
             // Lost the create race; the other process made it, which is the outcome we wanted.
         }
-        catch (SqlException ex)
+        catch (SqlException ex) when (!IsTransient(ex.Number))
         {
             throw CouldNotProvision(ex, queueTable);
         }
     }
+
+    // A failure that will pass on its own is not a configuration problem, and telling its author to
+    // change MakeChannels sends them to fix the wrong thing. A cold or throttled Azure SQL instance
+    // at startup is at least as likely as a permission denial, and more likely than it on a
+    // connection that has been working for months — so these propagate raw, exactly as the second
+    // deadlock does, and for the same reason.
+    private static bool IsTransient(int number) => number switch
+    {
+        -2 => true,      // command timeout
+        233 => true,     // connection initialisation failure
+        4060 => true,    // cannot open database, may be mid-failover
+        4221 => true,    // read on a replica before the secondary has caught up
+        10928 => true,   // Azure SQL: resource limit reached
+        10929 => true,   // Azure SQL: not enough resources right now
+        40197 => true,   // Azure SQL: service error during a reconfiguration
+        40501 => true,   // Azure SQL: service busy
+        40613 => true,   // Azure SQL: database currently unavailable
+        49918 => true,   // Azure SQL: cannot process, not enough resources
+        49919 => true,   // Azure SQL: too many create or update operations
+        49920 => true,   // Azure SQL: too many operations in progress
+        _ => false
+    };
 
     // Create is the default, so the commonest way to meet this code is by upgrading into it: an
     // application whose login has DML rights only gets error 262, "CREATE TABLE permission denied",

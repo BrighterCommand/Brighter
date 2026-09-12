@@ -60,19 +60,13 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 
             foreach (var publication in _publications)
             {
-                if (publication.Topic is null) throw new ConfigurationException("MS SQL Message Producer Factory: Topic is missing from the publication");
+                RequireTopic(publication);
 
                 //A sender may be the first thing to run against a new database, so the producer
                 //side provisions too rather than waiting for a consumer to have done it.
                 EnsureQueueStoreExists(publication.MakeChannels);
 
-                var producer = new MsSqlMessageProducer(_msSqlConfiguration, publication);
-                producer.Publication = publication;
-                var producerKey = new ProducerKey(publication.Topic, publication.Type);
-                if (producers.ContainsKey(producerKey))
-                    throw new ConfigurationException($"MS SQL Message Producer Factory: A publication with the topic {publication.Topic} and {publication.Type} already exists in the producer registry. Each topic + type must be unique in the producer registry. If you did not set a type, we will match against an empty type, so you cannot have two publications with the same topic and no type in the producer registry.");    
-                producers[producerKey] = producer;
-                
+                AddProducer(producers, publication);
             }
 
             return producers;
@@ -94,19 +88,34 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 
             foreach (var publication in _publications)
             {
-                if (publication.Topic is null) throw new ConfigurationException("MS SQL Message Producer Factory: Topic is missing from the publication");
+                RequireTopic(publication);
 
                 await EnsureQueueStoreExistsAsync(publication.MakeChannels);
 
-                var producer = new MsSqlMessageProducer(_msSqlConfiguration, publication);
-                producer.Publication = publication;
-                var producerKey = new ProducerKey(publication.Topic, publication.Type);
-                if (producers.ContainsKey(producerKey))
-                    throw new ConfigurationException($"MS SQL Message Producer Factory: A publication with the topic {publication.Topic} and {publication.Type} already exists in the producer registry. Each topic + type must be unique in the producer registry. If you did not set a type, we will match against an empty type, so you cannot have two publications with the same topic and no type in the producer registry.");
-                producers[producerKey] = producer;
+                AddProducer(producers, publication);
             }
 
             return producers;
+        }
+
+        //The two bodies above are the house style here — PostgresMessageProducerFactory duplicates
+        //its pair the same way — but everything except the one differing call lives in these two,
+        //so the surface on which they can silently drift is that call and the await.
+        private static void RequireTopic(Publication publication)
+        {
+            if (publication.Topic is null)
+                throw new ConfigurationException("MS SQL Message Producer Factory: Topic is missing from the publication");
+        }
+
+        private void AddProducer(
+            Dictionary<ProducerKey, IAmAMessageProducer> producers, Publication publication)
+        {
+            var producer = new MsSqlMessageProducer(_msSqlConfiguration, publication);
+            producer.Publication = publication;
+            var producerKey = new ProducerKey(publication.Topic!, publication.Type);
+            if (producers.ContainsKey(producerKey))
+                throw new ConfigurationException($"MS SQL Message Producer Factory: A publication with the topic {publication.Topic} and {publication.Type} already exists in the producer registry. Each topic + type must be unique in the producer registry. If you did not set a type, we will match against an empty type, so you cannot have two publications with the same topic and no type in the producer registry.");
+            producers[producerKey] = producer;
         }
     }
 }

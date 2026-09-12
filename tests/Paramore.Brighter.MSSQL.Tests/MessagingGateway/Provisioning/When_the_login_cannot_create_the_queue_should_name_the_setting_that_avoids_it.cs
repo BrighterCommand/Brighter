@@ -63,8 +63,20 @@ public class MsSqlQueueProvisioningPermissionTests : IDisposable
         builder.UserID = _login;
         builder.Password = $"Prob3_{_login}!";
         _readWriteConnectionString = builder.ConnectionString;
-        _configuration = new RelationalDatabaseConfiguration(
-            _readWriteConnectionString, queueStoreTable: _queueTable);
+
+        try
+        {
+            _configuration = new RelationalDatabaseConfiguration(
+                _readWriteConnectionString, queueStoreTable: _queueTable);
+        }
+        catch
+        {
+            //xUnit does not call Dispose when a constructor throws, and the login name is a fresh
+            //GUID each run, so without this a failing CI job accumulates logins in a container that
+            //outlives it.
+            DropLogin();
+            throw;
+        }
     }
 
     [Fact]
@@ -127,17 +139,24 @@ public class MsSqlQueueProvisioningPermissionTests : IDisposable
         MsSqlQueueProvisioningCreateTests.DropQueueTable(_queueTable);
 
         //A login cannot be dropped while a pooled connection is still open under it, and the
-        //gateway's connections are pooled by definition.
-        SqlConnection.ClearAllPools();
+        //gateway's connections are pooled by definition. ClearPool rather than ClearAllPools:
+        //only this login's pool blocks the DROP, and other collections in this assembly run
+        //alongside this one even though the classes inside MsSqlQueueProvisioning do not.
+        using (var pooled = new SqlConnection(_readWriteConnectionString))
+            SqlConnection.ClearPool(pooled);
+        DropLogin();
+    }
+
+    private void DropLogin() =>
         Execute($"""
                  DECLARE @kill nvarchar(max) = N'';
                  SELECT @kill += 'KILL ' + CAST(session_id AS varchar(10)) + ';'
                  FROM sys.dm_exec_sessions WHERE login_name = '{_login}';
                  EXEC(@kill);
                  DROP USER IF EXISTS [{_login}];
-                 DROP LOGIN [{_login}];
+                 IF EXISTS (SELECT 1 FROM sys.server_principals WHERE name = '{_login}')
+                     DROP LOGIN [{_login}];
                  """);
-    }
 
     private class MyCommand : Command
     {

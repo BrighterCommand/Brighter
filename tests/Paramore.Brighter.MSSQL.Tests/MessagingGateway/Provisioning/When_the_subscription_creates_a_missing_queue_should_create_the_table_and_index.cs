@@ -141,8 +141,12 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
         //Act
         var exception = Record.Exception(() => channelFactory.CreateSyncChannel(subscription));
 
-        //Assert
-        Assert.IsType<ConfigurationException>(exception);
+        //Assert -- the type alone does not discriminate here, and asserting it alone was a defect
+        //this file carried for one commit. Connect wraps a failed connect in a ConfigurationException
+        //too, so against the unreachable server the type check passes with the guard deleted. The
+        //message is what separates "refused the name" from "could not reach the server".
+        var configurationException = Assert.IsType<ConfigurationException>(exception);
+        Assert.Contains("close the bracket", configurationException.Message);
     }
 
     [Fact]
@@ -179,9 +183,12 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
     [Fact]
     public void When_the_queue_table_name_is_longer_than_sql_servers_limit_should_throw()
     {
-        //Arrange -- 129 characters; 128 is SQL Server's own identifier limit. Without a bound the
-        //name reaches the CREATE and fails there with a message that never mentions configuration.
-        //Unreachable server for the same reason as the bracket test above.
+        //Arrange -- 129 characters; 128 is SQL Server's own identifier limit.
+        //
+        //Driven through Validate, which is the only mode that can reach this bound: under Create
+        //the 119-character index bound fires first, so with Create this test passed with the 128
+        //guard deleted outright. Both guards raise ConfigurationException, so the type check could
+        //not tell them apart, and the whole suite stayed green without it.
         var configuration = new RelationalDatabaseConfiguration(
             MsSqlQueueProvisioningAssumeTests.UnreachableConnectionString,
             queueStoreTable: new string('Q', 129));
@@ -191,13 +198,15 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
             new ChannelName("create.channel"),
             new RoutingKey("create.topic"),
             messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Create);
+            makeChannels: OnMissingChannel.Validate);
 
         //Act
         var exception = Record.Exception(() => channelFactory.CreateSyncChannel(subscription));
 
         //Assert
-        Assert.IsType<ConfigurationException>(exception);
+        var configurationException = Assert.IsType<ConfigurationException>(exception);
+        Assert.Contains("128", configurationException.Message);
+        Assert.DoesNotContain("119", configurationException.Message);
     }
 
     [Fact]
@@ -256,6 +265,83 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
         {
             DropQueueTable(longest);
         }
+    }
+
+    [Fact]
+    public void When_something_else_owns_the_table_name_should_not_mistake_it_for_a_lost_race()
+    {
+        //Arrange -- a view holding the name. This is the hazard the post-create re-probe exists for
+        //and the only place a swallowed error could otherwise become a silent success: the
+        //IF NOT EXISTS guard asks sys.tables and passes, the CREATE TABLE takes 2714, "there is
+        //already an object named", and the swallow treats that as a lost race. Nothing about it
+        //looks different from the race it is imitating until the re-probe asks again.
+        //
+        //Deterministic, and no threads: 2714 is provoked by the name collision rather than raced for.
+        CreateView(_queueTable);
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
+        var subscription = new MsSqlSubscription<MyCommand>(
+            new SubscriptionName("create.subscription"),
+            new ChannelName("create.channel"),
+            new RoutingKey("create.topic"),
+            messagePumpType: MessagePumpType.Reactor,
+            makeChannels: OnMissingChannel.Create);
+
+        try
+        {
+            //Act
+            var exception = Record.Exception(() => channelFactory.CreateSyncChannel(subscription));
+
+            //Assert
+            var configurationException = Assert.IsType<ConfigurationException>(exception);
+            Assert.Contains(_queueTable, configurationException.Message);
+            Assert.Contains("owns that name", configurationException.Message);
+        }
+        finally
+        {
+            DropView(_queueTable);
+        }
+    }
+
+    [Fact]
+    public void When_the_queue_store_table_name_is_blank_should_say_so()
+    {
+        //Arrange -- reachable only this way: the producer factory's constructor refuses an empty
+        //name first, and RelationalDatabaseConfiguration substitutes its default for null, so a
+        //channel factory given an explicitly blank name is the one route to this guard.
+        var configuration = new RelationalDatabaseConfiguration(
+            MsSqlQueueProvisioningAssumeTests.UnreachableConnectionString, queueStoreTable: "   ");
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
+
+        //Act
+        var exception = Record.Exception(() => channelFactory.CreateSyncChannel(
+            new MsSqlSubscription<MyCommand>(
+                new SubscriptionName("create.subscription"),
+                new ChannelName("create.channel"),
+                new RoutingKey("create.topic"),
+                messagePumpType: MessagePumpType.Reactor,
+                makeChannels: OnMissingChannel.Create)));
+
+        //Assert
+        var configurationException = Assert.IsType<ConfigurationException>(exception);
+        Assert.Contains("missing", configurationException.Message);
+    }
+
+    private static void CreateView(string name)
+    {
+        using var connection = new SqlConnection(Configuration.DefaultConnectingString);
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = $"CREATE VIEW [{name}] AS SELECT 1 AS x";
+        command.ExecuteNonQuery();
+    }
+
+    private static void DropView(string name)
+    {
+        using var connection = new SqlConnection(Configuration.DefaultConnectingString);
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = $"DROP VIEW IF EXISTS [{name}]";
+        command.ExecuteNonQuery();
     }
 
     [Fact]

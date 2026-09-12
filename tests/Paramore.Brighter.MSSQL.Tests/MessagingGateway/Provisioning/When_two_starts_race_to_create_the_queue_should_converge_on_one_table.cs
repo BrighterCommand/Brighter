@@ -44,6 +44,10 @@ public class MsSqlQueueProvisioningConcurrencyTests : IDisposable
 {
     private const int ConcurrentStarts = 8;
 
+    //Generous, because these exist to turn a hang into a failure rather than to measure anything.
+    private static readonly TimeSpan GateTimeout = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan JoinTimeout = TimeSpan.FromSeconds(60);
+
     private readonly string _queueTable = MsSqlQueueProvisioningCreateTests.UniqueQueueTableName();
     private readonly RelationalDatabaseConfiguration _configuration;
 
@@ -79,10 +83,17 @@ public class MsSqlQueueProvisioningConcurrencyTests : IDisposable
             var index = i;
             threads[index] = new Thread(() =>
             {
-                WarmTheConnectionPool();
-                gate.SignalAndWait();
+                //The whole body, warm-up included. An unhandled exception on a raw foreground
+                //thread terminates the test host: a transient failure in the warm-up would read in
+                //CI as a crashed run with no assertion message rather than as a failed test. Worse,
+                //a thread that died before signalling would leave the other seven parked on the
+                //barrier and Join() would never return, so the run would hang instead of failing.
                 outcomes[index] = Record.Exception(() =>
                 {
+                    WarmTheConnectionPool();
+                    if (!gate.SignalAndWait(GateTimeout))
+                        throw new TimeoutException("The other starts never reached the gate.");
+
                     using var channel = starts[index].CreateSyncChannel(
                         new MsSqlSubscription<MyCommand>(
                             new SubscriptionName("race.subscription"),
@@ -95,7 +106,8 @@ public class MsSqlQueueProvisioningConcurrencyTests : IDisposable
             threads[index].Start();
         }
 
-        foreach (var thread in threads) thread.Join();
+        foreach (var thread in threads)
+            Assert.True(thread.Join(JoinTimeout), "A start neither finished nor failed.");
 
         //Assert -- every start succeeds, and there is exactly one table at the end.
         Assert.All(outcomes, Assert.Null);

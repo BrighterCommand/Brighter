@@ -59,7 +59,7 @@ public class MsSqlQueueProvisioningAsyncTests : IDisposable
         var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
 
         //Act
-        var channel = await channelFactory.CreateAsyncChannelAsync(Subscription(OnMissingChannel.Create));
+        using var channel = await channelFactory.CreateAsyncChannelAsync(Subscription(OnMissingChannel.Create));
 
         //Assert
         Assert.NotNull(channel);
@@ -109,7 +109,7 @@ public class MsSqlQueueProvisioningAsyncTests : IDisposable
         //Arrange -- the control for the fact above, on the async ladder: same call, same name, the
         //only difference being that the table now exists.
         var creating = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
-        await creating.CreateAsyncChannelAsync(Subscription(OnMissingChannel.Create));
+        using (await creating.CreateAsyncChannelAsync(Subscription(OnMissingChannel.Create))) { }
         var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
 
         //Act
@@ -134,8 +134,10 @@ public class MsSqlQueueProvisioningAsyncTests : IDisposable
         var exception = await Record.ExceptionAsync(
             () => channelFactory.CreateAsyncChannelAsync(Subscription(OnMissingChannel.Create)));
 
-        //Assert
-        Assert.IsType<ConfigurationException>(exception);
+        //Assert -- on the message, not the type: ConnectAsync wraps its own failure in a
+        //ConfigurationException too, so the type check alone passes with the guard deleted.
+        var configurationException = Assert.IsType<ConfigurationException>(exception);
+        Assert.Contains("close the bracket", configurationException.Message);
     }
 
     [Fact]
