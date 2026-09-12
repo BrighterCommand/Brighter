@@ -13,12 +13,12 @@ cell remains `Unknown`.
 | `Unknown` | Transient; permitted only during the fix phase. The cleanup is blocked while any cell holds this value. |
 | `Pass` | Conforms as generated; both Reactor and Proactor variants are green against a live broker. |
 | `Fixed (#PR/commit)` | Conformed via an in-spec gateway fix linked to the PR or commit. |
-| `Deferred -> #NNNN (sign-off: @maintainer)` | A named, linked, maintainer-signed-off follow-up issue. |
+| `Deferred -> #NNNN (sign-off: @iancooper)` | A named, linked, maintainer-signed-off follow-up issue. |
 
 ## Rules
 
 - **Placeholder rows** (transports with no gateway configuration declared yet) occupy a single row
-  per transport. Their cells may resolve only to `Deferred -> #NNNN (sign-off: @maintainer)` — never
+  per transport. Their cells may resolve only to `Deferred -> #NNNN (sign-off: @iancooper)` — never
   to `Pass` or `Fixed` — because no generated suite exists to pass.
 - A behaviour is `Pass` or `Fixed` only when **both** the Reactor and Proactor variants pass against
   a running broker (FR-14). If only one variant passes, the cell must be `Deferred`.
@@ -255,7 +255,7 @@ cell remains `Unknown`.
     conformance conclusion rests on the generated canonical suite, which is fully green apart from the
     FR-5 Deferred skips.
 - `AzureServiceBus / AzureServiceBusMessagingGateway` — **9 of 11 cells `Pass`, verified in CI against a
-  real namespace (2026-09-07). FR-5 and FR-9 remain `Deferred -> #4240 (sign-off: @maintainer)`.**
+  real namespace (2026-09-07). FR-5 and FR-9 remain `Deferred -> #4240 (sign-off: @iancooper)`.**
   - **How this was established.** Probe PR #4317 (closed unmerged, as #4308 was) flipped all 11 cells so
     the generator emitted no `Skip`, applied the #4309 fix, and merged the #4310 fix so the run measured
     the right thing. `azure-ci` job `101853410391` against baseline run `34127954869`: the failing set
@@ -437,6 +437,45 @@ both mechanisms, and it still fails anything dead-lettered before the budget ran
 Both changes live in the shared templates, so every configuration is held to the same rule. The four
 configurations that were already `Pass` were re-run against the revised assertions and stay green.
 
+### The division of labour: what this suite proves, and what the pump suite proves
+
+FR-23 drives a real pump. **The other canonical behaviours deliberately do not**, and that is a
+decision rather than an oversight, so it is recorded here.
+
+FR-2, FR-15 and FR-22 call `Requeue` on the channel; FR-4, FR-5, FR-6, FR-7, FR-8 and FR-17 call
+`Reject`. None starts a pump. Read as "does the pump do the right thing", those tests would be
+bypassing the code under test — the objection that made FR-23 change. Read as what they are, a
+**gateway** suite, they are correct: they ask whether *this transport* honours a requeue or a reject,
+which is the only question a transport can answer.
+
+The pump's half of the behaviour is proven separately, against in-memory channels, in
+`tests/Paramore.Brighter.Core.Tests/MessageDispatch` — **86 tests, 41 `Reactor` and 45 `Proactor`**:
+
+| the pump decision | covering tests |
+|---|---|
+| a deferring handler is requeued until rejected | `When_a_command_handler_throws_a_defer_message_Then_message_is_requeued_until_rejected` (×4) |
+| the requeue-count threshold is reached | `When_a_requeue_count_threshold_for_{commands,events}_has_been_reached` (×4) |
+| `ChannelFailureException` retries until reconnected | `When_a_channel_failure_exception_is_thrown_…_should_retry_until_connection_re_established` (×4) |
+| the unacceptable-message limit | `When_an_unacceptable_message_limit_is_{reached,reset}` (×8) |
+| reject falls back to the DLQ with no invalid channel | `When_no_imq_configured_reject_falls_back_to_dlq` (×2) |
+
+**Validity is compositional**: the gateway suite proves the transport performs the operation, the pump
+suite proves the pump decides to perform it, and together they cover the behaviour. Neither needs to
+re-prove the other's half, and a gateway suite that re-drove the pump for all nine behaviours would be
+duplicating 86 tests across 24 configurations to learn nothing new.
+
+FR-23 is the exception that shows where the line falls. Its question — *does exhausting the budget put
+the message on the DLQ?* — spans both halves at once: the budget exists only in the pump, and the
+landing is observable only on the transport. No test on either side alone can answer it, so FR-23
+alone drives a real pump.
+
+⚠️ **The risk this carries, stated so it is not discovered the hard way.** The composition is only as
+good as both halves, and **nothing links them**. If the `MessageDispatch` tests above are deleted,
+weakened, or quietly narrowed, every conformance cell in this ledger stays green while the composite
+claim silently stops being true — the gateway suite cannot notice, because it never asserted the
+pump's half in the first place. Treat those 86 tests as load-bearing for this ledger, not as an
+independent suite that happens to exist.
+
 ### Why the eight AWS cells stay `Deferred`: the budget is inert on SQS (#4341)
 
 `AWS` and `AWS.V4` were run against LocalStack and are **not** promoted. The test does not fail on a
@@ -482,27 +521,27 @@ fix: `ApproximateReceiveCount` is already requested on every receive
 
 | Configuration | FR-2 | FR-4 | FR-5 | FR-6 | FR-7 | FR-8 | FR-9 | FR-15 | FR-16 | FR-17 | FR-22 | FR-23 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| AWS / SnsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @maintainer) |
-| AWS / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @maintainer) |
-| AWS / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @maintainer) |
-| AWS / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @maintainer) |
-| AWS.V4 / SnsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @maintainer) |
-| AWS.V4 / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @maintainer) |
-| AWS.V4 / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @maintainer) |
-| AWS.V4 / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @maintainer) |
-| GCP / Pull | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Pass | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Deferred -> #4240 (sign-off: @maintainer) |
-| GCP / PullOrdering | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Pass | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Deferred -> #4240 (sign-off: @maintainer) |
-| GCP / Stream | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) |
-| GCP / StreamOrdering | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) | Deferred -> #4240 (sign-off: @maintainer) |
+| AWS / SnsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
+| AWS / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
+| AWS / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
+| AWS / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
+| AWS.V4 / SnsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
+| AWS.V4 / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
+| AWS.V4 / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
+| AWS.V4 / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
+| GCP / Pull | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Pass | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Deferred -> #4240 (sign-off: @iancooper) |
+| GCP / PullOrdering | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Pass | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Deferred -> #4240 (sign-off: @iancooper) |
+| GCP / Stream | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
+| GCP / StreamOrdering | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
 | Kafka / Classic | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | Kafka / Consumer | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | Kafka / PartitionKey | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
-| MSSQL / MSSQLMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass |
+| MSSQL / MSSQLMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass |
 | PostgresSQL / PostgresMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
-| Redis / RedisMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass |
-| RMQ.Async / Classic | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
-| RMQ.Async / Quorum | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
-| RocketMQ / RocketMQMessagingGateway | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) |
-| AzureServiceBus / AzureServiceBusMessagingGateway | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @maintainer) |
-| MQTT / MqttMessagingGateway | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) |
-| RMQ.Sync / RmqSyncMessagingGateway | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @maintainer) |
+| Redis / RedisMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass |
+| RMQ.Async / Classic | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
+| RMQ.Async / Quorum | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
+| RocketMQ / RocketMQMessagingGateway | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) |
+| AzureServiceBus / AzureServiceBusMessagingGateway | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) |
+| MQTT / MqttMessagingGateway | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) |
+| RMQ.Sync / RmqSyncMessagingGateway | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) |
