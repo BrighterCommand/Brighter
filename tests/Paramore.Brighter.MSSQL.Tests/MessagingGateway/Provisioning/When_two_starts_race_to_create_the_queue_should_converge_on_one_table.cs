@@ -106,8 +106,11 @@ public class MsSqlQueueProvisioningConcurrencyTests : IDisposable
             threads[index].Start();
         }
 
-        foreach (var thread in threads)
-            Assert.True(thread.Join(JoinTimeout), "A start neither finished nor failed.");
+        //Joined to completion before anything is asserted: an Assert inside this loop would exit
+        //the method with the remaining threads still parked on the barrier, and `using var gate`
+        //would then dispose it under them.
+        var joined = threads.Select(thread => thread.Join(JoinTimeout)).ToArray();
+        Assert.All(joined, finished => Assert.True(finished, "A start neither finished nor failed."));
 
         //Assert -- every start succeeds, and there is exactly one table at the end.
         Assert.All(outcomes, Assert.Null);

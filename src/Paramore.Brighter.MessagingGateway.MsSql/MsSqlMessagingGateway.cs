@@ -249,9 +249,11 @@ public class MsSqlMessagingGateway(IAmARelationalDatabaseConfiguration configura
         return queueTable;
     }
 
-    // Only the connect is wrapped, and deliberately: this runs as the host starts, so the commonest
+    // The connect is wrapped, and deliberately: this runs as the host starts, so the commonest
     // first-run mistakes — wrong server, malformed string, no permission — would otherwise surface
-    // as a bare provider exception with nothing saying which table we were provisioning.
+    // as a bare provider exception with nothing saying which table we were provisioning. A
+    // transient failure is the exception, and takes the same route it takes out of the DDL: typing
+    // a failover window as a ConfigurationException defeats any policy that retries on one.
     private SqlConnection Connect(string queueTable)
     {
         try
@@ -259,6 +261,10 @@ public class MsSqlMessagingGateway(IAmARelationalDatabaseConfiguration configura
             var connection = new SqlConnection(Configuration.ConnectionString);
             connection.Open();
             return connection;
+        }
+        catch (SqlException ex) when (IsTransient(ex.Number))
+        {
+            throw;
         }
         catch (Exception ex) when (ex is SqlException or ArgumentException or InvalidOperationException)
         {
@@ -275,6 +281,10 @@ public class MsSqlMessagingGateway(IAmARelationalDatabaseConfiguration configura
             var connection = new SqlConnection(Configuration.ConnectionString);
             await connection.OpenAsync(cancellationToken);
             return connection;
+        }
+        catch (SqlException ex) when (IsTransient(ex.Number))
+        {
+            throw;
         }
         catch (Exception ex) when (ex is SqlException or ArgumentException or InvalidOperationException)
         {
@@ -418,20 +428,37 @@ public class MsSqlMessagingGateway(IAmARelationalDatabaseConfiguration configura
     // at startup is at least as likely as a permission denial, and more likely than it on a
     // connection that has been working for months — so these propagate raw, exactly as the second
     // deadlock does, and for the same reason.
+    //
+    // Consulted on BOTH paths. Most of these arrive during login rather than from a command, so a
+    // set applied only to the DDL would exempt them in the one place they cannot appear.
+    //
+    // Three codes are deliberately absent, because each is ambiguous in a way that resolves towards
+    // configuration on a first run — which is when the wrapper's message is worth most. 4060,
+    // "cannot open database requested by the login", is a failover in Azure and a misspelled
+    // database name everywhere else. 40615 is an IP that the firewall rule does not list, and 11001
+    // is a host name that does not resolve. A network-unreachable server arrives as number 0 and is
+    // likewise left wrapped.
     private static bool IsTransient(int number) => number switch
     {
-        -2 => true,      // command timeout
-        233 => true,     // connection initialisation failure
-        4060 => true,    // cannot open database, may be mid-failover
+        -2 => true,      // command timeout; measured against a table held under TABLOCKX
+        64 => true,      // connection succeeded, then failed during the login process
+        233 => true,     // connection initialisation failure, typically a restarting server
+        1204 => true,    // SQL Server is out of lock resources
+        1222 => true,    // lock request time out period exceeded; the DDL sibling of -2
         4221 => true,    // read on a replica before the secondary has caught up
+        10053 => true,   // transport-level: connection aborted by the software in the host
+        10054 => true,   // transport-level: connection reset by peer
+        10060 => true,   // transport-level: connection attempt timed out
         10928 => true,   // Azure SQL: resource limit reached
         10929 => true,   // Azure SQL: not enough resources right now
+        40143 => true,   // Azure SQL: connection could not be initialised
         40197 => true,   // Azure SQL: service error during a reconfiguration
         40501 => true,   // Azure SQL: service busy
         40613 => true,   // Azure SQL: database currently unavailable
         49918 => true,   // Azure SQL: cannot process, not enough resources
         49919 => true,   // Azure SQL: too many create or update operations
         49920 => true,   // Azure SQL: too many operations in progress
+        49977 => true,   // Azure SQL: busy with another operation
         _ => false
     };
 

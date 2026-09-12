@@ -177,9 +177,14 @@ That case is now raised as a `ConfigurationException` naming the queue table, ca
 own message, and naming the setting that avoids it. A login with no DDL rights can still use
 `Validate`, because checking is one `SELECT` over `sys.tables`.
 
-Errors that will pass on their own — command timeouts, and the Azure SQL unavailability and
-throttling codes — are deliberately left as the provider threw them, because telling their author to
-reconfigure `MakeChannels` would send them to fix the wrong thing.
+Errors that will pass on their own — command and lock timeouts, the transport-level family, and the
+Azure SQL unavailability and throttling codes — are deliberately left as the provider threw them, on
+both the connect and the DDL, because telling their author to reconfigure `MakeChannels` would send
+them to fix the wrong thing, and because typing a failover window as a `ConfigurationException`
+defeats any policy that retries on `SqlException.Number`.
+
+A wrong server, a malformed connection string and a misspelled database name are *not* in that set
+and stay wrapped: those are the first-run mistakes the message exists for.
 
 #### Under `Create`, the queue table name is bounded at 119 characters
 

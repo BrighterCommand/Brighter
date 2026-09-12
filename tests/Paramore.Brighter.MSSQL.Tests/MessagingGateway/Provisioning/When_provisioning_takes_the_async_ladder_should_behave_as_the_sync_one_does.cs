@@ -138,6 +138,7 @@ public class MsSqlQueueProvisioningAsyncTests : IDisposable
         //ConfigurationException too, so the type check alone passes with the guard deleted.
         var configurationException = Assert.IsType<ConfigurationException>(exception);
         Assert.Contains("close the bracket", configurationException.Message);
+        Assert.DoesNotContain("provider said", configurationException.Message);
     }
 
     [Fact]

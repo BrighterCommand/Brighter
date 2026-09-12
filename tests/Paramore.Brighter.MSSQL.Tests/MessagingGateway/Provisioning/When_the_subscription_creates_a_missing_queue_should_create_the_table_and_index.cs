@@ -147,6 +147,7 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
         //message is what separates "refused the name" from "could not reach the server".
         var configurationException = Assert.IsType<ConfigurationException>(exception);
         Assert.Contains("close the bracket", configurationException.Message);
+        Assert.DoesNotContain("provider said", configurationException.Message);
     }
 
     [Fact]
@@ -202,6 +203,34 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
 
         //Act
         var exception = Record.Exception(() => channelFactory.CreateSyncChannel(subscription));
+
+        //Assert
+        var configurationException = Assert.IsType<ConfigurationException>(exception);
+        Assert.Contains("128", configurationException.Message);
+        Assert.DoesNotContain("119", configurationException.Message);
+    }
+
+    [Fact]
+    public void When_the_queue_table_name_is_over_both_bounds_should_report_the_absolute_one()
+    {
+        //Arrange -- 129 characters through Create, where both length guards match. Which one answers
+        //is load-bearing and nothing else holds it in place: the 119 guard's message ends by saying
+        //the table "can still be used with MakeChannels = Validate", and for a 129-character name
+        //that advice cannot be taken, because SQL Server will not hold an identifier that long under
+        //any mode. The absolute bound has to be the one that speaks.
+        var configuration = new RelationalDatabaseConfiguration(
+            MsSqlQueueProvisioningAssumeTests.UnreachableConnectionString,
+            queueStoreTable: new string('Q', 129));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
+
+        //Act
+        var exception = Record.Exception(() => channelFactory.CreateSyncChannel(
+            new MsSqlSubscription<MyCommand>(
+                new SubscriptionName("create.subscription"),
+                new ChannelName("create.channel"),
+                new RoutingKey("create.topic"),
+                messagePumpType: MessagePumpType.Reactor,
+                makeChannels: OnMissingChannel.Create)));
 
         //Assert
         var configurationException = Assert.IsType<ConfigurationException>(exception);

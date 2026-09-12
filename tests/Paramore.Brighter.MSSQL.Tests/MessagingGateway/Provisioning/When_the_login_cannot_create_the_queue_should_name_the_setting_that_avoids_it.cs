@@ -53,30 +53,31 @@ public class MsSqlQueueProvisioningPermissionTests : IDisposable
 
         var builder = new SqlConnectionStringBuilder(Configuration.DefaultConnectingString);
 
-        Execute($"""
-                 CREATE LOGIN [{_login}] WITH PASSWORD = 'Prob3_{_login}!', CHECK_POLICY = OFF;
-                 CREATE USER [{_login}] FOR LOGIN [{_login}];
-                 ALTER ROLE db_datareader ADD MEMBER [{_login}];
-                 ALTER ROLE db_datawriter ADD MEMBER [{_login}];
-                 """);
+        //The guard opens HERE, around the batch itself, because that is the statement that can
+        //leave something behind: CREATE LOGIN commits, and a CREATE USER or ALTER ROLE that then
+        //fails leaves the login. xUnit does not call Dispose when a constructor throws, and the
+        //login name is a fresh GUID each run, so without this a failing CI job accumulates logins
+        //in a container that outlives it.
+        try
+        {
+            Execute($"""
+                     CREATE LOGIN [{_login}] WITH PASSWORD = 'Prob3_{_login}!', CHECK_POLICY = OFF;
+                     CREATE USER [{_login}] FOR LOGIN [{_login}];
+                     ALTER ROLE db_datareader ADD MEMBER [{_login}];
+                     ALTER ROLE db_datawriter ADD MEMBER [{_login}];
+                     """);
+        }
+        catch
+        {
+            DropLogin();
+            throw;
+        }
 
         builder.UserID = _login;
         builder.Password = $"Prob3_{_login}!";
         _readWriteConnectionString = builder.ConnectionString;
-
-        try
-        {
-            _configuration = new RelationalDatabaseConfiguration(
-                _readWriteConnectionString, queueStoreTable: _queueTable);
-        }
-        catch
-        {
-            //xUnit does not call Dispose when a constructor throws, and the login name is a fresh
-            //GUID each run, so without this a failing CI job accumulates logins in a container that
-            //outlives it.
-            DropLogin();
-            throw;
-        }
+        _configuration = new RelationalDatabaseConfiguration(
+            _readWriteConnectionString, queueStoreTable: _queueTable);
     }
 
     [Fact]
@@ -147,10 +148,18 @@ public class MsSqlQueueProvisioningPermissionTests : IDisposable
         DropLogin();
     }
 
+    //Each KILL is wrapped individually, because the session list is read and then executed, and a
+    //pooled session may close between the two: KILL then fails with "Process ID n is not an active
+    //process ID" and takes the whole Dispose with it, failing a test whose assertions had already
+    //passed. Measured — it goes red roughly three runs in four when both target frameworks run
+    //against one container, which is exactly what sqlserver-ci does.
+    //
+    //Only the KILLs are tolerated. A DROP LOGIN that fails because a session really is still there
+    //is a leak, and still surfaces.
     private void DropLogin() =>
         Execute($"""
                  DECLARE @kill nvarchar(max) = N'';
-                 SELECT @kill += 'KILL ' + CAST(session_id AS varchar(10)) + ';'
+                 SELECT @kill += 'BEGIN TRY KILL ' + CAST(session_id AS varchar(10)) + '; END TRY BEGIN CATCH END CATCH;'
                  FROM sys.dm_exec_sessions WHERE login_name = '{_login}';
                  EXEC(@kill);
                  DROP USER IF EXISTS [{_login}];
