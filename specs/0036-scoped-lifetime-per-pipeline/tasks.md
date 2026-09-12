@@ -1013,7 +1013,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T6.17
   - **References**: AC-38 (FR-5, FR-12, C-7); ADR 0072 step 4, ADR 0070 step 4
 
-- [ ] **TEST + IMPLEMENT: T6.19 — a handler's outbox write is in the caller's transaction when opted in, and is not when it is not**
+- [x] **TEST + IMPLEMENT: T6.19 — a handler's outbox write is in the caller's transaction when opted in, and is not when it is not**
   - **USE COMMAND**: `/test-first an opted in handler's DepositPost shares the controller's DbContext and transaction and rolls back with it`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_a_handler_deposits_in_an_opted_in_request_the_outbox_write_should_join_the_caller_transaction.cs`
