@@ -381,16 +381,19 @@ redelivered for ever would pass every other DLQ behaviour in this suite.
   configurations, so it lands on the loosened identity and delivery-count bounds described below. It
   needed no broker the async pair did not already need: the conformance suite never asks for the
   delayed-message plugin, so a stock `rabbitmq:*-management` image serves all three RMQ cells.
-- **The other 15 remain `Deferred`.** Eight of those are the `AWS` and `AWS.V4` cells, which are
-  blocked on [#4341](https://github.com/BrighterCommand/Brighter/issues/4341) — a product decision,
-  not a broker run — so the reachable ceiling for this column today is 16, not 24. The remaining
-  seven (`MQTT`, `GCP` ×4, `RocketMQ`, `AzureServiceBus`) still need a broker run; CI on #4297 is the
-  evidence that moves them, one transport at a time.
+- **The other 15 remain `Deferred`, and two different things hold them.** Nine are blocked on a
+  product defect rather than on a broker run: the eight `AWS` and `AWS.V4` cells on
+  [#4341](https://github.com/BrighterCommand/Brighter/issues/4341), and `MQTT` on
+  [#4351](https://github.com/BrighterCommand/Brighter/issues/4351). Re-running those changes nothing
+  until the defect is fixed. The remaining six — `GCP` ×4, `RocketMQ`, `AzureServiceBus` — have simply
+  not been run yet. So the ceiling reachable by broker runs alone is **15**, not 24, and CI on #4297
+  is the evidence that moves the six.
 
 ### `MQTT` was attempted and stays `Deferred` — the Proactor pump deadlocks on the first requeue
 
-Measured 2026-09-12 against `docker-compose-mqtt.yaml`. The two variants disagree, and FR-14's
-both-variants rule is what holds the cell:
+Measured 2026-09-12 against `docker-compose-mqtt.yaml`, and tracked as
+[#4351](https://github.com/BrighterCommand/Brighter/issues/4351). The two variants disagree, and
+FR-14's both-variants rule is what holds the cell:
 
 | variant | result |
 |---|---|
@@ -601,5 +604,5 @@ fix: `ApproximateReceiveCount` is already requested on every receive
 | RMQ.Async / Quorum | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | RocketMQ / RocketMQMessagingGateway | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) |
 | AzureServiceBus / AzureServiceBusMessagingGateway | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) |
-| MQTT / MqttMessagingGateway | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) |
+| MQTT / MqttMessagingGateway | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4351 (sign-off: @iancooper) |
 | RMQ.Sync / RmqSyncMessagingGateway | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Pass |
