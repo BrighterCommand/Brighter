@@ -381,10 +381,11 @@ redelivered for ever would pass every other DLQ behaviour in this suite.
   configurations, so it lands on the loosened identity and delivery-count bounds described below. It
   needed no broker the async pair did not already need: the conformance suite never asks for the
   delayed-message plugin, so a stock `rabbitmq:*-management` image serves all three RMQ cells.
-- **The other 14 remain `Deferred`.** Eight of those are the `AWS` and `AWS.V4` cells, which are
+- **The other 15 remain `Deferred`.** Eight of those are the `AWS` and `AWS.V4` cells, which are
   blocked on [#4341](https://github.com/BrighterCommand/Brighter/issues/4341) — a product decision,
-  not a broker run — so the reachable ceiling for this column today is 16, not 24. CI on #4297 is the
-  evidence that moves the remaining six, one transport at a time.
+  not a broker run — so the reachable ceiling for this column today is 16, not 24. The remaining
+  seven (`MQTT`, `GCP` ×4, `RocketMQ`, `AzureServiceBus`) still need a broker run; CI on #4297 is the
+  evidence that moves them, one transport at a time.
 
 Every cell above was also checked for vacuity the same way: force the pump's budget to `int.MaxValue`
 so it can never be exhausted, and confirm the test goes red. Both variants were probed separately —
