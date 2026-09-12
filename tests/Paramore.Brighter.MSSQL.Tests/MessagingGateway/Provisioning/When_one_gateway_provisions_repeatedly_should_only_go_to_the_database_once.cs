@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Data.SqlClient;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Xunit;
 
@@ -99,6 +100,50 @@ public class MsSqlQueueProvisioningOnceTests : IDisposable
 
         //Assert
         Assert.True(MsSqlQueueProvisioningCreateTests.QueueTableExists(_queueTable));
+    }
+
+
+    [Fact]
+    public void When_one_gateway_validates_and_then_creates_should_still_create_the_index()
+    {
+        //Arrange -- the ordering the provisioning memory could plausibly break, and it is reachable:
+        //one Dispatcher shares one ChannelFactory across every subscription, and subscriptions may
+        //differ in MakeChannels. So a Validate subscription can open first, against a table someone
+        //else created WITHOUT the topic index, and a Create subscription can follow on the same
+        //instance. Keying the memory on OnMissingChannel rather than on a single flag is what makes
+        //the second call still run; a bool would have swallowed it and left the index missing.
+        CreateQueueTableWithoutIndex(_queueTable);
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
+
+        //Act
+        using (var validated = channelFactory.CreateSyncChannel(Subscription(OnMissingChannel.Validate))) { }
+        Assert.False(MsSqlQueueProvisioningCreateTests.TopicIndexExists(_queueTable));
+
+        using var created = channelFactory.CreateSyncChannel(Subscription(OnMissingChannel.Create));
+
+        //Assert
+        Assert.True(MsSqlQueueProvisioningCreateTests.TopicIndexExists(_queueTable));
+    }
+
+    private static void CreateQueueTableWithoutIndex(string queueTable)
+    {
+        using var connection = new SqlConnection(Configuration.DefaultConnectingString);
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = MsSqlQueueBuilder.GetDDL(queueTable);
+        command.ExecuteNonQuery();
+    }
+
+    private static MsSqlSubscription<MyCommand> Subscription(OnMissingChannel makeChannels) =>
+        new(new SubscriptionName("once.subscription"),
+            new ChannelName("once.channel"),
+            new RoutingKey("once.topic"),
+            messagePumpType: MessagePumpType.Reactor,
+            makeChannels: makeChannels);
+
+    private class MyCommand : Command
+    {
+        public MyCommand() : base(Guid.NewGuid()) { }
     }
 
     public void Dispose() => MsSqlQueueProvisioningCreateTests.DropQueueTable(_queueTable);
