@@ -178,6 +178,48 @@ so a burst larger than `BufferSize` overflowed the Brighter `Channel` wrapper an
 buffered is left for the next call. A directly-constructed `MqttMessageConsumer` does not sit behind a
 `Channel` and keeps its uncapped behaviour unless you pass the new optional `batchSize` argument.
 
+### RMQ.Async: subscriptions declare durable queues by default (#4355)
+
+`RmqSubscription` and `RmqSubscription<T>` in `Paramore.Brighter.MessagingGateway.RMQ.Async` now default
+`isDurable` to **`true`**. Previously they defaulted to `false`, which asked the broker for a transient,
+non-exclusive queue.
+
+RabbitMQ **4.3** deprecates that combination and **refuses to declare it by default**:
+
+```
+INTERNAL_ERROR - Feature `transient_nonexcl_queues` is deprecated.
+By default, this feature is not permitted anymore.
+```
+
+Because `isDurable: false` was the *default*, an out-of-the-box RMQ.Async consumer could not connect to a
+4.3 broker at all - the declare failed and Brighter surfaced a `ChannelFailureException`. The deprecation
+notice states the feature will be removed "regardless of the configuration", so permitting it through
+broker settings is only a stopgap.
+
+`Paramore.Brighter.MessagingGateway.RMQ.Sync` is **unchanged** and still defaults to `isDurable: false`. It
+targets the RabbitMQ 3.x line through the legacy `RabbitMQ.Client` 6.x API, and 3.x permits transient
+non-exclusive queues.
+
+#### Breaking: an existing transient queue will fail to redeclare
+
+RabbitMQ rejects a `QueueDeclare` whose durability differs from the queue that already exists. **If you are
+on RMQ.Async and your queues were created with the old default, upgrading will fail** with a
+`PRECONDITION_FAILED` channel error until you either keep the old behaviour explicitly:
+
+```csharp
+new RmqSubscription<MyEvent>(
+    subscriptionName: new SubscriptionName("MySubscription"),
+    channelName: new ChannelName("my.queue"),
+    routingKey: new RoutingKey("my.topic"),
+    isDurable: false)          // opt back in to a transient queue
+```
+
+or delete the existing queue and let Brighter recreate it as durable. A durable queue survives a broker
+restart, so this also changes what happens to queued messages across a restart - which is usually the
+behaviour you wanted.
+
+Note the dead-letter queue is declared with the same durability as its subscription, so both move together.
+
 ### MSSQL transport provisions its queue table (#4343)
 
 `OnMissingChannel` on an `MsSqlSubscription` or a `Publication` is now honoured by the MSSQL

@@ -112,9 +112,16 @@ cell remains `Unknown`.
   `rabbitmq:4.2-management` rather than `brightercommand/rabbitmq:4.2-management-delay`: the
   delayed-message plugin is being retired upstream and the suite never asked for it, so the pins moved to
   stock images and the one plugin-dependent test was retired (see "The delay plugin is retired" below).
-  The 4.2 pin itself is unchanged and still deliberate — the `transient_nonexcl_queues` rejection on 4.3 is
-  a product forward-compatibility defect, now tracked as
-  [#4355](https://github.com/BrighterCommand/Brighter/issues/4355). **Requeue/redeliver + no-channel ack (FR-7/15/16/22) `Pass` natively** — notably
+  The 4.2 pin itself is unchanged — the `transient_nonexcl_queues` rejection on 4.3 was a product
+  forward-compatibility defect, tracked as
+  [#4355](https://github.com/BrighterCommand/Brighter/issues/4355) and **since fixed for `RMQ.Async`**: its
+  `RmqSubscription` now defaults `isDurable` to `true`, so a default subscription declares a queue 4.3 will
+  accept. **Measured against a real 4.3.5 broker: all 80 generated `RMQ.Async` conformance tests pass**, and
+  the run is unchanged on 4.2 (145 passed, 6 skipped, 0 failed). `RMQ.Sync` keeps `isDurable: false` by
+  decision — it targets the RabbitMQ 3.x line through `RabbitMQ.Client` 6.x, and 3.x permits transient
+  non-exclusive queues. ⚠️ **24 hand-written `RMQ.Async` tests still fail on 4.3** because they opt into a
+  transient queue explicitly (mostly `QueueFactory`'s own `isDurable: false` default in `TestHelpers.cs`);
+  they pass on 4.2, which is what CI runs, so the pin stays until someone decides to move those too. **Requeue/redeliver + no-channel ack (FR-7/15/16/22) `Pass` natively** — notably
   **FR-16** (`RmqMessageConsumer.NackAsync` → `BasicNackAsync(requeue: true)` → the broker redelivers,
   contrast Redis/MSSQL `Deferred`). **Delay (FR-2/FR-9) `Pass` via a wired `RmqHarnessMessageScheduler`** —
   the gateway delegates a non-zero delay to `IAmAMessageProducer.Scheduler` when `DelaySupported == false`

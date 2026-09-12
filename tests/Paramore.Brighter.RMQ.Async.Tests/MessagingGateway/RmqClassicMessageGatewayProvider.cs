@@ -238,7 +238,7 @@ public class RmqClassicMessageGatewayProvider
             connection: _connection,
             queueName: subscription.DeadLetterChannelName!,
             routingKey: subscription.DeadLetterRoutingKey!,
-            isDurable: false,
+            isDurable: subscription.IsDurable,
             makeChannels: OnMissingChannel.Assume
         );
 
@@ -270,7 +270,7 @@ public class RmqClassicMessageGatewayProvider
             connection: _connection,
             queueName: subscription.DeadLetterChannelName!,
             routingKey: subscription.DeadLetterRoutingKey!,
-            isDurable: false,
+            isDurable: subscription.IsDurable,
             makeChannels: OnMissingChannel.Assume
         );
 
@@ -355,7 +355,7 @@ public class RmqClassicMessageGatewayProvider
             connection: _connection,
             queueName: new ChannelName(invalidRoutingKey.Value),
             routingKey: invalidRoutingKey,
-            isDurable: false,
+            isDurable: subscription.IsDurable,
             makeChannels: OnMissingChannel.Create
         );
     }

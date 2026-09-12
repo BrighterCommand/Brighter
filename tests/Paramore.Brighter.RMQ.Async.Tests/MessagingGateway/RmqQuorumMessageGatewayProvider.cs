@@ -358,7 +358,7 @@ public class RmqQuorumMessageGatewayProvider
             connection: _connection,
             queueName: new ChannelName(invalidRoutingKey.Value),
             routingKey: invalidRoutingKey,
-            isDurable: false,
+            isDurable: subscription.IsDurable,
             makeChannels: OnMissingChannel.Create
         );
     }
