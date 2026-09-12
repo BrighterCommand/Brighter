@@ -385,9 +385,12 @@ redelivered for ever would pass every other DLQ behaviour in this suite.
   product defect rather than on a broker run: the eight `AWS` and `AWS.V4` cells on
   [#4341](https://github.com/BrighterCommand/Brighter/issues/4341), and `MQTT` on
   [#4351](https://github.com/BrighterCommand/Brighter/issues/4351). Re-running those changes nothing
-  until the defect is fixed. The remaining six — `GCP` ×4, `RocketMQ`, `AzureServiceBus` — have simply
-  not been run yet. So the ceiling reachable by broker runs alone is **15**, not 24, and CI on #4297
-  is the evidence that moves the six.
+  until the defect is fixed. Of the remaining six, **`GCP` ×4 and `AzureServiceBus` cannot be run
+  against local infrastructure at all** — GCP's emulator implements neither of the two APIs the DLQ
+  path needs (see below), and ASB has no emulator — so `gcp-ci` and `azure-ci`, which run against real
+  cloud projects, are the only evidence that can move those five. Only **`RocketMQ`** is still a
+  broker run somebody can do locally. So the ceiling reachable by *local* broker runs alone is
+  **10**, and CI on #4297 is what moves the other five.
 
 ### `MQTT` was attempted and stays `Deferred` — the Proactor pump deadlocks on the first requeue
 
@@ -430,6 +433,51 @@ with the file untouched since `b42887af4`, which predates it. The item was misse
 Either half of the fix unblocks the cell: stop connecting in the constructor (an async factory, or
 lazy connect on first publish), or create the requeue producer eagerly with the consumer so it is
 never built on the pump thread.
+
+### `GCP` ×4 was attempted and stays `Deferred` — the emulator cannot create a DLQ subscription
+
+Measured 2026-09-12 against `docker-compose-gcp.yaml` (the `cloud-sdk:emulators` Pub/Sub emulator on
+`localhost:8085`, with `PUBSUB_EMULATOR_HOST` and `GOOGLE_CLOUD_PROJECT` exported). All eight tests —
+four configurations × both variants — fail in ~4 s during **arrange**, before any pump runs. The
+behaviour was never reached, so this run is evidence about the *infrastructure*, not about FR-23.
+
+**The DLQ path needs two APIs the emulator does not implement.** Creating a subscription that
+carries a `DeadLetterPolicy` routes through `GcpPubSubMessageGateway.EnsureSubscriptionExistsAsync`
+(`:235`), which calls `UpdateIAmRoleForDeadLetterAsync` (`:481`). That method does two things, and
+the emulator refuses both:
+
+| call | what happens on the emulator |
+|---|---|
+| `ProjectsClient.GetProjectAsync` — Cloud Resource Manager, used to derive the default Pub/Sub service account when `DeadLetterPolicy.PublisherMember` is unset | `Unauthenticated` — the request leaves for **real GCP**. `ProjectsClientConfiguration` is the one builder hook the four GCP providers do not wire for emulator detection, and Resource Manager is a different service from Pub/Sub, so `PUBSUB_EMULATOR_HOST` could not redirect it anyway |
+| `PublisherServiceApiClient.IAMPolicyClient.GetIamPolicyAsync` on the dead-letter topic | `Unimplemented` — the Pub/Sub emulator has no IAM surface at all |
+
+The second was isolated rather than inferred: setting `PublisherMember` explicitly on the provider's
+`DeadLetterPolicy` skips the Resource Manager call, and the run then fails one line later on
+`GetIamPolicy` with `Unimplemented`. That probe was reverted; it is recorded here, not committed.
+
+**So no amount of harness work makes this cell runnable locally.** This is the same resolution as
+`AzureServiceBus`: the scoped suite cannot be run against local infrastructure, and verification is
+deferred to real infrastructure — here `gcp-ci`, which runs against a real GCP project.
+
+⚠️ **A second, independent blocker is visible in source and would survive the emulator being fixed.**
+`GcpPullMessageConsumer.Requeue{,Async}` requeues with `ModifyAckDeadline(…, 0)` (`:335`, `:369`),
+which returns the message to the subscription **without rewriting the stored copy**, and
+`HandledCount` is written only on *send* (`Parser.AddHeaders`, `:307`). Every redelivery therefore
+arrives reading 0, the pump bumps it to 1, `HandledCountReached(RequeueCount)` is never true, and the
+budget cannot run down. What would dead-letter the message is the subscription's own
+`MaxDeliveryAttempts`, and the DLQ copy would carry `HandledCount = 0` — failing this behaviour's
+`>= RequeueCount - 1` bound. **This is the same defect as
+[#4341](https://github.com/BrighterCommand/Brighter/issues/4341) on SQS**, whose `ChangeMessageVisibility`
+requeue has exactly this shape. It is recorded here as a source reading, not a measurement: the
+emulator blocker above stops the run that would confirm it.
+
+⭐ **A product observation worth separating from the cell.** `UpdateIAmRoleForDeadLetterAsync` makes
+channel creation *hard-fail* when the project's IAM cannot be read or written. That means an
+application creating a DLQ-backed channel must hold `resourcemanager.projects.get` and
+`pubsub.topics.{get,set}IamPolicy`, which an application service account frequently will not — the
+DLQ is usually provisioned by infrastructure-as-code. Tolerating `Unimplemented` and
+`PermissionDenied` there (log and continue, as the binding may already exist) would both fix that and
+make the emulator path usable.
 
 ### A harness note the MQTT run exposed: the 30 s ceiling is not enforced for MQTT
 
