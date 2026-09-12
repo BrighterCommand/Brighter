@@ -932,7 +932,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T6.12, T5.2, T4.5
   - **References**: AC-11 (FR-8, FR-10, FR-24.4, D6, D19); ADR 0075 steps 3, 6, ADR 0072 step 2
 
-- [ ] **TEST + IMPLEMENT: T6.14 — suppression propagates into an async subscriber and does not leak out of it**
+- [x] **TEST + IMPLEMENT: T6.14 — suppression propagates into an async subscriber and does not leak out of it**
   - **USE COMMAND**: `/test-first two concurrently running Publish subscribers and a nested SendAsync all resolve outside the request scope while the caller stays unsuppressed`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_two_subscribers_run_concurrently_suppression_should_propagate_and_not_leak.cs`
