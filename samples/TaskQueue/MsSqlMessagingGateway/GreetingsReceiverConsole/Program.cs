@@ -43,10 +43,6 @@ var builder = Host.CreateApplicationBuilder(args);
 var connectionString = SampleDatabase.ConnectionString(
     builder.Configuration.GetConnectionString("Brighter"));
 
-// The queue table is not provisioned by anything in Brighter — see QueueTableProvisioner.
-// Running it here as well as in the sender is what lets either process be started first.
-QueueTableProvisioner.EnsureQueueTable(connectionString, SampleDatabase.QueueTable);
-
 // The two tables this process uses: the queue it reads, and the Inbox it de-duplicates
 // against. No outBoxTableName, because this process has no Outbox.
 var configuration = new RelationalDatabaseConfiguration(
