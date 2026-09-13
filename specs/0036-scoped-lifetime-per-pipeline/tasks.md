@@ -1153,7 +1153,7 @@ Two Tidy-First steps **are** owed in the DI package, and both are sequenced ahea
   - **Depends on**: T7.0b (without which this task's own registration breaks the existing suite), T7.0a, T6.22 (Phase 6 complete), T3.6
   - **References**: AC-27 (FR-22.1, D5); ADR 0074 steps 2, 3, 4, 5, 6
 
-- [ ] **TEST + IMPLEMENT: T7.2 — the same error fires in a consumer host**
+- [x] **TEST + IMPLEMENT: T7.2 — the same error fires in a consumer host**
   - **USE COMMAND**: `/test-first a consumer host that opts in with all three lifetimes Transient fails validation through the ServiceActivator hosted service`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_consumer_host_owns_validation_the_inert_opt_in_error_should_still_fire.cs`
