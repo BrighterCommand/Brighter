@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
@@ -32,8 +33,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     /// evaluated by <see cref="ScopeConfigurationValidator"/> (ADR 0074 step 4).
     /// </summary>
     /// <remarks>
-    /// Carries the FR-22.1 rule only. The other six ADR 0074 rules arrive with their own acceptance
-    /// criteria in later tasks — they are not stubbed here.
+    /// Carries the FR-22.1 and FR-22.2 rules. The other five ADR 0074 rules arrive with their own
+    /// acceptance criteria in later tasks — they are not stubbed here.
     /// </remarks>
     internal static class ScopeConfigurationRules
     {
@@ -58,6 +59,34 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     $"MapperLifetime ({c.MapperLifetime}), TransformerLifetime ({c.TransformerLifetime}) is " +
                     $"{ServiceLifetime.Scoped} — the opt-in has no effect, because {ScopeAffinity.JoinAmbient} " +
                     $"only applies to a {ServiceLifetime.Scoped} handler, mapper or transformer. " +
+                    "See docs/guides/lifetimes-and-scoping.md for guidance on choosing a conformant triple."));
+
+        /// <summary>
+        /// FR-22.2 — Error, mixed lifetimes. After discarding any of
+        /// <see cref="ScopeConfiguration.HandlerLifetime"/>, <see cref="ScopeConfiguration.MapperLifetime"/>,
+        /// <see cref="ScopeConfiguration.TransformerLifetime"/> that is <see cref="ServiceLifetime.Singleton"/>,
+        /// the remainder must all be equal (D8). Not conditional on <see cref="ScopeConfiguration.Affinity"/> —
+        /// a mixed pair can never share a pipeline-scoped dependency, regardless of whether either side ever
+        /// joins an ambient scope.
+        /// </summary>
+        /// <returns>A simple specification reporting an Error naming all three lifetimes with their values
+        /// and the guidance page.</returns>
+        public static ISpecification<ScopeConfiguration> MixedLifetimes()
+            => new Specification<ScopeConfiguration>(
+                c =>
+                {
+                    var remainder = new[] { c.HandlerLifetime, c.MapperLifetime, c.TransformerLifetime }
+                        .Where(lifetime => lifetime != ServiceLifetime.Singleton)
+                        .Distinct()
+                        .Count();
+                    return remainder <= 1;
+                },
+                c => new ValidationError(
+                    ValidationSeverity.Error,
+                    "Brighter options",
+                    $"HandlerLifetime ({c.HandlerLifetime}), MapperLifetime ({c.MapperLifetime}), " +
+                    $"TransformerLifetime ({c.TransformerLifetime}) mix {ServiceLifetime.Transient} and " +
+                    $"{ServiceLifetime.Scoped} — the mixed pair do not share pipeline-scoped dependencies. " +
                     "See docs/guides/lifetimes-and-scoping.md for guidance on choosing a conformant triple."));
     }
 }

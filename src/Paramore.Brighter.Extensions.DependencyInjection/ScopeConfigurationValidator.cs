@@ -77,7 +77,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             {
                 var configurationSpecs = new List<ISpecification<ScopeConfiguration>>
                 {
-                    ScopeConfigurationRules.InertOptIn()
+                    ScopeConfigurationRules.InertOptIn(),
+                    ScopeConfigurationRules.MixedLifetimes()
                 };
                 EvaluateSpecs(new[] { _configuration }, configurationSpecs, findings);
             }
