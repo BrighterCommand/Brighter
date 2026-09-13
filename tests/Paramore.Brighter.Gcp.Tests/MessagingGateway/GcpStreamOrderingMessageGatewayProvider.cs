@@ -32,6 +32,7 @@ using System.Threading.Tasks;
 using Google.Api.Gax;
 using Google.Cloud.PubSub.V1;
 using Paramore.Brighter.Gcp.Tests.Helper;
+using Paramore.Brighter.Gcp.Tests.MessagingGateway.StreamOrdering;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
 using Paramore.Brighter.Tasks;
@@ -50,6 +51,7 @@ public class GcpStreamOrderingMessageGatewayProvider
 {
     private readonly GcpMessagingGatewayConnection _connection;
     private readonly GcpPubSubChannelFactory _channelFactory;
+    private readonly GcpHarnessMessageScheduler _scheduler;
     private GcpPubSubSubscription? _lastSubscription;
 
     public GcpStreamOrderingMessageGatewayProvider()
@@ -58,6 +60,15 @@ public class GcpStreamOrderingMessageGatewayProvider
         {
             Credential = GatewayFactory.GetCredential(),
             ProjectId = GatewayFactory.GetProjectId(),
+            // Every Pub/Sub client builder must opt into emulator detection so that a local
+            // PUBSUB_EMULATOR_HOST run reaches the emulator (and CI, with no env var, still hits
+            // production). The admin topic client (TopicManagerConfiguration) and streaming
+            // subscriber (StreamConfiguration) are separate builders from the publish/subscription
+            // manager ones, so they must be wired too — otherwise EnsureTopicExist talks to real GCP.
+            TopicManagerConfiguration = cfg =>
+            {
+                cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction;
+            },
             PublisherConfiguration = cfg =>
             {
                 cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction;
@@ -66,8 +77,13 @@ public class GcpStreamOrderingMessageGatewayProvider
             {
                 cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction;
             },
+            StreamConfiguration = cfg =>
+            {
+                cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction;
+            },
         };
         _channelFactory = new GcpPubSubChannelFactory(_connection);
+        _scheduler = new GcpHarnessMessageScheduler(_connection);
     }
 
     public RoutingKey GetOrCreateRoutingKey([CallerMemberName] string? testName = null)
@@ -97,13 +113,13 @@ public class GcpStreamOrderingMessageGatewayProvider
         RoutingKey routingKey,
         ChannelName channelName,
         OnMissingChannel makeChannel,
-        bool setupDeadLetterQueue = false
+        RoutingKey? deadLetterRoutingKey = null,
+        RoutingKey? invalidMessageRoutingKey = null
     )
     {
-        if (setupDeadLetterQueue)
+        if (deadLetterRoutingKey != null)
         {
-            var dlqTopic = $"dlq-stream-ord-{Guid.NewGuid():N}";
-            var dlqSub = $"dlq-stream-ord-{Guid.NewGuid():N}";
+            var dlqChannelName = new ChannelName(deadLetterRoutingKey.Value);
 
             return new GcpPubSubSubscription<MyCommand>(
                 subscriptionName: new SubscriptionName(channelName),
@@ -112,7 +128,7 @@ public class GcpStreamOrderingMessageGatewayProvider
                 messagePumpType: MessagePumpType.Proactor,
                 ackDeadlineSeconds: 60,
                 requeueCount: 5,
-                deadLetter: new DeadLetterPolicy(new RoutingKey(dlqTopic), new ChannelName(dlqSub))
+                deadLetter: new DeadLetterPolicy(deadLetterRoutingKey, dlqChannelName)
                 {
                     AckDeadlineSeconds = 60,
                     MaxDeliveryAttempts = 5,
@@ -154,7 +170,9 @@ public class GcpStreamOrderingMessageGatewayProvider
             },
         };
         _connection.PublisherConfiguration?.Invoke(builder);
-        return new GcpMessageProducer(builder.Build(), publication);
+        // GCP has no native delayed publish; the gateway delegates a non-zero send delay to the
+        // scheduler seam (FR-9). Wire the wall-clock harness scheduler so delayed sends conform.
+        return new GcpMessageProducer(builder.Build(), publication) { Scheduler = _scheduler };
     }
 
     public async Task<IAmAMessageProducerAsync> CreateProducerAsync(
@@ -181,7 +199,9 @@ public class GcpStreamOrderingMessageGatewayProvider
         };
         _connection.PublisherConfiguration?.Invoke(builder);
         var client = await builder.BuildAsync(cancellationToken);
-        return new GcpMessageProducer(client, publication);
+        // GCP has no native delayed publish; the gateway delegates a non-zero send delay to the
+        // scheduler seam (FR-9). Wire the wall-clock harness scheduler so delayed sends conform.
+        return new GcpMessageProducer(client, publication) { Scheduler = _scheduler };
     }
 
     public IAmAChannelSync CreateChannel(GcpPubSubSubscription subscription)
@@ -207,6 +227,7 @@ public class GcpStreamOrderingMessageGatewayProvider
     {
         channel?.Dispose();
         producer?.Dispose();
+        _scheduler.Dispose();
 
         if (_lastSubscription != null)
         {
@@ -227,6 +248,8 @@ public class GcpStreamOrderingMessageGatewayProvider
         {
             await producer.DisposeAsync();
         }
+
+        _scheduler.Dispose();
 
         if (_lastSubscription != null)
         {
@@ -311,4 +334,26 @@ public class GcpStreamOrderingMessageGatewayProvider
             dlqChannel.Dispose();
         }
     }
+
+    public Message GetMessageFromInvalidChannel(GcpPubSubSubscription subscription)
+    {
+        return Message.Empty;
+    }
+
+    public Task<Message> GetMessageFromInvalidChannelAsync(
+        GcpPubSubSubscription subscription,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return Task.FromResult(Message.Empty);
+    }
+
+    public RejectionMetadataKeys RejectionMetadataKeys =>
+        new RejectionMetadataKeys(
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty
+        );
 }

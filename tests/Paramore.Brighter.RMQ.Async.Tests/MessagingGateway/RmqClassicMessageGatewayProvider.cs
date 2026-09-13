@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
+using Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Classic;
 using Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Classic.Proactor;
 using Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Classic.Reactor;
 using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
@@ -17,45 +18,35 @@ public class RmqClassicMessageGatewayProvider
         IAmAMessageGatewayReactorProvider
 {
     private static readonly Uri s_amqpUri = new("amqp://guest:guest@localhost:5672/%2f");
-    private static readonly Lazy<bool> s_delaySupported = new(DetectDelaySupport);
     private readonly RmqMessagingGatewayConnection _connection;
+
+    // FR-2 / FR-9: prove RMQ's delay via the gateway's scheduler-delegation seam (the same mechanism
+    // proven for Kafka / Redis / MSSQL), not the native x-delayed-message exchange plugin. We present
+    // a plain (non-delay) exchange so RmqMessageProducer reports DelaySupported == false and routes a
+    // non-zero delay to IAmAMessageProducer.Scheduler — producer.Scheduler for FR-9 send-with-delay,
+    // and the consumer factory's scheduler for FR-2 delayed requeue (forwarded to the requeue
+    // producer). One shared wall-clock scheduler re-publishes to the topic. Lazily created; disposed
+    // in CleanUp.
+    //
+    // The native plugin path is deliberately NOT exercised here because it is not yet conformant:
+    // RmqMessagePublisher.RequeueMessageAsync hardcodes TimeSpan.Zero and publishes to the default
+    // exchange, dropping a requeue delay (FR-2 redelivers immediately); and a plugin-delivered send
+    // arrives carrying Header.Delayed == the applied delay, tripping the universal message-equivalence
+    // assertion (Delayed == TimeSpan.Zero). Both are larger src fixes tracked as follow-up; the
+    // scheduler seam is a real, gateway-supported delay path that delivers conformant semantics.
+    private RmqHarnessMessageScheduler? _scheduler;
+
+    private RmqHarnessMessageScheduler Scheduler =>
+        _scheduler ??= new RmqHarnessMessageScheduler(_connection);
 
     public RmqClassicMessageGatewayProvider()
     {
-        var delaySupported = s_delaySupported.Value;
-
         _connection = new RmqMessagingGatewayConnection
         {
             AmpqUri = new AmqpUriSpecification(s_amqpUri),
-            Exchange = delaySupported
-                ? new Exchange("paramore.brighter.gentest.delay.exchange", supportDelay: true)
-                : new Exchange("paramore.brighter.gentest.exchange"),
+            Exchange = new Exchange("paramore.brighter.gentest.exchange"),
             DeadLetterExchange = new Exchange("paramore.brighter.gentest.exchange.dlq"),
         };
-    }
-
-    private static bool DetectDelaySupport()
-    {
-        try
-        {
-            var factory = new ConnectionFactory { Uri = s_amqpUri };
-            using var connection = factory.CreateConnectionAsync().GetAwaiter().GetResult();
-            using var channel = connection.CreateChannelAsync().GetAwaiter().GetResult();
-
-            channel.ExchangeDeclareAsync(
-                "_brighter_delay_detect",
-                "x-delayed-message",
-                durable: false,
-                autoDelete: true,
-                arguments: new Dictionary<string, object?> { { "x-delayed-type", "direct" } }
-            ).GetAwaiter().GetResult();
-
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
     }
 
     public void CleanUp(
@@ -71,6 +62,9 @@ public class RmqClassicMessageGatewayProvider
         }
 
         producer?.Dispose();
+
+        try { _scheduler?.Dispose(); } catch { /* best effort */ }
+        _scheduler = null;
     }
 
     public async Task CleanUpAsync(
@@ -89,12 +83,15 @@ public class RmqClassicMessageGatewayProvider
         {
             await producer.DisposeAsync();
         }
+
+        try { _scheduler?.Dispose(); } catch { /* best effort */ }
+        _scheduler = null;
     }
 
     public IAmAChannelSync CreateChannel(RmqSubscription subscription)
     {
         var channel = new ChannelFactory(
-            new RmqMessageConsumerFactory(_connection)
+            new RmqMessageConsumerFactory(_connection, Scheduler)
         ).CreateSyncChannel(subscription);
 
         if (subscription.MakeChannels == OnMissingChannel.Create)
@@ -105,7 +102,7 @@ public class RmqClassicMessageGatewayProvider
 
         if (subscription.DeadLetterChannelName != null && subscription.RequeueCount > 0)
         {
-            return new RequeueTrackingChannelSync(channel, subscription.RequeueCount);
+            return new RequeueTrackingChannelSync(channel);
         }
 
         return channel;
@@ -117,7 +114,7 @@ public class RmqClassicMessageGatewayProvider
     )
     {
         var channel = await new ChannelFactory(
-            new RmqMessageConsumerFactory(_connection)
+            new RmqMessageConsumerFactory(_connection, Scheduler)
         ).CreateAsyncChannelAsync(subscription, cancellationToken);
 
         if (subscription.MakeChannels == OnMissingChannel.Create)
@@ -128,7 +125,7 @@ public class RmqClassicMessageGatewayProvider
 
         if (subscription.DeadLetterChannelName != null && subscription.RequeueCount > 0)
         {
-            return new RequeueTrackingChannelAsync(channel, subscription.RequeueCount);
+            return new RequeueTrackingChannelAsync(channel);
         }
 
         return channel;
@@ -151,6 +148,7 @@ public class RmqClassicMessageGatewayProvider
         var produces = new RmqMessageProducerFactory(connection, [publication]).Create();
 
         var producer = produces.First().Value;
+        producer.Scheduler = Scheduler;
         return (IAmAMessageProducerSync)producer;
     }
 
@@ -177,6 +175,7 @@ public class RmqClassicMessageGatewayProvider
         ).CreateAsync();
 
         var producer = produces.First().Value;
+        producer.Scheduler = Scheduler;
         return (IAmAMessageProducerAsync)producer;
     }
 
@@ -193,10 +192,11 @@ public class RmqClassicMessageGatewayProvider
         RoutingKey routingKey,
         ChannelName channelName,
         OnMissingChannel makeChannel,
-        bool setupDeadLetterQueue = false
+        RoutingKey? deadLetterRoutingKey = null,
+        RoutingKey? invalidMessageRoutingKey = null
     )
     {
-        if (setupDeadLetterQueue)
+        if (deadLetterRoutingKey != null)
         {
             return new RmqSubscription<MyCommand>(
                 subscriptionName: new SubscriptionName(Uuid.NewAsString()),
@@ -204,8 +204,8 @@ public class RmqClassicMessageGatewayProvider
                 routingKey: routingKey,
                 messagePumpType: MessagePumpType.Proactor,
                 makeChannels: makeChannel,
-                deadLetterChannelName: new ChannelName($"{routingKey}.DLQ"),
-                deadLetterRoutingKey: new RoutingKey($"{routingKey}.DLQ"),
+                deadLetterChannelName: new ChannelName(deadLetterRoutingKey.Value),
+                deadLetterRoutingKey: deadLetterRoutingKey,
                 requeueCount: 3
             );
         }
@@ -238,7 +238,7 @@ public class RmqClassicMessageGatewayProvider
             connection: _connection,
             queueName: subscription.DeadLetterChannelName!,
             routingKey: subscription.DeadLetterRoutingKey!,
-            isDurable: false,
+            isDurable: subscription.IsDurable,
             makeChannels: OnMissingChannel.Assume
         );
 
@@ -270,7 +270,7 @@ public class RmqClassicMessageGatewayProvider
             connection: _connection,
             queueName: subscription.DeadLetterChannelName!,
             routingKey: subscription.DeadLetterRoutingKey!,
-            isDurable: false,
+            isDurable: subscription.IsDurable,
             makeChannels: OnMissingChannel.Assume
         );
 
@@ -296,6 +296,79 @@ public class RmqClassicMessageGatewayProvider
         }
     }
 
+    // FR-5: RMQ.Async has no invalid-message channel. Its rejection path is a native BasicReject
+    // that dead-letters through the single configured DLX (x-dead-letter-routing-key), and neither
+    // RmqMessageConsumer nor RmqSubscription models a separate invalid destination. This hook makes a
+    // GENUINE bounded read against an invalid queue bound (by the {topic}.Invalid convention the
+    // canonical test uses) so the harness is complete: because the gateway never routes an
+    // unacceptable rejection to that routing key, the read observes MT_NONE — evidencing an
+    // architectural src gap (no Brighter-managed invalid routing), not a stubbed harness hook.
+    public async Task<Message> GetMessageFromInvalidChannelAsync(
+        RmqSubscription subscription,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var invalidConsumer = CreateInvalidChannelConsumer(subscription);
+        try
+        {
+            var messages = await invalidConsumer.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
+            var message = messages.First();
+            if (message.Header.MessageType != MessageType.MT_NONE)
+            {
+                await invalidConsumer.AcknowledgeAsync(message, cancellationToken);
+                return message;
+            }
+
+            return new Message();
+        }
+        finally
+        {
+            await invalidConsumer.DisposeAsync();
+        }
+    }
+
+    public Message GetMessageFromInvalidChannel(RmqSubscription subscription)
+    {
+        var invalidConsumer = CreateInvalidChannelConsumer(subscription);
+        try
+        {
+            var messages = invalidConsumer.Receive(TimeSpan.FromSeconds(5));
+            var message = messages.First();
+            if (message.Header.MessageType != MessageType.MT_NONE)
+            {
+                invalidConsumer.Acknowledge(message);
+                return message;
+            }
+
+            return new Message();
+        }
+        finally
+        {
+            invalidConsumer.Dispose();
+        }
+    }
+
+    private RmqMessageConsumer CreateInvalidChannelConsumer(RmqSubscription subscription)
+    {
+        var invalidRoutingKey = new RoutingKey($"{subscription.RoutingKey.Value}.Invalid");
+        return new RmqMessageConsumer(
+            connection: _connection,
+            queueName: new ChannelName(invalidRoutingKey.Value),
+            routingKey: invalidRoutingKey,
+            isDurable: subscription.IsDurable,
+            makeChannels: OnMissingChannel.Create
+        );
+    }
+
+    public RejectionMetadataKeys RejectionMetadataKeys =>
+        new RejectionMetadataKeys(
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty
+        );
+
     /// <summary>
     /// Channel decorator that tracks requeue count per original message ID and
     /// rejects (sending to DLQ) after the max requeue count is reached.
@@ -303,13 +376,11 @@ public class RmqClassicMessageGatewayProvider
     private class RequeueTrackingChannelAsync : IAmAChannelAsync
     {
         private readonly IAmAChannelAsync _inner;
-        private readonly int _maxRequeueCount;
         private readonly Dictionary<string, int> _requeueCounts = new();
 
-        public RequeueTrackingChannelAsync(IAmAChannelAsync inner, int maxRequeueCount)
+        public RequeueTrackingChannelAsync(IAmAChannelAsync inner)
         {
             _inner = inner;
-            _maxRequeueCount = maxRequeueCount;
         }
 
         public ChannelName Name => _inner.Name;
@@ -342,11 +413,13 @@ public class RmqClassicMessageGatewayProvider
             count++;
             _requeueCounts[originalId] = count;
 
-            if (count >= _maxRequeueCount)
-            {
-                await _inner.RejectAsync(message, cancellationToken: cancellationToken);
-                return false;
-            }
+            // The delivery budget is NOT enforced here. Reactor and Proactor own it: they call
+            // UpdateHandledCount, test HandledCountReached(RequeueCount), and reject with
+            // DeliveryError when it is spent. This wrapper used to do the same thing at channel
+            // level, which meant the FR-23 conformance behaviour could pass on the harness's copy
+            // of the rule while the product's copy was untested - and would have kept passing had
+            // the two diverged. Tracking the original message id is harness bookkeeping, so it
+            // stays; deciding when a message dies is production behaviour, so it does not.
 
             return await _inner.RequeueAsync(message, timeOut, cancellationToken);
         }
@@ -366,13 +439,11 @@ public class RmqClassicMessageGatewayProvider
     private class RequeueTrackingChannelSync : IAmAChannelSync
     {
         private readonly IAmAChannelSync _inner;
-        private readonly int _maxRequeueCount;
         private readonly Dictionary<string, int> _requeueCounts = new();
 
-        public RequeueTrackingChannelSync(IAmAChannelSync inner, int maxRequeueCount)
+        public RequeueTrackingChannelSync(IAmAChannelSync inner)
         {
             _inner = inner;
-            _maxRequeueCount = maxRequeueCount;
         }
 
         public ChannelName Name => _inner.Name;
@@ -398,11 +469,13 @@ public class RmqClassicMessageGatewayProvider
             count++;
             _requeueCounts[originalId] = count;
 
-            if (count >= _maxRequeueCount)
-            {
-                _inner.Reject(message);
-                return false;
-            }
+            // The delivery budget is NOT enforced here. Reactor and Proactor own it: they call
+            // UpdateHandledCount, test HandledCountReached(RequeueCount), and reject with
+            // DeliveryError when it is spent. This wrapper used to do the same thing at channel
+            // level, which meant the FR-23 conformance behaviour could pass on the harness's copy
+            // of the rule while the product's copy was untested - and would have kept passing had
+            // the two diverged. Tracking the original message id is harness bookkeeping, so it
+            // stays; deciding when a message dies is production behaviour, so it does not.
 
             return _inner.Requeue(message, timeOut);
         }

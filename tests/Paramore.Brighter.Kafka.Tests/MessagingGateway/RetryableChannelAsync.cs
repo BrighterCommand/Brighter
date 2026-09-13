@@ -24,17 +24,23 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
 /// <summary>
-/// Wraps an <see cref="IAmAChannelAsync"/> and retries <see cref="ReceiveAsync"/> calls
-/// when the broker returns <see cref="MessageType.MT_NONE"/>.
-/// Kafka on CI can be slow to deliver messages, so this avoids flaky test failures.
+/// Wraps an <see cref="IAmAChannelAsync"/> and re-polls <see cref="ReceiveAsync"/> when the broker
+/// returns <see cref="MessageType.MT_NONE"/> — Kafka on CI can be slow to deliver a message that
+/// is coming, so a spurious early MT_NONE should not fail a positive assertion.
+///
+/// The retry is bounded to the caller's requested timeout: ReceiveAsync(t) never waits longer than t
+/// in total. This preserves the conformance contract that a receive is a single bounded receive — the
+/// FR-2 / FR-9 before-D negative arm and FR-15's "redelivered within 5 s" assertion both depend on a
+/// receive respecting its timeout, so re-polling must never extend the window past the delay under test.
 /// </summary>
-public class RetryableChannelAsync(IAmAChannelAsync inner, int maxRetries = 5) : IAmAChannelAsync
+public class RetryableChannelAsync(IAmAChannelAsync inner) : IAmAChannelAsync
 {
     public ChannelName Name => inner.Name;
 
@@ -48,14 +54,21 @@ public class RetryableChannelAsync(IAmAChannelAsync inner, int maxRetries = 5) :
 
     public async Task<Message> ReceiveAsync(TimeSpan? timeout, CancellationToken cancellationToken = default)
     {
-        for (int attempt = 0; attempt < maxRetries; attempt++)
+        if (timeout is null)
+            return await inner.ReceiveAsync(timeout, cancellationToken);
+
+        var stopwatch = Stopwatch.StartNew();
+        var message = await inner.ReceiveAsync(timeout, cancellationToken);
+        while (message.Header.MessageType == MessageType.MT_NONE)
         {
-            var message = await inner.ReceiveAsync(timeout, cancellationToken);
-            if (message.Header.MessageType != MessageType.MT_NONE)
-                return message;
+            var remaining = timeout.Value - stopwatch.Elapsed;
+            if (remaining <= TimeSpan.Zero)
+                break;
+
+            message = await inner.ReceiveAsync(remaining, cancellationToken);
         }
 
-        return await inner.ReceiveAsync(timeout, cancellationToken);
+        return message;
     }
 
     public Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null,

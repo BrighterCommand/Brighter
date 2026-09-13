@@ -36,13 +36,19 @@ public interface IAmAMessageGatewayReactorProvider
     
     /// <summary>
     /// Creates a subscription configuration for the specified routing key and channel.
+    /// Passing <paramref name="deadLetterRoutingKey"/> only yields a DLQ-only channel;
+    /// passing <paramref name="invalidMessageRoutingKey"/> only yields an invalid-channel-only channel;
+    /// passing both yields a channel that routes per the full fallback ladder;
+    /// passing neither yields a channel with no routing (reject acknowledges and continues).
     /// </summary>
     /// <param name="routingKey">The routing key to subscribe to.</param>
     /// <param name="channelName">The channel name for receiving messages.</param>
     /// <param name="makeChannel">The action to take when the channel is missing.</param>
-    /// <param name="setupDeadLetterQueue">Whether to set up a dead letter queue.</param>
+    /// <param name="deadLetterRoutingKey">The routing key for the dead-letter queue, or null for none.</param>
+    /// <param name="invalidMessageRoutingKey">The routing key for the invalid-message channel, or null for none.</param>
     /// <returns>A subscription configuration.</returns>
-    Paramore.Brighter.MessagingGateway.Redis.RedisSubscription CreateSubscription(RoutingKey routingKey, ChannelName channelName, OnMissingChannel makeChannel, bool setupDeadLetterQueue = false);
+    Paramore.Brighter.MessagingGateway.Redis.RedisSubscription CreateSubscription(RoutingKey routingKey, ChannelName channelName, OnMissingChannel makeChannel,
+        RoutingKey? deadLetterRoutingKey = null, RoutingKey? invalidMessageRoutingKey = null);
 
     /// <summary>
     /// Creates an synchronous message producer for the specified publication.
@@ -69,8 +75,29 @@ public interface IAmAMessageGatewayReactorProvider
 
     /// <summary>
     /// Gets a message from the dead letter queue for the specified subscription.
+    /// Polls with a bounded retry and returns a message whose <c>Header.MessageType</c> is
+    /// <c>MessageType.MT_NONE</c> when nothing arrives within the bound, or when the subscription
+    /// does not configure a dead-letter routing key. Never throws; never blocks indefinitely.
     /// </summary>
     /// <param name="subscription">The subscription configuration.</param>
-    /// <returns>The message from the dead letter queue.</returns>
+    /// <returns>The message from the dead letter queue, or an MT_NONE sentinel when empty or unconfigured.</returns>
     Message GetMessageFromDeadLetterQueue(Paramore.Brighter.MessagingGateway.Redis.RedisSubscription subscription);
+
+    /// <summary>
+    /// Gets a message from the invalid-message channel for the specified subscription.
+    /// Polls with a bounded retry and returns a message whose <c>Header.MessageType</c> is
+    /// <c>MessageType.MT_NONE</c> when nothing arrives within the bound, or when the subscription
+    /// does not configure an invalid-message routing key. Never throws; never blocks indefinitely.
+    /// </summary>
+    /// <param name="subscription">The subscription configuration.</param>
+    /// <returns>The message from the invalid-message channel, or an MT_NONE sentinel when empty or unconfigured.</returns>
+    Message GetMessageFromInvalidChannel(Paramore.Brighter.MessagingGateway.Redis.RedisSubscription subscription);
+
+    /// <summary>
+    /// Gets the transport-specific rejection-metadata key names.
+    /// Each member returns the actual <c>Header.Bag</c> key string this transport stamps,
+    /// allowing generated tests to assert the universal semantic set without hard-coding any
+    /// one transport's key strings.
+    /// </summary>
+    RejectionMetadataKeys RejectionMetadataKeys { get; }
 }

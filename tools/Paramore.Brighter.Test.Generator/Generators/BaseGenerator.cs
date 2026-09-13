@@ -48,26 +48,36 @@ public abstract class BaseGenerator(ILogger logger)
     /// <param name="templateFolderName">The name of the subfolder within the Templates directory that contains the Liquid templates.</param>
     /// <param name="model">The model object whose properties are available to the templates during rendering.</param>
     /// <param name="ignore">An optional predicate that, when returning <c>true</c> for a template's file name, causes that template to be skipped. The predicate receives the file name only, never the path.</param>
-    protected virtual async Task GenerateAsync(TestConfiguration configuration, 
+    /// <param name="prepareModel">
+    /// An optional action invoked with the template's path and the model immediately before that
+    /// template is rendered. Callers use it to set per-template state on the model - for example
+    /// the ledger-driven <c>Skip</c> value on a canonical template. It runs after the
+    /// <paramref name="ignore"/> check and so can only change what a rendered file contains,
+    /// never which files are rendered.
+    /// </param>
+    protected async Task GenerateAsync(TestConfiguration configuration,
         string prefix, string templateFolderName,
-        object model, Func<string, bool>? ignore = null)
+        object model, Func<string, bool>? ignore = null,
+        Action<string, object>? prepareModel = null)
     {
         var destinationFolder = Path.Combine(configuration.DestinationFolder, prefix);
         logger.LogInformation("Base destination folder {DestinationFolder}", destinationFolder);
 
         foreach (var plannedFile in Plan(configuration, prefix, templateFolderName, ignore))
         {
+            prepareModel?.Invoke(plannedFile.TemplatePath, model);
+
             var destinationTemplateFile = new FileInfo(plannedFile.DestinationPath);
             if (destinationTemplateFile.Directory == null)
             {
                 logger.LogError("Destination folder {DestinationFolder} does not exist", destinationFolder);
                 continue;
             }
-            
+
             destinationTemplateFile.Directory.Create();
-            
+
             logger.LogInformation("Generating file from {TemplatePath} to {DestinationPath}", plannedFile.TemplatePath, plannedFile.DestinationPath);
-            
+
             await _parser.ParseAsync(new ParseContext(plannedFile.TemplatePath,
                 plannedFile.DestinationPath,
                 model));
@@ -79,8 +89,8 @@ public abstract class BaseGenerator(ILogger logger)
     /// <paramref name="prefix"/> would write, without writing any of them.
     /// </summary>
     /// <remarks>
-    /// <see cref="GenerateAsync(TestConfiguration,string,string,object,Func{string,bool})"/> renders
-    /// exactly this list, so an audit can ask what the generator owns without running it.
+    /// <see cref="GenerateAsync(TestConfiguration,string,string,object,Func{string,bool},Action{string,object})"/>
+    /// renders exactly this list, so an audit can ask what the generator owns without running it.
     /// </remarks>
     /// <param name="configuration">The root test configuration containing the destination folder and shared settings.</param>
     /// <param name="prefix">A relative path prefix appended to <see cref="TestConfiguration.DestinationFolder"/> for the output directory.</param>

@@ -24,15 +24,21 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Diagnostics;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
 /// <summary>
-/// Wraps an <see cref="IAmAChannelSync"/> and retries <see cref="Receive"/> calls
-/// when the broker returns <see cref="MessageType.MT_NONE"/>.
-/// Kafka on CI can be slow to deliver messages, so this avoids flaky test failures.
+/// Wraps an <see cref="IAmAChannelSync"/> and re-polls <see cref="Receive"/> when the broker
+/// returns <see cref="MessageType.MT_NONE"/> — Kafka on CI can be slow to deliver a message that
+/// is coming, so a spurious early MT_NONE should not fail a positive assertion.
+///
+/// The retry is bounded to the caller's requested timeout: Receive(t) never waits longer than t in
+/// total. This preserves the conformance contract that Receive(t) is a single bounded receive — the
+/// FR-2 / FR-9 before-D negative arm and FR-15's "redelivered within 5 s" assertion both depend on a
+/// receive respecting its timeout, so re-polling must never extend the window past the delay under test.
 /// </summary>
-public class RetryableChannelSync(IAmAChannelSync inner, int maxRetries = 5) : IAmAChannelSync
+public class RetryableChannelSync(IAmAChannelSync inner) : IAmAChannelSync
 {
     public ChannelName Name => inner.Name;
 
@@ -44,14 +50,21 @@ public class RetryableChannelSync(IAmAChannelSync inner, int maxRetries = 5) : I
 
     public Message Receive(TimeSpan? timeout)
     {
-        for (int attempt = 0; attempt < maxRetries; attempt++)
+        if (timeout is null)
+            return inner.Receive(timeout);
+
+        var stopwatch = Stopwatch.StartNew();
+        var message = inner.Receive(timeout);
+        while (message.Header.MessageType == MessageType.MT_NONE)
         {
-            var message = inner.Receive(timeout);
-            if (message.Header.MessageType != MessageType.MT_NONE)
-                return message;
+            var remaining = timeout.Value - stopwatch.Elapsed;
+            if (remaining <= TimeSpan.Zero)
+                break;
+
+            message = inner.Receive(remaining);
         }
 
-        return inner.Receive(timeout);
+        return message;
     }
 
     public bool Reject(Message message, MessageRejectionReason? reason = null) =>

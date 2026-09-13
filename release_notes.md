@@ -143,6 +143,113 @@ A relative `dataschema` stored in a relational Outbox is also now read back corr
 `RelationDatabaseOutbox` read it with `UriKind.Absolute` and silently dropped it to `null`,
 inconsistent with the `Source` reader in the same class and with every other Outbox implementation.
 
+### MQTT: `ReceiveAsync` waits for a message, and honours the caller's cancellation token (#4240)
+
+`MqttMessageConsumer` buffered arrivals in a queue and returned whatever happened to be in it at the
+moment of the call. An empty buffer returned immediately with a single `MT_NONE` message, so a caller
+who wanted to wait for a message had to sleep before every `Receive` and hope the sleep was long
+enough - the timeout argument bounded how long the *drain* was allowed to take, not how long to wait
+for a message to arrive. `ReceiveAsync` was `Task.FromResult(Receive(timeOut))`: synchronous, and it
+ignored its `cancellationToken` entirely.
+
+Both now wait up to `timeOut` (300 ms if unspecified) for at least one message to arrive, and are
+woken by the arrival itself rather than by an interval expiring. A receive that finds nothing inside
+the window still returns the single `MT_NONE` message, unchanged.
+
+#### Behaviour change: a cancelled `ReceiveAsync` now throws
+
+`ReceiveAsync` now observes the `cancellationToken` you pass it and throws `OperationCanceledException`
+when you cancel, which is the contract the interface declares and the behaviour the other async
+gateways already have. Previously the token was accepted and ignored, so a cancelled receive returned
+an empty result instead.
+
+**This does not affect the Brighter pump.** `Proactor` calls `Channel.ReceiveAsync(TimeOut)` without a
+token and stops on an `MT_QUIT` message, not by cancelling a receive in flight, so shutdown is a clean
+stop exactly as before. The change is visible only to code calling
+`IAmAMessageConsumerAsync.ReceiveAsync` directly with a token it cancels - most often a test. **If you
+have such a call and relied on it returning empty, catch `OperationCanceledException`.** A timeout
+elapsing is not cancellation and still returns `MT_NONE`.
+
+#### `BufferSize` is now honoured on MQTT
+
+A consumer built by `MqttMessageConsumerFactory` returns at most the subscription's `BufferSize`
+messages per receive, which is what that setting means. Previously a receive drained the whole buffer,
+so a burst larger than `BufferSize` overflowed the Brighter `Channel` wrapper and threw. Anything still
+buffered is left for the next call. A directly-constructed `MqttMessageConsumer` does not sit behind a
+`Channel` and keeps its uncapped behaviour unless you pass the new optional `batchSize` argument.
+
+### RMQ.Async: subscriptions declare durable queues by default (#4355)
+
+`RmqSubscription` and `RmqSubscription<T>` in `Paramore.Brighter.MessagingGateway.RMQ.Async` now default
+`isDurable` to **`true`**. Previously they defaulted to `false`, which asked the broker for a transient,
+non-exclusive queue.
+
+RabbitMQ **4.3** deprecates that combination and **refuses to declare it by default**:
+
+```
+INTERNAL_ERROR - Feature `transient_nonexcl_queues` is deprecated.
+By default, this feature is not permitted anymore.
+```
+
+Because `isDurable: false` was the *default*, an out-of-the-box RMQ.Async consumer could not connect to a
+4.3 broker at all - the declare failed and Brighter surfaced a `ChannelFailureException`. The deprecation
+notice states the feature will be removed "regardless of the configuration", so permitting it through
+broker settings is only a stopgap.
+
+`Paramore.Brighter.MessagingGateway.RMQ.Sync` is **unchanged** and still defaults to `isDurable: false`. It
+targets the RabbitMQ 3.x line through the legacy `RabbitMQ.Client` 6.x API, and 3.x permits transient
+non-exclusive queues.
+
+#### Breaking: an existing transient queue will fail to redeclare
+
+**Why this default had to move at all.** This is not Brighter changing its mind about a sensible default -
+it is **RabbitMQ changing what it supports**. Transient non-exclusive queues were a supported queue shape
+for the whole life of the 3.x line; 4.3 deprecates them and refuses to create them, and the deprecation
+notice is explicit that they will be removed in a future major version "regardless of the configuration".
+A default that a current broker will not accept is not a default we can keep. The cost of moving it is the
+migration below, and there is no version of this change that avoids that cost - a broker cannot hold one
+queue under two durabilities.
+
+**What goes wrong.** RabbitMQ rejects a `QueueDeclare` whose arguments differ from the queue that already
+exists, and durability is one of those arguments. **If you are on RMQ.Async and your queues were created
+under the old default, upgrading will fail** when Brighter reopens the channel:
+
+```
+PRECONDITION_FAILED - inequivalent arg 'durable' for queue 'my.queue' in vhost '/':
+received 'true' but current is 'false'
+```
+
+Brighter surfaces that as a `ChannelFailureException`. It happens on the first receive, not at startup, so
+it can look like a runtime fault rather than an upgrade step.
+
+**Two ways out.** Either keep the old behaviour explicitly:
+
+```csharp
+new RmqSubscription<MyEvent>(
+    subscriptionName: new SubscriptionName("MySubscription"),
+    channelName: new ChannelName("my.queue"),
+    routingKey: new RoutingKey("my.topic"),
+    isDurable: false)          // opt back in to a transient queue
+```
+
+- which keeps you working on 3.x and on a 4.3 broker explicitly configured to permit the deprecated
+feature, but leaves you on a queue shape RabbitMQ intends to remove -
+
+or **drain and delete the existing queue** and let Brighter recreate it as durable. Deleting a queue
+discards any messages still in it, so drain it first if that matters. This is the option that leaves you
+on a supported queue shape.
+
+**What changes once the queue is durable.** A durable queue survives a broker restart, so messages that
+would previously have been discarded with the queue now outlive it. For most deployments that is the
+behaviour you wanted; if you were relying on a restart to clear a backlog, you no longer get that.
+
+Note the dead-letter queue is declared with the same durability as its subscription, so both move together
+and a partially-migrated pair is not possible.
+
+We hit this inside Brighter's own test suite while making the change: two tests pre-created their queue as
+transient and then opened a subscription that now defaults to durable, and failed with exactly the error
+above. If it catches the suite that introduced the change, it will catch upgrades.
+
 ### MSSQL transport provisions its queue table (#4343)
 
 `OnMissingChannel` on an `MsSqlSubscription` or a `Publication` is now honoured by the MSSQL

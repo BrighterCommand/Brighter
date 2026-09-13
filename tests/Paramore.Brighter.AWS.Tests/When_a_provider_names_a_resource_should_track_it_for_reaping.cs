@@ -28,7 +28,7 @@ public class ProviderResourceTrackingTests
     public void When_a_provider_names_a_resource_should_track_it_for_reaping(string provider)
     {
         //arrange
-        var (reaper, subscription) = CreateSubscriptionWithDeadLetterQueue(provider);
+        var (reaper, subscription) = CreateSubscriptionWithRejectionChannels(provider);
 
         //act
         var tracked = reaper.PendingTopics.Concat(reaper.PendingQueues).ToArray();
@@ -39,54 +39,70 @@ public class ProviderResourceTrackingTests
         // provider that tracks one name and then subscribes with another. That is not
         // hypothetical — both SQS providers deliberately discard the channel name they were given
         // and subscribe with the publication's queue instead, and this is what pins that as
-        // intended rather than forgotten.
+        // intended rather than forgotten. It also catches a provider that adapts a canonical
+        // routing key to the transport's alphabet and then tracks the name it was handed rather
+        // than the adapted one AWS will actually see.
         Assert.Contains(subscription.RoutingKey.Value, tracked);
         Assert.Contains(subscription.ChannelName.Value, tracked);
 
         Assert.NotNull(subscription.DeadLetterRoutingKey);
         Assert.Contains(subscription.DeadLetterRoutingKey!.Value, tracked);
+
+        // The invalid-message queue is the resource the conformance suite adds, and the one the
+        // reaper could not have known about: it is created lazily on the first rejection, so no
+        // channel or producer this fixture holds is a handle on it.
+        Assert.NotNull(subscription.InvalidMessageRoutingKey);
+        Assert.Contains(subscription.InvalidMessageRoutingKey!.Value, tracked);
     }
 
     private static (AwsTestResourceReaper Reaper, SqsSubscription Subscription)
-        CreateSubscriptionWithDeadLetterQueue(string provider)
+        CreateSubscriptionWithRejectionChannels(string provider)
     {
         switch (provider)
         {
             case "SnsStandard":
             {
                 var sut = new SnsStandardMessageGatewayProvider();
+                var routingKey = sut.GetOrCreateRoutingKey();
                 return (sut.Reaper, sut.CreateSubscription(
-                    sut.GetOrCreateRoutingKey(),
+                    routingKey,
                     sut.GetOrCreateChannelName(),
                     OnMissingChannel.Create,
-                    setupDeadLetterQueue: true));
+                    deadLetterRoutingKey: new RoutingKey($"{routingKey}.DLQ"),
+                    invalidMessageRoutingKey: new RoutingKey($"{routingKey}.Invalid")));
             }
             case "SnsFifo":
             {
                 var sut = new SnsFifoMessageGatewayProvider();
+                var routingKey = sut.GetOrCreateRoutingKey();
                 return (sut.Reaper, sut.CreateSubscription(
-                    sut.GetOrCreateRoutingKey(),
+                    routingKey,
                     sut.GetOrCreateChannelName(),
                     OnMissingChannel.Create,
-                    setupDeadLetterQueue: true));
+                    deadLetterRoutingKey: new RoutingKey($"{routingKey}.DLQ"),
+                    invalidMessageRoutingKey: new RoutingKey($"{routingKey}.Invalid")));
             }
             case "SqsStandard":
             {
                 var sut = new SqsStandardMessageGatewayProvider();
+                var routingKey = sut.GetOrCreateRoutingKey();
                 return (sut.Reaper, sut.CreateSubscription(
-                    sut.GetOrCreateRoutingKey(),
+                    routingKey,
                     sut.GetOrCreateChannelName(),
                     OnMissingChannel.Create,
-                    setupDeadLetterQueue: true));
+                    deadLetterRoutingKey: new RoutingKey($"{routingKey}.DLQ"),
+                    invalidMessageRoutingKey: new RoutingKey($"{routingKey}.Invalid")));
             }
             case "SqsFifo":
             {
                 var sut = new SqsFifoMessageGatewayProvider();
+                var routingKey = sut.GetOrCreateRoutingKey();
                 return (sut.Reaper, sut.CreateSubscription(
-                    sut.GetOrCreateRoutingKey(),
+                    routingKey,
                     sut.GetOrCreateChannelName(),
                     OnMissingChannel.Create,
-                    setupDeadLetterQueue: true));
+                    deadLetterRoutingKey: new RoutingKey($"{routingKey}.DLQ"),
+                    invalidMessageRoutingKey: new RoutingKey($"{routingKey}.Invalid")));
             }
             default:
                 throw new ArgumentOutOfRangeException(
