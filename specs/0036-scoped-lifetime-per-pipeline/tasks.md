@@ -1199,7 +1199,7 @@ Two Tidy-First steps **are** owed in the DI package, and both are sequenced ahea
   - **Depends on**: T7.3
   - **References**: AC-41 (FR-22.2, FR-20, D8); ADR 0074 step 4
 
-- [ ] **TEST + IMPLEMENT: T7.5 — a captive dependency on a `Singleton` artefact is a warning, and the detection contract is pinned**
+- [x] **TEST + IMPLEMENT: T7.5 — a captive dependency on a `Singleton` artefact is a warning, and the detection contract is pinned**
   - **USE COMMAND**: `/test-first a Singleton mapper requiring a Scoped service is reported as one warning and the four bounds of the detection contract are pinned`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_singleton_artefact_requires_a_scoped_service_validation_should_warn.cs`
