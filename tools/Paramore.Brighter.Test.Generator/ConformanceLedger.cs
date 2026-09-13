@@ -129,6 +129,26 @@ public sealed class ConformanceLedger : IAmAConformanceLedger
     public bool HasRow(string ledgerKey) => _cells.ContainsKey(ledgerKey);
 
     /// <summary>
+    /// The number of configuration rows the matrix holds.
+    /// </summary>
+    public int RowCount => _cells.Count;
+
+    /// <summary>
+    /// Every cell in the matrix, as (configuration row, behaviour column, raw text).
+    /// </summary>
+    /// <remarks>
+    /// <para>Exists so that a caller wanting to sweep the whole matrix - an audit asking "which
+    /// cells are Deferred, and do they carry an issue and a sign-off" - does not have to parse the
+    /// markdown a second time. A second parser is a second set of header heuristics, and the two
+    /// drift: the ledger stops meaning one thing.</para>
+    /// <para>Cell text is returned uninterpreted. Ask <see cref="IsRecognisedCellValue"/> what a
+    /// value means rather than matching on it here.</para>
+    /// </remarks>
+    public IEnumerable<(string LedgerKey, string FrColumn, string CellValue)> Cells
+        => _cells.SelectMany(
+            row => row.Value.Select(cell => (row.Key, cell.Key, cell.Value)));
+
+    /// <summary>
     /// Reads the raw cell at (<paramref name="ledgerKey"/>, <paramref name="frColumn"/>) without
     /// interpreting it.
     /// </summary>

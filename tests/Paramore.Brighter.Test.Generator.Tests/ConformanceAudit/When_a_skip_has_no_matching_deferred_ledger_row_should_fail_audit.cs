@@ -214,13 +214,16 @@ public class LedgerSkipCrossCheckAuditTests
             "0036-universal-transport-conformance-tests");
         Directory.CreateDirectory(specDir);
 
+        // FR-4 is present because ConformanceLedger identifies the matrix by an FR-2 + FR-4
+        // column pair, and it is the single parser both the generator and this audit read through.
+        // Its cells are Pass so they contribute nothing to the Deferred sweep under test.
         var dataRows = string.Join(
-            "\n", ledgerCells.Select(c => $"| Canary / Config | {c} |"));
+            "\n", ledgerCells.Select(c => $"| Canary / Config | {c} | Pass |"));
         File.WriteAllText(
             Path.Combine(specDir, "conformance-status.md"),
             "## Conformance Matrix\n\n" +
-            "| Configuration | FR-2 |\n" +
-            "|---|---|\n" +
+            "| Configuration | FR-2 | FR-4 |\n" +
+            "|---|---|---|\n" +
             dataRows + "\n");
 
         // Generated directory and file (created only when Skip values are supplied)

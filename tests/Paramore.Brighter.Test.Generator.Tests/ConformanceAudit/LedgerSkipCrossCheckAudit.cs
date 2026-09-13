@@ -162,12 +162,20 @@ public static class LedgerSkipCrossCheckAudit
     /// <paramref name="repoRoot"/> and the conformance ledger at <paramref name="ledgerPath"/>.
     /// Returns the aggregate result. Never makes network calls or spawns subprocesses.
     /// </summary>
+    /// <exception cref="System.InvalidOperationException">
+    /// Thrown by <see cref="ConformanceLedger"/> when the matrix cannot be found in the ledger, or
+    /// is found but holds no rows. The audit does not soften that into an empty result: a ledger
+    /// nothing can read is the case where every cell means "run without a Skip", so reporting zero
+    /// violations against it would be the most misleading answer available.
+    /// </exception>
     public static CrossCheckResult CrossCheck(string repoRoot, string ledgerPath)
     {
         var violations = new List<LedgerCrossCheckViolation>();
 
-        // ── Parse the conformance ledger ──────────────────────────────────────
-        var (dataRowsFound, deferredCells, ledgerIssueNumbers) = ParseLedger(ledgerPath);
+        // ── Read the conformance ledger ───────────────────────────────────────
+        // Through ConformanceLedger, which is the generator's own parser: one reader, so the
+        // audit cannot disagree with the generator about what the ledger says.
+        var (dataRowsFound, deferredCells, ledgerIssueNumbers) = ReadLedger(ledgerPath);
 
         // ── Direction 2: Ledger → Trail ───────────────────────────────────────
         // Every Deferred cell must carry a real issue link AND a sign-off token.
@@ -216,70 +224,36 @@ public static class LedgerSkipCrossCheckAudit
     // ── Private helpers ───────────────────────────────────────────────────────
 
     /// <summary>
-    /// Parses the conformance-status.md matrix and returns the total data rows found, the list of
-    /// Deferred cell values, and the set of issue numbers extracted from those Deferred cells.
-    ///
-    /// The matrix header is identified by "| Configuration |" so that the two-column Cell
-    /// Vocabulary table (whose Deferred row contains backtick-formatted text) is never mistaken
-    /// for matrix data.
+    /// Reads the conformance matrix through <see cref="ConformanceLedger"/> - the generator's own
+    /// parser - and returns the row count, the Deferred cell values, and the issue numbers those
+    /// cells cite.
     /// </summary>
+    /// <remarks>
+    /// The audit used to carry its own markdown parser, keyed on a <c>"| Configuration |"</c>
+    /// header where the generator keys on an FR-2 + FR-4 column pair. Two parsers means two
+    /// answers to "what does the ledger say", and the audit's job is to check the generator
+    /// against the ledger - which it cannot do from a different reading of the same file.
+    /// </remarks>
     private static (int dataRowsFound, List<string> deferredCells, HashSet<string> ledgerIssueNumbers)
-        ParseLedger(string ledgerPath)
+        ReadLedger(string ledgerPath)
     {
+        var ledger             = new ConformanceLedger(ledgerPath);
         var deferredCells      = new List<string>();
         var ledgerIssueNumbers = new HashSet<string>();
-        var dataRowsFound      = 0;
 
-        var lines              = File.ReadAllLines(ledgerPath);
-        var matrixHeaderIndex  = -1;
-
-        for (var i = 0; i < lines.Length; i++)
+        foreach (var (_, _, cellValue) in ledger.Cells)
         {
-            if (lines[i].TrimStart().StartsWith("| Configuration |", System.StringComparison.Ordinal))
-            {
-                matrixHeaderIndex = i;
-                break;
-            }
-        }
-
-        if (matrixHeaderIndex < 0)
-            return (dataRowsFound, deferredCells, ledgerIssueNumbers);
-
-        // matrixHeaderIndex + 1 is the separator row (|---|---|…); data starts at + 2.
-        var dataStart = matrixHeaderIndex + 2;
-
-        for (var i = dataStart; i < lines.Length; i++)
-        {
-            var line = lines[i].Trim();
-            if (!line.StartsWith("|"))
-                break; // end of the markdown table
-
-            var cells = line.Split('|')
-                            .Select(c => c.Trim())
-                            .Where(c => c.Length > 0)
-                            .ToArray();
-
-            // A data row has at least one configuration cell and one behaviour cell.
-            if (cells.Length < 2)
+            if (!cellValue.StartsWith("Deferred", System.StringComparison.Ordinal))
                 continue;
 
-            dataRowsFound++;
+            deferredCells.Add(cellValue);
 
-            // cells[0] is the configuration name; cells[1..] are the behaviour columns.
-            foreach (var cell in cells.Skip(1))
-            {
-                if (!cell.StartsWith("Deferred", System.StringComparison.Ordinal))
-                    continue;
-
-                deferredCells.Add(cell);
-
-                var issueMatch = ISSUE_LINK_PATTERN.Match(cell);
-                if (issueMatch.Success)
-                    ledgerIssueNumbers.Add(issueMatch.Groups[1].Value);
-            }
+            var issueMatch = ISSUE_LINK_PATTERN.Match(cellValue);
+            if (issueMatch.Success)
+                ledgerIssueNumbers.Add(issueMatch.Groups[1].Value);
         }
 
-        return (dataRowsFound, deferredCells, ledgerIssueNumbers);
+        return (ledger.RowCount, deferredCells, ledgerIssueNumbers);
     }
 
     /// <summary>
