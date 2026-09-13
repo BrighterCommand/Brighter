@@ -1253,7 +1253,7 @@ Two Tidy-First steps **are** owed in the DI package, and both are sequenced ahea
   - **Depends on**: T7.5, T3.5, T6.2 (the test project and its ASP.NET host)
   - **References**: AC-50 (FR-22.4, FR-17, FR-14, C-12, C-15, D14, D18); ADR 0074 step 4, ADR 0076 step 2
 
-- [ ] **TEST + IMPLEMENT: T7.7 — duplicate scope providers: the last registration wins, and the duplicate is reported**
+- [x] **TEST + IMPLEMENT: T7.7 — duplicate scope providers: the last registration wins, and the duplicate is reported**
   - **USE COMMAND**: `/test-first two distinct scope providers produce one warning naming both and the pipeline resolves through the last registered one`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_two_distinct_scope_providers_are_registered_validation_should_report_the_duplicate.cs`
