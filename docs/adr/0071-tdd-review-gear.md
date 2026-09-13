@@ -1,7 +1,7 @@
 ---
 id: 0071-tdd-review-gear
 title: "Shiftable Review Gear for the TDD Approval Gate"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-09-13
@@ -17,7 +17,7 @@ Date: 2026-09-13
 
 ## Status
 
-Proposed
+Accepted
 
 Implements [issue #4357](https://github.com/BrighterCommand/Brighter/issues/4357).
 Supersedes no prior ADR. This is a decision about the project's own agent tooling, not its
