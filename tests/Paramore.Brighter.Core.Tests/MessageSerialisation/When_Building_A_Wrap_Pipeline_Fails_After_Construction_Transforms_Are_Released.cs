@@ -59,7 +59,9 @@ public class TransformPipelinePostConstructionFailureReleaseTests
         public List<IAmAMessageTransform> Created { get; } = new();
         public List<IAmAMessageTransform> Released { get; } = new();
 
-        public Lease<IAmAMessageTransform>? Create(Type transformerType)
+        public IAmAScope? CreatePipelineScope() => null;
+
+        public Lease<IAmAMessageTransform>? Create(Type transformerType, IAmAScope? scope = null)
         {
             var transform = new MySimpleTransform();
             Created.Add(transform);

@@ -351,6 +351,7 @@ ralph.log
 
 # AI agent session state
 PROMPT.md
+PROMPT-*.md
 
 # Local-only docker compose overrides (e.g. port remaps for host conflicts)
 docker-compose-*.local.yaml

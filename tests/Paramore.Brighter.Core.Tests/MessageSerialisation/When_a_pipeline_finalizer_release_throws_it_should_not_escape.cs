@@ -115,7 +115,9 @@ public class TransformPipelineFinalizerReleaseTests
         //recorded before the throw so the test can prove the finalizer genuinely reached the release
         public static int ReleaseAttempts => Volatile.Read(ref s_releaseAttempts);
 
-        public Lease<IAmAMessageMapper<T>>? Get<T>() where T : class, IRequest => null;
+        public IAmAScope? CreatePipelineScope() => null;
+
+        public Lease<IAmAMessageMapper<T>>? Get<T>(IAmAScope? scope = null) where T : class, IRequest => null;
 
         public (Type? MapperType, bool IsDefault) ResolveMapperInfo(Type requestType) => (null, false);
 
@@ -139,7 +141,9 @@ public class TransformPipelineFinalizerReleaseTests
         //recorded before the throw so the test can prove the finalizer genuinely reached the release
         public static int ReleaseAttempts => Volatile.Read(ref s_releaseAttempts);
 
-        public Lease<IAmAMessageMapperAsync<T>>? GetAsync<T>() where T : class, IRequest => null;
+        public IAmAScope? CreatePipelineScope() => null;
+
+        public Lease<IAmAMessageMapperAsync<T>>? GetAsync<T>(IAmAScope? scope = null) where T : class, IRequest => null;
 
         public (Type? MapperType, bool IsDefault) ResolveAsyncMapperInfo(Type requestType) => (null, false);
 

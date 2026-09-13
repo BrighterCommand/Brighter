@@ -75,7 +75,9 @@ namespace Paramore.Brighter.Core.Tests.MessageMappers
 
         private sealed class ThrowingMapperFactory : IAmAMessageMapperFactory, IDisposable
         {
-            public Lease<IAmAMessageMapper>? Create(Type messageMapperType) => null;
+            public IAmAScope? CreatePipelineScope() => null;
+
+            public Lease<IAmAMessageMapper>? Create(Type messageMapperType, IAmAScope? scope = null) => null;
 
             public void Release(Lease<IAmAMessageMapper>? lease) { }
 
@@ -86,7 +88,9 @@ namespace Paramore.Brighter.Core.Tests.MessageMappers
         {
             public int DisposeCount { get; private set; }
 
-            public Lease<IAmAMessageMapper>? Create(Type messageMapperType) => null;
+            public IAmAScope? CreatePipelineScope() => null;
+
+            public Lease<IAmAMessageMapper>? Create(Type messageMapperType, IAmAScope? scope = null) => null;
 
             public void Release(Lease<IAmAMessageMapper>? lease) { }
 
@@ -97,7 +101,9 @@ namespace Paramore.Brighter.Core.Tests.MessageMappers
         {
             public int DisposeCount { get; private set; }
 
-            public Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType) => null;
+            public IAmAScope? CreatePipelineScope() => null;
+
+            public Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType, IAmAScope? scope = null) => null;
 
             public void Release(Lease<IAmAMessageMapperAsync>? lease) { }
 

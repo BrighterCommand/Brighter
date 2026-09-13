@@ -97,7 +97,9 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             public DispatcherState? StateAtDispose { get; private set; }
             public Func<DispatcherState>? ReadDispatcherState { get; set; }
 
-            public Lease<IAmAMessageMapper>? Create(Type messageMapperType) => new Lease<IAmAMessageMapper>(make());
+            public IAmAScope? CreatePipelineScope() => null;
+
+            public Lease<IAmAMessageMapper>? Create(Type messageMapperType, IAmAScope? scope = null) => new Lease<IAmAMessageMapper>(make());
             public void Release(Lease<IAmAMessageMapper>? lease) { }
 
             public void Dispose()

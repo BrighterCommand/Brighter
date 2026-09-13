@@ -25,12 +25,15 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter
 {
-    internal sealed partial class HandlerLifetimeScope : IAmALifetime
+    /// <summary>
+    /// Tracks the handler instances a handler pipeline has created, and carries the pipeline's own
+    /// <see cref="IAmAScope"/> handle. The default implementation of <see cref="IAmALifetime"/>.
+    /// </summary>
+    public sealed partial class HandlerLifetimeScope : IAmALifetime
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<HandlerLifetimeScope>();
 
@@ -38,22 +41,29 @@ namespace Paramore.Brighter
         private readonly List<IHandleRequests> _trackedObjects = new List<IHandleRequests>();
         private readonly List<IHandleRequestsAsync> _trackedAsyncObjects = new List<IHandleRequestsAsync>();
         private readonly IAmAHandlerFactoryAsync? _asyncHandlerFactory;
+        private readonly IAmAScope? _pipelineScope;
 
-        public HandlerLifetimeScope(IAmAHandlerFactorySync handlerFactorySync) 
-            : this(handlerFactorySync, null)
+        public HandlerLifetimeScope(IAmAHandlerFactorySync handlerFactorySync, IAmAScope? pipelineScope = null)
+            : this(handlerFactorySync, null, pipelineScope)
         {}
 
-        public HandlerLifetimeScope(IAmAHandlerFactoryAsync asyncHandlerFactory) 
-            : this(null, asyncHandlerFactory)
+        public HandlerLifetimeScope(IAmAHandlerFactoryAsync asyncHandlerFactory, IAmAScope? pipelineScope = null)
+            : this(null, asyncHandlerFactory, pipelineScope)
         {}
 
-        public HandlerLifetimeScope(IAmAHandlerFactorySync? handlerFactorySync, IAmAHandlerFactoryAsync? asyncHandlerFactory) 
+        public HandlerLifetimeScope(
+            IAmAHandlerFactorySync? handlerFactorySync,
+            IAmAHandlerFactoryAsync? asyncHandlerFactory,
+            IAmAScope? pipelineScope = null)
         {
             _handlerFactorySync = handlerFactorySync;
             _asyncHandlerFactory = asyncHandlerFactory;
+            _pipelineScope = pipelineScope;
         }
 
         public int TrackedItemCount => _trackedObjects.Count + _trackedAsyncObjects.Count;
+
+        public IAmAScope? PipelineScope => _pipelineScope;
 
         public void Add(IHandleRequests instance)
         {
@@ -73,23 +83,47 @@ namespace Paramore.Brighter
 
         public void Dispose()
         {
-            _trackedObjects.Each((trackedItem) =>
+            //release every tracked handler, sync then async, catching per item so one failing
+            //Release does not skip the rest or leave the tracking lists uncleared
+            foreach (var trackedItem in _trackedObjects)
             {
-                //free disposable items
-                _handlerFactorySync?.Release(trackedItem, this);
-                Log.ReleasingHandlerInstance(s_logger, trackedItem.GetHashCode(), trackedItem.GetType());
-            });
+                try
+                {
+                    _handlerFactorySync?.Release(trackedItem, this);
+                    Log.ReleasingHandlerInstance(s_logger, trackedItem.GetHashCode(), trackedItem.GetType());
+                }
+                catch (Exception exception)
+                {
+                    Log.FailedToReleaseHandler(s_logger, trackedItem.GetHashCode(), trackedItem.GetType(), trackedItem.Name, exception);
+                }
+            }
 
-            _trackedAsyncObjects.Each(trackedItem =>
+            foreach (var trackedItem in _trackedAsyncObjects)
             {
-                //free disposable items
-                _asyncHandlerFactory?.Release(trackedItem, this);
-                Log.ReleasingAsyncHandlerInstance(s_logger, trackedItem.GetHashCode(), trackedItem.GetType());
-            });
+                try
+                {
+                    _asyncHandlerFactory?.Release(trackedItem, this);
+                    Log.ReleasingAsyncHandlerInstance(s_logger, trackedItem.GetHashCode(), trackedItem.GetType());
+                }
+                catch (Exception exception)
+                {
+                    Log.FailedToReleaseHandler(s_logger, trackedItem.GetHashCode(), trackedItem.GetType(), trackedItem.Name, exception);
+                }
+            }
 
-            //clear our tracking
+            //clear our tracking so this scope does not outlive its disposal holding references
             _trackedObjects.Clear();
             _trackedAsyncObjects.Clear();
+
+            //dispose the pipeline scope handle last and unconditionally, holding any failure
+            try
+            {
+                _pipelineScope?.Dispose();
+            }
+            catch (Exception exception)
+            {
+                Log.FailedToDisposePipelineScope(s_logger, exception);
+            }
         }
 
         private static partial class Log
@@ -105,6 +139,12 @@ namespace Paramore.Brighter
 
             [LoggerMessage(LogLevel.Debug, "Releasing async handler instance {InstanceHashCode} of type {HandlerType}")]
             public static partial void ReleasingAsyncHandlerInstance(ILogger logger, int instanceHashCode, Type handlerType);
+
+            [LoggerMessage(LogLevel.Error, "Failed to release handler instance {InstanceHashCode} of type {HandlerType} ({HandlerName})")]
+            public static partial void FailedToReleaseHandler(ILogger logger, int instanceHashCode, Type handlerType, HandlerName handlerName, Exception exception);
+
+            [LoggerMessage(LogLevel.Error, "Failed to dispose the handler pipeline's own scope; the pipeline's result is unaffected")]
+            public static partial void FailedToDisposePipelineScope(ILogger logger, Exception exception);
         }
     }
 }

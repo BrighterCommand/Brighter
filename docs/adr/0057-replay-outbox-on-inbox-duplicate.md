@@ -1,3 +1,17 @@
+---
+id: 0057-replay-outbox-on-inbox-duplicate
+title: "Replay Outbox Messages on Inbox Duplicate Detection"
+status: Accepted
+author:
+  - "Ian Cooper"
+created: 2026-04-16
+summary: "Adds a Causation Id linking an inbox entry to the outbox messages produced during the same handler invocation, propagated through RequestContext.Bag, so that a new OnceOnlyAction.Replay can mark those messages undispatched and let the sweeper resend them when the inbox detects a duplicate — replaying a stalled workflow's downstream effects without re-executing the handler."
+tags:
+  - "inbox"
+  - "outbox"
+  - "workflow"
+---
+
 # 57. Replay Outbox Messages on Inbox Duplicate Detection
 
 Date: 2026-04-16

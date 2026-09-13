@@ -44,7 +44,9 @@ public class MessageWrapCleanupTests
     
     private sealed class MyReleaseTrackingTransformFactory : IAmAMessageTransformerFactory
     {
-        public Lease<IAmAMessageTransform>? Create(Type transformerType)
+        public IAmAScope? CreatePipelineScope() => null;
+
+        public Lease<IAmAMessageTransform>? Create(Type transformerType, IAmAScope? scope = null)
         {
             return new Lease<IAmAMessageTransform>(new MySimpleTransform());
         }

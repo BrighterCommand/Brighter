@@ -70,6 +70,13 @@ This ensures the mandatory approval step is never skipped and tests are reviewed
   - By following the rules for only testing behaviors, you only need to write tests for the behaviors exposed from the module not its details.
   - Private or Internal classes used in the implementation do not need tests - they are covered by the behavior that led to their creation.
 
+## Tests Exercise the Production Path
+
+- **A test that drives a path production never takes has no value.** It does not protect behaviour; it pins an implementation, and it keeps that implementation alive by making its removal look like a regression.
+- Where a public seam can be reached in more than one way, a test must reach it the way production does — supplying the collaborators production supplies, obtained the way production obtains them. A hand-rolled stand-in for something the framework always provides tests a configuration no user has.
+- **When a design change removes a path that only tests were exercising, rewrite the tests onto the production path. Do not keep the path so that the tests keep passing.** Preserving a code path for its tests inverts the relationship: the tests exist to protect behaviour users depend on, not to protect themselves.
+- This is not a licence to weaken coverage. Rewriting a test onto the production path should assert the same property; if the property can no longer be asserted there, that is a finding about the design, not a reason to keep the old path.
+
 ## No InternalsVisibleTo
 
 - **NEVER use `InternalsVisibleTo` to expose internal classes for testing.**

@@ -35,6 +35,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         }
         internal sealed class CheapHandlerFactorySync : IAmAHandlerFactorySync
         {
+            public IAmAScope? CreatePipelineScope() => null;
+
             public IHandleRequests Create(Type handlerType, IAmALifetime lifetime)
             {
                 if (handlerType == typeof(MyPreAndPostDecoratedHandler))

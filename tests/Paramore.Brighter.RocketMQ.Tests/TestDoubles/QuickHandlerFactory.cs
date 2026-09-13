@@ -2,6 +2,8 @@
 
 internal class QuickHandlerFactory(Func<IHandleRequests> handlerAction) : IAmAHandlerFactorySync
 {
+    public IAmAScope? CreatePipelineScope() => null;
+
     public IHandleRequests Create(Type handlerType, IAmALifetime lifetime)
     {
         return handlerAction();
