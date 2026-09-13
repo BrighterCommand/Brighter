@@ -1,209 +1,185 @@
-# Review: requirements — 0037-validate-subscription-channel-factory
+# Review: requirements — 0037-validate-subscription-channel-factory (round 2)
 
 **Date**: 2026-09-13
 **Threshold**: 60
 **Verdict**: NEEDS WORK
 
-10 findings at or above threshold 60. Address these before approving.
+13 findings at or above threshold 60. Address these before approving.
+
+## Round 1 disposition
+
+| # | Prior finding | Status | Justification |
+|---|---|---|---|
+| 1 | Three transports with no override (AWSSQS, AWSSQS.V4, Postgres) | **FIXED** | D2 widened; FR-9/FR-10/FR-11 added; Table 1 now says "nine of twelve … three declare none"; FR-12 condition 2 catches the inherited default; C-1's "only known class" claim corrected. Verified: exactly twelve gateway subscription families, nine overrides, those three with none. |
+| 2 | AC-17/AC-19 needed a broker | **FIXED** | Replaced by AC-26, which asserts the routing *decision* (`f.GetType() == subscription.ChannelFactoryType`) with an explicit note that channel creation is forbidden. |
+| 3 | C-9 places unit tests where the types are unreachable | **PARTIALLY FIXED** | Core.Tests' seven references verified exactly as C-9 states, and the doubles approach fixes AC-1..AC-15. But new placement defects appear — see findings 5 and 8. |
+| 4 | C-3 downcast claim wrong | **FIXED** | Verified all twelve factories with both idioms plus `Cast`/explicit-cast forms: eleven throw `ConfigurationException`, only `MQTT/ChannelFactory.cs` passes the subscription through. Cited throw sites all correct. |
+| 5 | Sweep mechanism under-specified / would throw | **FIXED** | FR-12 now pins `RuntimeHelpers.GetUninitializedObject`; AC-29 pins "constructs nothing". Verified viable: every one of the nine overrides is an expression-bodied `=> typeof(X)` constant touching no instance state, and tests target net9.0/net10.0 where the API exists. |
+| 6 | No AC for FR-5 items 1 and 4 | **FIXED** | AC-12 (item 1) and AC-13 (item 4, pinned literal) added. (Their content has separate problems — findings 1 and 2.) |
+| 7 | MsSql citations stale | **FIXED** | Verified `:53`, `:75`, `:99` and the `msSqlSubscription` variable name. |
+| 8 | Constructor examples do not compile | **PARTIALLY FIXED** | The MQTT one is gone; FR-1's `MsSql.ChannelFactory(connection)` remains wrong. Re-opened as finding 7. |
+| 9 | `Type.FullName` unworkable for generics; AC-11 untestable clause | **FIXED** | Normative display-name format added; AC-14 makes it assertable. (AC-15's replacement clause creates a new contradiction — finding 3.) |
+| 10 | Null-`RequestType` AC's Given incomplete | **FIXED** | AC-19 now supplies `getRequestType:` and `messagePumpType: MessagePumpType.Proactor`, matching the base ctor's two guards (verified at `Subscription.cs:212-216`). |
+| 11 | `RocketMqSubscription` non-generic does not exist | **FIXED** | Table 1 row is now `RocketSubscription` (`RocketMqSubscription.cs:50`); FR-12 scope names the base/derived pair. |
+| 12 | `DispatchBuilder` mutation not addressed | **FIXED** | FR-2a added with the verified `DispatchBuilder.cs:146-148` quote; AC-5 asserts the invariance. |
+| 13 | Grounding line refs off | **FIXED** | Verified `ServiceCollectionExtensions.cs:199-229` and `CombinedChannelFactory.cs:14`. Also spot-verified `:159`, `Subscription.cs:48/:172`, `IAmConsumerOptions.cs:12`, `Specification.cs:35`, `ValidationError.cs:33`, `BrighterPipelineValidationExtensions.cs:58`, `GcpPubSubChannelFactory.cs:14`, `GcpPubSubConsumerFactory.cs:15`, `MqttMessageConsumerFactory.cs:30`, MQTT `ChannelFactory.cs:33`, AWSSQS/V4 `ChannelFactory.cs:44`, `PostgresChannelFactory.cs:11`, MultiBus `Program.cs:83` — all correct. |
+| 14 | NFR-1 mis-describes existing rules | **FIXED** | Now says three use the predicate/error-factory form and `UnwrapTransformResolvable` (`:142-167`, verified) uses `DisposingSpecification`. |
+
+Twelve of fourteen are genuinely fixed; #3 and #8 are re-opened below.
 
 ## Findings
 
-### 1. Three in-repo transports do not override `ChannelFactoryType` at all — the rule turns their *correct* configurations into startup-blocking Errors (Score: 95)
+### 1. The pinned remedy template gives actively wrong advice in the feature's headline case (Score: 78)
 
-The document's model is stated as "`Subscription.ChannelFactoryType` … is a `virtual` property, defaulting to `typeof(InMemoryChannelFactory)`, that **each transport's subscription overrides**", and Table 1 enumerates "nine `override Type ChannelFactoryType` declarations in `src/`". The count of overrides is right, but the model is wrong: there are **twelve** gateway subscription families in `src/`, and three of them declare **no override**, so they inherit `typeof(InMemoryChannelFactory)`:
+FR-5 item 4 is now a *normative literal*, and AC-13 pins it. But the template's only variable is `{D}` — the *declared* type — so in the direct arm the remedy always tells the developer to make the world match the subscription, never the other way round. In the flagship scenario (issue #4331, FR-1's own first example, AC-1, AC-12, AC-13) `D` is `InMemoryChannelFactory`, so the message a developer sees is advice to configure an in-memory channel factory — which is precisely the silent-wrong-bus outcome C-2 declares "a worse failure than an exception".
 
-- `src/Paramore.Brighter.MessagingGateway.AWSSQS/SqsSubscription.cs`
-- `src/Paramore.Brighter.MessagingGateway.AWSSQS.V4/SqsSubscription.cs`
-- `src/Paramore.Brighter.MessagingGateway.Postgres/PostgresSubscription.cs`
+**Evidence**: FR-5, "Remedy clause (normative template)": `— use a subscription whose ChannelFactoryType is {D-display-name}, or configure a channel factory of type {D-display-name}`. AC-1's configuration is a plain `Subscription<GreetingMade>` (`D = typeof(InMemoryChannelFactory)`) handed a transport factory. AC-13: "the `Message` **ends with** the literal … where `{D}` is the display name of the declared channel factory type." Rendered: `— use a subscription whose ChannelFactoryType is Paramore.Brighter.InMemoryChannelFactory, or configure a channel factory of type Paramore.Brighter.InMemoryChannelFactory`. NFR-2 requires each message "state a remedy"; the issue's own illustrative message was the opposite direction ("use `MsSqlSubscription<T>`"), and OOS-6 excludes computing that — but OOS-6 excludes *naming the subscription type*, not naming the *effective factory* the developer must satisfy.
 
-Consequence under FR-3's direct arm: a correct, working AWS SQS consumer (`options.DefaultChannelFactory = new Paramore.Brighter.MessagingGateway.AWSSQS.ChannelFactory(...)`, subscriptions of type `SqsSubscription<T>`) has `D = typeof(InMemoryChannelFactory)` and `F = AWSSQS.ChannelFactory`. `typeof(InMemoryChannelFactory).IsAssignableFrom(typeof(AWSSQS.ChannelFactory))` is `false`, so the rule emits `ValidationSeverity.Error` and, under the default `throwOnError: true`, **prevents a working host from starting**. Same for Postgres. These are exactly the shape of AC-1 — the spec's headline positive case — applied to a configuration that runs fine today.
+**Recommendation**: Make the remedy asymmetric and factory-aware, e.g. `— either configure a channel factory of type {D}, or use a subscription type whose ChannelFactoryType is {F}` (where `{F}` is the effective factory's display name, or the inner-factory list in the combined arm). Pin the new literal in FR-5 and AC-13, and add an AC asserting the remedy names the *effective* factory in the `D == InMemoryChannelFactory` case.
 
-This is not D1 or D2 being re-argued; it is a consequence of D1 the document fails to state, and it directly contradicts two of its own clauses:
+---
+
+### 2. AC-12 asserts a literal that cannot be produced anywhere in the repository (Score: 75)
+
+AC-12's expected string embeds a namespace/type pair that does not exist, and cannot exist in the project C-9 assigns the test to.
+
+**Evidence**: AC-12 — "Then the `Message` contains the display name of the subscription's runtime type, `Paramore.Brighter.Subscription<Greetings.Ports.Events.GreetingMade>`." Verified: `class GreetingMade` exists only under `samples/WebAPI/WebAPI_Dynamo/*` in namespaces `GreetingsApp.Requests` and `SalutationApp.Requests`; the namespace `Greetings.Ports.Events` exists only in `samples/TaskQueue/ASBTaskQueue` and `samples/TaskQueue/RedisTaskQueue`, and contains `GreetingEvent`/`GreetingAsyncEvent`, not `GreetingMade`. The combination appears nowhere. Worse, `GreetingMade` does not exist in `tests/Paramore.Brighter.Core.Tests` at all, and the AC preamble plus C-9 place AC-12 in `tests/Paramore.Brighter.Core.Tests/Validation/`, whose seven project references include no samples. The same phantom type is used as the request type in AC-1, AC-7, AC-11 and AC-20 to AC-24, and C-9 additionally requires "each with its own distinct request type … to avoid assembly-scan collisions", which `GreetingMade` shared across every AC would violate.
+
+**Recommendation**: Replace `GreetingMade` throughout with a double the spec defines (e.g. `FakeChannelFactoryRequest` in `Paramore.Brighter.Core.Tests.Validation.TestDoubles`), and restate AC-12's expected literal in terms of that type's actual namespace — or state it as a *shape* (`Paramore.Brighter.Subscription<{namespace}.{TRequest}>`) rather than a fixed string. Add the request-type doubles to C-9's list.
+
+---
+
+### 3. AC-15's negative assertion contradicts FR-5's own mandated remedy literal (Score: 72)
+
+AC-15 adds a blanket assertion about every occurrence of the token `ChannelFactory` in the message. FR-5's remedy template — which AC-13 requires the message to *end with* — contains `ChannelFactoryType`, in which `ChannelFactory` is preceded by a space. The two ACs cannot both pass under a straightforward substring implementation.
+
+**Evidence**: AC-15 — "every occurrence of the token `ChannelFactory` in the message is immediately preceded by a `.` (i.e. no bare, unqualified `ChannelFactory` appears)." FR-5 — `— use a subscription whose ChannelFactoryType is {D-display-name}, …`. `"… whose ChannelFactoryType is …".IndexOf("ChannelFactory")` lands on a character preceded by `' '`. Two developers will resolve this differently (one strips the remedy clause before asserting; one uses a word-boundary regex; one treats it as a genuine failure), which is exactly the divergence the review criteria call out.
+
+**Recommendation**: Restate AC-15 with a word boundary and an explicit carve-out, e.g. "no occurrence of `ChannelFactory` that is neither preceded by `.` nor part of the token `ChannelFactoryType`", or scope the assertion to the portion of the message before the remedy clause.
+
+---
+
+### 4. The Error verdict for user-defined `Subscription` subclasses with no override is never addressed, and NFR-6 asserts the opposite (Score: 70)
+
+D2 removes the *in-repo* false positives, and C-1 is careful to hedge ("every class of in-repo false positive known at the time of writing"). NFR-6 is not hedged, and neither is FR-12's guard, which sweeps only shipped gateway assemblies. Any application- or third-party-defined `Subscription` subclass that does not override `ChannelFactoryType` — a custom transport, a community gateway, or a subclass added purely to carry extra configuration and used with a non-downcasting factory — has `D = typeof(InMemoryChannelFactory)` and will be an `Error` that blocks a host running correctly today. That is the identical shape to round 1's Critical finding, in the one population D2 cannot reach, and the document nowhere states it.
+
+**Evidence**: NFR-6 — "No configuration that starts successfully today and is genuinely correct may be made to fail by this feature. **There is exactly one deliberate exception, C-2**". C-2 is the opposite direction only. Verified: `Subscription.ChannelFactoryType` is `public virtual` (`Subscription.cs:172`) with a `typeof(InMemoryChannelFactory)` default, so the default is inherited silently by any subclass anywhere; FR-12's scope is "each shipped messaging-gateway assembly", so no guard exists for out-of-repo subscriptions. FR-3's direct arm then evaluates `typeof(InMemoryChannelFactory).IsAssignableFrom(F.GetType())` → false → Error under the default `throwOnError: true`.
+
+**Recommendation**: Add a constraint (a sibling to C-2) that names this population, states the consequence of D1 for it, and says how it is mitigated — for example that migration notes instruct custom-subscription authors to add the override, and/or that release notes flag it as a breaking startup change for V10.X. Then qualify NFR-6 to "no *in-repo* configuration", or list this as a second acknowledged exception.
+
+---
+
+### 5. AC-25 and AC-26 cannot be hosted in any existing test project (Score: 70)
+
+The AC preamble states "Each of AC-20 to AC-26 lives in the corresponding gateway test project". AC-25 and AC-26 are written across *all five* corrected transports, and AC-26 additionally requires evaluating the rule — which lives in `Paramore.Brighter.ServiceActivator`.
 
 **Evidence**:
-- NFR-6: "No configuration that starts successfully today and is genuinely correct may be made to fail by this feature. The known exception is discussed in C-2." C-2 covers only the *opposite* direction (transport subscription → in-memory factory). It does not cover "subscription that silently declares in-memory because its transport forgot the override → real transport factory".
-- C-1: "It is safe to do so precisely because D2 (FR-7, FR-8) removes **the only known class of in-repo false positive**." That claim is false — AWS SQS (both versions) and Postgres are three further classes, affecting more in-repo samples than GCP/MQTT (`samples/TaskQueue/AWSTaskQueue/…`, `samples/TaskQueue/PostgresTaskQueue/…`, `samples/Scheduler/AwsTaskQueue/…`, and four `samples/Transforms/AWS*/…`).
-- FR-9/AC-20 ("each of the nine subscription types in Table 1") and AC-21's sweep ("enumerates every non-abstract type … **that declares (or inherits an override of) `ChannelFactoryType`**") both pass vacuously for AWSSQS and Postgres, so the regression guard as specified does not catch the gap either.
-- The same three transports are also unroutable by `CombinedChannelFactory` today for the same reason the document identifies for GCP/MQTT — so the Proposed Solution's claim that "Two long-standing transport defects are fixed" undercounts by three.
+- AC-25 — "Given **each of the five corrected subscription types**"; AC-26 — "Given, **for each corrected transport**, a `CombinedChannelFactory` …". Verified: no `tests/*/*.csproj` references more than one of `MessagingGateway.GcpPubSub`, `MessagingGateway.MQTT`, `MessagingGateway.AWSSQS`, `MessagingGateway.AWSSQS.V4`, `MessagingGateway.Postgres`. There is therefore no project in which "each of the five" can be a single test.
+- AC-26 — "and **the rule produces no findings** for that subscription." Verified: `tests/Paramore.Brighter.Gcp.Tests` and `tests/Paramore.Brighter.PostgresSQL.Tests` have **no** `Paramore.Brighter.ServiceActivator` project reference (AWS.Tests, AWS.V4.Tests and MQTT.Tests do). Two of the five cannot see `ConsumerValidationRules` at all.
 
-**Recommendation**: Add an FR (a sibling to FR-7/FR-8) that adds `ChannelFactoryType` overrides to `SqsSubscription` (AWSSQS), `SqsSubscription` (AWSSQS.V4) and `PostgresSubscription`; or, if the maintainer will not widen D2's scope, add an explicit FR requiring the rule to *not* report an Error when `D == typeof(InMemoryChannelFactory)` and the subscription's runtime type is not `Subscription`/`Subscription<T>`. Correct the Table 1 preamble to say "nine of twelve transports override…", replace AC-20's fixed list, and rewrite AC-21's sweep predicate to enumerate every non-abstract `Subscription` subclass in a gateway assembly (not only those that override), asserting the declared type implements `IAmAChannelFactory` **and** is not the inherited `InMemoryChannelFactory` default. Correct C-1's "only known class of in-repo false positive" claim.
+**Recommendation**: Split AC-25 and AC-26 into five per-transport criteria, each stating its host project. For AC-26's second clause, either state that `Paramore.Brighter.ServiceActivator` must be added as a project reference to `Gcp.Tests` and `PostgresSQL.Tests`, or drop the clause there and cover it once in `Core.Tests` with the doubles (the routing-decision clause needs only `Paramore.Brighter`).
 
 ---
 
-### 2. AC-17 and AC-19 cannot be satisfied without a broker, contradicting NFR-3 and AC-23 (Score: 85)
+### 6. OOS-2 still says "six factories that downcast", contradicting C-3's corrected count of eleven (Score: 68)
 
-Both ACs require, as a second clause, that the `CombinedChannelFactory` actually *select* and use the transport factory. Selecting it means calling `CreateSyncChannel`/`CreateAsyncChannel`, which in both transports opens a real connection during construction.
+C-3 was rewritten in this revision from "six do" to "eleven of the twelve"; OOS-2 was not updated with it.
+
+**Evidence**: OOS-2 — "**The six factories that downcast** the subscription keep doing so, with the same exception type and message." C-3 — "**Eleven of the twelve** transport channel factories downcast … only MQTT's `ChannelFactory` does not." Verified C-3 is the correct one: AWSSQS `:98/:208`, AWSSQS.V4 `:98/:208`, ASB `:103`, GCP `:28/:68`, Kafka `:63/:82/:102`, MsSql `:53/:75/:99`, Postgres `:18/:39/:60`, Redis `:63/:82/:96`, RMQ.Async `:64/:86/:109`, RMQ.Sync `:63/:97`, RocketMQ `:15/:30` — eleven; MQTT's `ChannelFactory` has no downcast at all.
+
+**Recommendation**: Change OOS-2 to "the eleven factories that downcast".
+
+---
+
+### 7. FR-1's first example still uses a constructor signature that does not exist (re-opening round 1 finding 8) (Score: 68)
+
+The MQTT half of the prior finding was resolved; the MsSql half was carried through unchanged into the revision, and it now appears in the example that anchors the whole feature.
+
+**Evidence**: FR-1 — "with `options.DefaultChannelFactory = new Paramore.Brighter.MessagingGateway.MsSql.ChannelFactory(**connection**)`". Verified `MsSql/ChannelFactory.cs:32`: `public ChannelFactory(MsSqlMessageConsumerFactory msSqlMessageConsumerFactory)`. There is no connection-taking overload. FR-3's examples hide the same problem behind `(...)`, which is fine, but FR-1's does not.
+
+**Recommendation**: Change to `new Paramore.Brighter.MessagingGateway.MsSql.ChannelFactory(msSqlMessageConsumerFactory)` or elide the argument as FR-3 does.
+
+---
+
+### 8. The test doubles are defined in a project `Paramore.Brighter.Extensions.Tests` cannot reference (Score: 66)
+
+C-9 places the doubles in `Core.Tests` and then tells AC-16/AC-17 to reuse them from a different test project. Test projects do not reference one another here.
+
+**Evidence**: C-9 — "Host-start behaviour (AC-16, AC-17) … belongs in `tests/Paramore.Brighter.Extensions.Tests`, which already references that package, **still using the doubles above** rather than a real transport." Verified `tests/Paramore.Brighter.Extensions.Tests/*.csproj` references exactly `Paramore.Brighter.Extensions.DependencyInjection`, `Paramore.Brighter.Outbox.Sqlite`, `Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection`, `Paramore.Brighter.ServiceActivator.Extensions.Hosting`, `Paramore.Brighter.Sqlite.EntityFrameworkCore` — no reference to `Paramore.Brighter.Core.Tests`, where C-9 puts the doubles. As written, AC-16/AC-17 cannot compile.
+
+**Recommendation**: State explicitly that `Extensions.Tests` gets its own copies of the doubles (with their own distinct request types, per `.agent_instructions/testing.md`), or that a shared location such as `Paramore.Test.Helpers` hosts them. Duplicating them silently is the outcome an implementer will reach anyway; the spec should say which.
+
+---
+
+### 9. NFR-3 still refers to "the FR-9 sweep" after the renumber (Score: 65)
+
+FR-9 is now the AWSSQS correction; the sweep is FR-12. A reader following the cross-reference lands on a requirement that is not reflection-based at all.
+
+**Evidence**: NFR-3 — "The rule inspects types and configured instances only. **The FR-9 sweep is reflection-only.**" FR-9 — "`SqsSubscription` (AWSSQS) declares its channel factory." FR-12 — "An automated **reflection sweep** MUST assert …". Every other cross-reference to the sweep (C-1, C-9, AC-27/28/29) correctly says FR-12; NFR-3 is the sole survivor.
+
+**Recommendation**: Change to "The FR-12 sweep is reflection-only."
+
+---
+
+### 10. Two acceptance criteria use test doubles the document never defines (Score: 65)
+
+C-9 enumerates exactly four doubles, and the AC preamble repeats that list as the closed set. Two ACs reach outside it.
 
 **Evidence**:
-- AC-19: "*and the combined factory selects the MQTT `ChannelFactory` for that subscription rather than throwing `ConfigurationException`*". `MQTT/ChannelFactory.cs:63-73` calls `_consumerFactory.Create(subscription)`, and `MQTT/MqttMessageConsumer.cs:117-120` ends its constructor with `Task connectTask = Connect(configuration.ConnectionAttempts); connectTask.GetAwaiter().GetResult();` — a blocking TCP connect to the broker.
-- AC-17: "*and the combined factory selects the `GcpPubSubChannelFactory` for that subscription*". `GcpPubSub/GcpPubSubChannelFactory.cs:34-40` calls `await EnsureSubscriptionExistsAsync(pullSubscription)` — a Pub/Sub admin API call.
-- NFR-3: "Neither the rule **nor any test introduced by this feature** may open a connection to a broker, a database, or any external service." AC-23: "*Given the full set of tests introduced by this feature, When they run in an environment with no broker, database, or network access, Then they all pass.*"
+- AC-6 — "two subscriptions — a `FakeTransportSubscription` named `sub-a` and a **`FakeOtherSubscription`** named `sub-b`". C-9's list is `FakeTransportSubscription`, `FakeTransportChannelFactory`, `FakeDerivedChannelFactory`, `FakeOtherChannelFactory`. There is no `FakeOtherSubscription` anywhere in the document; without it AC-6 (the "no false positives in multi-bus" criterion, and FR-13's only combined-arm positive case) cannot be arranged.
+- AC-15 — "a subscription declaring a channel factory type **named `ChannelFactory` in one namespace**, handed a factory whose type is also **named `ChannelFactory` in a different namespace**". Since AC-15 names no real gateway type, the preamble puts it in `Core.Tests` against the doubles — but two doubles both named `ChannelFactory` in different namespaces are not in C-9's list either.
 
-(AC-8's companion assertion is fine by contrast — `CombinedChannelFactory` throws at `CombinedChannelFactory.cs:35-38` before it dispatches to any inner factory.)
-
-**Recommendation**: Reduce the second clause of AC-17 and AC-19 to the routing *decision* rather than channel creation — e.g. assert that the inner factory whose `GetType() == subscription.ChannelFactoryType` is found, or assert `CreateSyncChannel` does not throw `ConfigurationException("No channel factory found for subscription …")` using a stub inner factory of the same runtime type. Alternatively delete the second clause; AC-16/AC-18 plus the rule's own behaviour already cover the fix.
+**Recommendation**: Add `FakeOtherSubscription` (declaring `typeof(FakeOtherChannelFactory)`) and the AC-15 pair (e.g. `…TestDoubles.AlphaBus.ChannelFactory` / `…TestDoubles.BetaBus.ChannelFactory`, plus a subscription declaring the former) to C-9's list and to the AC preamble.
 
 ---
 
-### 3. C-9 places the rule's unit tests in a project that cannot reference the types AC-1 to AC-15 are written in (Score: 85)
+### 11. AC-28 requires a shipped gateway assembly to contain the defects AC-27 forbids (Score: 65)
 
-C-9: "The rule's unit tests belong with the existing consumer validation tests (`tests/Paramore.Brighter.Core.Tests/Validation/` …)." That directory exists and uses the `When_…` convention as claimed. But almost every AC is written in terms of concrete gateway types that `Paramore.Brighter.Core.Tests` cannot see, and AC-12/AC-13 are written in terms of `AddConsumers`, which it also cannot see.
+The guard's negative test is specified against real gateway assemblies, which makes it self-contradictory with the positive test.
 
-**Evidence**: `tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj` lines 7-13 declare exactly seven project references — `Paramore.Brighter`, `Paramore.Brighter.BoxProvisioning`, `Paramore.Brighter.Extensions.DependencyInjection`, `Paramore.Brighter.Mediator`, `Paramore.Brighter.Outbox.Hosting`, `Paramore.Brighter.ServiceActivator`, `Paramore.Brighter.Testing`. There is **no** `MessagingGateway.*` reference and **no** `Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection` reference. Yet:
-- AC-1, AC-2, AC-4, AC-6, AC-7, AC-8, AC-9, AC-15 name `Paramore.Brighter.MessagingGateway.MsSql.ChannelFactory` and/or `MsSqlSubscription<T>`.
-- AC-3, AC-4, AC-5 name `RmqSubscription` (RMQ.Async) and `RMQ.Async.ChannelFactory`.
-- AC-11 names `RedisSubscription<T>` and `Kafka.ChannelFactory`.
-- AC-12/AC-13 say "*Given a host configured with `AddConsumers` … When the host starts*"; `AddConsumers` is defined at `src/Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection/ServiceCollectionExtensions.cs:29` and `:78`.
+**Evidence**: AC-28 — "Given **a gateway assembly containing** (a) a non-abstract `Subscription` subclass with no `ChannelFactoryType` override, and (b) one overriding it with a type that does not implement `IAmAChannelFactory`, When the sweep runs, Then it fails for both". AC-27 — "Given every non-abstract type assignable to `Subscription` in **each shipped messaging-gateway assembly** … Then the type implements `IAmAChannelFactory` and is not `typeof(InMemoryChannelFactory)`, **for every type found**." If any shipped gateway assembly contained (a) or (b), AC-27 would be red. FR-12's own example has the same framing. Neither says the sweep's predicate must be extracted and exercised over synthetic types in a test assembly, which is the only way both ACs can be green.
 
-`tests/Paramore.Brighter.Extensions.Tests` does reference `ServiceActivator.Extensions.DependencyInjection` but likewise references no gateway assembly. So no existing project can host the ACs as written.
-
-**Recommendation**: Either (a) rewrite AC-1 to AC-15 against purpose-built test doubles (`FakeTransportSubscription` overriding `ChannelFactoryType`, `FakeTransportChannelFactory : IAmAChannelFactory`, `FakeDerivedChannelFactory : FakeTransportChannelFactory`) so they are genuinely unit-level and live in `Core.Tests`, keeping the real-type versions only where a gateway test project can host them; or (b) state in C-9 which project references must be added, and reconcile that with the repo convention that `Core.Tests` takes no gateway dependency. Also state where AC-12/AC-13 (host-start behaviour) live.
+**Recommendation**: Require FR-12 to expose the check as a pure predicate over `(Type subscriptionType, Type declaredFactoryType)`, and restate AC-28 as "Given two synthetic `Subscription` subclasses in the test assembly — one with no override, one overriding with a non-`IAmAChannelFactory` type — When the predicate is applied …".
 
 ---
 
-### 4. C-3's claim about which channel factories downcast is factually wrong for two of the three it names, and omits a fourth (Score: 82)
+### 12. FR-5's premise undercounts the same-named factories by three (Score: 62)
 
-C-3 is load-bearing: it is the stated reason "why a mismatch is not *always* an immediate runtime failure today, and hence why D2 … is what makes D1 … safe". Two of its three examples do downcast, and the arithmetic does not add up.
+FR-5's rationale for fully-qualified names names five assemblies; there are eight, including two of the transports this very specification is correcting.
 
-**Evidence**: C-3 states "*Three of the nine channel factories do not downcast the subscription (`AzureServiceBusChannelFactory`, MQTT's `ChannelFactory`, `RocketMqChannelFactory`); the other six do …*"
-- `src/Paramore.Brighter.MessagingGateway.AzureServiceBus/AzureServiceBusChannelFactory.cs:103-105`: `if (subscription is not AzureServiceBusSubscription azureServiceBusSubscription) { throw new ConfigurationException(...` — it **does** downcast.
-- `src/Paramore.Brighter.MessagingGateway.RocketMQ/RocketMqChannelFactory.cs:15-17` and `:30-32`: `if (subscription is not RocketSubscription) throw new ConfigurationException(...)` — it **does** downcast.
-- Only MQTT's `ChannelFactory` genuinely does not (`MQTT/ChannelFactory.cs:32-73` passes the subscription straight through).
-- `GcpPubSubChannelFactory` — one of the nine — appears in neither list, and it **does** downcast (`GcpPubSubChannelFactory.cs:28-31`). So the count is "one of nine does not, eight do", not "three do not, six do".
+**Evidence**: FR-5 — "**Five transports** name their channel factory class `ChannelFactory` in five different assemblies (Redis, RMQ.Sync, RMQ.Async, Kafka, MsSql)." Verified `public [partial] class ChannelFactory` in **eight** assemblies: `MessagingGateway.AWSSQS` (`:44`), `MessagingGateway.AWSSQS.V4` (`:44`), `MessagingGateway.Kafka` (`:32`), `MessagingGateway.MQTT` (`:33`), `MessagingGateway.MsSql` (`:12`), `MessagingGateway.Redis` (`:33`), `MessagingGateway.RMQ.Async` (`:33`), `MessagingGateway.RMQ.Sync` (`:32`). The document elsewhere depends on the AWS and MQTT ones being called `ChannelFactory` (Table 1, FR-8, FR-9, FR-10), so this is an internal inconsistency, not only a miscount — and it understates the case FR-5 is making.
 
-**Root cause of the error**: the claim originated from a grep using the pattern `as [A-Za-z]+Subscription`, which matches the older `subscription as XSubscription` idiom but misses the modern `subscription is not XSubscription` pattern that ASB, RocketMQ and GCP use.
-
-**Recommendation**: Restate C-3 as "eight of the nine transport channel factories downcast the subscription and throw `ConfigurationException`; only MQTT's `ChannelFactory` does not", cite the throw sites, and rewrite the derived rationale accordingly (the "MQTT in particular would be flagged despite 'working'" argument survives; the Azure/RocketMQ part of it does not).
+**Recommendation**: "Eight transports name their channel factory class `ChannelFactory` in eight different assemblies (AWSSQS, AWSSQS.V4, Kafka, MQTT, MsSql, Redis, RMQ.Sync, RMQ.Async)."
 
 ---
 
-### 5. FR-9/AC-21's reflection sweep is under-specified, and the obvious implementation throws before it can read `ChannelFactoryType` (Score: 75)
+### 13. FR-12 requires a sweep over twelve assemblies but nothing says where it runs or that all twelve are covered (Score: 60)
 
-FR-9 requires the sweep to "obtain" each type's `ChannelFactoryType`. That property is an **instance** virtual property (`Subscription.cs:172`), so an instance is required — and the base `Subscription` constructor actively rejects the arguments a naive sweep would supply.
+FR-12 and AC-27 are written as a single sweep over "each shipped messaging-gateway assembly", while C-9 disperses the real-type tests into gateway test projects with an unenumerated "and the rest".
 
-**Evidence**: `src/Paramore.Brighter/Subscription.cs` base constructor body:
-```csharp
-if (messagePumpType == MessagePumpType.Unknown)
-    throw new ConfigurationException("You must set a message pump type: use Reactor for sync pipelines; use Proactor for async pipelines");
+**Evidence**: FR-12 — "for every non-abstract type assignable to `Subscription` in **each shipped messaging-gateway assembly**". C-9 — "live in the corresponding gateway test projects (`Paramore.Brighter.Gcp.Tests`, `Paramore.Brighter.MQTT.Tests`, `Paramore.Brighter.AWS.Tests`, `Paramore.Brighter.AWS.V4.Tests`, `Paramore.Brighter.PostgresSQL.Tests` **and the rest**)". Verified: a per-project test can only sweep the assemblies its project references, and no project references more than one of the corrected five; there are twelve gateway assemblies and twelve corresponding test projects (`AzureServiceBus.Tests`, `Kafka.Tests`, `MSSQL.Tests`, `Redis.Tests`, `RMQ.Async.Tests`, `RMQ.Sync.Tests`, `RocketMQ.Tests` in addition to the five named). Nothing requires a sweep in each of the twelve, so a compliant implementation could add it to one project and leave eleven assemblies unguarded — defeating FR-12's stated purpose.
 
-if (requestType is null && getRequestType is null)
-    throw new ConfigurationException("You must set a request type or a function to map a message to a request type");
-```
-Every transport subscription defaults `messagePumpType` to `MessagePumpType.Unknown` and `requestType` to `null`, and requires three positional arguments (`SubscriptionName`, `ChannelName`, `RoutingKey`) with no defaults. So `Activator.CreateInstance(type)` fails, and `Activator.CreateInstance(type, name, channel, key)` throws `ConfigurationException` for every non-generic transport subscription. The sweep must therefore either pick the right optional-parameter positions per type (signatures differ — compare `MqttSubscription`'s 19 parameters with `GcpPubSubSubscription`'s 29), close each generic type against a suitable `IRequest` (noting `GcpPubSubSubscription<T> where T : class, IRequest` vs `MqttSubscription<T> where T : IRequest`), or bypass construction entirely (`RuntimeHelpers.GetUninitializedObject`). FR-9's phrase "instantiates **or otherwise obtains**" leaves all of that to the implementer, and AC-21 adds no constraint.
-
-**Recommendation**: Pin the mechanism in FR-9 (or explicitly delegate it to the ADR and say so), and add to AC-21 a Given that names the construction strategy — e.g. "the sweep obtains `ChannelFactoryType` without invoking a subscription constructor". Add a boundary AC for generic subscription types and for abstract/base pairs (`RocketSubscription` + `RocketMqSubscription<T>` must not double-report).
+**Recommendation**: Enumerate the twelve host projects in C-9, or make AC-27 explicit: "one sweep test per gateway test project, covering all twelve shipped gateway assemblies", and state how a newly added thirteenth gateway is forced to acquire one.
 
 ---
 
-### 6. No acceptance criterion pins FR-5 item 4 (the remedy clause) or FR-5 item 1 (the subscription's own type) (Score: 70)
+### 14. NFR-5 still scopes the API-change allowance to FR-7/FR-8 only (Score: 55)
 
-FR-5 makes four numbered demands on the message. Items 2 and 3 are pinned by AC-1, AC-4, AC-6 and AC-11. Items 1 and 4 are pinned by nothing testable — they appear only in FR-5's own bulleted examples, not in any AC.
+Dangling pre-renumber reference. FR-9, FR-10 and FR-11 also change the public observable value of a virtual property on shipped public classes.
 
-**Evidence**: AC-1's Then reads "*… and a `Message` containing the literals `Paramore.Brighter.InMemoryChannelFactory` and `Paramore.Brighter.MessagingGateway.MsSql.ChannelFactory`*" — no mention of the subscription type, no mention of a remedy. Meanwhile NFR-2 makes the remedy mandatory ("state a remedy"), and FR-5 item 4 describes it only as prose. Two developers will produce different remedy wording, and neither can fail a test. This is a missing AC for a non-obvious requirement — the remedy is the whole point of the finding message (see the issue's illustrative text, "— use `MsSqlSubscription<T>`", which OOS-6 then explicitly excludes).
+**Evidence**: NFR-5 — "No public API change to existing abstractions **beyond what FR-7/FR-8 require**." Compare C-8, updated correctly: "**FR-7 to FR-11** change the value returned by a public virtual property (or add the override where none existed)", and NFR-6, likewise "FR-7 to FR-11".
 
-**Recommendation**: Add an AC that asserts the message contains the subscription's own `Type.FullName`, and an AC that asserts a specified remedy substring (give the literal template in FR-5), so the message shape is pinned rather than described.
-
----
-
-### 7. The MsSql `ChannelFactory` line citations are stale and the quoted snippet does not match the code (Score: 70)
-
-The Problem Statement and the Grounding references both cite `src/Paramore.Brighter.MessagingGateway.MsSql/ChannelFactory.cs` "lines 46, 66 and 88" and quote a snippet using the variable name `rmqSubscription`.
-
-**Evidence**: In the current file the downcasts are at lines **53, 75 and 99**, with the throws at 55, 77 and 101, and the variable is named `msSqlSubscription`:
-```csharp
-MsSqlSubscription? msSqlSubscription = subscription as MsSqlSubscription;
-```
-Lines 46/66/88 contain XML-doc text. The document has copied the stale citation and the pre-rename snippet verbatim from issue #4334; the code has moved since the issue was filed.
-
-**Recommendation**: Update the three line numbers to 53/75/99 and re-copy the snippet with the current variable name. Consider citing method names rather than line numbers throughout, since the document leans on file:line heavily.
+**Recommendation**: "beyond what FR-7 to FR-11 require."
 
 ---
 
-### 8. Two of the three constructor examples in the requirements do not compile against the real types (Score: 68)
+### 15. NFR-6 names an exception and then denies it is one (Score: 50)
 
-**Evidence**:
-- FR-1's first example: "`options.DefaultChannelFactory = new Paramore.Brighter.MessagingGateway.MsSql.ChannelFactory(connection)`". The actual signature is `MsSql/ChannelFactory.cs:32`: `public ChannelFactory(MsSqlMessageConsumerFactory msSqlMessageConsumerFactory)`. There is no connection-taking overload.
-- AC-19: "`new Paramore.Brighter.MessagingGateway.MQTT.ChannelFactory(configuration)`". The actual signature is `MQTT/ChannelFactory.cs:51`: `public ChannelFactory(MqttMessageConsumerFactory consumerFactory)`.
-- AC-17's `new GcpPubSubChannelFactory(connection)` **is** correct (`GcpPubSubChannelFactory.cs:14`), which makes the other two look verified when they are not.
+The reworded NFR-6 is circular: it protects only configurations that are "genuinely correct", then declares its single exception to be not genuinely correct — so the exception is not an exception, and the requirement becomes unfalsifiable because the specification itself decides what counts as correct.
 
-`new SubscriptionName("greeting-sub")` as the first constructor argument is correct (`Subscription.cs:280`).
+**Evidence**: NFR-6 — "No configuration that starts successfully today and **is genuinely correct** may be made to fail by this feature. There is exactly one deliberate exception, C-2 …, which this specification **classifies as *not* genuinely correct** — it silently consumes from the wrong bus."
 
-**Recommendation**: Correct the two constructor examples to take the consumer factories (and show how those are built without a broker, given NFR-3). If the ACs are rewritten against test doubles per finding 3, this resolves itself.
-
----
-
-### 9. FR-5's `Type.FullName` mandate is unworkable for generic subscriptions, and AC-11's negative assertion is not testable as written (Score: 65)
-
-FR-5 item 1 requires "the subscription's own runtime type, as `Type.FullName`". Every example in the document uses a *generic* subscription, and `Type.FullName` for a closed generic embeds the assembly-qualified type argument.
-
-**Evidence**: `typeof(Subscription<GreetingMade>).FullName` returns something of the shape
-```
-Paramore.Brighter.Subscription`1[[…GreetingMade, Paramore.Brighter.Core.Tests, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]
-```
-FR-5's own example asserts the message "contain[s] the literal `Paramore.Brighter.Subscription`" — technically satisfied as a substring, but the rendered message will carry a Version/Culture/PublicKeyToken payload that contradicts NFR-2's "Actionable, unambiguous messages" and FR-5's closing sentence "*assembly-qualified names are not required*". FR-5 gives no rule for formatting generic type arguments.
-
-Separately, AC-11's Then ends "*and the message is not satisfied by the bare token `ChannelFactory` appearing twice*". That is a statement about the AC, not an assertion a test can make.
-
-**Recommendation**: Either specify a formatting helper (e.g. "namespace-qualified name with generic arguments rendered as their own namespace-qualified names, no assembly identity") and pin it with an AC over a generic subscription, or narrow FR-5 item 1 to the *generic type definition*'s `FullName`. Rewrite AC-11's last clause as a positive assertion.
-
----
-
-### 10. AC-15's subscription cannot be constructed the way the AC implies (Score: 60)
-
-AC-15: "*Given a datatype-channel subscription with `RequestType == null` declaring `MsSqlSubscription`'s channel factory type, handed an `InMemoryChannelFactory`*".
-
-**Evidence**: The base `Subscription` constructor rejects that shape unless a `getRequestType` delegate is supplied, and separately throws unless `messagePumpType` is set to `Reactor` or `Proactor`, while `MsSqlSubscription`'s constructor defaults it to `MessagePumpType.Unknown`. Neither precondition is stated in the Given, so the AC as literally written produces a `ConfigurationException` in arrange, not a `ValidationError` in assert. (C-7's underlying requirement is sound; it is the AC's Given that is incomplete.)
-
-**Recommendation**: Add the missing Given conditions — "constructed with `getRequestType:` a mapping function and `messagePumpType: MessagePumpType.Proactor`, so `RequestType` is null" — so the AC arranges successfully.
-
----
-
-### 11. Table 1 and AC-20 name a type that does not exist in non-generic form (Score: 58)
-
-Table 1's first row and AC-20's list both name `RocketMqSubscription` as one of "the nine subscription types" whose `ChannelFactoryType` is read.
-
-**Evidence**: `src/Paramore.Brighter.MessagingGateway.RocketMQ/RocketMqSubscription.cs:10` declares `public class RocketSubscription : Subscription, …` and the override at `:50` lives on `RocketSubscription`. `RocketMqSubscription` exists only as the generic `public class RocketMqSubscription<T> : RocketSubscription` (`:117`). `RocketMqChannelFactory.cs:15` and `:30` likewise downcast to `RocketSubscription`.
-
-**Recommendation**: Rename the Table 1 row and the AC-20 entry to `RocketSubscription` (noting `RocketMqSubscription<T>` derives from it).
-
----
-
-### 12. FR-2 does not address `DispatchBuilder` mutating `subscription.ChannelFactory`, so the rule's inputs depend on hosted-service ordering (Score: 55)
-
-FR-2 cites `DispatchBuilder.cs:146-148` correctly, but describes it as "assigns the default only to subscriptions whose `ChannelFactory` is `null`" without noting that this is a **write** to the shared subscription object.
-
-**Evidence**:
-```csharp
-foreach (var connection in _subscriptions.Where(c => c.ChannelFactory == null))
-{
-    connection.ChannelFactory = _defaultChannelFactory;
-}
-```
-So whether the rule sees FR-2 step 1 or steps 2/3 depends on whether `IDispatcher` has been resolved before the validation hosted service runs — i.e. on `IHostedService` registration order. The outcome happens to be invariant (the assigned instance is the same object, and step 3's synthesised `InMemoryChannelFactory` has the same type as the one line 159 news up), but the document neither states that invariance nor makes it a requirement, and C-6 only covers the *snapshot* concern, not the mutation.
-
-**Recommendation**: Add a sentence to FR-2 (or a new C-) stating that the rule's verdict must be invariant to whether `DispatchBuilder.Subscriptions()` has already back-filled `subscription.ChannelFactory`, and add an AC that evaluates the rule both before and after that back-fill and asserts identical findings.
-
----
-
-### 13. Two grounding line references are off (Score: 50)
-
-**Evidence**:
-- `ServiceCollectionExtensions.cs:205-226` is cited three times as `RegisterConsumerValidationSpecs`. The method actually spans lines **199-229**.
-- C-4 cites `CombinedChannelFactory.cs:13` for the `_factories` field. Line 13 is `{`; the field is on line **14**.
-
-(`:34`, `:46`, `:59`, `Subscription.cs:48`, `Subscription.cs:172`, `IAmConsumerOptions.cs:12`, `GcpPubSubSubscription.cs:108`, `MqttSubscription.cs:35`, `GcpPubSubChannelFactory.cs:14-15`, `GcpPubSubConsumerFactory.cs:15`, MQTT `ChannelFactory.cs:33`, `BrighterPipelineValidationExtensions.cs:58` and `samples/TaskQueue/MultiBus/GreetingsReceiverConsole/Program.cs:83` all check out exactly.)
-
-**Recommendation**: Correct to `:199-229` and `:14`.
-
----
-
-### 14. NFR-1 mis-describes the pattern used by the existing four rules (Score: 45)
-
-NFR-1 requires the new rule be "expressed with the established `ISpecification<Subscription>` / `Specification<Subscription>` pattern used by the existing four rules".
-
-**Evidence**: Only three of the four use `Specification<Subscription>` with a `(predicate, errorFactory)` pair. `UnwrapTransformResolvable` (`ConsumerValidationRules.cs:142-167`) returns a `DisposingSpecification<Subscription>` built from a single `subscription => IReadOnlyList<ValidationResult>` function. `ValidationError` is confirmed as `public record ValidationError(ValidationSeverity Severity, string Source, string Message)` (`src/Paramore.Brighter/ValidationError.cs:33`) and `ISpecification<TData>` at `src/Paramore.Brighter/Specification.cs:35`.
-
-**Recommendation**: Say "the `ISpecification<Subscription>` abstraction used by the existing rules, of which three use the `Specification<Subscription>` predicate/error-factory form".
+**Recommendation**: Drop the "genuinely correct" qualifier and make the exception real: "No configuration that starts successfully today may be made to fail, with one deliberate exception: C-2." That is a testable statement; the current wording is not.
 
 ---
 
@@ -211,10 +187,10 @@ NFR-1 requires the new rule be "expressed with the established `ISpecification<S
 
 | Score Range | Count |
 |-------------|-------|
-| 90-100 (Critical) | 1 |
-| 70-89 (High) | 6 |
-| 50-69 (Medium) | 6 |
-| 0-49 (Low) | 1 |
+| 90-100 (Critical) | 0 |
+| 70-89 (High) | 5 |
+| 50-69 (Medium) | 10 |
+| 0-49 (Low) | 0 |
 
-**Total findings**: 14
-**Findings at or above threshold (60)**: 10
+**Total findings**: 15
+**Findings at or above threshold (60)**: 13
