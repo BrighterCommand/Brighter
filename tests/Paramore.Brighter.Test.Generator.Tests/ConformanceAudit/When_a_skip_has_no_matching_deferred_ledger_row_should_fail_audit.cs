@@ -16,7 +16,9 @@ namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 ///
 /// Direction 2 — Ledger → Trail: every ledger cell whose value starts with "Deferred" must carry
 /// both a real issue link (<c>#&lt;digits&gt;</c>) and a sign-off token
-/// (<c>sign-off: @&lt;name&gt;</c>). A Deferred cell missing either is a violation.
+/// (<c>sign-off: @&lt;handle&gt;</c>) naming an accountable maintainer. A Deferred cell missing
+/// either is a violation, and so is one whose handle is a placeholder (<c>@maintainer</c>,
+/// <c>@m</c>) - that has the shape of a sign-off while naming nobody.
 ///
 /// The audit reads only <c>conformance-status.md</c> and the in-tree test artifacts —
 /// no network calls, no subprocess, no tracker queries.
@@ -29,7 +31,7 @@ public class LedgerSkipCrossCheckAuditTests
     public void When_deferred_cell_has_both_issue_link_and_sign_off_should_be_valid()
     {
         // Arrange
-        const string cell = "Deferred -> #4240 (sign-off: @maintainer)";
+        const string cell = "Deferred -> #4240 (sign-off: @iancooper)";
 
         // Act
         var isValid = LedgerSkipCrossCheckAudit.IsValidDeferredCell(cell);
@@ -42,7 +44,7 @@ public class LedgerSkipCrossCheckAuditTests
     public void When_deferred_cell_has_no_issue_link_should_be_invalid()
     {
         // Arrange — sign-off present but no #<digits>
-        const string cell = "Deferred (sign-off: @maintainer)";
+        const string cell = "Deferred (sign-off: @iancooper)";
 
         // Act
         var isValid = LedgerSkipCrossCheckAudit.IsValidDeferredCell(cell);
@@ -75,7 +77,7 @@ public class LedgerSkipCrossCheckAuditTests
     {
         // Arrange — synthetic repo: Skip references issue #9999; ledger only contains #4240
         var repoRoot = BuildSyntheticRepo(
-            ledgerCells: ["Deferred -> #4240 (sign-off: @maintainer)"],
+            ledgerCells: ["Deferred -> #4240 (sign-off: @iancooper)"],
             skipValues:  ["Deferred: #9999 — no matching ledger row for this number"]);
 
         try
@@ -102,7 +104,7 @@ public class LedgerSkipCrossCheckAuditTests
     {
         // Arrange — synthetic repo: Deferred cell carries a sign-off but no #<digits>
         var repoRoot = BuildSyntheticRepo(
-            ledgerCells: ["Deferred (sign-off: @maintainer)"],
+            ledgerCells: ["Deferred (sign-off: @iancooper)"],
             skipValues:  []);
 
         try

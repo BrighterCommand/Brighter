@@ -239,7 +239,7 @@ public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants 
         var ledger = new InMemoryConformanceLedger(
             new Dictionary<(string, string), string>
             {
-                [(LEDGER_KEY, FR_COLUMN)] = "Deferred -> #1234 (sign-off: @maintainer)"
+                [(LEDGER_KEY, FR_COLUMN)] = "Deferred -> #1234 (sign-off: @iancooper)"
             });
         var configuration = BuildConfiguration();
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);

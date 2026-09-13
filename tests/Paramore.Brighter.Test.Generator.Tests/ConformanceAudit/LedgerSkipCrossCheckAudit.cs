@@ -88,7 +88,9 @@ public sealed record LedgerResolutionResult(
 ///   <item><description>
 ///     <b>Ledger → Trail</b> — every ledger cell whose value starts with "Deferred" must carry
 ///     both a real issue link (<c>#&lt;digits&gt;</c>) and a sign-off token
-///     (<c>sign-off: @&lt;name&gt;</c>). A Deferred cell missing either is a violation.
+///     (<c>sign-off: @&lt;handle&gt;</c>) naming an accountable maintainer. A Deferred cell missing
+///     either is a violation, and so is one whose handle is a placeholder (<c>@maintainer</c>,
+///     <c>@m</c>) - that has the shape of a sign-off while naming nobody.
 ///   </description></item>
 /// </list>
 ///
@@ -107,9 +109,27 @@ public static class LedgerSkipCrossCheckAudit
     private static readonly Regex ISSUE_LINK_PATTERN =
         new(@"#(\d+)", RegexOptions.Compiled);
 
-    // sign-off: @<non-whitespace> — required in every Deferred ledger cell
+    // sign-off: @<handle> — required in every Deferred ledger cell, and the handle must name a
+    // person. GitHub's own shape: 2-39 chars of alphanumerics and single inner hyphens. Two chars
+    // is the floor rather than GitHub's one, because a single letter is an abbreviation in practice
+    // and never an identification.
     private static readonly Regex SIGN_OFF_PATTERN =
-        new(@"sign-off:\s*@\S+", RegexOptions.Compiled);
+        new(@"sign-off:\s*@(?<handle>[A-Za-z0-9](?:-?[A-Za-z0-9]){1,38})\b", RegexOptions.Compiled);
+
+    // The bare token, with no constraint on what follows it. Only used to tell "there is no
+    // sign-off here at all" from "there is one, but its handle names nobody" when reporting.
+    private static readonly Regex SIGN_OFF_TOKEN_PATTERN =
+        new(@"sign-off:", RegexOptions.Compiled);
+
+    // Handles that satisfy the shape above while naming nobody. A deferral signed by one of these
+    // has no accountable owner, which is the whole point of requiring a sign-off.
+    private static readonly HashSet<string> PLACEHOLDER_HANDLES =
+        new(System.StringComparer.OrdinalIgnoreCase)
+        {
+            "maintainer", "maintainers", "owner", "owners", "name", "username", "handle",
+            "you", "user", "someone", "somebody", "anyone", "tbd", "tba", "todo",
+            "placeholder", "example", "xxx", "yyy", "zzz", "foo", "bar"
+        };
 
     // Deferred: #<digits> — the only valid Skip prefix; captures the issue number
     private static readonly Regex SKIP_DEFERRED_PREFIX =
@@ -117,13 +137,25 @@ public static class LedgerSkipCrossCheckAudit
 
     /// <summary>
     /// Returns <c>true</c> when <paramref name="cellValue"/> starts with "Deferred" and carries
-    /// both a real issue link (<c>#&lt;digits&gt;</c>) and a sign-off token
-    /// (<c>sign-off: @&lt;name&gt;</c>).
+    /// both a real issue link (<c>#&lt;digits&gt;</c>) and an accountable sign-off
+    /// (<c>sign-off: @&lt;handle&gt;</c>).
     /// </summary>
     public static bool IsValidDeferredCell(string cellValue) =>
         cellValue.TrimStart().StartsWith("Deferred", System.StringComparison.Ordinal)
         && ISSUE_LINK_PATTERN.IsMatch(cellValue)
-        && SIGN_OFF_PATTERN.IsMatch(cellValue);
+        && HasAccountableSignOff(cellValue);
+
+    /// <summary>
+    /// Returns <c>true</c> when <paramref name="cellValue"/> carries a sign-off whose handle both
+    /// looks like a GitHub handle and is not a placeholder standing in for one.
+    /// </summary>
+    /// <remarks>
+    /// A cell may carry more than one sign-off; one accountable handle is enough, so this reports
+    /// whether <em>any</em> of them names a person rather than demanding that all of them do.
+    /// </remarks>
+    private static bool HasAccountableSignOff(string cellValue) =>
+        SIGN_OFF_PATTERN.Matches(cellValue)
+            .Any(m => !PLACEHOLDER_HANDLES.Contains(m.Groups["handle"].Value));
 
     /// <summary>
     /// Runs the two-direction cross-check over the in-tree artifacts rooted at
@@ -145,10 +177,17 @@ public static class LedgerSkipCrossCheckAudit
                 continue;
 
             var hasIssue   = ISSUE_LINK_PATTERN.IsMatch(cell);
-            var hasSignOff = SIGN_OFF_PATTERN.IsMatch(cell);
-            var missing    = (!hasIssue && !hasSignOff) ? "issue link and sign-off"
+            var hasSignOff = HasAccountableSignOff(cell);
+
+            // A cell that carries a sign-off token but no usable handle is a different fault from
+            // one that carries no sign-off at all, and it needs a different fix — say which.
+            var signOffFault = SIGN_OFF_TOKEN_PATTERN.IsMatch(cell)
+                ? "an accountable sign-off: the handle given is a placeholder or too short to name anyone"
+                : "sign-off (sign-off: @<handle>)";
+
+            var missing    = (!hasIssue && !hasSignOff) ? $"issue link and {signOffFault}"
                            : !hasIssue                  ? "issue link (#<digits>)"
-                                                        : "sign-off (sign-off: @<name>)";
+                                                        : signOffFault;
             violations.Add(new LedgerCrossCheckViolation(
                 "LedgerMissingField",
                 $"Deferred ledger cell is missing {missing}: \"{cell}\""));

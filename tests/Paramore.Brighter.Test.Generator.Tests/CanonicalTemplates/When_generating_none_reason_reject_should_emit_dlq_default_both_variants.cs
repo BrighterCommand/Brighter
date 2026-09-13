@@ -282,7 +282,7 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
         var ledger = new InMemoryConformanceLedger(
             new Dictionary<(string, string), string>
             {
-                [(LEDGER_KEY, FR_COLUMN)] = "Deferred -> #4240 (sign-off: @maintainer)"
+                [(LEDGER_KEY, FR_COLUMN)] = "Deferred -> #4240 (sign-off: @iancooper)"
             });
         var configuration = BuildConfiguration();
         var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);

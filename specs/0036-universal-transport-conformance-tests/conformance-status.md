@@ -13,7 +13,7 @@ cell remains `Unknown`.
 | `Unknown` | Transient; permitted only during the fix phase. The cleanup is blocked while any cell holds this value. |
 | `Pass` | Conforms as generated; both Reactor and Proactor variants are green against a live broker. |
 | `Fixed (#PR/commit)` | Conformed via an in-spec gateway fix linked to the PR or commit. |
-| `Deferred -> #NNNN (sign-off: @iancooper)` | A named, linked, maintainer-signed-off follow-up issue. |
+| `Deferred -> #NNNN (sign-off: @iancooper)` | A named, linked, maintainer-signed-off follow-up issue. The handle must name a real maintainer: `LedgerSkipCrossCheckAudit` rejects a placeholder such as `@maintainer` or `@m`, which has the shape of a sign-off while naming nobody. |
 
 ## Rules
 

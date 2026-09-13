@@ -142,7 +142,7 @@ public class WhenLedgerMarksACellShouldEmitSkipOnlyWhenNotProven : IDisposable
         var ledger = new InMemoryConformanceLedger(
             new Dictionary<(string, string), string>
             {
-                [(LEDGER_KEY, FR_COLUMN)] = $"Deferred -> #{REAL_ISSUE_NUMBER} (sign-off: @m)"
+                [(LEDGER_KEY, FR_COLUMN)] = $"Deferred -> #{REAL_ISSUE_NUMBER} (sign-off: @iancooper)"
             });
 
         var configuration = BuildConfiguration();
@@ -165,7 +165,7 @@ public class WhenLedgerMarksACellShouldEmitSkipOnlyWhenNotProven : IDisposable
         var ledger = new InMemoryConformanceLedger(
             new Dictionary<(string, string), string>
             {
-                [(LEDGER_KEY, FR_COLUMN)] = "Deferred -> #9999 (sign-off: @maintainer)"
+                [(LEDGER_KEY, FR_COLUMN)] = "Deferred -> #9999 (sign-off: @iancooper)"
             });
 
         var configuration = BuildConfiguration();

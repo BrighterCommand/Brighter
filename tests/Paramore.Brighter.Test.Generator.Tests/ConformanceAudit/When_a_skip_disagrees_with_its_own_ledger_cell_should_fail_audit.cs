@@ -164,7 +164,7 @@ public class LedgerCellAgreementAuditTests
         // Positioned by column name, not a hard-coded index, so the fixture keeps deferring the
         // column it means to when the canonical set changes.
         var cells = Enumerable.Repeat("Pass", s_frColumns.Length).ToArray();
-        cells[Array.IndexOf(s_frColumns, "FR-16")] = "Deferred -> #4240 (sign-off: @maintainer)";
+        cells[Array.IndexOf(s_frColumns, "FR-16")] = "Deferred -> #4240 (sign-off: @iancooper)";
         return string.Join(" | ", cells);
     }
 
