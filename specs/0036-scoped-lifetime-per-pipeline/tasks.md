@@ -1134,7 +1134,7 @@ Two Tidy-First steps **are** owed in the DI package, and both are sequenced ahea
   - **Depends on**: T7.0a
   - **References**: FR-22.1, AC-24 (general clause); ADR 0074 step 5b
 
-- [ ] **TEST + IMPLEMENT: T7.1 — a wholly inert opt-in is an error, in a producer host**
+- [x] **TEST + IMPLEMENT: T7.1 — a wholly inert opt-in is an error, in a producer host**
   - **USE COMMAND**: `/test-first a producer host that opts in with all three lifetimes Transient fails validation with a message naming the affinity and all three lifetimes`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_the_opt_in_is_inert_validation_should_report_an_error.cs`
