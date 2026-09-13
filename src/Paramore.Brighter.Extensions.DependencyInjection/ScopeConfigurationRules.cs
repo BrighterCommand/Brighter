@@ -36,9 +36,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     /// evaluated by <see cref="ScopeConfigurationValidator"/> (ADR 0074 step 4).
     /// </summary>
     /// <remarks>
-    /// Carries the FR-22.1, FR-22.2, FR-22.3 and FR-22.4 rules. The remaining three ADR 0074 rules
-    /// (FR-24.3, FR-17's two) arrive with their own acceptance criteria in later tasks — they are not
-    /// stubbed here.
+    /// Carries the FR-22.1, FR-22.2, FR-22.3, FR-22.4 and FR-24.3 rules. The remaining two ADR 0074 rules
+    /// (FR-17's two) arrive with their own acceptance criteria in later tasks — they are not stubbed here.
     /// </remarks>
     internal static class ScopeConfigurationRules
     {
@@ -127,6 +126,41 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                         "AddConsumers instead of registering IBrighterOptions directly. " +
                         "See docs/guides/lifetimes-and-scoping.md for guidance.");
                 });
+
+        /// <summary>
+        /// FR-24.3 — Warning, duplicate scope provider. More than one distinct <see cref="IAmAScopeProvider"/>
+        /// implementation is registered unkeyed (D11 means Brighter itself never registers a default one, so
+        /// two such registrations can only come from the application). MS DI resolves an unkeyed service type
+        /// to the last-registered descriptor, so that is the provider the container-backed factories will
+        /// actually ask; the rest are silently shadowed. Distinctness is judged over the <b>implementation</b>
+        /// — a repeated registration of the same type is idempotent in effect and is not a finding.
+        /// </summary>
+        /// <returns>A simple specification reporting a Warning naming every distinct provider registered,
+        /// identifying the last-registered one as effective, and the guidance page.</returns>
+        public static ISpecification<ScopeConfiguration> DuplicateScopeProvider()
+            => new Specification<ScopeConfiguration>(
+                c => UnkeyedProviderIdentities(c).Distinct().Count() <= 1,
+                c =>
+                {
+                    var identities = UnkeyedProviderIdentities(c).ToList();
+                    var distinctIdentities = identities.Distinct().Select(DescribeProviderIdentity).ToList();
+                    var effective = DescribeProviderIdentity(identities.Last());
+                    return new ValidationError(
+                        ValidationSeverity.Warning,
+                        "Brighter options",
+                        $"More than one {nameof(IAmAScopeProvider)} is registered ({string.Join(", ", distinctIdentities)}) " +
+                        $"— the container resolves the last-registered one, {effective}, as the effective " +
+                        "ambient scope source, and the others are silently shadowed. Register only one " +
+                        "IAmAScopeProvider implementation. See docs/guides/lifetimes-and-scoping.md for guidance.");
+                });
+
+        private static IEnumerable<object> UnkeyedProviderIdentities(ScopeConfiguration configuration)
+            => configuration.ScopeProviderRegistrations
+                .Where(d => d.ServiceKey is null)
+                .Select(d => (object?)d.ImplementationType ?? d.ImplementationInstance?.GetType() ?? (object)d.Position);
+
+        private static string DescribeProviderIdentity(object identity)
+            => identity is Type type ? type.Name : $"the registration at position {identity}";
 
         /// <summary>
         /// FR-22.3 — Warning, captive dependency. A candidate whose kind's configured lifetime is
