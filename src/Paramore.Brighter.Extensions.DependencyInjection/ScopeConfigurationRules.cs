@@ -36,8 +36,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     /// evaluated by <see cref="ScopeConfigurationValidator"/> (ADR 0074 step 4).
     /// </summary>
     /// <remarks>
-    /// Carries the FR-22.1, FR-22.2 and FR-22.3 rules. The other four ADR 0074 rules arrive with their own
-    /// acceptance criteria in later tasks — they are not stubbed here.
+    /// Carries the FR-22.1, FR-22.2, FR-22.3 and FR-22.4 rules. The remaining three ADR 0074 rules
+    /// (FR-24.3, FR-17's two) arrive with their own acceptance criteria in later tasks — they are not
+    /// stubbed here.
     /// </remarks>
     internal static class ScopeConfigurationRules
     {
@@ -91,6 +92,41 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     $"TransformerLifetime ({c.TransformerLifetime}) mix {ServiceLifetime.Transient} and " +
                     $"{ServiceLifetime.Scoped} — the mixed pair do not share pipeline-scoped dependencies. " +
                     "See docs/guides/lifetimes-and-scoping.md for guidance on choosing a conformant triple."));
+
+        /// <summary>
+        /// FR-22.4 — Error, defeated opt-in. An affinity override (<see cref="ScopeAffinityOverride"/>) is
+        /// registered, and the <see cref="IBrighterOptions"/> descriptor the container will resolve — the
+        /// last <b>unkeyed</b> one — is not the descriptor <c>RegisterBrighterOptions</c> (ADR 0076) added,
+        /// so the write-through never ran and the override was never applied (D18). A rule about
+        /// registrations, not values — it must not compare the override's affinity with the resolved
+        /// object's, since an override carrying <see cref="ScopeAffinity.AlwaysNew"/> (the option's own
+        /// default) is by value indistinguishable from an override that was never applied.
+        /// </summary>
+        /// <returns>A simple specification reporting an Error naming the affinity the override carries,
+        /// that the resolved <see cref="IBrighterOptions"/> was supplied by the application rather than by
+        /// Brighter, the remedy, and the guidance page.</returns>
+        public static ISpecification<ScopeConfiguration> DefeatedOptIn()
+            => new Specification<ScopeConfiguration>(
+                c =>
+                {
+                    var lastOverride = c.AffinityOverrideRegistrations.LastOrDefault();
+                    if (lastOverride is null) return true; // no opt-in registered — nothing to defeat
+
+                    var lastUnkeyedOptions = c.BrighterOptionsRegistrations.LastOrDefault(d => d.ServiceKey is null);
+                    return lastUnkeyedOptions is not null && lastUnkeyedOptions.IsBrighterRegistered;
+                },
+                c =>
+                {
+                    var affinity = ((ScopeAffinityOverride)c.AffinityOverrideRegistrations.Last().ImplementationInstance!).Affinity;
+                    return new ValidationError(
+                        ValidationSeverity.Error,
+                        "Brighter options registration",
+                        $"AddBrighterRequestScope registered affinity {affinity}, but the resolved " +
+                        $"{nameof(IBrighterOptions)} was supplied by the application rather than by Brighter, so " +
+                        "the override was never applied. Configure Brighter's options through AddBrighter/" +
+                        "AddConsumers instead of registering IBrighterOptions directly. " +
+                        "See docs/guides/lifetimes-and-scoping.md for guidance.");
+                });
 
         /// <summary>
         /// FR-22.3 — Warning, captive dependency. A candidate whose kind's configured lifetime is
