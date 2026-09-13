@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -47,10 +48,10 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.Hosting
                 var diagnosticWriter = _serviceProvider.GetService<IAmAPipelineDiagnosticWriter>();
                 diagnosticWriter?.Describe();
 
-                var validator = _serviceProvider.GetService<IAmAPipelineValidator>();
-                if (validator != null)
+                var validators = _serviceProvider.GetServices<IAmAPipelineValidator>();
+                if (validators.Any())
                 {
-                    var result = validator.Validate();
+                    var result = PipelineValidationResult.Combine(validators.Select(v => v.Validate()).ToArray());
 
                     if (_options.Value.ThrowOnError)
                     {
