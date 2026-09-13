@@ -117,6 +117,34 @@ public class RetryableChannelTransientFailureTests
             $"retrying should have stopped with the budget, but took {stopwatch.Elapsed}");
     }
 
+    [Fact]
+    public void When_a_channel_failure_is_followed_only_by_empty_receives_should_rethrow_rather_than_report_no_message()
+    {
+        //Arrange - one failure, then a topic that stays silent for the rest of the 400ms budget
+        var inner = new FlakyChannelSync(failures: 1, TimeSpan.FromMilliseconds(100), Message.Empty);
+        var channel = new RetryableChannelSync(inner);
+
+        //Act
+        var exception = Record.Exception(() => channel.Receive(TimeSpan.FromMilliseconds(400)));
+
+        //Assert - the failure is only swallowed when a message actually arrives, and none did
+        Assert.IsType<ChannelFailureException>(exception);
+    }
+
+    [Fact]
+    public async Task When_a_channel_failure_is_followed_only_by_empty_receives_should_rethrow_rather_than_report_no_message_async()
+    {
+        //Arrange - one failure, then a topic that stays silent for the rest of the 400ms budget
+        var inner = new FlakyChannelAsync(failures: 1, TimeSpan.FromMilliseconds(100), Message.Empty);
+        var channel = new RetryableChannelAsync(inner);
+
+        //Act
+        var exception = await Record.ExceptionAsync(() => channel.ReceiveAsync(TimeSpan.FromMilliseconds(400)));
+
+        //Assert - the failure is only swallowed when a message actually arrives, and none did
+        Assert.IsType<ChannelFailureException>(exception);
+    }
+
     /// <summary>
     /// A channel whose first <paramref name="failures"/> receives spend <paramref name="failureDelay"/>
     /// and then raise <see cref="ChannelFailureException"/>, the way a consumer does when it polls a

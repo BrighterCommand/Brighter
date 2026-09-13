@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Diagnostics;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -39,8 +40,10 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 /// moments earlier may not have propagated across the cluster, so the first consume can fail for a
 /// topic that is on its way. The pump rides that out (it catches ChannelFailureException, waits and
 /// continues); a test calling ReceiveAsync directly has no pump, so without this it would be stricter
-/// than production. A failure that outlasts the budget is rethrown, so a genuine outage is still
-/// reported as the exception rather than masked as an empty receive.
+/// than production. ⛔ The failure is only swallowed when a message actually arrives: if the budget expires
+/// having received nothing, the last ChannelFailureException is rethrown, because a consumer polling a
+/// topic that really is missing returns MT_NONE on its later polls rather than failing again — so
+/// without this a genuine outage would be masked as an empty receive.
 ///
 /// The retry is bounded to the caller's requested timeout: ReceiveAsync(t) never waits longer than t
 /// in total. This preserves the conformance contract that a receive is a single bounded receive — the
@@ -69,6 +72,7 @@ public class RetryableChannelAsync(IAmAChannelAsync inner) : IAmAChannelAsync
         var budget = timeout.Value;
         var stopwatch = Stopwatch.StartNew();
         var remaining = budget;
+        ExceptionDispatchInfo? failure = null;
 
         while (true)
         {
@@ -77,8 +81,9 @@ public class RetryableChannelAsync(IAmAChannelAsync inner) : IAmAChannelAsync
             {
                 message = await inner.ReceiveAsync(remaining, cancellationToken);
             }
-            catch (ChannelFailureException)
+            catch (ChannelFailureException channelFailure)
             {
+                failure = ExceptionDispatchInfo.Capture(channelFailure);
                 remaining = budget - stopwatch.Elapsed;
                 if (remaining <= TimeSpan.Zero)
                     throw;
@@ -86,9 +91,15 @@ public class RetryableChannelAsync(IAmAChannelAsync inner) : IAmAChannelAsync
                 continue;
             }
 
-            remaining = budget - stopwatch.Elapsed;
-            if (message.Header.MessageType != MessageType.MT_NONE || remaining <= TimeSpan.Zero)
+            if (message.Header.MessageType != MessageType.MT_NONE)
                 return message;
+
+            remaining = budget - stopwatch.Elapsed;
+            if (remaining > TimeSpan.Zero)
+                continue;
+
+            failure?.Throw();
+            return message;
         }
     }
 
