@@ -1168,7 +1168,7 @@ Two Tidy-First steps **are** owed in the DI package, and both are sequenced ahea
   - **Depends on**: T7.1, T7.0b
   - **References**: AC-40 (FR-22.1, C-12, C-15, D14), AC-24 (general clause); ADR 0074 step 5b
 
-- [ ] **TEST + IMPLEMENT: T7.3 — mixing `Transient` and `Scoped` is an error under either affinity setting**
+- [x] **TEST + IMPLEMENT: T7.3 — mixing `Transient` and `Scoped` is an error under either affinity setting**
   - **USE COMMAND**: `/test-first a host mixing Transient and Scoped across the three lifetimes fails validation under both affinity settings`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_transient_and_scoped_are_mixed_validation_should_report_an_error.cs`
