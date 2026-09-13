@@ -93,6 +93,15 @@ public static class BrighterPipelineValidationExtensions
                 providerRegistrations, mapperRegistryFactory, transformerProbe);
         });
 
+        // ADR 0074's validator, registered beside the core one — AddSingleton, not TryAdd, because TryAdd
+        // tests the service type and would never add a second implementation of it. The snapshot is
+        // captured here, above the delegate, matching ValidationProviderRegistrations' and
+        // ServiceCollectionTransformerResolvabilityProbe's own ValidatePipelines()-call-time capture point.
+        var registrationSnapshot = new ContainerRegistrationSnapshot(builder.Services);
+        builder.Services.AddSingleton<IAmAPipelineValidator>(sp => new ScopeConfigurationValidator(
+            sp.GetService<IBrighterOptions>(),
+            registrationSnapshot));
+
         builder.Services.AddSingleton<IHostedService, BrighterValidationHostedService>();
         builder.Services.AddOptions<BrighterPipelineValidationOptions>();
 
