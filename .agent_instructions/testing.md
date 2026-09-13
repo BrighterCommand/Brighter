@@ -12,15 +12,17 @@
 
 ## TDD Style
 
-**MANDATORY Tool**: ALWAYS use the `/test-first <behavior>` command (see [.claude/commands/tdd/test-first.md](../../.claude/commands/tdd/test-first.md)) when writing new tests.
+**MANDATORY Tool**: ALWAYS use the `/test-first <behavior>` command (see [.claude/commands/tdd/test-first.md](../.claude/commands/tdd/test-first.md)) when writing new tests.
 
 - **DO NOT write test files manually** (using Write tool) and proceed to implementation
 - **DO NOT run tests without approval**
 - **STOP after writing the test and ASK FOR APPROVAL**
 - The user will review the test in their IDE, not in CLI output
-- This is NOT optional - the approval gate is MANDATORY when working with Claude Code
+- The approval gate is **armed by default**. Assume it is armed unless a spec command has explicitly
+  told you the spec is in the `review-after` gear
 
-This ensures the mandatory approval step is never skipped and tests are reviewed before implementation.
+This ensures the approval step is never skipped by accident and tests are reviewed before
+implementation.
 
 - We write developer tests
   - Failure of a test case implicates the most recent edit.
@@ -31,13 +33,47 @@ This ensures the mandatory approval step is never skipped and tests are reviewed
   - **APPROVAL**: Get approval for the test before implementing
   - Green: Make the test pass, commit any sins necessary to move fast
   - Refactor: Improve the design of the code.
-- **Approval Workflow** (⛔ MANDATORY - NOT OPTIONAL):
+- **Approval Workflow** (⛔ ARMED BY DEFAULT):
   - When working on a feature, ALWAYS use `/test-first <behavior>` - do not write tests manually
   - The skill will write the test and ASK FOR APPROVAL before proceeding
   - The user will review the test in their IDE
   - DO NOT run tests or start implementation without explicit user approval
   - After approval, implement the minimum code to make the test pass
-  - The approval step is MANDATORY when working with Claude Code - you cannot bypass it
+  - You cannot bypass the gate on your own initiative. It is disarmed only by a deliberate,
+    recorded, scoped gear shift the user makes with `/spec:gear` — never by assumption, never by a
+    prose instruction in a scratch file, and never because the tasks look repetitive
+
+### The review gear
+
+Whether the approval pause fires is a **gear** ([ADR 0071](../docs/adr/0071-tdd-review-gear.md)),
+selected for the certainty you have and the blast radius you face — high value early in a spec, low
+value on a run of near-identical tasks whose shape has already been reviewed repeatedly.
+
+| Gear | Gate | Meaning |
+|------|------|---------|
+| `review-before` | ✅ armed | Each test reviewed in the IDE before implementation. **The default.** |
+| `review-after` | ➖ not armed | RED still proved first; reviewed as a batch afterwards. |
+
+- The gear lives in `specs/{spec}/.current-gear` — untracked working state, scoped to one spec and
+  optionally to one section of `tasks.md`, carrying the reason for the shift. Shift it with
+  `/spec:gear`, in either direction, at any time.
+- `/spec:implement` honours it; `/spec:ralph-implement` is always `review-after`. A **standalone
+  `/test-first` and `/bugfix:test` are always gated** — they do not read the gear file.
+- Absent, unparseable, unknown value, or a task outside the gear's scope all resolve to
+  `review-before`. Fail safe, never fail open.
+
+**What `review-after` does NOT remove.** Only the human pause. All of these hold in both gears:
+
+- **RED first** — the test is written and observed to fail *for the right reason* before any
+  production code exists. Ungated is not test-after.
+- **The full regression suite**, not just the new test's own `--filter`.
+- **The two-commit shape** — a `feat:`/`test:` commit for the behaviour, then a separate `docs:`
+  commit ticking the task off in `tasks.md`.
+- **Every convention in this document** — naming, one test per file, TestDoubles one class per
+  file, a distinct request type per new test double, new closed generics registered with the test
+  project's logging `Initializer.cs`, no mocks for isolation, `InMemory*` for I/O.
+
+A run in `review-after` that drops any of these is defective — it is not "a different gear".
 - Where possible, avoid writing tests after.
   - This will not give you scope control - only writing the code required by tests.
     - You should only write the code necessary for a test to pass; do not write speculative code.
@@ -94,7 +130,7 @@ This ensures the mandatory approval step is never skipped and tests are reviewed
   - Consider writing in-memory replacements for I/O, that could be used in a production system, over a fake or mock.
   - Look for existing classes that use the naming convention InMemory*
   - Use the naming convention InMemory for your own in-memory implementations.
-  - See [ADR 0023](docs/adr/0023-reactor-and-nonblocking-io.md) for advice on how to replace I/O.
+  - See [ADR 0023](../docs/adr/0023-reactor-and-nonblocking-io.md) for advice on how to replace I/O.
 - Do NOT use fakes or mocks for isolating a class.
   - We use developer tests: isolation is to the most recent edit, not a class.
   - Do not inject dependencies into a constructor or property for test isolation
