@@ -34,9 +34,11 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway;
 /// channels. Nothing in the type system says so; these tests are what says so.
 /// </summary>
 /// <remarks>
-/// No database is needed. The factory throws before it constructs a consumer, and the positive
-/// control gets a channel because <c>MsSqlMessageConsumer</c> opens no connection in its
-/// constructor — so this sits beside the other connection-free tests in this folder.
+/// No database is needed, and the subscriptions say <see cref="OnMissingChannel.Assume"/> to keep
+/// it that way: the factory now provisions the queue store as it opens a channel, so anything else
+/// would drag a database into a test about downcasting. The negative cases throw before they reach
+/// provisioning; the positive ones get a channel because Assume opens no connection and
+/// <c>MsSqlMessageConsumer</c> opens none in its constructor either.
 /// </remarks>
 [Trait("Category", "MSSQL")]
 public class MsSqlChannelFactorySubscriptionTypeTests
@@ -52,7 +54,8 @@ public class MsSqlChannelFactorySubscriptionTypeTests
     private static MsSqlSubscription<MyEvent> AnMsSqlSubscription() =>
         new(new SubscriptionName("mssql"),
             new ChannelName("test.topic"),
-            new RoutingKey("test.topic"));
+            new RoutingKey("test.topic"),
+            makeChannels: OnMissingChannel.Assume);
 
     private ChannelFactory CreateChannelFactory() =>
         new(new MsSqlMessageConsumerFactory(_configuration));
@@ -154,7 +157,8 @@ public class MsSqlChannelFactorySubscriptionTypeTests
             new SubscriptionName("non-generic"),
             new ChannelName("test.topic"),
             new RoutingKey("test.topic"),
-            typeof(MyEvent));
+            typeof(MyEvent),
+            makeChannels: OnMissingChannel.Assume);
 
         // Act
         using var channel = channelFactory.CreateSyncChannel(subscription);
