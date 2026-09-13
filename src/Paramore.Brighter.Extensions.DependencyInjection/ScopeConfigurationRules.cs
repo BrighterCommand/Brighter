@@ -36,8 +36,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     /// evaluated by <see cref="ScopeConfigurationValidator"/> (ADR 0074 step 4).
     /// </summary>
     /// <remarks>
-    /// Carries the FR-22.1, FR-22.2, FR-22.3, FR-22.4 and FR-24.3 rules. The remaining two ADR 0074 rules
-    /// (FR-17's two) arrive with their own acceptance criteria in later tasks — they are not stubbed here.
+    /// Carries the FR-22.1, FR-22.2, FR-22.3, FR-22.4, FR-24.3 and the first of FR-17's two rules. The
+    /// remaining ADR 0074 rule (FR-17's other) arrives with its own acceptance criterion in a later task —
+    /// it is not stubbed here.
     /// </remarks>
     internal static class ScopeConfigurationRules
     {
@@ -161,6 +162,44 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
         private static string DescribeProviderIdentity(object identity)
             => identity is Type type ? type.Name : $"the registration at position {identity}";
+
+        /// <summary>
+        /// FR-17 — Warning, conflicting repeated opt-in. More than one distinct <see cref="ScopeAffinity"/>
+        /// value is carried by a registered <see cref="ScopeAffinityOverride"/> instance (D18: the
+        /// last-registered one is effective, matching <see cref="DuplicateScopeProvider"/>'s own
+        /// last-registration-wins rule for the provider, so both halves of a repeated
+        /// <c>AddBrighterRequestScope</c> gesture resolve the same way). Distinctness is judged over the
+        /// affinity <b>value</b>, read from each unkeyed descriptor's constructed instance — never a
+        /// registration-position fallback, which has no defensible "unknown, treat as distinct" reading
+        /// for a value and would falsely report the idempotent identical-affinity repeat this rule must
+        /// exclude. A descriptor with no readable instance (registered by factory delegate, FR-17's other
+        /// rule) contributes nothing to the distinctness set.
+        /// </summary>
+        /// <returns>A simple specification reporting a Warning naming every distinct affinity registered,
+        /// identifying the last-registered one as effective, and the guidance page.</returns>
+        public static ISpecification<ScopeConfiguration> RepeatedOptIn()
+            => new Specification<ScopeConfiguration>(
+                c => UnkeyedOverrideAffinities(c).Distinct().Count() <= 1,
+                c =>
+                {
+                    var affinities = UnkeyedOverrideAffinities(c).ToList();
+                    var distinctAffinities = affinities.Distinct().ToList();
+                    var effective = affinities.Last();
+                    return new ValidationError(
+                        ValidationSeverity.Warning,
+                        "Brighter options",
+                        $"AddBrighterRequestScope was called more than once with different affinities " +
+                        $"({string.Join(", ", distinctAffinities)}) — the last call's affinity, {effective}, is " +
+                        "effective and the others are silently discarded. Call AddBrighterRequestScope only " +
+                        "once. See docs/guides/lifetimes-and-scoping.md for guidance.");
+                });
+
+        private static IEnumerable<ScopeAffinity> UnkeyedOverrideAffinities(ScopeConfiguration configuration)
+            => configuration.AffinityOverrideRegistrations
+                .Where(d => d.ServiceKey is null)
+                .Select(d => (d.ImplementationInstance as ScopeAffinityOverride)?.Affinity)
+                .Where(affinity => affinity.HasValue)
+                .Select(affinity => affinity!.Value);
 
         /// <summary>
         /// FR-22.3 — Warning, captive dependency. A candidate whose kind's configured lifetime is
