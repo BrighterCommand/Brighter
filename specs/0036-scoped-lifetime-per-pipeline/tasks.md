@@ -1100,7 +1100,7 @@ Two Tidy-First steps **are** owed in the DI package, and both are sequenced ahea
   - **Depends on**: T6.22 (Phase 6 complete), T3.6
   - **References**: FR-22.1, FR-22.2, FR-22.3, FR-22.4, D15, C-20; ADR 0074 steps 2, 3
 
-- [ ] **STRUCTURAL: T7.0b — widen both validation hosts to many validators, while there is still only one**
+- [x] **STRUCTURAL: T7.0b — widen both validation hosts to many validators, while there is still only one**
   - **USE COMMAND**: `/tidy-first widen the two validation hosted services and the twelve affected test sites from one IAmAPipelineValidator to many`
   - Files: `src/Paramore.Brighter.Extensions.DependencyInjection/BrighterValidationHostedService.cs` — the field (`:47`), the constructor parameter (`:60`) and `StartAsync` (`:71`, validating at `:76`); `src/Paramore.Brighter.ServiceActivator.Extensions.Hosting/ServiceActivatorHostedService.cs` (`:50-54`). All four anchors re-derived at HEAD ✓
   - Change the field and constructor parameter to `IEnumerable<IAmAPipelineValidator>`, with `StartAsync` calling `PipelineValidationResult.Combine` over each `Validate()` **before** the existing throw-and-log block, which does not change. Change `ServiceActivatorHostedService` from `GetService` to `GetServices` and its `!= null` guard to an empty-sequence one; its throw-and-log block does not change either
