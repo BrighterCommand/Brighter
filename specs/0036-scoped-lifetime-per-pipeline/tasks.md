@@ -1088,7 +1088,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
 
 Two Tidy-First steps **are** owed in the DI package, and both are sequenced ahead of T7.1 for reasons each states: **T7.0a** lands the validation entities and the registration snapshot inert, and **T7.0b** widens the two validation hosts to many validators while there is still only one. Neither touches core.
 
-- [ ] **STRUCTURAL: T7.0a — land the validation entities and the registration snapshot, inert**
+- [x] **STRUCTURAL: T7.0a — land the validation entities and the registration snapshot, inert**
   - **USE COMMAND**: `/tidy-first add the ContainerRegistrationSnapshot and the five scope-configuration entity types to the DI package with no rule and no caller`
   - Files, all new under `src/Paramore.Brighter.Extensions.DependencyInjection/`: `ContainerRegistrationSnapshot.cs`, `ScopeConfiguration.cs`, `DescriptorRecord.cs`, `ArtefactRegistration.cs`, `ArtefactKind.cs`, `ArtefactConstructorSelector.cs`
   - `ContainerRegistrationSnapshot` is built from an `IServiceCollection` and answers **three** queries (ADR 0074 step 2): the effective lifetime for a service type — the last **unkeyed** descriptor, matching Microsoft's resolution, or the last for a `(type, key)` pair where a parameter names one; the artefact candidates with their kinds, over keyed and unkeyed descriptors alike; and the `DescriptorRecord`s for a service type **in registration order**, each carrying the service key where there is one, the implementation type where one is statically known, the registration position where none is, and the `ImplementationInstance` where the descriptor supplies one
