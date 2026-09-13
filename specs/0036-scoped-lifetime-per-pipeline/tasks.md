@@ -1227,7 +1227,7 @@ Two Tidy-First steps **are** owed in the DI package, and both are sequenced ahea
   - **Depends on**: T7.4
   - **References**: AC-42 (FR-22.3, C-20, D15); ADR 0074 steps 3, 4, 5a, 5b
 
-- [ ] **TEST + IMPLEMENT: T7.6 — an opt-in defeated by an application's own `IBrighterOptions` registration is reported, not silent**
+- [x] **TEST + IMPLEMENT: T7.6 — an opt-in defeated by an application's own `IBrighterOptions` registration is reported, not silent**
   - **USE COMMAND**: `/test-first a host whose own IBrighterOptions registration defeats the opt-in is reported as one error on every path and in either ordering`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_the_application_registers_its_own_brighter_options_the_defeated_opt_in_should_be_reported.cs`
