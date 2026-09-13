@@ -1184,7 +1184,7 @@ Two Tidy-First steps **are** owed in the DI package, and both are sequenced ahea
   - **Depends on**: T7.2
   - **References**: AC-28 (FR-22.2, C-18, D8); ADR 0074 step 4
 
-- [ ] **TEST + IMPLEMENT: T7.4 — `Singleton` is excluded from the consistency rule**
+- [x] **TEST + IMPLEMENT: T7.4 — `Singleton` is excluded from the consistency rule**
   - **USE COMMAND**: `/test-first Singleton lifetimes are discarded before the consistency rule compares the remainder`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_lifetime_is_singleton_it_should_be_discarded_from_the_consistency_rule.cs`
