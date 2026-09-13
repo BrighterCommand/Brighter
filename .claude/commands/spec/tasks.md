@@ -77,7 +77,7 @@ prompt MUST include:
   - Test should verify:
     - [verification point 1]
     - [verification point 2]
-  - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - [implementation point 1 with specific file/line numbers where applicable]
     - [implementation point 2]
@@ -95,7 +95,7 @@ prompt MUST include:
     - Message rejected with DeliveryError reason
     - Message acknowledged (can consume next message)
     - Warning logged
-  - **⛔ STOP HERE - WAIT FOR USER APPROVAL in IDE before implementing**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - In KafkaMessageConsumer.Reject() check if both producers are null
     - Log warning via NoChannelsConfiguredForRejection
@@ -110,6 +110,22 @@ prompt MUST include:
 3. **Single task**: Combines TEST + IMPLEMENT so workflow is clear
 4. **Complete context**: All details needed for test and implementation
 5. **IDE review**: Explicitly states user will review in IDE, not CLI
+
+##### The gate line and the review gear
+
+Write the `⛔` line on **every** behavioral task. It states the default: the gate is armed unless
+the spec has been deliberately shifted into the `review-after` gear
+([ADR 0071](../../../docs/adr/0071-tdd-review-gear.md)).
+
+Do **not** try to encode the gear in `tasks.md` — no per-task or per-phase "no gate" annotations,
+and no omitting the `⛔` line for tasks you expect to run unattended. `tasks.md` is frozen once
+`.tasks-approved` lands, so a gear written into it could not be shifted afterwards without lifting
+that freeze. The gear lives in the untracked `specs/{spec}/.current-gear` file and is shifted with
+`/spec:gear`. The `⛔` line is a statement of the default, not a per-task switch.
+
+Do keep **phase headings** meaningful and stable, though: `/spec:gear` can scope a gear to a single
+phase heading, so a well-named phase ("Phase 5 — Provider rejection tests") is what makes a narrow,
+self-expiring gear shift possible.
 
 ##### DO NOT Format Tasks Like This
 
@@ -148,7 +164,8 @@ After the sub-agent returns:
      is `/spec:review tasks` (Step 4), which the user is prompted to run before approval; that
      is where any remaining gaps are caught.
    - Each behavioral task uses the `TEST + IMPLEMENT` template with `/test-first` and the
-     `⛔ STOP HERE` gate — none are split into separate TEST/IMPLEMENT tasks.
+     `⛔ APPROVAL GATE` line — none are split into separate TEST/IMPLEMENT tasks, and none omit
+     the gate line.
    - No task is an implementation detail rather than a behavior.
    - If coverage is incomplete or a task is malformed, ask the sub-agent to revise (or fix
      it yourself) before writing.
@@ -160,4 +177,12 @@ After the sub-agent returns:
 Remind the user to:
 - Review `tasks.md`
 - Run `/spec:review tasks` for an adversarial coverage review, then
-- `/spec:approve tasks` when ready to begin implementation with `/spec:implement`.
+- `/spec:approve tasks` when ready to begin implementation.
+
+`tasks.md` is the **single** task list, and both drivers run it:
+- `/spec:implement` — one task at a time, approval gate armed by default.
+- `/spec:ralph-implement` — a self-driving unattended loop over the same list, in the
+  `review-after` gear.
+
+The choice between them is a gear change (`/spec:gear`), not a different task list — so do not
+draft tasks "for unattended execution". Draft them once, well.

@@ -9,7 +9,8 @@ The spec commands provide a structured approach to designing and implementing fe
 1. **Requirements**: Capture user needs and problem statements
 2. **Design (ADRs)**: Document architectural decisions (can have multiple ADRs per requirement)
 3. **Tasks**: Break down implementation into actionable steps
-4. **Implementation**: Follow TDD to write tests and code
+4. **Implementation**: Follow TDD to write tests and code, in whichever **review gear** the work
+   currently warrants — shifted with `/spec:gear`, armed by default
 
 ## Workflow
 
@@ -31,30 +32,42 @@ The spec commands provide a structured approach to designing and implementing fe
       │                   (Repeat for multiple architectural decisions)
       │
       ▼
- Choose by certainty ────► (prompted at /spec:approve design)
+ tasks.md ──────────────► /spec:tasks
+      │                   /spec:review tasks
+      │                   /spec:approve tasks
       │
-      ├── Attended ──────► /spec:tasks
-      │   (review each      /spec:approve tasks
-      │    test)            /spec:implement   (sonnet; TDD: Tests → Code)
-      │
-      └── Unattended ────► /spec:ralph-tasks       (standalone, from approved design)
-          (review in        /spec:ralph-implement  (opus + auto mode, self-driving loop)
-           batches)
-      │
+      ▼
+ Pick a driver, ────────► /spec:implement        (sonnet; one task at a time)
+ shift gear as you go     /spec:ralph-implement  (opus + auto mode; unattended loop)
+      │                        ▲
+      │                        └── /spec:gear  shifts the review gear, either way
       ▼
  Pull Request
 ```
 
-**The certainty fork.** After the design is approved, you pick *one* of two paths — and
-`/spec:approve design` prompts you to choose:
+**One task list, one gear lever.** There is a single task list — `tasks.md` — and both drivers run
+it. What changes between "attended" and "unattended" is the **review gear**, and the gear is
+shiftable at any point in either direction ([ADR 0071](../../../docs/adr/0071-tdd-review-gear.md)):
 
-- **Attended** (`/spec:tasks` → `/spec:implement`): a strict Red → **user approval** → Green
-  → Refactor loop in the main agent on **sonnet**. Every test is reviewed in the IDE before
-  implementation. Use when the work is uncertain.
-- **Unattended** (`/spec:ralph-tasks` → `/spec:ralph-implement`): `ralph-tasks.md` is
-  generated **directly from the approved design** (no `tasks.md`, no per-test gates), then a
-  self-driving loop on **opus** under **auto mode** delegates each task to a **sonnet**
-  sub-agent. Reviewed in batches rather than per test. Use when the work is well-understood.
+| Gear | Gate | Meaning |
+|------|------|---------|
+| `review-before` | ✅ armed | Every test reviewed in the IDE before implementation. **The default.** |
+| `review-after` | ➖ not armed | RED still proved first; the work is reviewed as a batch afterwards. |
+
+**Gears, not paths.** You select a gear for the certainty you have and the blast radius you face.
+Early in a spec, while the design is still moving, run `review-before`. Later, on a run of
+near-identical tasks whose shape has been approved six times, upshift. The moment the work starts
+producing tests you would not have approved, downshift — mid-phase, with nothing unwound.
+
+The two drivers:
+
+- **`/spec:implement`** — one task at a time in the main agent on **sonnet**. Honours whatever gear
+  is set.
+- **`/spec:ralph-implement`** — a self-driving unattended loop over the **same** `tasks.md`, on
+  **opus** under **auto mode**, delegating each task to a **sonnet** sub-agent. Always
+  `review-after`; a downshift stops it cleanly.
+
+Neither regenerates a task list, and switching between them costs nothing.
 
 ## Sub-agents & model policy
 
@@ -68,7 +81,7 @@ and gives the heavy work a focused, single-purpose context.
    knows what is in its prompt. The command reads the needed files (and runs `gh`/`git`)
    first, then passes the text or paths.
 2. **Launch `Agent`** with an explicit `subagent_type` and `model`:
-   - **Planning commands** (`/spec:design`, `/spec:tasks`, `/spec:ralph-tasks`) use
+   - **Planning commands** (`/spec:design`, `/spec:tasks`) use
      `subagent_type: "Plan"`. `Plan` has all tools **except** `Agent`, `ExitPlanMode`,
      `Edit`, `Write`, and `NotebookEdit` — so it can Read/Glob/Grep/Bash/WebFetch/WebSearch
      but has no file-editing tool. That makes it much **harder** for the sub-agent to
@@ -88,8 +101,8 @@ and gives the heavy work a focused, single-purpose context.
    launching, the main agent clarifies any ambiguous or under-specified inputs with the user
    via `AskUserQuestion`, then launches the sub-agent with the clarified inputs folded in.
    Every delegated command keeps `AskUserQuestion` in its own `allowed-tools` for this. The
-   sub-agents never prompt: the `Plan`-based commands (`requirements`, `design`, `tasks`,
-   `ralph-tasks`) have no `AskUserQuestion` so they *structurally* can't, and the
+   sub-agents never prompt: the `Plan`-based commands (`requirements`, `design`, `tasks`)
+   have no `AskUserQuestion` so they *structurally* can't, and the
    `general-purpose` `review` sub-agent is explicitly instructed not to. **Exception:**
    `/spec:ralph-implement` runs fully **unattended** — neither its main agent nor its
    sub-agent prompts the user (it has no `AskUserQuestion` at all).
@@ -106,12 +119,11 @@ and gives the heavy work a focused, single-purpose context.
 | `/spec:requirements` | Yes — `Plan` (read-only drafting) | **opus** | Planning / analysis |
 | `/spec:design` | Yes — `Plan` (read-only) | **opus** | Architecture / design |
 | `/spec:tasks` | Yes — `Plan` (read-only) | **opus** | Planning / coverage mapping |
-| `/spec:ralph-tasks` | Yes — `Plan` (read-only) | **opus** | Planning / decomposition |
 | `/spec:review` | Yes — `general-purpose` | **opus** | Adversarial reasoning |
 | `/spec:ralph-implement` (orchestrator) | — (the loop itself) | **opus** | Cheap bookkeeping + **required for auto mode** |
 | `/spec:ralph-implement` (per-task sub-agent) | Yes — `general-purpose` (writes source) | **sonnet** | Mechanical TDD implementation, kept off the opus loop context for cost |
 | `/spec:implement` | No | **sonnet** (Step 0 prompts to switch) | Implementation work; runs in the main agent, so set the session model |
-| `/spec:new`, `/spec:switch`, `/spec:approve`, `/spec:status` | No | — | Mechanical bookkeeping |
+| `/spec:new`, `/spec:switch`, `/spec:approve`, `/spec:status`, `/spec:gear` | No | — | Mechanical bookkeeping |
 
 The planning commands use the `Plan` agent so the "return as text, don't write the file"
 rule is much harder to violate accidentally (it has no `Write`/`Edit`/`NotebookEdit`; the
@@ -126,8 +138,8 @@ expensive per-task churn on the cheaper model and out of the opus loop's context
 without taking the orchestrator off opus.
 
 `/spec:implement` is deliberately **not** delegated: its per-behavior
-Red → user-approval → Green → Refactor loop is interactive, and the mandatory approval gate
-must run in the main agent where it can reach the user. Because there is no sub-agent to
+Red → user-approval → Green → Refactor loop is interactive, and the approval gate — armed
+by default — must run in the main agent where it can reach the user. Because there is no sub-agent to
 assign a model to, run the command itself on **sonnet** (the session model) — it is
 implementation work. **Step 0 of `/spec:implement` actively checks the session model and
 prompts you to switch to sonnet if you are on another model** (e.g. opus). This guidance is
@@ -234,10 +246,9 @@ Approve a specification phase or specific ADR.
 ```
 - Updates Status from "Proposed" to "Accepted" in ALL ADRs for current spec
 - Creates `.design-approved` marker
-- **Prompts you to choose the implementation path** (the certainty fork): the **attended**
-  path (`/spec:tasks` → `/spec:implement`, review each test) or the **unattended** path
-  (`/spec:ralph-tasks` → `/spec:ralph-implement`, review in batches). Either path can start
-  straight from the approved design.
+- Points you at `/spec:tasks` — there is one task list and one route to it. Attended vs.
+  unattended is not a fork here; it is a **gear** you pick (and change) at implementation time
+  with `/spec:gear`.
 
 **Approve Specific ADR:**
 ```bash
@@ -252,7 +263,11 @@ Approve a specification phase or specific ADR.
 /spec:approve tasks
 ```
 - Creates `.tasks-approved` marker
-- Allows progression to implementation
+- Allows progression to implementation with either driver (`/spec:implement` or
+  `/spec:ralph-implement`)
+- Freezes the **content** of `tasks.md`. Checkbox state (`[ ]` → `[x]`/`[!]`) is progress
+  bookkeeping and both drivers write it; rewording, adding, removing or reordering tasks after
+  this point needs a fresh review
 
 ---
 
@@ -364,9 +379,9 @@ Updates `specs/.current-spec` to the specified spec directory.
 
 ---
 
-### `/spec:implement [task-number]`
+### `/spec:implement [task-number] [--review-before|--review-after]`
 
-Begin TDD implementation of approved specification.
+Begin TDD implementation of approved specification, one task at a time.
 
 ```bash
 # Implement all tasks
@@ -374,11 +389,18 @@ Begin TDD implementation of approved specification.
 
 # Implement specific task
 /spec:implement 3
+
+# Shift the gear and start in the same gesture (sugar for /spec:gear)
+/spec:implement --review-after
 ```
 
 **Requirements:**
 - Tasks must be approved (`.tasks-approved` exists)
 - All ADRs must be approved (Status: Accepted)
+
+**Gear-aware.** The command resolves the review gear before every task — so a shift made from
+another terminal takes effect at the next task, in either direction. It announces the resolved gear
+and the reason it was shifted before starting.
 
 **Strict TDD Workflow with Approval Gates:**
 
@@ -396,11 +418,13 @@ The implement command follows a rigorous Red-Green-Refactor cycle:
 3. Runs test to verify it fails correctly
 4. Shows test to user with explanation
 
-**✅ USER APPROVAL - Critical Gate:**
-- **MUST get explicit user approval before writing implementation**
-- Uses AskUserQuestion to request approval
-- If changes requested, modifies test and asks again
-- **No implementation code written without approval**
+**✅ USER APPROVAL - the gate (armed by default):**
+- In `review-before` (the default): **MUST get explicit user approval before writing
+  implementation**. Uses AskUserQuestion; if changes are requested, modifies the test and asks
+  again. **No implementation code written without approval**
+- In `review-after`: the pause is skipped — and *only* the pause. RED must still be proved first,
+  and the run says so in one line. It still stops and asks if the test looks wrong, needs a design
+  decision, or duplicates an existing test
 
 **🟢 GREEN Phase - Make Test Pass:**
 1. Writes minimum code to make test pass
@@ -441,53 +465,70 @@ The implement command follows a rigorous Red-Green-Refactor cycle:
       [Shows refactoring] All tests still pass ✓
 
 ✓ Committed: feat: add dead letter queue for invalid messages
+✓ Committed: docs: mark task 7 complete
 ```
+
+**Two commits per task, in both gears**: a `feat:`/`test:`/`fix:`/`refactor:` commit for the change,
+then a separate `docs:` commit ticking the task off in `tasks.md`.
 
 ---
 
-### `/spec:ralph-tasks`
+### `/spec:gear [review-before|review-after] ["phase"] [--because "..."]`
 
-Generate `ralph-tasks.md` for unattended TDD implementation. **Standalone** — the unattended
-peer of `/spec:tasks`, derived **directly from the approved design** (requirements + ADRs). It
-does **not** require `tasks.md` or `.tasks-approved`.
+Report or shift the **review gear** — whether `/test-first`'s approval gate is armed for the
+current spec. See [ADR 0071](../../../docs/adr/0071-tdd-review-gear.md).
 
 ```bash
-/spec:ralph-tasks
+/spec:gear                                        # what gear am I in, and why?
+/spec:gear review-after "Phase 5 — Provider rejection tests" \
+    --because "Phase 4's six tests were all approved unchanged; the shape is settled"
+/spec:gear review-before --because "the last two tests asserted the wrong thing"
 ```
 
-Creates `specs/{current-spec}/ralph-tasks.md`, formatted for unattended execution:
+**The gear file** — `specs/{current-spec}/.current-gear`, **gitignored**:
 
-- **No approval gates**: No `⛔ STOP HERE` or `/test-first` directives
-- **RALPH-VERIFY**: Each task includes an exact `dotnet test --filter` command
-- **References**: Each task lists files/ADRs to read (self-contained for fresh context)
-- **Strict atomicity**: One behavior per task, ~200 lines max, ordered by dependency
-
-**Requirements:**
-- Design must be approved (`.design-approved` exists)
-- All ADRs must be approved (Status: Accepted)
-
-> Pick *either* `/spec:tasks` (attended) *or* `/spec:ralph-tasks` (unattended) after design
-> approval — they are alternative branches, not sequential steps.
-
-**Ralph task format:**
-```markdown
-- [ ] **[Brief behavior description]**
-  - **Behavior**: [Precise behavioral specification]
-  - **Test file**: `tests/[Project]/[When_condition_should_behavior.cs]`
-  - **Test should verify**:
-    - [Point 1]
-    - [Point 2]
-  - **Implementation files**:
-    - `src/[Project]/[File.cs]` - [What to add/change]
-  - **RALPH-VERIFY**: `dotnet test tests/[Project]/ --filter "FullyQualifiedName~When_condition_should_behavior"`
-  - **References**: [ADR numbers, requirement sections, existing code files]
 ```
+# Working state — untracked. Shift with /spec:gear.
+gear: review-after
+scope: Phase 5 — Provider rejection tests
+driver: ralph
+shifted: 2026-09-13 — Phase 4's six tests were all approved unchanged; the shape is settled
+```
+
+| Field | Required | Meaning |
+|-------|----------|---------|
+| `gear` | yes | `review-before` \| `review-after` |
+| `scope` | no | A phase heading from `tasks.md`; the gear applies only under that heading. Absent = spec-wide. |
+| `driver` | no | `implement` \| `ralph` |
+| `shifted` | yes | Date + one-line reason |
+
+**Resolution** — absent file, unparseable file, unknown value, or a task outside `scope:` all
+resolve to `review-before`. Fail safe, never fail open.
+
+**Why untracked**: the gear is where the work currently *is*, not what the project decided.
+Tracking it would put an hourly-changing value into branch history and make the answer depend on
+which branch is checked out rather than on what the operator last chose.
+
+**Why per-spec**: a root-level gear file would survive branch switches and silently disarm the gate
+for unrelated work. Inside the spec directory it cannot reach past the spec that owns it.
+
+**Who honours it**: `/spec:implement` and `/spec:ralph-implement`. A standalone `/test-first` and
+`/bugfix:test` are **always gated** — they never read the file, so they cannot inherit a mode they
+did not ask for.
+
+**What `review-after` does NOT remove**: RED-first, the full regression suite, the two-commit shape
+(`feat:`/`test:` then a separate `docs:` tick), and every test-authoring convention. Only the human
+pause goes.
+
+**Discoverability**: because the file is untracked, `/spec:gear` also maintains a pointer line in
+`PROMPT.md`, and `/spec:status` reports the resolved gear.
 
 ---
 
 ### `/spec:ralph-implement [count]`
 
-Unattended TDD implementation from `ralph-tasks.md` via a **self-driving loop**. Run it on
+Unattended TDD implementation from the spec's **approved `tasks.md`** — the same task list
+`/spec:implement` works from — via a **self-driving loop** in the `review-after` gear. Run it on
 **opus** with **auto mode** enabled for a true unattended run.
 
 ```bash
@@ -498,10 +539,15 @@ Unattended TDD implementation from `ralph-tasks.md` via a **self-driving loop**.
 /spec:ralph-implement 3
 ```
 
+**No separate task list.** This command reads `tasks.md`, skips tasks already ticked, and honours
+the gear's `scope:` if one is set. Nothing is regenerated; there is no `ralph-tasks.md`.
+
 **Up-front setup (Step 0, the only interactive part):**
 - Advises that the orchestrator should be on **opus** and that **auto mode** should be on
   (auto mode is a permission mode set in Claude Code settings / `CLAUDE_CODE_ENABLE_AUTO_MODE`,
   Opus-gated — the command can't toggle it; it advises and proceeds).
+- **Sets the gear** to `review-after`, asking for the reason (and optionally a phase scope) if the
+  spec is not already in that gear, so `/spec:gear` and `/spec:status` tell the truth mid-run.
 - Asks (via `AskUserQuestion`) which **run bound** to use — *unless* a `count` was passed,
   which sets the tasks bound directly:
   - **Tasks** — stop after N tasks complete (the `count` argument)
@@ -510,24 +556,39 @@ Unattended TDD implementation from `ralph-tasks.md` via a **self-driving loop**.
 
 **Two models on purpose:** the **opus** orchestrator does only bookkeeping; each task's test +
 implementation is delegated to a **sonnet** sub-agent (cheaper, and kept off the opus loop
-context). The sub-agent never commits, pushes, or edits the task files.
+context). The sub-agent never commits, pushes, or edits the task list.
 
-**Loop per task:** check `RALPH_STOP` → select next `- [ ]` task → delegate 🔴 Red → 🟢 Green
-→ 🔵 Refactor to a sonnet sub-agent → orchestrator marks the checkbox and commits → check
-continuation → repeat. Long runs can self-pace across context windows with `ScheduleWakeup`.
+**Task shapes.** `tasks.md` is a general list, so the loop dispatches on the task: `TEST +
+IMPLEMENT` runs the full Red→Green→Refactor cycle; `STRUCTURAL` runs a tidy-first refactor with the
+existing suite green before and after (`refactor:`); `DOC` is a documentation edit (`docs:`).
+Anything it cannot confidently classify it marks `- [!]` and skips rather than improvising.
+
+**Loop per task:** check `RALPH_STOP` and the gear → select next in-scope `- [ ]` task → delegate
+🔴 Red → 🟢 Green → 🔵 Refactor to a sonnet sub-agent → orchestrator commits the change, then
+commits the checkbox tick → check continuation → repeat. Long runs can self-pace across context
+windows with `ScheduleWakeup`.
 
 **Stop mechanisms:**
 - The chosen **bound** (tasks / turns / budget)
+- `/spec:gear review-before` — **downshift**: the loop finishes the task in flight, then stops
+  cleanly with `DOWNSHIFTED`. Nothing completed is unwound; `/spec:implement` resumes from the next
+  unchecked task under the restored gate. This is the way back into per-test review mid-phase
 - `RALPH_STOP` file at repo root — the unattended kill-switch (`touch RALPH_STOP` from another
   terminal); halts after the current task
 - **Esc** — cancel a pending self-paced wake-up at the keyboard
+- **Scope exhausted** — the next unchecked task falls outside the gear's `scope:` phase
 - Automatically stops when all tasks complete
 
 **Error handling:** Failed tasks are marked `- [!]` with an explanation and skipped.
 
+**What it does not drop:** RED is still proved before any production code, the full regression suite
+still runs, each task still produces the two-commit shape, and every test-authoring convention still
+applies. `review-after` removes the human pause and nothing else.
+
 **Requirements:**
-- Design must be approved (`.design-approved` exists)
-- `ralph-tasks.md` must exist (run `/spec:ralph-tasks` first)
+- Requirements, design **and tasks** approved (`.requirements-approved`, `.design-approved`,
+  `.tasks-approved`)
+- All ADRs must be approved (Status: Accepted)
 - Recommended: session on **opus** with **auto mode** enabled
 
 ---
@@ -539,22 +600,29 @@ per-action permission prompts and the self-driving loop (optionally self-paced w
 `ScheduleWakeup`) replaces the old `scripts/ralph.sh` overnight runner.
 
 ```bash
-# 1. Spec workflow up to an APPROVED DESIGN (no tasks step needed for this path)
+# 1. The normal spec workflow, through to an APPROVED TASK LIST
 /spec:requirements 123
 /spec:approve requirements
 /spec:design message-serialization
-/spec:approve design          # ← prompts you to pick the unattended path
+/spec:approve design
+/spec:tasks
+/spec:review tasks
+/spec:approve tasks
 
-# 2. Generate ralph-tasks directly from the approved design
-/spec:ralph-tasks
+# 2. Work the early, uncertain tasks attended — the gate is armed by default
+/spec:implement
 
-# 3. Review ralph-tasks.md in your IDE
-
-# 4. Switch to opus and enable auto mode, then run the loop
+# 3. Once the task shape is settled, upshift and hand the rest to the loop
+/spec:gear review-after "Phase 5 — Provider rejection tests" \
+    --because "Phase 4's six tests were all approved unchanged"
 /model opus
 /spec:ralph-implement         # choose tasks / turns / budget when prompted
 
-# 5. Stop the loop (if needed)
+# 4. Take back per-test review at any point, from another terminal
+/spec:gear review-before      # loop stops after the current task; nothing is unwound
+/spec:implement               # resumes from the next unchecked task, gated
+
+# 5. Or stop the loop outright
 touch RALPH_STOP              # unattended kill-switch (halts after current task)
 #   …or press Esc to cancel a pending self-paced wake-up
 ```
@@ -601,10 +669,20 @@ Here's a complete workflow for adding a new feature:
 /spec:review tasks
 /spec:approve tasks
 
-# 4. Check overall status
+# 4. Check overall status (including the current review gear)
 /spec:status
 
-# 5. Begin implementation
+# 5. Begin implementation — the approval gate is armed by default
+/spec:implement
+
+# 6. Once a phase's task shape is settled, upshift and let the loop finish it
+/spec:gear review-after "Phase 5 — Provider rejection tests" \
+    --because "Phase 4's six tests were all approved unchanged"
+/model opus
+/spec:ralph-implement 8
+
+# 7. Downshift the moment the tests stop looking right — nothing is unwound
+/spec:gear review-before --because "the last two tests asserted the wrong thing"
 /spec:implement
 ```
 
@@ -621,8 +699,8 @@ Brighter/
 │       ├── .tasks-approved                # Approval marker
 │       ├── .adr-list                      # List of associated ADRs
 │       ├── requirements.md                # User requirements
-│       ├── tasks.md                       # Implementation tasks
-│       ├── ralph-tasks.md                 # Unattended TDD tasks (optional)
+│       ├── tasks.md                       # Implementation tasks (the single task list)
+│       ├── .current-gear                  # Review gear — GITIGNORED working state
 │       └── README.md                      # Spec overview
 ├── docs/
 │   └── adr/
@@ -662,6 +740,10 @@ Brighter/
 - Follow TDD: write tests before implementation
 - Identify dependencies between tasks
 - Include risk mitigation tasks
+- Give phases meaningful, stable headings — `/spec:gear` can scope a gear to a single phase, and a
+  well-named phase is what makes a narrow, self-expiring gear shift possible
+- Do **not** try to encode the gear in `tasks.md`; it is frozen by `.tasks-approved`, and the gear
+  lives in the untracked `.current-gear` file so it can still be shifted afterwards
 
 ### Git Workflow
 1. Create feature branch (or use existing)

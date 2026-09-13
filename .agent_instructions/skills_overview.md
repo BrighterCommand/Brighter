@@ -12,7 +12,7 @@ Skills are slash commands that automate multi-step workflows and enforce Brighte
 
 | Skill | Purpose | Usage |
 |-------|---------|-------|
-| `/test-first` | TDD with mandatory approval | `/test-first <behavior description>` |
+| `/test-first` | TDD with an approval gate, armed by default | `/test-first <behavior description>` |
 | `/tidy-first` | Separate refactoring from features | `/tidy-first <change description>` |
 | `/adr` | Create Architecture Decision Record | `/adr <title>` |
 | `/bugfix:*` | Diagnosis-first bug workflow (Confirm gate) | `/bugfix:triage [issue \| description]` |
@@ -41,8 +41,8 @@ Skills are slash commands that automate multi-step workflows and enforce Brighte
 | `/spec:approve` | Approve phases | `/spec:approve <phase> [adr-number]` |
 | `/spec:review` | Review phases | `/spec:review [phase] [adr-number]` |
 | `/spec:switch` | Switch to different spec | `/spec:switch <spec-name>` |
-| `/spec:ralph-tasks` | Generate unattended TDD tasks | `/spec:ralph-tasks` |
-| `/spec:ralph-implement` | Unattended TDD implementation | `/spec:ralph-implement [count]` |
+| `/spec:gear` | Report or shift the TDD review gear | `/spec:gear [review-before\|review-after] ["phase"]` |
+| `/spec:ralph-implement` | Unattended TDD loop over the same `tasks.md` | `/spec:ralph-implement [count]` |
 
 ## Quick Reference Card
 
@@ -61,7 +61,7 @@ Skills are slash commands that automate multi-step workflows and enforce Brighte
 🧪 TEST-DRIVEN DEVELOPMENT
    /test-first <behavior>
    • Write test → Approve → Implement → Refactor
-   • Enforces mandatory approval before implementation
+   • Approval gate armed by default; shift it with /spec:gear
    • Example: /test-first when message fails it should retry
 
 🏗️  REFACTORING
@@ -84,9 +84,14 @@ Skills are slash commands that automate multi-step workflows and enforce Brighte
    /spec:status                  → Show all specs
    /spec:approve <phase>         → Approve phase
 
+⚙️  REVIEW GEAR
+   /spec:gear                     → Which gear am I in, and why?
+   /spec:gear review-after "P5"   → Upshift, scoped to one phase (reason required)
+   /spec:gear review-before       → Downshift; takes effect at the next task
+
 🔄 RALPH LOOP (UNATTENDED)
-   /spec:ralph-tasks              → Generate ralph tasks (standalone, from approved design)
-   /spec:ralph-implement [count]  → Unattended self-driving loop (opus + auto mode)
+   /spec:ralph-implement [count]  → Self-driving loop over the SAME tasks.md,
+                                    always review-after (opus + auto mode)
 ```
 
 ## Decision Tree: Which Skill Should I Use?
@@ -124,13 +129,17 @@ Each skill enforces specific practices from `.agent_instructions/`:
 
 **Enforces**:
 - Red-Green-Refactor TDD cycle
-- **MANDATORY approval before implementation** (lines 21-25)
+- **Approval before implementation, armed by default** — disarmed only by a deliberate, scoped,
+  recorded `/spec:gear review-after` shift, and even then only for `/spec:implement` and
+  `/spec:ralph-implement` (a standalone `/test-first` and `/bugfix:test` are always gated)
+- **RED first in both gears** — the test is observed failing for the right reason before any
+  production code
 - BDD-style test naming (`When_X_should_Y`)
 - One test per file
 - Developer tests (not unit tests)
 - InMemory* implementations instead of mocks
 
-**Reference**: [testing.md](testing.md) lines 11-26
+**Reference**: [testing.md](testing.md) → "TDD Style" and "The review gear"
 
 ### `/adr` → documentation.md
 
@@ -234,25 +243,31 @@ Each skill enforces specific practices from `.agent_instructions/`:
 #   - refactor: simplify nested conditionals in KafkaConsumer
 ```
 
-### Workflow 5: Ralph Loop (Unattended)
+### Workflow 5: Shift Gear Mid-Spec (Attended → Unattended → Attended)
 
 ```bash
-# 1. Complete spec workflow up to an APPROVED DESIGN (no tasks step needed for this path)
+# 1. Complete the spec workflow through /spec:approve tasks, then start attended.
+#    The approval gate is armed by default — every test reviewed in the IDE.
+/spec:implement
 
-# 2. Generate ralph-tasks directly from the approved design
-/spec:ralph-tasks
+# 2. After a few phases the task shape is settled. Upshift, scoped to one phase.
+/spec:gear review-after "Phase 5 — Provider rejection tests" \
+    --because "Phase 4's six tests were all approved unchanged"
 
-# 3. Review ralph-tasks.md in your IDE
-
-# 4. Switch to opus + enable auto mode, then run the self-driving loop
+# 3. Hand the phase to the unattended loop — SAME tasks.md, no regeneration
 /model opus
-/spec:ralph-implement          # choose the bound: tasks / turns / budget
+/spec:ralph-implement 8        # bound: tasks / turns / budget
 
-# 5. Stop if needed
+# 4. The tests stop looking right. Downshift from another terminal — mid-phase, no unwinding.
+/spec:gear review-before --because "the last two tests asserted the wrong thing"
+/spec:implement                # resumes at the next unchecked task, gated
+
+# 5. Or stop the loop outright
 touch RALPH_STOP               # unattended kill-switch (or press Esc for a pending wake-up)
 
 # 6. Review results
 git log --oneline
+/spec:status                   # shows the current gear too
 ```
 
 ## Benefits Summary
@@ -308,12 +323,13 @@ Risk: Easy to skip approval or go straight to implementation
 ✅ Skill-Guided:
 1. Type: /test-first <behavior>
 2. Claude writes test following all conventions
-3. Mandatory approval gate (can't proceed without it)
+3. Approval gate, armed by default (can't proceed without it)
 4. Claude implements minimum code
 5. Claude suggests refactoring
 6. All steps enforced
 
-Benefit: Impossible to skip approval, all conventions followed
+Benefit: The approval can't be skipped by accident — only by your own deliberate,
+         scoped, recorded /spec:gear shift — and all conventions are followed either way
 ```
 
 ### Creating ADR Without `/adr`
@@ -397,7 +413,11 @@ A: Yes! Skills generate starting point, you can edit before committing.
 A: Skills ask for approval - tell Claude to adjust categorization.
 
 **Q: Can I skip the approval steps?**
-A: No, and that's the point - approvals prevent mistakes.
+A: Not on the agent's initiative — but you can shift gear. `/spec:gear review-after` disarms the
+TDD approval pause for one spec (optionally one phase), with a recorded reason, and
+`/spec:gear review-before` arms it again mid-phase without unwinding anything. It removes the pause
+and nothing else: RED-first, the full suite, the two-commit shape and every convention still hold.
+The other gates (`/bugfix:confirm`, `/spec:approve`) are not shiftable.
 
 **Q: Do skills work with existing code?**
 A: Yes! `/tidy-first` is specifically for working with existing code.
@@ -411,11 +431,11 @@ A: Yes! `/tidy-first` is specifically for working with existing code.
 
 ## Detailed Documentation
 
-- **Skills Overview**: [.claude/commands/README.md](../../.claude/commands/README.md)
-- **Test-First**: [.claude/commands/tdd/README.md](../../.claude/commands/tdd/README.md)
-- **ADR**: [.claude/commands/adr/README.md](../../.claude/commands/adr/README.md)
-- **Tidy First**: [.claude/commands/refactor/README.md](../../.claude/commands/refactor/README.md)
-- **Spec Workflow**: [.claude/commands/spec/README.md](../../.claude/commands/spec/README.md)
+- **Skills Overview**: [.claude/commands/README.md](../.claude/commands/README.md)
+- **Test-First**: [.claude/commands/tdd/README.md](../.claude/commands/tdd/README.md)
+- **ADR**: [.claude/commands/adr/README.md](../.claude/commands/adr/README.md)
+- **Tidy First**: [.claude/commands/refactor/README.md](../.claude/commands/refactor/README.md)
+- **Spec Workflow**: [.claude/commands/spec/README.md](../.claude/commands/spec/README.md)
 
 ---
 
