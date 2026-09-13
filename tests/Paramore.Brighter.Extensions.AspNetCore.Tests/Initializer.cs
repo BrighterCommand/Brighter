@@ -95,6 +95,7 @@ internal static class Initializer
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<DepositEntityCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<MixedHostConsumerCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<DispatcherFromRequestCommand>).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(PipelineBuilder<PackageNotCalledSendCommand>).TypeHandle);
 
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<PlaceOrder>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<SharedMarkerSentCommand>).TypeHandle);
@@ -110,11 +111,13 @@ internal static class Initializer
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<DepositEntityCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<MixedHostConsumerCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<DispatcherFromRequestCommand>).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(RequestHandler<PackageNotCalledSendCommand>).TypeHandle);
 
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandlerAsync<PublishScopeOrderPlaced>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandlerAsync<ConcurrentPublishOrderPlaced>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandlerAsync<ConcurrentPublishInnerCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(RequestHandlerAsync<TransientHandlerPublishedEvent>).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(RequestHandlerAsync<PackageNotCalledPublishedEvent>).TypeHandle);
 
         RuntimeHelpers.RunClassConstructor(typeof(WrapPipeline<PostedOrderCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(WrapPipeline<SharedMarkerPostedCommand>).TypeHandle);
@@ -124,6 +127,7 @@ internal static class Initializer
         RuntimeHelpers.RunClassConstructor(typeof(WrapPipeline<TransientHandlerPublishPostedCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(WrapPipeline<AccumulationPostedCommand>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(WrapPipeline<DepositEntityPostedCommand>).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(WrapPipeline<PackageNotCalledPostCommand>).TypeHandle);
 
         RuntimeHelpers.RunClassConstructor(typeof(OutboxProducerMediator<Message, CommittableTransaction>).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(OutboxProducerMediator<Message, DbTransaction>).TypeHandle);
