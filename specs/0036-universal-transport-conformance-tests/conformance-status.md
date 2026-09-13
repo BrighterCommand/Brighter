@@ -150,7 +150,12 @@ cell remains `Unknown`.
   maintainer-approved **FR-8 relaxation** (see `decision-log.md`), a transport that dead-letters via a
   native broker mechanism is conformant on **routing alone**: the canonical templates assert DLQ arrival
   unconditionally and guard the rejection-metadata sub-assertions on
-  `RejectionMetadataKeys.StampsRejectionMetadata` (true iff the provider declares non-empty keys). So
+  `RejectionMetadataKeys.StampsRejectionMetadata` (true iff the provider declares non-empty keys).
+  ⭐ **This paragraph has an executable counterpart.** `RejectionMetadataContractAudit` names the four
+  configurations allowed to claim FR-8 on routing alone — `RMQ.Async / Classic`, `RMQ.Async / Quorum`,
+  `RMQ.Sync` and `AzureServiceBus` — and fails the build if a fifth acquires empty keys while claiming
+  FR-8, or if one of the four starts stamping metadata and this note goes stale. **Measured: 24 providers,
+  8 with all-empty keys; the other four (GCP ×4) leave FR-8 `Deferred`, so they claim nothing.** So
   FR-4/6/8/17 `Pass` for RMQ (routing) while metadata-stamping transports (SQS/Redis/Postgres/MSSQL, ADRs
   `0038`/`0039`/`0040`/`0041`) still assert the full metadata. **⛔ FR-5 (a *separate* invalid channel)
   stays `Deferred -> #4240`:** neither `RmqMessageConsumer` nor `RmqSubscription` models an invalid
