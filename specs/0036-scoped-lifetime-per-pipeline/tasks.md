@@ -1271,7 +1271,7 @@ Two Tidy-First steps **are** owed in the DI package, and both are sequenced ahea
   - **Depends on**: T7.6
   - **References**: AC-32 (FR-24.3, C-15, D11); ADR 0074 step 4, ADR 0072 step 5
 
-- [ ] **TEST + IMPLEMENT: T7.8 — a repeated opt-in resolves to the last call, and a conflicting repeat is reported**
+- [x] **TEST + IMPLEMENT: T7.8 — a repeated opt-in resolves to the last call, and a conflicting repeat is reported**
   - **USE COMMAND**: `/test-first calling the registration extension twice with different affinities takes the last call's value and reports one warning naming both`
   - Test location: "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_the_registration_extension_is_called_twice_the_last_call_should_win_and_be_reported.cs`
