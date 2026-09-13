@@ -37,7 +37,7 @@ full reference in [`gear.md`](gear.md)):
 | `review-after` | ➖ not armed | Prove RED, then implement without pausing. Reviewed as a batch afterwards. |
 
 The gear is held in `specs/{current-spec}/.current-gear` — **gitignored** working state, per spec,
-optionally scoped to one phase of `tasks.md`. It is shifted with `/spec:gear`, or with the
+optionally scoped to one section of `tasks.md`. It is shifted with `/spec:gear`, or with the
 `--review-before` / `--review-after` flags on this command, which write the same file.
 
 **`review-after` removes the approval pause and nothing else.** RED-first, the full regression suite,
@@ -80,7 +80,8 @@ from another terminal mid-run).
 file:
 
 - `--review-after` requires a reason. If the user did not give one in their message, ask for one
-  with `AskUserQuestion` and offer to scope it to a phase of `tasks.md`. Then write
+  with `AskUserQuestion` and offer to scope it to a section of `tasks.md` (a heading's text, or a
+  `tasks N-M` range for a flat list). Then write
   `specs/{current-spec}/.current-gear` with `gear: review-after`, the optional `scope:`,
   `driver: implement`, and a `shifted:` line carrying today's date and the reason.
 - `--review-before` writes `gear: review-before` with a `shifted:` line (or deletes the file).
@@ -91,8 +92,10 @@ file:
 1. No `.current-gear` in the spec directory → **`review-before`**.
 2. File present but unparseable, or `gear:` is not one of the two known values →
    **`review-before`**, and say so out loud. Fail safe, never fail open.
-3. `scope:` present and the selected task is **not** under that phase heading in `tasks.md` →
-   **`review-before`**.
+3. `scope:` present and the selected task falls **outside** it → **`review-before`**. A `scope:`
+   that matches nothing in `tasks.md` (renamed heading, range past the end) is rule 2, not "no
+   scope" — resolve to `review-before` and say the scope did not match. See [`gear.md`](gear.md) →
+   *Reading a `scope:`*; `tasks.md` files are not uniformly structured, so do not assume phases.
 4. Otherwise → the gear named in the file.
 
 **Announce the resolved gear** in one line before starting, e.g.
@@ -290,7 +293,7 @@ terminal while you were working, and a downshift must take effect at the very ne
 - **Gear `review-after`**: continue straight to the next task under the gear's scope without asking.
   Stop and hand back when any of these holds:
   - the gear has been shifted to `review-before` (say so, and say which task you stopped at),
-  - the next task falls outside the gear's `scope:` phase,
+  - the next task falls outside the gear's `scope:`,
   - no unchecked tasks remain,
   - a task failed and you could not resolve it.
 

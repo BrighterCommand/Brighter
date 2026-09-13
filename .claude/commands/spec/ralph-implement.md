@@ -93,11 +93,12 @@ This runs **once**, before the loop starts.
    - If it already reads `gear: review-after`, keep it and note its `scope:` — the loop will honour
      that scope (see Step 3).
    - Otherwise ask the user, with `AskUserQuestion`, for the **reason** for the upshift (and offer
-     to scope it to a phase of `tasks.md`), then write the file:
+     to scope it to a section of `tasks.md` — a heading's text, or a `tasks N-M` range for a
+     flat list), then write the file:
      ```
      # Working state — untracked. Shift with /spec:gear.
      gear: review-after
-     scope: {phase heading, or omit for spec-wide}
+     scope: {heading text or `tasks N-M`, or omit for spec-wide}
      driver: ralph
      shifted: {today} — {reason}
      ```
@@ -163,19 +164,31 @@ This keeps the main agent's context lean.
 Scan `tasks.md` top to bottom for the first task that is:
 
 - unchecked (`- [ ]`) — skip `- [x]` (done) and `- [!]` (failed earlier this run), and
-- **within the gear's `scope:`**, if one is set — i.e. under that phase heading. If the next
-  unchecked task falls outside the scope, the loop's work is finished: stop with
+- **within the gear's `scope:`**, if one is set — see [`gear.md`](gear.md) → *Reading a `scope:`*.
+  If the next unchecked task falls outside the scope, the loop's work is finished: stop with
   `Status: SCOPE_COMPLETE` and name the task it stopped before.
 
-`tasks.md` is a general task list, so tasks come in several shapes. Read the task's own text and
-dispatch on it:
+#### Dispatch on the task's shape
 
-| Task shape | Handling |
-|------------|----------|
-| **`TEST + IMPLEMENT: …`** (carries a `/test-first` command and an approval-gate line) | The normal case — Step 4's Red→Green→Refactor cycle. The task's `⛔` approval-gate line is a `review-before` instruction; under `review-after` it does not fire, and that is the *only* thing the gear changes about the task. |
-| **`STRUCTURAL: …`** (tidy-first refactoring) | No new test. Delegate the refactoring, and require the **existing** suite green before and after. Commit as `refactor:`. Behaviour must not change. |
-| **`DOC: …`** (documentation only) | No test, no build. Delegate the edit; commit as `docs:`. This is the behaviour commit for that task — the checkbox tick still gets its own second commit. |
-| **Anything else** | If you cannot confidently classify the task, do **not** guess: mark it `- [!]` with `RALPH-SKIPPED: unrecognised task shape, needs /spec:implement`, commit the marker, and continue. An unattended loop should skip what it does not understand, not improvise. |
+`tasks.md` is a general task list, and the labels in use across this repository vary. Match the
+task's leading bold label **case-insensitively**, and treat the synonyms below as one shape — the
+project's `/tidy-first` vocabulary and the `STRUCTURAL` label mean the same thing, and `DOC` and
+`DOCUMENT` likewise. Do not invent a new label; match what the file says.
+
+| Task shape | Labels seen in `specs/` | Handling |
+|------------|-------------------------|----------|
+| **Behavioural** | `TEST + IMPLEMENT` | The normal case — Step 4's Red→Green→Refactor cycle. The task's `⛔` line is a `review-before` instruction; under `review-after` it does not fire, and that is the *only* thing the gear changes about the task. |
+| **Test only** | `TEST`, `TEST (RED)` | Write the test and prove it fails for the right reason. If the task's own text asks only for the test, stop there and commit as `test:`. If the very next task is the matching `IMPLEMENT`, do **not** run ahead into it — it is its own task and its own commit. |
+| **Implementation only** | `IMPLEMENT` | Only run this when the test that specifies it already exists — i.e. the preceding `TEST` task is already `- [x]`, or the task names an existing failing test. Make that test pass, then the full suite. **If no such test exists, mark `- [!]`** with `RALPH-SKIPPED: IMPLEMENT task with no preceding test`. An unattended TDD loop must never write implementation that no test demanded. |
+| **Structural** | `TIDY FIRST`, `TIDY`, `TIDY-FIRST`, `STRUCTURAL` | No new test. Require the **existing** suite green before *and* after. Commit as `refactor:`. Behaviour must not change; if a test's result changes, the refactoring was wrong — revert and mark `- [!]`. |
+| **Documentation** | `DOC`, `DOCUMENT` | No test. Delegate the edit; commit as `docs:`. That is the change commit for the task — the checkbox tick still gets its own second commit. |
+| **Scaffolding** | `SETUP` | Project/config/package scaffolding. No test, but `dotnet build` of the affected project(s) MUST succeed. Commit as `chore:`. |
+| **Checkpoint** | `VERIFY`, `VALIDATION` | Run the checks the task names and report. A checkpoint asserts the state is already correct, so it should need **no** source change: if it passes, tick it with the `docs:` bookkeeping commit alone. If it fails, or would require a change to pass, mark `- [!]` with the failure — do not "fix" it here, because whatever it caught belongs to some other task. |
+| **Anything else** | free prose, unlabelled | Do **not** guess: mark `- [!]` with `RALPH-SKIPPED: unrecognised task shape, needs /spec:implement`, commit the marker, and continue. An unattended loop should skip what it does not understand, not improvise. |
+
+These labels were taken from the ~750 tasks currently in `specs/`. If you meet a label that is not
+listed, that is the "anything else" row — skip it and let a human decide, rather than mapping it to
+the nearest row by guesswork.
 
 If no unchecked tasks remain:
 ```
@@ -193,7 +206,8 @@ Then STOP.
 Launch an `Agent` with `subagent_type: "general-purpose"` and **`model: "sonnet"`**. The
 prompt MUST include:
 
-1. The **full text of the selected task** from `tasks.md`, verbatim, including its phase heading.
+1. The **full text of the selected task** from `tasks.md`, verbatim, including the heading of the
+   section it sits under.
 2. The context the task does not carry itself — because `tasks.md` tasks were written for an
    interactive session, they assume conversation context a fresh sub-agent does not have. Pass:
    - `specs/{current-spec}/requirements.md`
@@ -298,12 +312,13 @@ two-commit shape**: the change, then the bookkeeping.
 
    - Test: When_[condition]_should_[expected_behavior]
    - Implementation: [brief description]
-   - Task: [task number]/[total] ([phase heading])
+   - Task: [task number]/[total] ([section heading])
 
    Co-Authored-By: Claude Opus <noreply@anthropic.com>
    Co-Authored-By: Claude Sonnet <noreply@anthropic.com>"
    ```
-   Use `refactor:` for a `STRUCTURAL` task and `docs:` for a `DOC` task.
+   Match the prefix to the task's shape (Step 3): `feat:`/`fix:` behavioural, `test:` test-only,
+   `refactor:` structural, `docs:` documentation, `chore:` scaffolding.
    (Both models contributed: the main agent on **opus** orchestrated and committed; the
    sub-agent on **sonnet** wrote the test + implementation.)
 3. **Commit two — the bookkeeping:** use Edit to change `- [ ]` to `- [x]` in `tasks.md`, then:

@@ -38,7 +38,7 @@ shifted: 2026-09-13 — Phase 4's six tests were all approved unchanged; the sha
 | Field | Required | Meaning |
 |-------|----------|---------|
 | `gear` | yes | `review-before` \| `review-after` |
-| `scope` | no | A phase heading from `tasks.md`. The gear applies **only** to tasks under that heading; tasks anywhere else fall back to `review-before`. Absent = the whole spec. |
+| `scope` | no | A **section** of `tasks.md` the gear applies to — either a heading's text (any depth: `##`–`####`, a phase, a task group, whatever the file uses) or a task range, `tasks N-M`, for flat lists with no useful headings. Tasks outside it fall back to `review-before`. Absent = the whole spec. |
 | `driver` | no | `implement` \| `ralph` — which command is expected to be driving. |
 | `shifted` | yes | Date + a one-line reason. A gear change is a judgement about certainty; the reason is the interesting part. |
 
@@ -50,9 +50,32 @@ improvise:
 1. No `specs/.current-spec`, or no `.current-gear` in that spec directory → **`review-before`**.
 2. The file exists but cannot be parsed, or `gear:` holds anything other than the two known
    values → **`review-before`**, and **say so out loud**. Fail safe, never fail open.
-3. `scope:` is present and the task about to be worked is **not** under that phase heading in
-   `tasks.md` → **`review-before`**.
+3. `scope:` is present and the task about to be worked falls **outside** it → **`review-before`**.
+   See *Reading a `scope:`* below — `tasks.md` files are not uniformly structured, so resolve the
+   scope against what the file actually contains rather than assuming it has phases.
 4. Otherwise → the gear named in the file.
+
+## Reading a `scope:`
+
+`tasks.md` is **not** uniformly structured across this repository, so do not assume a phase layout.
+Of the task lists in `specs/`, roughly half use `## Phase N: …` or `### Phase N: …`; the rest use
+`## Task N: …`, a single flat `## Tasks` section, or numbered subsections like `#### 13.A.7`.
+Heading depth varies from `##` to `####` within the same convention.
+
+A `scope:` value is therefore matched in this order:
+
+1. **`tasks N-M`** (e.g. `tasks 6-11`) — an inclusive range over the task numbering the file itself
+   uses. Use this for flat lists. This is the only form that works when a file has no useful
+   headings at all.
+2. **A heading's text** — match it against every markdown heading in `tasks.md` at any depth,
+   comparing the heading text with the leading `#`s, any leading number, and surrounding whitespace
+   stripped. The scope covers tasks from that heading until the next heading **of the same or
+   shallower depth**.
+
+If a `scope:` matches **nothing** in `tasks.md` — a renamed heading, a typo, a range past the end of
+the list — that is resolution rule 2: treat the gear as **`review-before`**, and say the scope did
+not match. A scope that silently matches nothing must never read as "no scope, so spec-wide"; that
+would widen the gear at the exact moment it stopped being understood.
 
 ## Who honours the gear
 
@@ -103,9 +126,11 @@ default; no gear file)` — and do **not** create one. Absence is a valid, corre
    are mechanical, one-acceptance-criterion tasks", "re-running a phase that was already reviewed")
    plus free text. Do not write the file without a reason; an unexplained ungated run is exactly the
    invisible waiver this mechanism replaces.
-3. **Encourage a scope.** If no phase was given, look at `tasks.md`, show the phase headings, and
-   ask whether to scope the gear to one of them or leave it spec-wide. A scoped gear expires
-   naturally as the phase completes; a spec-wide one does not.
+3. **Encourage a scope.** If none was given, read `tasks.md` and offer what that file actually
+   provides — its section headings if it has meaningful ones, otherwise a task-number range —
+   and ask whether to scope the gear or leave it spec-wide. A scoped gear expires naturally as
+   its section completes; a spec-wide one does not. Do not insist: a genuinely flat, short task
+   list is fine to run spec-wide.
 4. Write `specs/{current-spec}/.current-gear` with the fields above, stamping `shifted:` with
    today's date and the reason.
 5. Confirm what changed, and state the non-negotiables (below) so it is on the record that the

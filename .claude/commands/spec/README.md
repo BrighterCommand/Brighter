@@ -498,12 +498,15 @@ shifted: 2026-09-13 — Phase 4's six tests were all approved unchanged; the sha
 | Field | Required | Meaning |
 |-------|----------|---------|
 | `gear` | yes | `review-before` \| `review-after` |
-| `scope` | no | A phase heading from `tasks.md`; the gear applies only under that heading. Absent = spec-wide. |
+| `scope` | no | A section of `tasks.md` — a heading's text (any depth) or a `tasks N-M` range for flat lists. Absent = spec-wide. |
 | `driver` | no | `implement` \| `ralph` |
 | `shifted` | yes | Date + one-line reason |
 
-**Resolution** — absent file, unparseable file, unknown value, or a task outside `scope:` all
-resolve to `review-before`. Fail safe, never fail open.
+**Resolution** — absent file, unparseable file, unknown value, a task outside `scope:`, or a
+`scope:` that matches nothing in `tasks.md` all resolve to `review-before`. Fail safe, never fail
+open. `tasks.md` files are not uniformly structured (about half use `## Phase N`, the rest
+`## Task N`, a flat `## Tasks`, or numbered subsections), so a scope is matched against the headings
+the file actually has, or by task range.
 
 **Why untracked**: the gear is where the work currently *is*, not what the project decided.
 Tracking it would put an hourly-changing value into branch history and make the answer depend on
@@ -558,10 +561,22 @@ the gear's `scope:` if one is set. Nothing is regenerated; there is no `ralph-ta
 implementation is delegated to a **sonnet** sub-agent (cheaper, and kept off the opus loop
 context). The sub-agent never commits, pushes, or edits the task list.
 
-**Task shapes.** `tasks.md` is a general list, so the loop dispatches on the task: `TEST +
-IMPLEMENT` runs the full Red→Green→Refactor cycle; `STRUCTURAL` runs a tidy-first refactor with the
-existing suite green before and after (`refactor:`); `DOC` is a documentation edit (`docs:`).
-Anything it cannot confidently classify it marks `- [!]` and skips rather than improvising.
+**Task shapes.** `tasks.md` is a general list and the labels in use vary, so the loop matches the
+task's leading label case-insensitively and treats synonyms as one shape:
+
+| Shape | Labels | Commit |
+|-------|--------|--------|
+| Behavioural | `TEST + IMPLEMENT` | `feat:` / `fix:` |
+| Test only | `TEST`, `TEST (RED)` | `test:` |
+| Implementation only | `IMPLEMENT` | `feat:` — **only** when the specifying test already exists; otherwise skipped |
+| Structural | `TIDY FIRST`, `TIDY`, `TIDY-FIRST`, `STRUCTURAL` | `refactor:` |
+| Documentation | `DOC`, `DOCUMENT` | `docs:` |
+| Scaffolding | `SETUP` | `chore:` |
+| Checkpoint | `VERIFY`, `VALIDATION` | bookkeeping tick only |
+
+Anything else it marks `- [!]` and skips rather than improvising. The labels come from the ~750
+tasks currently in `specs/`; an unlisted label is skipped for a human to decide, never mapped to the
+nearest row by guesswork.
 
 **Loop per task:** check `RALPH_STOP` and the gear → select next in-scope `- [ ]` task → delegate
 🔴 Red → 🟢 Green → 🔵 Refactor to a sonnet sub-agent → orchestrator commits the change, then
@@ -576,7 +591,7 @@ windows with `ScheduleWakeup`.
 - `RALPH_STOP` file at repo root — the unattended kill-switch (`touch RALPH_STOP` from another
   terminal); halts after the current task
 - **Esc** — cancel a pending self-paced wake-up at the keyboard
-- **Scope exhausted** — the next unchecked task falls outside the gear's `scope:` phase
+- **Scope exhausted** — the next unchecked task falls outside the gear's `scope:`
 - Automatically stops when all tasks complete
 
 **Error handling:** Failed tasks are marked `- [!]` with an explanation and skipped.

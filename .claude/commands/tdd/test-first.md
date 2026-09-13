@@ -258,6 +258,6 @@ Should I commit these changes?
 - This workflow enforces the TDD approval requirement from .agent_instructions/testing.md
 - The approval gate ensures the test correctly specifies desired behavior before implementation
 - The gate is armed by default; `/spec:gear` is the only supported way to disarm it, and it does so
-  for one spec (optionally one phase) at a time — see ADR 0071
+  for one spec (optionally one section of its task list) at a time — see ADR 0071
 - Following this workflow provides scope control and better design
 - You may run `/test-first` multiple times to build up functionality incrementally

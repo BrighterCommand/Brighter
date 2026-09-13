@@ -5,7 +5,7 @@ status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-09-13
-summary: "Makes the /test-first approval gate a shiftable gear (review-before | review-after) held in an untracked, per-spec .current-gear file that defaults to gated, is scopable to one phase of tasks.md, and can be downshifted mid-run; separates gate state from task-list format so /spec:ralph-implement reads the existing tasks.md and /spec:ralph-tasks is removed."
+summary: "Makes the /test-first approval gate a shiftable gear (review-before | review-after) held in an untracked, per-spec .current-gear file that defaults to gated, is scopable to one section of tasks.md, and can be downshifted mid-run; separates gate state from task-list format so /spec:ralph-implement reads the existing tasks.md and /spec:ralph-tasks is removed."
 tags:
   - "meta"
   - "testing"
@@ -110,7 +110,7 @@ shifted: 2026-09-13 — Phase 4's six tests were all approved unchanged; the sha
 | Field | Required | Meaning |
 |-------|----------|---------|
 | `gear` | yes | `review-before` \| `review-after` |
-| `scope` | no | A phase heading from `tasks.md`. The gear applies **only** to tasks under that heading; tasks anywhere else fall back to `review-before`. Absent means the whole spec. |
+| `scope` | no | A **section** of `tasks.md` — a heading's text (any depth) or a `tasks N-M` range. The gear applies **only** to tasks inside it; tasks anywhere else fall back to `review-before`. Absent means the whole spec. See *Scoping against a non-uniform task list* below. |
 | `driver` | no | `implement` \| `ralph` — which command is expected to be driving. |
 | `shifted` | yes | Date and a one-line justification. A gear change is a judgement about certainty; the reason is the interesting part. |
 
@@ -119,7 +119,8 @@ Resolution rules, in order:
 1. No `specs/.current-spec`, or no `.current-gear` in that spec → **`review-before`**.
 2. File present but unparseable, or `gear:` holds anything other than the two known values →
    **`review-before`**, and say so out loud. Fail safe, never fail open.
-3. `scope:` present and the current task is not under that phase heading → **`review-before`**.
+3. `scope:` present and the current task falls outside it — **or** the `scope:` matches nothing in
+   `tasks.md` at all — → **`review-before`**.
 4. Otherwise, the gear named in the file.
 
 **Why untracked.** The gear is where the work *currently is*, not what the project decided. Tracking
@@ -136,6 +137,25 @@ directory, the gear cannot reach past the spec that owns it.
 diff. `PROMPT.md` — the project's existing convention for session state that must survive a context
 reset — should carry a pointer to the gear file for any spec being run ungated, and `/spec:status`
 reports the resolved gear for every spec it lists.
+
+### 2a. Scoping against a non-uniform task list
+
+`tasks.md` is **not** uniformly structured across this repository, and the gear must not assume it
+is. Of the ~38 task lists in `specs/`, roughly half use `## Phase N: …` / `### Phase N: …`; the rest
+use `## Task N: …`, a single flat `## Tasks` section, or numbered subsections such as `#### 13.A.7`.
+Heading depth varies from `##` to `####` within the same convention.
+
+So `scope:` accepts either form:
+
+1. **`tasks N-M`** — an inclusive range over the file's own task numbering. The only form that works
+   for a flat list with no useful headings.
+2. **A heading's text** — matched against every heading at any depth, with the `#`s, any leading
+   number and surrounding whitespace stripped; the scope runs to the next heading of the same or
+   shallower depth.
+
+A `scope:` that matches **nothing** resolves to `review-before` (resolution rule 2), not to
+"spec-wide". Widening the gear at the moment its scope stopped being understood is the one failure
+mode a scoped gear exists to prevent.
 
 ### 3. Who honours the gear
 
@@ -155,7 +175,7 @@ explicitly — the caller opts in, the shared skill stays safe by default.
 
 ```bash
 /spec:gear                                      # report the resolved gear and why
-/spec:gear review-after "Phase 5" --because "…" # upshift, scoped to one phase
+/spec:gear review-after "Phase 5" --because "…" # upshift, scoped to one section
 /spec:gear review-before                        # downshift; takes effect at the next task
 ```
 
@@ -187,9 +207,18 @@ silently drop them:
 ### 6. Consequence for the ralph commands
 
 Because gear and task-list format are now separated, `/spec:ralph-implement` reads the **existing
-`tasks.md`** — skipping tasks already ticked, and handling `STRUCTURAL` and `DOC` task shapes
-alongside `TEST + IMPLEMENT`. It gains `.tasks-approved` as a prerequisite, which it previously did
-not have.
+`tasks.md`** — skipping tasks already ticked. It gains `.tasks-approved` as a prerequisite, which it
+previously did not have.
+
+Reading a real `tasks.md` means accepting the labels real task lists use. An audit of the ~750 tasks
+currently in `specs/` found `TEST + IMPLEMENT` (370), the tidy-first family `TIDY FIRST`/`TIDY`/
+`TIDY-FIRST`/`STRUCTURAL` (98), `IMPLEMENT` (34), `TEST`/`TEST (RED)` (10), `VERIFY`/`VALIDATION`
+(9), `DOC`/`DOCUMENT` (4) and `SETUP` (3), plus a free-prose tail. The loop dispatches on all of
+these, matching case-insensitively and treating synonyms as one shape — notably the project's own
+`/tidy-first` vocabulary and `STRUCTURAL`, which mean the same thing. Two rules keep the generality
+honest: an `IMPLEMENT` task runs **only** when the test specifying it already exists (an unattended
+TDD loop must never write implementation no test demanded), and an unrecognised label is marked
+`- [!]` for a human rather than mapped to the nearest shape by guesswork.
 
 `/spec:ralph-tasks` is therefore **removed**. Its only purpose was to regenerate a task list in a
 format that expressed "no approval gate", and the gear expresses that directly. `tasks.md` becomes
@@ -200,7 +229,7 @@ the single task-list format, and the certainty fork at `/spec:approve design` be
 
 `CLAUDE.md` and `.agent_instructions/testing.md` stop saying the gate cannot be bypassed. They say
 instead that the gate is **armed by default**, that `/spec:gear` is the only supported way to
-disarm it, that the disarm is scoped to one spec (and optionally one phase), and that the
+disarm it, that the disarm is scoped to one spec (and optionally one section of its task list), and that the
 disciplines in §5 hold in either gear. The documented behaviour and the actual behaviour agree
 again, which the `PROMPT.md` waiver never achieved.
 
@@ -225,7 +254,7 @@ again, which the `PROMPT.md` waiver never achieved.
   `PROMPT.md` pointer and `/spec:status`, but not eliminated — this is the price of keeping
   operational state out of the permanent record.
 - One more piece of state a session must resolve before acting, and one more file that can be stale
-  (e.g. a `scope:` naming a phase that has since been completed).
+  (e.g. a `scope:` naming a section that has since been completed).
 - `/spec:ralph-implement` must now cope with the full generality of `tasks.md`, including task
   shapes it never had to parse before.
 
@@ -233,7 +262,7 @@ again, which the `PROMPT.md` waiver never achieved.
 
 **Risk**: A gear left in `review-after` and forgotten, so later, less certain work runs ungated
 without anyone choosing that.
-- **Mitigation**: `scope:` narrows the gear to one phase, so it expires naturally as the phase
+- **Mitigation**: `scope:` narrows the gear to one section, so it expires naturally as that section
   completes; resolution rule 3 falls back to `review-before` outside the scope. `/spec:status` and
   the start of every `/spec:implement` run report the resolved gear and the `shifted:` reason.
 

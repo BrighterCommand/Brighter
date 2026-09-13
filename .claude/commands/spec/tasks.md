@@ -123,9 +123,12 @@ and no omitting the `⛔` line for tasks you expect to run unattended. `tasks.md
 that freeze. The gear lives in the untracked `specs/{spec}/.current-gear` file and is shifted with
 `/spec:gear`. The `⛔` line is a statement of the default, not a per-task switch.
 
-Do keep **phase headings** meaningful and stable, though: `/spec:gear` can scope a gear to a single
-phase heading, so a well-named phase ("Phase 5 — Provider rejection tests") is what makes a narrow,
-self-expiring gear shift possible.
+Do keep **section headings** meaningful and stable, though: `/spec:gear` can scope a gear to a
+single heading, so a well-named section ("Phase 5 — Provider rejection tests", "Task 6-11 — Provider
+coverage") is what makes a narrow, self-expiring gear shift possible. Any heading convention works —
+`## Phase N`, `## Task N`, a named group — and the depth does not matter; a scope can also be a
+`tasks N-M` range. What does not work is a single flat `## Tasks` heading over forty tasks, because
+there is then nothing to scope to short of the whole spec.
 
 ##### DO NOT Format Tasks Like This
 

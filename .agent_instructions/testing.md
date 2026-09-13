@@ -55,7 +55,7 @@ value on a run of near-identical tasks whose shape has already been reviewed rep
 | `review-after` | ➖ not armed | RED still proved first; reviewed as a batch afterwards. |
 
 - The gear lives in `specs/{spec}/.current-gear` — untracked working state, scoped to one spec and
-  optionally to one phase of `tasks.md`, carrying the reason for the shift. Shift it with
+  optionally to one section of `tasks.md`, carrying the reason for the shift. Shift it with
   `/spec:gear`, in either direction, at any time.
 - `/spec:implement` honours it; `/spec:ralph-implement` is always `review-after`. A **standalone
   `/test-first` and `/bugfix:test` are always gated** — they do not read the gear file.

@@ -71,7 +71,7 @@ resolved by `/spec:implement` and `/spec:ralph-implement`, which pass the result
 explicitly. `/bugfix:test` is always gated too.
 
 Shift the gear with [`/spec:gear`](../spec/gear.md). It writes `specs/{spec}/.current-gear` —
-untracked working state, scoped to one spec and optionally one phase of `tasks.md`, carrying the
+untracked working state, scoped to one spec and optionally one section of `tasks.md`, carrying the
 reason for the shift.
 
 **`review-after` removes the human pause and nothing else.** These hold in both gears:

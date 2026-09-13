@@ -87,7 +87,7 @@ Parse $ARGUMENTS to extract phase and optional ADR number:
      or `/spec:ralph-implement` (unattended loop over the same list, `review-after` gear)
    - Follow TDD: write tests first, then code
    - The gate is armed by default; `/spec:gear` shifts it, scoped to this spec and optionally to
-     one phase of `tasks.md`
+     one section of `tasks.md`
 4. Note that `.tasks-approved` freezes the **content** of `tasks.md`. Checkbox state (`[ ]` →
    `[x]`/`[!]`) is progress bookkeeping and both drivers write it; rewording, adding, removing or
    reordering tasks after this point needs a fresh review.

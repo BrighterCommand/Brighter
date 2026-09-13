@@ -86,7 +86,7 @@ Skills are slash commands that automate multi-step workflows and enforce Brighte
 
 ⚙️  REVIEW GEAR
    /spec:gear                     → Which gear am I in, and why?
-   /spec:gear review-after "P5"   → Upshift, scoped to one phase (reason required)
+   /spec:gear review-after "P5"   → Upshift, scoped to a section (reason required)
    /spec:gear review-before       → Downshift; takes effect at the next task
 
 🔄 RALPH LOOP (UNATTENDED)
@@ -414,7 +414,7 @@ A: Skills ask for approval - tell Claude to adjust categorization.
 
 **Q: Can I skip the approval steps?**
 A: Not on the agent's initiative — but you can shift gear. `/spec:gear review-after` disarms the
-TDD approval pause for one spec (optionally one phase), with a recorded reason, and
+TDD approval pause for one spec (optionally one section of its task list), with a recorded reason, and
 `/spec:gear review-before` arms it again mid-phase without unwinding anything. It removes the pause
 and nothing else: RED-first, the full suite, the two-commit shape and every convention still hold.
 The other gates (`/bugfix:confirm`, `/spec:approve`) are not shiftable.

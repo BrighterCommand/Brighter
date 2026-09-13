@@ -37,7 +37,7 @@ work starts producing tests you would not have approved.
 
 - **The only supported way to disarm the gate is `/spec:gear review-after`**, which writes
   `specs/{spec}/.current-gear` — untracked working state, scoped to **one spec** and optionally to
-  **one phase** of `tasks.md`, carrying the reason for the shift.
+  **one section** of `tasks.md`, carrying the reason for the shift.
 - **`/spec:implement`** honours the gear; **`/spec:ralph-implement`** is always `review-after`.
   A **standalone `/test-first` and `/bugfix:test` are always gated** — they never read the gear file
   and must never infer a gear from context.
