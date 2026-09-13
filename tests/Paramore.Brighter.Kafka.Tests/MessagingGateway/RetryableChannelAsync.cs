@@ -35,10 +35,19 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 /// returns <see cref="MessageType.MT_NONE"/> — Kafka on CI can be slow to deliver a message that
 /// is coming, so a spurious early MT_NONE should not fail a positive assertion.
 ///
+/// It re-polls on a <see cref="ChannelFailureException"/> for the same reason: a topic created
+/// moments earlier may not have propagated across the cluster, so the first consume can fail for a
+/// topic that is on its way. The pump rides that out (it catches ChannelFailureException, waits and
+/// continues); a test calling ReceiveAsync directly has no pump, so without this it would be stricter
+/// than production. A failure that outlasts the budget is rethrown, so a genuine outage is still
+/// reported as the exception rather than masked as an empty receive.
+///
 /// The retry is bounded to the caller's requested timeout: ReceiveAsync(t) never waits longer than t
 /// in total. This preserves the conformance contract that a receive is a single bounded receive — the
 /// FR-2 / FR-9 before-D negative arm and FR-15's "redelivered within 5 s" assertion both depend on a
 /// receive respecting its timeout, so re-polling must never extend the window past the delay under test.
+/// For the same reason there is no pause before or between attempts: every retry draws from what is
+/// left of the caller's budget.
 /// </summary>
 public class RetryableChannelAsync(IAmAChannelAsync inner) : IAmAChannelAsync
 {
@@ -57,18 +66,30 @@ public class RetryableChannelAsync(IAmAChannelAsync inner) : IAmAChannelAsync
         if (timeout is null)
             return await inner.ReceiveAsync(timeout, cancellationToken);
 
+        var budget = timeout.Value;
         var stopwatch = Stopwatch.StartNew();
-        var message = await inner.ReceiveAsync(timeout, cancellationToken);
-        while (message.Header.MessageType == MessageType.MT_NONE)
+        var remaining = budget;
+
+        while (true)
         {
-            var remaining = timeout.Value - stopwatch.Elapsed;
-            if (remaining <= TimeSpan.Zero)
-                break;
+            Message message;
+            try
+            {
+                message = await inner.ReceiveAsync(remaining, cancellationToken);
+            }
+            catch (ChannelFailureException)
+            {
+                remaining = budget - stopwatch.Elapsed;
+                if (remaining <= TimeSpan.Zero)
+                    throw;
 
-            message = await inner.ReceiveAsync(remaining, cancellationToken);
+                continue;
+            }
+
+            remaining = budget - stopwatch.Elapsed;
+            if (message.Header.MessageType != MessageType.MT_NONE || remaining <= TimeSpan.Zero)
+                return message;
         }
-
-        return message;
     }
 
     public Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null,
