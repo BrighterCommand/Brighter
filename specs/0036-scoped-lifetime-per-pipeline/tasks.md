@@ -1062,7 +1062,7 @@ This phase declares types and moves a registration. It has **no acceptance crite
   - **Depends on**: T6.20, T5.4
   - **References**: AC-55 (FR-19, C-14, D16); ADR 0075 step 4a, ADR 0073 (*What C-14 asks of this package*)
 
-- [ ] **TEST + IMPLEMENT: T6.22 — not opted in, adoption behaviour is identical to today (one criterion, two test projects)**
+- [x] **TEST + IMPLEMENT: T6.22 — not opted in, adoption behaviour is identical to today (one criterion, two test projects)**
   - **USE COMMAND**: `/test-first a host with no scope provider behaves exactly as before and a host that only references the ASP.NET package never touches IHttpContextAccessor`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests" **and** "tests/Paramore.Brighter.Extensions.AspNetCore.Tests"
   - Test file: `When_no_scope_provider_is_registered_the_existing_suite_should_pass.cs` (in `Paramore.Brighter.Extensions.Tests`) **and** `When_the_package_is_referenced_but_the_extension_is_not_called_the_accessor_should_not_be_touched.cs` (in `Paramore.Brighter.Extensions.AspNetCore.Tests`)
