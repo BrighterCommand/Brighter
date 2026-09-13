@@ -23,7 +23,10 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
@@ -33,7 +36,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     /// evaluated by <see cref="ScopeConfigurationValidator"/> (ADR 0074 step 4).
     /// </summary>
     /// <remarks>
-    /// Carries the FR-22.1 and FR-22.2 rules. The other five ADR 0074 rules arrive with their own
+    /// Carries the FR-22.1, FR-22.2 and FR-22.3 rules. The other four ADR 0074 rules arrive with their own
     /// acceptance criteria in later tasks — they are not stubbed here.
     /// </remarks>
     internal static class ScopeConfigurationRules
@@ -88,5 +91,51 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     $"TransformerLifetime ({c.TransformerLifetime}) mix {ServiceLifetime.Transient} and " +
                     $"{ServiceLifetime.Scoped} — the mixed pair do not share pipeline-scoped dependencies. " +
                     "See docs/guides/lifetimes-and-scoping.md for guidance on choosing a conformant triple."));
+
+        /// <summary>
+        /// FR-22.3 — Warning, captive dependency. A candidate whose kind's configured lifetime is
+        /// <see cref="ServiceLifetime.Singleton"/>, that is not Brighter's own (<paramref name="excluded"/>),
+        /// and whose <see cref="ArtefactConstructorSelector"/>-selected constructor takes a direct parameter
+        /// registered <see cref="ServiceLifetime.Scoped"/> in <paramref name="snapshot"/> (D15, C-20).
+        /// </summary>
+        /// <param name="snapshot">Reads each parameter's effective registered lifetime.</param>
+        /// <param name="excluded">Types Brighter itself put in the pipeline (ADR 0074 step 5a) — never
+        /// inspected.</param>
+        /// <returns>A specification reporting one Warning per captive parameter, naming the artefact type,
+        /// the dependency type, and the guidance page.</returns>
+        public static ISpecification<ArtefactRegistration> CaptiveDependency(
+            ContainerRegistrationSnapshot snapshot, HashSet<Type> excluded)
+        {
+            var selector = new ArtefactConstructorSelector();
+
+            return new Specification<ArtefactRegistration>(candidate =>
+            {
+                if (candidate.ConfiguredLifetime != ServiceLifetime.Singleton)
+                    return [];
+
+                if (excluded.Contains(candidate.ArtefactType))
+                    return [];
+
+                var constructor = selector.Select(candidate.ArtefactType);
+                if (constructor is null)
+                    return [];
+
+                var findings = new List<ValidationResult>();
+                foreach (var parameter in constructor.GetParameters())
+                {
+                    var key = parameter.GetCustomAttribute<FromKeyedServicesAttribute>()?.Key;
+                    if (snapshot.EffectiveLifetimeOf(parameter.ParameterType, key) != ServiceLifetime.Scoped)
+                        continue;
+
+                    findings.Add(ValidationResult.Fail(new ValidationError(
+                        ValidationSeverity.Warning,
+                        $"{candidate.Kind} '{candidate.ArtefactType.Name}'",
+                        $"'{candidate.ArtefactType.Name}' is {ServiceLifetime.Singleton} but its constructor " +
+                        $"requires '{parameter.ParameterType.Name}', which is registered {ServiceLifetime.Scoped} " +
+                        "— a captive dependency. See docs/guides/lifetimes-and-scoping.md for guidance.")));
+                }
+                return findings;
+            });
+        }
     }
 }

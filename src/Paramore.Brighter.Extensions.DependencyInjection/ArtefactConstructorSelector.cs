@@ -35,12 +35,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     /// yields none.
     /// </summary>
     /// <remarks>
-    /// This is a shell. The type and <see cref="Select"/>'s signature land in T7.0a, inert; D15's rule
-    /// body is behaviour driven by AC-42's two constructor-selection clauses and lands in T7.5. Landing the
-    /// shell here rather than in T7.5 means the captive-dependency rule does not also have to create this
-    /// file. Deliberately not Microsoft's own constructor selection, which additionally requires the
-    /// winner's parameters to be a superset of every other resolvable candidate's - Brighter's rule answers
-    /// what a type appears to require, before anything is built, not which constructor the container would
+    /// Deliberately not Microsoft's own constructor selection, which additionally requires the winner's
+    /// parameters to be a superset of every other resolvable candidate's - Brighter's rule answers what a
+    /// type appears to require, before anything is built, not which constructor the container would
     /// activate (ADR 0074, <c>Technology Choices</c>).
     /// </remarks>
     internal sealed class ArtefactConstructorSelector
@@ -51,8 +48,35 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="artefactType">The candidate artefact type.</param>
         /// <returns>The widest public constructor, or <see langword="null"/> where two are equally wide,
         /// where there is no public constructor, or where the only public constructor is parameterless.</returns>
-        /// <exception cref="NotImplementedException">Always - D15's rule has no body yet (T7.5).</exception>
-        public ConstructorInfo? Select(Type artefactType) =>
-            throw new NotImplementedException("D15's constructor-selection rule lands in T7.5.");
+        public ConstructorInfo? Select(Type artefactType)
+        {
+            var publicConstructors = artefactType.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
+            if (publicConstructors.Length == 0)
+                return null;
+
+            var widest = publicConstructors[0];
+            var widestCount = widest.GetParameters().Length;
+            var tied = false;
+
+            for (var i = 1; i < publicConstructors.Length; i++)
+            {
+                var count = publicConstructors[i].GetParameters().Length;
+                if (count > widestCount)
+                {
+                    widest = publicConstructors[i];
+                    widestCount = count;
+                    tied = false;
+                }
+                else if (count == widestCount)
+                {
+                    tied = true;
+                }
+            }
+
+            if (tied || widestCount == 0)
+                return null;
+
+            return widest;
+        }
     }
 }

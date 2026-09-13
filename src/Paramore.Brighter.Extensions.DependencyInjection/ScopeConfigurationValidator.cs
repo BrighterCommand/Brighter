@@ -30,10 +30,11 @@ using Paramore.Brighter.Validation;
 namespace Paramore.Brighter.Extensions.DependencyInjection
 {
     /// <summary>
-    /// Evaluates ADR 0074's scope-configuration rules — the lifetime and opt-in rules the container-backed
-    /// factories' behaviour depends on — and reports them through the same <see cref="IAmAPipelineValidator"/>
-    /// seam as the core <c>PipelineValidator</c>. Registered alongside it, not wrapping it: both validation
-    /// hosts resolve every registered <see cref="IAmAPipelineValidator"/> and combine the results.
+    /// Evaluates ADR 0074's scope-configuration rules — the lifetime, opt-in and captive-dependency rules
+    /// the container-backed factories' behaviour depends on — and reports them through the same
+    /// <see cref="IAmAPipelineValidator"/> seam as the core <c>PipelineValidator</c>. Registered alongside
+    /// it, not wrapping it: both validation hosts resolve every registered <see cref="IAmAPipelineValidator"/>
+    /// and combine the results.
     /// </summary>
     /// <remarks>
     /// Public because it is one of the implementations <see cref="IAmAPipelineValidator"/> now resolves to;
@@ -44,7 +45,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     /// <see cref="ValidationResultCollector{T}"/> with its own harvest loop —
     /// <c>PipelineValidator.EvaluateSpecs</c> is not extracted, moved or widened, since there is no
     /// <c>InternalsVisibleTo</c> anywhere and lifting it would put permanent public API on core's
-    /// <c>netstandard2.0</c> surface. Runs nothing else and disposes nothing.
+    /// <c>netstandard2.0</c> surface. Runs nothing else and disposes nothing — the
+    /// <see cref="MessageMapperRegistry"/> the captive-dependency check reads transforms from is owned and
+    /// disposed by the shared <see cref="ValidationMapperRegistry"/>, not by this type.
     /// </remarks>
     public sealed class ScopeConfigurationValidator : IAmAPipelineValidator
     {
@@ -53,8 +56,19 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         // scope configuration to validate, exactly as PipelineValidator leaves its own optional rules
         // inert when their inputs are absent (e.g. ValidateProducers when publications is null).
         private readonly ScopeConfiguration? _configuration;
+        private readonly ContainerRegistrationSnapshot _snapshot;
+        private readonly PipelineBuilder<IRequest> _pipelineBuilder;
+        private readonly IEnumerable<Publication>? _publications;
+        private readonly IEnumerable<Subscription>? _subscriptions;
+        private readonly ValidationMapperRegistry _mapperRegistry;
 
-        internal ScopeConfigurationValidator(IBrighterOptions? options, ContainerRegistrationSnapshot snapshot)
+        internal ScopeConfigurationValidator(
+            IBrighterOptions? options,
+            ContainerRegistrationSnapshot snapshot,
+            PipelineBuilder<IRequest> pipelineBuilder,
+            IEnumerable<Publication>? publications,
+            IEnumerable<Subscription>? subscriptions,
+            ValidationMapperRegistry mapperRegistry)
         {
             _configuration = options is null
                 ? null
@@ -66,6 +80,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     snapshot.DescriptorsFor(typeof(IAmAScopeProvider)),
                     snapshot.DescriptorsFor(typeof(ScopeAffinityOverride)),
                     snapshot.DescriptorsFor(typeof(IBrighterOptions)));
+            _snapshot = snapshot;
+            _pipelineBuilder = pipelineBuilder;
+            _publications = publications;
+            _subscriptions = subscriptions;
+            _mapperRegistry = mapperRegistry;
         }
 
         /// <inheritdoc />
@@ -81,10 +100,21 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     ScopeConfigurationRules.MixedLifetimes()
                 };
                 EvaluateSpecs(new[] { _configuration }, configurationSpecs, findings);
+
+                var excluded = ArtefactExclusionSet.Build(
+                    _pipelineBuilder, _mapperRegistry.Value, _publications, _subscriptions);
+                var candidates = _snapshot.Artefacts(
+                    _configuration.HandlerLifetime, _configuration.MapperLifetime, _configuration.TransformerLifetime);
+                var captiveDependencySpecs = new List<ISpecification<ArtefactRegistration>>
+                {
+                    ScopeConfigurationRules.CaptiveDependency(_snapshot, excluded)
+                };
+                EvaluateSpecs(candidates, captiveDependencySpecs, findings);
             }
 
-            var errors = findings.Where(f => f.Severity == ValidationSeverity.Error);
-            var warnings = findings.Where(f => f.Severity == ValidationSeverity.Warning);
+            var distinctFindings = findings.Distinct().ToList();
+            var errors = distinctFindings.Where(f => f.Severity == ValidationSeverity.Error);
+            var warnings = distinctFindings.Where(f => f.Severity == ValidationSeverity.Warning);
             return new PipelineValidationResult(errors, warnings);
         }
 
