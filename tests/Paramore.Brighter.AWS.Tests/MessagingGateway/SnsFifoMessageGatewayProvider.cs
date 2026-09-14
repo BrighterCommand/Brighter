@@ -156,19 +156,13 @@ public class SnsFifoMessageGatewayProvider
             invalidChannel = await new ChannelFactory(_awsConnection)
                 .CreateAsyncChannelAsync(invalidSubscription, cancellationToken);
 
-            for (var i = 0; i < 10; i++)
+            var message = await invalidChannel.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
+            if (message.Header.MessageType != MessageType.MT_NONE)
             {
-                var message = await invalidChannel.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
-                if (message.Header.MessageType != MessageType.MT_NONE)
-                {
-                    await invalidChannel.AcknowledgeAsync(message, cancellationToken);
-                    return message;
-                }
-
-                await Task.Delay(1000, cancellationToken);
+                await invalidChannel.AcknowledgeAsync(message, cancellationToken);
             }
 
-            return new Message();
+            return message;
         }
         catch (Amazon.SQS.Model.QueueDoesNotExistException)
         {
@@ -321,19 +315,13 @@ public class SnsFifoMessageGatewayProvider
 
         try
         {
-            for (var i = 0; i < 10; i++)
+            var message = await dlqChannel.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
+            if (message.Header.MessageType != MessageType.MT_NONE)
             {
-                var message = await dlqChannel.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
-                if (message.Header.MessageType != MessageType.MT_NONE)
-                {
-                    await dlqChannel.AcknowledgeAsync(message, cancellationToken);
-                    return message;
-                }
-
-                await Task.Delay(1000, cancellationToken);
+                await dlqChannel.AcknowledgeAsync(message, cancellationToken);
             }
 
-            return new Message();
+            return message;
         }
         finally
         {

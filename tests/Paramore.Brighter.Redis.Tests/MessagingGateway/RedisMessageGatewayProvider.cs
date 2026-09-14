@@ -264,30 +264,7 @@ public class RedisMessageGatewayProvider
 
         await Task.CompletedTask;
 
-        for (var i = 0; i < 10; i++)
-        {
-            var messages = _dlqConsumer.Receive(TimeSpan.FromSeconds(5));
-            if (!messages.Any())
-            {
-                Thread.Sleep(1000);
-                continue;
-            }
-
-            var message = messages.First();
-            if (message.Header.MessageType != MessageType.MT_NONE)
-            {
-                _dlqConsumer.Acknowledge(message);
-
-                // Restore original topic — Reject changes it to the DLQ routing key
-                if (message.Header.Bag.TryGetValue("originalTopic", out var originalTopic))
-                    message.Header.Topic = new RoutingKey(originalTopic.ToString()!);
-
-                return message;
-            }
-            Thread.Sleep(1000);
-        }
-
-        return new Message();
+        return ReceiveOne(_dlqConsumer);
     }
 
     public Message GetMessageFromDeadLetterQueue(RedisSubscription subscription)
@@ -295,30 +272,7 @@ public class RedisMessageGatewayProvider
         if (_dlqConsumer == null)
             throw new InvalidOperationException("DLQ consumer was not pre-created. Ensure CreateChannel was called with a DLQ-configured subscription.");
 
-        for (var i = 0; i < 10; i++)
-        {
-            var messages = _dlqConsumer.Receive(TimeSpan.FromSeconds(5));
-            if (!messages.Any())
-            {
-                Thread.Sleep(1000);
-                continue;
-            }
-
-            var message = messages.First();
-            if (message.Header.MessageType != MessageType.MT_NONE)
-            {
-                _dlqConsumer.Acknowledge(message);
-
-                // Restore original topic — Reject changes it to the DLQ routing key
-                if (message.Header.Bag.TryGetValue("originalTopic", out var originalTopic))
-                    message.Header.Topic = new RoutingKey(originalTopic.ToString()!);
-
-                return message;
-            }
-            Thread.Sleep(1000);
-        }
-
-        return new Message();
+        return ReceiveOne(_dlqConsumer);
     }
 
     public Message GetMessageFromInvalidChannel(RedisSubscription subscription)
@@ -326,30 +280,7 @@ public class RedisMessageGatewayProvider
         if (_invalidConsumer == null)
             throw new InvalidOperationException("Invalid-message consumer was not pre-created. Ensure CreateChannel was called with an invalid-message-configured subscription.");
 
-        for (var i = 0; i < 10; i++)
-        {
-            var messages = _invalidConsumer.Receive(TimeSpan.FromSeconds(5));
-            if (!messages.Any())
-            {
-                Thread.Sleep(1000);
-                continue;
-            }
-
-            var message = messages.First();
-            if (message.Header.MessageType != MessageType.MT_NONE)
-            {
-                _invalidConsumer.Acknowledge(message);
-
-                // Restore original topic — Reject changes it to the invalid routing key
-                if (message.Header.Bag.TryGetValue("originalTopic", out var originalTopic))
-                    message.Header.Topic = new RoutingKey(originalTopic.ToString()!);
-
-                return message;
-            }
-            Thread.Sleep(1000);
-        }
-
-        return new Message();
+        return ReceiveOne(_invalidConsumer);
     }
 
     public async Task<Message> GetMessageFromInvalidChannelAsync(
@@ -362,30 +293,39 @@ public class RedisMessageGatewayProvider
 
         await Task.CompletedTask;
 
-        for (var i = 0; i < 10; i++)
+        return ReceiveOne(_invalidConsumer);
+    }
+
+    /// <summary>
+    /// One bounded receive from a rejection destination, acknowledged and restored to its original
+    /// topic if anything was there.
+    /// </summary>
+    /// <remarks>
+    /// <para>The retry belongs to the caller's NFR-2 loop, so this attempts exactly one receive and
+    /// reports what it found. An empty batch and a batch holding an MT_NONE sentinel both mean the
+    /// same thing - nothing has arrived yet - and both are reported as MT_NONE.</para>
+    /// <para>Redis is alone in needing the topic restored: <c>Reject</c> rewrites the header topic
+    /// to the rejection routing key on the way out, so the original is read back from the bag.</para>
+    /// </remarks>
+    private static Message ReceiveOne(RedisMessageConsumer consumer)
+    {
+        var messages = consumer.Receive(TimeSpan.FromSeconds(5));
+        if (!messages.Any())
         {
-            var messages = _invalidConsumer.Receive(TimeSpan.FromSeconds(5));
-            if (!messages.Any())
-            {
-                Thread.Sleep(1000);
-                continue;
-            }
-
-            var message = messages.First();
-            if (message.Header.MessageType != MessageType.MT_NONE)
-            {
-                _invalidConsumer.Acknowledge(message);
-
-                // Restore original topic — Reject changes it to the invalid routing key
-                if (message.Header.Bag.TryGetValue("originalTopic", out var originalTopic))
-                    message.Header.Topic = new RoutingKey(originalTopic.ToString()!);
-
-                return message;
-            }
-            Thread.Sleep(1000);
+            return new Message();
         }
 
-        return new Message();
+        var message = messages.First();
+        if (message.Header.MessageType != MessageType.MT_NONE)
+        {
+            consumer.Acknowledge(message);
+
+            // Restore original topic — Reject changes it to the rejection routing key
+            if (message.Header.Bag.TryGetValue("originalTopic", out var originalTopic))
+                message.Header.Topic = new RoutingKey(originalTopic.ToString()!);
+        }
+
+        return message;
     }
 
     public RejectionMetadataKeys RejectionMetadataKeys =>

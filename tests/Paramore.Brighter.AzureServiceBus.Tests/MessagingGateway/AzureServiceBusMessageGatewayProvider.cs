@@ -187,22 +187,17 @@ public class AzureServiceBusMessageGatewayProvider
 
         try
         {
-            for (var i = 0; i < 10; i++)
+            var received = receiver.ReceiveMessagesAsync(maxMessages: 1, maxWaitTime: TimeSpan.FromSeconds(5))
+                .GetAwaiter().GetResult();
+
+            var msg = received.FirstOrDefault();
+            if (msg == null)
             {
-                var received = receiver.ReceiveMessagesAsync(maxMessages: 1, maxWaitTime: TimeSpan.FromSeconds(5))
-                    .GetAwaiter().GetResult();
-
-                var msg = received.FirstOrDefault();
-                if (msg != null)
-                {
-                    receiver.CompleteMessageAsync(msg).GetAwaiter().GetResult();
-                    return ConvertToMessage(msg);
-                }
-
-                Thread.Sleep(1000);
+                return new Message();
             }
 
-            return new Message();
+            receiver.CompleteMessageAsync(msg).GetAwaiter().GetResult();
+            return ConvertToMessage(msg);
         }
         finally
         {
@@ -330,21 +325,16 @@ public class AzureServiceBusMessageGatewayProvider
 
         await using (receiver.ConfigureAwait(false))
         {
-            for (var i = 0; i < 10; i++)
+            var received = await receiver.ReceiveMessagesAsync(maxMessages: 1,
+                maxWaitTime: TimeSpan.FromSeconds(5),
+                cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
+
+            var msg = received.FirstOrDefault();
+            if (msg != null)
             {
-                var received = await receiver.ReceiveMessagesAsync(maxMessages: 1,
-                    maxWaitTime: TimeSpan.FromSeconds(5),
-                    cancellationToken: cancellationToken)
-                    .ConfigureAwait(false);
-
-                var msg = received.FirstOrDefault();
-                if (msg != null)
-                {
-                    await receiver.CompleteMessageAsync(msg, cancellationToken).ConfigureAwait(false);
-                    return ConvertToMessage(msg);
-                }
-
-                await Task.Delay(1000, cancellationToken).ConfigureAwait(false);
+                await receiver.CompleteMessageAsync(msg, cancellationToken).ConfigureAwait(false);
+                return ConvertToMessage(msg);
             }
         }
 

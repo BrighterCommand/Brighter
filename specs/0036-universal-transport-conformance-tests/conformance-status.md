@@ -581,14 +581,27 @@ nothing; `mqadmin deleteTopic` and recreate does not help either, because the co
 survive. **Only `docker-compose … down -v` followed by `up -d` gives a clean store** — RocketMQ's
 store lives inside the container filesystem, not in a named volume.
 
-### A harness note the MQTT run exposed: the 30 s ceiling is not enforced for MQTT
+### ✅ RESOLVED — a harness note the MQTT run exposed, which turned out to be tree-wide
 
-`MqttMessageGatewayProvider.GetMessageFromDeadLetterQueue{,Async}` loops 10 times over a 5 s
-`Receive` plus a 1 s `Thread.Sleep`, so a single call takes ~60 s. The FR-23 retry loop wraps it in a
-30 s stopwatch, which therefore cannot bound anything: one call already overruns it. The async
-overload is also `Thread.Sleep`-based inside an `async` method. Neither affects the verdict above —
-the Proactor deadlock is upstream of the DLQ poll — but the ceiling documented in NFR-2 is not the
-ceiling MQTT observes.
+The finding, as first recorded here: `MqttMessageGatewayProvider.GetMessageFromDeadLetterQueue{,Async}`
+looped 10 times over a 5 s `Receive` plus a 1 s `Thread.Sleep`, so a single call took ~60 s. The
+FR-23 retry loop wrapped it in a 30 s stopwatch, which therefore could not bound anything: one call
+already overran it. The async overload was `Thread.Sleep`-based inside an `async` method. Neither
+affected the verdict above — the Proactor deadlock is upstream of the DLQ poll — but the ceiling
+documented in NFR-2 was not the ceiling MQTT observed.
+
+It was never an MQTT quirk. The same `10 × (5 s + 1 s)` loop had been copied into **50 helper bodies
+across 13 provider files** — every `GetMessageFromDeadLetterQueue[Async]` and
+`GetMessageFromInvalidChannel[Async]` in the tree bar the already-compliant ones (Kafka's six, RMQ's
+invalid-channel pair, GCP's and ASB's invalid-channel helpers, RocketMQ's sync one). So no rejection-
+destination arrival anywhere observed NFR-2's documented bound, and the cost was not spread evenly:
+AC-5's "DLQ must be empty" check asserts a message *never* arrives, so it ran the full 60 s on every
+run — 8 minutes per CI job on `aws-ci` alone, across its 8 live invalid-channel tests.
+
+All 50 now attempt a single bounded receive and return, the retry having moved to the caller's loop
+where NFR-2 says it lives; the rejection-destination ceiling is stated as 60 s so today's tolerance
+is preserved exactly rather than tightened. `DeadLetterPollContractAudit` fails the build if a helper
+starts retrying internally again.
 
 Every cell above was also checked for vacuity the same way: force the pump's budget to `int.MaxValue`
 so it can never be exhausted, and confirm the test goes red. Both variants were probed separately —

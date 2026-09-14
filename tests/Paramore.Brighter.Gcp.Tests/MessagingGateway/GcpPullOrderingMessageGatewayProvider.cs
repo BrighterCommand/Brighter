@@ -281,22 +281,16 @@ public class GcpPullOrderingMessageGatewayProvider
         );
         try
         {
-            for (var i = 0; i < 10; i++)
+            var message = await dlqChannel.ReceiveAsync(
+                TimeSpan.FromSeconds(5),
+                cancellationToken
+            );
+            if (message.Header.MessageType != MessageType.MT_NONE)
             {
-                var message = await dlqChannel.ReceiveAsync(
-                    TimeSpan.FromSeconds(5),
-                    cancellationToken
-                );
-                if (message.Header.MessageType != MessageType.MT_NONE)
-                {
-                    await dlqChannel.AcknowledgeAsync(message, cancellationToken);
-                    return message;
-                }
-
-                await Task.Delay(1000, cancellationToken);
+                await dlqChannel.AcknowledgeAsync(message, cancellationToken);
             }
 
-            return new Message();
+            return message;
         }
         finally
         {
@@ -318,19 +312,13 @@ public class GcpPullOrderingMessageGatewayProvider
         var dlqChannel = _channelFactory.CreateSyncChannel(dlqSubscription);
         try
         {
-            for (var i = 0; i < 10; i++)
+            var message = dlqChannel.Receive(TimeSpan.FromSeconds(5));
+            if (message.Header.MessageType != MessageType.MT_NONE)
             {
-                var message = dlqChannel.Receive(TimeSpan.FromSeconds(5));
-                if (message.Header.MessageType != MessageType.MT_NONE)
-                {
-                    dlqChannel.Acknowledge(message);
-                    return message;
-                }
-
-                Thread.Sleep(1000);
+                dlqChannel.Acknowledge(message);
             }
 
-            return new Message();
+            return message;
         }
         finally
         {

@@ -513,9 +513,13 @@ design decisions recorded in ADR 0067.
   `When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log`.
 - **NFR-2 (Determinism).** Timing-dependent tests MUST use bounded receive-retry loops rather than
   a single receive after a fixed sleep, so broker propagation delays do not cause false failures. The
-  bound is a single wall-clock ceiling with a poll interval, stated once here and cited by FR-2,
-  FR-9, FR-15, FR-16 and FR-22: **an arrival retry loop polls at a 500 ms interval up to a 30 s
-  ceiling**, returning as soon as a message arrives and failing if the ceiling is reached with none.
+  bound is a wall-clock ceiling with a poll interval, stated once here and cited by FR-2,
+  FR-9, FR-15, FR-16 and FR-22: **an arrival retry loop polls at a 500 ms interval, up to a 30 s
+  ceiling for a channel arrival and a 60 s ceiling for a rejection-destination arrival** (the
+  dead-letter queue or the invalid-message channel), returning as soon as a message arrives and
+  failing if the ceiling is reached with none. Rejection destinations get the longer bound because
+  reaching one is a broker-side move that follows a delivery budget being spent, not a single
+  redelivery.
   The **positive delay** used by the FR-2 and FR-9 tests is **5 s**, comfortably inside the 30 s
   ceiling; the **lower-bound / negative** assertions (a receive that must find nothing — FR-2's
   before-`D` arm, FR-9's immediate receive, and the "does not appear" checks) are the exemption of
@@ -523,6 +527,15 @@ design decisions recorded in ADR 0067.
   relevant window, not a retry loop. FR-15's zero-delay check is **not** in this set — it is a
   positive first-iteration arrival that stays inside the retry loop. (These figures are a determinism
   floor for CI, not a behavioural contract; a maintainer may widen the ceiling for a slow broker.)
+
+  **The ceiling lives in the test, and only there.** A provider's
+  `GetMessageFromDeadLetterQueue[Async]` / `GetMessageFromInvalidChannel[Async]` MUST attempt a
+  single bounded receive and return what it found; it MUST NOT loop or sleep. A helper that retries
+  internally overruns the caller's ceiling, so the loop above re-tests an already-expired stopwatch
+  and never runs a second iteration — the bounded loop this requirement mandates becomes decorative,
+  and the real bound silently becomes the helper's own. It also turns AC-20's absence checks into
+  the most expensive tests in the suite, since a message asserted never to arrive makes an internal
+  retry loop run to its full ceiling on every run. Enforced by `DeadLetterPollContractAudit`.
 - **NFR-3 (No mechanism assertions).** The suite MUST NOT assert *how* a behaviour is achieved —
   native versus Brighter fallback. It asserts only that the observable behaviour holds, and only
   against the channel and producer surfaces. The related prohibition on reintroducing capability
@@ -703,6 +716,12 @@ faces of that boundary — mechanism proofs and internal-mechanics proofs respec
   the same criteria — AC-2's and AC-9's receive after the delay, AC-5's and AC-18's
   DLQ/invalid-channel arrivals — stays inside a bounded retry loop like every other arrival, as does
   AC-16's first-iteration receipt.
+
+  Inspecting the template is necessary but not sufficient, because AC-5's and AC-18's absence checks
+  read a rejection destination through a provider helper. "A single bounded receive" is a claim about
+  what that call does, not merely about how the template spells it, so the provider side of it is
+  stated in NFR-2 and enforced by `DeadLetterPollContractAudit`. Before that audit existed the
+  templates satisfied this criterion while the helpers behind them retried for a minute apiece.
 - **AC-21 (NFR-3).** *Given* the generated messaging-gateway templates, *when* their sources are
   inspected, *then* no assertion references a scheduler, a native-delay API, a redrive policy, a
   DLX, or any other transport-specific mechanism — every assertion is on an observable outcome

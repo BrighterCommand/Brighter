@@ -75,20 +75,34 @@ public interface IAmAMessageGatewayReactorProvider
 
     /// <summary>
     /// Gets a message from the dead letter queue for the specified subscription.
-    /// Polls with a bounded retry and returns a message whose <c>Header.MessageType</c> is
-    /// <c>MessageType.MT_NONE</c> when nothing arrives within the bound, or when the subscription
+    /// Attempts a single bounded receive and returns a message whose <c>Header.MessageType</c> is
+    /// <c>MessageType.MT_NONE</c> when nothing was waiting, or when the subscription
     /// does not configure a dead-letter routing key. Never throws; never blocks indefinitely.
     /// </summary>
+    /// <remarks>
+    /// The retry belongs to the caller, not here. A test polls this in a bounded loop whose ceiling
+    /// and interval NFR-2 states, and an implementation that also retries internally overruns that
+    /// ceiling - leaving the caller's loop to re-test an expired stopwatch and never run a second
+    /// iteration - while making AC-20's absence checks wait out the full bound on every run, for a
+    /// message asserted never to arrive. Enforced by <c>DeadLetterPollContractAudit</c>.
+    /// </remarks>
     /// <param name="subscription">The subscription configuration.</param>
     /// <returns>The message from the dead letter queue, or an MT_NONE sentinel when empty or unconfigured.</returns>
     Message GetMessageFromDeadLetterQueue(Paramore.Brighter.MessagingGateway.AWSSQS.V4.SqsSubscription subscription);
 
     /// <summary>
     /// Gets a message from the invalid-message channel for the specified subscription.
-    /// Polls with a bounded retry and returns a message whose <c>Header.MessageType</c> is
-    /// <c>MessageType.MT_NONE</c> when nothing arrives within the bound, or when the subscription
+    /// Attempts a single bounded receive and returns a message whose <c>Header.MessageType</c> is
+    /// <c>MessageType.MT_NONE</c> when nothing was waiting, or when the subscription
     /// does not configure an invalid-message routing key. Never throws; never blocks indefinitely.
     /// </summary>
+    /// <remarks>
+    /// The retry belongs to the caller, not here. A test polls this in a bounded loop whose ceiling
+    /// and interval NFR-2 states, and an implementation that also retries internally overruns that
+    /// ceiling - leaving the caller's loop to re-test an expired stopwatch and never run a second
+    /// iteration - while making AC-20's absence checks wait out the full bound on every run, for a
+    /// message asserted never to arrive. Enforced by <c>DeadLetterPollContractAudit</c>.
+    /// </remarks>
     /// <param name="subscription">The subscription configuration.</param>
     /// <returns>The message from the invalid-message channel, or an MT_NONE sentinel when empty or unconfigured.</returns>
     Message GetMessageFromInvalidChannel(Paramore.Brighter.MessagingGateway.AWSSQS.V4.SqsSubscription subscription);

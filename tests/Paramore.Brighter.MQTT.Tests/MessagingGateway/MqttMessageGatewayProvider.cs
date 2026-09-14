@@ -228,20 +228,16 @@ return new RequeueTrackingChannelAsync(channel);
             throw new InvalidOperationException(
                 "DLQ consumer was not pre-created. Ensure CreateChannel was called with a DLQ-configured subscription.");
 
-        for (var i = 0; i < 10; i++)
+        var messages = _dlqConsumer.Receive(TimeSpan.FromSeconds(5));
+        var found = messages.FirstOrDefault(m => m.Header.MessageType != MessageType.MT_NONE);
+        if (found == null)
         {
-            var messages = _dlqConsumer.Receive(TimeSpan.FromSeconds(5));
-            var found = messages.FirstOrDefault(m => m.Header.MessageType != MessageType.MT_NONE);
-            if (found != null)
-            {
-                _dlqConsumer.Acknowledge(found);
-                RestoreOriginalTopic(found);
-                return found;
-            }
-            Thread.Sleep(1000);
+            return new Message();
         }
 
-        return new Message();
+        _dlqConsumer.Acknowledge(found);
+        RestoreOriginalTopic(found);
+        return found;
     }
 
     public async Task<Message> GetMessageFromDeadLetterQueueAsync(
@@ -254,20 +250,16 @@ return new RequeueTrackingChannelAsync(channel);
 
         await Task.CompletedTask;
 
-        for (var i = 0; i < 10; i++)
+        var messages = _dlqConsumer.Receive(TimeSpan.FromSeconds(5));
+        var found = messages.FirstOrDefault(m => m.Header.MessageType != MessageType.MT_NONE);
+        if (found == null)
         {
-            var messages = _dlqConsumer.Receive(TimeSpan.FromSeconds(5));
-            var found = messages.FirstOrDefault(m => m.Header.MessageType != MessageType.MT_NONE);
-            if (found != null)
-            {
-                _dlqConsumer.Acknowledge(found);
-                RestoreOriginalTopic(found);
-                return found;
-            }
-            Thread.Sleep(1000);
+            return new Message();
         }
 
-        return new Message();
+        _dlqConsumer.Acknowledge(found);
+        RestoreOriginalTopic(found);
+        return found;
     }
 
     public Message GetMessageFromInvalidChannel(MqttSubscription subscription)
@@ -276,20 +268,16 @@ return new RequeueTrackingChannelAsync(channel);
             throw new InvalidOperationException(
                 "Invalid-message consumer was not pre-created. Ensure CreateChannel was called with an invalid-message-configured subscription.");
 
-        for (var i = 0; i < 10; i++)
+        var messages = _invalidConsumer.Receive(TimeSpan.FromSeconds(5));
+        var found = messages.FirstOrDefault(m => m.Header.MessageType != MessageType.MT_NONE);
+        if (found == null)
         {
-            var messages = _invalidConsumer.Receive(TimeSpan.FromSeconds(5));
-            var found = messages.FirstOrDefault(m => m.Header.MessageType != MessageType.MT_NONE);
-            if (found != null)
-            {
-                _invalidConsumer.Acknowledge(found);
-                RestoreOriginalTopic(found);
-                return found;
-            }
-            Thread.Sleep(1000);
+            return new Message();
         }
 
-        return new Message();
+        _invalidConsumer.Acknowledge(found);
+        RestoreOriginalTopic(found);
+        return found;
     }
 
     public async Task<Message> GetMessageFromInvalidChannelAsync(
@@ -302,20 +290,16 @@ return new RequeueTrackingChannelAsync(channel);
 
         await Task.CompletedTask;
 
-        for (var i = 0; i < 10; i++)
+        var messages = _invalidConsumer.Receive(TimeSpan.FromSeconds(5));
+        var found = messages.FirstOrDefault(m => m.Header.MessageType != MessageType.MT_NONE);
+        if (found == null)
         {
-            var messages = _invalidConsumer.Receive(TimeSpan.FromSeconds(5));
-            var found = messages.FirstOrDefault(m => m.Header.MessageType != MessageType.MT_NONE);
-            if (found != null)
-            {
-                _invalidConsumer.Acknowledge(found);
-                RestoreOriginalTopic(found);
-                return found;
-            }
-            Thread.Sleep(1000);
+            return new Message();
         }
 
-        return new Message();
+        _invalidConsumer.Acknowledge(found);
+        RestoreOriginalTopic(found);
+        return found;
     }
 
     public ChannelName GetOrCreateChannelName([CallerMemberName] string? testName = null)

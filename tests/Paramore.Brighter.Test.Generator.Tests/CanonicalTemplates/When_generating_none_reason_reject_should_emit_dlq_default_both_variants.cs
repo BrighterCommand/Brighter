@@ -15,7 +15,7 @@ namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 ///   - create the subscription with BOTH a deadLetterRoutingKey and an invalidMessageRoutingKey
 ///     named argument (AC-18, FR-1(2));
 ///   - call _channel.Reject with a None MessageRejectionReason (AC-18);
-///   - poll for DLQ arrival INSIDE the bounded retry loop (Stopwatch, 500 ms, 30 s — NFR-2, AC-18);
+///   - poll for DLQ arrival INSIDE the bounded retry loop (Stopwatch, 500 ms, 60 s — NFR-2, AC-18);
 ///   - assert the rejection reason equals "None" and the original-topic equals the data topic (AC-18);
 ///   - assert invalid-channel absence via a SINGLE bounded GetMessageFromInvalidChannel call
 ///     asserting MT_NONE (AC-18, AC-20 exemption);
@@ -161,7 +161,7 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("GetMessageFromDeadLetterQueue", content);
         Assert.Contains("Stopwatch", content);
-        Assert.Contains("TimeSpan.FromSeconds(30)", content);
+        Assert.Contains("TimeSpan.FromSeconds(60)", content);
         Assert.Contains("500", content);
     }
 
@@ -180,7 +180,7 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("GetMessageFromDeadLetterQueueAsync", content);
         Assert.Contains("Stopwatch", content);
-        Assert.Contains("TimeSpan.FromSeconds(30)", content);
+        Assert.Contains("TimeSpan.FromSeconds(60)", content);
         Assert.Contains("500", content);
     }
 

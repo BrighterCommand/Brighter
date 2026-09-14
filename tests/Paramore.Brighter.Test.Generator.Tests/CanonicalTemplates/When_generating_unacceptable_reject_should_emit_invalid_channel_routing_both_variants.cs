@@ -15,7 +15,7 @@ namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 ///   - create the subscription with BOTH a deadLetterRoutingKey AND an invalidMessageRoutingKey
 ///     named argument (AC-5, FR-1(1));
 ///   - call _channel.Reject with an Unacceptable MessageRejectionReason (AC-5);
-///   - poll for invalid-channel arrival INSIDE the bounded retry loop (Stopwatch, 500 ms, 30 s — NFR-2);
+///   - poll for invalid-channel arrival INSIDE the bounded retry loop (Stopwatch, 500 ms, 60 s — NFR-2);
 ///   - assert the rejection reason equals "Unacceptable" and the original-topic equals the data topic (AC-5);
 ///   - assert DLQ absence via a SINGLE bounded GetMessageFromDeadLetterQueue call outside the retry
 ///     loop, asserting MT_NONE (AC-5, AC-20 exemption);
@@ -161,7 +161,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("GetMessageFromInvalidChannel", content);
         Assert.Contains("Stopwatch", content);
-        Assert.Contains("TimeSpan.FromSeconds(30)", content);
+        Assert.Contains("TimeSpan.FromSeconds(60)", content);
         Assert.Contains("500", content);
     }
 
@@ -180,7 +180,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("GetMessageFromInvalidChannelAsync", content);
         Assert.Contains("Stopwatch", content);
-        Assert.Contains("TimeSpan.FromSeconds(30)", content);
+        Assert.Contains("TimeSpan.FromSeconds(60)", content);
         Assert.Contains("500", content);
     }
 

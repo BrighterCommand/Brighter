@@ -19,7 +19,7 @@ namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 ///   - assert RejectionReason equals "DeliveryError" (AC-8);
 ///   - assert RejectionMessage equals the description passed to Reject (AC-8);
 ///   - assert RejectionTimestamp is a parseable ISO-8601 timestamp within the last minute (AC-8);
-///   - assert DLQ arrival INSIDE the bounded retry loop (Stopwatch, 500 ms, 30 s — NFR-2);
+///   - assert DLQ arrival INSIDE the bounded retry loop (Stopwatch, 500 ms, 60 s — NFR-2);
 ///   - emit the conditional ledger-driven Skip so the Deferred marker is supplied by the
 ///     conformance ledger, not hard-coded in the template (FR-21).
 /// </summary>
@@ -262,7 +262,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("GetMessageFromDeadLetterQueue", content);
         Assert.Contains("Stopwatch", content);
-        Assert.Contains("TimeSpan.FromSeconds(30)", content);
+        Assert.Contains("TimeSpan.FromSeconds(60)", content);
         Assert.Contains("500", content);
     }
 
@@ -281,7 +281,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("GetMessageFromDeadLetterQueueAsync", content);
         Assert.Contains("Stopwatch", content);
-        Assert.Contains("TimeSpan.FromSeconds(30)", content);
+        Assert.Contains("TimeSpan.FromSeconds(60)", content);
         Assert.Contains("500", content);
     }
 

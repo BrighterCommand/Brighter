@@ -66,10 +66,10 @@ public class WhenRejectingMessageWithUnknownReasonShouldSendToDlqAsync : IAsyncL
 
         await _channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.None, "Test unknown rejection reason"));
 
-        // Assert — DLQ arrival: bounded retry loop (500 ms poll, 30 s ceiling — NFR-2, AC-18)
+        // Assert — DLQ arrival: bounded retry loop (60 s ceiling, 500 ms between attempts — NFR-2, AC-18)
         var dlqMessage = new Message();
         var stopwatch = Stopwatch.StartNew();
-        while (stopwatch.Elapsed < TimeSpan.FromSeconds(30))
+        while (stopwatch.Elapsed < TimeSpan.FromSeconds(60))
         {
             dlqMessage = await _messageGatewayProvider.GetMessageFromDeadLetterQueueAsync(_subscription);
             if (dlqMessage.Header.MessageType != MessageType.MT_NONE)

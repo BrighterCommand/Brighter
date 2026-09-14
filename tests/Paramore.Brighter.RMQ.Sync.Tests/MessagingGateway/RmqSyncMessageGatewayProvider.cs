@@ -192,19 +192,14 @@ public class RmqSyncMessageGatewayProvider
 
         try
         {
-            for (var i = 0; i < 10; i++)
+            var messages = dlqConsumer.Receive(TimeSpan.FromSeconds(5));
+            var message = messages.First();
+            if (message.Header.MessageType != MessageType.MT_NONE)
             {
-                var messages = dlqConsumer.Receive(TimeSpan.FromSeconds(5));
-                var message = messages.First();
-                if (message.Header.MessageType != MessageType.MT_NONE)
-                {
-                    dlqConsumer.Acknowledge(message);
-                    return message;
-                }
-                Thread.Sleep(1000);
+                dlqConsumer.Acknowledge(message);
             }
 
-            return new Message();
+            return message;
         }
         finally
         {
@@ -347,19 +342,14 @@ public class RmqSyncMessageGatewayProvider
 
         try
         {
-            for (var i = 0; i < 10; i++)
+            var messages = dlqConsumer.Receive(TimeSpan.FromSeconds(5));
+            var message = messages.First();
+            if (message.Header.MessageType != MessageType.MT_NONE)
             {
-                var messages = dlqConsumer.Receive(TimeSpan.FromSeconds(5));
-                var message = messages.First();
-                if (message.Header.MessageType != MessageType.MT_NONE)
-                {
-                    dlqConsumer.Acknowledge(message);
-                    return Task.FromResult(message);
-                }
-                Thread.Sleep(1000);
+                dlqConsumer.Acknowledge(message);
             }
 
-            return Task.FromResult(new Message());
+            return Task.FromResult(message);
         }
         finally
         {

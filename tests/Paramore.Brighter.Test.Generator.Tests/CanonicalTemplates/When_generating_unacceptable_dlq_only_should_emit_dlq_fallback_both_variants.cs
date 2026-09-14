@@ -14,7 +14,7 @@ namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 ///   - name the file When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq (NFR-1);
 ///   - create the subscription with deadLetterRoutingKey ONLY (no invalidMessageRoutingKey — AC-6, FR-1(2));
 ///   - call _channel.Reject with an Unacceptable MessageRejectionReason (AC-6);
-///   - poll for DLQ arrival INSIDE the bounded retry loop (Stopwatch, 500 ms, 30 s — NFR-2);
+///   - poll for DLQ arrival INSIDE the bounded retry loop (Stopwatch, 500 ms, 60 s — NFR-2);
 ///   - assert the rejection-reason key equals "Unacceptable" on the DLQ message (AC-6);
 ///   - emit the conditional ledger-driven Skip so the Deferred marker is supplied by the
 ///     conformance ledger, not hard-coded in the template (FR-21).
@@ -158,7 +158,7 @@ public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants 
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("GetMessageFromDeadLetterQueue", content);
         Assert.Contains("Stopwatch", content);
-        Assert.Contains("TimeSpan.FromSeconds(30)", content);
+        Assert.Contains("TimeSpan.FromSeconds(60)", content);
         Assert.Contains("500", content);
     }
 
@@ -177,7 +177,7 @@ public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants 
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("GetMessageFromDeadLetterQueueAsync", content);
         Assert.Contains("Stopwatch", content);
-        Assert.Contains("TimeSpan.FromSeconds(30)", content);
+        Assert.Contains("TimeSpan.FromSeconds(60)", content);
         Assert.Contains("500", content);
     }
 

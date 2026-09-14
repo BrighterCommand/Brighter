@@ -14,7 +14,7 @@ namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 ///   - name the file When_rejecting_message_with_delivery_error_should_send_to_dlq (NFR-1);
 ///   - create the subscription with a deadLetterRoutingKey named argument (AC-4, FR-1(2));
 ///   - call _channel.Reject with a DeliveryError MessageRejectionReason (AC-4);
-///   - poll for DLQ arrival inside the bounded retry loop (Stopwatch, 500 ms, 30 s — NFR-2);
+///   - poll for DLQ arrival inside the bounded retry loop (Stopwatch, 500 ms, 60 s — NFR-2);
 ///   - assert the original-topic metadata key equals the data topic (AC-4);
 ///   - assert the rejection-reason metadata key is present (AC-4);
 ///   - emit the conditional ledger-driven Skip so the Deferred marker is supplied by the
@@ -157,7 +157,7 @@ public class WhenGeneratingDeliveryErrorRejectShouldEmitDlqRoutingBothVariants :
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("GetMessageFromDeadLetterQueue", content);
         Assert.Contains("Stopwatch", content);
-        Assert.Contains("TimeSpan.FromSeconds(30)", content);
+        Assert.Contains("TimeSpan.FromSeconds(60)", content);
         Assert.Contains("500", content);
     }
 
@@ -176,7 +176,7 @@ public class WhenGeneratingDeliveryErrorRejectShouldEmitDlqRoutingBothVariants :
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("GetMessageFromDeadLetterQueueAsync", content);
         Assert.Contains("Stopwatch", content);
-        Assert.Contains("TimeSpan.FromSeconds(30)", content);
+        Assert.Contains("TimeSpan.FromSeconds(60)", content);
         Assert.Contains("500", content);
     }
 

@@ -192,19 +192,14 @@ public class PostgresMessageGatewayProvider
 
         try
         {
-            for (var i = 0; i < 10; i++)
+            var messages = dlqConsumer.Receive(TimeSpan.FromSeconds(5));
+            var message = messages.First();
+            if (message.Header.MessageType != MessageType.MT_NONE)
             {
-                var messages = dlqConsumer.Receive(TimeSpan.FromSeconds(5));
-                var message = messages.First();
-                if (message.Header.MessageType != MessageType.MT_NONE)
-                {
-                    dlqConsumer.Acknowledge(message);
-                    return message;
-                }
-                Thread.Sleep(1000);
+                dlqConsumer.Acknowledge(message);
             }
 
-            return new Message();
+            return message;
         }
         finally
         {
@@ -232,19 +227,14 @@ public class PostgresMessageGatewayProvider
 
         try
         {
-            for (var i = 0; i < 10; i++)
+            var messages = await dlqConsumer.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
+            var message = messages.First();
+            if (message.Header.MessageType != MessageType.MT_NONE)
             {
-                var messages = await dlqConsumer.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
-                var message = messages.First();
-                if (message.Header.MessageType != MessageType.MT_NONE)
-                {
-                    await dlqConsumer.AcknowledgeAsync(message, cancellationToken);
-                    return message;
-                }
-                await Task.Delay(1000, cancellationToken);
+                await dlqConsumer.AcknowledgeAsync(message, cancellationToken);
             }
 
-            return new Message();
+            return message;
         }
         finally
         {
@@ -272,19 +262,14 @@ public class PostgresMessageGatewayProvider
 
         try
         {
-            for (var i = 0; i < 10; i++)
+            var messages = invalidConsumer.Receive(TimeSpan.FromSeconds(5));
+            var message = messages.First();
+            if (message.Header.MessageType != MessageType.MT_NONE)
             {
-                var messages = invalidConsumer.Receive(TimeSpan.FromSeconds(5));
-                var message = messages.First();
-                if (message.Header.MessageType != MessageType.MT_NONE)
-                {
-                    invalidConsumer.Acknowledge(message);
-                    return message;
-                }
-                Thread.Sleep(1000);
+                invalidConsumer.Acknowledge(message);
             }
 
-            return new Message();
+            return message;
         }
         finally
         {
@@ -315,19 +300,14 @@ public class PostgresMessageGatewayProvider
 
         try
         {
-            for (var i = 0; i < 10; i++)
+            var messages = await invalidConsumer.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
+            var message = messages.First();
+            if (message.Header.MessageType != MessageType.MT_NONE)
             {
-                var messages = await invalidConsumer.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
-                var message = messages.First();
-                if (message.Header.MessageType != MessageType.MT_NONE)
-                {
-                    await invalidConsumer.AcknowledgeAsync(message, cancellationToken);
-                    return message;
-                }
-                await Task.Delay(1000, cancellationToken);
+                await invalidConsumer.AcknowledgeAsync(message, cancellationToken);
             }
 
-            return new Message();
+            return message;
         }
         finally
         {

@@ -299,20 +299,14 @@ public class RocketMqMessageGatewayProvider
 
         try
         {
-            for (var i = 0; i < 10; i++)
+            var messages = await consumer.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
+            var message = messages.First();
+            if (message.Header.MessageType != MessageType.MT_NONE)
             {
-                var messages = await consumer.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
-                var message = messages.First();
-                if (message.Header.MessageType != MessageType.MT_NONE)
-                {
-                    await consumer.AcknowledgeAsync(message, cancellationToken);
-                    return message;
-                }
-
-                await Task.Delay(1000, cancellationToken);
+                await consumer.AcknowledgeAsync(message, cancellationToken);
             }
 
-            return new Message();
+            return message;
         }
         finally
         {
@@ -346,20 +340,14 @@ public class RocketMqMessageGatewayProvider
 
         try
         {
-            for (var i = 0; i < 10; i++)
+            var messages = await consumer.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
+            var message = messages.First();
+            if (message.Header.MessageType != MessageType.MT_NONE)
             {
-                var messages = await consumer.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
-                var message = messages.First();
-                if (message.Header.MessageType != MessageType.MT_NONE)
-                {
-                    await consumer.AcknowledgeAsync(message, cancellationToken);
-                    return message;
-                }
-
-                await Task.Delay(1000, cancellationToken);
+                await consumer.AcknowledgeAsync(message, cancellationToken);
             }
 
-            return new Message();
+            return message;
         }
         finally
         {

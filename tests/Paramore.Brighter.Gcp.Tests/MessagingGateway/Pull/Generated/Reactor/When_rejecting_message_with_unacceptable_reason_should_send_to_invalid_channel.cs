@@ -61,10 +61,10 @@ public class WhenRejectingMessageWithUnacceptableReasonShouldSendToInvalidChanne
 
         _channel.Reject(received, new MessageRejectionReason(RejectionReason.Unacceptable, "Test unacceptable message"));
 
-        // Assert — invalid-channel arrival: bounded retry loop (500 ms poll, 30 s ceiling — NFR-2, AC-5)
+        // Assert — invalid-channel arrival: bounded retry loop (60 s ceiling, 500 ms between attempts — NFR-2, AC-5)
         var invalidMessage = new Message();
         var stopwatch = Stopwatch.StartNew();
-        while (stopwatch.Elapsed < TimeSpan.FromSeconds(30))
+        while (stopwatch.Elapsed < TimeSpan.FromSeconds(60))
         {
             invalidMessage = _messageGatewayProvider.GetMessageFromInvalidChannel(_subscription);
             if (invalidMessage.Header.MessageType != MessageType.MT_NONE)
