@@ -214,14 +214,16 @@ The rule MUST emit at most one finding per configured subscription per validatio
 
   **The doubles (a closed set — no AC may use one not listed here).** One class per file under `Validation/TestDoubles/`, per `.agent_instructions/testing.md`:
 
-  | Double | Purpose |
+  | Double | Role in the comparison |
   |---|---|
-  | `FakeTransportChannelFactory : IAmAChannelFactory` | The "transport" factory. Throws if any channel is actually created, so a test straying into channel creation fails loudly. |
-  | `FakeDerivedChannelFactory : FakeTransportChannelFactory` | The direct-arm subclass case (AC-8, AC-9). |
-  | `FakeOtherChannelFactory : IAmAChannelFactory` | An unrelated factory, for mismatch and multi-bus cases. |
-  | `FakeTransportSubscription : Subscription` | Overrides `ChannelFactoryType` to `typeof(FakeTransportChannelFactory)`. |
-  | `FakeOtherSubscription : Subscription` | Overrides `ChannelFactoryType` to `typeof(FakeOtherChannelFactory)`. Required by AC-6. |
-  | `AlphaBus.ChannelFactory` / `BetaBus.ChannelFactory` | Two factories **both named `ChannelFactory`** in different namespaces under `…TestDoubles.AlphaBus` / `…TestDoubles.BetaBus`, plus `AlphaBus.AlphaSubscription` declaring the former. Required by AC-15, which is the same-simple-name case. |
+  | `DeclaredChannelFactory : IAmAChannelFactory` | The identity a subscription **declares**. The compatible case in the direct arm. |
+  | `DerivedChannelFactory : DeclaredChannelFactory` | A subclass of the declared identity — the direct arm's assignability case (AC-8, AC-9). |
+  | `NonMatchingChannelFactory : IAmAChannelFactory` | A **different** identity that nothing declares. The mismatch case. |
+  | `DeclaringSubscription : Subscription` | Overrides `ChannelFactoryType` to `typeof(DeclaredChannelFactory)`. |
+  | `NonMatchingSubscription : Subscription` | Overrides `ChannelFactoryType` to `typeof(NonMatchingChannelFactory)`. Required by AC-6. |
+  | `AlphaBus.ChannelFactory` / `BetaBus.ChannelFactory` | Two factories **both named `ChannelFactory`** in different namespaces under `…TestDoubles.AlphaBus` / `…TestDoubles.BetaBus`, plus `AlphaBus.AlphaSubscription` declaring the former. Required by AC-15, the same-simple-name case. |
+
+  **These doubles are identity-only and MUST stay that way.** The rule never invokes a channel factory — FR-3 compares `Type` objects (`D.IsAssignableFrom(F.GetType())` in the direct arm, `f.GetType() == D` in the combined arm), so a double's entire contribution is *being a distinct type*. Every `IAmAChannelFactory` member on these doubles MUST therefore throw (`CreateSyncChannel`, `CreateAsyncChannel`, `CreateAsyncChannelAsync`), which both documents the intent and turns any test that strays into channel creation into a loud failure rather than a silent pass (NFR-3). They are named for their role in the comparison rather than after a transport precisely so that no one is tempted to give them transport behaviour: there is no behaviour to give.
 
   **Request types.** Each subscription double takes its own distinct request type — `FakeChannelFactoryRequest`, `FakeOtherRequest`, `AlphaRequest` — declared in `…Validation.TestDoubles`, one per file, so assembly scans cannot collide (`.agent_instructions/testing.md`). **No acceptance criterion may use `GreetingMade`**: that type exists only under `samples/WebAPI/*` (`WebAPI_Dynamo`, `WebAPI_Dapper`, `WebAPI_EFCore`) in namespaces `GreetingsApp.Requests` / `SalutationApp.Requests`, and is not visible to any test project. The namespace `Greetings.Ports.Events` (a different sample) contains `GreetingEvent`, not `GreetingMade`.
 
@@ -287,22 +289,22 @@ The rule MUST emit at most one finding per configured subscription per validatio
 
 ## Acceptance Criteria
 
-Unless a criterion names a real gateway type, it is written against the test doubles defined in C-9 — the closed set `FakeTransportSubscription`, `FakeOtherSubscription`, `FakeTransportChannelFactory`, `FakeDerivedChannelFactory`, `FakeOtherChannelFactory`, `AlphaBus.ChannelFactory`, `BetaBus.ChannelFactory`, `AlphaBus.AlphaSubscription` — with their own request types (`FakeChannelFactoryRequest`, `FakeOtherRequest`, `AlphaRequest`), and lives in `tests/Paramore.Brighter.Core.Tests/Validation/`. `TestRequest` in the transport-correction criteria means a request type local to that gateway test project. No criterion uses `GreetingMade`, which is not visible to any test project (C-9).
+Unless a criterion names a real gateway type, it is written against the test doubles defined in C-9 — the closed set `DeclaringSubscription`, `NonMatchingSubscription`, `DeclaredChannelFactory`, `DerivedChannelFactory`, `NonMatchingChannelFactory`, `AlphaBus.ChannelFactory`, `BetaBus.ChannelFactory`, `AlphaBus.AlphaSubscription` — with their own request types (`FakeChannelFactoryRequest`, `FakeOtherRequest`, `AlphaRequest`), and lives in `tests/Paramore.Brighter.Core.Tests/Validation/`. `TestRequest` in the transport-correction criteria means a request type local to that gateway test project. No criterion uses `GreetingMade`, which is not visible to any test project (C-9).
 
 ### The rule's behaviour
 
 **AC-1** (FR-1, FR-5, FR-6) — *A mismatch is one Error, correctly sourced.*
-Given a `Subscription<FakeChannelFactoryRequest>` named `greeting-sub` with `ChannelFactory` null, and `options.DefaultChannelFactory` set to a `FakeTransportChannelFactory`,
+Given a `Subscription<FakeChannelFactoryRequest>` named `greeting-sub` with `ChannelFactory` null, and `options.DefaultChannelFactory` set to a `DeclaredChannelFactory`,
 When the rule is evaluated,
 Then exactly one `ValidationError` is produced, with `Severity == ValidationSeverity.Error` and `Source == "Subscription 'greeting-sub'"`.
 
 **AC-2** (FR-1, FR-3 direct arm) — *A matching subscription passes.*
-Given a `FakeTransportSubscription` named `greeting-sub` with `ChannelFactory` null, and `options.DefaultChannelFactory` set to a `FakeTransportChannelFactory`,
+Given a `DeclaringSubscription` named `greeting-sub` with `ChannelFactory` null, and `options.DefaultChannelFactory` set to a `DeclaredChannelFactory`,
 When the rule is evaluated,
 Then no findings are produced.
 
 **AC-3** (FR-2) — *The per-subscription factory overrides the default.*
-Given `options.DefaultChannelFactory` set to a `FakeOtherChannelFactory`, and a `FakeTransportSubscription` named `sub-a` whose `ChannelFactory` is set to a `FakeTransportChannelFactory`,
+Given `options.DefaultChannelFactory` set to a `NonMatchingChannelFactory`, and a `DeclaringSubscription` named `sub-a` whose `ChannelFactory` is set to a `DeclaredChannelFactory`,
 When the rule is evaluated,
 Then no findings are produced for `sub-a`.
 
@@ -317,7 +319,7 @@ When the rule is evaluated once before `subscription.ChannelFactory` has been ba
 Then both evaluations produce identical findings — same count, same `Source`, byte-identical `Message`.
 
 **AC-6** (FR-3 combined arm, FR-13) — *A correct multi-bus configuration produces no false positives.*
-Given `options.DefaultChannelFactory = new CombinedChannelFactory([new FakeTransportChannelFactory(), new FakeOtherChannelFactory()])` and two subscriptions — a `FakeTransportSubscription` named `sub-a` and a `FakeOtherSubscription` named `sub-b`, both with `ChannelFactory` null,
+Given `options.DefaultChannelFactory = new CombinedChannelFactory([new DeclaredChannelFactory(), new NonMatchingChannelFactory()])` and two subscriptions — a `DeclaringSubscription` named `sub-a` and a `NonMatchingSubscription` named `sub-b`, both with `ChannelFactory` null,
 When the rule is evaluated,
 Then no findings are produced for either subscription.
 
@@ -327,17 +329,17 @@ When the rule is evaluated,
 Then exactly one `Error` is produced for `greeting-sub`, whose `Message` contains the display names of both inner factories in constructor order, and does not name `Paramore.Brighter.CombinedChannelFactory` as the type the subscription will be handed.
 
 **AC-8** (FR-3 direct arm) — *A user subclass of a channel factory is accepted.*
-Given a `FakeDerivedChannelFactory` (deriving from `FakeTransportChannelFactory`) set as `options.DefaultChannelFactory`, and a `FakeTransportSubscription` with `ChannelFactory` null,
+Given a `DerivedChannelFactory` (deriving from `DeclaredChannelFactory`) set as `options.DefaultChannelFactory`, and a `DeclaringSubscription` with `ChannelFactory` null,
 When the rule is evaluated,
 Then no findings are produced.
 
 **AC-9** (FR-3 combined arm) — *The same subclass inside a `CombinedChannelFactory` is flagged, mirroring runtime.*
-Given `options.DefaultChannelFactory = new CombinedChannelFactory([new FakeDerivedChannelFactory()])` and a `FakeTransportSubscription` with `ChannelFactory` null,
+Given `options.DefaultChannelFactory = new CombinedChannelFactory([new DerivedChannelFactory()])` and a `DeclaringSubscription` with `ChannelFactory` null,
 When the rule is evaluated,
 Then exactly one `Error` is produced — and, as a companion assertion, calling `CreateSyncChannel` on that `CombinedChannelFactory` with the same subscription throws `ConfigurationException` (it throws at `CombinedChannelFactory.cs:35-38`, before dispatching to any inner factory, so no channel is created).
 
 **AC-10** (FR-3, no recursion) — *Nested combined factories are not unwrapped.*
-Given `options.DefaultChannelFactory = new CombinedChannelFactory([new CombinedChannelFactory([new FakeTransportChannelFactory()])])` and a `FakeTransportSubscription`,
+Given `options.DefaultChannelFactory = new CombinedChannelFactory([new CombinedChannelFactory([new DeclaredChannelFactory()])])` and a `DeclaringSubscription`,
 When the rule is evaluated,
 Then exactly one `Error` is produced, matching the runtime behaviour of `CombinedChannelFactory`, which also fails to route this subscription.
 
@@ -354,17 +356,17 @@ When the rule is evaluated,
 Then the `Message` contains the display name of the subscription's runtime type — `Paramore.Brighter.Subscription<Paramore.Brighter.Core.Tests.Validation.TestDoubles.FakeChannelFactoryRequest>` — rendered per FR-5's display-name format.
 
 **AC-13** (FR-5 item 4, template T1) — *The two-way remedy, where both directions are legitimate.*
-Given the configuration of AC-4 — a `FakeTransportSubscription` (so `D == typeof(FakeTransportChannelFactory)`, **not** the in-memory default) resolving to a `FakeOtherChannelFactory`,
+Given the configuration of AC-4 — a `DeclaringSubscription` (so `D == typeof(DeclaredChannelFactory)`, **not** the in-memory default) resolving to a `NonMatchingChannelFactory`,
 When the rule is evaluated,
-Then the `Message` ends with the literal `— either configure a channel factory of type {D}, or use a subscription type whose ChannelFactoryType is {F}`, with `{D}` the display name of `FakeTransportChannelFactory` and `{F}` that of `FakeOtherChannelFactory`.
+Then the `Message` ends with the literal `— either configure a channel factory of type {D}, or use a subscription type whose ChannelFactoryType is {F}`, with `{D}` the display name of `DeclaredChannelFactory` and `{F}` that of `NonMatchingChannelFactory`.
 
 **AC-13a** (FR-5 item 4, template T3) — *The in-memory case offers only the direction that fixes the defect.*
-Given the configuration of AC-1 — a plain `Subscription<FakeChannelFactoryRequest>` (so `D == typeof(InMemoryChannelFactory)`) handed a `FakeTransportChannelFactory`,
+Given the configuration of AC-1 — a plain `Subscription<FakeChannelFactoryRequest>` (so `D == typeof(InMemoryChannelFactory)`) handed a `DeclaredChannelFactory`,
 When the rule is evaluated,
-Then the `Message` ends with the literal `— use a subscription type whose ChannelFactoryType is {F}`, naming `FakeTransportChannelFactory`; and the message contains **no** occurrence of the substring `configure a channel factory of type`. The `{D}` half is suppressed entirely, per FR-5 template T3 — advising the developer to configure an `InMemoryChannelFactory` would be advising the C-2 failure.
+Then the `Message` ends with the literal `— use a subscription type whose ChannelFactoryType is {F}`, naming `DeclaredChannelFactory`; and the message contains **no** occurrence of the substring `configure a channel factory of type`. The `{D}` half is suppressed entirely, per FR-5 template T3 — advising the developer to configure an `InMemoryChannelFactory` would be advising the C-2 failure.
 
 **AC-13b** (FR-5 item 4, template T2) — *The combined arm lists the alternatives.*
-Given the configuration of AC-7 but with a `FakeTransportSubscription` (so `D != typeof(InMemoryChannelFactory)`) against a `CombinedChannelFactory` no inner factory of which matches,
+Given the configuration of AC-7 but with a `DeclaringSubscription` (so `D != typeof(InMemoryChannelFactory)`) against a `CombinedChannelFactory` no inner factory of which matches,
 When the rule is evaluated,
 Then the `Message` ends with the literal `— either configure a channel factory of type {D}, or use a subscription type whose ChannelFactoryType is one of: {F-list}`, with `{F-list}` the inner factories' display names in constructor order.
 
@@ -403,7 +405,7 @@ When `ValidatePipelines(throwOnError: true)` runs,
 Then the `HandlerRegistered` rule still produces exactly one `Error` with its existing message, and this feature contributes no additional finding.
 
 **AC-19** (FR-1, C-7) — *A subscription with a null `RequestType` is still checked.*
-Given a `FakeTransportSubscription` constructed with `getRequestType:` a mapping function (so `requestType` may be null) and `messagePumpType: MessagePumpType.Proactor` — both required, or the base `Subscription` constructor throws `ConfigurationException` — such that `RequestType` is null, handed a `FakeOtherChannelFactory`,
+Given a `DeclaringSubscription` constructed with `getRequestType:` a mapping function (so `requestType` may be null) and `messagePumpType: MessagePumpType.Proactor` — both required, or the base `Subscription` constructor throws `ConfigurationException` — such that `RequestType` is null, handed a `NonMatchingChannelFactory`,
 When the rule is evaluated,
 Then exactly one `Error` is produced (the rule does not skip null-`RequestType` subscriptions).
 
@@ -470,7 +472,7 @@ Then no subscription constructor is invoked (so no `ConfigurationException` from
 ### Determinism and hygiene
 
 **AC-30** (FR-13) — *Findings are one-per-subscription, ordered and deterministic.*
-Given two mismatched subscriptions — `sub-a` a `FakeTransportSubscription` and `sub-b` a `FakeOtherSubscription`, in that order in `options.Subscriptions` — evaluated against a `CombinedChannelFactory` whose three inner factories are `[FakeDerivedChannelFactory, AlphaBus.ChannelFactory, BetaBus.ChannelFactory]` (chosen so neither subscription matches),
+Given two mismatched subscriptions — `sub-a` a `DeclaringSubscription` and `sub-b` a `NonMatchingSubscription`, in that order in `options.Subscriptions` — evaluated against a `CombinedChannelFactory` whose three inner factories are `[DerivedChannelFactory, AlphaBus.ChannelFactory, BetaBus.ChannelFactory]` (chosen so neither subscription matches),
 When the rule is evaluated twice,
 Then each run produces exactly two findings — one per subscription, in the order `sub-a`, `sub-b` — with byte-identical messages across the two runs.
 
