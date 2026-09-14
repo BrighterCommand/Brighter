@@ -130,9 +130,17 @@ whose assembly identity payload defeats NFR-2. The rule MUST therefore render ev
 
 A display name MUST NOT contain `Version=`, `Culture=` or `PublicKeyToken=`, and MUST NOT be a bare `Type.Name`.
 
-**Remedy clause (normative template).** Item 4 MUST be rendered as, literally:
-`— either configure a channel factory of type {D-display-name}, or use a subscription type whose ChannelFactoryType is {F-display-names}`
-where `{F-display-names}` is the effective factory's display name in the direct arm. In the **combined arm** the clause is instead rendered `— either configure a channel factory of type {D-display-name}, or use a subscription type whose ChannelFactoryType is one of: {inner factory display names, constructor order, comma-separated}` — "is one of" rather than "is", because a subscription declares exactly one type and the combined factory offers several.
+**Remedy clause (normative templates).** Item 4 MUST be rendered as one of exactly three literals, selected by the rules below. `{F}` is the effective factory's display name; `{F-list}` is the inner factories' display names in constructor order, comma-separated.
+
+| # | Condition | Literal |
+|---|---|---|
+| T1 | Direct arm, and `D != typeof(InMemoryChannelFactory)` | `— either configure a channel factory of type {D}, or use a subscription type whose ChannelFactoryType is {F}` |
+| T2 | Combined arm, and `D != typeof(InMemoryChannelFactory)` | `— either configure a channel factory of type {D}, or use a subscription type whose ChannelFactoryType is one of: {F-list}` |
+| T3 | `D == typeof(InMemoryChannelFactory)` (either arm) | `— use a subscription type whose ChannelFactoryType is {F}` (direct) / `…is one of: {F-list}` (combined) |
+
+**T3 suppresses the `{D}` half, and that suppression is normative.** When `D` is `InMemoryChannelFactory` the subscription is a plain `Subscription`/`Subscription<T>`, and "configure a channel factory of type `Paramore.Brighter.InMemoryChannelFactory`" is not a legitimate remedy — following it produces a consumer that silently reads from an in-memory bus instead of the intended transport, which is exactly the outcome C-2 exists to prevent. Offering it as one of two options is not neutral: it is the option that requires less work, in the case this feature most often fires. T3 therefore offers only the direction that fixes the defect.
+
+T2's "is one of" rather than "is" is deliberate: a subscription declares exactly one channel factory type, while a combined factory offers several.
 
 The remedy MUST be **asymmetric**: it names `{D}` on the "change the configuration" side and `{F}` on the "change the subscription" side. A template referring only to `{D}` would, in this feature's headline case — a plain `Subscription<T>` (`D = InMemoryChannelFactory`) handed a transport factory — advise the developer to configure an in-memory channel factory, which is precisely the silent-wrong-bus outcome C-2 exists to prevent. The remedy is pinned by AC-13 and AC-13a rather than left to the implementer's prose.
 - Example (direct arm): a `Subscription<TestRequest>` handed a `Paramore.Brighter.MessagingGateway.MsSql.ChannelFactory` yields a message containing the literals `Paramore.Brighter.Subscription`, `Paramore.Brighter.InMemoryChannelFactory` and `Paramore.Brighter.MessagingGateway.MsSql.ChannelFactory`, and a remedy clause.
@@ -187,7 +195,7 @@ The rule MUST emit at most one finding per configured subscription per validatio
 - **NFR-3 — No broker or network access.** Neither the rule nor any test introduced by this feature may open a connection to a broker, a database, or any external service. The rule inspects types and configured instances only. The FR-12 sweep is reflection-only.
 - **NFR-4 — No new startup cost when validation is off.** Consistent with FR-6; the rule performs work only inside a `ValidatePipelines()`-enabled run, and its per-subscription cost is bounded by the size of the candidate factory set.
 - **NFR-5 — No public API change to existing abstractions beyond what FR-7 to FR-11 require.** In particular `IAmAChannelFactory`, `Subscription` and `IAmConsumerOptions` keep their current members. If the rule requires read access to a `CombinedChannelFactory`'s inner factories, any new member MUST be added to `CombinedChannelFactory` itself and MUST be additive (see C-4).
-- **NFR-6 — Behaviour preserved for working configurations.** No configuration that starts successfully today may be made to fail by this feature, with exactly **two** deliberate, documented exceptions: **C-2** (a transport-specific subscription resolving to an in-memory factory) and **C-10** (a subscription type defined outside this repository that declares no `ChannelFactoryType` override). Stated without the "genuinely correct" qualifier deliberately — that qualifier made the requirement unfalsifiable, because the specification would then decide for itself what counts as correct. The AWS SQS / Postgres / GCP / MQTT configurations that a naive reading of D1 would have broken are **not** exceptions: FR-7 to FR-11 correct their declarations so they pass, which is the whole reason D2 is in scope.
+- **NFR-6 — Behaviour preserved for working configurations.** No configuration that starts successfully today may be made to fail by this feature, **except** in the cases documented as deliberate exceptions in **C-2**, **C-10** and **C-11**. Deliberately stated without a count: the exception set is enumerated in those constraints, and a number in this sentence has twice been wrong as further cases surfaced. Any newly discovered case MUST be added as its own constraint and to C-8's release-note obligations, not absorbed silently here. Stated without the "genuinely correct" qualifier deliberately — that qualifier made the requirement unfalsifiable, because the specification would then decide for itself what counts as correct. The AWS SQS / Postgres / GCP / MQTT configurations that a naive reading of D1 would have broken are **not** exceptions: FR-7 to FR-11 correct their declarations so they pass, which is the whole reason D2 is in scope.
 - **NFR-7 — British spelling** in all new documentation and XML comments, consistent with the repository.
 
 ### Constraints and Assumptions
@@ -201,7 +209,7 @@ The rule MUST emit at most one finding per configured subscription per validatio
 - **C-5 — The rule needs the consumer options.** FR-2 requires `options.DefaultChannelFactory`, which lives on `IAmConsumerOptions` and is available where the four existing consumer specs are registered (`ServiceCollectionExtensions.cs:199-229`). Threading it into the rule's factory function is expected wiring, not new API. Where the options or the default factory cannot be resolved, FR-2 step 3 (in-memory) applies.
 - **C-6 — Validation sees the configuration as snapshotted by `ValidatePipelines()`.** Consistent with the existing documented behaviour of `ValidatePipelines` ("call this last in the Brighter builder chain"), a channel factory assigned after that call is not seen by the rule.
 - **C-7 — Subscriptions with a null `RequestType` are still checked.** Unlike `PumpHandlerMatch`, `HandlerRegistered` and `UnwrapTransformResolvable`, this rule does not depend on `RequestType` and therefore MUST NOT skip datatype-channel subscriptions whose `RequestType` is null.
-- **C-8 — Versioning.** Targets Brighter V10.X. FR-7 to FR-11 change the value returned by a public virtual property (or add the override where none existed); this is a behaviour change (a fix), not a binary-breaking API change, and must be noted in the release notes. FR-9 to FR-11 in particular make AWS SQS, AWS SQS V4 and Postgres subscriptions routable by `CombinedChannelFactory` for the first time. The release notes MUST additionally carry the C-10 breaking-change note for out-of-repo subscription types.
+- **C-8 — Versioning.** Targets Brighter V10.X. FR-7 to FR-11 change the value returned by a public virtual property (or add the override where none existed); this is a behaviour change (a fix), not a binary-breaking API change, and must be noted in the release notes. FR-9 to FR-11 in particular make AWS SQS, AWS SQS V4 and Postgres subscriptions routable by `CombinedChannelFactory` for the first time. The release notes MUST additionally carry the breaking-change notes for **C-10** (out-of-repo subscription types with no override) and **C-11** (a plain `Subscription<T>` used with MQTT, which works today), each naming its symptom and its one-line remedy.
 - **C-9 — Test placement, test doubles, and their request types.** `tests/Paramore.Brighter.Core.Tests` references only `Paramore.Brighter`, `Paramore.Brighter.BoxProvisioning`, `Paramore.Brighter.Extensions.DependencyInjection`, `Paramore.Brighter.Mediator`, `Paramore.Brighter.Outbox.Hosting`, `Paramore.Brighter.ServiceActivator` and `Paramore.Brighter.Testing` — **no** `MessagingGateway.*` assembly and **not** `ServiceActivator.Extensions.DependencyInjection`. The rule's behavioural tests (AC-1 to AC-19) MUST therefore be written against purpose-built doubles, not real gateway types, and live in `tests/Paramore.Brighter.Core.Tests/Validation/` with the existing `When_…` naming.
 
   **The doubles (a closed set — no AC may use one not listed here).** One class per file under `Validation/TestDoubles/`, per `.agent_instructions/testing.md`:
@@ -256,6 +264,14 @@ The rule MUST emit at most one finding per configured subscription per validatio
   1. `release_notes.md` MUST record this as a breaking startup change for V10.X, naming the symptom (an `Error` from `ValidatePipelines` citing `InMemoryChannelFactory` as the declared type) and the remedy (`public override Type ChannelFactoryType => typeof(MyChannelFactory);`).
   2. The finding's message MUST make the remedy self-evident without consulting the release notes — which FR-5's asymmetric remedy clause already achieves, since `{F}` names the factory the subscription must declare.
   3. `ValidatePipelines` is opt-in, so an affected user can also unblock immediately with `ValidatePipelines(throwOnError: false)` while they add the override. This MUST be stated in the release note as the interim workaround.
+
+- **C-11 — MQTT is a third deliberate exception: a plain `Subscription<T>` consumes MQTT correctly today and will become an `Error`.** MQTT is the one shipped transport whose channel factory accepts *any* `Subscription`. `MQTT/ChannelFactory.cs:61-99` builds its channel from `subscription.ChannelName`, `subscription.RoutingKey` and `subscription.BufferSize` only, and `MqttMessageConsumerFactory.Create` (`MqttMessageConsumerFactory.cs:63-68`) probes with null-tolerant `as IUseBrighterDeadLetterSupport` / `as IUseBrighterInvalidMessageSupport` casts, taking all broker configuration from `MqttMessagingGatewayConsumerConfiguration`. So `new Subscription<T>(…)` handed the MQTT `ChannelFactory` consumes MQTT correctly **today** — it is not a latent failure like the eleven downcasting transports (C-3).
+
+  Under FR-3's direct arm that configuration has `D = typeof(InMemoryChannelFactory)` and `F = MQTT.ChannelFactory`, so it becomes an `Error` and, under the default `throwOnError: true`, blocks a host that currently runs. Unlike C-10 this involves **only shipped Brighter types**, so it is in-repo and cannot be dismissed as a custom-transport edge case.
+
+  **Accepted on the same grounds as D3**, and with the same one-line remedy: use `MqttSubscription<T>`, which is the documented way to configure an MQTT consumer and which FR-8 corrects in this same change. The alternative — exempting MQTT from the rule — would mean the one transport where a mismatch is currently *silent* is also the one the rule stays silent about, which inverts the feature's purpose.
+
+  **Obligations**: the release note required by C-8 MUST name this case explicitly alongside C-10's, with the symptom (an `Error` citing `InMemoryChannelFactory` as the declared type against the MQTT channel factory) and the remedy (`MqttSubscription<T>`). FR-5's template T3 already renders exactly that remedy direction, naming `Paramore.Brighter.MessagingGateway.MQTT.ChannelFactory` as the type the subscription must declare.
 
 ### Out of Scope
 
@@ -337,15 +353,20 @@ Given the configuration of AC-1,
 When the rule is evaluated,
 Then the `Message` contains the display name of the subscription's runtime type — `Paramore.Brighter.Subscription<Paramore.Brighter.Core.Tests.Validation.TestDoubles.FakeChannelFactoryRequest>` — rendered per FR-5's display-name format.
 
-**AC-13** (FR-5 item 4) — *The message carries the pinned remedy clause.*
-Given the configuration of AC-1,
+**AC-13** (FR-5 item 4, template T1) — *The two-way remedy, where both directions are legitimate.*
+Given the configuration of AC-4 — a `FakeTransportSubscription` (so `D == typeof(FakeTransportChannelFactory)`, **not** the in-memory default) resolving to a `FakeOtherChannelFactory`,
 When the rule is evaluated,
-Then the `Message` ends with the literal `— either configure a channel factory of type {D}, or use a subscription type whose ChannelFactoryType is {F}`, where `{D}` is the display name of the declared channel factory type and `{F}` is as defined in FR-5 — here, the direct arm, so the effective factory's display name.
+Then the `Message` ends with the literal `— either configure a channel factory of type {D}, or use a subscription type whose ChannelFactoryType is {F}`, with `{D}` the display name of `FakeTransportChannelFactory` and `{F}` that of `FakeOtherChannelFactory`.
 
-**AC-13a** (FR-5 item 4) — *The remedy names the effective factory, not the in-memory default, in the headline case.*
+**AC-13a** (FR-5 item 4, template T3) — *The in-memory case offers only the direction that fixes the defect.*
 Given the configuration of AC-1 — a plain `Subscription<FakeChannelFactoryRequest>` (so `D == typeof(InMemoryChannelFactory)`) handed a `FakeTransportChannelFactory`,
 When the rule is evaluated,
-Then the `{F}` half of the remedy names `FakeTransportChannelFactory`, and the message does **not** advise the developer to configure an `InMemoryChannelFactory` as the way to make the subscription work. (This is the case that made the earlier `{D}`-only template give backwards advice.)
+Then the `Message` ends with the literal `— use a subscription type whose ChannelFactoryType is {F}`, naming `FakeTransportChannelFactory`; and the message contains **no** occurrence of the substring `configure a channel factory of type`. The `{D}` half is suppressed entirely, per FR-5 template T3 — advising the developer to configure an `InMemoryChannelFactory` would be advising the C-2 failure.
+
+**AC-13b** (FR-5 item 4, template T2) — *The combined arm lists the alternatives.*
+Given the configuration of AC-7 but with a `FakeTransportSubscription` (so `D != typeof(InMemoryChannelFactory)`) against a `CombinedChannelFactory` no inner factory of which matches,
+When the rule is evaluated,
+Then the `Message` ends with the literal `— either configure a channel factory of type {D}, or use a subscription type whose ChannelFactoryType is one of: {F-list}`, with `{F-list}` the inner factories' display names in constructor order.
 
 **AC-14** (FR-5 type display format) — *Display names carry no assembly identity.*
 Given any finding produced by the rule for a closed generic subscription,
