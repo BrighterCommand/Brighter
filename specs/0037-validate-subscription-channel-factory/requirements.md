@@ -132,7 +132,7 @@ A display name MUST NOT contain `Version=`, `Culture=` or `PublicKeyToken=`, and
 
 **Remedy clause (normative template).** Item 4 MUST be rendered as, literally:
 `— either configure a channel factory of type {D-display-name}, or use a subscription type whose ChannelFactoryType is {F-display-names}`
-where `{F-display-names}` is the effective factory's display name in the direct arm, or the comma-separated display names of the inner factories in constructor order in the combined arm.
+where `{F-display-names}` is the effective factory's display name in the direct arm. In the **combined arm** the clause is instead rendered `— either configure a channel factory of type {D-display-name}, or use a subscription type whose ChannelFactoryType is one of: {inner factory display names, constructor order, comma-separated}` — "is one of" rather than "is", because a subscription declares exactly one type and the combined factory offers several.
 
 The remedy MUST be **asymmetric**: it names `{D}` on the "change the configuration" side and `{F}` on the "change the subscription" side. A template referring only to `{D}` would, in this feature's headline case — a plain `Subscription<T>` (`D = InMemoryChannelFactory`) handed a transport factory — advise the developer to configure an in-memory channel factory, which is precisely the silent-wrong-bus outcome C-2 exists to prevent. The remedy is pinned by AC-13 and AC-13a rather than left to the implementer's prose.
 - Example (direct arm): a `Subscription<TestRequest>` handed a `Paramore.Brighter.MessagingGateway.MsSql.ChannelFactory` yields a message containing the literals `Paramore.Brighter.Subscription`, `Paramore.Brighter.InMemoryChannelFactory` and `Paramore.Brighter.MessagingGateway.MsSql.ChannelFactory`, and a remedy clause.
@@ -169,7 +169,7 @@ An automated **reflection sweep** MUST assert, for every non-abstract type assig
 
 Condition 2 is what catches the AWSSQS/Postgres class of defect; a guard that only checked types *declaring* an override would pass over them vacuously.
 
-**Mechanism (normative).** The sweep MUST obtain `ChannelFactoryType` **without invoking a subscription constructor**. `ChannelFactoryType` is an instance virtual property (`Subscription.cs:172`), while the base `Subscription` constructor throws `ConfigurationException` unless `messagePumpType` is `Reactor`/`Proactor` and a `requestType` or `getRequestType` is supplied — and every transport subscription defaults `messagePumpType` to `Unknown` with `requestType` null, so `Activator.CreateInstance` cannot be used. The sweep MUST therefore use an uninitialised instance (`System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject`) or an equivalent construction-free mechanism, and MUST NOT require broker or network access (NFR-3).
+**Mechanism (normative).** The sweep MUST obtain `ChannelFactoryType` **without invoking a subscription constructor**. `ChannelFactoryType` is an instance virtual property (`Subscription.cs:172`), so an instance is needed. `Activator.CreateInstance(Type)` cannot supply one: **no shipped subscription type declares a parameterless constructor** — a constructor whose parameters are all optional does not produce one — so it throws `MissingMethodException`. Separately, several transports' constructors default `messagePumpType` to `MessagePumpType.Unknown` (GCP Pub/Sub, Postgres, MsSql, Kafka among them), which `Subscription.cs:213` rejects with `ConfigurationException`; others default to `Reactor` or `Proactor` (`RMQ.Sync/RmqSubscription.cs:107`, `AWSSQS/SqsSubscription.cs:201`, `Redis/RedisSubscription.cs:125`, `AzureServiceBus/AzureServiceBusSubscription.cs:125`, `RMQ.Async/RmqSubscription.cs:177`, `MQTT/MqttSubscription.cs:131`). The missing parameterless constructor is the universal reason; the pump-type guard is an additional obstacle for some. The sweep MUST therefore use an uninitialised instance (`System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject`) or an equivalent construction-free mechanism, and MUST NOT require broker or network access (NFR-3).
 
 **The check MUST be exposed as a pure predicate** over `(Type subscriptionType, Type declaredFactoryType)` returning pass/fail plus a reason, so that the negative cases (AC-28) can be exercised over synthetic types declared in a test assembly. A guard whose failure path can only be demonstrated by shipping a defective gateway is not testable.
 
@@ -215,11 +215,13 @@ The rule MUST emit at most one finding per configured subscription per validatio
   | `FakeOtherSubscription : Subscription` | Overrides `ChannelFactoryType` to `typeof(FakeOtherChannelFactory)`. Required by AC-6. |
   | `AlphaBus.ChannelFactory` / `BetaBus.ChannelFactory` | Two factories **both named `ChannelFactory`** in different namespaces under `…TestDoubles.AlphaBus` / `…TestDoubles.BetaBus`, plus `AlphaBus.AlphaSubscription` declaring the former. Required by AC-15, which is the same-simple-name case. |
 
-  **Request types.** Each subscription double takes its own distinct request type — `FakeChannelFactoryRequest`, `FakeOtherRequest`, `AlphaRequest` — declared in `…Validation.TestDoubles`, one per file, so assembly scans cannot collide (`.agent_instructions/testing.md`). **No acceptance criterion may use `TestRequest`**: that type exists only under `samples/WebAPI/WebAPI_Dynamo` in namespaces `GreetingsApp.Requests` / `SalutationApp.Requests`, is not visible to any test project, and the namespace `Greetings.Ports.Events` contains `GreetingEvent`, not `TestRequest`.
+  **Request types.** Each subscription double takes its own distinct request type — `FakeChannelFactoryRequest`, `FakeOtherRequest`, `AlphaRequest` — declared in `…Validation.TestDoubles`, one per file, so assembly scans cannot collide (`.agent_instructions/testing.md`). **No acceptance criterion may use `GreetingMade`**: that type exists only under `samples/WebAPI/*` (`WebAPI_Dynamo`, `WebAPI_Dapper`, `WebAPI_EFCore`) in namespaces `GreetingsApp.Requests` / `SalutationApp.Requests`, and is not visible to any test project. The namespace `Greetings.Ports.Events` (a different sample) contains `GreetingEvent`, not `GreetingMade`.
+
+  **`TestRequest` is a placeholder, not a type.** In the transport-correction criteria (AC-20 to AC-26f) and in the FR-7 to FR-11 examples, `TestRequest` stands for a request type declared **locally in that gateway test project**, one per file, per `.agent_instructions/testing.md`. No type named `TestRequest` exists in the repository today and none need be created centrally; each gateway test project supplies its own.
 
   **Host-start behaviour (AC-16, AC-17)** needs `ServiceActivator.Extensions.DependencyInjection` and belongs in `tests/Paramore.Brighter.Extensions.Tests`, which already references it. That project does **not** reference `Paramore.Brighter.Core.Tests` — test projects here do not reference one another — so it MUST declare **its own copies** of the doubles it needs, in its own namespace, with their own distinct request types. This duplication is deliberate and stated so an implementer does not discover it mid-task.
 
-  **Real-type tests.** The five correction criteria (AC-20 to AC-26e) and the FR-12 sweep (AC-27) name real gateway types and live in the gateway test project for that assembly, reflection-only, requiring no infrastructure (NFR-3). The twelve shipped gateway assemblies map to twelve test projects:
+  **Real-type tests.** The transport-correction criteria (AC-20 to AC-26f) and the FR-12 sweep (AC-27) name real gateway types and live in the gateway test project for that assembly, requiring no infrastructure (NFR-3). All are reflection-only **except AC-26f**, which constructs a channel factory and evaluates the rule — construction only, so it still touches no broker, database or network. The twelve shipped gateway assemblies map to twelve test projects:
 
   | Gateway assembly | Test project |
   |---|---|
@@ -248,7 +250,7 @@ The rule MUST emit at most one finding per configured subscription per validatio
   - A subclass of a *transport* subscription (e.g. extending `RmqSubscription` to carry extra configuration) inherits that transport's correct override and is **unaffected**.
   - A subclass of `Subscription`/`Subscription<T>` itself, used with a **downcasting** factory, already fails today — the rule only moves the failure earlier and names it.
   - A subclass of `Subscription`/`Subscription<T>` used with a **non-downcasting** custom factory, in a single-factory (non-combined) configuration, is the genuinely new breakage: it starts today and will not after this change.
-  - Any such subscription used with a `CombinedChannelFactory` already throws `ConfigurationException("No channel factory found for subscription …")` today, so it is not a new failure.
+  - Any such subscription used with a `CombinedChannelFactory` already throws `ConfigurationException("No channel factory found for subscription …")` today — **unless** one of the inner factories is exactly an `InMemoryChannelFactory`, in which case `CombinedChannelFactory.cs:34`'s exact-type match routes it successfully and the rule's combined arm likewise finds a match and reports nothing. Either way it is not a new failure.
 
   **Requirements this places on the change:**
   1. `release_notes.md` MUST record this as a breaking startup change for V10.X, naming the symptom (an `Error` from `ValidatePipelines` citing `InMemoryChannelFactory` as the declared type) and the remedy (`public override Type ChannelFactoryType => typeof(MyChannelFactory);`).
@@ -269,7 +271,7 @@ The rule MUST emit at most one finding per configured subscription per validatio
 
 ## Acceptance Criteria
 
-Unless a criterion names a real gateway type, it is written against the test doubles defined in C-9 — the closed set `FakeTransportSubscription`, `FakeOtherSubscription`, `FakeTransportChannelFactory`, `FakeDerivedChannelFactory`, `FakeOtherChannelFactory`, `AlphaBus.ChannelFactory`, `BetaBus.ChannelFactory`, `AlphaBus.AlphaSubscription` — with their own request types (`FakeChannelFactoryRequest`, `FakeOtherRequest`, `AlphaRequest`), and lives in `tests/Paramore.Brighter.Core.Tests/Validation/`. `TestRequest` in the transport-correction criteria means a request type local to that gateway test project. No criterion uses `GreetingMade` (C-9).
+Unless a criterion names a real gateway type, it is written against the test doubles defined in C-9 — the closed set `FakeTransportSubscription`, `FakeOtherSubscription`, `FakeTransportChannelFactory`, `FakeDerivedChannelFactory`, `FakeOtherChannelFactory`, `AlphaBus.ChannelFactory`, `BetaBus.ChannelFactory`, `AlphaBus.AlphaSubscription` — with their own request types (`FakeChannelFactoryRequest`, `FakeOtherRequest`, `AlphaRequest`), and lives in `tests/Paramore.Brighter.Core.Tests/Validation/`. `TestRequest` in the transport-correction criteria means a request type local to that gateway test project. No criterion uses `GreetingMade`, which is not visible to any test project (C-9).
 
 ### The rule's behaviour
 
@@ -338,7 +340,7 @@ Then the `Message` contains the display name of the subscription's runtime type 
 **AC-13** (FR-5 item 4) — *The message carries the pinned remedy clause.*
 Given the configuration of AC-1,
 When the rule is evaluated,
-Then the `Message` ends with the literal `— either configure a channel factory of type {D}, or use a subscription type whose ChannelFactoryType is {F}`, where `{D}` is the display name of the declared channel factory type and `{F}` the display name of the effective factory.
+Then the `Message` ends with the literal `— either configure a channel factory of type {D}, or use a subscription type whose ChannelFactoryType is {F}`, where `{D}` is the display name of the declared channel factory type and `{F}` is as defined in FR-5 — here, the direct arm, so the effective factory's display name.
 
 **AC-13a** (FR-5 item 4) — *The remedy names the effective factory, not the in-memory default, in the headline case.*
 Given the configuration of AC-1 — a plain `Subscription<FakeChannelFactoryRequest>` (so `D == typeof(InMemoryChannelFactory)`) handed a `FakeTransportChannelFactory`,
@@ -369,6 +371,11 @@ Given the configuration of AC-16 with `ValidatePipelines(throwOnError: false)`,
 When the host starts,
 Then the host starts successfully and the mismatch `Error` is present in the validation results.
 
+**AC-17a** (FR-6, NFR-4) — *A disabled validation run evaluates nothing.*
+Given the mismatched configuration of AC-16 with `ValidatePipelines(enabled: false)`,
+When the host starts,
+Then the host starts successfully and no validation results are produced by any rule. (Verifiable: `BrighterPipelineValidationExtensions.cs:58-60` returns the builder untouched when `enabled` is false.)
+
 **AC-18** (FR-6) — *Existing rules are unaffected.*
 Given a subscription whose `RequestType` has no registered handler and whose channel factory is correctly matched,
 When `ValidatePipelines(throwOnError: true)` runs,
@@ -381,9 +388,9 @@ Then exactly one `Error` is produced (the rule does not skip null-`RequestType` 
 
 ### The five transport corrections
 
-Each of AC-20 to AC-26 lives in the corresponding gateway test project, is reflection-only, and requires no infrastructure.
+Each of AC-20 to AC-26f lives in the corresponding gateway test project and requires no infrastructure. All are reflection-only except AC-26f, which constructs a channel factory and evaluates the rule (construction only — no channel is created).
 
-**AC-20** (FR-7) — Given a `GcpPubSubSubscription<TestRequest>`, When `ChannelFactoryType` is read, Then it equals `typeof(GcpPubSubChannelFactory)`.
+**AC-20** (FR-7) — Given `new GcpPubSubSubscription<TestRequest>(new SubscriptionName("t"), new ChannelName("t"), new RoutingKey("t"), messagePumpType: MessagePumpType.Proactor)` — the three positional arguments and the explicit pump type are both required, since `GcpPubSubSubscription<T>` defaults `messagePumpType` to `Unknown` (`GcpPubSubSubscription.cs:164-180`) and `Subscription.cs:213` rejects that — When `ChannelFactoryType` is read, Then it equals `typeof(GcpPubSubChannelFactory)`.
 
 **AC-21** (FR-8) — Given an `MqttSubscription<TestRequest>`, When `ChannelFactoryType` is read, Then it equals `typeof(Paramore.Brighter.MessagingGateway.MQTT.ChannelFactory)`.
 
@@ -391,7 +398,9 @@ Each of AC-20 to AC-26 lives in the corresponding gateway test project, is refle
 
 **AC-23** (FR-10) — Given a `SqsSubscription<TestRequest>` (AWSSQS.V4), When `ChannelFactoryType` is read, Then it equals `typeof(Paramore.Brighter.MessagingGateway.AWSSQS.V4.ChannelFactory)`.
 
-**AC-24** (FR-11) — Given a `PostgresSubscription<TestRequest>`, When `ChannelFactoryType` is read, Then it equals `typeof(PostgresChannelFactory)`.
+**AC-24** (FR-11) — Given `new PostgresSubscription<TestRequest>(new SubscriptionName("t"), new ChannelName("t"), new RoutingKey("t"), messagePumpType: MessagePumpType.Proactor)` — `PostgresSubscription<T>` likewise defaults `messagePumpType` to `Unknown` (`PostgresSubscription.cs:146-158`) — When `ChannelFactoryType` is read, Then it equals `typeof(PostgresChannelFactory)`.
+
+*Note on the Givens*: the required constructor arguments differ per transport. AC-21 (MQTT) and AC-22/AC-23 (AWS) need no explicit `messagePumpType` — those generic constructors already default to `Proactor` (`MqttSubscription.cs:131`, `SqsSubscription.cs:201`).
 
 **AC-25** (FR-7 to FR-11) — *All five declared types are real channel factories.*
 Given the corrected subscription type for a transport,
@@ -440,7 +449,7 @@ Then no subscription constructor is invoked (so no `ConfigurationException` from
 ### Determinism and hygiene
 
 **AC-30** (FR-13) — *Findings are one-per-subscription, ordered and deterministic.*
-Given two mismatched subscriptions `sub-a` and `sub-b`, in that order in `options.Subscriptions`, evaluated against a `CombinedChannelFactory` with three inner factories,
+Given two mismatched subscriptions — `sub-a` a `FakeTransportSubscription` and `sub-b` a `FakeOtherSubscription`, in that order in `options.Subscriptions` — evaluated against a `CombinedChannelFactory` whose three inner factories are `[FakeDerivedChannelFactory, AlphaBus.ChannelFactory, BetaBus.ChannelFactory]` (chosen so neither subscription matches),
 When the rule is evaluated twice,
 Then each run produces exactly two findings — one per subscription, in the order `sub-a`, `sub-b` — with byte-identical messages across the two runs.
 
