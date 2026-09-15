@@ -24,17 +24,35 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Diagnostics;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
 /// <summary>
-/// Wraps an <see cref="IAmAChannelAsync"/> and retries <see cref="ReceiveAsync"/> calls
-/// when the broker returns <see cref="MessageType.MT_NONE"/>.
-/// Kafka on CI can be slow to deliver messages, so this avoids flaky test failures.
+/// Wraps an <see cref="IAmAChannelAsync"/> and re-polls <see cref="ReceiveAsync"/> when the broker
+/// returns <see cref="MessageType.MT_NONE"/> — Kafka on CI can be slow to deliver a message that
+/// is coming, so a spurious early MT_NONE should not fail a positive assertion.
+///
+/// It re-polls on a <see cref="ChannelFailureException"/> for the same reason: a topic created
+/// moments earlier may not have propagated across the cluster, so the first consume can fail for a
+/// topic that is on its way. The pump rides that out (it catches ChannelFailureException, waits and
+/// continues); a test calling ReceiveAsync directly has no pump, so without this it would be stricter
+/// than production. ⛔ The failure is only swallowed when a message actually arrives: if the budget expires
+/// having received nothing, the last ChannelFailureException is rethrown, because a consumer polling a
+/// topic that really is missing returns MT_NONE on its later polls rather than failing again — so
+/// without this a genuine outage would be masked as an empty receive.
+///
+/// The retry is bounded to the caller's requested timeout: ReceiveAsync(t) never waits longer than t
+/// in total. This preserves the conformance contract that a receive is a single bounded receive — the
+/// FR-2 / FR-9 before-D negative arm and FR-15's "redelivered within 5 s" assertion both depend on a
+/// receive respecting its timeout, so re-polling must never extend the window past the delay under test.
+/// For the same reason there is no pause before or between attempts: every retry draws from what is
+/// left of the caller's budget.
 /// </summary>
-public class RetryableChannelAsync(IAmAChannelAsync inner, int maxRetries = 5) : IAmAChannelAsync
+public class RetryableChannelAsync(IAmAChannelAsync inner) : IAmAChannelAsync
 {
     public ChannelName Name => inner.Name;
 
@@ -48,14 +66,41 @@ public class RetryableChannelAsync(IAmAChannelAsync inner, int maxRetries = 5) :
 
     public async Task<Message> ReceiveAsync(TimeSpan? timeout, CancellationToken cancellationToken = default)
     {
-        for (int attempt = 0; attempt < maxRetries; attempt++)
+        if (timeout is null)
+            return await inner.ReceiveAsync(timeout, cancellationToken);
+
+        var budget = timeout.Value;
+        var stopwatch = Stopwatch.StartNew();
+        var remaining = budget;
+        ExceptionDispatchInfo? failure = null;
+
+        while (true)
         {
-            var message = await inner.ReceiveAsync(timeout, cancellationToken);
+            Message message;
+            try
+            {
+                message = await inner.ReceiveAsync(remaining, cancellationToken);
+            }
+            catch (ChannelFailureException channelFailure)
+            {
+                failure = ExceptionDispatchInfo.Capture(channelFailure);
+                remaining = budget - stopwatch.Elapsed;
+                if (remaining <= TimeSpan.Zero)
+                    throw;
+
+                continue;
+            }
+
             if (message.Header.MessageType != MessageType.MT_NONE)
                 return message;
-        }
 
-        return await inner.ReceiveAsync(timeout, cancellationToken);
+            remaining = budget - stopwatch.Elapsed;
+            if (remaining > TimeSpan.Zero)
+                continue;
+
+            failure?.Throw();
+            return message;
+        }
     }
 
     public Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null,

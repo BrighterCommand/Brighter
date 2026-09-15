@@ -57,7 +57,7 @@ public class When_rmq_async_consumer_disposes_should_dispose_producer
             _rmqConnection,
             new ChannelName(Guid.NewGuid().ToString()),
             new RoutingKey(Guid.NewGuid().ToString()),
-            isDurable: false);
+            isDurable: true);
 
         // Act & Assert - should not throw
         var exception = Record.Exception(() => consumer.Dispose());
@@ -76,7 +76,7 @@ public class When_rmq_async_consumer_disposes_should_dispose_producer
             _rmqConnection,
             queueName,
             topic,
-            isDurable: false,
+            isDurable: true,
             scheduler: scheduler);
 
         var sendProducer = new RmqMessageProducer(_rmqConnection);
@@ -115,7 +115,7 @@ public class When_rmq_async_consumer_disposes_should_dispose_producer
             _rmqConnection,
             queueName,
             topic,
-            isDurable: false,
+            isDurable: true,
             scheduler: scheduler);
 
         var sendProducer = new RmqMessageProducer(_rmqConnection);

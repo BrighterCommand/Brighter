@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -39,9 +39,22 @@ namespace Paramore.Brighter.Test.Generator.Generators;
 /// and conditionally skipping tests for unsupported gateway features.
 /// </summary>
 /// <param name="logger">The logger instance used for diagnostic output during generation.</param>
-public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger)
+/// <param name="ledger">
+/// Optional conformance ledger override. When null the generator loads the ledger from the
+/// checked-in file by walking up from <see cref="AppContext.BaseDirectory"/>. Pass an
+/// <see cref="InMemoryConformanceLedger"/> in tests to control per-cell values.
+/// </param>
+public class MessagingGatewayGenerator(
+    ILogger<MessagingGatewayGenerator> logger,
+    IAmAConformanceLedger? ledger = null)
     : BaseGenerator(logger)
 {
+    // The conformance ledger driving the canonical Deferred Skips, resolved once per
+    // GenerateAsync(TestConfiguration) call. Never null once resolved: LoadLedgerFromFileSystem
+    // throws rather than handing back a null that would silently skip the whole suite.
+    // The canonical-template → FR-column map lives in CanonicalBehaviours.
+    private IAmAConformanceLedger _ledger = null!;
+
     /// <summary>
     /// Generates messaging gateway test files for the configured gateway(s) in the provided <paramref name="configuration"/>.
     /// Uses <see cref="TestConfiguration.MessagingGateway"/> for a single gateway or <see cref="TestConfiguration.MessagingGateways"/> for multiple.
@@ -49,6 +62,10 @@ public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger
     /// <param name="configuration">The root test configuration containing messaging gateway settings and destination folder.</param>
     public async Task GenerateAsync(TestConfiguration configuration)
     {
+        // Resolve the conformance ledger once for this generation run. Throws rather than
+        // returning null: see ConformanceLedger.LoadFrom.
+        _ledger = ledger ?? LoadLedgerFromFileSystem();
+
         foreach (var suite in Suites(configuration))
         {
             await GenerateAsync(
@@ -56,7 +73,8 @@ public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger
                 suite.Prefix,
                 suite.TemplateFolderName,
                 suite.Model,
-                suite.Ignore
+                suite.Ignore,
+                suite.PrepareModel
             );
         }
     }
@@ -80,7 +98,7 @@ public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger
 
     /// <summary>
     /// Describes every rendering this generator performs for <paramref name="configuration"/>:
-    /// the Reactor and Proactor suites of each configured gateway.
+    /// the Reactor, Proactor and Shared suites of each configured gateway.
     /// </summary>
     /// <remarks>
     /// Both <see cref="GenerateAsync(TestConfiguration)"/> and <see cref="Plan(TestConfiguration)"/>
@@ -126,7 +144,7 @@ public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger
     }
 
     /// <summary>
-    /// The two suites - Reactor and Proactor - rendered for a single messaging gateway.
+    /// The three suites - Reactor, Proactor and Shared - rendered for a single messaging gateway.
     /// </summary>
     /// <param name="configuration">The root configuration the model inherits unset values from.</param>
     /// <param name="messagingGatewayConfiguration">The gateway whose suites are described.</param>
@@ -134,12 +152,21 @@ public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger
     /// <param name="modelPrefix">The prefix the templates should read from the model.</param>
     /// <returns>The suites for the gateway.</returns>
     /// <remarks>
-    /// Both suites share one copy of the configuration, carrying the prefix the templates need and
-    /// the values inherited from the root. The caller's own configuration object is left alone, so
-    /// describing the work does not perform part of it - and because the inheritance happens here,
-    /// the model a plan reasons about is the model a generation renders.
+    /// <para>
+    /// All three suites share one copy of the configuration, carrying the prefix the templates need
+    /// and the values inherited from the root. The caller's own configuration object is left alone,
+    /// so describing the work does not perform part of it - and because the inheritance happens
+    /// here, the model a plan reasons about is the model a generation renders.
+    /// </para>
+    /// <para>
+    /// The Shared suite renders support types the Reactor and Proactor tests both reference, so it
+    /// lands in the gateway's <c>Generated</c> folder rather than a variant folder beneath it, and
+    /// takes neither the capability-flag <c>ignore</c> nor the ledger's per-template
+    /// <c>prepareModel</c>: its templates are not conformance behaviours, so there is no capability
+    /// that could withdraw one and no ledger cell that could defer one.
+    /// </para>
     /// </remarks>
-    private static IEnumerable<GenerationSuite> SuitesFor(
+    private IEnumerable<GenerationSuite> SuitesFor(
         TestConfiguration configuration,
         MessagingGatewayConfiguration messagingGatewayConfiguration, string folderName, string modelPrefix)
     {
@@ -151,9 +178,16 @@ public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger
                 Path.Combine("MessagingGateway", folderName, "Generated", variant),
                 Path.Combine("MessagingGateway", variant),
                 model,
-                filename => SkipTest(model, filename)
+                filename => SkipTest(model, filename),
+                SetCanonicalSkip
             );
         }
+
+        yield return new GenerationSuite(
+            Path.Combine("MessagingGateway", folderName, "Generated"),
+            Path.Combine("MessagingGateway", "Shared"),
+            model
+        );
     }
 
     /// <summary>
@@ -172,30 +206,10 @@ public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger
             return true;
         }
 
-        if (!configuration.HasSupportToDelayedMessages && fileName.Contains("delayed_message"))
-        {
-            return true;
-        }
-
-        if (!configuration.HasSupportToDelayedMessages && fileName.Contains("with_delay"))
-        {
-            return true;
-        }
-
-        if (!configuration.HasSupportToDeadLetterQueue && fileName.Contains("dead_letter_queue"))
-        {
-            return true;
-        }
-
         if (
             !configuration.HasSupportToValidateBrokerExistence
             && fileName.Contains("no_broker_created")
         )
-        {
-            return true;
-        }
-
-        if (!configuration.HasSupportToRequeue && fileName.Contains("requeuing"))
         {
             return true;
         }
@@ -208,6 +222,61 @@ public class MessagingGatewayGenerator(ILogger<MessagingGatewayGenerator> logger
             return true;
         }
 
+        // Narrower than the gate above: a transport can honour an explicit Validate and still
+        // complete silently against infrastructure that is not there, so this skips assume_channel
+        // alone and leaves validate_channel generated.
+        if (
+            !configuration.HasSupportToDetectMissingInfrastructureOnAssume
+            && fileName.Contains("assume_channel")
+        )
+        {
+            return true;
+        }
+
         return false;
+    }
+
+    // ── Ledger integration ───────────────────────────────────────────────────
+
+    /// <summary>
+    /// Loads the conformance ledger by walking up from <see cref="AppContext.BaseDirectory"/>
+    /// until <c>specs/0036-…/conformance-status.md</c> is found.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the ledger cannot be located. See <see cref="ConformanceLedger.LoadFrom"/> for
+    /// why this fails rather than generating an ungated suite.
+    /// </exception>
+    private static IAmAConformanceLedger LoadLedgerFromFileSystem()
+        => ConformanceLedger.LoadFrom(AppContext.BaseDirectory);
+
+    /// <summary>
+    /// Sets the <see cref="MessagingGatewayConfiguration.Skip"/> property on the model before
+    /// each Reactor/Proactor template render. For canonical templates whose base name is in
+    /// <see cref="CanonicalBehaviours.TEMPLATE_FR_COLUMNS"/> and whose configuration declares a
+    /// <see cref="MessagingGatewayConfiguration.LedgerKey"/>, the ledger determines whether a
+    /// Deferred Skip string is emitted. For all other templates the property is set to the empty
+    /// string (not null) so that `{% if Skip != empty %}` evaluates to false in the template.
+    /// </summary>
+    private void SetCanonicalSkip(string templatePath, object model)
+    {
+        if (model is not MessagingGatewayConfiguration config) return;
+
+        // The full template path, not a bare name: unlike the Ignore predicate, prepareModel
+        // is handed the path the plan resolved, so take the name from it.
+        var baseName = Path.GetFileName(templatePath).Replace(".cs.liquid", "");
+
+        var frColumn = CanonicalBehaviours.FrColumnFor(baseName);
+
+        if (frColumn != null && !string.IsNullOrEmpty(config.LedgerKey))
+        {
+            config.Skip = _ledger.GetSkip(config.LedgerKey, frColumn, CanonicalBehaviours.BehaviourFor(frColumn));
+        }
+        else
+        {
+            // Empty string rather than null: Liquid's `nil != empty` is TRUE, so null would
+            // cause `{% if Skip != empty %}` to render even when Skip carries no value.
+            // An empty string satisfies `"" == empty` and correctly suppresses the block.
+            config.Skip = string.Empty;
+        }
     }
 }

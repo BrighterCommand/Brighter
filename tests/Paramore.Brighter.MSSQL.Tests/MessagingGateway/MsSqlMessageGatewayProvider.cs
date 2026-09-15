@@ -22,9 +22,39 @@ public class MsSqlMessageGatewayProvider
         IAmAMessageGatewayReactorProvider
 {
     private RelationalDatabaseConfiguration? _configuration;
+    private ConformanceHarnessMessageScheduler? _scheduler;
 
     public MsSqlMessageGatewayProvider()
     {
+    }
+
+    // MSSQL has no native delayed delivery: the gateway delegates a requested delay to the
+    // scheduler seam (producer.Scheduler for FR-9 send-with-delay; the consumer factory's
+    // scheduler for FR-2 requeue-with-delay). One shared harness scheduler honours the delay by
+    // wall-clock and re-publishes to the topic. Accessed only after _configuration is set (the
+    // channel/producer factories assign it first); disposed in CleanUp.
+    private ConformanceHarnessMessageScheduler Scheduler =>
+        _scheduler ??= new ConformanceHarnessMessageScheduler(RepublishToMsSql);
+
+    // The only part of scheduling that is MSSQL's: build a producer, send, and hand it back for
+    // the scheduler to dispose. The factory hands back the interface, so the disposal the
+    // scheduler performs is the cast one.
+    private IDisposable? RepublishToMsSql(Message message)
+    {
+        var publication = new Publication
+        {
+            Topic = message.Header.Topic,
+            MakeChannels = OnMissingChannel.Create,
+        };
+
+        var producer = new MsSqlMessageProducerFactory(_configuration!, [publication])
+            .Create()
+            .First()
+            .Value;
+
+        return ConformanceHarnessMessageScheduler.SendAndHandBack(
+            producer as IDisposable,
+            () => ((IAmAMessageProducerSync)producer).Send(message));
     }
 
     public void CleanUp(
@@ -40,6 +70,8 @@ public class MsSqlMessageGatewayProvider
         }
 
         producer?.Dispose();
+        _scheduler?.Dispose();
+        _scheduler = null;
     }
 
     public async Task CleanUpAsync(
@@ -58,6 +90,9 @@ public class MsSqlMessageGatewayProvider
         {
             await producer.DisposeAsync();
         }
+
+        _scheduler?.Dispose();
+        _scheduler = null;
     }
 
     public IAmAChannelSync CreateChannel(MsSqlSubscription subscription)
@@ -69,12 +104,12 @@ public class MsSqlMessageGatewayProvider
             _configuration = testHelper.QueueConfiguration;
         }
 
-        var consumerFactory = new MsSqlMessageConsumerFactory(_configuration);
+        var consumerFactory = new MsSqlMessageConsumerFactory(_configuration, Scheduler);
         var channel = new ChannelFactory(consumerFactory).CreateSyncChannel(subscription);
 
         if (subscription.DeadLetterRoutingKey != null && subscription.RequeueCount > 0)
         {
-            return new RequeueTrackingChannelSync(channel, subscription.RequeueCount);
+            return new RequeueTrackingChannelSync(channel);
         }
 
         return channel;
@@ -92,12 +127,12 @@ public class MsSqlMessageGatewayProvider
             _configuration = testHelper.QueueConfiguration;
         }
 
-        var consumerFactory = new MsSqlMessageConsumerFactory(_configuration);
+        var consumerFactory = new MsSqlMessageConsumerFactory(_configuration, Scheduler);
         var channel = new ChannelFactory(consumerFactory).CreateAsyncChannel(subscription);
 
         if (subscription.DeadLetterRoutingKey != null && subscription.RequeueCount > 0)
         {
-            return Task.FromResult<IAmAChannelAsync>(new RequeueTrackingChannelAsync(channel, subscription.RequeueCount));
+            return Task.FromResult<IAmAChannelAsync>(new RequeueTrackingChannelAsync(channel));
         }
 
         return Task.FromResult(channel);
@@ -113,8 +148,9 @@ public class MsSqlMessageGatewayProvider
         }
 
         var producers = new MsSqlMessageProducerFactory(_configuration, [publication]).Create();
-        var producer = producers.First().Value;
-        return (IAmAMessageProducerSync)producer;
+        var producer = (IAmAMessageProducerSync)producers.First().Value;
+        producer.Scheduler = Scheduler;
+        return producer;
     }
 
     public async Task<IAmAMessageProducerAsync> CreateProducerAsync(
@@ -131,8 +167,9 @@ public class MsSqlMessageGatewayProvider
 
         var producers = await new MsSqlMessageProducerFactory(_configuration, [publication])
             .CreateAsync();
-        var producer = producers.First().Value;
-        return (IAmAMessageProducerAsync)producer;
+        var producer = (IAmAMessageProducerAsync)producers.First().Value;
+        producer.Scheduler = Scheduler;
+        return producer;
     }
 
     public Publication CreatePublication(RoutingKey routingKey, OnMissingChannel makeChannels = OnMissingChannel.Create)
@@ -148,14 +185,15 @@ public class MsSqlMessageGatewayProvider
         RoutingKey routingKey,
         ChannelName channelName,
         OnMissingChannel makeChannel,
-        bool setupDeadLetterQueue = false
+        RoutingKey? deadLetterRoutingKey = null,
+        RoutingKey? invalidMessageRoutingKey = null
     )
     {
         // In MSSQL messaging, the producer writes to "queue" = Topic.Value and the consumer
         // reads from "queue" = ChannelName.Value, so they must match for message delivery.
         var msSqlChannelName = new ChannelName(routingKey.Value);
 
-        if (setupDeadLetterQueue)
+        if (deadLetterRoutingKey != null)
         {
             return new MsSqlSubscription<MyCommand>(
                 subscriptionName: new SubscriptionName(Uuid.NewAsString()),
@@ -163,7 +201,8 @@ public class MsSqlMessageGatewayProvider
                 routingKey: routingKey,
                 messagePumpType: MessagePumpType.Proactor,
                 makeChannels: makeChannel,
-                deadLetterRoutingKey: new RoutingKey($"{routingKey}.DLQ"),
+                deadLetterRoutingKey: deadLetterRoutingKey,
+                invalidMessageRoutingKey: invalidMessageRoutingKey,
                 requeueCount: 3
             );
         }
@@ -173,7 +212,8 @@ public class MsSqlMessageGatewayProvider
             channelName: msSqlChannelName,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
-            makeChannels: makeChannel
+            makeChannels: makeChannel,
+            invalidMessageRoutingKey: invalidMessageRoutingKey
         );
     }
 
@@ -187,36 +227,35 @@ public class MsSqlMessageGatewayProvider
         return new RoutingKey($"Topic{Uuid.New():N}");
     }
 
+    public RejectionMetadataKeys RejectionMetadataKeys =>
+        new RejectionMetadataKeys(
+            "originalTopic",
+            "originalMessageType",
+            "rejectionReason",
+            "rejectionMessage",
+            "rejectionTimestamp"
+        );
+
     public Message GetMessageFromDeadLetterQueue(MsSqlSubscription subscription)
     {
-        var dlqSubscription = new MsSqlSubscription<MyCommand>(
-            subscriptionName: new SubscriptionName(Uuid.NewAsString()),
-            channelName: new ChannelName($"DLQ-{Uuid.New():N}"),
-            routingKey: subscription.DeadLetterRoutingKey!,
-            messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Assume
-        );
+        if (subscription.DeadLetterRoutingKey == null)
+            return Message.Empty;
 
         var dlqConsumer = new MsSqlMessageConsumer(
             _configuration,
-            dlqSubscription.RoutingKey.Value
+            subscription.DeadLetterRoutingKey.Value
         );
 
         try
         {
-            for (var i = 0; i < 10; i++)
+            var messages = dlqConsumer.Receive(TimeSpan.FromSeconds(5));
+            var message = messages.First();
+            if (message.Header.MessageType != MessageType.MT_NONE)
             {
-                var messages = dlqConsumer.Receive(TimeSpan.FromSeconds(5));
-                var message = messages.First();
-                if (message.Header.MessageType != MessageType.MT_NONE)
-                {
-                    dlqConsumer.Acknowledge(message);
-                    return message;
-                }
-                Thread.Sleep(1000);
+                dlqConsumer.Acknowledge(message);
             }
 
-            return new Message();
+            return message;
         }
         finally
         {
@@ -229,34 +268,24 @@ public class MsSqlMessageGatewayProvider
         CancellationToken cancellationToken = default
     )
     {
-        var dlqSubscription = new MsSqlSubscription<MyCommand>(
-            subscriptionName: new SubscriptionName(Uuid.NewAsString()),
-            channelName: new ChannelName($"DLQ-{Uuid.New():N}"),
-            routingKey: subscription.DeadLetterRoutingKey!,
-            messagePumpType: MessagePumpType.Proactor,
-            makeChannels: OnMissingChannel.Assume
-        );
+        if (subscription.DeadLetterRoutingKey == null)
+            return Message.Empty;
 
         var dlqConsumer = new MsSqlMessageConsumer(
             _configuration,
-            dlqSubscription.RoutingKey.Value
+            subscription.DeadLetterRoutingKey.Value
         );
 
         try
         {
-            for (var i = 0; i < 10; i++)
+            var messages = await dlqConsumer.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
+            var message = messages.First();
+            if (message.Header.MessageType != MessageType.MT_NONE)
             {
-                var messages = await dlqConsumer.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
-                var message = messages.First();
-                if (message.Header.MessageType != MessageType.MT_NONE)
-                {
-                    await dlqConsumer.AcknowledgeAsync(message, cancellationToken);
-                    return message;
-                }
-                await Task.Delay(1000, cancellationToken);
+                await dlqConsumer.AcknowledgeAsync(message, cancellationToken);
             }
 
-            return new Message();
+            return message;
         }
         finally
         {
@@ -264,16 +293,71 @@ public class MsSqlMessageGatewayProvider
         }
     }
 
+    public Message GetMessageFromInvalidChannel(MsSqlSubscription subscription)
+    {
+        if (subscription.InvalidMessageRoutingKey == null)
+            return Message.Empty;
+
+        var invalidConsumer = new MsSqlMessageConsumer(
+            _configuration,
+            subscription.InvalidMessageRoutingKey.Value
+        );
+
+        try
+        {
+            var messages = invalidConsumer.Receive(TimeSpan.FromSeconds(5));
+            var message = messages.First();
+            if (message.Header.MessageType != MessageType.MT_NONE)
+            {
+                invalidConsumer.Acknowledge(message);
+            }
+
+            return message;
+        }
+        finally
+        {
+            invalidConsumer.Dispose();
+        }
+    }
+
+    public async Task<Message> GetMessageFromInvalidChannelAsync(
+        MsSqlSubscription subscription,
+        CancellationToken cancellationToken = default
+    )
+    {
+        if (subscription.InvalidMessageRoutingKey == null)
+            return Message.Empty;
+
+        var invalidConsumer = new MsSqlMessageConsumer(
+            _configuration,
+            subscription.InvalidMessageRoutingKey.Value
+        );
+
+        try
+        {
+            var messages = await invalidConsumer.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
+            var message = messages.First();
+            if (message.Header.MessageType != MessageType.MT_NONE)
+            {
+                await invalidConsumer.AcknowledgeAsync(message, cancellationToken);
+            }
+
+            return message;
+        }
+        finally
+        {
+            await invalidConsumer.DisposeAsync();
+        }
+    }
+
     private class RequeueTrackingChannelAsync : IAmAChannelAsync
     {
         private readonly IAmAChannelAsync _inner;
-        private readonly int _maxRequeueCount;
         private readonly Dictionary<string, int> _requeueCounts = new();
 
-        public RequeueTrackingChannelAsync(IAmAChannelAsync inner, int maxRequeueCount)
+        public RequeueTrackingChannelAsync(IAmAChannelAsync inner)
         {
             _inner = inner;
-            _maxRequeueCount = maxRequeueCount;
         }
 
         public ChannelName Name => _inner.Name;
@@ -306,11 +390,13 @@ public class MsSqlMessageGatewayProvider
             count++;
             _requeueCounts[originalId] = count;
 
-            if (count >= _maxRequeueCount)
-            {
-                await _inner.RejectAsync(message, cancellationToken: cancellationToken);
-                return false;
-            }
+            // The delivery budget is NOT enforced here. Reactor and Proactor own it: they call
+            // UpdateHandledCount, test HandledCountReached(RequeueCount), and reject with
+            // DeliveryError when it is spent. This wrapper used to do the same thing at channel
+            // level, which meant the FR-23 conformance behaviour could pass on the harness's copy
+            // of the rule while the product's copy was untested - and would have kept passing had
+            // the two diverged. Tracking the original message id is harness bookkeeping, so it
+            // stays; deciding when a message dies is production behaviour, so it does not.
 
             return await _inner.RequeueAsync(message, timeOut, cancellationToken);
         }
@@ -326,13 +412,11 @@ public class MsSqlMessageGatewayProvider
     private class RequeueTrackingChannelSync : IAmAChannelSync
     {
         private readonly IAmAChannelSync _inner;
-        private readonly int _maxRequeueCount;
         private readonly Dictionary<string, int> _requeueCounts = new();
 
-        public RequeueTrackingChannelSync(IAmAChannelSync inner, int maxRequeueCount)
+        public RequeueTrackingChannelSync(IAmAChannelSync inner)
         {
             _inner = inner;
-            _maxRequeueCount = maxRequeueCount;
         }
 
         public ChannelName Name => _inner.Name;
@@ -358,11 +442,13 @@ public class MsSqlMessageGatewayProvider
             count++;
             _requeueCounts[originalId] = count;
 
-            if (count >= _maxRequeueCount)
-            {
-                _inner.Reject(message);
-                return false;
-            }
+            // The delivery budget is NOT enforced here. Reactor and Proactor own it: they call
+            // UpdateHandledCount, test HandledCountReached(RequeueCount), and reject with
+            // DeliveryError when it is spent. This wrapper used to do the same thing at channel
+            // level, which meant the FR-23 conformance behaviour could pass on the harness's copy
+            // of the rule while the product's copy was untested - and would have kept passing had
+            // the two diverged. Tracking the original message id is harness bookkeeping, so it
+            // stays; deciding when a message dies is production behaviour, so it does not.
 
             return _inner.Requeue(message, timeOut);
         }

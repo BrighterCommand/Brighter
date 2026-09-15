@@ -71,7 +71,7 @@ public class PostgresMessageGatewayProvider
 
         if (subscription.DeadLetterRoutingKey != null && subscription.RequeueCount > 0)
         {
-            return new RequeueTrackingChannelSync(channel, subscription.RequeueCount);
+            return new RequeueTrackingChannelSync(channel);
         }
 
         return channel;
@@ -87,7 +87,7 @@ public class PostgresMessageGatewayProvider
 
         if (subscription.DeadLetterRoutingKey != null && subscription.RequeueCount > 0)
         {
-            return new RequeueTrackingChannelAsync(channel, subscription.RequeueCount);
+            return new RequeueTrackingChannelAsync(channel);
         }
 
         return channel;
@@ -124,14 +124,15 @@ public class PostgresMessageGatewayProvider
         RoutingKey routingKey,
         ChannelName channelName,
         OnMissingChannel makeChannel,
-        bool setupDeadLetterQueue = false
+        RoutingKey? deadLetterRoutingKey = null,
+        RoutingKey? invalidMessageRoutingKey = null
     )
     {
         // In PostgreSQL messaging, the producer writes to "queue" = Topic.Value and the consumer
         // reads from "queue" = ChannelName.Value, so they must match for message delivery.
         var pgChannelName = new ChannelName(routingKey.Value);
 
-        if (setupDeadLetterQueue)
+        if (deadLetterRoutingKey != null)
         {
             return new PostgresSubscription<MyCommand>(
                 subscriptionName: new SubscriptionName(Uuid.NewAsString()),
@@ -139,7 +140,8 @@ public class PostgresMessageGatewayProvider
                 routingKey: routingKey,
                 messagePumpType: MessagePumpType.Proactor,
                 makeChannels: makeChannel,
-                deadLetterRoutingKey: new RoutingKey($"{routingKey}.DLQ"),
+                deadLetterRoutingKey: deadLetterRoutingKey,
+                invalidMessageRoutingKey: invalidMessageRoutingKey,
                 requeueCount: 3
             );
         }
@@ -149,7 +151,8 @@ public class PostgresMessageGatewayProvider
             channelName: pgChannelName,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
-            makeChannels: makeChannel
+            makeChannels: makeChannel,
+            invalidMessageRoutingKey: invalidMessageRoutingKey
         );
     }
 
@@ -163,11 +166,20 @@ public class PostgresMessageGatewayProvider
         return new RoutingKey($"Topic{Uuid.New():N}");
     }
 
+    public RejectionMetadataKeys RejectionMetadataKeys =>
+        new RejectionMetadataKeys(
+            "originalTopic",
+            "originalMessageType",
+            "rejectionReason",
+            "rejectionMessage",
+            "rejectionTimestamp"
+        );
+
     public Message GetMessageFromDeadLetterQueue(PostgresSubscription subscription)
     {
         var dlqSubscription = new PostgresSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(Uuid.NewAsString()),
-            channelName: new ChannelName($"DLQ-{Uuid.New():N}"),
+            channelName: new ChannelName(subscription.DeadLetterRoutingKey!.Value),
             routingKey: subscription.DeadLetterRoutingKey!,
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Assume
@@ -180,19 +192,14 @@ public class PostgresMessageGatewayProvider
 
         try
         {
-            for (var i = 0; i < 10; i++)
+            var messages = dlqConsumer.Receive(TimeSpan.FromSeconds(5));
+            var message = messages.First();
+            if (message.Header.MessageType != MessageType.MT_NONE)
             {
-                var messages = dlqConsumer.Receive(TimeSpan.FromSeconds(5));
-                var message = messages.First();
-                if (message.Header.MessageType != MessageType.MT_NONE)
-                {
-                    dlqConsumer.Acknowledge(message);
-                    return message;
-                }
-                Thread.Sleep(1000);
+                dlqConsumer.Acknowledge(message);
             }
 
-            return new Message();
+            return message;
         }
         finally
         {
@@ -207,7 +214,7 @@ public class PostgresMessageGatewayProvider
     {
         var dlqSubscription = new PostgresSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(Uuid.NewAsString()),
-            channelName: new ChannelName($"DLQ-{Uuid.New():N}"),
+            channelName: new ChannelName(subscription.DeadLetterRoutingKey!.Value),
             routingKey: subscription.DeadLetterRoutingKey!,
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Assume
@@ -220,19 +227,14 @@ public class PostgresMessageGatewayProvider
 
         try
         {
-            for (var i = 0; i < 10; i++)
+            var messages = await dlqConsumer.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
+            var message = messages.First();
+            if (message.Header.MessageType != MessageType.MT_NONE)
             {
-                var messages = await dlqConsumer.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
-                var message = messages.First();
-                if (message.Header.MessageType != MessageType.MT_NONE)
-                {
-                    await dlqConsumer.AcknowledgeAsync(message, cancellationToken);
-                    return message;
-                }
-                await Task.Delay(1000, cancellationToken);
+                await dlqConsumer.AcknowledgeAsync(message, cancellationToken);
             }
 
-            return new Message();
+            return message;
         }
         finally
         {
@@ -240,16 +242,87 @@ public class PostgresMessageGatewayProvider
         }
     }
 
+    public Message GetMessageFromInvalidChannel(PostgresSubscription subscription)
+    {
+        if (subscription.InvalidMessageRoutingKey == null)
+            return Message.Empty;
+
+        var invalidSubscription = new PostgresSubscription<MyCommand>(
+            subscriptionName: new SubscriptionName(Uuid.NewAsString()),
+            channelName: new ChannelName(subscription.InvalidMessageRoutingKey!.Value),
+            routingKey: subscription.InvalidMessageRoutingKey,
+            messagePumpType: MessagePumpType.Reactor,
+            makeChannels: OnMissingChannel.Assume
+        );
+
+        var invalidConsumer = new PostgresMessageConsumer(
+            _configuration,
+            invalidSubscription
+        );
+
+        try
+        {
+            var messages = invalidConsumer.Receive(TimeSpan.FromSeconds(5));
+            var message = messages.First();
+            if (message.Header.MessageType != MessageType.MT_NONE)
+            {
+                invalidConsumer.Acknowledge(message);
+            }
+
+            return message;
+        }
+        finally
+        {
+            invalidConsumer.Dispose();
+        }
+    }
+
+    public async Task<Message> GetMessageFromInvalidChannelAsync(
+        PostgresSubscription subscription,
+        CancellationToken cancellationToken = default
+    )
+    {
+        if (subscription.InvalidMessageRoutingKey == null)
+            return Message.Empty;
+
+        var invalidSubscription = new PostgresSubscription<MyCommand>(
+            subscriptionName: new SubscriptionName(Uuid.NewAsString()),
+            channelName: new ChannelName(subscription.InvalidMessageRoutingKey!.Value),
+            routingKey: subscription.InvalidMessageRoutingKey,
+            messagePumpType: MessagePumpType.Proactor,
+            makeChannels: OnMissingChannel.Assume
+        );
+
+        var invalidConsumer = new PostgresMessageConsumer(
+            _configuration,
+            invalidSubscription
+        );
+
+        try
+        {
+            var messages = await invalidConsumer.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
+            var message = messages.First();
+            if (message.Header.MessageType != MessageType.MT_NONE)
+            {
+                await invalidConsumer.AcknowledgeAsync(message, cancellationToken);
+            }
+
+            return message;
+        }
+        finally
+        {
+            await invalidConsumer.DisposeAsync();
+        }
+    }
+
     private class RequeueTrackingChannelAsync : IAmAChannelAsync
     {
         private readonly IAmAChannelAsync _inner;
-        private readonly int _maxRequeueCount;
         private readonly Dictionary<string, int> _requeueCounts = new();
 
-        public RequeueTrackingChannelAsync(IAmAChannelAsync inner, int maxRequeueCount)
+        public RequeueTrackingChannelAsync(IAmAChannelAsync inner)
         {
             _inner = inner;
-            _maxRequeueCount = maxRequeueCount;
         }
 
         public ChannelName Name => _inner.Name;
@@ -282,11 +355,13 @@ public class PostgresMessageGatewayProvider
             count++;
             _requeueCounts[originalId] = count;
 
-            if (count >= _maxRequeueCount)
-            {
-                await _inner.RejectAsync(message, cancellationToken: cancellationToken);
-                return false;
-            }
+            // The delivery budget is NOT enforced here. Reactor and Proactor own it: they call
+            // UpdateHandledCount, test HandledCountReached(RequeueCount), and reject with
+            // DeliveryError when it is spent. This wrapper used to do the same thing at channel
+            // level, which meant the FR-23 conformance behaviour could pass on the harness's copy
+            // of the rule while the product's copy was untested - and would have kept passing had
+            // the two diverged. Tracking the original message id is harness bookkeeping, so it
+            // stays; deciding when a message dies is production behaviour, so it does not.
 
             return await _inner.RequeueAsync(message, timeOut, cancellationToken);
         }
@@ -302,13 +377,11 @@ public class PostgresMessageGatewayProvider
     private class RequeueTrackingChannelSync : IAmAChannelSync
     {
         private readonly IAmAChannelSync _inner;
-        private readonly int _maxRequeueCount;
         private readonly Dictionary<string, int> _requeueCounts = new();
 
-        public RequeueTrackingChannelSync(IAmAChannelSync inner, int maxRequeueCount)
+        public RequeueTrackingChannelSync(IAmAChannelSync inner)
         {
             _inner = inner;
-            _maxRequeueCount = maxRequeueCount;
         }
 
         public ChannelName Name => _inner.Name;
@@ -334,11 +407,13 @@ public class PostgresMessageGatewayProvider
             count++;
             _requeueCounts[originalId] = count;
 
-            if (count >= _maxRequeueCount)
-            {
-                _inner.Reject(message);
-                return false;
-            }
+            // The delivery budget is NOT enforced here. Reactor and Proactor own it: they call
+            // UpdateHandledCount, test HandledCountReached(RequeueCount), and reject with
+            // DeliveryError when it is spent. This wrapper used to do the same thing at channel
+            // level, which meant the FR-23 conformance behaviour could pass on the harness's copy
+            // of the rule while the product's copy was untested - and would have kept passing had
+            // the two diverged. Tracking the original message id is harness bookkeeping, so it
+            // stays; deciding when a message dies is production behaviour, so it does not.
 
             return _inner.Requeue(message, timeOut);
         }

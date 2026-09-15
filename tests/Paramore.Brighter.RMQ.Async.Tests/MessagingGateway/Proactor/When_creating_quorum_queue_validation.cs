@@ -113,9 +113,9 @@ public class RmqMessageConsumerQuorumValidationTests
         var queueName = new ChannelName(Guid.NewGuid().ToString());
         var routingKey = new RoutingKey(Guid.NewGuid().ToString());
 
-        // Classic queue (default) should work with any settings
+        // Classic queues accept high availability, which quorum queues reject
         using var consumer = new RmqMessageConsumer(rmqConnection, queueName, routingKey,
-            isDurable: false,
+            isDurable: true,
             highAvailability: true,
             queueType: QueueType.Classic);
         

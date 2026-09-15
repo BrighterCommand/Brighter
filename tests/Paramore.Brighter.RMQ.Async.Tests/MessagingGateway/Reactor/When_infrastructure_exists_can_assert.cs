@@ -31,7 +31,7 @@ public class RmqAssumeExistingInfrastructureTests : IDisposable
             connection:rmqConnection, 
             queueName: queueName, 
             routingKey:_message.Header.Topic, 
-            isDurable: false, 
+            isDurable: true, 
             highAvailability:false, 
             makeChannels: OnMissingChannel.Assume);
 

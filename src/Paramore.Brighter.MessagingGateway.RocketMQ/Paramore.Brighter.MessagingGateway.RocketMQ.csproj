@@ -18,4 +18,11 @@
     <PackageReference Include="RocketMQ.Client" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- rocketmq-ci is commented out in ci.yml, so the generated RocketMQ suite never runs and a
+         broker-free test is the only thing that exercises this gateway at all. This assembly is
+         already unsigned (see SignAssembly above), so no strong-name key is involved. -->
+    <InternalsVisibleTo Include="Paramore.Brighter.RocketMQ.Tests" />
+  </ItemGroup>
+
 </Project>
