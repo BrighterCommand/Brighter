@@ -134,10 +134,54 @@ public class ConformanceHarnessMessageSchedulerTests
         }
     }
 
+    [Fact]
+    public void When_disposing_with_a_republish_in_flight_should_dispose_what_it_allocated()
+    {
+        // Arrange - a republish that has started but not returned when Dispose runs. Publishing
+        // allocates a producer holding a broker connection, and the scheduler is the only thing
+        // that knows to close it; the callback is the one path where the scheduler can be torn
+        // down between allocating that producer and being told about it.
+        var inFlight = new ManualResetEventSlim(false);
+        var release = new ManualResetEventSlim(false);
+        var allocated = new TrackingDisposable();
+
+        var scheduler = new ConformanceHarnessMessageScheduler(_ =>
+        {
+            inFlight.Set();
+            release.Wait(WELL_PAST_THE_DELAY);
+            return allocated;
+        });
+
+        scheduler.Schedule(AMessage(), TimeSpan.Zero);
+        Assert.True(inFlight.Wait(WELL_PAST_THE_DELAY), "the republish should have begun.");
+
+        // Act - tear the scheduler down with the republish still inside the delegate, then let it
+        // return. Nothing may block: Dispose must not wait on a callback that is waiting on us.
+        scheduler.Dispose();
+        release.Set();
+
+        // Assert
+        Assert.True(allocated.Disposed.Wait(WELL_PAST_THE_DELAY),
+            "a republish that returned after Dispose had run handed its producer to a list that "
+            + "will never be walked again. Nothing else holds it, so the connection it opened stays "
+            + "open past the end of the test that opened it.");
+    }
+
     // ── helpers ───────────────────────────────────────────────────────────────
 
     private static Message AMessage(string topic = "conformance.harness.scheduler") =>
         new(
             new MessageHeader(Id.Random(), new RoutingKey(topic), MessageType.MT_COMMAND),
             new MessageBody("{}"));
+
+    /// <summary>
+    /// Stands in for whatever republishing allocated - a producer, a producer registry - and
+    /// records that the scheduler closed it.
+    /// </summary>
+    private sealed class TrackingDisposable : IDisposable
+    {
+        public ManualResetEventSlim Disposed { get; } = new(false);
+
+        public void Dispose() => Disposed.Set();
+    }
 }
