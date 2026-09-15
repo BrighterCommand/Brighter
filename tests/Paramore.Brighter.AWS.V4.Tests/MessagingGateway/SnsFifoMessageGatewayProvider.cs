@@ -16,15 +16,31 @@ public class SnsFifoMessageGatewayProvider
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
     private readonly AwsTestResourceReaper _reaper;
-    private SnsHarnessMessageScheduler? _scheduler;
+    private ConformanceHarnessMessageScheduler? _scheduler;
 
     // SNS has no native delayed publish; the producer delegates a requested delay to this seam, which
     // honours it by wall-clock and re-publishes to the (FIFO) SNS topic once the delay elapses (FR-9).
     // The message keeps the FIFO MessageGroupId/MessageDeduplicationId the FifoMetadataProducer stamped.
-    private SnsHarnessMessageScheduler Scheduler =>
-        _scheduler ??= new SnsHarnessMessageScheduler(
-            _awsConnection,
-            new SnsAttributes(type: SqsType.Fifo, contentBasedDeduplication: false));
+    private ConformanceHarnessMessageScheduler Scheduler =>
+        _scheduler ??= new ConformanceHarnessMessageScheduler(RepublishToSns);
+
+    // The only part of scheduling that is SNS's: build a producer, send, and hand it back for the
+    // scheduler to dispose. The topic attributes say FIFO so the re-publish targets the existing
+    // FIFO topic rather than creating a standard one beside it; the message already carries the
+    // MessageGroupId/MessageDeduplicationId FifoMetadataProducer stamped before the delay.
+    private IDisposable RepublishToSns(Message message)
+    {
+        var publication = new SnsPublication
+        {
+            Topic = message.Header.Topic,
+            MakeChannels = OnMissingChannel.Create,
+            TopicAttributes = new SnsAttributes(type: SqsType.Fifo, contentBasedDeduplication: false),
+        };
+
+        var producer = new SnsMessageProducer(_awsConnection, publication);
+        producer.Send(message);
+        return producer;
+    }
 
     // A FIFO queue name must end in ".fifo" and otherwise use only alphanumerics/hyphens/underscores.
     // The canonical dotted DLQ/invalid keys ("<topic>.DLQ", where <topic> already ends ".fifo") break

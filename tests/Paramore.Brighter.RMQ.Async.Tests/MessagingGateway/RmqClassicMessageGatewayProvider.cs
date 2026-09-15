@@ -34,10 +34,19 @@ public class RmqClassicMessageGatewayProvider
     // arrives carrying Header.Delayed == the applied delay, tripping the universal message-equivalence
     // assertion (Delayed == TimeSpan.Zero). Both are larger src fixes tracked as follow-up; the
     // scheduler seam is a real, gateway-supported delay path that delivers conformant semantics.
-    private RmqHarnessMessageScheduler? _scheduler;
+    private ConformanceHarnessMessageScheduler? _scheduler;
 
-    private RmqHarnessMessageScheduler Scheduler =>
-        _scheduler ??= new RmqHarnessMessageScheduler(_connection);
+    private ConformanceHarnessMessageScheduler Scheduler =>
+        _scheduler ??= new ConformanceHarnessMessageScheduler(RepublishToRmq);
+
+    // The only part of scheduling that is RMQ's: build a producer, send, and hand it back for the
+    // scheduler to dispose.
+    private IDisposable RepublishToRmq(Message message)
+    {
+        var producer = new RmqMessageProducer(_connection);
+        producer.Send(message);
+        return producer;
+    }
 
     public RmqClassicMessageGatewayProvider()
     {

@@ -63,10 +63,31 @@ public class KafkaConsumerMessageGatewayProvider
     // Delay hook (FR-2/9): Kafka has no native delayed delivery, so the gateway delegates a
     // requested delay to the producer's scheduler seam. The harness supplies a wall-clock scheduler
     // (shared across the producer and consumer paths) that re-publishes after the delay elapses.
-    private KafkaHarnessMessageScheduler? _scheduler;
+    private ConformanceHarnessMessageScheduler? _scheduler;
 
-    private KafkaHarnessMessageScheduler Scheduler =>
-        _scheduler ??= new KafkaHarnessMessageScheduler(_configuration);
+    private ConformanceHarnessMessageScheduler Scheduler =>
+        _scheduler ??= new ConformanceHarnessMessageScheduler(RepublishToKafka);
+
+    // The only part of scheduling that is Kafka's: build a producer, send, and hand back what the
+    // scheduler must dispose. Here that is the registry rather than the producer - the producer is
+    // looked up from it and does not own its own lifetime.
+    private IDisposable RepublishToKafka(Message message)
+    {
+        var publication = new KafkaPublication
+        {
+            Topic = message.Header.Topic,
+            NumPartitions = 1,
+            ReplicationFactor = 1,
+            MessageTimeoutMs = 2000,
+            RequestTimeoutMs = 2000,
+            MakeChannels = OnMissingChannel.Create,
+        };
+
+        var registry = new KafkaProducerRegistryFactory(_configuration, [publication]).Create();
+        var producer = (IAmAMessageProducerSync)registry.LookupBy(message.Header.Topic);
+        producer.Send(message);
+        return registry;
+    }
 
     public void CleanUp(
         IAmAMessageProducerSync? producer,

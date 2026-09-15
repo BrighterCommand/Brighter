@@ -22,7 +22,7 @@ public class MsSqlMessageGatewayProvider
         IAmAMessageGatewayReactorProvider
 {
     private RelationalDatabaseConfiguration? _configuration;
-    private MsSqlHarnessMessageScheduler? _scheduler;
+    private ConformanceHarnessMessageScheduler? _scheduler;
 
     public MsSqlMessageGatewayProvider()
     {
@@ -33,8 +33,28 @@ public class MsSqlMessageGatewayProvider
     // scheduler for FR-2 requeue-with-delay). One shared harness scheduler honours the delay by
     // wall-clock and re-publishes to the topic. Accessed only after _configuration is set (the
     // channel/producer factories assign it first); disposed in CleanUp.
-    private MsSqlHarnessMessageScheduler Scheduler =>
-        _scheduler ??= new MsSqlHarnessMessageScheduler(_configuration!);
+    private ConformanceHarnessMessageScheduler Scheduler =>
+        _scheduler ??= new ConformanceHarnessMessageScheduler(RepublishToMsSql);
+
+    // The only part of scheduling that is MSSQL's: build a producer, send, and hand it back for
+    // the scheduler to dispose. The factory hands back the interface, so the disposal the
+    // scheduler performs is the cast one.
+    private IDisposable? RepublishToMsSql(Message message)
+    {
+        var publication = new Publication
+        {
+            Topic = message.Header.Topic,
+            MakeChannels = OnMissingChannel.Create,
+        };
+
+        var producer = new MsSqlMessageProducerFactory(_configuration!, [publication])
+            .Create()
+            .First()
+            .Value;
+
+        ((IAmAMessageProducerSync)producer).Send(message);
+        return producer as IDisposable;
+    }
 
     public void CleanUp(
         IAmAMessageProducerSync? producer,

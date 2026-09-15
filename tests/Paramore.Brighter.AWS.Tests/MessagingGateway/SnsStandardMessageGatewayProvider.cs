@@ -16,7 +16,7 @@ public class SnsStandardMessageGatewayProvider
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
     private readonly AwsTestResourceReaper _reaper;
-    private SnsHarnessMessageScheduler? _scheduler;
+    private ConformanceHarnessMessageScheduler? _scheduler;
 
     public SnsStandardMessageGatewayProvider()
     {
@@ -33,8 +33,23 @@ public class SnsStandardMessageGatewayProvider
 
     // SNS has no native delayed publish; the producer delegates a requested delay to this seam,
     // which honours it by wall-clock and re-publishes to the SNS topic once the delay elapses (FR-9).
-    private SnsHarnessMessageScheduler Scheduler =>
-        _scheduler ??= new SnsHarnessMessageScheduler(_awsConnection);
+    private ConformanceHarnessMessageScheduler Scheduler =>
+        _scheduler ??= new ConformanceHarnessMessageScheduler(RepublishToSns);
+
+    // The only part of scheduling that is SNS's: build a producer, send, and hand it back for the
+    // scheduler to dispose.
+    private IDisposable RepublishToSns(Message message)
+    {
+        var publication = new SnsPublication
+        {
+            Topic = message.Header.Topic,
+            MakeChannels = OnMissingChannel.Create,
+        };
+
+        var producer = new SnsMessageProducer(_awsConnection, publication);
+        producer.Send(message);
+        return producer;
+    }
 
     // SQS queue names permit only alphanumerics, hyphens and underscores. Map the canonical
     // dotted DLQ/invalid routing keys onto that alphabet so the queue can be created.

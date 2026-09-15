@@ -46,9 +46,32 @@ public class MqttMessageGatewayProvider
 
     // Shared harness scheduler for FR-2 (delayed requeue) and FR-9 (delayed send).
     // MQTT has no native delayed delivery; the gateway delegates to the scheduler seam.
-    private MqttHarnessMessageScheduler? _scheduler;
-    private MqttHarnessMessageScheduler Scheduler =>
-        _scheduler ??= new MqttHarnessMessageScheduler(HOSTNAME, PORT);
+    private ConformanceHarnessMessageScheduler? _scheduler;
+    private ConformanceHarnessMessageScheduler Scheduler =>
+        _scheduler ??= new ConformanceHarnessMessageScheduler(RepublishToMqtt);
+
+    // The only part of scheduling that is MQTT's: build a producer, send, and hand it back for the
+    // scheduler to dispose.
+    private IDisposable RepublishToMqtt(Message message)
+    {
+        // The message's topic is the routing key used by both the producer prefix and the
+        // subscriber's wildcard pattern. Publishing to {topicPrefix}/{Header.Topic} (where
+        // topicPrefix == Header.Topic) mirrors the pattern the provider's main producer follows,
+        // so the subscriber's "{routingKey}/#" wildcard catches the redelivered message.
+        var topicPrefix = message.Header.Topic.Value;
+        var config = new MqttMessagingGatewayProducerConfiguration
+        {
+            Hostname = HOSTNAME,
+            Port = PORT,
+            TopicPrefix = topicPrefix,
+            ClientID = $"brighter-sched-{Guid.NewGuid().ToString("N")[..8]}"
+        };
+
+        var publisher = new MqttMessagePublisher(config);
+        var producer = new MqttMessageProducer(publisher, new Publication { Topic = message.Header.Topic });
+        producer.Send(message);
+        return producer;
+    }
 
     // MQTT uses the base Publication type — there is no transport-specific publication class.
     public Publication CreatePublication(

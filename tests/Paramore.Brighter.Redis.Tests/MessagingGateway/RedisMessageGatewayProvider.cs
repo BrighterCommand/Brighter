@@ -41,7 +41,7 @@ public class RedisMessageGatewayProvider
     private readonly RedisMessagingGatewayConfiguration _configuration;
     private RedisMessageConsumer? _dlqConsumer;
     private RedisMessageConsumer? _invalidConsumer;
-    private RedisHarnessMessageScheduler? _scheduler;
+    private ConformanceHarnessMessageScheduler? _scheduler;
 
     public RedisMessageGatewayProvider()
     {
@@ -52,8 +52,23 @@ public class RedisMessageGatewayProvider
     // scheduler seam (producer.Scheduler for FR-9 send-with-delay; the consumer factory's
     // scheduler for FR-2 requeue-with-delay). One shared harness scheduler honours the delay by
     // wall-clock and re-publishes to the topic. Lazily created; disposed in CleanUp.
-    private RedisHarnessMessageScheduler Scheduler =>
-        _scheduler ??= new RedisHarnessMessageScheduler(_configuration);
+    private ConformanceHarnessMessageScheduler Scheduler =>
+        _scheduler ??= new ConformanceHarnessMessageScheduler(RepublishToRedis);
+
+    // The only part of scheduling that is Redis's: build a producer, send, and hand it back for
+    // the scheduler to dispose.
+    private IDisposable RepublishToRedis(Message message)
+    {
+        var publication = new RedisMessagePublication
+        {
+            Topic = message.Header.Topic,
+            MakeChannels = OnMissingChannel.Create,
+        };
+
+        var producer = new RedisMessageProducer(_configuration, publication);
+        producer.Send(message);
+        return producer;
+    }
 
     public void CleanUp(
         IAmAMessageProducerSync? producer,

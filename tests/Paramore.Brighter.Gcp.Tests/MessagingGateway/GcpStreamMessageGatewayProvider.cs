@@ -46,7 +46,7 @@ public class GcpStreamMessageGatewayProvider
 {
     private readonly GcpMessagingGatewayConnection _connection;
     private readonly GcpPubSubChannelFactory _channelFactory;
-    private readonly GcpHarnessMessageScheduler _scheduler;
+    private readonly ConformanceHarnessMessageScheduler _scheduler;
     private GcpPubSubSubscription? _lastSubscription;
 
     public GcpStreamMessageGatewayProvider()
@@ -78,7 +78,39 @@ public class GcpStreamMessageGatewayProvider
             },
         };
         _channelFactory = new GcpPubSubChannelFactory(_connection);
-        _scheduler = new GcpHarnessMessageScheduler(_connection);
+        _scheduler = new ConformanceHarnessMessageScheduler(RepublishToPubSub);
+    }
+
+    // The only part of scheduling that is Pub/Sub's: build a producer, send, and hand it back for
+    // the scheduler to dispose.
+    private IDisposable RepublishToPubSub(Message message)
+    {
+        var publication = new GcpPublication<MyCommand>
+        {
+            Topic = message.Header.Topic,
+            MakeChannels = OnMissingChannel.Assume,
+        };
+
+        var topicName = TopicName.FromProjectTopic(
+            _connection.ProjectId,
+            message.Header.Topic.Value
+        );
+
+        // A message carrying a partition key is published with an OrderingKey (see Parser), which
+        // Pub/Sub rejects unless the publisher client has message ordering enabled. Mirror the
+        // provider's ordering-aware producer so the re-publish of an ordered message succeeds.
+        var enableOrdering = !string.IsNullOrEmpty(message.Header.PartitionKey);
+        var builder = new PublisherClientBuilder
+        {
+            Credential = _connection.Credential,
+            TopicName = topicName,
+            Settings = new PublisherClient.Settings { EnableMessageOrdering = enableOrdering },
+        };
+        _connection.PublisherConfiguration?.Invoke(builder);
+
+        var producer = new GcpMessageProducer(builder.Build(), publication);
+        producer.Send(message);
+        return producer;
     }
 
     public RoutingKey GetOrCreateRoutingKey([CallerMemberName] string? testName = null)

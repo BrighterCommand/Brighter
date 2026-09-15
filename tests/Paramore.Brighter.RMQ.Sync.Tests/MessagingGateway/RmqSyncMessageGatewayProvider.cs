@@ -52,10 +52,19 @@ public class RmqSyncMessageGatewayProvider
     //
     // RMQ.Sync is the V6 blocking API (classic queues only). It declares a single Classic
     // configuration — there is no QueueType.Quorum in this assembly.
-    private RmqSyncHarnessMessageScheduler? _scheduler;
+    private ConformanceHarnessMessageScheduler? _scheduler;
 
-    private RmqSyncHarnessMessageScheduler Scheduler =>
-        _scheduler ??= new RmqSyncHarnessMessageScheduler(_connection);
+    private ConformanceHarnessMessageScheduler Scheduler =>
+        _scheduler ??= new ConformanceHarnessMessageScheduler(RepublishToRmq);
+
+    // The only part of scheduling that is RMQ's: build a producer, send, and hand it back for the
+    // scheduler to dispose.
+    private IDisposable RepublishToRmq(Message message)
+    {
+        var producer = new RmqMessageProducer(_connection);
+        producer.Send(message);
+        return producer;
+    }
 
     public RmqSyncMessageGatewayProvider()
     {
@@ -394,113 +403,6 @@ public class RmqSyncMessageGatewayProvider
             isDurable: false,
             makeChannels: OnMissingChannel.Create
         );
-    }
-
-    // ── inner: scheduler ────────────────────────────────────────────────────
-
-    /// <summary>
-    /// A minimal wall-clock message scheduler for the RMQ.Sync conformance harness (FR-2, FR-9).
-    ///
-    /// The stock <c>rabbitmq:management</c> broker has no delayed-message exchange plugin, so
-    /// <see cref="RmqMessageProducer"/> reports <c>DelaySupported == false</c>. On that path the
-    /// gateway honours a requested delay by delegating to the scheduler seam: producer.Scheduler
-    /// for FR-9 send-with-delay, and the consumer factory's scheduler for FR-2 delayed requeue.
-    /// This scheduler honours the delay by wall-clock and re-publishes the message once the delay
-    /// elapses — exactly the universal-by-wall-clock behaviour FR-2 / FR-9 assert.
-    /// </summary>
-    private sealed class RmqSyncHarnessMessageScheduler
-        : IAmAMessageScheduler,
-          IAmAMessageSchedulerSync,
-          IAmAMessageSchedulerAsync,
-          IDisposable
-    {
-        private readonly RmqMessagingGatewayConnection _connection;
-        private readonly List<Timer> _timers = [];
-        private readonly List<RmqMessageProducer> _producers = [];
-        private readonly object _lock = new();
-
-        public RmqSyncHarnessMessageScheduler(RmqMessagingGatewayConnection connection) =>
-            _connection = connection;
-
-        public string Schedule(Message message, TimeSpan delay)
-        {
-            var id = Guid.NewGuid().ToString();
-            var timer = new Timer(_ => Republish(message), null, Clamp(delay), Timeout.InfiniteTimeSpan);
-            lock (_lock) { _timers.Add(timer); }
-            return id;
-        }
-
-        public string Schedule(Message message, DateTimeOffset at) =>
-            Schedule(message, at - DateTimeOffset.UtcNow);
-
-        public Task<string> ScheduleAsync(
-            Message message,
-            TimeSpan delay,
-            CancellationToken cancellationToken = default
-        ) => Task.FromResult(Schedule(message, delay));
-
-        public Task<string> ScheduleAsync(
-            Message message,
-            DateTimeOffset at,
-            CancellationToken cancellationToken = default
-        ) => Task.FromResult(Schedule(message, at));
-
-        // ReScheduler / Cancel are not exercised by the FR-2 / FR-9 conformance behaviours.
-        public bool ReScheduler(string schedulerId, DateTimeOffset at) => false;
-        public bool ReScheduler(string schedulerId, TimeSpan delay) => false;
-
-        public Task<bool> ReSchedulerAsync(
-            string schedulerId,
-            DateTimeOffset at,
-            CancellationToken cancellationToken = default
-        ) => Task.FromResult(false);
-
-        public Task<bool> ReSchedulerAsync(
-            string schedulerId,
-            TimeSpan delay,
-            CancellationToken cancellationToken = default
-        ) => Task.FromResult(false);
-
-        public void Cancel(string id) { }
-
-        public Task CancelAsync(string id, CancellationToken cancellationToken = default) =>
-            Task.CompletedTask;
-
-        private static TimeSpan Clamp(TimeSpan delay) => delay > TimeSpan.Zero ? delay : TimeSpan.Zero;
-
-        private void Republish(Message message)
-        {
-            try
-            {
-                var producer = new RmqMessageProducer(_connection);
-                lock (_lock) { _producers.Add(producer); }
-                producer.Send(message);
-            }
-            catch
-            {
-                // Best-effort redelivery for the conformance harness; a broker error surfaces
-                // as the conformance test's after-delay arm timing out rather than an unobserved
-                // exception.
-            }
-        }
-
-        public void Dispose()
-        {
-            lock (_lock)
-            {
-                foreach (var timer in _timers)
-                {
-                    try { timer.Dispose(); } catch { /* ignore */ }
-                }
-                _timers.Clear();
-
-                foreach (var producer in _producers)
-                {
-                    try { producer.Dispose(); } catch { /* ignore */ }
-                }
-                _producers.Clear();
-            }
-        }
     }
 
     // ── inner: sync-to-async channel adapter ────────────────────────────────
