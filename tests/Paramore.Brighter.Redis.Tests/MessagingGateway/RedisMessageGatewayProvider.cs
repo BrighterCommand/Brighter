@@ -57,7 +57,7 @@ public class RedisMessageGatewayProvider
 
     // The only part of scheduling that is Redis's: build a producer, send, and hand it back for
     // the scheduler to dispose.
-    private IDisposable RepublishToRedis(Message message)
+    private IDisposable? RepublishToRedis(Message message)
     {
         var publication = new RedisMessagePublication
         {
@@ -66,8 +66,7 @@ public class RedisMessageGatewayProvider
         };
 
         var producer = new RedisMessageProducer(_configuration, publication);
-        producer.Send(message);
-        return producer;
+        return ConformanceHarnessMessageScheduler.SendAndHandBack(producer, () => producer.Send(message));
     }
 
     public void CleanUp(

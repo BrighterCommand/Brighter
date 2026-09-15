@@ -52,8 +52,9 @@ public class MsSqlMessageGatewayProvider
             .First()
             .Value;
 
-        ((IAmAMessageProducerSync)producer).Send(message);
-        return producer as IDisposable;
+        return ConformanceHarnessMessageScheduler.SendAndHandBack(
+            producer as IDisposable,
+            () => ((IAmAMessageProducerSync)producer).Send(message));
     }
 
     public void CleanUp(

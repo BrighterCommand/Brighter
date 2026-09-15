@@ -71,7 +71,7 @@ public class KafkaConsumerMessageGatewayProvider
     // The only part of scheduling that is Kafka's: build a producer, send, and hand back what the
     // scheduler must dispose. Here that is the registry rather than the producer - the producer is
     // looked up from it and does not own its own lifetime.
-    private IDisposable RepublishToKafka(Message message)
+    private IDisposable? RepublishToKafka(Message message)
     {
         var publication = new KafkaPublication
         {
@@ -85,8 +85,7 @@ public class KafkaConsumerMessageGatewayProvider
 
         var registry = new KafkaProducerRegistryFactory(_configuration, [publication]).Create();
         var producer = (IAmAMessageProducerSync)registry.LookupBy(message.Header.Topic);
-        producer.Send(message);
-        return registry;
+        return ConformanceHarnessMessageScheduler.SendAndHandBack(registry, () => producer.Send(message));
     }
 
     public void CleanUp(

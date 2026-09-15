@@ -83,7 +83,7 @@ public class GcpPullMessageGatewayProvider
 
     // The only part of scheduling that is Pub/Sub's: build a producer, send, and hand it back for
     // the scheduler to dispose.
-    private IDisposable RepublishToPubSub(Message message)
+    private IDisposable? RepublishToPubSub(Message message)
     {
         var publication = new GcpPublication<MyCommand>
         {
@@ -109,8 +109,7 @@ public class GcpPullMessageGatewayProvider
         _connection.PublisherConfiguration?.Invoke(builder);
 
         var producer = new GcpMessageProducer(builder.Build(), publication);
-        producer.Send(message);
-        return producer;
+        return ConformanceHarnessMessageScheduler.SendAndHandBack(producer, () => producer.Send(message));
     }
 
     public RoutingKey GetOrCreateRoutingKey([CallerMemberName] string? testName = null)

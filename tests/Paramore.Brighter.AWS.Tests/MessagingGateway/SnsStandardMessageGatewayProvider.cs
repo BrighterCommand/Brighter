@@ -38,7 +38,7 @@ public class SnsStandardMessageGatewayProvider
 
     // The only part of scheduling that is SNS's: build a producer, send, and hand it back for the
     // scheduler to dispose.
-    private IDisposable RepublishToSns(Message message)
+    private IDisposable? RepublishToSns(Message message)
     {
         var publication = new SnsPublication
         {
@@ -47,8 +47,7 @@ public class SnsStandardMessageGatewayProvider
         };
 
         var producer = new SnsMessageProducer(_awsConnection, publication);
-        producer.Send(message);
-        return producer;
+        return ConformanceHarnessMessageScheduler.SendAndHandBack(producer, () => producer.Send(message));
     }
 
     // SQS queue names permit only alphanumerics, hyphens and underscores. Map the canonical

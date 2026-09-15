@@ -28,7 +28,7 @@ public class SnsFifoMessageGatewayProvider
     // scheduler to dispose. The topic attributes say FIFO so the re-publish targets the existing
     // FIFO topic rather than creating a standard one beside it; the message already carries the
     // MessageGroupId/MessageDeduplicationId FifoMetadataProducer stamped before the delay.
-    private IDisposable RepublishToSns(Message message)
+    private IDisposable? RepublishToSns(Message message)
     {
         var publication = new SnsPublication
         {
@@ -38,8 +38,7 @@ public class SnsFifoMessageGatewayProvider
         };
 
         var producer = new SnsMessageProducer(_awsConnection, publication);
-        producer.Send(message);
-        return producer;
+        return ConformanceHarnessMessageScheduler.SendAndHandBack(producer, () => producer.Send(message));
     }
 
     // A FIFO queue name must end in ".fifo" and otherwise use only alphanumerics/hyphens/underscores.

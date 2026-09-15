@@ -52,7 +52,7 @@ public class MqttMessageGatewayProvider
 
     // The only part of scheduling that is MQTT's: build a producer, send, and hand it back for the
     // scheduler to dispose.
-    private IDisposable RepublishToMqtt(Message message)
+    private IDisposable? RepublishToMqtt(Message message)
     {
         // The message's topic is the routing key used by both the producer prefix and the
         // subscriber's wildcard pattern. Publishing to {topicPrefix}/{Header.Topic} (where
@@ -69,8 +69,7 @@ public class MqttMessageGatewayProvider
 
         var publisher = new MqttMessagePublisher(config);
         var producer = new MqttMessageProducer(publisher, new Publication { Topic = message.Header.Topic });
-        producer.Send(message);
-        return producer;
+        return ConformanceHarnessMessageScheduler.SendAndHandBack(producer, () => producer.Send(message));
     }
 
     // MQTT uses the base Publication type — there is no transport-specific publication class.

@@ -167,6 +167,61 @@ public class ConformanceHarnessMessageSchedulerTests
             + "open past the end of the test that opened it.");
     }
 
+    [Fact]
+    public void When_a_send_throws_should_dispose_what_the_republish_allocated()
+    {
+        // Arrange - the scheduler only ever learns about a resource that is handed back to it, so a
+        // send that throws on the way out takes its producer with it. The nine hand-written copies
+        // this replaces put the producer on their list *before* sending, so a failed send still had
+        // its connection closed at teardown; a delegate that returns after sending cannot.
+        var allocated = new TrackingDisposable();
+        var attempted = new ManualResetEventSlim(false);
+
+        using var scheduler = new ConformanceHarnessMessageScheduler(_ =>
+            ConformanceHarnessMessageScheduler.SendAndHandBack(allocated, () =>
+            {
+                attempted.Set();
+                throw new InvalidOperationException("the broker refused the publish");
+            }));
+
+        // Act
+        scheduler.Schedule(AMessage(), DELAY);
+
+        // Assert
+        Assert.True(attempted.Wait(WELL_PAST_THE_DELAY), "the republish should have been attempted.");
+        Assert.True(allocated.Disposed.Wait(WELL_PAST_THE_DELAY),
+            "a send that threw left a producer nobody holds a reference to. It is never handed back, "
+            + "so Dispose will not find it, and the broker connection it opened stays open for the "
+            + "life of the process.");
+    }
+
+    [Fact]
+    public void When_a_send_succeeds_should_dispose_what_it_allocated_only_at_teardown()
+    {
+        // Arrange - the other half. Without it, a SendAndHandBack that simply disposed whatever it
+        // was given would pass the test above while closing every producer the moment it had sent.
+        var allocated = new TrackingDisposable();
+        var sent = new ManualResetEventSlim(false);
+
+        var scheduler = new ConformanceHarnessMessageScheduler(_ =>
+            ConformanceHarnessMessageScheduler.SendAndHandBack(allocated, () => sent.Set()));
+
+        // Act
+        scheduler.Schedule(AMessage(), DELAY);
+        Assert.True(sent.Wait(WELL_PAST_THE_DELAY), "the republish should have sent.");
+
+        // Assert
+        Assert.False(allocated.Disposed.IsSet,
+            "a producer that sent successfully is handed back to the scheduler, not closed behind "
+            + "its back - closing it here would dispose it twice and tear down a connection the "
+            + "harness may still be using.");
+
+        scheduler.Dispose();
+
+        Assert.True(allocated.Disposed.Wait(WELL_PAST_THE_DELAY), "teardown should close it.");
+        Assert.Equal(1, allocated.DisposeCount);
+    }
+
     // ── helpers ───────────────────────────────────────────────────────────────
 
     private static Message AMessage(string topic = "conformance.harness.scheduler") =>
@@ -180,8 +235,16 @@ public class ConformanceHarnessMessageSchedulerTests
     /// </summary>
     private sealed class TrackingDisposable : IDisposable
     {
+        private int _disposeCount;
+
         public ManualResetEventSlim Disposed { get; } = new(false);
 
-        public void Dispose() => Disposed.Set();
+        public int DisposeCount => Volatile.Read(ref _disposeCount);
+
+        public void Dispose()
+        {
+            Interlocked.Increment(ref _disposeCount);
+            Disposed.Set();
+        }
     }
 }

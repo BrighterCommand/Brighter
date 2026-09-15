@@ -41,11 +41,10 @@ public class RmqClassicMessageGatewayProvider
 
     // The only part of scheduling that is RMQ's: build a producer, send, and hand it back for the
     // scheduler to dispose.
-    private IDisposable RepublishToRmq(Message message)
+    private IDisposable? RepublishToRmq(Message message)
     {
         var producer = new RmqMessageProducer(_connection);
-        producer.Send(message);
-        return producer;
+        return ConformanceHarnessMessageScheduler.SendAndHandBack(producer, () => producer.Send(message));
     }
 
     public RmqClassicMessageGatewayProvider()

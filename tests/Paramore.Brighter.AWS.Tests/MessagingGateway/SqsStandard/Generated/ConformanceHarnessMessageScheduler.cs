@@ -155,6 +155,45 @@ public sealed class ConformanceHarnessMessageScheduler(Func<Message, IDisposable
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Sends through <paramref name="send"/> and hands <paramref name="allocated"/> back for the
+    /// scheduler to dispose, closing it here instead if the send throws.
+    /// </summary>
+    /// <remarks>
+    /// The scheduler only ever learns about a resource that is returned to it, so a republish that
+    /// allocates a producer and then fails on the way out would take that producer with it - the
+    /// delegate never returns, nothing else holds a reference, and the broker connection it opened
+    /// stays open for the life of the process. The copies this type replaces did not have the
+    /// problem because they put the producer on a list *before* sending; a delegate that returns
+    /// its allocation cannot, so the rule lives here, once, rather than in all seventeen callers.
+    /// </remarks>
+    /// <param name="allocated">What publishing allocated, or <c>null</c> if it allocated nothing.</param>
+    /// <param name="send">Publishes the message. Its exception is propagated unchanged.</param>
+    /// <returns><paramref name="allocated"/>, for the caller to return to the scheduler.</returns>
+    public static IDisposable? SendAndHandBack(IDisposable? allocated, Action send)
+    {
+        try
+        {
+            send();
+        }
+        catch
+        {
+            try
+            {
+                allocated?.Dispose();
+            }
+            catch
+            {
+                // The send's exception is the one worth reporting; a failure closing up after it
+                // must not replace it on the way out.
+            }
+
+            throw;
+        }
+
+        return allocated;
+    }
+
     private static TimeSpan Clamp(TimeSpan delay) => delay > TimeSpan.Zero ? delay : TimeSpan.Zero;
 
     private void Fire(string id, Message message)
