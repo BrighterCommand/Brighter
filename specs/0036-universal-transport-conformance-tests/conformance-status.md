@@ -119,7 +119,17 @@ cell remains `Unknown`.
   accept. **Measured against a real 4.3.5 broker: all 80 generated `RMQ.Async` conformance tests pass**, and
   the run is unchanged on 4.2 (145 passed, 6 skipped, 0 failed). `RMQ.Sync` keeps `isDurable: false` by
   decision — it targets the RabbitMQ 3.x line through `RabbitMQ.Client` 6.x, and 3.x permits transient
-  non-exclusive queues. The **hand-written** `RMQ.Async` suite now runs clean on 4.3 as well. **22 of its
+  non-exclusive queues. **The consequence of that decision, measured so it is not mistaken for a
+  regression: the `RMQ.Sync` suite does not run on a 4.3+ broker at all.** Against a real 4.3.5 server it
+  is **46 failed / 35 passed / 3 skipped**, every failure on `transient_nonexcl_queues` at queue
+  declaration. That is expected, and it is not confined to the tests — `RmqSubscription.isDurable` still
+  defaults to `false` in the `RMQ.Sync` package, so a *default* subscription from that package is rejected
+  by 4.3+ as well. `RMQ.Sync`'s baseline of **81 passed / 3 skipped / 0 failed** is on the pinned 4.2
+  broker in `docker-compose-rmq.yaml`, which is what `rabbitmq-sync-ci` runs and where it is green; do not
+  compare a 4.3 run against it. Should `RMQ.Sync` ever need to support 4.3+, the fix is the one #4355
+  applied to `RMQ.Async` — move the `isDurable` default to `true` and follow it through the consumer
+  construction sites, creator and reader together, since a queue cannot be redeclared under a different
+  durability. The **hand-written** `RMQ.Async` suite now runs clean on 4.3 as well. **22 of its
   tests failed there**, every one on `transient_nonexcl_queues`, because they opted into a transient queue
   explicitly rather than inheriting the product default: `QueueFactory`'s own `isDurable: false` default in
   `TestHelpers.cs` fed 16 of them, and the rest passed `false` straight to `RmqMessageConsumer`. That default
