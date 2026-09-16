@@ -22,9 +22,14 @@ namespace Paramore.Brighter.MQTT.Tests;
 /// topic takes down a consumer, so the handler must drop what it cannot read.
 /// </para>
 /// <para>
-/// Exercised without a broker, which is why the deserialisation step is a separate internal method
-/// — the same shape, and for the same reason, as
-/// <c>RocketMqMessageProducer.AddHeaderProperties</c>.
+/// Exercised without a broker, through <see cref="MqttMessageCreator"/> — the public inverse of
+/// <see cref="MqttMessagePublisher.CreateMqttMessage"/>, and the MQTT counterpart of
+/// <c>KafkaMessageCreator</c>, which <c>Paramore.Brighter.Kafka.Tests</c> covers the same way.
+/// </para>
+/// <para>
+/// ⚠️ Keep the <c>[Trait("Category", "MQTT")]</c> below: <c>mqtt-ci</c> filters on
+/// <c>Category=MQTT</c>, and the <c>build</c> job runs an explicit list of four projects that does
+/// not include this one, so a test here without that trait runs in NEITHER job.
 /// </para>
 /// </remarks>
 [Trait("Category", "MQTT")]
@@ -39,8 +44,8 @@ public class MqttPayloadDeserialisationTests
         var malformed = Encoding.UTF8.GetBytes("{ this is not json");
 
         // Act
-        var fromNull = MqttMessageConsumer.TryDeserialiseMessage(deserialisesToNull, "test/topic");
-        var fromMalformed = MqttMessageConsumer.TryDeserialiseMessage(malformed, "test/topic");
+        var fromNull = MqttMessageCreator.CreateMessage(deserialisesToNull, "test/topic");
+        var fromMalformed = MqttMessageCreator.CreateMessage(malformed, "test/topic");
 
         // Assert — both are dropped, and neither throws out of the handler
         Assert.Null(fromNull);
@@ -64,9 +69,9 @@ public class MqttPayloadDeserialisationTests
 
         // Act / Assert - each is dropped. A throw here reaches MQTTnet's dispatch loop rather
         // than any caller, so one such payload would stop the consumer for every other message.
-        Assert.Null(MqttMessageConsumer.TryDeserialiseMessage(illegalMediaType, "test/topic"));
-        Assert.Null(MqttMessageConsumer.TryDeserialiseMessage(emptyMediaType, "test/topic"));
-        Assert.Null(MqttMessageConsumer.TryDeserialiseMessage(nullContentType, "test/topic"));
+        Assert.Null(MqttMessageCreator.CreateMessage(illegalMediaType, "test/topic"));
+        Assert.Null(MqttMessageCreator.CreateMessage(emptyMediaType, "test/topic"));
+        Assert.Null(MqttMessageCreator.CreateMessage(nullContentType, "test/topic"));
     }
 
     [Fact]
@@ -80,7 +85,7 @@ public class MqttPayloadDeserialisationTests
             System.Text.Json.JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
 
         // Act
-        var deserialised = MqttMessageConsumer.TryDeserialiseMessage(payload, "test/topic");
+        var deserialised = MqttMessageCreator.CreateMessage(payload, "test/topic");
 
         // Assert
         Assert.NotNull(deserialised);

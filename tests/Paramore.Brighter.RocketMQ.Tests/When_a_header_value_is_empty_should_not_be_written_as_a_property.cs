@@ -40,23 +40,32 @@ namespace Paramore.Brighter.RocketMQ.Tests;
 /// unconditionally, so <em>every</em> send through this gateway threw before reaching the broker.
 /// </para>
 /// <para>
-/// This runs without a broker, which is the point: <c>rocketmq-ci</c> is commented out in
-/// <c>ci.yml</c>, so the generated RocketMQ suite never executes. Nothing else in this repository
-/// would notice the guard being removed.
+/// Exercised without a broker, through <see cref="RocketMqMessagePublisher"/> - the public seam
+/// that says what this gateway would put on the wire, the same shape as
+/// <c>MqttMessagePublisher.CreateMqttMessage</c>. That matters here more than elsewhere:
+/// <c>rocketmq-ci</c> is commented out in <c>ci.yml</c>, so the generated RocketMQ suite never
+/// executes and nothing else in this repository would notice the guards being removed.
 /// </para>
 /// </remarks>
 [Trait("Category", "RocketMQ")]
 public class RocketMqEmptyHeaderPropertyTests
 {
-    private static Org.Apache.Rocketmq.Message.Builder ABuilder() =>
-        new Org.Apache.Rocketmq.Message.Builder()
-            .SetTopic("conformance-probe")
-            .SetBody([1]);
+    private static RocketMqPublication APublication() => new()
+    {
+        Topic = new RoutingKey("conformance-probe")
+    };
 
     private static MessageHeader AHeader() => new(
         messageId: Guid.NewGuid().ToString(),
         topic: new RoutingKey("conformance-probe"),
         messageType: MessageType.MT_EVENT);
+
+    private static Org.Apache.Rocketmq.Message Publish(MessageHeader header) =>
+        RocketMqMessagePublisher.CreateRocketMqMessage(
+            new Message(header, new MessageBody("{}")),
+            APublication(),
+            delay: null,
+            TimeProvider.System);
 
     [Fact]
     public void When_baggage_is_empty_should_not_write_the_property()
@@ -66,8 +75,7 @@ public class RocketMqEmptyHeaderPropertyTests
         Assert.Equal(string.Empty, header.Baggage.ToString());
 
         // Act - would throw if the empty value were handed to AddProperty
-        var exception = Record.Exception(
-            () => RocketMqMessageProducer.AddHeaderProperties(ABuilder(), header.MessageId, header));
+        var exception = Record.Exception(() => Publish(header));
 
         // Assert
         Assert.Null(exception);
@@ -81,11 +89,10 @@ public class RocketMqEmptyHeaderPropertyTests
         header.Baggage.LoadBaggage("key=value");
 
         // Act
-        var builder = ABuilder();
-        RocketMqMessageProducer.AddHeaderProperties(builder, header.MessageId, header);
+        var published = Publish(header);
 
         // Assert
-        Assert.Contains(HeaderNames.Baggage, builder.Build().Properties.Keys);
+        Assert.Contains(HeaderNames.Baggage, published.Properties.Keys);
     }
 
     [Fact]
@@ -94,6 +101,10 @@ public class RocketMqEmptyHeaderPropertyTests
         // Arrange / Act / Assert - characterises the SDK behaviour the guards exist for, so that a
         // future SDK version quietly accepting empty values shows up here rather than as an
         // unexplained pile of now-pointless conditionals.
-        Assert.Throws<ArgumentException>(() => ABuilder().AddProperty("a-key", string.Empty));
+        var builder = new Org.Apache.Rocketmq.Message.Builder()
+            .SetTopic("conformance-probe")
+            .SetBody([1]);
+
+        Assert.Throws<ArgumentException>(() => builder.AddProperty("a-key", string.Empty));
     }
 }
