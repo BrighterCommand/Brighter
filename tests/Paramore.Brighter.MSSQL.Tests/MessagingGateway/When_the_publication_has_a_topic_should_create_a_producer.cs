@@ -34,7 +34,10 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway;
 /// unstartable, and the only one that was not pinned.
 /// </summary>
 /// <remarks>
-/// No database: <c>Create</c> validates the publication and constructs producers without opening
+/// No database, and the publication says <see cref="OnMissingChannel.Assume"/> to keep it that
+/// way: <c>Create</c> now provisions the queue store before it builds a producer. The missing-topic
+/// case throws before it reaches provisioning; the positive case relies on Assume opening no
+/// connection, and on <c>Create</c> validating the publication and constructing producers without opening
 /// a connection.
 /// </remarks>
 [Trait("Category", "MSSQL")]
@@ -66,7 +69,14 @@ public class MsSqlProducerFactoryPublicationTopicTests
         // Arrange
         var factory = new MsSqlMessageProducerFactory(
             _configuration,
-            [new Publication { Topic = new RoutingKey("test.topic"), RequestType = typeof(MyEvent) }]);
+            [
+                new Publication
+                {
+                    Topic = new RoutingKey("test.topic"),
+                    RequestType = typeof(MyEvent),
+                    MakeChannels = OnMissingChannel.Assume
+                }
+            ]);
 
         // Act
         var producers = factory.Create();
