@@ -8,15 +8,27 @@ on:
   pull_request:
     types: [labeled]
 
-concurrency:
-  group: claude-review-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
-
 jobs:
   claude-review:
     # Only the `claude-review` label triggers a review. Labelling a draft is a
     # deliberate request, so drafts are not blocked — nothing runs unlabelled.
     if: github.event.label.name == 'claude-review'
+
+    # Scoped to the job, NOT to the workflow. GitHub claims a workflow-level
+    # concurrency group before it evaluates a job's `if`, so with the group at
+    # workflow level EVERY `labeled` event on the PR claimed it — and with
+    # cancel-in-progress, a run that then skipped on the `if` still killed a
+    # review already in flight. Observed on #4297: run 35129056175 was cancelled
+    # 33 seconds in by run 35129114484, which was itself `skipped` because the
+    # label that triggered it was `3 - Done`, not `claude-review`. Ordinary
+    # label housekeeping during a review was enough to destroy it.
+    #
+    # Down here the group is claimed only once the `if` has passed, so only a
+    # genuine second review request supersedes the first — which is the
+    # behaviour this was always meant to have.
+    concurrency:
+      group: claude-review-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
 
     runs-on: ubuntu-latest
     permissions:
@@ -34,6 +46,17 @@ jobs:
       - name: Run Claude Code Review
         id: claude-review
         uses: anthropics/claude-code-action@v1
+        # MCP_TOOL_TIMEOUT (ms): a Task-spawned sub-review agent's own tool
+        # calls are exempt from the main conversation's automatic call
+        # backgrounding, so a sub-agent working through a large diff is more
+        # exposed to this than a top-level call would be. The default is
+        # short enough that a run watched with show_full_output (#4369) cut
+        # off mid-tool-call at ~100-140s wall clock, right as a sub-agent was
+        # mid-review (BrighterCommand/Brighter#4282, 462 files) - no
+        # permission denial, no result event, just a truncated stream. Ten
+        # minutes gives a sub-agent room to actually finish its slice.
+        env:
+          MCP_TOOL_TIMEOUT: "600000"
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 
