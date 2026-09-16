@@ -106,6 +106,7 @@ so whether the rule observes step 1 or steps 2/3 depends on whether `IDispatcher
 Given the effective channel factory `F` (FR-2) and the subscription's declared channel factory type `D`:
 - **Combined arm.** If `F` is a `CombinedChannelFactory`, the candidate factory set is `F`'s inner factories, in the order supplied to its constructor. The subscription is **compatible** if and only if at least one inner factory `f` satisfies `f.GetType() == D` — exact type equality, mirroring `CombinedChannelFactory.cs:34/46/59` precisely. The rule MUST NOT compare `D` against `typeof(CombinedChannelFactory)`; doing so would flag every subscription in every multi-transport application. The rule MUST NOT recurse into a nested `CombinedChannelFactory` among the inner factories, because `CombinedChannelFactory` does not recurse at runtime either — a nested combined factory therefore matches only a subscription whose `D` is literally `typeof(CombinedChannelFactory)`.
 - **Direct arm.** If `F` is not a `CombinedChannelFactory`, the candidate factory set is `{ F }`, and the subscription is **compatible** if and only if `D.IsAssignableFrom(F.GetType())` — that is, `F` is of the declared type or a subtype of it. Assignability (rather than exact equality) is used here so that an application supplying its own subclass of a transport's `ChannelFactory` is not falsely flagged; at runtime that subclass satisfies the gateway's downcast of the subscription and works. The two arms differ deliberately because the runtime behaviours they predict differ.
+- **A null `D`.** `ChannelFactoryType` is `public virtual`, so an out-of-repo override may return `null`. In the **combined** arm the *iff* above already settles it: `object.GetType()` never returns null, so no inner factory satisfies the predicate, the subscription is in mismatch, and FR-1 requires exactly one `Error`. This matches runtime, where `_factories.FirstOrDefault(f => f.GetType() == null)` is `null` for every non-empty factory set and `CombinedChannelFactory.cs:37` throws on every start. The **direct** arm is stated explicitly to match: a null `D` is **incompatible**, decided by an explicit `D is null` test rather than by letting `D.IsAssignableFrom(...)` throw and be converted into a `"Rule evaluation failed"` finding with the wrong `Source`. The direct arm's verdict is new breakage and is accepted under **C-13**.
 - Example (combined, compatible): `F = new CombinedChannelFactory([new Paramore.Brighter.MessagingGateway.RMQ.Async.ChannelFactory(...), new Paramore.Brighter.MessagingGateway.MsSql.ChannelFactory(...)])` and the subscription is an `MsSqlSubscription<TestRequest>` (`D = Paramore.Brighter.MessagingGateway.MsSql.ChannelFactory`). No finding.
 - Example (combined, mismatch): the same `F` with a plain `Subscription<TestRequest>` (`D = typeof(InMemoryChannelFactory)`). One `Error`, because no inner factory is an `InMemoryChannelFactory`.
 - Example (direct, subclass accepted): `F = new MyAuditingMsSqlChannelFactory(...) : Paramore.Brighter.MessagingGateway.MsSql.ChannelFactory` with an `MsSqlSubscription<TestRequest>`. No finding.
@@ -118,7 +119,7 @@ A plain `Subscription<T>` or `Subscription` (whose `ChannelFactoryType` is `type
 **FR-5 — The finding message uses fully-qualified type names and names a concrete remedy.**
 Eight transports name their channel factory class `ChannelFactory` in eight different assemblies (AWSSQS, AWSSQS.V4, Kafka, MQTT, MsSql, Redis, RMQ.Sync, RMQ.Async). A message built from `Type.Name` would therefore read "expected `ChannelFactory`, got `ChannelFactory`". The `Message` of every finding produced by this rule MUST therefore contain:
 1. the subscription's own runtime type, as `Type.FullName`;
-2. the declared channel factory type `D`, as `Type.FullName`;
+2. the declared channel factory type `D`, as `Type.FullName` — or, when `D` is `null` (FR-3's null-`D` case), the literal phrase `no ChannelFactoryType` in its place, there being no type to name;
 3. the type(s) it will actually be handed, as `Type.FullName` — in the direct arm the effective factory's type; in the combined arm the `Type.FullName` of every inner factory in the candidate factory set, in constructor order, comma-separated;
 4. a remedy clause instructing the developer either to use the subscription type that the effective factory requires, or to configure a channel factory of type `D`.
 
@@ -130,14 +131,19 @@ whose assembly identity payload defeats NFR-2. The rule MUST therefore render ev
 
 A display name MUST NOT contain `Version=`, `Culture=` or `PublicKeyToken=`, and MUST NOT be a bare `Type.Name`.
 
-**Remedy clause (normative templates).** Item 4 MUST be rendered as one of exactly **four** literals, selected by the rules below. `{F}` is the effective factory's display name; `{F-list}` is the inner factories' display names in constructor order, comma-separated.
+**Remedy clause (normative templates).** Item 4 MUST be rendered as one of exactly **five** literals, selected by the rules below. `{F}` is the effective factory's display name; `{F-list}` is the inner factories' display names in constructor order, comma-separated. The conditions are evaluated in the order listed and are total over the input space: T4 first, then the null-`D`/in-memory pair, then the general pair.
 
 | # | Condition | Literal |
 |---|---|---|
-| T1 | Direct arm, and `D != typeof(InMemoryChannelFactory)` | `— either configure a channel factory of type {D}, or use a subscription type whose ChannelFactoryType is {F}` |
-| T2 | Combined arm, and `D != typeof(InMemoryChannelFactory)` | `— either configure a channel factory of type {D}, or use a subscription type whose ChannelFactoryType is one of: {F-list}` |
-| T3a | Direct arm, and `D == typeof(InMemoryChannelFactory)` | `— use a subscription type whose ChannelFactoryType is {F}` |
-| T3b | Combined arm, and `D == typeof(InMemoryChannelFactory)` | `— use a subscription type whose ChannelFactoryType is one of: {F-list}` |
+| T4 | Combined arm, and the candidate set is **empty** | `— add a channel factory to the combined channel factory` |
+| T3a | Direct arm, and (`D == typeof(InMemoryChannelFactory)` or `D is null`) | `— use a subscription type whose ChannelFactoryType is {F}` |
+| T3b | Combined arm, non-empty candidate set, and (`D == typeof(InMemoryChannelFactory)` or `D is null`) | `— use a subscription type whose ChannelFactoryType is one of: {F-list}` |
+| T1 | Direct arm, `D` is not null, and `D != typeof(InMemoryChannelFactory)` | `— either configure a channel factory of type {D}, or use a subscription type whose ChannelFactoryType is {F}` |
+| T2 | Combined arm, non-empty candidate set, `D` is not null, and `D != typeof(InMemoryChannelFactory)` | `— either configure a channel factory of type {D}, or use a subscription type whose ChannelFactoryType is one of: {F-list}` |
+
+**A null `D` selects T3a/T3b, not T1/T2.** T1 and T2 name `{D}` on their "change the configuration" side, which is unrenderable when there is no declared type; T3a/T3b already suppress that half, so they are the correct templates for the null case as well as the in-memory one. The reason differs — in-memory suppresses a remedy that is legitimate but harmful (C-2), null suppresses one that cannot be written — but the literal required is identical, so no further template is needed.
+
+**T4 exists because an empty candidate set has no `{F-list}` to offer.** A `CombinedChannelFactory` constructed with no inner factories is legal and routes nothing, so the verdict is an `Error`; but rendering T2/T3b with an empty list would produce a message ending "is one of:" with nothing after it, which states no remedy and so fails NFR-2. T4 names the actual fault instead. T4 is **combined-arm only** — the direct arm's candidate set is `{ F }` or `{ typeof(InMemoryChannelFactory) }` and can never be empty.
 
 **T3a and T3b suppress the `{D}` half, and that suppression is normative.** When `D` is `InMemoryChannelFactory` the subscription is a plain `Subscription`/`Subscription<T>`, and "configure a channel factory of type `Paramore.Brighter.InMemoryChannelFactory`" is not a legitimate remedy — following it produces a consumer that silently reads from an in-memory bus instead of the intended transport, which is exactly the outcome C-2 exists to prevent. Offering it as one of two options is not neutral: it is the option that requires less work, in the case this feature most often fires. T3a and T3b therefore offer only the direction that fixes the defect.
 
@@ -198,7 +204,7 @@ The rule MUST emit at most one finding per configured subscription per validatio
 - **NFR-3 — No broker or network access.** Neither the rule nor any test introduced by this feature may open a connection to a broker, a database, or any external service. The rule inspects types and configured instances only. The FR-12 sweep is reflection-only.
 - **NFR-4 — No new startup cost when validation is off.** Consistent with FR-6; the rule performs work only inside a `ValidatePipelines()`-enabled run, and its per-subscription cost is bounded by the size of the candidate factory set.
 - **NFR-5 — No public API change to existing abstractions beyond what FR-7 to FR-11 require.** In particular `IAmAChannelFactory`, `Subscription` and `IAmConsumerOptions` keep their current members. If the rule requires read access to a `CombinedChannelFactory`'s inner factories, any new member MUST be added to `CombinedChannelFactory` itself and MUST be additive (see C-4).
-- **NFR-6 — Behaviour preserved for working configurations.** No configuration that starts successfully today may be made to fail by this feature, **except** in the cases documented as deliberate exceptions in **C-2**, **C-10**, **C-11** and **C-12**. Deliberately stated without a count: the exception set is enumerated in those constraints, and a number in this sentence has twice been wrong as further cases surfaced. Any newly discovered case MUST be added as its own constraint and to C-8's release-note obligations, not absorbed silently here. Stated without the "genuinely correct" qualifier deliberately — that qualifier made the requirement unfalsifiable, because the specification would then decide for itself what counts as correct. A naive reading of D1 would have had the rule reject *every* correct AWS SQS, Postgres, GCP and MQTT configuration; FR-7 to FR-11 correct their declarations so those pass, which is the whole reason D2 is in scope. That is separate from C-11 and C-12, which are the residue those corrections cannot remove: MQTT's factory accepts any subscription (C-11), and correcting AWS SQS / Postgres withdraws an accidental in-memory route (C-12).
+- **NFR-6 — Behaviour preserved for working configurations.** No configuration that starts successfully today may be made to fail by this feature, **except** in the cases documented as deliberate exceptions in **C-2**, **C-10**, **C-11**, **C-12** and **C-13**. Deliberately stated without a count: the exception set is enumerated in those constraints, and a number in this sentence has twice been wrong as further cases surfaced. Any newly discovered case MUST be added as its own constraint and to C-8's release-note obligations, not absorbed silently here. Stated without the "genuinely correct" qualifier deliberately — that qualifier made the requirement unfalsifiable, because the specification would then decide for itself what counts as correct. A naive reading of D1 would have had the rule reject *every* correct AWS SQS, Postgres, GCP and MQTT configuration; FR-7 to FR-11 correct their declarations so those pass, which is the whole reason D2 is in scope. That is separate from C-11 and C-12, which are the residue those corrections cannot remove: MQTT's factory accepts any subscription (C-11), and correcting AWS SQS / Postgres withdraws an accidental in-memory route (C-12).
 - **NFR-7 — British spelling** in all new documentation and XML comments, consistent with the repository.
 
 ### Constraints and Assumptions
@@ -212,7 +218,7 @@ The rule MUST emit at most one finding per configured subscription per validatio
 - **C-5 — The rule needs the consumer options.** FR-2 requires `options.DefaultChannelFactory`, which lives on `IAmConsumerOptions` and is available where the four existing consumer specs are registered (`ServiceCollectionExtensions.cs:199-229`). Threading it into the rule's factory function is expected wiring, not new API. Where the options or the default factory cannot be resolved, FR-2 step 3 (in-memory) applies.
 - **C-6 — Validation sees the configuration as snapshotted by `ValidatePipelines()`.** Consistent with the existing documented behaviour of `ValidatePipelines` ("call this last in the Brighter builder chain"), a channel factory assigned after that call is not seen by the rule.
 - **C-7 — Subscriptions with a null `RequestType` are still checked.** Unlike `PumpHandlerMatch`, `HandlerRegistered` and `UnwrapTransformResolvable`, this rule does not depend on `RequestType` and therefore MUST NOT skip datatype-channel subscriptions whose `RequestType` is null.
-- **C-8 — Versioning.** Targets Brighter V10.X. FR-7 to FR-11 change the value returned by a public virtual property (or add the override where none existed); this is a behaviour change (a fix), not a binary-breaking API change, and must be noted in the release notes. FR-9 to FR-11 in particular make AWS SQS, AWS SQS V4 and Postgres subscriptions routable by `CombinedChannelFactory` for the first time. The release notes MUST additionally carry the breaking-change notes for **C-10** (out-of-repo subscription types with no override), **C-11** (a plain `Subscription<T>` used with MQTT, which works today) and **C-12** (AWS SQS / Postgres routed through an in-memory inner factory), each naming its symptom and its remedy. C-12 MUST be flagged as the one case `ValidatePipelines(throwOnError: false)` does not avoid, being a routing change rather than a validation verdict.
+- **C-8 — Versioning.** Targets Brighter V10.X. FR-7 to FR-11 change the value returned by a public virtual property (or add the override where none existed); this is a behaviour change (a fix), not a binary-breaking API change, and must be noted in the release notes. FR-9 to FR-11 in particular make AWS SQS, AWS SQS V4 and Postgres subscriptions routable by `CombinedChannelFactory` for the first time. The release notes MUST additionally carry the breaking-change notes for **C-10** (out-of-repo subscription types with no override), **C-11** (a plain `Subscription<T>` used with MQTT, which works today), **C-12** (AWS SQS / Postgres routed through an in-memory inner factory) and **C-13** (an out-of-repo override returning `null` in a single-factory configuration), each naming its symptom and its remedy. C-12 MUST be flagged as the one case `ValidatePipelines(throwOnError: false)` does not avoid, being a routing change rather than a validation verdict.
 - **C-9 — Test placement, test doubles, and their request types.** `tests/Paramore.Brighter.Core.Tests` references only `Paramore.Brighter`, `Paramore.Brighter.BoxProvisioning`, `Paramore.Brighter.Extensions.DependencyInjection`, `Paramore.Brighter.Mediator`, `Paramore.Brighter.Outbox.Hosting`, `Paramore.Brighter.ServiceActivator` and `Paramore.Brighter.Testing` — **no** `MessagingGateway.*` assembly and **not** `ServiceActivator.Extensions.DependencyInjection`. The rule's behavioural tests (AC-1 to AC-19) MUST therefore be written against purpose-built doubles, not real gateway types, and live in `tests/Paramore.Brighter.Core.Tests/Validation/` with the existing `When_…` naming.
 
   **The doubles (a closed set — no AC may use one not listed here).** One class per file under `Validation/TestDoubles/`, per `.agent_instructions/testing.md`:
@@ -224,6 +230,7 @@ The rule MUST emit at most one finding per configured subscription per validatio
   | `NonMatchingChannelFactory : IAmAChannelFactory` | A **different** identity that nothing declares. The mismatch case. |
   | `DeclaringSubscription : Subscription` | Overrides `ChannelFactoryType` to `typeof(DeclaredChannelFactory)`. |
   | `NonMatchingSubscription : Subscription` | Overrides `ChannelFactoryType` to `typeof(NonMatchingChannelFactory)`. Required by AC-6. |
+  | `NullDeclaringSubscription : Subscription` | Overrides `ChannelFactoryType` to return `null`, standing in for an out-of-repo override that declares nothing. Required by AC-10a and AC-10b. Identity-only in the same sense as the rest: it overrides `ChannelFactoryType` and nothing else. |
   | `AlphaBus.ChannelFactory` / `BetaBus.ChannelFactory` | Two factories **both named `ChannelFactory`** in different namespaces under `…TestDoubles.AlphaBus` / `…TestDoubles.BetaBus`, plus `AlphaBus.AlphaSubscription` declaring the former. Required by AC-15, the same-simple-name case. |
 
   **These doubles are identity-only and MUST stay that way.** The rule never invokes a channel factory — FR-3 compares `Type` objects (`D.IsAssignableFrom(F.GetType())` in the direct arm, `f.GetType() == D` in the combined arm), so a double's entire contribution is *being a distinct type*. Every `IAmAChannelFactory` member on these doubles MUST therefore throw (`CreateSyncChannel`, `CreateAsyncChannel`, `CreateAsyncChannelAsync`), which both documents the intent and turns any test that strays into channel creation into a loud failure rather than a silent pass (NFR-3). They are named for their role in the comparison rather than after a transport precisely so that no one is tempted to give them transport behaviour: there is no behaviour to give.
@@ -285,6 +292,16 @@ The rule MUST emit at most one finding per configured subscription per validatio
   **Accepted.** What breaks is a host that was silently consuming from an in-memory bus while believing it was consuming from SQS or Postgres — the precise silent-wrong-bus failure C-2 exists to name. Preserving it would mean preserving the defect. Note the asymmetry with C-2, C-10 and C-11: those are rule verdicts, suppressible by disabling validation; this is a routing change in `CombinedChannelFactory`, so the only remedy is to configure the real channel factory for that transport.
 
   **Obligations**: the C-8 release note MUST carry this case separately from C-10 and C-11, naming the symptom (`ConfigurationException` at Dispatcher start, not a validation finding), the remedy (add the transport's real channel factory to the `CombinedChannelFactory`, or stop relying on the in-memory route), and stating explicitly that `throwOnError: false` does not avoid it.
+
+- **C-13 — A direct-arm subscription whose `ChannelFactoryType` override returns `null` starts today and will become an `Error`.**
+
+  `CombinedChannelFactory` (`CombinedChannelFactory.cs:34/46/59`) is the **only** reader of `ChannelFactoryType` anywhere in `src/`. In a configuration whose effective channel factory is *not* a `CombinedChannelFactory`, a `Subscription` subclass that overrides `ChannelFactoryType` to return `null` is therefore never consulted at runtime: the host starts, the channel is built by the factory directly, and the consumer works. Under FR-3's null-`D` clause such a subscription is a mismatch, and under the default `throwOnError: true` it now blocks startup.
+
+  Note the asymmetry with the combined arm, which is **not** new breakage: there, a null `D` already fails at `CombinedChannelFactory.cs:37` on every start, so the rule converts a certain runtime failure into a named startup finding. Only the direct arm turns a working host into a blocked one.
+
+  **Accepted**, on D3's grounds. The population is vanishingly small — it requires an override written deliberately to return `null`, which no shipped subscription does and which ADR 0073's sweep would reject in-repo — and the remedy is the same one line as C-10's. The alternative, passing a null declaration in the direct arm, would make the rule silent about the one subscription that cannot state what it needs, which inverts the feature's purpose in the same way exempting MQTT would (C-11).
+
+  **Obligations**: the C-8 release note MUST name this case, its symptom (a startup `Error` reading `declares no ChannelFactoryType`), its remedy (return a real channel factory type from the override), and the fact that unlike C-12 it *is* suppressible by `ValidatePipelines(throwOnError: false)`.
 
 ### Out of Scope
 
@@ -354,6 +371,21 @@ Given `options.DefaultChannelFactory = new CombinedChannelFactory([new CombinedC
 When the rule is evaluated,
 Then exactly one `Error` is produced, matching the runtime behaviour of `CombinedChannelFactory`, which also fails to route this subscription.
 
+**AC-10a** (FR-3 null `D`, direct arm, C-13) — *A null declared type is a mismatch in the direct arm.*
+Given a `NullDeclaringSubscription` named `null-sub` with `ChannelFactory` null and `options.DefaultChannelFactory = new DeclaredChannelFactory()`,
+When the rule is evaluated,
+Then exactly one `Error` is produced for `null-sub`, whose `Message` contains the literal `no ChannelFactoryType` in place of a declared type name, ends with the T3a literal naming `DeclaredChannelFactory`, and contains no occurrence of the substring `configure a channel factory of type`.
+
+**AC-10b** (FR-3 null `D`, combined arm, FR-1) — *A null declared type is a mismatch in the combined arm.*
+Given `options.DefaultChannelFactory = new CombinedChannelFactory([new DeclaredChannelFactory(), new NonMatchingChannelFactory()])` and a `NullDeclaringSubscription` with `ChannelFactory` null,
+When the rule is evaluated,
+Then exactly one `Error` is produced, whose `Message` contains the literal `no ChannelFactoryType` and ends with the T3b literal listing both inner factories' display names in constructor order — and, as a companion assertion, calling `CreateSyncChannel` on that `CombinedChannelFactory` with the same subscription throws `ConfigurationException`, confirming the rule's verdict matches runtime.
+
+**AC-10c** (FR-3 combined arm, FR-5 template T4) — *An empty combined factory yields an actionable remedy.*
+Given `options.DefaultChannelFactory = new CombinedChannelFactory([])` and a `DeclaringSubscription` named `empty-sub` with `ChannelFactory` null,
+When the rule is evaluated,
+Then exactly one `Error` is produced for `empty-sub`, whose `Message` ends with the literal `— add a channel factory to the combined channel factory` and contains no occurrence of the substring `is one of:`.
+
 **AC-11** (FR-4) — *The default in-memory configuration is silent.*
 Given a plain `Subscription<FakeChannelFactoryRequest>` with `ChannelFactory` null and `options.DefaultChannelFactory` null,
 When the rule is evaluated,
@@ -400,6 +432,14 @@ When the rule is evaluated,
 Then the `Message` contains both namespace-qualified display names in full, and no occurrence of the token `ChannelFactory` appears that is neither immediately preceded by a `.` nor part of the token `ChannelFactoryType`.
 
 The `ChannelFactoryType` carve-out is required: FR-5's remedy clause, which AC-13 makes the message end with, contains that token preceded by a space. Without the carve-out AC-13 and AC-15 could not both pass.
+
+**"Token" means a match at a word boundary, and the assertion is normative as a regex.** A composite identifier that merely *ends* in `ChannelFactory` — `InMemoryChannelFactory`, `CombinedChannelFactory`, `DeclaredChannelFactory` — is a different token and is **not** an occurrence. Without this, the criterion would be unimplementable: FR-5's own body renders `Paramore.Brighter.InMemoryChannelFactory` in this feature's headline case, so a naive `Message.Contains("ChannelFactory")` reading would fail AC-13a and AC-15 simultaneously. The assertion MUST therefore be written as
+
+```
+Regex.Matches(message, @"(?<![.\w])ChannelFactory(?!Type)")
+```
+
+and MUST find no match. Two test sites assert this rule (`Core.Tests` and, for AC-26f, the gateway projects); writing it any other way is a defect in the test, not in the message.
 
 ### Severity and blocking
 
@@ -502,10 +542,18 @@ Then they all pass.
 
 ## Additional Context
 
+- **Amendments after approval.** This document was approved, then re-opened once and re-approved. The round-2 adversarial review of ADR 0072 found that the ADR was deciding things the requirements owned. Rather than let the ADR deviate, the following were amended here and nothing else was touched:
+  - **FR-3** gains the null-`D` clause for both arms (D4).
+  - **FR-5** item 2 admits `no ChannelFactoryType` when `D` is null; the remedy table is restated as five ordered, total conditions, adding **T4** for an empty candidate set.
+  - **NFR-6** and **C-8** gain **C-13**, the new direct-arm breakage.
+  - **C-9** gains one double, `NullDeclaringSubscription`.
+  - **AC-10a**, **AC-10b** and **AC-10c** are new; **AC-15** now defines "token" as a word-boundary match and pins the assertion to a regex.
+
 - **Origin.** Issue #4334, prompted by #4331, in which two sample applications had shipped with `Subscription<T>` where an `MsSqlSubscription<T>` was required and had never been able to start. Compilation succeeded, CI compiled the samples, and nothing detected the defect until someone tried to run them.
 - **Maintainer decisions already taken** (not to be re-opened by design or implementation):
   - **D1** — severity is `ValidationSeverity.Error` (see C-1).
   - **D3** — a subscription type defined *outside* this repository that declares no `ChannelFactoryType` override will be an `Error` that blocks startup, and that is **accepted** rather than softened (C-10). Rationale: custom transports are rare, the fix is one line, and softening the rule for an unverifiable population would weaken it exactly where the AWS SQS and Postgres defects lived until this specification. Raised by the round-2 adversarial review; decided by the maintainer.
+  - **D4** — a `ChannelFactoryType` override that returns `null` is an `Error` in **both** arms, not skipped (FR-3's null-`D` clause). The combined arm's verdict already followed from FR-3's *iff*; the direct arm's is new breakage, accepted as C-13. Raised by the round-2 adversarial review of ADR 0072; decided by the maintainer.
   - **D2** — correcting every wrong or missing `ChannelFactoryType` declaration ships with the rule, in this specification (FR-7 to FR-11), rather than being deferred. Originally scoped to the two *wrong* overrides (`GcpPubSubSubscription`, `MqttSubscription`); the adversarial review of these requirements found three transports with **no** override at all (`SqsSubscription` in both AWS packages, `PostgresSubscription`), which under D1 would have blocked working hosts. The maintainer widened D2 to cover all five.
 - **Grounding references** (HOW belongs in the ADR):
   - `src/Paramore.Brighter/Subscription.cs:48` (`ChannelFactory`), `:172` (`ChannelFactoryType`).
