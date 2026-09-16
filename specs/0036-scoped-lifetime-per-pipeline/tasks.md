@@ -1291,7 +1291,7 @@ Two Tidy-First steps **are** owed in the DI package, and both are sequenced ahea
   - **Depends on**: T7.7, T6.3
   - **References**: AC-49 (FR-17, FR-25, NFR-10, C-15); ADR 0074 step 4, ADR 0073 (*What a repeated call resolves to*)
 
-- [ ] **TEST + IMPLEMENT: T7.9 — an affinity override registered by factory delegate is reported, and the repeat it hides is what the report is about**
+- [x] **TEST + IMPLEMENT: T7.9 — an affinity override registered by factory delegate is reported, and the repeat it hides is what the report is about**
   - **USE COMMAND**: `/test-first an affinity override registered by factory delegate produces a warning about the registration shape while still taking effect`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_an_affinity_override_is_registered_by_factory_delegate_validation_should_report_the_shape.cs`
