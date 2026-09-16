@@ -1384,7 +1384,7 @@ Two Tidy-First steps **are** owed in the DI package, and both are sequenced ahea
   - **Depends on**: T7.13
   - **References**: AC-24 (FR-20, FR-25.6, NFR-1(c)); ADR 0070 step 7a (the catalogue), ADR 0074 step 7, ADR 0076 step 4
 
-- [ ] **DOC: T7.15 — the guidance page is self-sufficient, and the truth table's citations still hold**
+- [x] **DOC: T7.15 — the guidance page is self-sufficient, and the truth table's citations still hold**
   - No automated signal. Recorded on the **PR checklist**, one line per message and one line per `Then` clause
   - Verification, by a reviewer walking the merged `docs/guides/lifetimes-and-scoping.md`:
     - from **each of the seven messages** (T7.10's hosts) to the troubleshooting entry it names, and from there to the decision guide: each path yields a **concrete correction** of the kind the message calls for — a specific value for each of `HandlerLifetime`, `MapperLifetime` and `TransformerLifetime` forming a conformant triple for the three lifetime-related messages; a specific corrective **registration** action for the duplicate-provider, unreadable-override, repeated-opt-in and defeated-opt-in messages, each naming which registration to remove, which value takes effect if it is left, and what is lost until it is fixed
