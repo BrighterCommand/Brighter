@@ -84,6 +84,13 @@ jobs:
             matches command prefixes, so a command substitution is refused and
             the turn is wasted.
 
+            To see the diff, use `gh pr diff` (and `gh pr diff --name-only` for
+            the file list) - it fetches from the GitHub API and works
+            regardless of local git history. Do NOT use `git diff`, `git log`
+            or `git fetch` against `origin/master` or any other ref: the
+            checkout is shallow (`fetch-depth: 1`), those commands are not in
+            the Bash allow-list, and every attempt is denied.
+
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://docs.claude.com/en/docs/claude-code/cli-reference for available options
           #
@@ -106,19 +113,25 @@ jobs:
           # by default: it runs with --permission-mode acceptEdits and git
           # add/commit, and a label asking for a review is not a licence to commit.
           #
-          # Task is required so Claude can spawn parallel sub-review agents on a
-          # large diff. Without it, a review over more than a handful of files
-          # tries to parallelise anyway (its own tracking comment says so —
-          # "N parallel sub-reviews are running"), every Task call is denied,
-          # and it gives up a few turns later having posted nothing but the
-          # stalled todo list — reported as a successful run, since a comment
-          # did get posted. Confirmed on BrighterCommand/Brighter#4282 (462
-          # files): two runs, 15 and 20 turns respectively, 10 and 4 permission
-          # denials, no findings either time. --disallowed-tools already claws
-          # back what Task's default subagent tools would otherwise grant
+          # Task is required so Claude can spawn parallel sub-review agents on
+          # a large diff (confirmed working once allowed: BrighterCommand/
+          # Brighter#4282 spawned five). --disallowed-tools already claws back
+          # what Task's default subagent tools would otherwise grant
           # (Edit/Write/MultiEdit/NotebookEdit, git add/commit), so this does
           # not reopen the write-access door track_progress's acceptEdits mode
           # would otherwise leave open.
+          #
+          # Task alone was NOT enough to fix the large-diff stall it was
+          # originally added for. With show_full_output on, the actual cause
+          # turned out to be something else entirely: every sub-agent's first
+          # move was `git fetch origin master` (to diff against it), which is
+          # not in the Bash allow-list below and was denied every single time
+          # (8/8 denials on BrighterCommand/Brighter#4282's retest were this
+          # one command in various forms) - the review stalled retrying a
+          # command it could never be allowed to run, never reaching
+          # `gh pr diff`, which was allowed the whole time. Fixed by steering
+          # the prompt at `gh pr diff` explicitly, above, rather than widening
+          # the allow-list to admit raw git history commands.
           claude_args: >-
             --model claude-sonnet-5
             --max-turns 40
