@@ -1338,7 +1338,7 @@ Two Tidy-First steps **are** owed in the DI package, and both are sequenced ahea
   - **Depends on**: T7.10, T5.5
   - **References**: AC-25 (decision-guide clause), FR-25.9, NFR-10, C-18; ADR 0074 (clause-to-source map, clause 9; *Clause 9's table is derived, not authored*)
 
-- [ ] **DOC: T7.12 — guidance page part 3: the troubleshooting section, keyed to each of the seven validation messages (FR-25.10)**
+- [x] **DOC: T7.12 — guidance page part 3: the troubleshooting section, keyed to each of the seven validation messages (FR-25.10)**
   - No test beyond AC-44's reviewer walk (T7.15)
   - File: `docs/guides/lifetimes-and-scoping.md`
   - Content:
