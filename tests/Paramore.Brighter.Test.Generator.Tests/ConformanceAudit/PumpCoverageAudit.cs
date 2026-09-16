@@ -25,9 +25,13 @@ public sealed record RequiredPumpBehaviour(
     string ExampleTestName);
 
 /// <summary>
-/// A pump behaviour the ledger depends on that no test in the tree covers.
+/// A pump behaviour the ledger depends on that the tree no longer covers as claimed.
 /// </summary>
-/// <param name="Kind">The violation category. Always <c>PumpBehaviourNotCovered</c>.</param>
+/// <param name="Kind">
+/// The violation category. <c>PumpBehaviourNotCovered</c> when no pump variant covers the behaviour
+/// at all; <c>PumpBehaviourVariantNotCovered</c> when one variant covers it and another does not,
+/// which is the FR-14 parity failure.
+/// </param>
 /// <param name="Behaviour">The <see cref="RequiredPumpBehaviour.Description"/> left uncovered.</param>
 /// <param name="Detail">What the audit looked for, and where.</param>
 public sealed record PumpCoverageViolation(string Kind, string Behaviour, string Detail);
@@ -53,6 +57,12 @@ public sealed record PumpCoverageResult(IReadOnlyList<PumpCoverageViolation> Vio
 /// while the composite claim stops being true, because the gateway suite never asserted the pump's
 /// half in the first place. This audit supplies the link, and fails loudly when a behaviour the
 /// ledger leans on loses its coverage.
+/// </para>
+/// <para>
+/// Coverage is required in <em>both</em> pump variants. FR-14 makes Reactor/Proactor parity the
+/// standard the ledger's cells are read against, and the <c>MessageDispatch</c> tree carries a
+/// <c>Reactor</c> and a <c>Proactor</c> directory for exactly that reason. A behaviour surviving in
+/// one of them proves half of what the ledger claims, so it is reported rather than accepted.
 /// </para>
 /// <para>
 /// Matching is by file name. That catches the risk actually being guarded against — a test being
@@ -98,27 +108,74 @@ public static class PumpCoverageAudit
         ["tests", "Paramore.Brighter.Core.Tests", "MessageDispatch"];
 
     /// <summary>
+    /// The pump variants FR-14 requires parity across, named as their directories under
+    /// <see cref="s_dispatchPathSegments"/>.
+    /// </summary>
+    private static readonly string[] s_pumpVariants = ["Reactor", "Proactor"];
+
+    /// <summary>
     /// Scans the pump test tree under <paramref name="repoRoot"/> and reports every required
-    /// behaviour left without a covering test. Makes no network calls and spawns no subprocess.
+    /// behaviour left without a covering test in both pump variants. Makes no network calls and
+    /// spawns no subprocess.
     /// </summary>
     /// <param name="repoRoot">The repository root holding <c>tests/</c>.</param>
     /// <returns>The aggregate result; <see cref="PumpCoverageResult.Violations"/> is empty when intact.</returns>
     public static PumpCoverageResult CheckCoverage(string repoRoot)
     {
         var dispatchDir = Path.Combine([repoRoot, .. s_dispatchPathSegments]);
-        var testFileNames = EnumerateTestFileNames(dispatchDir);
+        var namesByVariant = s_pumpVariants.ToDictionary(
+            variant => variant,
+            variant => EnumerateTestFileNames(Path.Combine(dispatchDir, variant)));
 
         var violations = RequiredBehaviours
-            .Where(behaviour => !testFileNames.Any(name => Covers(name, behaviour)))
-            .Select(behaviour => new PumpCoverageViolation(
-                "PumpBehaviourNotCovered",
-                behaviour.Description,
-                $"no file under {Path.Combine(s_dispatchPathSegments)} has all of "
-                + $"[{string.Join(", ", behaviour.FileNameFragments)}] in its name; "
-                + $"expected something like {behaviour.ExampleTestName}.cs"))
+            .SelectMany(behaviour => ViolationsFor(behaviour, namesByVariant))
             .ToList();
 
         return new PumpCoverageResult(violations);
+    }
+
+    /// <summary>
+    /// Reports what <paramref name="behaviour"/> has lost: a single
+    /// <c>PumpBehaviourNotCovered</c> when no variant covers it, or one
+    /// <c>PumpBehaviourVariantNotCovered</c> per variant that dropped it while another kept it.
+    /// Distinguishing the two matters to whoever reads the failure — a behaviour gone entirely is a
+    /// deletion, whereas a behaviour gone from one pump is an FR-14 parity break.
+    /// </summary>
+    private static IEnumerable<PumpCoverageViolation> ViolationsFor(
+        RequiredPumpBehaviour behaviour,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> namesByVariant)
+    {
+        var missingFrom = s_pumpVariants
+            .Where(variant => !namesByVariant[variant].Any(name => Covers(name, behaviour)))
+            .ToList();
+
+        if (missingFrom.Count == 0)
+        {
+            return [];
+        }
+
+        var fragments = string.Join(", ", behaviour.FileNameFragments);
+
+        if (missingFrom.Count == s_pumpVariants.Length)
+        {
+            return
+            [
+                new PumpCoverageViolation(
+                    "PumpBehaviourNotCovered",
+                    behaviour.Description,
+                    $"no file under {Path.Combine(s_dispatchPathSegments)} has all of "
+                    + $"[{fragments}] in its name; "
+                    + $"expected something like {behaviour.ExampleTestName}.cs")
+            ];
+        }
+
+        return missingFrom.Select(variant => new PumpCoverageViolation(
+            "PumpBehaviourVariantNotCovered",
+            behaviour.Description,
+            $"covered in {string.Join(" and ", s_pumpVariants.Except(missingFrom))} but not in "
+            + $"{variant}: no file under "
+            + $"{Path.Combine([.. s_dispatchPathSegments, variant])} has all of "
+            + $"[{fragments}] in its name. FR-14 requires both pump variants."));
     }
 
     /// <summary>
@@ -129,13 +186,13 @@ public static class PumpCoverageAudit
             testFileName.Contains(fragment, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
-    /// Every <c>.cs</c> file name beneath <paramref name="dispatchDir"/>, or empty when the tree is
+    /// Every <c>.cs</c> file name beneath <paramref name="variantDir"/>, or empty when the tree is
     /// absent — a missing tree is itself total loss of coverage, and is reported as such rather than
     /// throwing.
     /// </summary>
-    private static IReadOnlyList<string> EnumerateTestFileNames(string dispatchDir) =>
-        Directory.Exists(dispatchDir)
-            ? Directory.EnumerateFiles(dispatchDir, "*.cs", SearchOption.AllDirectories)
+    private static IReadOnlyList<string> EnumerateTestFileNames(string variantDir) =>
+        Directory.Exists(variantDir)
+            ? Directory.EnumerateFiles(variantDir, "*.cs", SearchOption.AllDirectories)
                 .Select(Path.GetFileNameWithoutExtension)
                 .OfType<string>()
                 .ToList()
