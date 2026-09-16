@@ -704,11 +704,26 @@ landing is observable only on the transport. No test on either side alone can an
 alone drives a real pump.
 
 ⚠️ **The risk this carries, stated so it is not discovered the hard way.** The composition is only as
-good as both halves, and **nothing links them**. If the `MessageDispatch` tests above are deleted,
-weakened, or quietly narrowed, every conformance cell in this ledger stays green while the composite
-claim silently stops being true — the gateway suite cannot notice, because it never asserted the
-pump's half in the first place. Treat those 86 tests as load-bearing for this ledger, not as an
-independent suite that happens to exist.
+good as both halves. If the `MessageDispatch` tests above are deleted, weakened, or quietly narrowed,
+every conformance cell in this ledger stays green while the composite claim silently stops being true
+— the gateway suite cannot notice, because it never asserted the pump's half in the first place.
+Treat those 86 tests as load-bearing for this ledger, not as an independent suite that happens to
+exist.
+
+**`PumpCoverageAudit` is the link, and it fails the build.** For each behaviour in the table above it
+requires, in *both* the `Reactor` and the `Proactor` tree (FR-14 parity — one surviving half proves
+half of what the ledger claims), a file whose name carries the behaviour's fragments **and** whose
+contents still make at least one assertion. It reports the three losses separately, because the fix
+differs: `PumpBehaviourNotCovered` (gone from both trees — a deletion), `PumpBehaviourVariantNotCovered`
+(one pump kept it, the other dropped it), and `PumpBehaviourCoverageHollowedOut` (the name survives,
+the assertions do not). Each rule was probe-verified red against the real tree, not argued.
+
+⚠️ **What it still does not catch, so nobody reads it as more than it is.** It cannot tell a strong
+assertion from a vacuous one, so a test narrowed to a trivial case still passes it; and it can only
+guard behaviours listed in `PumpCoverageAudit.RequiredBehaviours`, so **adding a row to the table
+above without adding it there leaves that row unguarded.** Editing that list down to match a narrowed
+tree silences the audit by construction — the list and this table are meant to be changed together,
+and in review.
 
 ### Why the eight AWS cells stay `Deferred`: the budget is inert on SQS (#4341)
 
