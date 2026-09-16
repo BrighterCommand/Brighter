@@ -2,7 +2,7 @@
 
 This guide explains how Brighter's three configured lifetimes — `HandlerLifetime`, `MapperLifetime` and `TransformerLifetime` — govern the handlers, mappers and transforms Brighter resolves, and how a `Scoped` pipeline can share a host's own ambient dependency-injection scope instead of creating its own. It is the page every scope-related startup message points you back to.
 
-> **Status of this page.** This covers the lifetime model itself, the `IAmAScope`/`IAmALifetime` distinction, the full adoption truth table, the decision guide for choosing a lifetime triple, and a troubleshooting entry for each of the seven validation messages. A later addition covers the transaction, migration and captive-dependency consequences of adopting `Scoped`, and the request-scope extension's three gestures. If a section you expected is not here yet, it has not landed.
+> **Status of this page.** This page is complete: the lifetime model itself, the `IAmAScope`/`IAmALifetime` distinction, the full adoption truth table, the decision guide for choosing a lifetime triple, a troubleshooting entry for each of the seven validation messages, the transaction consequence for `Publish` subscribers, the `MapperLifetime.Scoped` breaking change and the joint mixing rule, the captive-dependency hazard in full, and the request-scope extension's three gestures.
 
 ## 1. The get/release cycle, by configured lifetime
 
@@ -180,3 +180,45 @@ This warning inspects only the artefact's own constructor parameters directly �
 **Cause.** An affinity override is registered by factory delegate (`services.AddSingleton(sp => new ScopeAffinityOverride(...))` or similar) rather than as a constructed instance. The override still takes effect — the write-through resolves it normally — but this validator cannot read its value without resolving it, so it cannot detect whether a *later* conflicting registration (the previous message) is present.
 
 **Remedy.** Register the override as a constructed instance instead of a factory delegate — `services.AddSingleton(new ScopeAffinityOverride(ScopeAffinity.JoinAmbient))`, or simply use `AddBrighterRequestScope(...)`, which registers this way already. Until this is fixed, the override's own affinity still applies as normal; what is lost is only this validator's ability to warn you if a second, conflicting `AddBrighterRequestScope`/override registration is added later.
+
+## 7. The transaction consequence: `Publish` subscribers and the outbox
+
+An in-process `Publish` subscriber — and every pipeline nested inside one, including a `Send` or `Post` its own handler issues — cannot join a transaction the caller opened. This is not a gap in scope adoption; it is [ADR 0039](../adr/0039-scoping-dependencies-inline-with-lifetime-scope.md)'s per-subscriber isolation working as specified, and §3's truth table states the mechanism: a `Publish` subscriber, and anything nested inside it, always creates and owns its own scope, whatever `DefaultScopeAffinity` is set to. There is no configuration of the three lifetimes, and no affinity setting, that lets a subscriber adopt the caller's ambient scope.
+
+If your caller's transaction needs to cover work a subscriber does, scope adoption is not the tool for that — **the outbox is the answer**. Write the subscriber's own outgoing messages to the outbox inside the same unit of work the caller's transaction already covers, and let the outbox's own delivery mechanism carry them from there; that is what makes the subscriber's effects durable together with the caller's, without requiring the subscriber to share the caller's DI scope at all.
+
+## 8. Breaking changes: `MapperLifetime.Scoped`, and the joint mixing rule
+
+Two changes described earlier on this page are breaking changes for an application upgrading to this version, with no compatibility flag for either.
+
+**`MapperLifetime.Scoped` no longer caches for the life of the process.** Before this change, a `Scoped` mapper was effectively cached across every pipeline for the life of the process; now it means what `Scoped` means everywhere else on this page (§1) — one instance per pipeline, disposed when the pipeline ends. Nothing at compile time warns you of this: the property name and type are unchanged, only the runtime behaviour is. If your mapper relied on the old process-wide caching, the migration is **`MapperLifetime = Singleton`**, which states the same caching intent explicitly rather than getting it as a side effect of what `Scoped` used to mean (§5's *When a kind should be `Singleton`*) — check first that the mapper has no container-`Scoped` constructor dependency before making that move (§9, below).
+
+**That migration is not itself a joint-rule exception.** Because `HandlerLifetime`, `MapperLifetime` and `TransformerLifetime` are validated as one joint choice (§5) once you call `ValidatePipelines()`, if what you actually need is per-pipeline *sharing* of a `Scoped` mapper with the rest of its pipeline — rather than the old process-wide caching — that is a `Scoped` mapper in the sense this page uses the term throughout, and it requires all three lifetimes set together: `{Scoped, Scoped, Transient}` is **not** a valid destination. Only the process-wide-caching migration (`MapperLifetime = Singleton`, the other two left as they are) sidesteps the joint rule, because `Singleton` is excluded from it (§5).
+
+**The joint mixing rule itself is also a breaking change for a validating application.** A host that today sets, say, `HandlerLifetime = Scoped` with `MapperLifetime = Transient` runs today — the two simply do not share pipeline-scoped dependencies — and will fail to start once it calls `ValidatePipelines()` against this version, reported as the mixed `Transient`/`Scoped` message (§6). This is enforced **only when `ValidatePipelines()` is called** — an application that never calls it keeps running exactly as before, mixed lifetimes and all; the break only lands for applications that opt in to validation.
+
+## 9. The captive-dependency hazard, in full
+
+A `Singleton` artefact — handler, mapper or transform — resolves once from the DI container's root provider and lives for the rest of the process. If its constructor takes a container-`Scoped` dependency, that dependency is held captive: kept alive for the life of the process instead of being released when whatever pipeline scope produced it ends, or an `InvalidOperationException` at resolution time if the container's own `ValidateScopes` option is enabled. This is what §6's captive-dependency warning reports, and it is the reason the `MapperLifetime = Singleton` migration in §8 is only safe **if** the mapper being migrated has no container-`Scoped` dependency — moving a mapper to `Singleton` without checking this can trade a documented breaking change for a subtle memory or correctness hazard.
+
+Brighter's own warning is a useful early signal, but it is bounded in ways a reader has to be prepared for, because it can neither name every captive dependency that exists nor be trusted as the last word on any single one:
+
+- **It inspects direct constructor parameters of the selected constructor only.** A transitive captive dependency — a `Singleton` artefact taking a `Transient` dependency that itself takes a `Scoped` one — is not reported at all.
+- **Constructor selection is Brighter's own rule, not MS DI's.** Brighter selects the public constructor with the most parameters, and does not inspect a type at all where two public constructors tie on parameter count. This does not reproduce MS DI's own selection rule, which additionally requires the winning constructor to be a superset of every other resolvable candidate and treats certain container-supplied types as always resolvable. As a result, the warning may be raised against — or miss — a constructor MS DI itself would never actually choose to resolve.
+- **A warning can name a Brighter-shipped type, not just an application's own.** The mechanism that keeps Brighter's own handlers and transforms from generating noise against their own constructor dependencies only reaches types returned by `RequestHandlerAttribute`/`TransformAttribute` — no mapper is ever returned by either attribute, so no mapper, Brighter-shipped or otherwise, is excluded by it. Brighter ships no mapper with constructor dependencies today, so this is latent rather than something you will see out of the box, but it means a future Brighter-shipped mapper with a `Scoped` dependency would be warned against exactly as if it were your own.
+
+Because of these bounds, **the container's own `ValidateScopes` option remains the complete check for captivity** — Brighter's warning is a targeted, early, and necessarily incomplete signal on top of it, not a replacement for it.
+
+## 10. The request-scope extension's three gestures
+
+`AddBrighterRequestScope(...)`'s affinity argument **is** the value that takes effect — not whatever `DefaultScopeAffinity` you may also have assigned elsewhere. The argument wins unconditionally, on every one of Brighter's four registration entry points and regardless of which order you call things in.
+
+**Assigning `DefaultScopeAffinity` yourself while also calling the extension is a configuration error**, even though nothing reports it. Whichever order you write the two in, the outcome is always the extension's argument value, never your own assignment — and validation does not flag this, because there is no way to tell "the application explicitly assigned the same value the extension's default carries" apart from "the application never touched the option at all"; a rule that tried would misfire on the ordinary, correct opt-in below. If you are calling the extension, express your intent through its argument, not through a separate assignment of the option.
+
+The extension covers exactly three intents, one gesture each:
+
+1. **Opt in to ambient adoption** — call `AddBrighterRequestScope()`. This registers the ambient scope source and selects `ScopeAffinity.JoinAmbient`.
+2. **Register the ambient source, but don't opt in** — call `AddBrighterRequestScope(ScopeAffinity.AlwaysNew)`. The scope source is available, but every pipeline still creates and owns its own scope.
+3. **Opt out entirely** — don't call the extension at all. No ambient scope source is registered, and adoption is not possible regardless of what `DefaultScopeAffinity` is set to.
+
+**One thing the argument does not beat: an application that registers `IBrighterOptions` itself.** That registration defeats the write-through the extension relies on, in either registration ordering, so the extension's argument never reaches the resolved options object at all — this is the *defeated opt-in* message in §6's troubleshooting section, above, and its remedy is the one to follow if you hit it.
