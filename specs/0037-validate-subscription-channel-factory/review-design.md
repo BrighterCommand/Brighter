@@ -1,144 +1,129 @@
-# Review: design — 0037-validate-subscription-channel-factory (ADR 0072, round 2)
+# Review: design — 0037-validate-subscription-channel-factory (ADR 0072, round 3)
 
 **Date**: 2026-09-16
 **Threshold**: 60
 **Verdict**: NEEDS WORK
 
-5 findings at or above threshold 60. Address these before approving.
+3 findings at or above threshold 60. Address these before approving.
 
-> Round 1's findings file was never committed; it is preserved at
-> `<scratchpad>/review-design.round1.md` for this session only.
+> **Main-agent verification.** Per the standing rule that agent findings are claims, not facts, all
+> seven were checked against the working tree before this file was written. All seven hold; none was
+> rejected this round. Specifically verified: the five "four remedy templates" sites (440, 466, 467,
+> 604, 777 — the other six `four` hits are unrelated); the two body templates at 471-472; the AC-7
+> gloss at 484-487 against the nested paragraph at 491-493; `DeclaredChannelFactory`'s real namespace
+> (`Paramore.Brighter.Core.Tests.Validation.TestDoubles`, pinned by AC-12) against the ADR's
+> `Paramore.Brighter.MessagingGateway.…` at 503; the prescribed XML snippet's missing thread-safety
+> remark; and `Arm` appearing only at line 393. **C-13's population claim was re-verified
+> independently and is correct**: the only *reads* of `ChannelFactoryType` in `src/` are
+> `CombinedChannelFactory.cs:34/46/59`; all eleven other mentions are declarations or overrides on
+> subscription types. FR-5's five-condition table was also re-checked by hand and **is** total and
+> non-overlapping over the nine reachable cells (3 + 2 + 2 + 1 + 1 = 9).
 
-## Round 1 disposition
+## Round 2 disposition
 
-1. **(92) `FactoryTypes` shape — FIXED.** Both forms compiled: the prescribed nullable-backing-field + expression-bodied property builds clean (0 warnings), the get-only auto-property initialised from `_factories` produces exactly `error CS0236: A field initializer cannot reference the non-static field, method, or property 'CombinedChannelFactory._factories'`, and the same auto-property initialised from the primary-constructor parameter `factories` compiles — so both halves of the ADR's new explanation are correct.
-2. **(78) Null `ChannelFactoryType` — FIXED as a decision, but its implementation is defective.** The `Error`-in-both-arms verdict is now stated consistently in the diagram (`false when D is null`, `D is not null && …`), the helper table and the Risks entry; but it introduces an undeclared NFR-6 exception and undeclared FR-5 deviations (findings 2 and 3 below).
-3. **(75) Phantom "one new public type" budget — FIXED.** `grep -niE "budget|quota|one new public type"` over the ADR returns nothing; the only two NFR-5 mentions now characterise it accurately ("confines any new member to `CombinedChannelFactory` itself"). The three replacement arguments are grounded — the `testing.md` quotations were verified verbatim.
-4. **(70) Nested `CombinedChannelFactory` in `{F-list}` — NOT FIXED.** It is now addressed at length, but the new passage attributes the wrong template and asserts a routing outcome that is false (finding 1).
-5. **(62) AC-9 companion assertion overstated — FIXED.** Both the Decision and Risks now say the pinning is negative-only and that AC-6/AC-10 have no runtime counterpart.
-6. **(58) Empty `FactoryTypes` — PARTIALLY FIXED.** `(none)` is defined and shared between body and remedy, but it renders an unactionable remedy and is recorded nowhere in Consequences (finding 6).
-7. **(35) Allocation contradiction — FIXED.** The Decision now reads "(The rule still allocates its candidate list; see Performance.)" and Performance agrees.
-8. **(25) "localized" — FIXED.** `grep -niE "localiz|organiz|behavior|color"` over the ADR returns nothing.
+1. **(80) Nested-composite acceptance names the wrong template and claims an impossible remedy — PARTIALLY FIXED.** Sub-parts (a) and (b) are genuinely fixed. (a): the ADR now reads "*so `D == typeof(DeclaredChannelFactory)`, which is not the in-memory default, and FR-5 selects **T2***" — correct against the amended FR-5 table (Combined arm, non-empty candidate set, `D` not null, `D != typeof(InMemoryChannelFactory)` → T2). (b): the false "would in fact route" justification is gone and replaced with the honest account — "*Following that second half does **not** produce a working configuration, and the ADR should not pretend otherwise … the inner composite scans its own `[DeclaredChannelFactory]` … finds none, and throws at `CombinedChannelFactory.cs:35-38`*" — verified against `src/Paramore.Brighter/CombinedChannelFactory.cs:34-38` (non-recursive `FirstOrDefault` + throw). (c) is **not** fixed: round 2 asked to "reconcile with the earlier statement explicitly rather than by re-scoping AC-7 to 'the outer composite'", and the re-scoping is still there verbatim — "*The rule never does: in the combined arm `{F-list}` is built from `FactoryTypes`, which reports the *inner* factories, and the outer composite's own type never enters it*" — eight lines above "*`{F-list}` is literally `Paramore.Brighter.CombinedChannelFactory`*". See finding 3.
+2. **(76) Direct-arm null-`D` is new breakage under NFR-6 — FIXED.** `requirements.md` now carries **C-13** in full, NFR-6 lists it ("*except in the cases documented as deliberate exceptions in **C-2**, **C-10**, **C-11**, **C-12** and **C-13***"), C-8 carries its release-note obligation, and the ADR's Risks entry now says the opposite of what round 2 objected to: "*In the *direct* arm there is no such consolation … Blocking it **is** new breakage, and it is recorded as **C-13** with its own release-note obligation under C-8*". A matching Consequences → Negative bullet exists. The Forces section also lists five exceptions, not four.
+3. **(72) Two undeclared FR-5 deviations presented as costing "no new normative surface" — FIXED.** The claim is not merely deleted but retracted by name: "*An earlier draft of this ADR claimed the rendering 'costs no new normative surface'. That was wrong twice*", followed by the two reasons and the statement that "*Both are now settled in `requirements.md` rather than asserted here*". FR-5 item 2 now admits `no ChannelFactoryType`, and the selection table is restated as five ordered conditions. `grep` finds no surviving "no new normative surface" in the ADR.
+4. **(66) AC-15's token rule never resolved as substring-or-token — FIXED.** AC-15 now defines token as a word-boundary match and pins `Regex.Matches(message, @"(?<![.\w])ChannelFactory(?!Type)")`, and the ADR states it: "*where "token" is now defined in the requirements as a word-boundary match and pinned to a normative regex. A composite identifier that merely *ends* in the word — `InMemoryChannelFactory`, `CombinedChannelFactory` — is a different token and is not an occurrence*". Round 2's specific complaint that `InMemoryChannelFactory` was never mentioned is answered.
+5. **(62) Lazy `FactoryTypes` contradicts "materialised once"/"stable"/"not observable" — PARTIALLY FIXED.** The prose contradictions are all gone and replaced with an honest statement: "*If two threads first read `FactoryTypes` concurrently they may each build a list and one write wins, so a caller can observe two equal-but-distinct instances*", the contract now says "*Stable in the sense that every read yields an **equal** list; not guaranteed to yield the same instance*", and Performance is qualified ("*once per `CombinedChannelFactory` for the single-threaded startup path that is its only caller*"). The one sub-point round 2 raised that is still open is the prescribed XML doc: the normative snippet an implementer copies still carries no thread-safety remark, while the prose says "*`FactoryTypes` is therefore documented as *not* thread-safe*". See finding 5.
+6. **(58) `(none)` renders a remedy with no remedy — PARTIALLY FIXED.** The *remedy* half is properly fixed: FR-5 gained T4, the ADR explains why ("*an empty list interpolated into T2/T3b would have ended the message at "is one of:" with nothing after it*"), and round 2's "state that it is combined-arm-only" is honoured ("*T4 is combined-arm only — the direct arm's candidate set is always exactly one type*"). The *body* half is not: the combined body template still interpolates `{F-list}` unconditionally, and the ADR asserts the opposite. See finding 1.
+7. **(55) New test double extends C-9's closed set without flagging an amendment — FIXED.** The ADR now routes it correctly: "*that was the wrong route — C-9's double set is closed … so cases that need a sixth double are a requirements change. `requirements.md` was amended instead*", and C-9 now lists `NullDeclaringSubscription` with AC-10a/AC-10b/AC-10c added. Round 2's "name the subscription double in case 3" is done — AC-10c names `DeclaringSubscription` named `empty-sub`, and the ADR echoes "*against a named `DeclaringSubscription`*".
+8. **(45) Implementation step 1 re-plants the wrong CS0236 reading and omits a `using` — FIXED.** Step 1 now reads "*— **not** a get-only auto-property initialised from `_factories`, which cannot compile (CS0236; an auto-property initialised from the primary-constructor `factories` parameter compiles fine, and is the wrong answer for the re-enumeration reason above). Add `using System;`*". The `using` claim was verified independently: `src/Paramore.Brighter/CombinedChannelFactory.cs:1-4` imports only the four namespaces named, no `ImplicitUsings` is set in `Directory.Build.props` or `src/Paramore.Brighter/Paramore.Brighter.csproj`, and there is no `GlobalUsings.cs` in the project — so `IReadOnlyList<Type>?` does require it.
+9. **(45) `IsCompatible`'s signature cannot decide the two arms — FIXED.** The helper table now reads `IsCompatible(Type? declared, Arm arm, IReadOnlyList<Type> candidates)`, with "*Takes the arm explicitly: it is the discriminator `ResolveCandidates` returns, never re-derived by testing `F is CombinedChannelFactory` again*".
+
+On the maintainer's four standing concerns, the verified positions are: the FR-5 remedy table **is** total and non-overlapping over the nine reachable cells (finding 1 concerns the *body*, not the remedy); T4 and every other template **pass** AC-15's regex; and C-13's grep claim **is** correct.
 
 ## Findings
 
-### 1. The nested-composite acceptance names the wrong template and claims a remedy that cannot work (Score: 80)
+### 1. The two message-body templates are not total over the input space the amended requirements added, and the ADR asserts the opposite (Score: 74)
 
-The revised passage is the ADR's answer to round-1 finding 4, and it is wrong on three counts.
+The maintainer asked whether FR-5's remedy table is total. It is. The space — arm (Direct/Combined) × `D` (null / `InMemoryChannelFactory` / other) × candidate set (empty / non-empty), noting that the direct arm's set is never empty — gives nine reachable cells, and the five conditions cover them exactly once: T4 takes the three Combined×empty cells, T3a the two Direct×{null, InMemory}, T3b the two Combined×non-empty×{null, InMemory}, T1 the one Direct×other, T2 the one Combined×non-empty×other. 3+2+2+1+1 = 9, no cell double-covered, and the ADR's "T4 is selected first" matches FR-5's stated order.
 
-**(a) Wrong template.** AC-10's Given is `CombinedChannelFactory([CombinedChannelFactory([new DeclaredChannelFactory()])])` **and a `DeclaringSubscription`** — so `D == typeof(DeclaredChannelFactory)`, which is *not* `typeof(InMemoryChannelFactory)`. FR-5's normative table selects **T2** for "Combined arm, and `D != typeof(InMemoryChannelFactory)`". The ADR says the message renders **T3b**.
+The defect is one level up: the ADR owns the **body**, and it supplies exactly two body templates, neither of which covers two cells the amendment explicitly created acceptance criteria for.
 
-**(b) The named type does not route.** If a developer follows the rendered remedy and declares `typeof(CombinedChannelFactory)`, the outer composite selects the inner composite at `CombinedChannelFactory.cs:34`, then calls `factory.CreateSyncChannel(subscription)` on it; the inner composite scans its own `[DeclaredChannelFactory]` for `f.GetType() == typeof(CombinedChannelFactory)`, finds none, and throws `ConfigurationException` at `CombinedChannelFactory.cs:35-38`. FR-3's word is "matches", not "routes"; the ADR silently upgrades one to the other.
+**(a) Empty combined candidate set (AC-10c).** The combined body interpolates `{F-list}` unconditionally, so `new CombinedChannelFactory([])` renders `… but will be handed one of '' — add a channel factory to the combined channel factory`. The ADR's claim that this cannot happen is false *as a claim about its own rendering plan*, and it is falsified by the sentence directly before it, which says `{F-list}`'s separator is "shared between body and remedy" — i.e. `{F-list}` appears in both. T4 replaces only the remedy. Note that AC-10c does not catch this: it asserts the message ends with the T4 literal and contains no `is one of:`, both of which the degenerate body satisfies.
 
-**(c) It contradicts the ADR three lines earlier**, and its AC-7 gloss does not survive AC-7's text. AC-7 forbids naming `Paramore.Brighter.CombinedChannelFactory` "as the type the subscription will be handed" — it draws no outer/inner distinction, and the rendered string is indistinguishable either way. The ADR's "one the rule never makes" is false: in AC-10's configuration the body reads "will be handed one of 'Paramore.Brighter.CombinedChannelFactory'", which is exactly that claim.
+**(b) Null `D` (AC-10a, AC-10b).** Round 2 correctly forced the deletion of the old "costs no new normative surface" passage, but the sentence that carried the null-`D` body rendering ("the body reads 'declares no ChannelFactoryType'") went with it and was not replaced. The only surviving statement is the FR-5-level "*FR-5 item 2 admits the literal phrase `no ChannelFactoryType`*" — which says what the requirement permits, not what the message renders. Read literally, the prescribed direct template with a null `D` renders `declares ChannelFactoryType ''`, which does **not** contain the literal AC-10a demands — so the template as written fails its own acceptance criterion. Two implementers patching around that will produce `declares no ChannelFactoryType but will be handed '{F}'` and `declares ChannelFactoryType 'no ChannelFactoryType' but will be handed '{F}'` respectively; both satisfy AC-10a's `contains the literal` assertion, so the test does not discriminate either.
 
-**Evidence**: ADR: "the T3b remedy reads '…whose ChannelFactoryType is one of: `Paramore.Brighter.CombinedChannelFactory`'. That is **correct**, not a violation of the rule above: FR-3 states that 'a nested combined factory therefore matches only a subscription whose `D` is literally `typeof(CombinedChannelFactory)`', so the message names the one type that would in fact route." Against the ADR three lines earlier: "telling a developer to declare `typeof(CombinedChannelFactory)` would be advice that can never work." And `src/Paramore.Brighter/CombinedChannelFactory.cs:34-38` (non-recursive `FirstOrDefault` + throw), which makes the nested declaration fail one level down.
+**Evidence**: ADR, message rendering section (lines 471-472):
+```
+direct   : Subscription type '{S}' declares ChannelFactoryType '{D}' but will be handed '{F}' {remedy}
+combined : Subscription type '{S}' declares ChannelFactoryType '{D}' but will be handed one of '{F-list}' {remedy}
+```
+and, twelve lines later: "*`{F-list}` joins display names with `", "` in constructor order. The separator is defined **once** and shared between body and remedy, so the two cannot disagree. An **empty** candidate set never reaches `{F-list}`: FR-5's template **T4** is selected first*". Against requirements AC-10c ("*Given `options.DefaultChannelFactory = new CombinedChannelFactory([])`*") and AC-10a ("*whose `Message` contains the literal `no ChannelFactoryType` in place of a declared type name*").
 
-**Recommendation**: Correct the template to T2. Drop the "would in fact route" justification — it is false — and replace it with an honest one: the message enumerates the candidate the *outer* composite would select, and following it does not produce a working configuration, so the nested case is a known message-quality limitation of a configuration that is broken either way. Record it under Negative. If that is unacceptable, filter nested composites from `{F-list}` and let it render `(none)`, which at least does not advise an impossible fix. Either way, reconcile with the earlier statement explicitly rather than by re-scoping AC-7 to "the outer composite".
-
----
-
-### 2. The direct-arm null-`D` verdict is new breakage under NFR-6, and the Risks entry mis-states it (Score: 76)
-
-The ADR decides "We therefore treat a null declared type as a mismatch in both arms". For the **direct** arm this makes a configuration that starts and runs correctly today fail at startup. `grep -rn "ChannelFactoryType" src --include="*.cs"` excluding declarations returns **only** `CombinedChannelFactory.cs:34`, `:46`, `:59`. Nothing else in `src/` reads it. So in a non-combined configuration a `Subscription` subclass that overrides `ChannelFactoryType` to return `null` is never inspected at runtime, the host starts, and the consumer works. After this change it is an `Error` and, under the default `throwOnError: true`, blocks startup.
-
-NFR-6 permits exactly four exceptions (C-2, C-10, C-11, C-12) and states: "Any newly discovered case MUST be added as its own constraint and to C-8's release-note obligations, not absorbed silently here." This case is none of the four — C-10 is about subclasses that *declare no override* and inherit `typeof(InMemoryChannelFactory)`, a different shape. The ADR adds no constraint, no release note, and nothing in Consequences → Negative.
-
-Worse, the Risks entry asserts the opposite of what the code shows, and its qualifier quietly covers only the *other* arm.
-
-**Evidence**: ADR Risks: "The affected population is narrower than C-10's: a subclass that overrides `ChannelFactoryType` and returns `null` already fails at Dispatcher start **under `CombinedChannelFactory`**, so the rule converts a certain runtime failure into a named startup finding **rather than creating new breakage**." The sentence's evidence is combined-arm-only; the conclusion is claimed for both. Against `src/Paramore.Brighter/CombinedChannelFactory.cs:34/46/59` as the sole readers.
-
-**Recommendation**: Either (a) flag this as a requirements amendment — a new constraint C-13 with its own C-8 release-note obligation, listed in Consequences → Negative — and correct the Risks entry to say the direct arm *is* new breakage; or (b) reconsider the direct-arm verdict for null `D` (a defensible alternative the ADR did not weigh: treat the direct arm as compatible when `D` is null, since nothing at runtime consults it, while keeping the combined arm's FR-3-mandated `Error`). Do not leave the Risks text asserting "rather than creating new breakage".
+**Recommendation**: Give the body four forms, not two — direct/combined × declared/undeclared — or state one rule that derives all four (e.g. the declared clause renders `declares ChannelFactoryType '{D}'` when `D` is non-null and `declares no ChannelFactoryType` when it is null; the handed clause renders `will be handed one of '{F-list}'` when the candidate set is non-empty and `will be handed no channel factory at all` — or similar — when it is empty). Then correct "An empty candidate set never reaches `{F-list}`" to say what is true: T4 keeps it out of the *remedy*, and the body handles it separately. The wording of C-13's release-note obligation in requirements ("*a startup `Error` reading `declares no ChannelFactoryType`*") is the natural anchor for the null-`D` body.
 
 ---
 
-### 3. Two undeclared deviations from FR-5, presented as costing "no new normative surface" (Score: 72)
+### 2. The ADR still says "four remedy literals/templates" in five places, contradicting the amended FR-5 and its own record of the amendment (Score: 64)
 
-FR-5 is normative in two respects the null-`D` decision changes, and the ADR declares neither as a deviation — it declares the *opposite*.
+FR-5 as amended is explicit: "*Item 4 MUST be rendered as one of exactly **five** literals*", and the ADR itself records the amendment — "*FR-5's selection table is restated as five ordered, total conditions*". But five other passages, including a section heading and the mitigation for a named risk, still count four. The Risks sentence is the one with teeth: it is the ADR's licence for future editors to revise anything outside the normative set, and under it T4 is revisable body wording — which would break AC-10c.
 
-**(a) FR-5 item 2.** Verbatim: "The `Message` of every finding produced by this rule MUST therefore contain: … 2. the declared channel factory type `D`, as `Type.FullName`". A finding whose body reads "declares no ChannelFactoryType" contains no such name. This applies to the **combined** arm too — the arm the ADR says "is not ours to decide" — so it cannot be waved through as a consequence of a discretionary choice.
+**Evidence**: ADR section heading (line 440) "*#### 3. Message rendering — `DisplayName` and the four remedy templates*"; line 466, "*The message is assembled as a body plus one of FR-5's four remedy literals*"; line 467, "*Only the four remedy literals are normative; the body wording below is this ADR's proposal*"; Implementation Approach step 3 (line 604), "*with `ResolveCandidates` / `IsCompatible` / the four templates*"; Risks (line 777), "*Mitigation*: only the four remedy literals are normative; the body wording is this ADR's and may be revised as long as AC-12, AC-14 and AC-15 hold*". Against requirements FR-5's table, which lists T4, T3a, T3b, T1, T2, and the ADR's own "*FR-5's template **T4** is selected first*". (The document's six other uses of "four" — four existing rules, four imported namespaces, four families of host — are correct and unaffected.)
 
-**(b) FR-5's template selection table.** Verbatim: "Item 4 MUST be rendered as one of exactly **four** literals, **selected by the rules below**", with T1 conditioned on "Direct arm, and `D != typeof(InMemoryChannelFactory)`" and T3a on "Direct arm, and `D == typeof(InMemoryChannelFactory)`". A null `D` satisfies T1's condition as written. The ADR widens T3a/T3b's condition instead. That is a change to a normative selection rule, not merely a change of which literal text ships.
-
-**Evidence**: ADR: "**Rendering costs no new normative surface.** The body reads 'declares no ChannelFactoryType' in place of 'declares ChannelFactoryType '{D}''… The selection condition for T3a/T3b therefore widens from `D == typeof(InMemoryChannelFactory)` to `D == typeof(InMemoryChannelFactory) || D is null`. **FR-5's four literals are untouched and no fifth is introduced.**" The four literal *strings* are indeed untouched; the MUST in item 2 and the MUST governing their selection are not.
-
-**Recommendation**: State plainly that this is a deviation from FR-5 item 2 and from FR-5's selection table for the null-`D` input, give the justification (item 2 is unsatisfiable when there is no type to name; T1 is unrenderable), and route it through the same requirements-amendment path as finding 2. Delete "costs no new normative surface".
+**Recommendation**: Change all five to "five", and in the Risks mitigation add AC-10c to the list of criteria that must continue to hold ("as long as AC-12, AC-14, AC-15 and AC-10c hold"), since T4's literal is now among the normative five.
 
 ---
 
-### 4. AC-15's token rule is never resolved as substring-or-token, and the ADR applies it both ways (Score: 66)
+### 3. The AC-7 gloss still claims the rule never names `CombinedChannelFactory` as the handed type, eight lines above the paragraph that shows it doing exactly that (Score: 62)
 
-The ADR promotes AC-15's assertion into a general body-wording constraint ("AC-15 forbids **any** occurrence of the token `ChannelFactory` that is neither preceded by `.` nor part of `ChannelFactoryType`") without settling what "token" means, and then applies it inconsistently:
+This is round 2's finding 1(c), which the revision did not address; its recommendation was explicit that the fix must not be a re-scope to "the outer composite", and the re-scope is what remains. The two passages cannot both be true of the AC-10 configuration: the combined body is `… but will be handed one of '{F-list}'`, and in that configuration `{F-list}` is the single string `Paramore.Brighter.CombinedChannelFactory`. The distinction the ADR draws — outer composite's type vs inner composite's type — is invisible in the rendered message, which is where AC-7's prohibition lives.
 
-- It **worries** about `Paramore.Brighter.CombinedChannelFactory` in `{F-list}` ("The nested case is the one exception") — an occurrence preceded by `d`, not `.`.
-- It **never mentions** `Paramore.Brighter.InMemoryChannelFactory`, which the direct-arm body renders in this feature's headline case (AC-1: plain `Subscription<T>`, so `D == typeof(InMemoryChannelFactory)`, body "declares ChannelFactoryType '{D}'"). That is the identical shape — an occurrence preceded by `y`, not `.`.
+This does not break AC-7 as a test: AC-7's Given is AC-6's flat `CombinedChannelFactory([DeclaredChannelFactory, NonMatchingChannelFactory])`, which contains no nesting, so no implementation is at risk. It is scored as an honesty defect in the document rather than a functional one — and honesty is precisely what the surrounding passage is claiming for itself ("*and the ADR should not pretend otherwise*").
 
-Under a word-boundary reading (`\bChannelFactory`) neither is an occurrence and the nested-case discussion is a non-problem. Under a substring reading both are breaches. Two implementers writing the AC-15 assertion will choose differently — `Regex.Matches(msg, @"\bChannelFactory")` vs `msg.IndexOf("ChannelFactory")` — and the substring implementer will get a red test the moment they generalise the assertion the way the ADR invites.
+On the open judgement call the maintainer flagged: the *acceptance itself* is now recorded correctly and the reasoning is sound. The counterfactual was verified — for `CombinedChannelFactory([CombinedChannelFactory([DeclaredChannelFactory])])`, `FactoryTypes` is `[typeof(CombinedChannelFactory)]`, so filtering nested composites does leave an empty list and does select T4. The trade-off as stated (T4 says less about what is configured than a type name that does not route) is a defensible call to leave to the maintainer, and it is recorded under Negative. Only the AC-7 bullet is wrong.
 
-**Evidence**: AC-15 verbatim: "no occurrence of the token `ChannelFactory` appears that is neither immediately preceded by a `.` nor part of the token `ChannelFactoryType`". ADR's general-constraint sentence vs its nested-case paragraph; and the ADR's own body template, which renders `{D}` unconditionally and therefore renders `Paramore.Brighter.InMemoryChannelFactory` for every AC-1/AC-13a-shaped finding.
+**Evidence**: ADR lines 483-487: "*AC-7 forbids naming `Paramore.Brighter.CombinedChannelFactory` **as the type the subscription will be handed**. The rule never does: in the combined arm `{F-list}` is built from `FactoryTypes`, which reports the *inner* factories, and the outer composite's own type never enters it.*" Against, in the next paragraph (line 491): "*`FactoryTypes` reports the inner factories' concrete types, so `{F-list}` is literally `Paramore.Brighter.CombinedChannelFactory`*", and the body template `… but will be handed one of '{F-list}'`.
 
-**Recommendation**: Decide it explicitly in the ADR — "token" means a match at a word boundary, so composite identifiers such as `InMemoryChannelFactory` and `CombinedChannelFactory` are not occurrences — and state the assertion's implementation (the regex) so both test sites agree. Then delete the nested-case "it is not a breach" discussion, which the resolution makes moot.
-
----
-
-### 5. The lazy `FactoryTypes` contradicts "materialised once", "stable", and "not observable" (Score: 62)
-
-The prescribed shape is right and compiles; the claims made *about* it are not, and they contradict the argument used to reject the alternative.
-
-- The ADR rejects a plain `=> _factories.Select(...).ToList()` because it "weakens the contract's 'stable' to 'equal-but-not-same'" — so "stable" is being used in the **reference-identity** sense.
-- It then concedes a race in which "two threads may each build a list, and one wins" and calls the outcome "not observable to a caller". Reference identity *is* observable, and the race produces exactly "equal-but-not-same": thread A can compute L1, be overwritten by thread B's L2, and see a different instance on its next read. That is the defect the alternative was rejected for.
-- Performance still asserts "`FactoryTypes` is materialised once per `CombinedChannelFactory`", and the Key Components note claims the shape "preserves the 'materialised once' property" — both false under the race the ADR itself describes.
-- Separately, the property is a non-volatile reference field publishing a `List<T>`. "Benign race" is a term of art that presumes safe publication; the ADR asserts it without argument, and the prescribed XML documentation says nothing about thread-safety, so the next editor has no guidance. Nothing in Brighter calls `FactoryTypes` concurrently today (the only consumer is the startup rule, and `ValidateConsumers`/`EvaluateSpecs` is a sequential loop), which is the honest reason the race does not matter — and it is the reason the ADR does not give.
-
-**Evidence**: the ADR's "Two alternatives were weighed and rejected" paragraph and its closing race sentence; the contract's "a non-null, possibly empty, **stable**, ordered list"; Performance's "materialised once per `CombinedChannelFactory`".
-
-**Recommendation**: Either state the honest position — "the only caller is the startup validation rule, which is single-threaded; the property is not documented as thread-safe and callers needing concurrent access must synchronise" — and soften "materialised once" to "materialised at most once per read-path, once in practice"; or make it genuinely once (`Lazy<IReadOnlyList<Type>>`, or `Interlocked.CompareExchange`) and keep the claims. Do not keep both the identity-based rejection of the alternative and the "not observable" dismissal of the race.
+**Recommendation**: Replace "The rule never does" with the accurate statement and the scope that saves it — e.g. "The rule does so only when an inner factory is itself a `CombinedChannelFactory`; AC-7's configuration has no nesting, so the criterion holds, and the nested case is accepted below as a known message-quality limitation." That reconciles the two passages instead of re-scoping the criterion.
 
 ---
 
-### 6. `(none)` renders a remedy with no remedy in it, and is absent from Consequences (Score: 58)
+### 4. The worked remedy example renders a namespace the type does not have (Score: 55)
 
-For `new CombinedChannelFactory([])` the ADR renders T3b (or T2) with `{F-list}` = `(none)`, producing a message ending "— use a subscription type whose ChannelFactoryType is one of: **(none)**". There is no subscription type that satisfies that, so the message states no remedy. NFR-2 verbatim: "Each message MUST … state a remedy. No message may be satisfiable by a generic phrase such as 'channel factory mismatch'." The ADR's justification ("FR-5 item 3 still requires the message to say what the subscription will be handed") is weak: FR-5 item 3 requires the `Type.FullName` of every inner factory, which an empty set satisfies vacuously — `(none)` is the ADR's own addition, not FR-5's requirement.
+The passage illustrates the nested case's "working half" with a display name for `DeclaredChannelFactory` placed under `Paramore.Brighter.MessagingGateway.…`. `DeclaredChannelFactory` is one of C-9's core test doubles, which live under `tests/Paramore.Brighter.Core.Tests/Validation/TestDoubles/` in `Paramore.Brighter.Core.Tests.Validation.TestDoubles` — the namespace AC-12 pins verbatim for exactly these doubles. No `MessagingGateway` assembly contains it, so the quoted message is a string the rule can never produce for AC-10's configuration.
 
-It is also unrecorded outside the Decision: neither Consequences → Negative nor Risks mentions the empty-composite rendering, and the ADR does not state that `(none)` is unreachable in the direct arm (it is — `candidates` is `[F.GetType()]` or `[typeof(InMemoryChannelFactory)]`, never empty).
+**Evidence**: ADR line 503: "*The message's *first* half — "either configure a channel factory of type `Paramore.Brighter.MessagingGateway.…DeclaredChannelFactory`" — is a working remedy*". Against requirements C-9 ("*One class per file under `Validation/TestDoubles/`*") and AC-12, which pins `Paramore.Brighter.Core.Tests.Validation.TestDoubles.FakeChannelFactoryRequest` as the namespace for that folder's types.
 
-**Evidence**: ADR: "`{F-list}` … renders as the literal `(none)` when the candidate list is empty — a `CombinedChannelFactory` constructed with no inner factories is legal today and routes nothing, so the verdict is an `Error` and FR-5 item 3 still requires the message to say what the subscription will be handed."
-
-**Recommendation**: For the empty-candidate case emit a remedy that is actionable ("add a channel factory of type `{D}` to the combined channel factory"), or accept `(none)` and record explicitly under Negative that this one configuration yields a message with a degenerate remedy clause. State that `(none)` is combined-arm-only.
+**Recommendation**: Render it as `Paramore.Brighter.Core.Tests.Validation.TestDoubles.DeclaredChannelFactory`, or elide the namespace entirely (`…DeclaredChannelFactory`) rather than inventing a wrong one.
 
 ---
 
-### 7. The new test double extends C-9's closed set without flagging a requirements amendment (Score: 55)
+### 5. The prescribed `FactoryTypes` XML documentation omits the thread-safety statement the ADR says it carries (Score: 52)
 
-The revised Testing Strategy adds three test cases and a sixth double. C-9 verbatim: "**The doubles (a closed set — no AC may use one not listed here).**" The new tests are not ACs, so the letter is not broken — but the acceptance-criteria preamble also binds every non-gateway criterion to the closed set, and the three new cases exist only because of findings 2 and 3's undeclared deviations. The ADR flags them as uncovered by any AC (good) but does not say what should follow: an amendment to C-9 and new acceptance criteria in the approved requirements.
+The thread-safety analysis is now honest — and the justification survives scrutiny for the in-repo caller: `sp.GetServices<ISpecification<Subscription>>()` occurs at exactly one site (`BrighterPipelineValidationExtensions.cs:79`), and `PipelineValidator.EvaluateSpecs` is a plain nested `foreach` over entities then specs, so the startup path is single-threaded as claimed. But the justification is "who calls it", and the ADR simultaneously sells the property as public surface for third parties ("*`FactoryTypes` makes a composite's routing set inspectable to anyone writing their own diagnostics*"), which is precisely the population that will not know. The mitigation the ADR names for that — documenting it — is not in the artefact an implementer copies.
 
-Case 3 is also under-specified: "A `CombinedChannelFactory` with no inner factories — one `Error` whose `{F-list}` renders `(none)`" does not say which subscription double, which decides whether T2 or T3b is rendered.
+**Evidence**: ADR prose: "*`FactoryTypes` is therefore documented as *not* thread-safe, and a caller needing concurrent access must synchronise or the property must be promoted to `Lazy<IReadOnlyList<Type>>` at that point.*" Against the normative snippet in the same section (lines 199-206), whose doc comment is three lines and mentions routing identities only:
+```csharp
+/// <summary>
+/// The concrete types of the inner factories, in the order supplied to the constructor.
+/// These are the identities this factory routes on: it can serve a subscription exactly when
+/// that subscription's <see cref="Subscription.ChannelFactoryType"/> is one of them.
+/// </summary>
+```
 
-**Evidence**: the revised Testing Strategy's three-case list; requirements.md C-9 and the Acceptance Criteria preamble.
-
-**Recommendation**: Say that these cases require a C-9 amendment (a `NullDeclaringSubscription` double) plus new ACs, and route them back through requirements rather than shipping them as ADR-only tests. Name the subscription double in case 3.
-
----
-
-### 8. Implementation Approach step 1 re-plants the wrong CS0236 reading, and omits a required `using` (Score: 45)
-
-Step 1 compresses the (now correct) Key Components explanation into a sentence that is false as written: a get-only auto-property compiles perfectly well in a primary-constructor class — `public IReadOnlyList<Type> FactoryTypes { get; } = factories.Select(f => f.GetType()).ToList();` builds clean. What cannot compile is an initialiser referencing the *instance field* `_factories`. Since Implementation Approach is the section an implementer works from, this is the same wrong-direction nudge round-1 finding 1 objected to.
-
-Separately, `src/Paramore.Brighter/CombinedChannelFactory.cs` has only four usings (`System.Collections.Generic`, `System.Linq`, `System.Threading`, `System.Threading.Tasks`), the repo sets no `ImplicitUsings`, and the file uses no `System` type today. The prescribed snippet's `IReadOnlyList<Type>?` therefore requires adding `using System;`, which the "pure structural addition" framing does not mention.
-
-**Evidence**: ADR Implementation Approach step 1: "A nullable backing field plus an expression-bodied property materialising once from `_factories` — **not** a get-only auto-property, which cannot compile in a primary-constructor class (CS0236). Pure structural addition". `src/Paramore.Brighter/CombinedChannelFactory.cs:1-4`; no `ImplicitUsings` in `Directory.Build.props` or `src/Paramore.Brighter/Paramore.Brighter.csproj`.
-
-**Recommendation**: "…not a get-only auto-property initialised from `_factories`, which cannot compile (CS0236)". Note the `using System;` addition.
+**Recommendation**: Add a `<remarks>` line to the prescribed snippet saying the property caches on first read, is not thread-safe, and that every read yields an equal but not necessarily identical list. That also puts the routing contract and its caveat at the point a future editor of `CombinedChannelFactory` would change it, which is the mitigation the Risks section already promises.
 
 ---
 
-### 9. `IsCompatible`'s stated signature cannot decide the two arms it is given (Score: 45)
+### 6. `Arm` and `ResolveCandidates`'s return type are named but never defined (Score: 45)
 
-The helper table gives `IsCompatible(Type? declared, candidates)` the responsibility of "*deciding* — FR-3's two arms, and the null-`declared` case", but its parameters carry no arm discriminator — while the paragraph immediately below insists the discriminator must be explicit and must travel with the list.
+The rule's internal structure is otherwise prescribed in detail — the `ChannelFactoryCompatible` signature is given in full, as is the `FactoryTypes` shape — but the discriminator the design turns on is left as a bare identifier. The ADR says `ResolveCandidates` "returns the arm and the candidate list together" and gives `IsCompatible(Type? declared, Arm arm, IReadOnlyList<Type> candidates)`, without saying whether `Arm` is a private enum, where it is declared, or whether `ResolveCandidates` returns a tuple, a private readonly record struct, or out-parameters. The consequence is nil (all of it is private to `ConsumerValidationRules`), which is why this is scored low, but the section is otherwise prescriptive enough that the omission reads as an oversight.
 
-**Evidence**: the helper table vs "`ResolveCandidates` returns the arm and the candidate list together… Keeping the arm as an explicit discriminator (rather than re-testing `F is CombinedChannelFactory` at each use site) is what lets the rest of the rule work in types only."
+**Evidence**: ADR helper table (line 393) and the paragraph below it; no definition of `Arm` appears anywhere in the document — `grep -n "\bArm\b"` finds only the diagram's `arm = Direct` / `arm = Combined` and the table row.
 
-**Recommendation**: Write the signature as `IsCompatible(Type? declared, Arm arm, IReadOnlyList<Type> candidates)`, or say that `candidates` is the `(arm, types)` pair `ResolveCandidates` returns.
+**Recommendation**: One clause: "`Arm` is a private nested `enum { Direct, Combined }` on `ConsumerValidationRules`, and `ResolveCandidates` returns `(Arm, IReadOnlyList<Type>)`."
+
+---
+
+### 7. "Two lexical constraints" introduces three bullets, and the third is stranded five paragraphs downstream (Score: 42)
+
+The AC-13a/AC-13c bullet is a sibling of the AC-15 and AC-7 bullets, but sits after the three-paragraph nested-composite discussion, orphaned between that discussion's closing sentence and the `{F-list}` paragraph. A reader following the list count will stop at two and miss a constraint the ADR calls "easy to breach accidentally".
+
+**Evidence**: ADR line 475, "*Two lexical constraints shaped that wording and are easy to breach accidentally:*" followed by two bullets, then the nested-case paragraphs ending "*Recorded under Negative as a known message-quality limitation.*", then (line 510) "*- AC-13a and AC-13c forbid the substring `configure a channel factory of type` anywhere in a T3a/T3b message, so the body must not paraphrase the suppressed half.*"
+
+**Recommendation**: Move the AC-13a/AC-13c bullet up to join the other two and change "Two" to "Three".
 
 ---
 
@@ -147,9 +132,9 @@ The helper table gives `IsCompatible(Type? declared, candidates)` the responsibi
 | Score Range | Count |
 |-------------|-------|
 | 90-100 (Critical) | 0 |
-| 70-89 (High) | 3 |
+| 70-89 (High) | 1 |
 | 50-69 (Medium) | 4 |
 | 0-49 (Low) | 2 |
 
-**Total findings**: 9
-**Findings at or above threshold (60)**: 5
+**Total findings**: 7
+**Findings at or above threshold (60)**: 3
