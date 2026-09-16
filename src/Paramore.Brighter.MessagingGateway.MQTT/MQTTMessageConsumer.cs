@@ -170,6 +170,19 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// caller. Either would let one poison message published by anybody on the topic stop this
         /// consumer.
         /// </para>
+        /// <para>
+        /// The catch is deliberately every exception, not a list of types. A malformed document
+        /// does fault as <see cref="JsonException"/>, because <c>Utf8JsonReader</c> marks its own
+        /// faults for <c>JsonSerializer</c> to rewrap — but a field whose value is merely illegal
+        /// need not. <c>MessageHeader.ContentType</c> is a <c>System.Net.Mime.ContentType</c> with
+        /// no registered converter, so it is populated as a POCO through its own setters, and those
+        /// are user code: an unparseable media type surfaces as <c>FormatException</c>, an empty
+        /// one as <c>ArgumentException</c>, and an explicit <c>"contentType": null</c> as
+        /// <c>NullReferenceException</c> — three types from one field. Since the block wraps a
+        /// single statement whose whole job is to parse untrusted bytes, any fault it raises is
+        /// attributable to the payload or to a converter, and both are better logged and dropped
+        /// than fatal. The exception is logged, so nothing is lost silently.
+        /// </para>
         /// </remarks>
         /// <param name="payload">The raw bytes MQTTnet delivered.</param>
         /// <param name="topicPrefix">The topic the payload arrived on, for the log entry.</param>
@@ -188,7 +201,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
                 return message;
             }
-            catch (JsonException ex)
+            catch (Exception ex)
             {
                 Log.MqttMessageConsumerDroppedMalformedPayload(s_logger, ex, topicPrefix);
                 return null;
@@ -647,10 +660,10 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             [LoggerMessage(LogLevel.Trace, "MQTTMessageConsumer: Received message from queue {TopicPrefix}")]
             public static partial void MqttMessageConsumerReceivedMessage(ILogger logger, object? topicPrefix);
 
-            [LoggerMessage(Level = LogLevel.Warning, Message = "MQTTMessageConsumer: Dropped a payload on {TopicPrefix} that deserialised to no message.")]
+            [LoggerMessage(Level = LogLevel.Warning, Message = "MQTTMessageConsumer: Dropped a payload on {TopicPrefix} that was the JSON literal null.")]
             public static partial void MqttMessageConsumerDroppedUnreadablePayload(ILogger logger, object? topicPrefix);
 
-            [LoggerMessage(Level = LogLevel.Warning, Message = "MQTTMessageConsumer: Dropped a malformed payload on {TopicPrefix}.")]
+            [LoggerMessage(Level = LogLevel.Warning, Message = "MQTTMessageConsumer: Dropped a payload on {TopicPrefix} that could not be read as a message.")]
             public static partial void MqttMessageConsumerDroppedMalformedPayload(ILogger logger, Exception ex, object? topicPrefix);
 
             [LoggerMessage(Level = LogLevel.Warning, Message = "MQTTMessageConsumer: Timed out retrieving messages.  Queue length: {QueueLength}")]

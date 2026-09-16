@@ -27,6 +27,7 @@ namespace Paramore.Brighter.MQTT.Tests;
 /// <c>RocketMqMessageProducer.AddHeaderProperties</c>.
 /// </para>
 /// </remarks>
+[Trait("Category", "MQTT")]
 public class MqttPayloadDeserialisationTests
 {
     [Fact]
@@ -44,6 +45,28 @@ public class MqttPayloadDeserialisationTests
         // Assert — both are dropped, and neither throws out of the handler
         Assert.Null(fromNull);
         Assert.Null(fromMalformed);
+    }
+
+    [Fact]
+    public void When_a_payload_carries_an_illegal_header_value_should_be_dropped_rather_than_escaping()
+    {
+        // Arrange - payloads that parse as JSON but carry a value no header field will accept.
+        // ContentType is the reachable case: MessageHeader exposes System.Net.Mime.ContentType
+        // through a public setter with no registered converter, so it is populated as a POCO and
+        // its own setters validate. Those setters are user code, so what they throw is NOT
+        // remapped to JsonException the way the Utf8JsonReader's own faults are.
+        var illegalMediaType = Encoding.UTF8.GetBytes(
+            "{\"header\":{\"contentType\":{\"mediaType\":\"garbage\"}}}");     // FormatException
+        var emptyMediaType = Encoding.UTF8.GetBytes(
+            "{\"header\":{\"contentType\":{\"mediaType\":\"\"}}}");             // ArgumentException
+        var nullContentType = Encoding.UTF8.GetBytes(
+            "{\"header\":{\"contentType\":null}}");                            // NullReferenceException
+
+        // Act / Assert - each is dropped. A throw here reaches MQTTnet's dispatch loop rather
+        // than any caller, so one such payload would stop the consumer for every other message.
+        Assert.Null(MqttMessageConsumer.TryDeserialiseMessage(illegalMediaType, "test/topic"));
+        Assert.Null(MqttMessageConsumer.TryDeserialiseMessage(emptyMediaType, "test/topic"));
+        Assert.Null(MqttMessageConsumer.TryDeserialiseMessage(nullContentType, "test/topic"));
     }
 
     [Fact]

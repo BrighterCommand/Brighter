@@ -16,9 +16,12 @@
   </ItemGroup>
   <ItemGroup>
     <!-- The arrival handler is a lambda over an MQTTnet client the consumer constructs itself, so
-         the payload it cannot read is only reachable through a broker. Exposing the deserialisation
-         step lets that case be covered in the `build` job instead of only in `mqtt-ci`. This
-         assembly is already unsigned (see SignAssembly above), so no strong-name key is involved. -->
+         the payload it cannot read is otherwise reachable only by publishing one through a broker.
+         Exposing the deserialisation step lets `mqtt-ci` cover it without standing one up. Note the
+         covering test still carries [Trait("Category", "MQTT")]: mqtt-ci filters on Category=MQTT,
+         and the `build` job runs an explicit list of four projects that does not include this one,
+         so a test here without that trait runs in NEITHER job. This assembly is already unsigned
+         (see SignAssembly above), so no strong-name key is involved. -->
     <InternalsVisibleTo Include="Paramore.Brighter.MQTT.Tests" />
   </ItemGroup>
 </Project>
