@@ -229,6 +229,11 @@ Verbosity follows the new optional `instrumentationOptions` constructor argument
 spans** unless you pass a narrower option. Construct the producer with, for example,
 `InstrumentationOptions.RequestInformation` if message bodies must stay out of your traces.
 
+⚠️ **That only helps for a producer you construct yourself.** The requeue, dead-letter and
+invalid-message producers that `MqttMessageConsumer` builds internally do not take the argument, so
+they are fixed at `All` and their spans carry message bodies with no supported way to narrow them.
+Tracked as [#4365](https://github.com/BrighterCommand/Brighter/issues/4365).
+
 
 ### RMQ.Async: subscriptions declare durable queues by default (#4355)
 
