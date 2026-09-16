@@ -240,7 +240,11 @@ factory directly, bypassing the routing the composite exists to perform — the 
 the Composite pattern buys. The rule demonstrably never needs an instance: FR-3's combined arm is
 `f.GetType() == D`, FR-5 item 3 needs display names of types, and AC-9's companion assertion calls
 `CreateSyncChannel` on the **composite**, not on an inner factory. Exposing instances would be a
-wider public API than the requirement, permanently, for no caller.
+wider public API than the requirement, permanently, for no caller — against
+[`.agent_instructions/testing.md`](../../.agent_instructions/testing.md)'s *Test Scope and Isolation*
+rule that "an assembly is a module, it's surface area should be as narrow as possible" and that one
+should "not expose more than is necessary from an assembly". `FactoryTypes` is the narrowest surface
+that satisfies the need: identities, not instances.
 
 **Why not tell-don't-ask — e.g. `bool CanRoute(Subscription subscription)`?** This is the strongest
 alternative and deserves a straight answer rather than a dismissal. Its merit is real: it would put
@@ -263,16 +267,31 @@ That test pins the rule's combined arm to the composite's routing in the one dir
 would matter (a false negative is worse than a false positive here). It is a weaker guarantee than
 sharing the code, and we record that honestly under Risks.
 
-**Why not `InternalsVisibleTo`?** Rejected on two independent grounds. First, it does not fit the
-assembly topology: the rule lives in `Paramore.Brighter.ServiceActivator`, a different assembly from
-`Paramore.Brighter`, so this would mean opening **all** of core's internals to ServiceActivator
-permanently in order to read one list — an invisible, unbounded widening of a boundary that a
-one-line public property widens by a known amount. Second, `InternalsVisibleTo` is **not used
-anywhere in `src/`** today (verified: the only occurrence is a comment in
-`SpannerBoxMigrationRunner.cs`); introducing it for this would add a mechanism the codebase has
-never needed, against "do not add new types without necessity" and its spirit for mechanisms. It also
-does not solve the problem for out-of-repo callers who write their own validation, whereas a public
-property does.
+**Why not `InternalsVisibleTo`?** **It is prohibited by a standing project rule**, so this is not a
+trade-off we get to weigh. [`.agent_instructions/testing.md`](../../.agent_instructions/testing.md)
+carries a dedicated section, *No InternalsVisibleTo*, whose first line is categorical:
+
+> **NEVER use `InternalsVisibleTo` to expose internal classes for testing.**
+
+and which prescribes the alternative directly:
+
+> If you need to inject a dependency for testing (e.g., randomness, I/O), make the interface
+> **public** so it can be injected through the public API.
+
+`FactoryTypes` is precisely that prescription applied: where access is needed, widen the **public**
+surface deliberately and by a known amount, rather than punching an invisible hole in the assembly
+boundary. The rule's bullets are framed around testing, and our caller is production code in another
+assembly rather than a test project — but the section heading and the `NEVER` are unqualified, and
+the reasoning that motivates them (tests and callers couple to behaviour, not to internals;
+refactoring internals must not break anyone) applies with more force to a production consumer, not
+less.
+
+Two supporting reasons, now secondary to the rule. It does not fit the assembly topology: the rule
+lives in `Paramore.Brighter.ServiceActivator`, a different assembly from `Paramore.Brighter`, so this
+would open **all** of core's internals to ServiceActivator permanently in order to read one list. And
+it does nothing for out-of-repo callers writing their own diagnostics, whereas a public property
+does. Consistent with the rule, the mechanism appears nowhere in `src/` today — the only occurrence
+of the string is a comment in `SpannerBoxMigrationRunner.cs`.
 
 #### 2. `ConsumerValidationRules.ChannelFactoryCompatible` — the rule (NEW)
 
@@ -636,9 +655,13 @@ These are real, and four of them are accepted breakage.
   factories for the remedy clause, so a boolean cannot render the finding; supplying both `CanRoute`
   and `FactoryTypes` gives two public members where one derives trivially from the other, and a
   routing-decision value object would spend NFR-5's one new public type that ADR 0073 needs.
-- **`InternalsVisibleTo` from `Paramore.Brighter` to `Paramore.Brighter.ServiceActivator`.** Rejected:
-  it opens all of core's internals permanently to read one list, it is used nowhere in `src/` today,
-  and it does nothing for out-of-repo callers who want to inspect a composite's routing.
+- **`InternalsVisibleTo` from `Paramore.Brighter` to `Paramore.Brighter.ServiceActivator`.** Rejected
+  because a standing project rule forbids the mechanism outright —
+  [`.agent_instructions/testing.md`](../../.agent_instructions/testing.md) § *No InternalsVisibleTo*:
+  "**NEVER use `InternalsVisibleTo` to expose internal classes for testing.**" That same rule
+  prescribes the remedy we took ("make the interface **public** so it can be injected through the
+  public API"). Secondarily it would open all of core's internals permanently in order to read one
+  list, and it would do nothing for out-of-repo callers wanting to inspect a composite's routing.
 - **Make `CombinedChannelFactory` match on assignability, or recurse into nested composites, so both
   arms unify.** Rejected per OOS-5. It would change runtime routing semantics for every existing
   multi-bus application as a side effect of adding a validation rule — the arms differ precisely
