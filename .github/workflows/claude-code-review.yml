@@ -34,6 +34,17 @@ jobs:
       - name: Run Claude Code Review
         id: claude-review
         uses: anthropics/claude-code-action@v1
+        # MCP_TOOL_TIMEOUT (ms): a Task-spawned sub-review agent's own tool
+        # calls are exempt from the main conversation's automatic call
+        # backgrounding, so a sub-agent working through a large diff is more
+        # exposed to this than a top-level call would be. The default is
+        # short enough that a run watched with show_full_output (#4369) cut
+        # off mid-tool-call at ~100-140s wall clock, right as a sub-agent was
+        # mid-review (BrighterCommand/Brighter#4282, 462 files) - no
+        # permission denial, no result event, just a truncated stream. Ten
+        # minutes gives a sub-agent room to actually finish its slice.
+        env:
+          MCP_TOOL_TIMEOUT: "600000"
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 
