@@ -178,6 +178,58 @@ so a burst larger than `BufferSize` overflowed the Brighter `Channel` wrapper an
 buffered is left for the next call. A directly-constructed `MqttMessageConsumer` does not sit behind a
 `Channel` and keeps its uncapped behaviour unless you pass the new optional `batchSize` argument.
 
+### AWS SNS: `SendWithDelay` honours its delay, and needs a scheduler to do it (#4240)
+
+`SnsMessageProducer.SendWithDelay` (both `Paramore.Brighter.MessagingGateway.AWSSQS` and
+`…AWSSQS.V4`) discarded the delay it was given: the sync overload forwarded `TimeSpan.Zero` to the
+async implementation, so a delayed send published **immediately**. It now forwards the delay it was
+called with, and a delayed send is handed to the configured message scheduler as the other transports
+already do.
+
+#### Behaviour change: a delayed send with no scheduler configured now throws
+
+Because the delay never survived the call, the no-scheduler path could not previously be reached from
+`SendWithDelay` — the send simply went out at once. Now that the delay is honoured, a delayed send
+with no scheduler configured throws `ConfigurationException` naming the missing setting, rather than
+publishing immediately or failing with a `NullReferenceException` from inside the send.
+
+**If you call `SendWithDelay` on SNS and have no `MessageSchedulerFactory` configured**, that call
+silently behaved as an immediate publish and will now throw. Either configure a scheduler, or call
+`Send` if immediate publication was what you wanted.
+
+Delayed sends now also accept either half of the scheduler pair: a host that configures only
+`IAmAMessageSchedulerSync` or only `IAmAMessageSchedulerAsync` no longer fails on a cast. The call
+prefers the half matching the path it is on. This matches Redis, Kafka, MsSql, MQTT and the in-memory
+reference implementation.
+
+### GCP Pub/Sub: `Receive` and `ReceiveAsync` bound the Pull to the caller's timeout (#4240)
+
+`GcpPullMessageConsumer` documented its `timeOut` as "not strictly used by the underlying Google
+Pub/Sub client". It is now used: the Pull is bounded to that window, so an empty subscription returns
+after the requested time instead of long-polling until a message arrives. An elapsed window is
+reported as a normal empty receive.
+
+When `timeOut` is null or non-positive, no deadline of ours is applied and the client's own
+per-method expiration stays in force — the behaviour of the overload this replaced. In that case a
+`DeadlineExceeded` still means a Pull took longer than the library expects, not that the subscription
+is empty, and it is logged and rethrown as before rather than being reported as an empty receive.
+
+**If you relied on `Receive` blocking until a message arrived**, pass a longer `timeOut`, or omit it
+to keep the client default.
+
+### MQTT: the producer emits producer telemetry (#4240)
+
+`MqttMessageProducer` emitted no producer events. It now calls `BrighterTracer.WriteProducerEvent` on
+both the sync and async send paths, which every other transport producer already did — MQTT was the
+only gateway without it.
+
+Verbosity follows the new optional `instrumentationOptions` constructor argument, which defaults to
+`InstrumentationOptions.All` as `RmqMessageProducer` and `InMemoryMessageProducer` do. Note that
+`All` includes `InstrumentationOptions.RequestBody`, so **message bodies are recorded on producer
+spans** unless you pass a narrower option. Construct the producer with, for example,
+`InstrumentationOptions.RequestInformation` if message bodies must stay out of your traces.
+
+
 ### RMQ.Async: subscriptions declare durable queues by default (#4355)
 
 `RmqSubscription` and `RmqSubscription<T>` in `Paramore.Brighter.MessagingGateway.RMQ.Async` now default
