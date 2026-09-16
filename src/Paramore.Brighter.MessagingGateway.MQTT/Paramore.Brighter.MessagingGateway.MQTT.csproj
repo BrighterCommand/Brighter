@@ -14,4 +14,11 @@
   <ItemGroup>
     <PackageReference Include="MQTTnet"/>
   </ItemGroup>
+  <ItemGroup>
+    <!-- The arrival handler is a lambda over an MQTTnet client the consumer constructs itself, so
+         the payload it cannot read is only reachable through a broker. Exposing the deserialisation
+         step lets that case be covered in the `build` job instead of only in `mqtt-ci`. This
+         assembly is already unsigned (see SignAssembly above), so no strong-name key is involved. -->
+    <InternalsVisibleTo Include="Paramore.Brighter.MQTT.Tests" />
+  </ItemGroup>
 </Project>

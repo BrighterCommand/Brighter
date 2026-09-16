@@ -135,16 +135,64 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             _mqttClient.ApplicationMessageReceivedAsync += e =>
             {
                 Log.MqttMessageConsumerReceivedMessage(s_logger, configuration.TopicPrefix);
-                var message = JsonSerializer.Deserialize<Message>(e.ApplicationMessage.PayloadSegment.ToArray(), JsonSerialisationOptions.Options);
 
-                _messages.Writer.TryWrite(message!);
+                var message = TryDeserialiseMessage(
+                    e.ApplicationMessage.PayloadSegment.ToArray(), configuration.TopicPrefix);
+
+                if (message is not null)
+                {
+                    _messages.Writer.TryWrite(message);
+                }
+
                 return Task.CompletedTask;
             };
 
             Task connectTask = Connect(configuration.ConnectionAttempts);
+
             connectTask
                 .GetAwaiter()
                 .GetResult();
+        }
+
+        /// <summary>
+        /// Turns an arriving MQTT payload into a <see cref="Message"/>, or reports that it could
+        /// not be read.
+        /// </summary>
+        /// <remarks>
+        /// Extracted from the arrival handler so it can be exercised without a broker, the same
+        /// shape as <c>RocketMqMessageProducer.AddHeaderProperties</c>.
+        /// <para>
+        /// The payload is whatever a publisher put on the topic, so neither outcome is exceptional:
+        /// a literal <c>null</c> document deserialises to <c>null</c>, and a malformed one throws.
+        /// Both are dropped here rather than allowed out. A <c>null</c> written into the channel
+        /// reaches the pump, which dereferences <see cref="Message.Header"/> and fails on an
+        /// unrelated thread; a throw escapes into MQTTnet's dispatch loop rather than into any
+        /// caller. Either would let one poison message published by anybody on the topic stop this
+        /// consumer.
+        /// </para>
+        /// </remarks>
+        /// <param name="payload">The raw bytes MQTTnet delivered.</param>
+        /// <param name="topicPrefix">The topic the payload arrived on, for the log entry.</param>
+        /// <returns>The message, or <c>null</c> when the payload could not be read.</returns>
+        internal static Message? TryDeserialiseMessage(byte[] payload, object? topicPrefix)
+        {
+            try
+            {
+                var message = JsonSerializer.Deserialize<Message>(
+                    payload, JsonSerialisationOptions.Options);
+
+                if (message is null)
+                {
+                    Log.MqttMessageConsumerDroppedUnreadablePayload(s_logger, topicPrefix);
+                }
+
+                return message;
+            }
+            catch (JsonException ex)
+            {
+                Log.MqttMessageConsumerDroppedMalformedPayload(s_logger, ex, topicPrefix);
+                return null;
+            }
         }
 
         /// <summary>
@@ -598,6 +646,12 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         {
             [LoggerMessage(LogLevel.Trace, "MQTTMessageConsumer: Received message from queue {TopicPrefix}")]
             public static partial void MqttMessageConsumerReceivedMessage(ILogger logger, object? topicPrefix);
+
+            [LoggerMessage(Level = LogLevel.Warning, Message = "MQTTMessageConsumer: Dropped a payload on {TopicPrefix} that deserialised to no message.")]
+            public static partial void MqttMessageConsumerDroppedUnreadablePayload(ILogger logger, object? topicPrefix);
+
+            [LoggerMessage(Level = LogLevel.Warning, Message = "MQTTMessageConsumer: Dropped a malformed payload on {TopicPrefix}.")]
+            public static partial void MqttMessageConsumerDroppedMalformedPayload(ILogger logger, Exception ex, object? topicPrefix);
 
             [LoggerMessage(Level = LogLevel.Warning, Message = "MQTTMessageConsumer: Timed out retrieving messages.  Queue length: {QueueLength}")]
             public static partial void MqttMessageConsumerTimedOutRetrievingMessages(ILogger logger, Exception ex, int queueLength);
