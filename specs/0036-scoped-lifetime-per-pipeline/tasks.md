@@ -1325,7 +1325,7 @@ Two Tidy-First steps **are** owed in the DI package, and both are sequenced ahea
   - **Depends on**: T7.9
   - **References**: AC-43 (FR-17, FR-22, FR-24.3, FR-25, NFR-10); ADR 0074 step 4 (*The seven rules* table)
 
-- [ ] **DOC: T7.11 — guidance page part 2: the decision guide (FR-25.9)**
+- [x] **DOC: T7.11 — guidance page part 2: the decision guide (FR-25.9)**
   - No test. Documentation whose substance is fixed by FR-22.2's rule and is **derived, not authored**
   - **Verified by**: a line on the PR checklist, and by **T7.15**'s reviewer walk — for each of the seven validation messages, the path message → troubleshooting entry → decision guide must yield a conformant **triple** or a specific corrective registration, without reading Brighter's source
   - File: `docs/guides/lifetimes-and-scoping.md`
