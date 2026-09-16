@@ -37,6 +37,16 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 
+          # Temporary diagnostic: the job log otherwise shows only the init and
+          # final result JSON, with nothing in between — no visibility into
+          # which tool calls are actually being denied. Adding Task to
+          # --allowed-tools (below) did not fix the large-diff stall (retested
+          # on #4282: still stalls after "Gather context", permission_denials
+          # still double digits), so this turns on the full turn-by-turn
+          # stream to see what is actually being denied before guessing again.
+          # Remove once the real cause is found and fixed.
+          show_full_output: true
+
           # Posts a tracking comment up front and keeps the review in it as the
           # review proceeds, so a run that dies half way still shows what it got
           # through. It also forces tag mode, which hands Claude the pull request
