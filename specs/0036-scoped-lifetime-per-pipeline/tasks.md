@@ -1349,7 +1349,7 @@ Two Tidy-First steps **are** owed in the DI package, and both are sequenced ahea
   - **Depends on**: T7.11
   - **References**: AC-25 (troubleshooting clause), AC-43, AC-44, FR-25.10, NFR-10, C-15, D14; ADR 0074 (clause-to-source map, clause 10; *Both host shapes, enumerated*)
 
-- [ ] **DOC: T7.13 — guidance page part 4: the transaction consequence, the breaks and migration, the captive-dependency hazard, and the extension's three gestures**
+- [x] **DOC: T7.13 — guidance page part 4: the transaction consequence, the breaks and migration, the captive-dependency hazard, and the extension's three gestures**
   - No test beyond AC-36's read and AC-44's walk. **Verified by**: **T7.15**'s reviewer walk
   - File: `docs/guides/lifetimes-and-scoping.md`
   - Content:
