@@ -1361,7 +1361,7 @@ Two Tidy-First steps **are** owed in the DI package, and both are sequenced ahea
   - **Depends on**: T7.12
   - **References**: AC-36 (C-4, FR-25.5), AC-25, AC-24, FR-25.6, FR-25.7, FR-25.8, FR-25.11, C-18, C-20, D18; ADR 0074 (clause-to-source map, clauses 5–8, 11), ADR 0075 step 7, ADR 0073 step 5, ADR 0076 step 4
 
-- [ ] **DOC: T7.14 — `release_notes.md`: one entry, thirteen breaking-change items**
+- [x] **DOC: T7.14 — `release_notes.md`: one entry, thirteen breaking-change items**
   - No test. Verified by a PR checklist, **one line per item in the entry** (AC-24's verifier)
   - File: `release_notes.md` — ⚠ **a single entry**, so that a reader upgrading sees one list rather than several unrelated ones. **No sibling ADR opens a second entry, and no item is numbered**, because the order they are written in is not a fact about the release
   - **ADR 0070's five**:
