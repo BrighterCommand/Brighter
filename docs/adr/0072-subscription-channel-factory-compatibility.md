@@ -104,8 +104,8 @@ the channel factory, although every subscription already carries the data needed
   non-blocking `Warning` for its two rule families; the difference is that 0064's conditions are
   deferred and conditional, whereas a channel-factory mismatch is a certain failure (or, worse, a
   silently wrong bus) on every start.
-- **The cure creates its own breakage.** Four documented exceptions to NFR-6 — C-2, C-10, C-11 and
-  C-12 — are accepted, and C-12 is *not* suppressible by `ValidatePipelines(throwOnError: false)`,
+- **The cure creates its own breakage.** Five documented exceptions to NFR-6 — C-2, C-10, C-11, C-12
+  and C-13 — are accepted, and C-12 is *not* suppressible by `ValidatePipelines(throwOnError: false)`,
   because it is a routing change in `CombinedChannelFactory`, not a validation verdict.
 
 ## Decision
@@ -161,8 +161,10 @@ already consumes — exactly as ADR 0064's `UnwrapTransformResolvable` does.
                                                                                  │
    compatible = arm == Combined                                                   │
                 ? candidates.Any(t => t == D)          ← exact equality, mirrors   │
-                                                         CombinedChannelFactory    │
-                : D.IsAssignableFrom(candidates[0])    ← assignability             │
+                                                         CombinedChannelFactory;   │
+                                                         false when D is null      │
+                : D is not null                        ← explicit guard, not a     │
+                  && D.IsAssignableFrom(candidates[0])    catch (see below)        │
                                                                                  │
    compatible ? (no finding) : ValidationError(Error, "Subscription 'name'", msg) ┘
                                                           │
@@ -184,30 +186,75 @@ The single most consequential detail in that diagram is that **the effective fac
 
 Had the rule compared instances (`ReferenceEquals`) or carried the instance into the message, the
 second case would have been fragile. Reducing to types also means FR-2 step 3 **never constructs** an
-`InMemoryChannelFactory` or an `InternalBus`: the rule allocates nothing on the passing path.
+`InMemoryChannelFactory` or an `InternalBus` — the in-memory fallback is a `typeof`, not a `new`.
+(The rule still allocates its candidate list; see Performance.)
 
 ### Key Components
 
 #### 1. `CombinedChannelFactory.FactoryTypes` — the composite's "knowing" responsibility (NEW, additive)
 
 ```csharp
+private IReadOnlyList<Type>? _factoryTypes;
+
 /// <summary>
 /// The concrete types of the inner factories, in the order supplied to the constructor.
 /// These are the identities this factory routes on: it can serve a subscription exactly when
 /// that subscription's <see cref="Subscription.ChannelFactoryType"/> is one of them.
 /// </summary>
-public IReadOnlyList<Type> FactoryTypes { get; }
+public IReadOnlyList<Type> FactoryTypes =>
+    _factoryTypes ??= _factories.Select(f => f.GetType()).ToList();
 ```
 
-**Contract.** Input: none. Output: a non-null, possibly empty, stable, ordered list of concrete
-factory types, one per inner factory, in constructor order, including duplicates if the same factory
-type was supplied twice. Error conditions: none — it never throws and never creates a channel.
+**Contract.** Input: none. Output: a non-null, possibly empty, ordered list of concrete factory types,
+one per inner factory, in constructor order, including duplicates if the same factory type was
+supplied twice. Stable in the sense that every read yields an **equal** list; not guaranteed to yield
+the same instance (see thread-safety below). Error conditions: none — it never throws and never
+creates a channel.
 
-**Implementation note (a real trap).** It MUST be derived from the existing `_factories` field, not
-from the primary-constructor `factories` parameter: `IEnumerable<IAmAChannelFactory>` need not be
-re-enumerable, and `_factories = factories.ToList()` has already consumed it. Because C# runs field
-and auto-property initialisers in declaration order, the property must be **declared after**
-`_factories`.
+**Implementation note (a real trap, and a compiler rule that hides it).** The property MUST be
+derived from the existing `_factories` field, **not** from the primary-constructor `factories`
+parameter: `IEnumerable<IAmAChannelFactory>` need not be re-enumerable, and
+`_factories = factories.ToList()` has already consumed it. Reading `factories` a second time can
+yield an empty list.
+
+The trap is that the obvious spelling of "derive it from `_factories`" does not compile.
+`CombinedChannelFactory` is a primary-constructor class with **no constructor body**
+(`CombinedChannelFactory.cs:12-14`), so a get-only auto-property is assignable only from an
+initialiser — and an instance field or auto-property initialiser may not reference *any* instance
+member, in any declaration order:
+
+```
+public IReadOnlyList<Type> FactoryTypes { get; } = _factories.Select(f => f.GetType()).ToList();
+// error CS0236: A field initializer cannot reference the non-static field, method, or property
+```
+
+This matters because the compile error points the wrong way. An implementer who reads it as an
+ordering problem will "fix" it by switching to `factories.Select(...)` — the initialiser *may*
+reference a primary-constructor parameter — and that is precisely the defect recorded under Risks:
+an already-consumed `IEnumerable` yields an empty list, and the rule then flags every subscription
+in every multi-bus application.
+
+**The shape above is therefore normative**: a nullable backing field plus an expression-bodied
+property that caches on first read. It keeps the primary constructor (so the change stays a pure
+addition) and derives from `_factories`. It also needs `using System;` added to the file —
+`CombinedChannelFactory.cs` currently imports only the four `System.Collections.Generic`,
+`System.Linq`, `System.Threading` and `System.Threading.Tasks` namespaces, uses no `System` type
+today, and the repository does not enable `ImplicitUsings`.
+
+Two alternatives were weighed and rejected: a plain expression-bodied
+`=> _factories.Select(...).ToList()` re-allocates on every read; converting the class to an explicit
+constructor would make this a non-trivial edit to an existing core type rather than an addition.
+
+**Thread-safety, stated plainly rather than waved through.** The backing field is a non-volatile
+reference and the property is not thread-safe. If two threads first read `FactoryTypes` concurrently
+they may each build a list and one write wins, so a caller can observe two equal-but-distinct
+instances. This is acceptable **only because of who calls it**: the sole consumer is the startup
+validation rule, reached through `PipelineValidator.ValidateConsumers` → `EvaluateSpecs`, which is a
+sequential loop on one thread. `FactoryTypes` is therefore documented as *not* thread-safe, and a
+caller needing concurrent access must synchronise or the property must be promoted to
+`Lazy<IReadOnlyList<Type>>` at that point. Note the honest consequence for the contract: "stable"
+below means *equal on every read*, not *the same instance on every read*, and "materialised once"
+means once per composite in practice rather than by guarantee.
 
 ##### Why this shape, and not the alternatives (the C-4 decision)
 
@@ -255,17 +302,25 @@ order**, so a boolean cannot render the finding. Resolving that would mean eithe
 `CanRoute` *and* `FactoryTypes`, in which case `CanRoute` is a one-line derivation of `FactoryTypes`
 and we have two public members where one suffices — against "there should be one, and preferably only
 one, obvious way to do it"; or (b) returning a routing-decision value object carrying the selection
-and the candidates, which is a new public type in core, and NFR-5 spends this feature's one
-permitted new public type on ADR 0073's predicate. There is a secondary cost too: a public
+and the candidates, which buys a permanent public abstraction in core to carry two fields between a
+single producer and a single consumer. YAGNI decides it: `FactoryTypes` can be wrapped in such a
+type later, without breaking anyone, if a second caller ever appears — whereas a published value
+object cannot be withdrawn. There is a secondary cost too: a public
 `CanRoute` on a channel factory reads as a runtime capability check and invites callers to pre-flight
 before every `CreateSyncChannel`, which is not a pattern we want to seed.
 
 The duplication that rejecting `CanRoute` leaves behind is genuine and we mitigate it directly rather
 than deny it: **AC-9's companion assertion** requires that, for the same configuration, the rule
 reports an `Error` *and* `CombinedChannelFactory.CreateSyncChannel` throws `ConfigurationException`.
-That test pins the rule's combined arm to the composite's routing in the one direction where drift
-would matter (a false negative is worse than a false positive here). It is a weaker guarantee than
-sharing the code, and we record that honestly under Risks.
+That test catches the most plausible drift — someone "unifying" the two arms on assignability — and
+it does so in the direction that matters most, since a false negative restores the silent failure the
+feature exists to remove. But it is materially weaker than sharing the code, in a way worth stating
+precisely: the pinning is **negative-only**. C-9 requires every `IAmAChannelFactory` member on the
+test doubles to throw, so the mirror-image assertion — a correct multi-bus configuration where the
+rule is silent *and* the composite successfully routes — cannot be written with the approved double
+set at all. AC-6 is therefore rule-only, with no runtime counterpart, and AC-10's nested case carries
+no companion assertion either. We record that under Risks rather than imply AC-9 pins both
+directions.
 
 **Why not `InternalsVisibleTo`?** **It is prohibited by a standing project rule**, so this is not a
 trade-off we get to weigh. [`.agent_instructions/testing.md`](../../.agent_instructions/testing.md)
@@ -335,7 +390,7 @@ lambdas call; only the *evaluation* repeats, on a path that is about to throw an
 | Helper | Responsibility |
 |---|---|
 | `ResolveCandidates(Subscription, IAmAChannelFactory?)` | *knowing* — FR-2's precedence, returning the arm discriminator and the ordered candidate `Type` list |
-| `IsCompatible(Type declared, candidates)` | *deciding* — FR-3's two arms, and nothing else |
+| `IsCompatible(Type? declared, Arm arm, IReadOnlyList<Type> candidates)` | *deciding* — FR-3's two arms, the null-`declared` case, and nothing else. Takes the arm explicitly: it is the discriminator `ResolveCandidates` returns, never re-derived by testing `F is CombinedChannelFactory` again |
 | `DisplayName(Type)` | *doing* — FR-5's display-name format |
 
 `ResolveCandidates` returns the arm and the candidate list together, because they are a single fact
@@ -343,15 +398,44 @@ about one subscription and separating them would let a caller pair a combined li
 comparison. Keeping the arm as an explicit discriminator (rather than re-testing `F is
 CombinedChannelFactory` at each use site) is what lets the rest of the rule work in types only.
 
-**A case the requirements do not pin.** `ChannelFactoryType` is `public virtual Type`, so an
-out-of-repo override may return `null`. `D.IsAssignableFrom(...)` would then throw, and the
-`Specification<T>` framework would convert it to an `Error` reading `"Rule evaluation failed: Object
-reference not set…"` with `Source` set to the subscription's `ToString()` — blocking startup with a
-useless diagnostic and the wrong `Source`. We therefore treat a null declared type as **satisfied
-(skipped)**: there is nothing to compare and no honest message to render, and silence is a better
-outcome than that finding. This is not a `try`/`catch` — ADR 0064's "rules must not catch" stands —
-it is a defined input case handled in the predicate. Flagged here because it is a decision this ADR
-takes that the requirements do not.
+**A case the requirements pin only for one arm.** `ChannelFactoryType` is `public virtual Type`, so
+an out-of-repo override may return `null`. The two arms are not symmetric here:
+
+- **Combined arm — already decided by FR-3.** Its compatibility test is an *if and only if*: the
+  subscription is compatible iff at least one inner factory satisfies `f.GetType() == D`.
+  `object.GetType()` never returns null, so a null `D` satisfies nothing, the subscription **is** in
+  mismatch, and FR-1 requires exactly one `ValidationError`. That is not ours to decide — and it
+  mirrors runtime exactly, since `_factories.FirstOrDefault(f => f.GetType() == null)` is `null` for
+  every non-empty factory set, so the composite throws `ConfigurationException` on **every** start.
+- **Direct arm — genuinely undefined.** `D.IsAssignableFrom(...)` would throw, and the
+  `Specification<T>` framework would convert that to an `Error` reading `"Rule evaluation failed:
+  Object reference not set…"` with `Source` set to the subscription's `ToString()` — blocking startup
+  with a useless diagnostic and the wrong `Source`.
+
+**We therefore treat a null declared type as a mismatch in both arms**, guarding the direct arm with
+an explicit `D is null` test rather than letting the exception path fire. This is not a `try`/`catch`
+— ADR 0064's "rules must not catch" stands — it is a defined input case handled in the predicate.
+
+Skipping was considered and rejected. It would leave the rule silent about a configuration that is
+certain to throw at Dispatcher start, which is the same inversion this ADR refuses to accept for MQTT
+under C-11: the case where failure is currently *silent* is the last case the rule should be silent
+about. Silence is the one outcome worse than an imperfect message.
+
+**This changed the requirements, and the requirements were amended rather than deviated from.** An
+earlier draft of this ADR claimed the rendering "costs no new normative surface". That was wrong
+twice: FR-5 item 2 required the message to carry `D` as a `Type.FullName`, which is unsatisfiable when
+there is no type; and a null `D` satisfies T1's stated condition (`D != typeof(InMemoryChannelFactory)`
+is true of `null`), so preferring T3a/T3b is a change to a **normative selection rule**, not merely a
+change of wording. Both are now settled in `requirements.md` rather than asserted here:
+
+- FR-5 item 2 admits the literal phrase `no ChannelFactoryType` when `D` is null.
+- FR-5's selection table is restated as five ordered, total conditions, with T3a/T3b taking
+  `D is null` alongside the in-memory case — for a different reason (the in-memory half is suppressed
+  because it is harmful, the null half because it is unwritable) but with the identical literal.
+- FR-3 carries the null-`D` verdict for both arms, and **C-13** records the direct arm's breakage with
+  its own C-8 release-note obligation, as NFR-6 requires of any newly discovered case.
+
+So the rule implements FR-3 and FR-5 as approved; nothing here is a deviation.
 
 #### 3. Message rendering — `DisplayName` and the four remedy templates
 
@@ -362,9 +446,11 @@ qualification. No display-name formatter exists in `Paramore.Brighter` today —
 is an `internal` netstandard2.0 polyfill for `IsAssignableTo`, and `Extensions/ReflectionExtensions.cs`
 is `internal` to core — so the rule provides its own.
 
-It is a **private static method on `ConsumerValidationRules`**, not a new public helper type. NFR-5
-allows one new public type and ADR 0073 needs it; a formatter used by one rule does not earn public
-surface. The algorithm avoids parsing `FullName`'s assembly payload entirely:
+It is a **private static method on `ConsumerValidationRules`**, not a new public helper type. A
+formatter with exactly one caller does not earn permanent public surface, and
+[`.agent_instructions/testing.md`](../../.agent_instructions/testing.md)'s *Test Scope and Isolation*
+rule — "an assembly is a module, it's surface area should be as narrow as possible" — points the same
+way. The latent duplicate this leaves behind is recorded honestly under Negative. The algorithm avoids parsing `FullName`'s assembly payload entirely:
 
 ```
 DisplayName(t):
@@ -388,16 +474,47 @@ combined : Subscription type '{S}' declares ChannelFactoryType '{D}' but will be
 
 Two lexical constraints shaped that wording and are easy to breach accidentally:
 
-- AC-15 forbids any occurrence of the token `ChannelFactory` that is neither preceded by `.` nor part
-  of `ChannelFactoryType`. The body therefore says "channel factory" in lower-case prose where it
-  refers to the concept, and never writes `CombinedChannelFactory` as a bare word — which AC-7
-  independently forbids, since naming it would tell the developer to declare
-  `typeof(CombinedChannelFactory)`, the one thing the combined arm must never suggest.
+- AC-15 forbids any occurrence of the **token** `ChannelFactory` that is neither preceded by `.` nor
+  part of `ChannelFactoryType`, where "token" is now defined in the requirements as a word-boundary
+  match and pinned to a normative regex. A composite identifier that merely *ends* in the word —
+  `InMemoryChannelFactory`, `CombinedChannelFactory` — is a different token and is not an occurrence,
+  so the body may render any of them freely. The body still says "channel factory" in lower-case prose
+  where it refers to the concept, because that reads better, not because AC-15 compels it.
+- AC-7 forbids naming `Paramore.Brighter.CombinedChannelFactory` **as the type the subscription will
+  be handed**. The rule never does: in the combined arm `{F-list}` is built from
+  `FactoryTypes`, which reports the *inner* factories, and the outer composite's own type never
+  enters it.
+
+**The nested case renders an honest message that is not a working remedy, and we accept that.** AC-10
+requires an `Error` for `CombinedChannelFactory([CombinedChannelFactory([DeclaredChannelFactory])])`
+with a `DeclaringSubscription` — so `D == typeof(DeclaredChannelFactory)`, which is not the in-memory
+default, and FR-5 selects **T2**. `FactoryTypes` reports the inner factories' concrete types, so
+`{F-list}` is literally `Paramore.Brighter.CombinedChannelFactory` and the message offers "…or use a
+subscription type whose ChannelFactoryType is one of: `Paramore.Brighter.CombinedChannelFactory`".
+
+Following that second half does **not** produce a working configuration, and the ADR should not
+pretend otherwise. A subscription declaring `typeof(CombinedChannelFactory)` is selected by the
+*outer* composite at `CombinedChannelFactory.cs:34`, which then calls `CreateSyncChannel` on the inner
+composite; the inner composite scans its own `[DeclaredChannelFactory]` for a factory whose type is
+`typeof(CombinedChannelFactory)`, finds none, and throws at `CombinedChannelFactory.cs:35-38`. FR-3's
+word is deliberately "matches", not "routes", and the distinction bites exactly here.
+
+We accept it rather than special-case it. The message's *first* half — "either configure a channel
+factory of type `Paramore.Brighter.MessagingGateway.…DeclaredChannelFactory`" — is a working remedy,
+and it is the half a developer should follow; nesting composites is a configuration that is broken
+whatever the subscription declares, so no rendering of this message describes a route that works.
+Filtering the nested type out of `{F-list}` would leave an empty list and select T4, whose "add a
+channel factory to the combined channel factory" is *less* informative about what is actually there.
+Recorded under Negative as a known message-quality limitation.
 - AC-13a and AC-13c forbid the substring `configure a channel factory of type` anywhere in a T3a/T3b
   message, so the body must not paraphrase the suppressed half.
 
 `{F-list}` joins display names with `", "` in constructor order. The separator is defined **once** and
-shared between body and remedy, so the two cannot disagree.
+shared between body and remedy, so the two cannot disagree. An **empty** candidate set never reaches
+`{F-list}`: FR-5's template **T4** is selected first and renders "— add a channel factory to the
+combined channel factory", which names the actual fault and satisfies NFR-2's demand for a remedy,
+where an empty list interpolated into T2/T3b would have ended the message at "is one of:" with nothing
+after it. T4 is combined-arm only — the direct arm's candidate set is always exactly one type.
 
 **Why T3a/T3b's suppression is architectural, not cosmetic.** When `D` is `InMemoryChannelFactory` the
 subscription is a plain `Subscription`/`Subscription<T>`, and "configure a channel factory of type
@@ -467,16 +584,21 @@ change rather than a follow-up. Their cost is C-12, recorded below.
 - **`Type.IsAssignableFrom`, not the `IsAssignableTo` polyfill.** `IsAssignableFrom` exists on
   netstandard2.0 natively; core's `IsAssignableTo` extension is `internal` and in the `System`
   namespace, unavailable across the assembly boundary.
-- **No new value type for the display name.** "Avoid primitive obsession" argues for one; NFR-5's
-  single-new-public-type budget, claimed by ADR 0073, argues against. The name is produced and
-  consumed within a few lines of the same private method, so a `string` is honest here.
+- **No new value type for the display name.** "Avoid primitive obsession" argues for one. Against:
+  the name is produced and consumed within a few lines of the same private method, never crosses a
+  boundary, and has no invariant to protect — a `DisplayName` wrapper would be a type whose only
+  behaviour is `ToString`. A `string` is honest here.
 
 ### Implementation Approach
 
 Sequenced so each step is independently testable, and structural changes precede behavioural ones.
 
-1. **`CombinedChannelFactory.FactoryTypes`** (core, additive). Declared after `_factories`, derived
-   from it. Pure structural addition; no existing behaviour changes.
+1. **`CombinedChannelFactory.FactoryTypes`** (core, additive). A nullable backing field plus an
+   expression-bodied property caching from `_factories` — **not** a get-only auto-property initialised
+   from `_factories`, which cannot compile (CS0236; an auto-property initialised from the
+   primary-constructor `factories` parameter compiles fine, and is the wrong answer for the
+   re-enumeration reason above). Add `using System;`. Pure structural addition; the primary
+   constructor is untouched and no existing behaviour changes.
 2. **The display-name formatter** as a private static on `ConsumerValidationRules`, covered by
    AC-12/AC-14/AC-15's message assertions.
 3. **`ChannelFactoryCompatible`**, with `ResolveCandidates` / `IsCompatible` / the four templates.
@@ -517,12 +639,29 @@ Three tests carry more weight than the rest:
 - **AC-30 (determinism)** — two runs, two subscriptions, byte-identical messages in
   `options.Subscriptions` order.
 
+**Three cases this ADR surfaced are now acceptance criteria**, not ADR-only tests. An earlier draft
+listed them here as uncovered and proposed testing them from this document; that was the wrong route —
+C-9's double set is closed and every non-gateway criterion is bound to it, so cases that need a sixth
+double are a requirements change. `requirements.md` was amended instead, and the tests are written
+from it like any other:
+
+- **AC-10a** — null `ChannelFactoryType` on the **direct** arm: one `Error`, body carrying
+  `no ChannelFactoryType`, remedy T3a.
+- **AC-10b** — the same on the **combined** arm: one `Error`, remedy T3b, plus the AC-9-shaped
+  companion assertion that `CreateSyncChannel` throws `ConfigurationException`.
+- **AC-10c** — a `CombinedChannelFactory` with no inner factories, against a named
+  `DeclaringSubscription`: one `Error` ending with T4.
+
+C-9 gains one double, `NullDeclaringSubscription`, which overrides `ChannelFactoryType` to return
+`null` and nothing else — identity-only in exactly the sense the rest of the set is.
+
 ### Performance
 
 Per subscription, per validation run, at startup, only when `ValidatePipelines()` is enabled: one
 null check, at most one `is` test, and either one `IsAssignableFrom` or a linear scan of
 `FactoryTypes` (in practice two or three entries). On the passing path the rule allocates only the
-candidate list; `FactoryTypes` is materialised once per `CombinedChannelFactory`. FR-2 step 3
+candidate list; `FactoryTypes` is materialised on first read and cached, so once per
+`CombinedChannelFactory` for the single-threaded startup path that is its only caller. FR-2 step 3
 allocates nothing at all, because the in-memory fallback is a `typeof`, not a `new`. String work
 happens only on the failing path, which is about to block startup. This is immeasurable against the
 container build it sits inside.
@@ -554,7 +693,7 @@ container build it sits inside.
 
 ### Negative
 
-These are real, and four of them are accepted breakage.
+These are real, and five of them are accepted breakage.
 
 - **C-2 — the symmetric in-memory verdict produces findings for configurations that would not
   throw.** A `MsSqlSubscription<T>` resolving to an `InMemoryChannelFactory` is an `Error` even though
@@ -587,6 +726,18 @@ These are real, and four of them are accepted breakage.
   was consuming from SQS — preserving it would mean preserving the defect. It must be a separate
   release note naming the symptom (a `ConfigurationException` at Dispatcher start, not a validation
   finding), the remedy, and the fact that `throwOnError: false` does not help.
+- **C-13 — a direct-arm subscription whose `ChannelFactoryType` override returns `null` stops
+  starting.** `CombinedChannelFactory` is the only reader of that property in `src/`, so in a
+  single-factory configuration a null declaration is never consulted today and the host runs. Under
+  FR-3's null-`D` clause it becomes an `Error` and, by default, blocks startup. Accepted on D3's
+  grounds — the population requires an override written deliberately to return `null`, and the remedy
+  is one line — but it is new breakage, not a converted failure, and it carries its own release note.
+- **The nested-composite message names a type that does not route.** For
+  `CombinedChannelFactory([CombinedChannelFactory([…])])` the T2 remedy's second half offers
+  `typeof(CombinedChannelFactory)`, which the outer composite will select and the inner composite will
+  then reject. The message's first half is still a working remedy, and the configuration is broken
+  whatever the subscription declares, so we accept it rather than special-case the rendering — but it
+  is a message that can mislead a reader who follows the wrong half.
 - **The combined arm restates `CombinedChannelFactory`'s routing predicate.** Two places now encode
   "exact type equality, non-recursive". The cost of the `FactoryTypes` choice over `CanRoute`, pinned
   by AC-9's companion assertion rather than eliminated.
@@ -594,9 +745,10 @@ These are real, and four of them are accepted breakage.
   the message text is effectively public API. Improving the wording later breaks tests, and AC-15's
   `ChannelFactoryType` carve-out is a constraint future editors will not guess.
 - **A private display-name formatter that others will want.** Type rendering is a general need —
-  `PipelineDiagnosticWriter` has the same problem — and we are solving it privately inside one rule
-  because the public-type budget is spent elsewhere. When a second caller appears this should be
-  promoted, and until then there is a latent duplicate waiting to be written.
+  `PipelineDiagnosticWriter` has the same problem, rendering bare `Type.Name` throughout — and we are
+  solving it privately inside one rule because one caller does not justify permanent public surface.
+  When a second caller appears this should be promoted, and until then there is a latent duplicate
+  waiting to be written.
 - **A new public member on a core type.** `FactoryTypes` is permanent surface on
   `CombinedChannelFactory`, additive and small, but it exists because a rule in another assembly
   needed to see inside.
@@ -610,8 +762,13 @@ These are real, and four of them are accepted breakage.
   dangerous direction, since it restores the silent failure the feature exists to remove.
   *Mitigation*: AC-9's companion assertion ties verdict to runtime behaviour; `FactoryTypes`'s XML
   documentation states the routing contract at the point a future editor would change it; and
-  promoting to a shared predicate later is a localized change, since the rule already asks the
-  composite rather than reaching into it.
+  promoting to a shared predicate later is a localised change, since the rule already asks the
+  composite rather than reaching into it. **The residual risk is real and asymmetric**: for the
+  reason given in the Decision, the companion assertion can only ever fire negatively — C-9's doubles
+  throw on every member, so no test in this feature asserts that a configuration the rule passes is
+  one the composite actually routes. AC-10's nested agreement point is likewise unpinned at runtime.
+  If ADR 0073 or a later change introduces a non-throwing double, the positive direction should be
+  pinned then.
 - **Risk: `Error` severity blocks a host we did not anticipate.** NFR-6 is deliberately stated without
   a count because the exception set has grown twice under review. *Mitigation*: any newly discovered
   case gets its own constraint and its own release note rather than being absorbed silently;
@@ -621,14 +778,23 @@ These are real, and four of them are accepted breakage.
   literals are normative; the body wording is this ADR's and may be revised as long as AC-12, AC-14
   and AC-15 hold. Defining `{F-list}`'s separator once removes the most likely inconsistency.
 - **Risk: a null `ChannelFactoryType` from an out-of-repo override.** *Mitigation*: handled as a
-  defined input (skip) rather than left to the framework's `"Rule evaluation failed"` path, which
-  would block startup with the wrong `Source` and an unhelpful message. Recorded above as a decision
-  the requirements do not pin, and reversible if maintainers prefer strictness.
+  defined input — a mismatch in both arms, guarded explicitly — rather than left to the framework's
+  `"Rule evaluation failed"` path, which would block startup with the wrong `Source` and an unhelpful
+  message. **The two arms are not the same kind of change and must not be described as if they were.**
+  In the *combined* arm the configuration already throws at `CombinedChannelFactory.cs:37` on every
+  start, so the rule converts a certain runtime failure into a named startup finding — no new
+  breakage. In the *direct* arm there is no such consolation: `CombinedChannelFactory` is the only
+  reader of `ChannelFactoryType` in `src/`, so a null declaration is never consulted, the host starts
+  and the consumer works today. Blocking it **is** new breakage, and it is recorded as **C-13** with
+  its own release-note obligation under C-8, as NFR-6 requires.
 - **Risk: `FactoryTypes` is initialised from the constructor parameter rather than `_factories`.** An
   `IEnumerable` already consumed by `_factories = factories.ToList()` would yield an empty list, and
   the rule would then flag **every** subscription in **every** multi-bus application — a very loud,
-  very wrong failure. *Mitigation*: derive from `_factories`, declare the property after it, and let
-  AC-6 (no false positives in a correct multi-bus configuration) catch a regression.
+  very wrong failure. This risk is *raised*, not lowered, by the CS0236 rule described above: the
+  compiler rejects the correct-looking auto-property and accepts the wrong one, so the error message
+  itself nudges an implementer toward the defect. *Mitigation*: the lazy-backing-field shape is
+  normative and spelled out in full; and AC-6 (no false positives in a correct multi-bus
+  configuration) catches a regression.
 - **Risk: C-12 surprises an operator at deployment rather than at build.** It is the only case with no
   validation-time warning. *Mitigation*: its own release note, named symptom, and the explicit
   statement that `throwOnError: false` does not avoid it.
@@ -654,7 +820,9 @@ These are real, and four of them are accepted breakage.
   make drift impossible. Rejected because FR-5's T2/T3b need the ordered display names of *all* inner
   factories for the remedy clause, so a boolean cannot render the finding; supplying both `CanRoute`
   and `FactoryTypes` gives two public members where one derives trivially from the other, and a
-  routing-decision value object would spend NFR-5's one new public type that ADR 0073 needs.
+  routing-decision value object buys a permanent public abstraction in core to carry two fields
+  between one producer and one consumer, which YAGNI rejects while `FactoryTypes` can still be wrapped
+  in one later without breaking anyone.
 - **`InternalsVisibleTo` from `Paramore.Brighter` to `Paramore.Brighter.ServiceActivator`.** Rejected
   because a standing project rule forbids the mechanism outright —
   [`.agent_instructions/testing.md`](../../.agent_instructions/testing.md) § *No InternalsVisibleTo*:
