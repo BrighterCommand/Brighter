@@ -95,10 +95,24 @@ jobs:
           # server. --disallowed-tools claws back the write access tag mode grants
           # by default: it runs with --permission-mode acceptEdits and git
           # add/commit, and a label asking for a review is not a licence to commit.
+          #
+          # Task is required so Claude can spawn parallel sub-review agents on a
+          # large diff. Without it, a review over more than a handful of files
+          # tries to parallelise anyway (its own tracking comment says so —
+          # "N parallel sub-reviews are running"), every Task call is denied,
+          # and it gives up a few turns later having posted nothing but the
+          # stalled todo list — reported as a successful run, since a comment
+          # did get posted. Confirmed on BrighterCommand/Brighter#4282 (462
+          # files): two runs, 15 and 20 turns respectively, 10 and 4 permission
+          # denials, no findings either time. --disallowed-tools already claws
+          # back what Task's default subagent tools would otherwise grant
+          # (Edit/Write/MultiEdit/NotebookEdit, git add/commit), so this does
+          # not reopen the write-access door track_progress's acceptEdits mode
+          # would otherwise leave open.
           claude_args: >-
             --model claude-sonnet-5
             --max-turns 40
-            --allowed-tools "mcp__github_inline_comment__create_inline_comment,Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"
+            --allowed-tools "Task,mcp__github_inline_comment__create_inline_comment,Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"
             --disallowed-tools "Edit,MultiEdit,Write,NotebookEdit,Bash(git add:*),Bash(git commit:*)"
 
       # A `labeled` trigger only fires on the add transition, so the label has to
