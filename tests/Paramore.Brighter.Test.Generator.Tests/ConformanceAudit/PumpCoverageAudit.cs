@@ -65,10 +65,11 @@ public sealed record PumpCoverageResult(IReadOnlyList<PumpCoverageViolation> Vio
 /// one of them proves half of what the ledger claims, so it is reported rather than accepted.
 /// </para>
 /// <para>
-/// Matching is by file name. That catches the risk actually being guarded against — a test being
-/// deleted or moved out of the tree — and costs nothing at scan time. It does not read test bodies,
-/// so it cannot notice a test that survives in name while being hollowed out; that is a code-review
-/// concern rather than an audit one.
+/// A behaviour is located by file name and then confirmed by content. The name catches a test
+/// deleted or moved out of the tree; the content catches the same loss wearing the name of the test
+/// it replaced, because a covering test stripped of its assertions keeps passing while proving
+/// nothing. The content bar is only that an assertion survives — whether it is a <em>good</em>
+/// assertion remains a code-review concern rather than an audit one.
 /// </para>
 /// </remarks>
 public static class PumpCoverageAudit
@@ -123,36 +124,39 @@ public static class PumpCoverageAudit
     public static PumpCoverageResult CheckCoverage(string repoRoot)
     {
         var dispatchDir = Path.Combine([repoRoot, .. s_dispatchPathSegments]);
-        var namesByVariant = s_pumpVariants.ToDictionary(
+        var filesByVariant = s_pumpVariants.ToDictionary(
             variant => variant,
-            variant => EnumerateTestFileNames(Path.Combine(dispatchDir, variant)));
+            variant => EnumerateTestFiles(Path.Combine(dispatchDir, variant)));
 
         var violations = RequiredBehaviours
-            .SelectMany(behaviour => ViolationsFor(behaviour, namesByVariant))
+            .SelectMany(behaviour => ViolationsFor(behaviour, filesByVariant))
             .ToList();
 
         return new PumpCoverageResult(violations);
     }
 
     /// <summary>
-    /// Reports what <paramref name="behaviour"/> has lost: a single
-    /// <c>PumpBehaviourNotCovered</c> when no variant covers it, or one
-    /// <c>PumpBehaviourVariantNotCovered</c> per variant that dropped it while another kept it.
-    /// Distinguishing the two matters to whoever reads the failure — a behaviour gone entirely is a
-    /// deletion, whereas a behaviour gone from one pump is an FR-14 parity break.
+    /// Reports what <paramref name="behaviour"/> has lost, in the terms whoever reads the failure
+    /// needs to act: <c>PumpBehaviourNotCovered</c> when no variant names it at all (a deletion),
+    /// <c>PumpBehaviourVariantNotCovered</c> when one pump kept it and another dropped it (an FR-14
+    /// parity break), and <c>PumpBehaviourCoverageHollowedOut</c> when a file still bears the name
+    /// but no longer asserts (go and read that file).
     /// </summary>
     private static IEnumerable<PumpCoverageViolation> ViolationsFor(
         RequiredPumpBehaviour behaviour,
-        IReadOnlyDictionary<string, IReadOnlyList<string>> namesByVariant)
+        IReadOnlyDictionary<string, IReadOnlyList<string>> filesByVariant)
     {
-        var missingFrom = s_pumpVariants
-            .Where(variant => !namesByVariant[variant].Any(name => Covers(name, behaviour)))
-            .ToList();
+        var namedIn = s_pumpVariants
+            .ToDictionary(
+                variant => variant,
+                variant => filesByVariant[variant]
+                    .Where(file => Covers(Path.GetFileNameWithoutExtension(file), behaviour))
+                    .ToList());
 
-        if (missingFrom.Count == 0)
-        {
-            return [];
-        }
+        var missingFrom = s_pumpVariants.Where(variant => namedIn[variant].Count == 0).ToList();
+        var hollowIn = s_pumpVariants
+            .Where(variant => namedIn[variant].Count > 0 && !namedIn[variant].Any(Asserts))
+            .ToList();
 
         var fragments = string.Join(", ", behaviour.FileNameFragments);
 
@@ -169,13 +173,23 @@ public static class PumpCoverageAudit
             ];
         }
 
-        return missingFrom.Select(variant => new PumpCoverageViolation(
+        var parityBreaks = missingFrom.Select(variant => new PumpCoverageViolation(
             "PumpBehaviourVariantNotCovered",
             behaviour.Description,
             $"covered in {string.Join(" and ", s_pumpVariants.Except(missingFrom))} but not in "
             + $"{variant}: no file under "
             + $"{Path.Combine([.. s_dispatchPathSegments, variant])} has all of "
             + $"[{fragments}] in its name. FR-14 requires both pump variants."));
+
+        var hollowed = hollowIn.Select(variant => new PumpCoverageViolation(
+            "PumpBehaviourCoverageHollowedOut",
+            behaviour.Description,
+            $"{variant} still names this behaviour but no longer asserts it — "
+            + $"{string.Join(", ", namedIn[variant].Select(Path.GetFileName))} "
+            + "contains no assertion. A test that asserts nothing passes while proving nothing, "
+            + "so the ledger cells leaning on it are no longer earned."));
+
+        return parityBreaks.Concat(hollowed);
     }
 
     /// <summary>
@@ -186,15 +200,24 @@ public static class PumpCoverageAudit
             testFileName.Contains(fragment, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
-    /// Every <c>.cs</c> file name beneath <paramref name="variantDir"/>, or empty when the tree is
+    /// True when <paramref name="testFile"/> still makes at least one assertion.
+    /// </summary>
+    /// <remarks>
+    /// The lowest bar that separates a test from an empty method, and deliberately so: the audit
+    /// cannot judge whether an assertion is a <em>good</em> one, which stays a code-review concern.
+    /// What it can do is refuse to count a body with nothing in it. xUnit's <c>Assert</c> is the
+    /// only assertion form this repository uses.
+    /// </remarks>
+    private static bool Asserts(string testFile) =>
+        File.ReadAllText(testFile).Contains("Assert.", StringComparison.Ordinal);
+
+    /// <summary>
+    /// Every <c>.cs</c> file beneath <paramref name="variantDir"/>, or empty when the tree is
     /// absent — a missing tree is itself total loss of coverage, and is reported as such rather than
     /// throwing.
     /// </summary>
-    private static IReadOnlyList<string> EnumerateTestFileNames(string variantDir) =>
+    private static IReadOnlyList<string> EnumerateTestFiles(string variantDir) =>
         Directory.Exists(variantDir)
-            ? Directory.EnumerateFiles(variantDir, "*.cs", SearchOption.AllDirectories)
-                .Select(Path.GetFileNameWithoutExtension)
-                .OfType<string>()
-                .ToList()
+            ? Directory.EnumerateFiles(variantDir, "*.cs", SearchOption.AllDirectories).ToList()
             : [];
 }
