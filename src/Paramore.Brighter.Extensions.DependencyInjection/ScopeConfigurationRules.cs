@@ -36,9 +36,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     /// evaluated by <see cref="ScopeConfigurationValidator"/> (ADR 0074 step 4).
     /// </summary>
     /// <remarks>
-    /// Carries the FR-22.1, FR-22.2, FR-22.3, FR-22.4, FR-24.3 and the first of FR-17's two rules. The
-    /// remaining ADR 0074 rule (FR-17's other) arrives with its own acceptance criterion in a later task —
-    /// it is not stubbed here.
+    /// Carries all seven ADR 0074 rules: FR-22.1, FR-22.2, FR-22.3, FR-22.4, FR-24.3 and both of FR-17's.
     /// </remarks>
     internal static class ScopeConfigurationRules
     {
@@ -200,6 +198,34 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 .Select(d => (d.ImplementationInstance as ScopeAffinityOverride)?.Affinity)
                 .Where(affinity => affinity.HasValue)
                 .Select(affinity => affinity!.Value);
+
+        /// <summary>
+        /// FR-17 — Warning, unreadable override. An affinity-override descriptor supplies neither a
+        /// statically known <see cref="DescriptorRecord.ImplementationType"/> nor a
+        /// <see cref="DescriptorRecord.ImplementationInstance"/> — the shape a registration by factory
+        /// delegate takes, since a <c>ServiceDescriptor</c> is always exactly one of implementation type,
+        /// instance or factory. The override still takes effect (D18's write-through resolves it), but
+        /// <see cref="RepeatedOptIn"/> cannot read a value off it, so a conflicting repeat carrying it goes
+        /// unreported — this rule reports the registration shape itself, which is readable, instead.
+        /// </summary>
+        /// <returns>A simple specification reporting a Warning stating that an affinity override is
+        /// registered by factory delegate, that its value cannot be read without resolving it, the remedy,
+        /// and the guidance page.</returns>
+        public static ISpecification<ScopeConfiguration> UnreadableOverride()
+            => new Specification<ScopeConfiguration>(
+                c => !HasUnreadableOverride(c),
+                _ => new ValidationError(
+                    ValidationSeverity.Warning,
+                    "Scope affinity registration",
+                    "An affinity override is registered by factory delegate — its value cannot be read " +
+                    "without resolving it, so a conflicting repeat carrying it cannot be reported. Register " +
+                    "the override as a constructed instance instead. " +
+                    "See docs/guides/lifetimes-and-scoping.md for guidance."));
+
+        private static bool HasUnreadableOverride(ScopeConfiguration configuration)
+            => configuration.AffinityOverrideRegistrations
+                .Where(d => d.ServiceKey is null)
+                .Any(d => d.ImplementationType is null && d.ImplementationInstance is null);
 
         /// <summary>
         /// FR-22.3 — Warning, captive dependency. A candidate whose kind's configured lifetime is

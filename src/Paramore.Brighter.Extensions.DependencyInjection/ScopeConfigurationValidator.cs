@@ -100,7 +100,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     ScopeConfigurationRules.MixedLifetimes(),
                     ScopeConfigurationRules.DefeatedOptIn(),
                     ScopeConfigurationRules.DuplicateScopeProvider(),
-                    ScopeConfigurationRules.RepeatedOptIn()
+                    ScopeConfigurationRules.RepeatedOptIn(),
+                    ScopeConfigurationRules.UnreadableOverride()
                 };
                 EvaluateSpecs(new[] { _configuration }, configurationSpecs, findings);
 
