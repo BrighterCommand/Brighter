@@ -1309,7 +1309,7 @@ Two Tidy-First steps **are** owed in the DI package, and both are sequenced ahea
   - **Depends on**: T7.8
   - **References**: AC-53 (FR-17); ADR 0074 step 4 (*FR-17's second rule*), ADR 0076 step 2
 
-- [ ] **TEST + IMPLEMENT: T7.10 — every validation message points at the guidance page**
+- [x] **TEST + IMPLEMENT: T7.10 — every validation message points at the guidance page**
   - **USE COMMAND**: `/test-first all seven validation messages contain the guidance page path`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_validation_rule_reports_it_should_name_the_guidance_page.cs`
