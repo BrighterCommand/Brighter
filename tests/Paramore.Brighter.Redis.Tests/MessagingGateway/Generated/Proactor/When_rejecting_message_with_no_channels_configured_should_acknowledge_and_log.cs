@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Text;
 using System.Threading.Tasks;
 
 using Xunit;
@@ -16,6 +17,7 @@ public class WhenRejectingMessageWithNoChannelsConfiguredShouldAcknowledgeAndLog
 {
     private readonly IAmAMessageGatewayProactorProvider _messageGatewayProvider;
     private readonly IAmAMessageBuilder _messageBuilder;
+    private readonly IAmAMessageAssertion _messageAssertion;
 
     private List<Message> _sentMessages = [];
 
@@ -29,6 +31,7 @@ public class WhenRejectingMessageWithNoChannelsConfiguredShouldAcknowledgeAndLog
     {
         _messageGatewayProvider = new Paramore.Brighter.Redis.Tests.MessagingGateway.RedisMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
+        _messageAssertion = new DefaultMessageAssertion();
     }
 
     public Task InitializeAsync()
@@ -53,36 +56,50 @@ public class WhenRejectingMessageWithNoChannelsConfiguredShouldAcknowledgeAndLog
         _producer = await _messageGatewayProvider.CreateProducerAsync(_publication);
         _channel = await _messageGatewayProvider.CreateChannelAsync(_subscription);
 
-        var message1 = _messageBuilder.SetTopic(_publication.Topic!).Build();
-        _sentMessages.Add(message1);
+        // Each message carries its own id and body. Sharing the builder's defaults would make the
+        // two the same message, and a rejected message that came back would then be
+        // indistinguishable from the one that should follow it.
+        var rejectedMessage = _messageBuilder.SetTopic(_publication.Topic!)
+            .SetMessageId(Id.Random())
+            .SetBody(Encoding.UTF8.GetBytes(Id.Random().ToString()))
+            .Build();
+        _sentMessages.Add(rejectedMessage);
 
-        var message2 = _messageBuilder.SetTopic(_publication.Topic!).Build();
-        _sentMessages.Add(message2);
+        var followingMessage = _messageBuilder.SetTopic(_publication.Topic!)
+            .SetMessageId(Id.Random())
+            .SetBody(Encoding.UTF8.GetBytes(Id.Random().ToString()))
+            .Build();
+        _sentMessages.Add(followingMessage);
 
-        await _producer.SendAsync(message1);
-        await _producer.SendAsync(message2);
+        await _producer.SendAsync(rejectedMessage);
+        await _producer.SendAsync(followingMessage);
 
         // Act — receive the first message and reject it; no destination is configured for it
-        var received1 = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));
-        Assert.NotEqual(MessageType.MT_NONE, received1.Header.MessageType);
+        var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));
+        Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
-        var rejected = await _channel.RejectAsync(received1, new MessageRejectionReason(RejectionReason.DeliveryError, "Test rejection with no channels configured"));
+        var rejected = await _channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.DeliveryError, "Test rejection with no channels configured"));
 
         // Assert — RejectAsync returns true: the message is removed, not redelivered
         Assert.True(rejected, "RejectAsync should return true when no channels are configured");
 
         // Assert — the message queued behind it arrives next, without blocking
-        var received2 = new Message();
+        var receivedFollowing = new Message();
         var stopwatch = Stopwatch.StartNew();
         while (stopwatch.Elapsed < TimeSpan.FromSeconds(30))
         {
-            received2 = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(500));
-            if (received2.Header.MessageType != MessageType.MT_NONE)
+            receivedFollowing = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(500));
+            if (receivedFollowing.Header.MessageType != MessageType.MT_NONE)
             {
                 break;
             }
         }
 
-        Assert.NotEqual(MessageType.MT_NONE, received2.Header.MessageType);
+        Assert.NotEqual(MessageType.MT_NONE, receivedFollowing.Header.MessageType);
+
+        // Assert — and it is the following message, not the rejected one come back. Without this
+        // the rejected message being redelivered - the one outcome this test exists to forbid -
+        // would satisfy the check above.
+        _messageAssertion.Assert(followingMessage, receivedFollowing);
     }
 }
