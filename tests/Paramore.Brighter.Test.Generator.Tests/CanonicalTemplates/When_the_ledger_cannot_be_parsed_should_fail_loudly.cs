@@ -93,9 +93,9 @@ public class LedgerParseFailureTests : IDisposable
     [Fact]
     public void When_a_column_name_only_appears_as_a_substring_should_not_match_the_header()
     {
-        // Arrange - FR-22 contains "FR-2" as a substring. A header carrying FR-22 and FR-4 but no
-        // FR-2 column is not the matrix, and matching it would read every cell from the wrong
-        // column offsets rather than failing.
+        // Arrange - the conformance ledger's FR-22 column contains "FR-2" as a substring. A
+        // header carrying FR-22 and FR-4 but no FR-2 column is not the matrix, and matching it
+        // would read every cell from the wrong column offsets rather than failing.
         var path = ALedgerContaining(
             "# Conformance status\n\n| Configuration | FR-22 | FR-4 |\n|---|---|---|\n| Redis | Pass | Pass |\n");
 

@@ -38,7 +38,8 @@ public sealed record CrossCheckResult(
 /// </summary>
 /// <param name="FilePath">The generated test file.</param>
 /// <param name="LedgerKey">The configuration row the file belongs to, e.g. "AWS / SqsFifo".</param>
-/// <param name="FrColumn">The behaviour column the file is judged against, e.g. "FR-16".</param>
+/// <param name="FrColumn">The conformance-ledger behaviour column the file is judged against,
+/// e.g. "FR-16", the Nack-redelivers behaviour.</param>
 /// <param name="ExpectedSkip">What the generator would emit for that cell ("" means no Skip).</param>
 /// <param name="ActualSkip">What the file actually carries ("" means no Skip).</param>
 public sealed record CellAgreementViolation(
@@ -230,7 +231,8 @@ public static class LedgerSkipCrossCheckAudit
     /// </summary>
     /// <remarks>
     /// The audit used to carry its own markdown parser, keyed on a <c>"| Configuration |"</c>
-    /// header where the generator keys on an FR-2 + FR-4 column pair. Two parsers means two
+    /// header where the generator keys on the conformance ledger's FR-2 + FR-4 column pair. Two
+/// parsers means two
     /// answers to "what does the ledger say", and the audit's job is to check the generator
     /// against the ledger - which it cannot do from a different reading of the same file.
     /// </remarks>

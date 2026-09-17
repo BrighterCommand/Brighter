@@ -29,7 +29,8 @@ public class PumpCoverageAuditTests
     public void When_a_required_pump_behaviour_has_no_covering_test_should_fail_audit()
     {
         // Arrange — a synthetic MessageDispatch tree covering every required pump behaviour
-        // except the requeue-count threshold, which is the half FR-23's ledger cells lean on.
+        // except the requeue-count threshold, which is the half the conformance ledger's
+        // budget-exhaustion cells (FR-23) lean on.
         var omitted = "requeue count threshold reached";
         var repoRoot = BuildSyntheticRepo(omitting: omitted);
 

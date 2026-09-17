@@ -13,7 +13,8 @@ namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 /// </summary>
 /// <param name="Kind">
 /// <c>"MixedRejectionKeys"</c> — a provider filled some rejection keys and left others empty; or
-/// <c>"UndeclaredRoutingOnly"</c> — a provider stamps no metadata yet its FR-8 cell claims
+/// <c>"UndeclaredRoutingOnly"</c> — a provider stamps no metadata yet the conformance ledger's
+/// rejection-metadata column (FR-8) claims
 /// conformance, without being a declared relaxation; or
 /// <c>"StaleRoutingOnlyDeclaration"</c> — a declared relaxation whose provider now stamps metadata,
 /// so the declaration and the ledger prose that goes with it are out of date.
@@ -39,14 +40,17 @@ public sealed record RejectionContractResult(
 /// <para>The contract asserts that rejection metadata is stamped onto a rejected message. A transport that
 /// dead-letters through a native broker mechanism routes the untouched original and stamps nothing,
 /// and declares that by returning <c>string.Empty</c> for every key in
-/// <c>RejectionMetadataKeys</c>. The generated FR-8 test then skips its metadata block, leaving it
-/// asserting only arrival at the dead-letter destination — which is what FR-4 already asserts. FR-8
-/// is a duplicate of FR-4 for those transports, by maintainer-approved relaxation.</para>
+/// <c>RejectionMetadataKeys</c>. The generated metadata test then skips its metadata block,
+/// leaving it asserting only arrival at the dead-letter destination — which is what the
+/// delivery-error behaviour already asserts. For those transports the two conformance-ledger
+/// columns, rejection metadata (FR-8) and delivery error to the dead-letter queue (FR-4), claim
+/// the same thing, by maintainer-approved relaxation.</para>
 ///
 /// <para>Two things follow, and this audit enforces both. The key set has to be all-empty or
 /// all-filled, because the generated code decides whether to assert metadata by reading a single
 /// key and would look up an empty Bag key for any other combination. And a transport that stamps
-/// nothing while claiming FR-8 has to be one of the declared relaxations, or a conformance claim
+/// nothing while claiming rejection-metadata conformance (FR-8) has to be one of the declared
+/// relaxations, or a conformance claim
 /// nothing checks can arrive unnoticed.</para>
 ///
 /// <para>Reads provider source as text rather than reflecting over it: the audit lives in the
@@ -57,13 +61,14 @@ public static class RejectionMetadataContractAudit
 {
     /// <summary>
     /// Configurations whose gateway dead-letters natively, stamps no Brighter metadata, and is
-    /// allowed to claim FR-8 on routing alone.
+    /// allowed to claim the conformance ledger's rejection-metadata behaviour (FR-8) on routing alone.
     /// </summary>
     /// <remarks>
     /// <para>Each entry has prose in <c>conformance-status.md</c> saying so. This set is the
     /// executable half of that prose: add a transport here only alongside the ledger note, and the
     /// audit reports a stale entry if its provider later starts stamping metadata.</para>
-    /// <para>A configuration that stamps nothing and leaves FR-8 <c>Deferred</c> does not belong
+    /// <para>A configuration that stamps nothing and leaves its rejection-metadata column (FR-8)
+/// <c>Deferred</c> does not belong
     /// here — it is claiming nothing, so there is nothing to relax.</para>
     /// </remarks>
     private static readonly HashSet<string> DECLARED_ROUTING_ONLY_RELAXATIONS =
@@ -80,7 +85,8 @@ public static class RejectionMetadataContractAudit
     private static readonly Regex REJECTION_KEYS_CONSTRUCTION =
         new(@"new\s+RejectionMetadataKeys\s*\((?<args>[^)]*)\)", RegexOptions.Compiled | RegexOptions.Singleline);
 
-    // Cell values that assert FR-8 conformance. "Deferred" and "Unknown" claim nothing.
+    // Conformance-ledger cell values that assert rejection-metadata conformance (FR-8).
+    // "Deferred" and "Unknown" claim nothing.
     private static readonly HashSet<string> CLAIMING_CELL_PREFIXES =
         new(System.StringComparer.Ordinal) { "Pass", "Fixed" };
 
@@ -153,7 +159,8 @@ public static class RejectionMetadataContractAudit
     }
 
     /// <summary>
-    /// Whether the configuration's FR-8 cell asserts conformance rather than deferring it.
+    /// Whether the configuration's rejection-metadata cell (FR-8) in the conformance ledger
+    /// asserts conformance rather than deferring it.
     /// </summary>
     private static bool ClaimsFr8(ConformanceLedger ledger, string ledgerKey) =>
         ledger.TryGetCell(ledgerKey, FR8_COLUMN, out var cellValue)

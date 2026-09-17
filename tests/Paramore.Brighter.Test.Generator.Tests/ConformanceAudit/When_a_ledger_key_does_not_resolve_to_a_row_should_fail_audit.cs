@@ -34,7 +34,8 @@ public class LedgerResolutionAuditTests
     private static readonly string ALL_PASS =
         string.Join(" | ", Enumerable.Repeat("Pass", s_frColumns.Length));
 
-    /// <summary>Every column Pass, except FR-16 which carries <paramref name="cellValue"/>.</summary>
+    /// <summary>Every conformance-ledger column Pass, except Nack redelivers (FR-16), which carries
+/// <paramref name="cellValue"/>.</summary>
     private static string AllPassExceptFr16(string cellValue)
     {
         var cells = Enumerable.Repeat("Pass", s_frColumns.Length).ToArray();
@@ -76,7 +77,8 @@ public class LedgerResolutionAuditTests
     [Fact]
     public void When_a_canonical_fr_column_is_absent_from_the_matrix_should_fail_audit()
     {
-        // Arrange — FR-16 has gone from the header, so every FR-16 cell resolves to nothing
+        // Arrange — the Nack-redelivers column (FR-16) has gone from the conformance ledger's
+        // header, so every FR-16 cell resolves to nothing
         var (header, cells) = MatrixWithout("FR-16");
         using var tree = SyntheticLedgerTree.Create(
             declaredLedgerKey: "Canary / CanaryGateway",

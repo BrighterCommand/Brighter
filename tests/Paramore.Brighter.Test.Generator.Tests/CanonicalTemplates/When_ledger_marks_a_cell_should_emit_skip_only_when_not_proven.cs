@@ -15,8 +15,8 @@ namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 /// </summary>
 public class WhenLedgerMarksACellShouldEmitSkipOnlyWhenNotProven : IDisposable
 {
-    // FR-22 maps to When_requeuing_a_failed_message_should_be_redelivered in the generator's
-    // canonical-template→FR-column map.
+    // The plain-requeue behaviour — column FR-22 of the conformance ledger — maps to
+    // When_requeuing_a_failed_message_should_be_redelivered in the generator's canonical map.
     private const string CANONICAL_TEMPLATE_NAME =
         "When_requeuing_a_failed_message_should_be_redelivered";
 
@@ -73,7 +73,8 @@ public class WhenLedgerMarksACellShouldEmitSkipOnlyWhenNotProven : IDisposable
     [Fact]
     public async Task When_ledger_cell_is_pass_should_not_emit_skip()
     {
-        // Arrange — ledger says Pass for (LEDGER_KEY, FR-22): test should run without Skip.
+        // Arrange — the conformance ledger records the plain-requeue behaviour (its FR-22
+        // column) as Pass for this configuration, so the test should run without a Skip.
         var ledger = new InMemoryConformanceLedger(
             new Dictionary<(string, string), string>
             {
@@ -160,8 +161,9 @@ public class WhenLedgerMarksACellShouldEmitSkipOnlyWhenNotProven : IDisposable
     [Fact]
     public async Task When_template_is_not_canonical_should_not_emit_skip_regardless_of_ledger()
     {
-        // Arrange — ledger marks the FR-22 cell Deferred, but the non-canonical template
-        // is not in the canonical-template→FR-column map, so it must receive no Skip.
+        // Arrange — the conformance ledger defers the plain-requeue behaviour (its FR-22
+        // column), but the non-canonical template is not in the generator's canonical map, so it
+        // must receive no Skip.
         var ledger = new InMemoryConformanceLedger(
             new Dictionary<(string, string), string>
             {

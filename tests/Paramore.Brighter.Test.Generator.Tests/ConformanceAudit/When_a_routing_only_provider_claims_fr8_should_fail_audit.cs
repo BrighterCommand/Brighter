@@ -10,8 +10,9 @@ namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 /// dead-letters through a native broker mechanism - RabbitMQ's DLX, Azure Service Bus's own
 /// dead-letter queue - routes the untouched original and stamps nothing, so its provider declares
 /// that by returning <c>string.Empty</c> for every key in <c>RejectionMetadataKeys</c>. The
-/// generated FR-8 test then skips its metadata block and asserts only that the message arrived at
-/// the dead-letter destination, which is exactly what FR-4 already asserts.
+/// generated metadata test then skips its metadata block and asserts only that the message arrived at
+/// the dead-letter destination, which is exactly what the delivery-error behaviour (FR-4 in the
+/// conformance ledger) already asserts.
 ///
 /// That relaxation is maintainer-approved and the ledger prose records it for each transport that
 /// uses it. What nothing checked is whether the prose still matches the code. These tests close
@@ -22,9 +23,10 @@ namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 ///   contract is all-empty or all-filled; a mixed set passes the
 ///   <c>StampsRejectionMetadata</c> guard - which reads only <c>RejectionReason</c> - and then
 ///   fails deep inside a generated test on <c>ContainsKey("")</c>, naming nothing useful.</description></item>
-///   <item><description>A provider that stamps nothing while its FR-8 cell claims Pass or Fixed
-///   must be one of the declared relaxations. Otherwise a transport can quietly acquire an FR-8
-///   conformance claim that its own test never checks.</description></item>
+///   <item><description>A provider that stamps nothing while its rejection-metadata cell (FR-8
+///   in the conformance ledger) claims Pass or Fixed must be one of the declared relaxations.
+///   Otherwise a transport can quietly acquire a conformance claim that its own test never
+///   checks.</description></item>
 /// </list>
 /// </summary>
 public class RejectionMetadataContractAuditTests
@@ -34,7 +36,8 @@ public class RejectionMetadataContractAuditTests
     [Fact]
     public void When_a_routing_only_provider_claims_fr8_should_fail_audit()
     {
-        // Arrange — stamps nothing, yet the ledger claims FR-8 Pass, and it is not a declared relaxation
+        // Arrange — stamps nothing, yet the conformance ledger claims Pass for rejection
+        // metadata (FR-8), and it is not a declared relaxation
         var repo = BuildSyntheticRepo(
             providerKeys: AllEmptyKeys,
             fr8CellValue: "Pass");
@@ -59,7 +62,8 @@ public class RejectionMetadataContractAuditTests
     [Fact]
     public void When_a_routing_only_provider_defers_fr8_should_pass_audit()
     {
-        // Arrange — stamps nothing and makes no FR-8 claim, so there is nothing to reconcile
+        // Arrange — stamps nothing and makes no rejection-metadata claim (FR-8), so there is
+        // nothing to reconcile
         var repo = BuildSyntheticRepo(
             providerKeys: AllEmptyKeys,
             fr8CellValue: "Deferred -> #4240 (sign-off: @iancooper)");
@@ -187,7 +191,8 @@ public class RejectionMetadataContractAuditTests
 
     /// <summary>
     /// Builds a synthetic repo holding one test project whose configuration declares one gateway,
-    /// a provider file returning <paramref name="providerKeys"/>, and a ledger whose FR-8 cell for
+    /// a provider file returning <paramref name="providerKeys"/>, and a ledger whose
+/// rejection-metadata cell (FR-8) for
     /// that gateway is <paramref name="fr8CellValue"/>.
     /// </summary>
     private static (string RepoRoot, string LedgerPath) BuildSyntheticRepo(

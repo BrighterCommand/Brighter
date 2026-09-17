@@ -25,8 +25,9 @@ namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 /// </summary>
 public class GeneratingEverywhereShouldEmitSkippedCanonicalSuiteTests
 {
-    // The eleven canonical template base names — one per canonical behaviour.
-    // FR-2, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, FR-15, FR-16, FR-17, FR-22.
+    // The eleven canonical template base names — one per canonical behaviour. The tags are the
+    // behaviour columns of the conformance ledger: FR-2, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9,
+    // FR-15, FR-16, FR-17, FR-22.
     private static readonly string[] CANONICAL_TEMPLATE_NAMES =
     [
         "When_requeuing_a_failed_message_with_delay_should_redeliver_after_delay",               // FR-2

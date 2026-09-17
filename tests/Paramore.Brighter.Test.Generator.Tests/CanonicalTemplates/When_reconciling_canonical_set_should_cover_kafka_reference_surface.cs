@@ -17,7 +17,8 @@ namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 /// This is a static check on the template sources. It does not invoke the
 /// generator; it confirms that the canonical set is structurally complete.
 ///
-/// Coverage Reconciliation (Kafka reference surface → canonical requirement):
+/// Coverage Reconciliation (Kafka reference surface → the behaviour column it is judged
+/// against in the conformance ledger, specs/.../conformance-status.md):
 ///   ..._requeues_with_delay_should_use_producer         → FR-2
 ///   ..._requeues_with_delay_should_use_scheduler        → — (OOS-2, mechanism assertion)
 ///   ..._delivery_error_should_send_to_dlq               → FR-4
@@ -32,9 +33,9 @@ namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 /// </summary>
 public class KafkaReferenceSurfaceReconciliationTests
 {
-    // The eleven canonical template names, one per Kafka reference behaviour
-    // (Coverage Reconciliation table, requirements.md): FR-2, FR-4, FR-5, FR-6,
-    // FR-7, FR-8, FR-9, FR-15, FR-16, FR-17, FR-22.
+    // The eleven canonical template names, one per Kafka reference behaviour. Each is judged
+    // against a behaviour column of the conformance ledger (Coverage Reconciliation table,
+    // requirements.md): FR-2, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, FR-15, FR-16, FR-17, FR-22.
     // Each MUST exist in both the Reactor and Proactor directories.
     private static readonly string[] CANONICAL_TEMPLATE_NAMES =
     [

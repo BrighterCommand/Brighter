@@ -37,7 +37,8 @@ public class LedgerCellAgreementAuditTests
             .OrderBy(column => int.Parse(column.Substring(3)))
             .ToArray();
 
-    // FR-16 is the "Nack redelivers" column — the 9th behaviour column in the matrix.
+    // The Nack-redelivers behaviour is column FR-16 of the conformance ledger — the 9th
+    // behaviour column in the matrix.
     private const string NACK_TEMPLATE = "When_nacking_a_message_it_should_be_redelivered";
 
     // ── 1. Synthetic cases ────────────────────────────────────────────────────
@@ -45,7 +46,8 @@ public class LedgerCellAgreementAuditTests
     [Fact]
     public void When_a_test_is_skipped_but_its_cell_says_pass_should_report_a_violation()
     {
-        // Arrange — the ledger says FR-16 passes for this configuration, so no Skip should exist,
+        // Arrange — the conformance ledger says the Nack-redelivers behaviour (FR-16) passes for
+        // this configuration, so no Skip should exist,
         // but the generated file is still carrying one (a cell flipped green without regenerating)
         using var tree = SyntheticTree.Create(
             frColumnValues: AllPass(),
@@ -64,7 +66,8 @@ public class LedgerCellAgreementAuditTests
     [Fact]
     public void When_a_cell_is_deferred_but_its_test_carries_no_skip_should_report_a_violation()
     {
-        // Arrange — the ledger defers FR-16, so the generated file must carry a Skip; it has none
+        // Arrange — the conformance ledger defers the Nack-redelivers behaviour (FR-16), so the
+        // generated file must carry a Skip; it has none
         // (a cell flipped to Deferred without regenerating, leaving the test running)
         using var tree = SyntheticTree.Create(
             frColumnValues: DeferFr16(),
