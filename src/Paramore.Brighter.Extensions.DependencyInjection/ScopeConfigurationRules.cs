@@ -98,7 +98,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// so the write-through never ran and the override was never applied (D18). A rule about
         /// registrations, not values — it must not compare the override's affinity with the resolved
         /// object's, since an override carrying <see cref="ScopeAffinity.AlwaysNew"/> (the option's own
-        /// default) is by value indistinguishable from an override that was never applied.
+        /// default) is by value indistinguishable from an override that was never applied. Declines to
+        /// fire when the override itself is unreadable (registered by factory delegate) — that shape is
+        /// <see cref="UnreadableOverride"/>'s to report, and this rule has no value to name in its message.
         /// </summary>
         /// <returns>A simple specification reporting an Error naming the affinity the override carries,
         /// that the resolved <see cref="IBrighterOptions"/> was supplied by the application rather than by
@@ -109,6 +111,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 {
                     var lastOverride = c.AffinityOverrideRegistrations.LastOrDefault();
                     if (lastOverride is null) return true; // no opt-in registered — nothing to defeat
+                    if (lastOverride.ImplementationInstance is not ScopeAffinityOverride)
+                        return true; // unreadable — UnreadableOverride() already reports this shape
 
                     var lastUnkeyedOptions = c.BrighterOptionsRegistrations.LastOrDefault(d => d.ServiceKey is null);
                     return lastUnkeyedOptions is not null && lastUnkeyedOptions.IsBrighterRegistered;
