@@ -209,9 +209,11 @@ public class WhenGeneratingNoChannelsRejectShouldEmitAckAndContinueBothVariants 
         Assert.Equal(DISTINCTLY_BUILT_MESSAGES, Occurrences(content, "SetMessageId(Id.Random())"));
         Assert.Equal(DISTINCTLY_BUILT_MESSAGES, Occurrences(content, ".SetBody("));
 
-        // Assert — the generated test identifies the message it received, rather than settling for
-        // the weaker claim that some message arrived
-        Assert.Contains("_messageAssertion.Assert(followingMessage, receivedFollowing)", content);
+        // Assert — the arm identifies the message that follows by id rather than assuming it is
+        // the one sent second, and forbids the rejected message coming back. Identifying by id is
+        // what lets this hold on a transport that does not order its deliveries (NFR-4).
+        Assert.Contains("_messageAssertion.Assert(theOtherMessage, receivedOther)", content);
+        Assert.Contains("Assert.NotEqual(rejectedMessage.Header.MessageId, next.Header.MessageId)", content);
     }
 
     [Fact]
@@ -232,9 +234,11 @@ public class WhenGeneratingNoChannelsRejectShouldEmitAckAndContinueBothVariants 
         Assert.Equal(DISTINCTLY_BUILT_MESSAGES, Occurrences(content, "SetMessageId(Id.Random())"));
         Assert.Equal(DISTINCTLY_BUILT_MESSAGES, Occurrences(content, ".SetBody("));
 
-        // Assert — the generated test identifies the message it received, rather than settling for
-        // the weaker claim that some message arrived
-        Assert.Contains("_messageAssertion.Assert(followingMessage, receivedFollowing)", content);
+        // Assert — the arm identifies the message that follows by id rather than assuming it is
+        // the one sent second, and forbids the rejected message coming back. Identifying by id is
+        // what lets this hold on a transport that does not order its deliveries (NFR-4).
+        Assert.Contains("_messageAssertion.Assert(theOtherMessage, receivedOther)", content);
+        Assert.Contains("Assert.NotEqual(rejectedMessage.Header.MessageId, next.Header.MessageId)", content);
     }
 
     [Fact]

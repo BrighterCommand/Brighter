@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -101,61 +102,55 @@ public class WhenNackingAMessageItShouldBeRedeliveredAsync : IAsyncLifetime
 
         // Each message carries its own id and body. Drawing both from the builder's defaults
         // would make them the same message, and the nacked message coming back would then be
-        // indistinguishable from the one queued behind it.
-        var nackedMessage = _messageBuilder.SetTopic(_publication.Topic!)
+        // indistinguishable from the other one. Which of the two the transport delivers first is
+        // not decided here — that is the transport's to choose (NFR-4).
+        var firstSent = _messageBuilder.SetTopic(_publication.Topic!)
             .SetMessageId(Id.Random())
             .SetBody(Encoding.UTF8.GetBytes(Id.Random().ToString()))
             .Build();
-        _sentMessages.Add(nackedMessage);
+        _sentMessages.Add(firstSent);
 
-        var followingMessage = _messageBuilder.SetTopic(_publication.Topic!)
+        var secondSent = _messageBuilder.SetTopic(_publication.Topic!)
             .SetMessageId(Id.Random())
             .SetBody(Encoding.UTF8.GetBytes(Id.Random().ToString()))
             .Build();
-        _sentMessages.Add(followingMessage);
+        _sentMessages.Add(secondSent);
 
-        await _producer.SendAsync(nackedMessage);
-        await _producer.SendAsync(followingMessage);
+        await _producer.SendAsync(firstSent);
+        await _producer.SendAsync(secondSent);
 
-        // Act — receive the first message and nack it
+        // Act — nack whichever message the transport hands over first. Which of the two that is
+        // belongs to the transport, not to Brighter, so the message to nack is identified by its
+        // id rather than assumed to be the one sent first (NFR-4).
         var receivedForNack = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));
         Assert.NotEqual(MessageType.MT_NONE, receivedForNack.Header.MessageType);
 
+        var nackedMessage = _sentMessages.Single(m => m.Header.MessageId == receivedForNack.Header.MessageId);
+        var theOtherMessage = _sentMessages.Single(m => m.Header.MessageId != nackedMessage.Header.MessageId);
+
         await _channel.NackAsync(receivedForNack);
 
-        // Assert — the nacked message comes back before the one queued behind it
-        var redelivered = new Message();
+        // Assert — one bounded loop, and both ids must show up in it. The nacked message's id
+        // appearing a SECOND time is a redelivery by definition: it was already received once and
+        // released. The other id appearing proves it was not blocked behind that redelivery.
+        // Each message is acknowledged as it arrives so a transport that blocks a message group
+        // while one of its messages is in flight can still make progress, and repeat receipts are
+        // absorbed by the set so an at-least-once transport does not fail the arm (NFR-2, NFR-4).
+        var observedIds = new HashSet<string>();
         var stopwatch = Stopwatch.StartNew();
-        while (stopwatch.Elapsed < TimeSpan.FromSeconds(30))
+        while (stopwatch.Elapsed < TimeSpan.FromSeconds(30) && observedIds.Count < 2)
         {
-            redelivered = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(500));
-            if (redelivered.Header.MessageType != MessageType.MT_NONE)
+            var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(500));
+            if (received.Header.MessageType == MessageType.MT_NONE)
             {
-                break;
+                continue;
             }
+
+            observedIds.Add(received.Header.MessageId.Value);
+            await _channel.AcknowledgeAsync(received);
         }
 
-        Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
-        _messageAssertion.Assert(nackedMessage, redelivered);
-
-        await _channel.AcknowledgeAsync(redelivered);
-
-        // Assert — the following message arrives next, not blocked behind the redelivered one
-        var receivedFollowing = new Message();
-        var stopwatch2 = Stopwatch.StartNew();
-        while (stopwatch2.Elapsed < TimeSpan.FromSeconds(30))
-        {
-            receivedFollowing = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(500));
-            if (receivedFollowing.Header.MessageType != MessageType.MT_NONE)
-            {
-                break;
-            }
-        }
-
-        Assert.NotEqual(MessageType.MT_NONE, receivedFollowing.Header.MessageType);
-
-        // Assert — and it is the message queued behind, not the nacked one arriving a second
-        // time. Without this the check above is satisfied either way.
-        _messageAssertion.Assert(followingMessage, receivedFollowing);
+        Assert.Contains(nackedMessage.Header.MessageId.Value, observedIds);
+        Assert.Contains(theOtherMessage.Header.MessageId.Value, observedIds);
     }
 }

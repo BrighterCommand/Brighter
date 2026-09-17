@@ -257,9 +257,11 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
         Assert.Equal(DISTINCTLY_BUILT_MESSAGES, Occurrences(content, "SetMessageId(Id.Random())"));
         Assert.Equal(DISTINCTLY_BUILT_MESSAGES, Occurrences(content, ".SetBody("));
 
-        // Assert — once the nacked message is acknowledged, the generated test identifies the
-        // message that follows, rather than settling for the weaker claim that one arrived
-        Assert.Contains("_messageAssertion.Assert(followingMessage, receivedFollowing)", content);
+        // Assert — the arm names BOTH ids it expects to observe after the nack, rather than
+        // settling for the weaker claim that a message arrived. It identifies them by id, not by
+        // arrival position, so an unordered transport cannot fail a conforming gateway (NFR-4).
+        Assert.Contains("Assert.Contains(nackedMessage.Header.MessageId.Value, observedIds)", content);
+        Assert.Contains("Assert.Contains(theOtherMessage.Header.MessageId.Value, observedIds)", content);
     }
 
     [Fact]
@@ -280,9 +282,11 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
         Assert.Equal(DISTINCTLY_BUILT_MESSAGES, Occurrences(content, "SetMessageId(Id.Random())"));
         Assert.Equal(DISTINCTLY_BUILT_MESSAGES, Occurrences(content, ".SetBody("));
 
-        // Assert — once the nacked message is acknowledged, the generated test identifies the
-        // message that follows, rather than settling for the weaker claim that one arrived
-        Assert.Contains("_messageAssertion.Assert(followingMessage, receivedFollowing)", content);
+        // Assert — the arm names BOTH ids it expects to observe after the nack, rather than
+        // settling for the weaker claim that a message arrived. It identifies them by id, not by
+        // arrival position, so an unordered transport cannot fail a conforming gateway (NFR-4).
+        Assert.Contains("Assert.Contains(nackedMessage.Header.MessageId.Value, observedIds)", content);
+        Assert.Contains("Assert.Contains(theOtherMessage.Header.MessageId.Value, observedIds)", content);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
