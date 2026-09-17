@@ -1,177 +1,169 @@
-# Review: design — 0037-validate-subscription-channel-factory (ADR 0072, round 4)
+# Review: design — 0037-validate-subscription-channel-factory (ADR 0072, round 5)
 
 **Date**: 2026-09-17
 **Threshold**: 60
 **Verdict**: NEEDS WORK
 
-5 findings at or above threshold 60. Address these before approving.
+2 findings at or above threshold 60. Address these before approving.
 
 > **Main-agent verification.** Per the standing rule that agent findings are claims, not facts, all
-> eight were checked against the working tree before this file was written. **All eight hold; none
-> was rejected** — the second consecutive round with no rejections, where rounds 1 and 2 each had
-> several collapse on inspection. Specifically verified: C-8 requires **four** release notes
-> (`requirements.md:221`) against the ADR's three at lines 511-512 and 654-655; AC-10b's `Message`
-> assertion (`requirements.md:379`) is a **body** assertion absent from both licence lists (357-359,
-> 677-679); the Forces claim at 103-106 is unqualified where Alternatives at 705-708 says "eleven of
-> twelve"; the three deleted citations by count across the tidy commit — `NFR-2` **1 → 0**,
-> `testing.md` **4 → 1**, `item 3` **1 → 0**; FR-5 item 3's text (`requirements.md:123`) does
-> quantify over "every inner factory in the candidate factory set", so the vacuous-satisfaction claim
-> **is correct** but appears nowhere in the ADR; `decider` is absent from
-> `design_principles.md:15`'s stereotype list; and `DisposingSpecification` appears at both 286 and
-> 760. Summary counts recomputed by hand and match.
+> four were checked against the working tree before this file was written. **All four hold**, and
+> every cited line number was confirmed accurate — which mattered more than usual this round: the
+> review agent stalled once and produced its final output on resume **without making any further
+> tool calls**, so all of its line references came from its pre-stall reading and could have gone
+> stale. They had not.
+>
+> **One supporting claim in finding 1 is wrong and is corrected below**: the agent stated that `D5`
+> "appears nowhere in … `PROMPT.md`". It appears there six times. The finding's substance is
+> unaffected — `D5` is absent from `requirements.md` (0 hits), which is the document the spec's
+> amendment convention governs, and absent from the spec directory entirely (0 hits). `PROMPT.md` is
+> gitignored session state, not a specification artefact, so recording a maintainer decision only
+> there is precisely the gap the finding identifies.
+>
+> Also verified: `requirements.md:553-565` defines **D1, D3, D4, D2** and no fifth decision; AC-7's
+> text (`requirements.md:357`) does constrain the handed clause; the ADR's three `D5` citations are
+> at 409, 422 and 425; the `body :` grammar at line 374 does include `{remedy}` against line 359's
+> body/remedy split; and the D1/D2 argument does appear three times (485, 730, 735). Summary counts
+> recomputed by hand and match.
 
-## Round 3 disposition
+## Round 4 disposition
 
-1. **(74) The two message-body templates are not total — FIXED.** Lines 361-376 replace the pair of fixed templates with two independently varying clauses (`{declared-clause}` on `D`; `{handed-clause}` on arm × candidate set). Totality checked by hand: 2 declared forms × 3 handed forms covers all nine reachable cells. Every cell was rendered and checked: **AC-10a** (direct, null `D`) contains `no ChannelFactoryType` ✓ and no `configure a channel factory of type` ✓; **AC-10b** (combined, null `D`) ✓; **AC-10c** (empty set) renders `will be handed no channel factory at all — add a channel factory to the combined channel factory`, containing no `is one of:` ✓; **AC-12** (`{S}`) ✓; **AC-13/13a/13b/13c** "ends with" holds because the remedy is appended last ✓; **AC-14** holds via `DisplayName`'s backtick strip ✓; **AC-15**'s regex `(?<![.\w])ChannelFactory(?!Type)` finds no match in any of the six renderings ✓. The fix is sound.
-2. **(64) "four remedy literals/templates" in five places — FIXED.** `grep -n "four\|Four"` now returns six hits (78, 114, 221, 469, 584, 787), every one a correct use ("four existing rules", "four things", "four families of host"). The Risks mitigation at 677-679 now reads "five remedy literals" and has gained AC-10a and AC-10c — though the list is still incomplete; see finding 2.
-3. **(62) The AC-7 gloss vs the nested paragraph — FIXED.** Lines 399-402 now read "The rule does name it when an inner factory is itself a `CombinedChannelFactory`; AC-7's configuration has no nesting, so the criterion holds, and that case is the accepted limitation below." Reconciled, not re-scoped, exactly as round 3 asked.
-4. **(55) The worked example's invented namespace — FIXED.** Line 412 now reads `Paramore.Brighter.Core.Tests.Validation.TestDoubles.DeclaredChannelFactory`.
-5. **(52) The prescribed XML doc omits the thread-safety statement — FIXED.** Lines 203-208 add a `<remarks>` block, and line 234 points at it ("as its `<remarks>` states"). `<remarks>` usage matches `.agent_instructions/documentation.md:29`.
-6. **(45) `Arm` never defined — FIXED.** Lines 304-305: "`Arm` is a private nested `enum { Direct, Combined }` on `ConsumerValidationRules`, and `ResolveCandidates` returns `(Arm, IReadOnlyList<Type>)`. Neither is public surface."
-7. **(42) "Two lexical constraints" with three bullets, one stranded — FIXED.** Line 392 says "Three", and all three bullets are adjacent at 393-404.
+1. **(78) C-13's release note dropped from the implementation plan and the count — FIXED.** ADR lines 530-531 now read "6. **Release notes** for C-8's obligations — C-10, C-11, C-12 and C-13 as separate entries, with C-12 flagged as the one `throwOnError: false` does not avoid, and C-13 flagged as one it does." Line 673 now reads "**Release-note burden.** Four distinct breaking-change notes (C-10, C-11, C-12, C-13)". Both match `requirements.md:221` (C-8) and C-13's Obligations (`requirements.md:304`).
 
-All seven round-3 findings are fixed. No regression was introduced by `6bfa7925b`.
+2. **(65) The body-revision licence named five of the constraining criteria, twice — FIXED as recommended.** Lines 362-367 state the set **once** as eight, and the Risks mitigation at 698-701 refers to it ("defined once in Key Components §3 rather than restated here, so the two cannot drift apart") instead of restating it. The three criteria round 4 named as missing (AC-10b, AC-13a, AC-13c) are all present. The residual scoping defect is finding 2 below — a different defect from the one round 4 filed.
 
-## Tidy assessment
+3. **(64) Forces' unqualified "certain failure on every start" — FIXED.** Lines 102-106 now carry the qualifier, name MQTT as the twelfth transport and C-11, and reduce the duplicate argument to a pointer that resolves (Alternatives 725-731).
 
-**Verdict on the hypothesis: the tidy half-worked. It eliminated the duplication it named, created no new contradiction, but deleted content it promised only to move, and left several duplicated facts untouched.**
+4. **(62) Three citations deleted by the tidy — FIXED.** All three restored and all three accurate:
+   - **NFR-2** at line 436 — `requirements.md:203` does require each message to state a remedy. Correct claim, and in the T4 paragraph where round 4 recommended it.
+   - **`.agent_instructions/testing.md` § *Test Scope and Isolation*** at lines 345-346 and 743-745. Quoted text checked against `testing.md:103-104`; character-identical apart from a lower-case initial for mid-sentence use, including the source's own `it's` solecism. Both attachments are to surface-narrowing decisions, which is what the rule governs.
+   - **FR-5 item 3** at line 739 — matches `requirements.md:123` and restores the evidence for the sentence it supports.
 
-**What it genuinely fixed.** Key Components §1's three rejected alternatives (instances, `CanRoute`, `InternalsVisibleTo`) are now stated once, in Alternatives Considered, with a one-line pointer at 259-260 whose count ("Three narrower or wider alternatives") matches the three bullets. The rejected "skip a null `ChannelFactoryType`" option became its own Alternatives bullet (740-744), and Key Components §2's pointer to it (line 322) resolves. `CanRoute`'s secondary pre-flight cost and the `InternalsVisibleTo` scope nuance did join their Alternatives bullets as claimed. AC-6's lack of a runtime counterpart did join the drift risk (667-671), replacing a genuinely dangling cross-reference ("for the reason given in the Decision") with the reason inline. **No dangling cross-reference was introduced by the move**: "Recorded under Risks" (228), "see Performance" (190), "see below" (167), "recorded under Negative" (345, 415), "see Alternatives Considered" (322), "the re-enumeration reason above" (500), "the CS0236 rule described above" (693) all still resolve.
+5. **(60) The empty-set/FR-5-item-3 vacuity reasoning lived only in a commit message — FIXED.** Lines 400-406 add the paragraph, in the right section, with the quotation and the item-2 contrast.
 
-**What it lost.** The commit claims "Nothing was deleted outright: content that existed only in Key Components moved out rather than being dropped." That is false in three places (finding 4). Most seriously, the ADR's *only* citation of **NFR-2** was in a Key Components sentence the tidy deleted; NFR-2 is now untraced anywhere in a 794-line design document whose largest section is about message quality.
+6. **(52) Four facts still stated twice — PARTIALLY FIXED (three of four).**
+   - `DisposingSpecification` — FIXED. §2 line 286 is now a pointer; the reason lives once at 787-789.
+   - Nested-composite limitation — FIXED. §3 (425-431) keeps the rendering fact and defers the consequence to Negative (653-658). The T2 mechanics were re-checked by hand against `CombinedChannelFactory.cs:34/37`: declaring `typeof(CombinedChannelFactory)` is selected by the outer composite and rejected by the inner one — the ADR's claim is correct.
+   - C-13's "only reader in `src/`" — FIXED. One hit, line 648 (Negative); Risks 709-710 refers to it.
+   - **The D1/D2 "corrections are load-bearing" argument — NOT deduplicated.** See finding 4.
 
-**Where duplication was relocated rather than eliminated.** The tidy's own diagnosis still applies to at least four facts it did not touch — and finding 3 is an *already-drifted* pair of exactly that kind, surviving in the document today.
+7. **(45) "decider" is not a project stereotype — FIXED.** Line 247 now reads `service provider`, which is in `design_principles.md:15`'s list.
 
-**Compression-induced imprecision**: one case, finding 3.
+8. **(42) "cannot be written with the approved double set at all" overstated — FIXED.** Lines 687-689 carry exactly the recommended softening.
+
+**Net: six FIXED, one PARTIALLY FIXED (6), one FIXED with a new adjacent defect (2). No regression introduced by `f06e98471` in the passages it touched.**
+
+## Hypotheses under test
+
+**1. The body constraint set — the eight listed are correctly scoped, but the set is incomplete, and the AC-7 carve-out does not hold.**
+
+Every AC in `requirements.md` was classified by whether a revision of the body wording could break it:
+
+| AC | Message assertion | Body constraint? |
+|---|---|---|
+| AC-1, AC-2/3/4/6/8/9/10/11, AC-16-19, AC-25/26/26f, AC-27-29, AC-31 | none (or severity/`Source`/count only) | no |
+| AC-5, AC-30 | byte-identical messages across runs | no — a determinism property, not breakable by re-wording |
+| AC-7 | display names of both inner factories, and **does not name `Paramore.Brighter.CombinedChannelFactory` as the type the subscription will be handed** | **yes — and absent from the set** |
+| AC-10a, AC-10b | literal `no ChannelFactoryType`; no `configure a channel factory of type` | yes ✓ in set |
+| AC-10c | ends with T4; no `is one of:` | yes ✓ in set |
+| AC-12 | display name of the subscription's own type | yes ✓ in set |
+| AC-13, AC-13b | "ends with" a remedy literal only | no — correctly excluded |
+| AC-13a, AC-13c | no `configure a channel factory of type` | yes ✓ in set |
+| AC-14 | no `Version=`/`Culture=`/`PublicKeyToken=`/backtick arity | yes ✓ in set |
+| AC-15 | the `ChannelFactory` token regex | yes ✓ in set |
+
+All eight listed ACs genuinely constrain the body — none is wrongly included — and exactly one constraining criterion is missing: **AC-7**. Its exclusion does not survive scrutiny; see finding 2.
+
+**2. The four deduplications — three lose nothing and every pointer resolves; the fourth was not performed.** For the three that were done, each target was checked and each section still stands on its own: §2 states which shapes are not used and why the collapsed constructor is wrong, deferring only the `DisposingSpecification` reason; §3 keeps the rendering fact that the Negative bullet does not restate; Risks keeps the direct-vs-combined asymmetry that Negative's C-13 bullet does not state in those terms. No information was lost.
+
+**3. The three restored citations — restored accurately, in the right places, supporting the claims they are attached to.** Verified character-by-character against `.agent_instructions/testing.md:103-104` and `requirements.md:203`/`:123`. One observation short of a finding: the ADR acknowledges that the `InternalsVisibleTo` rule "is framed around testing and our caller is production code in another assembly" (760-762), but applies the *Test Scope and Isolation* rule twice (345, 743) to production surface without that acknowledgement. The rule's text is not testing-specific, so the application is defensible; the asymmetry in framing is a nit.
+
+**4. The FR-5-item-3 vacuity paragraph — independently re-verified as correct, and the paragraph does establish it.** `requirements.md:123` quantifies universally over the candidate factory set, vacuously satisfied at cardinality zero. Item 2 (`requirements.md:122`) names one required type, which is why the null-`D` case needed the round-2 amendment. The ADR's quotation is exact, the contrast is drawn correctly, and the conclusion follows. FR-5's own T4 paragraph (`requirements.md:146`) independently confirms the empty-set case was already contemplated normatively on the remedy side. No requirements amendment is needed for this.
 
 ## Findings
 
-### 1. C-13's release note is dropped from the implementation plan and from the release-note count, contradicting two other passages and requirements C-8 (Score: 78)
+### 1. `D5` is cited three times as a settled decision but is defined nowhere in the specification, and it is the sole stated justification for narrowing an approved acceptance criterion (Score: 70)
 
-Requirements **C-8** is explicit that the release notes MUST carry **four** breaking-change notes: "the breaking-change notes for **C-10** …, **C-11** …, **C-12** … and **C-13** (an out-of-repo override returning `null` in a single-factory configuration), each naming its symptom and its remedy." C-13's own Obligations paragraph repeats it.
+`requirements.md` enumerates the maintainer decisions the design may not re-open — **D1**, **D2**, **D3**, **D4** — under "Maintainer decisions already taken (not to be re-opened by design or implementation)" (`requirements.md:553-565`), each with its statement and rationale. The ADR invokes a **D5** three times in the same register, and uses it to carry real weight: at line 422 it is the *entire* reason AC-7 is excluded from the body's constraint set.
 
-The ADR agrees with that twice — and then contradicts itself twice. The **Implementation Approach**, which is the artefact an implementer will actually work from, enumerates only three notes. The **Negative** consequences bullet counts only three. An implementer following step 6 ships three notes and breaches C-8.
+`D5` appears nowhere in `requirements.md` (0 hits) or anywhere else in the spec directory (0 hits). Repo-wide, the only other `D5`s are the unrelated decisions in ADR 0060 and ADR 0061. A reader of the parent requirements cannot resolve the reference, and the ADR never states what D5 says — line 425's parenthetical "(D5)" is the closest thing to a definition and it is a citation, not a statement.
 
-**Evidence**: ADR lines 511-512:
-```
-6. **Release notes** for C-8's obligations — C-10, C-11 and C-12 as separate entries, with C-12
-   flagged as the one `throwOnError: false` does not avoid.
-```
-and lines 654-655:
-```
-- **Release-note burden.** Three distinct breaking-change notes (C-10, C-11, C-12) for one feature is
-  a lot to ask a reader of V10.X notes to absorb.
-```
-Against the ADR's own line 633 — "*but it is new breakage, not a converted failure, and it **carries its own release note***" — and lines 688-689 — "*it is recorded as **C-13** with **its own release-note obligation under C-8**, as NFR-6 requires*". Against requirements C-8 (`requirements.md:221`) and C-13's Obligations (`requirements.md:304`).
+> *Main-agent correction*: the review agent also claimed D5 appears nowhere in `PROMPT.md`. It appears there six times. That does not rescue the ADR: `PROMPT.md` is gitignored session state, explicitly not a specification artefact, so a maintainer decision recorded only there is invisible to the requirements, to the review history, and to a fresh reader of the ADR.
 
-**Recommendation**: Change step 6 to "C-10, C-11, C-12 and C-13 as separate entries, with C-12 flagged as the one `throwOnError: false` does not avoid and C-13 flagged as one it does", and change the Negative bullet to "Four distinct breaking-change notes (C-10, C-11, C-12, C-13)".
+This is exactly the class of case this spec has a stated convention for. The round-2 amendment cycle established that when the design needs a decision the requirements own, `requirements.md` is amended rather than the ADR deviating — the ADR itself says so at lines 324-335 ("**This changed the requirements, and the requirements were amended rather than deviated from.**") and the requirements record it at 543-551 ("Amendments after approval"). D5 rules on how an approved acceptance criterion (AC-7) and an approved no-recursion rule (FR-3/AC-10) are to be satisfied. **D4 — a decision of identical shape, also raised by an adversarial review — was recorded in `requirements.md` and reflected in FR-3, C-13, C-9 and three new ACs. D5 was not recorded anywhere in the spec.**
+
+**Evidence**: ADR lines 408-409, 422-423 and 425:
+```
+408	**Three of those constraints are easy to breach accidentally, plus AC-7, which the set does not
+409	carry because D5 governs it:**
+…
+422	  that case is the accepted limitation below. AC-7 is not in the body's constraint set because D5
+423	  accepts that one rendering breaches its spirit while satisfying its letter.
+…
+425	**The nested case names a type that does not route, and we accept that (D5).** `FactoryTypes`
+```
+Against `requirements.md:553-565`, which defines D1, D3, D4 and D2 and no others, and `grep -rn "D5" specs/0037-validate-subscription-channel-factory/` → no matches.
+
+The acceptance itself is not being re-opened. The defect is that the acceptance is unrecorded and its identifier undefined, while the ADR leans on it to bound an approved criterion.
+
+**Recommendation**: Amend `requirements.md` — add **D5** to "Maintainer decisions already taken" (stating that the nested-composite rendering may name `Paramore.Brighter.CombinedChannelFactory` in `{F-list}` because filtering it would empty the candidate list and select T4, which says less about what is configured), add it to "Amendments after approval", and note against AC-7/AC-10 that this is the accepted reading. Then the ADR's three citations resolve. This is the round-2 pattern applied to the decision that produced it.
 
 ---
 
-### 2. The licence to revise the message body names five of the seven acceptance criteria that constrain it, and says so twice (Score: 65)
+### 2. AC-7's exclusion from the body's constraint set is a non sequitur, and the ADR's own text three lines earlier contradicts it (Score: 66)
 
-The ADR draws a deliberate line between the normative remedy literals and the body wording it owns, and attaches to the body a closed list of criteria that must keep holding. That list is the document's contract with future editors — round 3 scored the same sentence at 64 for exactly this reason, and the fix added AC-10a and AC-10c but stopped there. Two more criteria constrain the body and are still missing:
+The constraint set is the document's contract with future editors: "The body may be revised as long as **[the eight]** continue to hold" (362-363). Round 4 scored the incompleteness of that list at 65 and it was widened to eight. AC-7 is the ninth, and it was deliberately left out with a justification that does not work.
 
-- **AC-10b** requires the combined-arm null-`D` message to "contain the literal `no ChannelFactoryType`". That is a body assertion, not a remedy assertion — T3b contains no such literal.
-- **AC-13a and AC-13c** require that the message "contains **no** occurrence of the substring `configure a channel factory of type`". That is a prohibition on the *body*, which is why the ADR lists it as one of its three lexical constraints three paragraphs later.
+Three statements in the same block cannot all stand:
 
-So the ADR's own §3 names AC-13a/AC-13c as a body constraint while its summary sentence and its Risks mitigation license revising the body without them. Under the stated licence a future editor could rewrite the handed clause as "but the configured channel factory of type X will be handed to it" and break AC-13a/AC-13c, or drop the null-`D` declared clause in the combined arm and break AC-10b — both while believing they were inside the licence.
+- Line 364 asserts of the eight: "**All eight constrain the *body*, not the remedy**" — placing AC-7, which is excluded, outside the class of body constraints.
+- Line 408 puts AC-7 *inside* that class: "Three of those constraints are easy to breach accidentally, **plus AC-7**", and bullets it alongside AC-15, AC-13a/13c and AC-10a/10b — the three genuine body constraints.
+- Lines 418-419 then state what AC-7 constrains, and it is unambiguously the body: "AC-7 forbids naming `Paramore.Brighter.CombinedChannelFactory` **as the type the subscription will be handed**". "The type the subscription will be handed" is the `{handed-clause}` at line 380-383. No remedy template can breach it; only the body can.
 
-**Evidence**: ADR lines 357-359:
+The stated reason for exclusion — "D5 accepts that one rendering breaches its spirit while satisfying its letter" (422-423) — is about the **nested** configuration. The ADR says four words earlier that AC-7's configuration is *not* nested: "AC-7's configuration has no nesting, so the criterion holds" (421). So in AC-7's own configuration the criterion holds fully and must keep holding: it is an approved, unwaived acceptance criterion. D5's acceptance of a *different* configuration's rendering is no licence to drop AC-7 from the set of things a body revision must preserve. As written, a future editor is licensed to rewrite the handed clause as, say, "but the combined channel factory `Paramore.Brighter.CombinedChannelFactory` will be handed it, offering one of '{F-list}'" — inside the stated licence, and AC-7 fails.
+
+Relatedly, line 364's "not the remedy" is overstated for two of the eight it *does* list: line 414 says of AC-13a/AC-13c "the prohibition is on **the whole message**", and AC-14's and AC-15's assertions likewise range over the whole message. The sentence reads as a claim about which criteria bite on the body versus the remedy, and in that reading it is both loose and the premise on which AC-7 is excluded.
+
+**Evidence**: ADR lines 362-367, 408-409 and 418-423, against `requirements.md:357` (AC-7):
 ```
-**The message is a body plus one of FR-5's five remedy literals**, appended last so AC-13/13a/13b/13c's
-"ends with" assertions hold. Only the five literals are normative; the body below is this ADR's,
-constrained by AC-10a, AC-10c, AC-12, AC-14 and AC-15.
+Then exactly one `Error` is produced for `greeting-sub`, whose `Message` contains the display names
+of both inner factories in constructor order, and does not name
+`Paramore.Brighter.CombinedChannelFactory` as the type the subscription will be handed.
 ```
-and the same list repeated at lines 677-679. Against ADR lines 403-404 ("*AC-13a and AC-13c forbid the substring `configure a channel factory of type` anywhere in a T3a/T3b message, so **the body must not** paraphrase the suppressed half*") and requirements AC-10b (`requirements.md:379`).
 
-Note that the list appearing in two places is itself the tidy's failure mode: the round-3 fix had to patch both copies, and both are now wrong in the same way.
-
-**Recommendation**: Make both read "AC-10a, AC-10b, AC-10c, AC-12, AC-13a, AC-13c, AC-14 and AC-15", or — better, given the drift history — state the list once and have the Risks mitigation refer to it.
+**Recommendation**: Add AC-7 to the set — "AC-7, AC-10a, AC-10b, AC-10c, AC-12, AC-13a, AC-13c, AC-14 and AC-15" (nine) — and replace the D5 carve-out with the accurate statement: "AC-7 constrains the handed clause, and holds in AC-7's own non-nested configuration; D5 accepts only that the nested case renders an inner `CombinedChannelFactory` in `{F-list}`, which AC-7 does not cover." Also drop or qualify "not the remedy" in the summary sentence, since AC-13a/13c, AC-14 and AC-15 range over the whole message — the point being made is that the fixed remedy literals alone do not satisfy them.
 
 ---
 
-### 3. Forces states an unqualified "certain failure on every start" that C-11 and the qualified duplicate in Alternatives both contradict (Score: 64)
+### 3. "Body" is defined two ways in adjacent paragraphs, and the wider definition would extend the revision licence over the normative remedy literals (Score: 55)
 
-The same argument — why this ADR chooses `Error` where ADR 0064 chose `Warning` — is stated twice. The Alternatives copy carries the qualifier that makes it true; the Forces copy does not, and the unqualified version is false of MQTT, the one transport the ADR devotes an entire Negative bullet to precisely because its mismatch is **neither** a failure **nor** a wrong bus.
+Line 359 defines the message as body + remedy, with the remedy explicitly outside what this ADR owns: "**The message is a body plus one of FR-5's five remedy literals** … Only the five literals are normative; the body below is this ADR's." The grammar three paragraphs later defines `body` as *including* the remedy:
 
-C-11 (`requirements.md:280`) is unambiguous: "`new Subscription<T>(…)` handed the MQTT `ChannelFactory` consumes MQTT **correctly today** — it is not a latent failure like the eleven downcasting transports (C-3)." The ADR's own Negative bullet at 611-617 repeats it. So a channel-factory mismatch is *not* "a certain failure … on every start", and the parenthetical escape hatch does not rescue it either: MQTT with a plain `Subscription<T>` consumes the *right* bus, not a silently wrong one.
-
-**Evidence**: ADR Forces, lines 103-106:
 ```
-  the five corrections ship with it. This is the direct inverse of ADR 0064, which chose a
-  non-blocking `Warning` for its two rule families; the difference is that 0064's conditions are
-  deferred and conditional, whereas a channel-factory mismatch is a certain failure (or, worse, a
-  silently wrong bus) on every start.
+374	body            : Subscription type '{S}' {declared-clause} but {handed-clause} {remedy}
 ```
-Against ADR Alternatives, lines 705-708, which states the same argument correctly ("*fails on **every** start for eleven of twelve transports, or silently consumes the wrong bus*"), and against ADR lines 611-613 and requirements C-3/C-11.
 
-**Recommendation**: Add the qualifier to the Forces bullet ("…fails on every start for eleven of twelve transports, or silently consumes the wrong bus; MQTT, the twelfth, is C-11"), or delete the Forces copy and let the Alternatives bullet carry the argument — which is what the tidy did everywhere else.
+The licence sentence at 362-363 — "**The body** may be revised as long as [the constraint set] continues to hold" — is then ambiguous about whether the remedy literals are inside the revisable region, which is the one thing lines 359-360 and 698-699 say they are not. In context the intent is clear, but the term the licence turns on is defined inconsistently in the same sub-section, and this is the third consecutive round in which a defect has been found in this block.
 
----
+**Evidence**: ADR lines 359-360 against line 374; and Risks lines 698-701.
 
-### 4. The tidy deleted three requirement and project-rule citations that existed only in Key Components, contrary to its own "nothing was deleted outright" claim (Score: 62)
-
-`git diff 6bfa7925b 8d03b94c6` shows these three citations removed from Key Components and added nowhere:
-
-**(a) NFR-2 — now uncited anywhere in the ADR.** `grep -c -- "NFR-2"` returns 0 post-tidy and 1 pre-tidy. The deleted sentence was the ADR's sole trace to the requirement that governs its largest section.
-
-**(b) `.agent_instructions/testing.md` § *Test Scope and Isolation* — dropped from two decisions.** It grounded the rejection of `IReadOnlyList<IAmAChannelFactory> Factories` and the decision to keep `DisplayName` a private static. Both now rest on unsupported assertions — "A formatter with one caller does not earn permanent public surface" (line 344) and "it hands out capability … where the rule demonstrably needs only knowledge" (line 717). The project rule is real and says exactly what the deleted text quoted (`testing.md:103-104`). CLAUDE.md treats these files as rules to consult, not to reason around; the `InternalsVisibleTo` bullet still cites testing.md, so the document is now inconsistent about whether narrow-surface decisions are grounded in the rule or in taste.
-
-**(c) FR-5 item 3 — now uncited.** The deleted sentence was the ADR's only demonstration that the rule needs *types*, not *instances*: "FR-3's combined arm is `f.GetType() == D`, **FR-5 item 3 needs display names of types**, and AC-9's companion assertion calls `CreateSyncChannel` on the **composite**, not on an inner factory." That enumeration is the evidence for "No caller in this feature needs an instance", which is all the Alternatives bullet now asserts.
-
-**Evidence**: removed hunks in `git diff 6bfa7925b 8d03b94c6`; counts verified independently — `NFR-2` 1 → 0, `testing.md` 4 → 1, `item 3` 1 → 0. Against the tidy commit message: "*Nothing was deleted outright: content that existed only in Key Components moved out rather than being dropped.*"
-
-**Recommendation**: Restore the three citations in their new homes — NFR-2 in the `{F-list}`/T4 paragraph (417-420) or in Risks; the testing.md § *Test Scope and Isolation* quote in the "Expose `Factories`" Alternatives bullet and in §3's private-static sentence; FR-5 item 3's role in the "Expose `Factories`" bullet.
+**Recommendation**: Rename the production at 374 to `message :` (leaving `{remedy}` in it, since the append order is what makes the "ends with" assertions hold), or restate it as `body : Subscription type '{S}' {declared-clause} but {handed-clause}` and `message : {body} {remedy}`. The latter also makes line 359's split and lines 433-439's "reaches `{F-list}` on neither side" argument read more cleanly.
 
 ---
 
-### 5. The reasoning that the empty-candidate body clause needs no FR-5 amendment exists only in the commit message, not in the ADR (Score: 60)
+### 4. The D1/D2 "the corrections are load-bearing" argument is still stated three times — the one deduplication round 4 asked for that was not performed (Score: 45)
 
-`6bfa7925b`'s commit message says: "*FR-5 item 3 is satisfied vacuously by the empty set (zero types), so no requirements amendment is needed.*" **The claim was checked and it holds.** FR-5 item 3 reads "the type(s) it will actually be handed … in the combined arm the `Type.FullName` of **every inner factory in the candidate factory set**" — a universal quantification, vacuously true over an empty set. That is materially different from FR-5 item 2, which named a single required type and *was* therefore unsatisfiable when `D` is null and *did* require an amendment. So no requirements change is needed here.
+`f06e98471` reduced the Forces copy to a pointer at Alternatives, which is the right move and resolves. But the argument itself still appears in full twice more, plus a third statement of its conclusion:
 
-But the ADR does not say any of that. `grep -n "item 3"` on the ADR returns nothing (the tidy deleted the only hit — finding 4(c)), and the nearest thing to a statement, line 386, argues the wrong point: it explains why the body cannot render `one of ''`, which is an AC-10c concern, not an FR-5-item-3 concern. Meanwhile the very next section goes out of its way to declare exactly this kind of interaction: "**This changed the requirements, and the requirements were amended rather than deviated from**" (line 324). A reader comparing FR-5 item 2's explicit null clause against item 3's silence about the empty set will reasonably ask whether the ADR quietly took a second normative decision — which is precisely what round 2 caught it doing. A decision record whose justification lives in a git commit message is not a decision record.
+- Key Components §5, 485-490: "they are **load-bearing for D1**: without them the rule would report an `Error` for correct, working AWS SQS and Postgres consumers … including four families of in-repo sample."
+- Alternatives, 732-735: "Under `Error` severity with `throwOnError: true` the rule would refuse startup to correct AWS SQS, AWS SQS V4, Postgres, GCP Pub/Sub and MQTT hosts … The corrections are not a follow-up; they are the precondition for the severity."
+- Alternatives, 730-731: "The in-repo false positives that would have made `Error` unsafe are removed by D2, which is why the two ADRs can reach opposite conclusions from the same framework."
 
-**Evidence**: ADR lines 361-363 and 386. Note that line 362 attributes the empty candidate set to **T4** — a *remedy* template — never to item 3, which is the item that demands types in the body. Against `requirements.md:123` (FR-5 item 3) and `requirements.md:122` (item 2, which shows what an explicit amendment for this class of gap looks like).
+All three are currently consistent (§5's "four families of in-repo sample" matches C-1's four sample paths at `requirements.md:212`). The cost remains prospective and is exactly what round-4 finding 3 was: the Forces copy had already drifted before it was fixed. Note that §5's copy and Alternatives' copy already differ in scope — §5 names "AWS SQS and Postgres", Alternatives names all five transports — which is the first millimetre of the same drift.
 
-**Recommendation**: One sentence beside the clause table, e.g. "FR-5 item 3 quantifies over the candidate factory set, so an empty set satisfies it vacuously — unlike item 2, whose single required type forced the round-2 amendment. `will be handed no channel factory at all` is therefore body wording this ADR owns, not a deviation." This is a documentation fix, not a requirements amendment.
+**Evidence**: lines 485-490, 725-735; `grep -n "load-bearing"` → one hit (485), `grep -n "precondition for the severity"` → one hit (735).
 
----
-
-### 6. Four facts are still stated in two or more places, which is the failure mode the tidy was performed to remove (Score: 52)
-
-The tidy eliminated the duplication in Key Components §1 but left these standing, three of them straddling the same Key Components / Consequences boundary:
-
-- **The `DisposingSpecification` rejection** — Key Components §2, lines 285-286 **and** Alternatives, lines 760-762. This is the same class of duplication the tidy removed from §1, in the very next sub-section.
-- **The nested-composite limitation** — Key Components §3, lines 406-415 (ten lines) **and** Negative, lines 636-639 (four lines).
-- **C-13's argument** — Risks, lines 683-689 **and** Negative, lines 628-633, both carrying "`CombinedChannelFactory` is the only reader of `ChannelFactoryType` in `src/`" and the D3 acceptance.
-- **The D1/D2 "corrections are load-bearing" argument** — Forces 103-106, Key Components §5 465-471, Alternatives 704-710, Alternatives 711-714: four copies. Finding 3 is one of these four having already drifted.
-
-All four are currently consistent. The cost is prospective: each is a place where the next round's fix has to land twice.
-
-**Evidence**: line pairs cited above; `grep -n "C-13"` returns 11 hits across Forces, Key Components, Negative, Risks and Alternatives.
-
-**Recommendation**: Apply §1's pattern to §2 and §3 — state the decision and point at the record. The `DisposingSpecification` sentence in §2 can become "see Alternatives Considered"; §3's nested-composite paragraph can compress to its rendering fact and point at the Negative bullet.
-
----
-
-### 7. "decider" is not one of the project's stereotypes (Score: 45)
-
-The responsibility table applies Responsibility-Driven Design stereotypes, which `.agent_instructions/design_principles.md:15` enumerates as "information holder, structurer, service provider, coordinator, controller, interfacer". "decider" is not among them. `information holder` and `structurer / coordinator` on the first two rows are correct; the rule's row invents a term. The closest project-sanctioned stereotype for a rule that answers a question about objects it is handed is **service provider**.
-
-**Evidence**: ADR line 247: `| The rule | decider | *deciding* whether those two are compatible **for the purpose of validation** |`, against `.agent_instructions/design_principles.md:15`.
-
-**Recommendation**: `| The rule | service provider | *deciding* whether those two are compatible … |`, keeping the *deciding* verb in the responsibility column where it belongs.
-
----
-
-### 8. "cannot be written with the approved double set at all" overstates what the doubles forbid (Score: 42)
-
-The Risks entry's conclusion — the positive direction should be pinned when a non-throwing double exists — is right, and C-9 does make a "the composite successfully routes" assertion impossible. But a weaker positive assertion *is* writable today: `CreateSyncChannel` on a correctly-configured composite throws the double's own exception rather than `ConfigurationException`, which pins that routing selected an inner factory. C-9 requires the doubles' members to throw but does not fix the exception type, so the distinction is observable. The ADR's absolute "cannot be written … at all" invites a reader to stop looking.
-
-**Evidence**: ADR lines 667-670: "*C-9's doubles throw on every member, so the mirror-image assertion — a correct multi-bus configuration where the rule is silent **and** the composite successfully routes — **cannot be written with the approved double set at all**.*"
-
-**Recommendation**: Soften to "cannot be written as a successful-routing assertion; the most it can assert is that the composite throws the inner double's exception rather than `ConfigurationException`, which pins selection but not dispatch."
+**Recommendation**: Apply the pattern used for `DisposingSpecification` and C-13: let the Alternatives bullet carry the argument once, and reduce §5 to its decision — "They carry no design decision, but they are load-bearing for D1 (argued under Alternatives Considered). Their cost is C-12, recorded below."
 
 ---
 
@@ -181,8 +173,8 @@ The Risks entry's conclusion — the positive direction should be pinned when a 
 |-------------|-------|
 | 90-100 (Critical) | 0 |
 | 70-89 (High) | 1 |
-| 50-69 (Medium) | 5 |
-| 0-49 (Low) | 2 |
+| 50-69 (Medium) | 2 |
+| 0-49 (Low) | 1 |
 
-**Total findings**: 8
-**Findings at or above threshold (60)**: 5
+**Total findings**: 4
+**Findings at or above threshold (60)**: 2
