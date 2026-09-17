@@ -356,18 +356,28 @@ DisplayName(t):
 Known simplification: nested types render with CLR's `+` separator. No acceptance criterion exercises
 one — C-9's `AlphaBus`/`BetaBus` doubles are *namespaces*, not nested types.
 
-**The message is a body plus one of FR-5's five remedy literals**, appended last so AC-13/13a/13b/13c's
-"ends with" assertions hold. Only the five literals are normative; the body below is this ADR's.
+**The message is a body plus one of FR-5's five remedy literals**, appended last so the "ends with"
+assertions of AC-10a, AC-10b, AC-10c, AC-13, AC-13a, AC-13b and AC-13c all hold. Only the five
+literals are normative; the body below is this ADR's.
 
 **The body's constraint set — stated once here, referred to everywhere else.** The body may be
-revised as long as **AC-7, AC-10a, AC-10b, AC-10c, AC-12, AC-13a, AC-13c, AC-14 and AC-15** continue
-to hold. None of the nine is satisfied by the fixed remedy literals alone, so each is something a
-revision of the body can break: AC-7 forbids naming `Paramore.Brighter.CombinedChannelFactory` as the
-type the subscription will be handed, which only the handed clause can breach; AC-10a and AC-10b
-require the literal `no ChannelFactoryType`, which no remedy template contains; AC-10c forbids
-`is one of:`; AC-13a and AC-13c forbid the substring `configure a channel factory of type` anywhere
-in the message; AC-12 and AC-14 govern the rendered type names; AC-15 governs the `ChannelFactory`
-token.
+revised as long as **AC-5, AC-7, AC-10a, AC-10b, AC-10c, AC-12, AC-13a, AC-13c, AC-14, AC-15 and
+AC-30** continue to hold. None of the eleven is satisfied by the fixed remedy literals alone, so each
+is something a revision of the body can break:
+
+- **AC-5 and AC-30 require the message to be a pure function of `({S}, D, arm, candidate types)`.**
+  A body revision must not interpolate an instance, an identity hash, or anything that distinguishes
+  a back-filled `subscription.ChannelFactory` from a resolved default — AC-5 evaluates the same
+  configuration either side of `DispatchBuilder`'s back-fill and demands a byte-identical `Message`,
+  and AC-30 demands the same across two runs. This is the same reduction-to-types discipline the
+  Architecture Overview relies on, applied to the message rather than to the verdict.
+- **AC-7** forbids naming `Paramore.Brighter.CombinedChannelFactory` as the type the subscription
+  will be handed, which only the handed clause can breach.
+- **AC-10a and AC-10b** require the literal `no ChannelFactoryType`, which no remedy template
+  contains; **AC-10c** forbids `is one of:`.
+- **AC-13a and AC-13c** forbid the substring `configure a channel factory of type` anywhere in the
+  message.
+- **AC-12 and AC-14** govern the rendered type names; **AC-15** governs the `ChannelFactory` token.
 
 The body is **two independently varying clauses**, not a pair of fixed templates. The amended FR-5
 admits a null `D` (item 2) and an empty candidate set (T4), and those vary *different* clauses, so a
@@ -409,7 +419,7 @@ round-2 amendment. `will be handed no channel factory at all` is accordingly bod
 owns under the constraint set above, not a change to a normative rule. No requirements amendment is
 needed, and this paragraph records why rather than leaving the reasoning outside the document.
 
-**Four of those constraints are easy to breach accidentally:**
+**These are the easiest of them to breach accidentally:**
 
 - **AC-15** — "token" is a word-boundary match pinned to a normative regex, so a composite identifier
   merely *ending* in the word — `InMemoryChannelFactory`, `CombinedChannelFactory` — is a different
