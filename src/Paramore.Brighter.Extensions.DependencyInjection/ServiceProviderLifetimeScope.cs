@@ -273,12 +273,30 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// an ambient whose provider already resolves a <see cref="ScopedArtefactCache"/> ever becomes
         /// BORROWED, per <see cref="AmbientScopeProbe.CanResolveFrom"/>.
         /// </summary>
+        /// <remarks>
+        /// Publishes the fallback cache with <see cref="Interlocked.CompareExchange{T}(ref T, T, T)"/> and
+        /// disposes the loser, mirroring <see cref="EnsureRootScopePublished"/>'s own race-handling —
+        /// not <c>LazyInitializer.EnsureInitialized</c>'s no-<c>syncLock</c> overload, whose documented
+        /// contract lets the factory run more than once under concurrent first callers and silently
+        /// discards (never disposes) every result but the one that publishes.
+        /// </remarks>
         private ScopedArtefactCache ResolveOwnedArtefactCache(IServiceProvider scopeProvider)
         {
             if (scopeProvider.GetService(typeof(ScopedArtefactCache)) is ScopedArtefactCache registered)
                 return registered;
 
-            return LazyInitializer.EnsureInitialized(ref _ownedFallbackCache, () => new ScopedArtefactCache())!;
+            if (_ownedFallbackCache is { } published)
+                return published;
+
+            var created = new ScopedArtefactCache();
+            var winner = Interlocked.CompareExchange(ref _ownedFallbackCache, created, null);
+            if (winner is not null)
+            {
+                //lost the publish race — dispose the cache we created
+                created.Dispose();
+                return winner;
+            }
+            return created;
         }
 
         /// <summary>
