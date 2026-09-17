@@ -14,7 +14,8 @@ namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 ///   - name the file When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log;
 ///   - create the subscription with NEITHER a deadLetterRoutingKey nor an invalidMessageRoutingKey;
 ///   - call channel.Reject / RejectAsync with DeliveryError and assert the return is true;
-///   - assert M2 receipt INSIDE the bounded retry loop (Stopwatch, 500 ms, 30 s);
+///   - assert the following message's receipt INSIDE the bounded retry loop (Stopwatch, 500 ms,
+///     30 s);
 ///   - build the rejected message and the one queued behind it with their own id and body, and
 ///     identify the message that arrives, so a rejected message that came back cannot pass for
 ///     the one that should have followed it;
@@ -155,7 +156,7 @@ public class WhenGeneratingNoChannelsRejectShouldEmitAckAndContinueBothVariants 
     }
 
     [Fact]
-    public async Task When_generating_no_channels_reject_reactor_should_poll_m2_receipt_inside_bounded_retry_loop()
+    public async Task When_generating_no_channels_reject_reactor_should_poll_for_the_following_message_inside_a_bounded_retry_loop()
     {
         // Arrange
         var ledger = PassLedger();
@@ -165,7 +166,7 @@ public class WhenGeneratingNoChannelsRejectShouldEmitAckAndContinueBothVariants 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — M2 receipt polled inside the bounded retry loop
+        // Assert — the following message's receipt is polled inside the bounded retry loop
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("Stopwatch", content);
         Assert.Contains("TimeSpan.FromSeconds(30)", content);
@@ -173,7 +174,7 @@ public class WhenGeneratingNoChannelsRejectShouldEmitAckAndContinueBothVariants 
     }
 
     [Fact]
-    public async Task When_generating_no_channels_reject_proactor_should_poll_m2_receipt_inside_bounded_retry_loop()
+    public async Task When_generating_no_channels_reject_proactor_should_poll_for_the_following_message_inside_a_bounded_retry_loop()
     {
         // Arrange
         var ledger = PassLedger();
@@ -183,7 +184,7 @@ public class WhenGeneratingNoChannelsRejectShouldEmitAckAndContinueBothVariants 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — M2 receipt polled inside the bounded retry loop
+        // Assert — the following message's receipt is polled inside the bounded retry loop
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("Stopwatch", content);
         Assert.Contains("TimeSpan.FromSeconds(30)", content);

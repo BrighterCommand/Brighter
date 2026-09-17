@@ -15,7 +15,8 @@ namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 ///   - call channel.Nack / NackAsync on the received message;
 ///   - assert redelivery INSIDE the bounded retry loop (Stopwatch, 500 ms, 30 s);
 ///   - assert the redelivered message has the same id as the nacked message;
-///   - include a two-message variant proving M is redelivered and M2 is not blocked;
+///   - include a two-message variant proving the nacked message comes back and the one queued
+///     behind it is not blocked;
 ///   - emit the conditional ledger-driven Skip so the Deferred marker is supplied by the
 ///     conformance ledger, not hard-coded in the template;
 ///   - do NOT assert any transport mechanism.
@@ -25,6 +26,12 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
     private const string TEMPLATE_NAME = "When_nacking_a_message_it_should_be_redelivered";
     private const string LEDGER_KEY = "Kafka / Classic";
     private const string FR_COLUMN = "FR-16";
+
+    /// <summary>
+    /// The three messages the generated suite queues across its two facts. Each must be built with
+    /// its own identity, or a nacked message coming back cannot be told from the one behind it.
+    /// </summary>
+    private const int DISTINCTLY_BUILT_MESSAGES = 3;
 
     private readonly string _testDirectory;
     private readonly ILogger<Generators.MessagingGatewayGenerator> _logger;
@@ -153,9 +160,11 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — two-message variant present: M1 nacked, M1 redelivered, then M2 received
+        // Assert — the two-message fact is present: the nacked message comes back, and the one
+        // queued behind it still arrives. Asserted by the fact's name rather than by a variable
+        // name, which is incidental to the behaviour.
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
-        Assert.Contains("message2", content);
+        Assert.Contains("When_nacking_first_of_two_messages_should_redeliver_nacked_then_receive_second", content);
     }
 
     [Fact]
@@ -169,9 +178,11 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — two-message variant present: M1 nacked, M1 redelivered, then M2 received
+        // Assert — the two-message fact is present: the nacked message comes back, and the one
+        // queued behind it still arrives. Asserted by the fact's name rather than by a variable
+        // name, which is incidental to the behaviour.
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
-        Assert.Contains("message2", content);
+        Assert.Contains("When_nacking_first_of_two_messages_should_redeliver_nacked_then_receive_second", content);
     }
 
     [Fact]
@@ -228,7 +239,70 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
         Assert.DoesNotContain("Skip =", content);
     }
 
+    [Fact]
+    public async Task When_generating_nack_reactor_should_tell_the_following_message_from_the_nacked_one()
+    {
+        // Arrange
+        var ledger = PassLedger();
+        var configuration = BuildConfiguration();
+        var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
+
+        // Act
+        await generator.GenerateAsync(configuration);
+
+        // Assert — every message is built with its own id and body. Drawing them from one shared
+        // builder makes them the same message, and the nacked message coming back would then be
+        // indistinguishable from the one queued behind it.
+        var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
+        Assert.Equal(DISTINCTLY_BUILT_MESSAGES, Occurrences(content, "SetMessageId(Id.Random())"));
+        Assert.Equal(DISTINCTLY_BUILT_MESSAGES, Occurrences(content, ".SetBody("));
+
+        // Assert — once the nacked message is acknowledged, the generated test identifies the
+        // message that follows, rather than settling for the weaker claim that one arrived
+        Assert.Contains("_messageAssertion.Assert(followingMessage, receivedFollowing)", content);
+    }
+
+    [Fact]
+    public async Task When_generating_nack_proactor_should_tell_the_following_message_from_the_nacked_one()
+    {
+        // Arrange
+        var ledger = PassLedger();
+        var configuration = BuildConfiguration();
+        var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
+
+        // Act
+        await generator.GenerateAsync(configuration);
+
+        // Assert — every message is built with its own id and body. Drawing them from one shared
+        // builder makes them the same message, and the nacked message coming back would then be
+        // indistinguishable from the one queued behind it.
+        var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
+        Assert.Equal(DISTINCTLY_BUILT_MESSAGES, Occurrences(content, "SetMessageId(Id.Random())"));
+        Assert.Equal(DISTINCTLY_BUILT_MESSAGES, Occurrences(content, ".SetBody("));
+
+        // Assert — once the nacked message is acknowledged, the generated test identifies the
+        // message that follows, rather than settling for the weaker claim that one arrived
+        Assert.Contains("_messageAssertion.Assert(followingMessage, receivedFollowing)", content);
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Counts non-overlapping occurrences of <paramref name="needle"/> in <paramref name="content"/>,
+    /// so a fact can assert the exact number of build sites rather than merely that one exists.
+    /// </summary>
+    private static int Occurrences(string content, string needle)
+    {
+        var count = 0;
+        for (var at = content.IndexOf(needle, StringComparison.Ordinal);
+             at >= 0;
+             at = content.IndexOf(needle, at + needle.Length, StringComparison.Ordinal))
+        {
+            count++;
+        }
+
+        return count;
+    }
 
     private static InMemoryConformanceLedger PassLedger() =>
         new(new Dictionary<(string, string), string>

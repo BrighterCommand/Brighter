@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Text;
 using System.Threading.Tasks;
 
 using Xunit;
@@ -55,7 +56,10 @@ public class WhenNackingAMessageItShouldBeRedeliveredAsync : IAsyncLifetime
         _producer = await _messageGatewayProvider.CreateProducerAsync(_publication);
         _channel = await _messageGatewayProvider.CreateChannelAsync(_subscription);
 
-        var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
+        var message = _messageBuilder.SetTopic(_publication.Topic!)
+            .SetMessageId(Id.Random())
+            .SetBody(Encoding.UTF8.GetBytes(Id.Random().ToString()))
+            .Build();
         _sentMessages.Add(message);
 
         await _producer.SendAsync(message);
@@ -95,20 +99,29 @@ public class WhenNackingAMessageItShouldBeRedeliveredAsync : IAsyncLifetime
         _producer = await _messageGatewayProvider.CreateProducerAsync(_publication);
         _channel = await _messageGatewayProvider.CreateChannelAsync(_subscription);
 
-        var message1 = _messageBuilder.SetTopic(_publication.Topic!).Build();
-        _sentMessages.Add(message1);
+        // Each message carries its own id and body. Drawing both from the builder's defaults
+        // would make them the same message, and the nacked message coming back would then be
+        // indistinguishable from the one queued behind it.
+        var nackedMessage = _messageBuilder.SetTopic(_publication.Topic!)
+            .SetMessageId(Id.Random())
+            .SetBody(Encoding.UTF8.GetBytes(Id.Random().ToString()))
+            .Build();
+        _sentMessages.Add(nackedMessage);
 
-        var message2 = _messageBuilder.SetTopic(_publication.Topic!).Build();
-        _sentMessages.Add(message2);
+        var followingMessage = _messageBuilder.SetTopic(_publication.Topic!)
+            .SetMessageId(Id.Random())
+            .SetBody(Encoding.UTF8.GetBytes(Id.Random().ToString()))
+            .Build();
+        _sentMessages.Add(followingMessage);
 
-        await _producer.SendAsync(message1);
-        await _producer.SendAsync(message2);
+        await _producer.SendAsync(nackedMessage);
+        await _producer.SendAsync(followingMessage);
 
         // Act — receive the first message and nack it
-        var received1 = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));
-        Assert.NotEqual(MessageType.MT_NONE, received1.Header.MessageType);
+        var receivedForNack = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));
+        Assert.NotEqual(MessageType.MT_NONE, receivedForNack.Header.MessageType);
 
-        await _channel.NackAsync(received1);
+        await _channel.NackAsync(receivedForNack);
 
         // Assert — the nacked message comes back before the one queued behind it
         var redelivered = new Message();
@@ -123,22 +136,26 @@ public class WhenNackingAMessageItShouldBeRedeliveredAsync : IAsyncLifetime
         }
 
         Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
-        _messageAssertion.Assert(message1, redelivered);
+        _messageAssertion.Assert(nackedMessage, redelivered);
 
         await _channel.AcknowledgeAsync(redelivered);
 
         // Assert — the following message arrives next, not blocked behind the redelivered one
-        var received2 = new Message();
+        var receivedFollowing = new Message();
         var stopwatch2 = Stopwatch.StartNew();
         while (stopwatch2.Elapsed < TimeSpan.FromSeconds(30))
         {
-            received2 = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(500));
-            if (received2.Header.MessageType != MessageType.MT_NONE)
+            receivedFollowing = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(500));
+            if (receivedFollowing.Header.MessageType != MessageType.MT_NONE)
             {
                 break;
             }
         }
 
-        Assert.NotEqual(MessageType.MT_NONE, received2.Header.MessageType);
+        Assert.NotEqual(MessageType.MT_NONE, receivedFollowing.Header.MessageType);
+
+        // Assert — and it is the message queued behind, not the nacked one arriving a second
+        // time. Without this the check above is satisfied either way.
+        _messageAssertion.Assert(followingMessage, receivedFollowing);
     }
 }

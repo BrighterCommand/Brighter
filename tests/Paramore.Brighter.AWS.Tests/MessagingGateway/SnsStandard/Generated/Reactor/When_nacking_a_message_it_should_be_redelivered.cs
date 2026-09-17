@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Text;
 
 using Xunit;
 
@@ -49,7 +50,10 @@ public class WhenNackingAMessageItShouldBeRedelivered : IDisposable
         _producer = _messageGatewayProvider.CreateProducer(_publication);
         _channel = _messageGatewayProvider.CreateChannel(_subscription);
 
-        var message = _messageBuilder.SetTopic(_publication.Topic!).Build();
+        var message = _messageBuilder.SetTopic(_publication.Topic!)
+            .SetMessageId(Id.Random())
+            .SetBody(Encoding.UTF8.GetBytes(Id.Random().ToString()))
+            .Build();
         _sentMessages.Add(message);
 
         _producer.Send(message);
@@ -89,20 +93,29 @@ public class WhenNackingAMessageItShouldBeRedelivered : IDisposable
         _producer = _messageGatewayProvider.CreateProducer(_publication);
         _channel = _messageGatewayProvider.CreateChannel(_subscription);
 
-        var message1 = _messageBuilder.SetTopic(_publication.Topic!).Build();
-        _sentMessages.Add(message1);
+        // Each message carries its own id and body. Drawing both from the builder's defaults
+        // would make them the same message, and the nacked message coming back would then be
+        // indistinguishable from the one queued behind it.
+        var nackedMessage = _messageBuilder.SetTopic(_publication.Topic!)
+            .SetMessageId(Id.Random())
+            .SetBody(Encoding.UTF8.GetBytes(Id.Random().ToString()))
+            .Build();
+        _sentMessages.Add(nackedMessage);
 
-        var message2 = _messageBuilder.SetTopic(_publication.Topic!).Build();
-        _sentMessages.Add(message2);
+        var followingMessage = _messageBuilder.SetTopic(_publication.Topic!)
+            .SetMessageId(Id.Random())
+            .SetBody(Encoding.UTF8.GetBytes(Id.Random().ToString()))
+            .Build();
+        _sentMessages.Add(followingMessage);
 
-        _producer.Send(message1);
-        _producer.Send(message2);
+        _producer.Send(nackedMessage);
+        _producer.Send(followingMessage);
 
         // Act — receive the first message and nack it
-        var received1 = _channel.Receive(TimeSpan.FromMilliseconds(4000));
-        Assert.NotEqual(MessageType.MT_NONE, received1.Header.MessageType);
+        var receivedForNack = _channel.Receive(TimeSpan.FromMilliseconds(4000));
+        Assert.NotEqual(MessageType.MT_NONE, receivedForNack.Header.MessageType);
 
-        _channel.Nack(received1);
+        _channel.Nack(receivedForNack);
 
         // Assert — the nacked message comes back before the one queued behind it
         var redelivered = new Message();
@@ -117,22 +130,26 @@ public class WhenNackingAMessageItShouldBeRedelivered : IDisposable
         }
 
         Assert.NotEqual(MessageType.MT_NONE, redelivered.Header.MessageType);
-        _messageAssertion.Assert(message1, redelivered);
+        _messageAssertion.Assert(nackedMessage, redelivered);
 
         _channel.Acknowledge(redelivered);
 
         // Assert — the following message arrives next, not blocked behind the redelivered one
-        var received2 = new Message();
+        var receivedFollowing = new Message();
         var stopwatch2 = Stopwatch.StartNew();
         while (stopwatch2.Elapsed < TimeSpan.FromSeconds(30))
         {
-            received2 = _channel.Receive(TimeSpan.FromMilliseconds(500));
-            if (received2.Header.MessageType != MessageType.MT_NONE)
+            receivedFollowing = _channel.Receive(TimeSpan.FromMilliseconds(500));
+            if (receivedFollowing.Header.MessageType != MessageType.MT_NONE)
             {
                 break;
             }
         }
 
-        Assert.NotEqual(MessageType.MT_NONE, received2.Header.MessageType);
+        Assert.NotEqual(MessageType.MT_NONE, receivedFollowing.Header.MessageType);
+
+        // Assert — and it is the message queued behind, not the nacked one arriving a second
+        // time. Without this the check above is satisfied either way.
+        _messageAssertion.Assert(followingMessage, receivedFollowing);
     }
 }
