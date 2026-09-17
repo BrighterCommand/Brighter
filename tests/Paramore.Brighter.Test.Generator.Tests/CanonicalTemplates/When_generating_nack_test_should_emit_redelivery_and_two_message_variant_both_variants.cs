@@ -9,16 +9,16 @@ using Xunit;
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
 /// <summary>
-/// Verifies that the canonical nack-redelivery templates (FR-16) emit both a Reactor and a
+/// Verifies that the canonical nack-redelivery templates emit both a Reactor and a
 /// Proactor variant that:
-///   - name the file When_nacking_a_message_it_should_be_redelivered (NFR-1);
-///   - call channel.Nack / NackAsync on the received message (AC-17);
-///   - assert redelivery INSIDE the bounded retry loop (Stopwatch, 500 ms, 30 s — NFR-2, AC-20);
-///   - assert the redelivered message has the same id as the nacked message (AC-17);
-///   - include a two-message variant proving M is redelivered and M2 is not blocked (AC-17);
+///   - name the file When_nacking_a_message_it_should_be_redelivered;
+///   - call channel.Nack / NackAsync on the received message;
+///   - assert redelivery INSIDE the bounded retry loop (Stopwatch, 500 ms, 30 s);
+///   - assert the redelivered message has the same id as the nacked message;
+///   - include a two-message variant proving M is redelivered and M2 is not blocked;
 ///   - emit the conditional ledger-driven Skip so the Deferred marker is supplied by the
-///     conformance ledger, not hard-coded in the template (FR-21);
-///   - do NOT assert any transport mechanism (AC-21).
+///     conformance ledger, not hard-coded in the template;
+///   - do NOT assert any transport mechanism.
 /// </summary>
 public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothVariants : IDisposable
 {
@@ -51,7 +51,7 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Reactor file exists at the NFR-1 mandated path
+        // Assert — Reactor file exists at the mandated path
         var reactorPath = ReactorOutputPath(configuration);
         Assert.True(File.Exists(reactorPath),
             $"Reactor canonical nack-redelivery file not found at {reactorPath}");
@@ -68,7 +68,7 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Proactor file exists at the NFR-1 mandated path
+        // Assert — Proactor file exists at the mandated path
         var proactorPath = ProactorOutputPath(configuration);
         Assert.True(File.Exists(proactorPath),
             $"Proactor canonical nack-redelivery file not found at {proactorPath}");
@@ -85,7 +85,7 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Nack is called on the received message (FR-16, AC-17)
+        // Assert — Nack is called on the received message
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("Nack(", content);
     }
@@ -101,7 +101,7 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — NackAsync is called on the received message (FR-16, AC-17, FR-14)
+        // Assert — NackAsync is called on the received message
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("NackAsync(", content);
     }
@@ -117,7 +117,7 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — redelivery assertion sits inside a bounded retry loop (NFR-2, AC-17, AC-20)
+        // Assert — redelivery assertion sits inside a bounded retry loop
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("Stopwatch", content);
         Assert.Contains("TimeSpan.FromSeconds(30)", content);
@@ -135,7 +135,7 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — redelivery assertion sits inside a bounded retry loop (NFR-2, AC-17, AC-20)
+        // Assert — redelivery assertion sits inside a bounded retry loop
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("Stopwatch", content);
         Assert.Contains("TimeSpan.FromSeconds(30)", content);
@@ -153,7 +153,7 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — two-message variant present: M1 nacked, M1 redelivered, then M2 received (AC-17)
+        // Assert — two-message variant present: M1 nacked, M1 redelivered, then M2 received
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("message2", content);
     }
@@ -169,7 +169,7 @@ public class WhenGeneratingNackTestShouldEmitRedeliveryAndTwoMessageVariantBothV
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — two-message variant present: M1 nacked, M1 redelivered, then M2 received (AC-17)
+        // Assert — two-message variant present: M1 nacked, M1 redelivered, then M2 received
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("message2", content);
     }

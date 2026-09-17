@@ -29,8 +29,8 @@ public class MsSqlMessageGatewayProvider
     }
 
     // MSSQL has no native delayed delivery: the gateway delegates a requested delay to the
-    // scheduler seam (producer.Scheduler for FR-9 send-with-delay; the consumer factory's
-    // scheduler for FR-2 requeue-with-delay). One shared harness scheduler honours the delay by
+    // scheduler seam (producer.Scheduler for send-with-delay; the consumer factory's
+    // scheduler for requeue-with-delay). One shared harness scheduler honours the delay by
     // wall-clock and re-publishes to the topic. Accessed only after _configuration is set (the
     // channel/producer factories assign it first); disposed in CleanUp.
     private ConformanceHarnessMessageScheduler Scheduler =>
@@ -393,7 +393,7 @@ public class MsSqlMessageGatewayProvider
             // The delivery budget is NOT enforced here. Reactor and Proactor own it: they call
             // UpdateHandledCount, test HandledCountReached(RequeueCount), and reject with
             // DeliveryError when it is spent. This wrapper used to do the same thing at channel
-            // level, which meant the FR-23 conformance behaviour could pass on the harness's copy
+            // level, which meant the budget-exhaustion behaviour could pass on the harness's copy
             // of the rule while the product's copy was untested - and would have kept passing had
             // the two diverged. Tracking the original message id is harness bookkeeping, so it
             // stays; deciding when a message dies is production behaviour, so it does not.
@@ -445,7 +445,7 @@ public class MsSqlMessageGatewayProvider
             // The delivery budget is NOT enforced here. Reactor and Proactor own it: they call
             // UpdateHandledCount, test HandledCountReached(RequeueCount), and reject with
             // DeliveryError when it is spent. This wrapper used to do the same thing at channel
-            // level, which meant the FR-23 conformance behaviour could pass on the harness's copy
+            // level, which meant the budget-exhaustion behaviour could pass on the harness's copy
             // of the rule while the product's copy was untested - and would have kept passing had
             // the two diverged. Tracking the original message id is harness bookkeeping, so it
             // stays; deciding when a message dies is production behaviour, so it does not.

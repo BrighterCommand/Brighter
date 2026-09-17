@@ -9,19 +9,19 @@ using Xunit;
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
 /// <summary>
-/// Verifies that the canonical rejection-metadata templates (FR-8) emit both a Reactor and a
-/// Proactor variant (FR-14 closes the Kafka Reactor-only gap) that:
-///   - name the file When_rejecting_message_should_include_metadata (NFR-1);
+/// Verifies that the canonical rejection-metadata templates emit both a Reactor and a
+/// Proactor variant (closing the Kafka Reactor-only gap) that:
+///   - name the file When_rejecting_message_should_include_metadata;
 ///   - read every metadata field via provider.RejectionMetadataKeys.* — never hard-coded key strings
-///     (FR-8, AC-8); a field whose provider key is string.Empty fails as a genuine non-conformance;
-///   - assert OriginalTopic equals the data topic (AC-8);
-///   - assert OriginalType equals "MT_COMMAND" (AC-8);
-///   - assert RejectionReason equals "DeliveryError" (AC-8);
-///   - assert RejectionMessage equals the description passed to Reject (AC-8);
-///   - assert RejectionTimestamp is a parseable ISO-8601 timestamp within the last minute (AC-8);
-///   - assert DLQ arrival INSIDE the bounded retry loop (Stopwatch, 500 ms, 60 s — NFR-2);
+///     a field whose provider key is string.Empty fails as a genuine non-conformance;
+///   - assert OriginalTopic equals the data topic;
+///   - assert OriginalType equals "MT_COMMAND";
+///   - assert RejectionReason equals "DeliveryError";
+///   - assert RejectionMessage equals the description passed to Reject;
+///   - assert RejectionTimestamp is a parseable ISO-8601 timestamp within the last minute;
+///   - assert DLQ arrival INSIDE the bounded retry loop (Stopwatch, 500 ms, 60 s);
 ///   - emit the conditional ledger-driven Skip so the Deferred marker is supplied by the
-///     conformance ledger, not hard-coded in the template (FR-21).
+///     conformance ledger, not hard-coded in the template.
 /// </summary>
 public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : IDisposable
 {
@@ -54,7 +54,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Reactor file exists at the NFR-1 mandated path
+        // Assert — Reactor file exists at the mandated path
         var reactorPath = ReactorOutputPath(configuration);
         Assert.True(File.Exists(reactorPath),
             $"Reactor canonical metadata file not found at {reactorPath}");
@@ -71,7 +71,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Proactor file exists at the NFR-1 mandated path (FR-14 closes Kafka Reactor-only gap)
+        // Assert — Proactor file exists at the mandated path (closing the Kafka Reactor-only gap)
         var proactorPath = ProactorOutputPath(configuration);
         Assert.True(File.Exists(proactorPath),
             $"Proactor canonical metadata file not found at {proactorPath}");
@@ -88,7 +88,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — OriginalTopic read via keys.OriginalTopic, not a hard-coded string (FR-8, AC-8)
+        // Assert — OriginalTopic read via keys.OriginalTopic, not a hard-coded string
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("keys.OriginalTopic", content);
         Assert.Contains("_publication.Topic!.Value", content);
@@ -105,7 +105,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — OriginalTopic read via keys.OriginalTopic (FR-8, AC-8)
+        // Assert — OriginalTopic read via keys.OriginalTopic
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("keys.OriginalTopic", content);
         Assert.Contains("_publication.Topic!.Value", content);
@@ -122,7 +122,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — OriginalType read via keys.OriginalType and asserted equal to the sent message's own type (AC-8)
+        // Assert — OriginalType read via keys.OriginalType and asserted equal to the sent message's own type
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("keys.OriginalType", content);
         Assert.Contains("message.Header.MessageType.ToString()", content);
@@ -139,7 +139,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — OriginalType read via keys.OriginalType and asserted equal to the sent message's own type (AC-8, FR-14)
+        // Assert — OriginalType read via keys.OriginalType and asserted equal to the sent message's own type
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("keys.OriginalType", content);
         Assert.Contains("message.Header.MessageType.ToString()", content);
@@ -156,7 +156,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — RejectionReason read via keys.RejectionReason and asserted equal to "DeliveryError" (AC-8)
+        // Assert — RejectionReason read via keys.RejectionReason and asserted equal to "DeliveryError"
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("keys.RejectionReason", content);
         Assert.Contains("DeliveryError", content);
@@ -173,7 +173,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — RejectionReason read via keys.RejectionReason (AC-8, FR-14)
+        // Assert — RejectionReason read via keys.RejectionReason
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("keys.RejectionReason", content);
         Assert.Contains("DeliveryError", content);
@@ -190,7 +190,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — RejectionMessage read via keys.RejectionMessage; value equals description passed to Reject (AC-8)
+        // Assert — RejectionMessage read via keys.RejectionMessage; value equals description passed to Reject
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("keys.RejectionMessage", content);
     }
@@ -206,7 +206,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — RejectionMessage read via keys.RejectionMessage (AC-8, FR-14)
+        // Assert — RejectionMessage read via keys.RejectionMessage
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("keys.RejectionMessage", content);
     }
@@ -222,7 +222,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — RejectionTimestamp read via keys.RejectionTimestamp and parsed as ISO-8601 (AC-8)
+        // Assert — RejectionTimestamp read via keys.RejectionTimestamp and parsed as ISO-8601
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("keys.RejectionTimestamp", content);
         Assert.Contains("DateTimeOffset.TryParse", content);
@@ -240,7 +240,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — RejectionTimestamp read via keys.RejectionTimestamp and parsed (AC-8, FR-14)
+        // Assert — RejectionTimestamp read via keys.RejectionTimestamp and parsed
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("keys.RejectionTimestamp", content);
         Assert.Contains("DateTimeOffset.TryParse", content);
@@ -258,7 +258,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — DLQ arrival polled inside the bounded retry loop (NFR-2, AC-8)
+        // Assert — DLQ arrival polled inside the bounded retry loop
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("GetMessageFromDeadLetterQueue", content);
         Assert.Contains("Stopwatch", content);
@@ -277,7 +277,7 @@ public class WhenGeneratingMetadataTestShouldReadViaProviderKeysBothVariants : I
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — DLQ arrival polled inside the bounded retry loop (NFR-2, AC-8, FR-14)
+        // Assert — DLQ arrival polled inside the bounded retry loop
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("GetMessageFromDeadLetterQueueAsync", content);
         Assert.Contains("Stopwatch", content);

@@ -43,8 +43,8 @@ public static class GatewaySkipConventionAudit
 
     // Captures the string literal after Skip = "…". Whitespace around '=' is optional, since
     // Skip="flaky" is as valid C# as Skip = "flaky", and the capture is [^"]* so that a reasonless
-    // Skip = "" is surfaced as a violation rather than slipping past the extractor — AC-13 forbids
-    // a silent skip, and the empty value is the most silent of all.
+    // Skip = "" is surfaced as a violation rather than slipping past the extractor — a silent
+    // skip is forbidden, and the empty value is the most silent of all.
     //
     // Scope note: this audit walks the templates and the Generated/ trees only (see the class
     // remarks). Hand-written gateway tests are out of scope by design - they are not generated, so

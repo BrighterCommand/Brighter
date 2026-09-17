@@ -34,9 +34,9 @@ public sealed record RejectionContractResult(
     IReadOnlyList<RejectionKeysViolation> Violations);
 
 /// <summary>
-/// Read-only, network-free audit of the FR-8 rejection-metadata contract (ADR 0067, FR-8).
+/// Read-only, network-free audit of the rejection-metadata contract (ADR 0067).
 ///
-/// <para>FR-8 asserts that rejection metadata is stamped onto a rejected message. A transport that
+/// <para>The contract asserts that rejection metadata is stamped onto a rejected message. A transport that
 /// dead-letters through a native broker mechanism routes the untouched original and stamps nothing,
 /// and declares that by returning <c>string.Empty</c> for every key in
 /// <c>RejectionMetadataKeys</c>. The generated FR-8 test then skips its metadata block, leaving it

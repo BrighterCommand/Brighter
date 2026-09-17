@@ -132,8 +132,8 @@ public class RocketMqMessageGatewayProvider
 
     // Requeue/Nack are no-ops on RocketMQ; a message redelivers when its invisibility lease expires
     // (like a Postgres/SQS visibility lease). RocketMQ enforces a 10 s minimum invisibility, so plain
-    // requeue / nack redelivery (FR-22/FR-16, 30 s ceiling) is observable but a zero-delay "redeliver
-    // within 5 s" (FR-15) is not — that needs the commented-out ChangeInvisibleDuration (the FR-2 gap).
+    // requeue / nack redelivery (30 s ceiling) is observable but a zero-delay "redeliver
+    // within 5 s" is not — that needs the commented-out ChangeInvisibleDuration (the delay gap).
     private static readonly TimeSpan s_invisibilityTimeout = TimeSpan.FromSeconds(10);
 
     // Bound the consumer poll below the canonical delay (5 s) so the delayed-send before-D arm
@@ -145,7 +145,7 @@ public class RocketMqMessageGatewayProvider
     // RocketMQ honours only through the invisibility lease (10 s enforced minimum). Their post-requeue
     // receive arms are single polls with no inner retry loop, so the consumer poll must span the lease —
     // a 2 s poll would miss the ~10 s redelivery and report a false MT_NONE. Give those topics a longer
-    // poll; delay/FR-9 topics keep the short 2 s poll so their before-D arm still yields MT_NONE inside
+    // poll; delayed-send topics keep the short 2 s poll so their before-D arm still yields MT_NONE inside
     // the 5 s delay window. (Genuine redelivery is exercised; only the observation window is widened.)
     private static readonly TimeSpan s_invisibilityRedeliveryReceiveTimeout = TimeSpan.FromSeconds(15);
 
@@ -364,8 +364,9 @@ public class RocketMqMessageGatewayProvider
         }
 
         // "rq_delay" (the delayed-requeue sibling) issues its initial SendWithDelay on this topic;
-        // routing it through a Delay topic uses RocketMQ's native delivery-timestamp path (proven by
-        // FR-9) instead of the unwired Scheduler seam, which would NullReferenceException.
+        // routing it through a Delay topic uses RocketMQ's native delivery-timestamp path (proven
+        // by the delayed-send behaviour) instead of the unwired Scheduler seam, which would
+        // NullReferenceException.
         if (topic.Contains("delayed_msg") || topic.Contains("requeue_delay") || topic.Contains("rq_delay"))
         {
             return TopicType.Delay;
@@ -421,7 +422,7 @@ public class RocketMqMessageGatewayProvider
             // The delivery budget is NOT enforced here. Reactor and Proactor own it: they call
             // UpdateHandledCount, test HandledCountReached(RequeueCount), and reject with
             // DeliveryError when it is spent. This wrapper used to do the same thing at channel
-            // level, which meant the FR-23 conformance behaviour could pass on the harness's copy
+            // level, which meant the budget-exhaustion behaviour could pass on the harness's copy
             // of the rule while the product's copy was untested - and would have kept passing had
             // the two diverged. Tracking the original message id is harness bookkeeping, so it
             // stays; deciding when a message dies is production behaviour, so it does not.
@@ -477,7 +478,7 @@ public class RocketMqMessageGatewayProvider
             // The delivery budget is NOT enforced here. Reactor and Proactor own it: they call
             // UpdateHandledCount, test HandledCountReached(RequeueCount), and reject with
             // DeliveryError when it is spent. This wrapper used to do the same thing at channel
-            // level, which meant the FR-23 conformance behaviour could pass on the harness's copy
+            // level, which meant the budget-exhaustion behaviour could pass on the harness's copy
             // of the rule while the product's copy was untested - and would have kept passing had
             // the two diverged. Tracking the original message id is harness bookkeeping, so it
             // stays; deciding when a message dies is production behaviour, so it does not.

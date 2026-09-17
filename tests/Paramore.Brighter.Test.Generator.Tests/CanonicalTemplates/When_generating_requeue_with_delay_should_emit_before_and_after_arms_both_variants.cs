@@ -9,17 +9,17 @@ using Xunit;
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
 /// <summary>
-/// Verifies that the canonical requeue-with-delay templates (FR-2) emit both a Reactor and a
+/// Verifies that the canonical requeue-with-delay templates emit both a Reactor and a
 /// Proactor variant that:
-///   - pass a non-null positive TimeSpan (5 s) to Requeue/RequeueAsync (AC-12, FR-2);
-///   - assert Requeue returns true (AC-2);
-///   - assert an immediate single bounded receive before the delay yields MT_NONE (AC-2, AC-20
-///     exemption — the before-D arm is a single receive, NOT the bounded retry loop);
-///   - assert arrival INSIDE the bounded retry loop (500 ms poll, 30 s ceiling — NFR-2) after
-///     the delay (AC-2, the after-D arm);
-///   - contain no reference to a scheduler, native-delay API, or redrive policy (AC-21, NFR-3);
+///   - pass a non-null positive TimeSpan (5 s) to Requeue/RequeueAsync;
+///   - assert Requeue returns true;
+///   - assert an immediate single bounded receive before the delay yields MT_NONE (the
+///     before-delay arm is a single receive, NOT the bounded retry loop);
+///   - assert arrival INSIDE the bounded retry loop (500 ms poll, 30 s ceiling) after
+///     the delay (the after-delay arm);
+///   - contain no reference to a scheduler, native-delay API, or redrive policy;
 ///   - emit the conditional ledger-driven Skip pattern so the Deferred marker is supplied
-///     by the conformance ledger, not hard-coded in the template (FR-21).
+///     by the conformance ledger, not hard-coded in the template.
 /// </summary>
 public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVariants : IDisposable
 {
@@ -54,7 +54,7 @@ public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVaria
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Reactor file exists at the expected path (NFR-1)
+        // Assert — Reactor file exists at the expected path
         var reactorPath = ReactorOutputPath(configuration);
         Assert.True(File.Exists(reactorPath),
             $"Reactor canonical requeue-with-delay file not found at {reactorPath}");
@@ -71,7 +71,7 @@ public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVaria
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Proactor file exists at the expected path (NFR-1)
+        // Assert — Proactor file exists at the expected path
         var proactorPath = ProactorOutputPath(configuration);
         Assert.True(File.Exists(proactorPath),
             $"Proactor canonical requeue-with-delay file not found at {proactorPath}");
@@ -88,7 +88,7 @@ public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVaria
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Requeue is called with a non-null positive TimeSpan (AC-12, FR-2)
+        // Assert — Requeue is called with a non-null positive TimeSpan
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("TimeSpan.FromSeconds(5)", content);
         Assert.Contains("Requeue(", content);
@@ -105,7 +105,7 @@ public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVaria
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — the return value of Requeue is captured and asserted true (AC-2)
+        // Assert — the return value of Requeue is captured and asserted true
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("Assert.True(", content);
     }
@@ -121,7 +121,7 @@ public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVaria
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — before-D arm: a single Receive asserting MT_NONE (AC-2, AC-20 exemption;
+        // Assert — before-D arm: a single Receive asserting MT_NONE (a single receive outside the retry loop;
         // this must NOT be inside the bounded Stopwatch retry loop)
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("MT_NONE", content);
@@ -139,7 +139,7 @@ public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVaria
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — after-D arm uses the bounded retry loop (NFR-2, AC-20)
+        // Assert — after-D arm uses the bounded retry loop
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("Stopwatch", content);
         Assert.Contains("TimeSpan.FromSeconds(30)", content);
@@ -157,7 +157,7 @@ public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVaria
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — no mechanism assertions (AC-21, NFR-3)
+        // Assert — no mechanism assertions
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.DoesNotContain("scheduler", content, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("RedrivePolicy", content, StringComparison.OrdinalIgnoreCase);
@@ -176,7 +176,7 @@ public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVaria
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — RequeueAsync is called with a non-null positive TimeSpan (AC-12, FR-2, FR-14)
+        // Assert — RequeueAsync is called with a non-null positive TimeSpan
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("TimeSpan.FromSeconds(5)", content);
         Assert.Contains("RequeueAsync(", content);
@@ -193,7 +193,7 @@ public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVaria
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — the return value of RequeueAsync is captured and asserted true (AC-2)
+        // Assert — the return value of RequeueAsync is captured and asserted true
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("Assert.True(", content);
     }
@@ -209,7 +209,7 @@ public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVaria
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — before-D arm: a single ReceiveAsync asserting MT_NONE (AC-2, AC-20 exemption)
+        // Assert — before-D arm: a single ReceiveAsync asserting MT_NONE (a single receive outside the retry loop)
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("MT_NONE", content);
         Assert.Contains("ReceiveAsync(", content);
@@ -226,7 +226,7 @@ public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVaria
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — after-D arm uses the bounded retry loop (NFR-2, AC-20)
+        // Assert — after-D arm uses the bounded retry loop
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("Stopwatch", content);
         Assert.Contains("TimeSpan.FromSeconds(30)", content);
@@ -244,7 +244,7 @@ public class WhenGeneratingRequeueWithDelayShouldEmitBeforeAndAfterArmsBothVaria
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — no mechanism assertions (AC-21, NFR-3)
+        // Assert — no mechanism assertions
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.DoesNotContain("scheduler", content, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("RedrivePolicy", content, StringComparison.OrdinalIgnoreCase);

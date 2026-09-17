@@ -10,7 +10,7 @@ namespace Paramore.Brighter.Test.Generator.Tests.MessagingGatewayGenerator;
 /// Asserts:
 ///   1. <see cref="MessagingGatewayConfiguration"/> has no <c>HasSupportToDelayedMessages</c>,
 ///      <c>HasSupportToDeadLetterQueue</c>, or <c>HasSupportToRequeue</c> members — the three
-///      retired capability-gate properties (FR-10(4), AC-10(c)).
+///      retired capability-gate properties.
 ///   2. The four retained flag properties remain present — confirming the type was not emptied
 ///      or renamed, and that the cleanup was surgical.
 /// </summary>
@@ -22,7 +22,7 @@ public class WhenGatesRetiredShouldAbsentConfigProperties
         // Arrange
         var type = typeof(MessagingGatewayConfiguration);
 
-        // Act + Assert — the three retired properties are absent from the compiled surface (AC-10(c))
+        // Act + Assert — the three retired properties are absent from the compiled surface
         Assert.True(
             type.GetProperty("HasSupportToDelayedMessages", BindingFlags.Public | BindingFlags.Instance) == null,
             "HasSupportToDelayedMessages must be absent — its gate was retired (ADR 0066 Step C, FR-10(4))");

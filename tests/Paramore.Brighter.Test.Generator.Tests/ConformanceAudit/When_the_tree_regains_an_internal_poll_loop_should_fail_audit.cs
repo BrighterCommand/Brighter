@@ -22,7 +22,7 @@ namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 /// <para>
 /// That regression is worth a guard because it is invisible in review: the helper still returns the
 /// right message, every conformance cell stays green, and the only symptoms are that the caller's
-/// NFR-2 loop quietly stops retrying and the AC-20 absence checks quietly become the slowest tests
+/// bounded loop quietly stops retrying and the absence checks quietly become the slowest tests
 /// in the suite.
 /// </para>
 /// </remarks>

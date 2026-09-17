@@ -43,7 +43,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway;
 /// topic subscription. The gateway's <c>Reject</c> path calls
 /// <c>ServiceBusReceiver.DeadLetterAsync(lockToken, reason, description)</c> with no
 /// Brighter-stamped metadata, so <see cref="RejectionMetadataKeys"/> is all
-/// <see cref="string.Empty"/> (FR-8 relaxation: native-DLQ transport, routing only).
+/// <see cref="string.Empty"/> (a native-dead-letter transport, conformant on routing alone).
 ///
 /// Credentials are resolved lazily from <c>BrighterTestsASBConnectionString</c> or
 /// <c>BrighterTestsASBNameSpace</c>. When neither env-var is set, <see cref="ASBCreds"/>

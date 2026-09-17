@@ -7,11 +7,11 @@ using Xunit;
 namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 
 /// <summary>
-/// Audit tests enforcing FR-14 parity on the pump half of the conformance claim.
+/// Audit tests enforcing Reactor/Proactor parity on the pump half of the conformance claim.
 /// </summary>
 /// <remarks>
 /// <para>
-/// FR-14 requires every canonical behaviour to be proven in both the Reactor and the Proactor
+/// Every canonical behaviour must be proven in both the Reactor and the Proactor
 /// variant, and the ledger's ✅ cells are read that way. The pump half is proven in
 /// <c>tests/Paramore.Brighter.Core.Tests/MessageDispatch</c>, which carries a <c>Reactor</c> and a
 /// <c>Proactor</c> tree for exactly that reason.

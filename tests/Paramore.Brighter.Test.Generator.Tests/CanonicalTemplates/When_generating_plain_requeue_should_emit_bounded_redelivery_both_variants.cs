@@ -9,10 +9,10 @@ using Xunit;
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
 /// <summary>
-/// Verifies that the canonical plain-requeue templates (FR-22) emit both a Reactor and a
+/// Verifies that the canonical plain-requeue templates emit both a Reactor and a
 /// Proactor variant that call Requeue/RequeueAsync with no positive delay, assert the return
 /// is true, and assert redelivery inside a bounded receive-retry loop (500 ms poll, 30 s
-/// ceiling — NFR-2, AC-20). The [Fact] conditional Skip pattern must be present so the
+/// ceiling). The [Fact] conditional Skip pattern must be present so the
 /// ledger-driven mechanism (prior task) drives the Deferred marker without the template
 /// hard-coding any marker itself.
 /// </summary>
@@ -47,7 +47,7 @@ public class WhenGeneratingPlainRequeueShouldEmitBoundedRedeliveryBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Reactor file exists at the expected path (NFR-1)
+        // Assert — Reactor file exists at the expected path
         var reactorPath = ReactorOutputPath(configuration);
         Assert.True(File.Exists(reactorPath),
             $"Reactor canonical plain-requeue file not found at {reactorPath}");
@@ -64,7 +64,7 @@ public class WhenGeneratingPlainRequeueShouldEmitBoundedRedeliveryBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Proactor file exists at the expected path (NFR-1)
+        // Assert — Proactor file exists at the expected path
         var proactorPath = ProactorOutputPath(configuration);
         Assert.True(File.Exists(proactorPath),
             $"Proactor canonical plain-requeue file not found at {proactorPath}");
@@ -81,7 +81,7 @@ public class WhenGeneratingPlainRequeueShouldEmitBoundedRedeliveryBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Requeue is called without a positive delay argument (AC-25, FR-22)
+        // Assert — Requeue is called without a positive delay argument
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("Requeue(received)", content);
         Assert.DoesNotContain("TimeSpan.FromSeconds", content.Replace("TimeSpan.FromSeconds(30)", string.Empty));
@@ -98,7 +98,7 @@ public class WhenGeneratingPlainRequeueShouldEmitBoundedRedeliveryBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — the return value of Requeue is captured and asserted true (AC-25)
+        // Assert — the return value of Requeue is captured and asserted true
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("Assert.True(", content);
     }
@@ -114,7 +114,7 @@ public class WhenGeneratingPlainRequeueShouldEmitBoundedRedeliveryBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — a bounded retry loop with wall-clock ceiling is present (NFR-2, AC-20)
+        // Assert — a bounded retry loop with wall-clock ceiling is present
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("Stopwatch", content);
         Assert.Contains("TimeSpan.FromSeconds(30)", content);
@@ -132,7 +132,7 @@ public class WhenGeneratingPlainRequeueShouldEmitBoundedRedeliveryBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — RequeueAsync is called without a positive delay argument (AC-25, FR-22, FR-14)
+        // Assert — RequeueAsync is called without a positive delay argument
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("RequeueAsync(received)", content);
     }
@@ -148,7 +148,7 @@ public class WhenGeneratingPlainRequeueShouldEmitBoundedRedeliveryBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — the return value of RequeueAsync is captured and asserted true (AC-25)
+        // Assert — the return value of RequeueAsync is captured and asserted true
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("Assert.True(", content);
     }
@@ -164,7 +164,7 @@ public class WhenGeneratingPlainRequeueShouldEmitBoundedRedeliveryBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — a bounded retry loop with wall-clock ceiling is present (NFR-2, AC-20)
+        // Assert — a bounded retry loop with wall-clock ceiling is present
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("Stopwatch", content);
         Assert.Contains("TimeSpan.FromSeconds(30)", content);

@@ -193,7 +193,7 @@ public class GcpPullMessageGatewayProvider
         };
         _connection.PublisherConfiguration?.Invoke(builder);
         // GCP has no native delayed publish; the gateway delegates a non-zero send delay to the
-        // scheduler seam (FR-9). Wire the wall-clock harness scheduler so delayed sends conform.
+        // scheduler seam. Wire the wall-clock harness scheduler so delayed sends conform.
         return new GcpMessageProducer(builder.Build(), publication) { Scheduler = _scheduler };
     }
 
@@ -222,7 +222,7 @@ public class GcpPullMessageGatewayProvider
         _connection.PublisherConfiguration?.Invoke(builder);
         var client = await builder.BuildAsync(cancellationToken);
         // GCP has no native delayed publish; the gateway delegates a non-zero send delay to the
-        // scheduler seam (FR-9). Wire the wall-clock harness scheduler so delayed sends conform.
+        // scheduler seam. Wire the wall-clock harness scheduler so delayed sends conform.
         return new GcpMessageProducer(client, publication) { Scheduler = _scheduler };
     }
 

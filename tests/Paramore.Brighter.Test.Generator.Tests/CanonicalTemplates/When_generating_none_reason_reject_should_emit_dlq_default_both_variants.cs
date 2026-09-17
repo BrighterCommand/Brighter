@@ -9,18 +9,18 @@ using Xunit;
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
 /// <summary>
-/// Verifies that the canonical None-reason reject templates (FR-17) emit both a Reactor and a
+/// Verifies that the canonical None-reason reject templates emit both a Reactor and a
 /// Proactor variant that:
-///   - name the file When_rejecting_message_with_unknown_reason_should_send_to_dlq (NFR-1);
+///   - name the file When_rejecting_message_with_unknown_reason_should_send_to_dlq;
 ///   - create the subscription with BOTH a deadLetterRoutingKey and an invalidMessageRoutingKey
-///     named argument (AC-18, FR-1(2));
-///   - call _channel.Reject with a None MessageRejectionReason (AC-18);
-///   - poll for DLQ arrival INSIDE the bounded retry loop (Stopwatch, 500 ms, 60 s — NFR-2, AC-18);
-///   - assert the rejection reason equals "None" and the original-topic equals the data topic (AC-18);
+///     named argument;
+///   - call _channel.Reject with a None MessageRejectionReason;
+///   - poll for DLQ arrival INSIDE the bounded retry loop (Stopwatch, 500 ms, 60 s);
+///   - assert the rejection reason equals "None" and the original-topic equals the data topic;
 ///   - assert invalid-channel absence via a SINGLE bounded GetMessageFromInvalidChannel call
-///     asserting MT_NONE (AC-18, AC-20 exemption);
+///     asserting MT_NONE (a single receive outside the retry loop);
 ///   - emit the conditional ledger-driven Skip so the Deferred marker is supplied by the
-///     conformance ledger, not hard-coded in the template (FR-21).
+///     conformance ledger, not hard-coded in the template.
 /// </summary>
 public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : IDisposable
 {
@@ -55,7 +55,7 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Reactor file exists at the NFR-1 mandated path
+        // Assert — Reactor file exists at the mandated path
         var reactorPath = ReactorOutputPath(configuration);
         Assert.True(File.Exists(reactorPath),
             $"Reactor canonical None-reason reject file not found at {reactorPath}");
@@ -72,7 +72,7 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Proactor file exists at the NFR-1 mandated path
+        // Assert — Proactor file exists at the mandated path
         var proactorPath = ProactorOutputPath(configuration);
         Assert.True(File.Exists(proactorPath),
             $"Proactor canonical None-reason reject file not found at {proactorPath}");
@@ -89,7 +89,7 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — subscription must name both deadLetterRoutingKey and invalidMessageRoutingKey (AC-18, FR-1(2))
+        // Assert — subscription must name both deadLetterRoutingKey and invalidMessageRoutingKey
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("deadLetterRoutingKey:", content);
         Assert.Contains("invalidMessageRoutingKey:", content);
@@ -106,7 +106,7 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — subscription must name both deadLetterRoutingKey and invalidMessageRoutingKey (AC-18, FR-1(2))
+        // Assert — subscription must name both deadLetterRoutingKey and invalidMessageRoutingKey
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("deadLetterRoutingKey:", content);
         Assert.Contains("invalidMessageRoutingKey:", content);
@@ -123,7 +123,7 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Reject is called with RejectionReason.None (AC-18)
+        // Assert — Reject is called with RejectionReason.None
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("Reject(", content);
         Assert.Contains("RejectionReason.None", content);
@@ -140,7 +140,7 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — RejectAsync is called with RejectionReason.None (AC-18, FR-14)
+        // Assert — RejectAsync is called with RejectionReason.None
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("RejectAsync(", content);
         Assert.Contains("RejectionReason.None", content);
@@ -157,7 +157,7 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — DLQ arrival polled inside the bounded retry loop (NFR-2, AC-18)
+        // Assert — DLQ arrival polled inside the bounded retry loop
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("GetMessageFromDeadLetterQueue", content);
         Assert.Contains("Stopwatch", content);
@@ -176,7 +176,7 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — DLQ arrival polled inside the bounded retry loop (NFR-2, AC-18)
+        // Assert — DLQ arrival polled inside the bounded retry loop
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("GetMessageFromDeadLetterQueueAsync", content);
         Assert.Contains("Stopwatch", content);
@@ -195,7 +195,7 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — rejection reason "None" and original-topic assertion on DLQ message (AC-18)
+        // Assert — rejection reason "None" and original-topic assertion on DLQ message
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("keys.RejectionReason", content);
         Assert.Contains("RejectionReason.None.ToString()", content);
@@ -214,7 +214,7 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — rejection reason "None" and original-topic assertion on DLQ message (AC-18)
+        // Assert — rejection reason "None" and original-topic assertion on DLQ message
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("keys.RejectionReason", content);
         Assert.Contains("RejectionReason.None.ToString()", content);
@@ -234,7 +234,7 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
         await generator.GenerateAsync(configuration);
 
         // Assert — invalid-channel absence: single bounded GetMessageFromInvalidChannel call
-        // asserting MT_NONE (AC-18, AC-20 exemption — single receive outside the retry loop)
+        // asserting MT_NONE (a single receive outside the retry loop)
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("GetMessageFromInvalidChannel", content);
         Assert.Contains("MT_NONE", content);
@@ -252,7 +252,7 @@ public class WhenGeneratingNoneReasonRejectShouldEmitDlqDefaultBothVariants : ID
         await generator.GenerateAsync(configuration);
 
         // Assert — invalid-channel absence: single bounded GetMessageFromInvalidChannelAsync call
-        // asserting MT_NONE (AC-18, AC-20 exemption — single receive outside the retry loop)
+        // asserting MT_NONE (a single receive outside the retry loop)
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("GetMessageFromInvalidChannelAsync", content);
         Assert.Contains("MT_NONE", content);

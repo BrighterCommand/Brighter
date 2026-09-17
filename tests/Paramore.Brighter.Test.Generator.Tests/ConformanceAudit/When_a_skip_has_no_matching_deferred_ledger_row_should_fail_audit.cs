@@ -8,7 +8,7 @@ namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 
 /// <summary>
 /// Audit tests enforcing the two-direction cross-check between in-tree Deferred Skip markers
-/// and conformance-ledger rows (ADR 0067, FR-13, FR-21, AC-13, AC-24).
+/// and conformance-ledger rows (ADR 0067).
 ///
 /// Direction 1 — Skip → Ledger: every distinct issue number in a generated/template
 /// <c>Skip = "Deferred: #&lt;n&gt; …"</c> must appear in at least one ledger cell as

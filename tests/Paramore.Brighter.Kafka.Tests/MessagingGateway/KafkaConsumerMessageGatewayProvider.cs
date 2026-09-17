@@ -51,7 +51,7 @@ public class KafkaConsumerMessageGatewayProvider
     };
     private readonly List<IAmAProducerRegistry> _producerRegistries = [];
 
-    // Rejection-channel read hooks (FR-4/5/6/8/17): fresh Earliest consumers over the
+    // Rejection-channel read hooks: fresh Earliest consumers over the
     // subscription's DLQ / invalid-message topics, created lazily and reused across the
     // conformance test's bounded poll loop so offsets advance instead of re-reading from start.
     private IAmAMessageConsumerSync? _deadLetterConsumer;
@@ -60,7 +60,7 @@ public class KafkaConsumerMessageGatewayProvider
     private IAmAMessageConsumerAsync? _invalidChannelConsumerAsync;
     private readonly List<string> _rejectionTopics = [];
 
-    // Delay hook (FR-2/9): Kafka has no native delayed delivery, so the gateway delegates a
+    // Delay hook: Kafka has no native delayed delivery, so the gateway delegates a
     // requested delay to the producer's scheduler seam. The harness supplies a wall-clock scheduler
     // (shared across the producer and consumer paths) that re-publishes after the delay elapses.
     private ConformanceHarnessMessageScheduler? _scheduler;
@@ -249,8 +249,8 @@ public class KafkaConsumerMessageGatewayProvider
             makeChannels: makeChannel,
             // Every other provider declares a budget; Kafka's three did not, so they took the
             // Subscription default of -1 ("requeue for ever"). The pump reads that as
-            // DiscardRequeuedMessagesEnabled() == false and never rejects, which left FR-23
-            // untestable here rather than failing.
+            // DiscardRequeuedMessagesEnabled() == false and never rejects, which left budget
+            // exhaustion untestable here rather than failing.
             requeueCount: 3,
             deadLetterRoutingKey: deadLetterRoutingKey,
             invalidMessageRoutingKey: invalidMessageRoutingKey

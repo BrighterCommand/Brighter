@@ -44,7 +44,7 @@ public class MqttMessageGatewayProvider
     private MqttMessageConsumer? _dlqConsumer;
     private MqttMessageConsumer? _invalidConsumer;
 
-    // Shared harness scheduler for FR-2 (delayed requeue) and FR-9 (delayed send).
+    // Shared harness scheduler for delayed requeue and delayed send.
     // MQTT has no native delayed delivery; the gateway delegates to the scheduler seam.
     private ConformanceHarnessMessageScheduler? _scheduler;
     private ConformanceHarnessMessageScheduler Scheduler =>
@@ -242,7 +242,7 @@ return new RequeueTrackingChannelAsync(channel);
         _scheduler = null;
     }
 
-    // Polls the pre-subscribed DLQ consumer with a bounded retry ceiling (NFR-2, AC-20, AC-25).
+    // Polls the pre-subscribed DLQ consumer with a bounded retry ceiling.
     // Returns MT_NONE when nothing arrives within the bound or when no DLQ key was configured.
     public Message GetMessageFromDeadLetterQueue(MqttSubscription subscription)
     {
@@ -407,7 +407,7 @@ return new RequeueTrackingChannelAsync(channel);
             // The delivery budget is NOT enforced here. Reactor and Proactor own it: they call
             // UpdateHandledCount, test HandledCountReached(RequeueCount), and reject with
             // DeliveryError when it is spent. This wrapper used to do the same thing at channel
-            // level, which meant the FR-23 conformance behaviour could pass on the harness's copy
+            // level, which meant the budget-exhaustion behaviour could pass on the harness's copy
             // of the rule while the product's copy was untested - and would have kept passing had
             // the two diverged. Tracking the original message id is harness bookkeeping, so it
             // stays; deciding when a message dies is production behaviour, so it does not.
@@ -469,7 +469,7 @@ return new RequeueTrackingChannelAsync(channel);
             // The delivery budget is NOT enforced here. Reactor and Proactor own it: they call
             // UpdateHandledCount, test HandledCountReached(RequeueCount), and reject with
             // DeliveryError when it is spent. This wrapper used to do the same thing at channel
-            // level, which meant the FR-23 conformance behaviour could pass on the harness's copy
+            // level, which meant the budget-exhaustion behaviour could pass on the harness's copy
             // of the rule while the product's copy was untested - and would have kept passing had
             // the two diverged. Tracking the original message id is harness bookkeeping, so it
             // stays; deciding when a message dies is production behaviour, so it does not.

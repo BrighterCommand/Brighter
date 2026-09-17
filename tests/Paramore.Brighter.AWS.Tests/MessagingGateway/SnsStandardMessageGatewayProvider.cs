@@ -32,7 +32,7 @@ public class SnsStandardMessageGatewayProvider
     internal AwsTestResourceReaper Reaper => _reaper;
 
     // SNS has no native delayed publish; the producer delegates a requested delay to this seam,
-    // which honours it by wall-clock and re-publishes to the SNS topic once the delay elapses (FR-9).
+    // which honours it by wall-clock and re-publishes to the SNS topic once the delay elapses.
     private ConformanceHarnessMessageScheduler Scheduler =>
         _scheduler ??= new ConformanceHarnessMessageScheduler(RepublishToSns);
 

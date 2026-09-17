@@ -9,16 +9,16 @@ using Xunit;
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
 /// <summary>
-/// Verifies that the canonical zero-delay-requeue templates (FR-15, AC-16) emit both a Reactor and a
+/// Verifies that the canonical zero-delay-requeue templates emit both a Reactor and a
 /// Proactor variant that:
-///   - pass TimeSpan.Zero explicitly to Requeue/RequeueAsync (AC-16, FR-15);
-///   - assert Requeue returns true (AC-16);
+///   - pass TimeSpan.Zero explicitly to Requeue/RequeueAsync;
+///   - assert Requeue returns true;
 ///   - assert the message arrives INSIDE a bounded receive-retry loop (500 ms poll, 30 s ceiling
-///     — NFR-2, AC-20) — this is a POSITIVE first-iteration assertion, not an AC-20-exemption
+///) — this is a POSITIVE first-iteration assertion, not an absence-check
 ///     single receive expecting MT_NONE (no before-zero-delay negative arm);
-///   - assert elapsed time from the Requeue call to receipt is less than 5 s (AC-16);
+///   - assert elapsed time from the Requeue call to receipt is less than 5 s;
 ///   - emit the conditional ledger-driven Skip pattern so the Deferred marker is supplied
-///     by the conformance ledger, not hard-coded in the template (FR-21).
+///     by the conformance ledger, not hard-coded in the template.
 /// </summary>
 public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVariants : IDisposable
 {
@@ -53,7 +53,7 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Reactor file exists at the expected path (NFR-1)
+        // Assert — Reactor file exists at the expected path
         var reactorPath = ReactorOutputPath();
         Assert.True(File.Exists(reactorPath),
             $"Reactor canonical zero-delay-requeue file not found at {reactorPath}");
@@ -70,7 +70,7 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Proactor file exists at the expected path (NFR-1)
+        // Assert — Proactor file exists at the expected path
         var proactorPath = ProactorOutputPath();
         Assert.True(File.Exists(proactorPath),
             $"Proactor canonical zero-delay-requeue file not found at {proactorPath}");
@@ -87,7 +87,7 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Requeue is called with TimeSpan.Zero explicitly (AC-16, FR-15)
+        // Assert — Requeue is called with TimeSpan.Zero explicitly
         var content = await File.ReadAllTextAsync(ReactorOutputPath());
         Assert.Contains("TimeSpan.Zero", content);
         Assert.Contains("Requeue(", content);
@@ -104,7 +104,7 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — the return value of Requeue is captured and asserted true (AC-16)
+        // Assert — the return value of Requeue is captured and asserted true
         var content = await File.ReadAllTextAsync(ReactorOutputPath());
         Assert.Contains("Assert.True(", content);
     }
@@ -120,7 +120,7 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — receipt assertion is inside a bounded retry loop (NFR-2, AC-20, AC-16)
+        // Assert — receipt assertion is inside a bounded retry loop
         var content = await File.ReadAllTextAsync(ReactorOutputPath());
         Assert.Contains("Stopwatch", content);
         Assert.Contains("TimeSpan.FromSeconds(30)", content);
@@ -138,7 +138,7 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — elapsed time from Requeue call to receipt is asserted less than 5 s (AC-16)
+        // Assert — elapsed time from Requeue call to receipt is asserted less than 5 s
         var content = await File.ReadAllTextAsync(ReactorOutputPath());
         Assert.Contains("TimeSpan.FromSeconds(5)", content);
     }
@@ -154,8 +154,8 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — no AC-20-exemption single receive expecting MT_NONE before the loop;
-        // FR-15 is a positive first-iteration arrival, not a before-delay negative arm (AC-16)
+        // Assert — no absence-check single receive expecting MT_NONE before the loop;
+        // a zero-delay requeue is a positive first-iteration arrival, not a before-delay negative arm
         var content = await File.ReadAllTextAsync(ReactorOutputPath());
         Assert.DoesNotContain("Assert.Equal(MessageType.MT_NONE", content);
     }
@@ -171,7 +171,7 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — RequeueAsync is called with TimeSpan.Zero explicitly (AC-16, FR-15, FR-14)
+        // Assert — RequeueAsync is called with TimeSpan.Zero explicitly
         var content = await File.ReadAllTextAsync(ProactorOutputPath());
         Assert.Contains("TimeSpan.Zero", content);
         Assert.Contains("RequeueAsync(", content);
@@ -188,7 +188,7 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — the return value of RequeueAsync is captured and asserted true (AC-16)
+        // Assert — the return value of RequeueAsync is captured and asserted true
         var content = await File.ReadAllTextAsync(ProactorOutputPath());
         Assert.Contains("Assert.True(", content);
     }
@@ -204,7 +204,7 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — receipt assertion is inside a bounded retry loop (NFR-2, AC-20, AC-16)
+        // Assert — receipt assertion is inside a bounded retry loop
         var content = await File.ReadAllTextAsync(ProactorOutputPath());
         Assert.Contains("Stopwatch", content);
         Assert.Contains("TimeSpan.FromSeconds(30)", content);
@@ -222,7 +222,7 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — elapsed time from RequeueAsync call to receipt is asserted less than 5 s (AC-16)
+        // Assert — elapsed time from RequeueAsync call to receipt is asserted less than 5 s
         var content = await File.ReadAllTextAsync(ProactorOutputPath());
         Assert.Contains("TimeSpan.FromSeconds(5)", content);
     }

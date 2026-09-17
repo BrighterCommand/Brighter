@@ -6,7 +6,7 @@ using Xunit;
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
 /// <summary>
-/// Coverage reconciliation checkpoint (FR-21, AC-13, AC-21).
+/// Coverage reconciliation checkpoint.
 ///
 /// Verifies that every behavioural row of the Kafka reference surface
 /// (requirements.md "Coverage Reconciliation (Kafka reference surface)" table)
@@ -35,7 +35,7 @@ public class KafkaReferenceSurfaceReconciliationTests
     // The eleven canonical template names, one per Kafka reference behaviour
     // (Coverage Reconciliation table, requirements.md): FR-2, FR-4, FR-5, FR-6,
     // FR-7, FR-8, FR-9, FR-15, FR-16, FR-17, FR-22.
-    // Each MUST exist in both the Reactor and Proactor directories (FR-14).
+    // Each MUST exist in both the Reactor and Proactor directories.
     private static readonly string[] CANONICAL_TEMPLATE_NAMES =
     [
         "When_requeuing_a_failed_message_with_delay_should_redeliver_after_delay",              // FR-2
@@ -51,7 +51,7 @@ public class KafkaReferenceSurfaceReconciliationTests
         "When_requeuing_a_failed_message_should_be_redelivered",                                // FR-22
     ];
 
-    // Mechanism terms that must never appear in any canonical template body (AC-21, NFR-3, OOS-1).
+    // Mechanism terms that must never appear in any canonical template body.
     // Any occurrence is a mechanism assertion that violates the suite's scope.
     private static readonly string[] MECHANISM_TERMS =
     [
@@ -86,7 +86,7 @@ public class KafkaReferenceSurfaceReconciliationTests
         // Arrange — template directories are resolved in the constructor
 
         // Assert — every behavioural row in the Coverage Reconciliation table has a canonical
-        // template in both the Reactor and Proactor directories (FR-14, FR-21)
+        // template in both the Reactor and Proactor directories
         foreach (var templateName in CANONICAL_TEMPLATE_NAMES)
         {
             var reactorTemplate = Path.Combine(_reactorDir, $"{templateName}.cs.liquid");
@@ -114,7 +114,7 @@ public class KafkaReferenceSurfaceReconciliationTests
                 .Where(File.Exists)
                 .ToList();
 
-        // Assert — no canonical template body contains any mechanism term (AC-21, NFR-3, OOS-1).
+        // Assert — no canonical template body contains any mechanism term.
         // A scheduler, native-delay API, or redrive policy reference is a mechanism assertion
         // that violates the mechanism-agnostic conformance suite contract.
         foreach (var templatePath in canonicalFiles)

@@ -32,25 +32,25 @@ public sealed record PollContractResult(
     IReadOnlyList<HelperPollViolation> Violations);
 
 /// <summary>
-/// Read-only, network-free audit of the rejection-destination poll contract (NFR-2, AC-20).
+/// Read-only, network-free audit of the rejection-destination poll contract.
 ///
-/// <para>NFR-2 puts every assertion that a message *arrives* inside one bounded retry loop, with a
-/// stated poll interval and a stated ceiling, and AC-20 exempts the assertions that a message is
-/// *absent* — those are a single bounded receive. Both rules are written in the generated test, and
+/// <para>Every assertion that a message *arrives* sits inside one bounded retry loop, with a
+/// stated poll interval and a stated ceiling. The assertions that a message is *absent* are
+/// exempt — those are a single bounded receive. Both rules are written in the generated test, and
 /// both assume the same thing of the provider: that
 /// <c>GetMessageFromDeadLetterQueue</c> / <c>GetMessageFromInvalidChannel</c> attempt **one**
 /// bounded receive and return, leaving the retrying to the caller.</para>
 ///
 /// <para>A helper that retries internally breaks both rules at once, and silently. It overruns the
 /// caller's ceiling, so the caller's loop re-tests an already-expired stopwatch and never runs a
-/// second iteration — the bounded loop NFR-2 mandates becomes decorative, and the real bound is
-/// whatever the helper's own loop happens to be. Worse, it turns AC-20's absence checks into the
+/// second iteration — the bounded loop becomes decorative, and the real bound is
+/// whatever the helper's own loop happens to be. Worse, it turns the absence checks into the
 /// most expensive tests in the suite: the message is asserted never to arrive, so an internal retry
 /// loop is guaranteed to burn its entire ceiling on every single run.</para>
 ///
 /// <para>So the contract this audit enforces is narrow and mechanical: inside a helper body there is
-/// no loop and no sleep. The ceiling and the poll interval live in the generated test, where NFR-2
-/// says they live and where they can be read.</para>
+/// no loop and no sleep. The ceiling and the poll interval live in the generated test, where
+/// they belong and where they can be read.</para>
 ///
 /// <para>Reads provider source as text rather than reflecting over it: the audit lives in the
 /// generator's test project, which does not reference the transport test projects, and a text scan

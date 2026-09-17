@@ -50,34 +50,34 @@ public class WhenGeneratingProviderInterfaceShouldExposeCanonicalSurface : IDisp
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Reactor interface declares the FR-1(1)(2) CreateSubscription signature with nullable routing keys
+        // Assert — Reactor interface declares the CreateSubscription signature with nullable routing keys
         var reactorInterface = await File.ReadAllTextAsync(
             Path.Combine(reactorOutput, "IAmAMessageGatewayReactorProvider.cs"));
         Assert.Contains("RoutingKey? deadLetterRoutingKey = null", reactorInterface);
         Assert.Contains("RoutingKey? invalidMessageRoutingKey = null", reactorInterface);
         Assert.DoesNotContain("setupDeadLetterQueue", reactorInterface);
 
-        // Assert — Reactor interface exposes FR-1(3) invalid-channel read and FR-1(5) metadata keys
+        // Assert — Reactor interface exposes the invalid-channel read and the metadata keys
         Assert.Contains("GetMessageFromInvalidChannel", reactorInterface);
         Assert.Contains("RejectionMetadataKeys RejectionMetadataKeys { get; }", reactorInterface);
 
-        // Assert — XML doc states the MT_NONE contract for bounded read members (FR-1(3))
+        // Assert — XML doc states the MT_NONE contract for bounded read members
         Assert.Contains("MT_NONE", reactorInterface);
 
-        // Assert — Proactor interface declares the FR-1(1)(2) CreateSubscription signature with nullable routing keys
+        // Assert — Proactor interface declares the CreateSubscription signature with nullable routing keys
         var proactorInterface = await File.ReadAllTextAsync(
             Path.Combine(proactorOutput, "IAmAMessageGatewayProactorProvider.cs"));
         Assert.Contains("RoutingKey? deadLetterRoutingKey = null", proactorInterface);
         Assert.Contains("RoutingKey? invalidMessageRoutingKey = null", proactorInterface);
         Assert.DoesNotContain("setupDeadLetterQueue", proactorInterface);
 
-        // Assert — Proactor interface exposes async FR-1(3) invalid-channel read and FR-1(5) metadata keys
+        // Assert — Proactor interface exposes the async invalid-channel read and the metadata keys
         Assert.Contains("GetMessageFromInvalidChannelAsync", proactorInterface);
         Assert.Contains("Task<Message>", proactorInterface);
         Assert.Contains("CancellationToken", proactorInterface);
         Assert.Contains("RejectionMetadataKeys RejectionMetadataKeys { get; }", proactorInterface);
 
-        // Assert — XML doc states the MT_NONE contract for bounded read members (FR-1(3))
+        // Assert — XML doc states the MT_NONE contract for bounded read members
         Assert.Contains("MT_NONE", proactorInterface);
 
     }

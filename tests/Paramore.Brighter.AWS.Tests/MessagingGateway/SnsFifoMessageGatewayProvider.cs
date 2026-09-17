@@ -19,7 +19,7 @@ public class SnsFifoMessageGatewayProvider
     private ConformanceHarnessMessageScheduler? _scheduler;
 
     // SNS has no native delayed publish; the producer delegates a requested delay to this seam, which
-    // honours it by wall-clock and re-publishes to the (FIFO) SNS topic once the delay elapses (FR-9).
+    // honours it by wall-clock and re-publishes to the (FIFO) SNS topic once the delay elapses.
     // The message keeps the FIFO MessageGroupId/MessageDeduplicationId the FifoMetadataProducer stamped.
     private ConformanceHarnessMessageScheduler Scheduler =>
         _scheduler ??= new ConformanceHarnessMessageScheduler(RepublishToSns);

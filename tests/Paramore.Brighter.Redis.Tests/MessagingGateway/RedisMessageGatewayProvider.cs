@@ -49,8 +49,8 @@ public class RedisMessageGatewayProvider
     }
 
     // Redis has no native delayed delivery: the gateway delegates a requested delay to the
-    // scheduler seam (producer.Scheduler for FR-9 send-with-delay; the consumer factory's
-    // scheduler for FR-2 requeue-with-delay). One shared harness scheduler honours the delay by
+    // scheduler seam (producer.Scheduler for send-with-delay; the consumer factory's
+    // scheduler for requeue-with-delay). One shared harness scheduler honours the delay by
     // wall-clock and re-publishes to the topic. Lazily created; disposed in CleanUp.
     private ConformanceHarnessMessageScheduler Scheduler =>
         _scheduler ??= new ConformanceHarnessMessageScheduler(RepublishToRedis);
@@ -146,7 +146,7 @@ public class RedisMessageGatewayProvider
         }
 
         // Pre-subscribe invalid-message consumer so it receives notifications when messages
-        // are rejected as unacceptable (FR-5). Mirrors the DLQ hook above.
+        // are rejected as unacceptable. Mirrors the DLQ hook above.
         if (subscription.InvalidMessageRoutingKey != null)
         {
             var invalidQueueName = new ChannelName($"invalid-{Guid.NewGuid().ToString("N")[..8]}");
@@ -315,7 +315,7 @@ public class RedisMessageGatewayProvider
     /// topic if anything was there.
     /// </summary>
     /// <remarks>
-    /// <para>The retry belongs to the caller's NFR-2 loop, so this attempts exactly one receive and
+    /// <para>The retry belongs to the caller's bounded poll loop, so this attempts exactly one receive and
     /// reports what it found. An empty batch and a batch holding an MT_NONE sentinel both mean the
     /// same thing - nothing has arrived yet - and both are reported as MT_NONE.</para>
     /// <para>Redis is alone in needing the topic restored: <c>Reject</c> rewrites the header topic
@@ -407,7 +407,7 @@ public class RedisMessageGatewayProvider
             // The delivery budget is NOT enforced here. Reactor and Proactor own it: they call
             // UpdateHandledCount, test HandledCountReached(RequeueCount), and reject with
             // DeliveryError when it is spent. This wrapper used to do the same thing at channel
-            // level, which meant the FR-23 conformance behaviour could pass on the harness's copy
+            // level, which meant the budget-exhaustion behaviour could pass on the harness's copy
             // of the rule while the product's copy was untested - and would have kept passing had
             // the two diverged. Tracking the original message id is harness bookkeeping, so it
             // stays; deciding when a message dies is production behaviour, so it does not.
@@ -466,7 +466,7 @@ public class RedisMessageGatewayProvider
             // The delivery budget is NOT enforced here. Reactor and Proactor own it: they call
             // UpdateHandledCount, test HandledCountReached(RequeueCount), and reject with
             // DeliveryError when it is spent. This wrapper used to do the same thing at channel
-            // level, which meant the FR-23 conformance behaviour could pass on the harness's copy
+            // level, which meant the budget-exhaustion behaviour could pass on the harness's copy
             // of the rule while the product's copy was untested - and would have kept passing had
             // the two diverged. Tracking the original message id is harness bookkeeping, so it
             // stays; deciding when a message dies is production behaviour, so it does not.

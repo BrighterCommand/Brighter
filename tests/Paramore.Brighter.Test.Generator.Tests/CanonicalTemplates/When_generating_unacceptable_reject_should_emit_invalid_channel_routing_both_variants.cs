@@ -9,18 +9,18 @@ using Xunit;
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
 /// <summary>
-/// Verifies that the canonical unacceptable-reject templates (FR-5) emit both a Reactor and a
+/// Verifies that the canonical unacceptable-reject templates emit both a Reactor and a
 /// Proactor variant that:
-///   - name the file When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel (NFR-1);
+///   - name the file When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel;
 ///   - create the subscription with BOTH a deadLetterRoutingKey AND an invalidMessageRoutingKey
-///     named argument (AC-5, FR-1(1));
-///   - call _channel.Reject with an Unacceptable MessageRejectionReason (AC-5);
-///   - poll for invalid-channel arrival INSIDE the bounded retry loop (Stopwatch, 500 ms, 60 s — NFR-2);
-///   - assert the rejection reason equals "Unacceptable" and the original-topic equals the data topic (AC-5);
+///     named argument;
+///   - call _channel.Reject with an Unacceptable MessageRejectionReason;
+///   - poll for invalid-channel arrival INSIDE the bounded retry loop (Stopwatch, 500 ms, 60 s);
+///   - assert the rejection reason equals "Unacceptable" and the original-topic equals the data topic;
 ///   - assert DLQ absence via a SINGLE bounded GetMessageFromDeadLetterQueue call outside the retry
-///     loop, asserting MT_NONE (AC-5, AC-20 exemption);
+///     loop, asserting MT_NONE (a single receive outside the retry loop);
 ///   - emit the conditional ledger-driven Skip so the Deferred marker is supplied by the
-///     conformance ledger, not hard-coded in the template (FR-21).
+///     conformance ledger, not hard-coded in the template.
 /// </summary>
 public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBothVariants : IDisposable
 {
@@ -55,7 +55,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Reactor file exists at the NFR-1 mandated path
+        // Assert — Reactor file exists at the mandated path
         var reactorPath = ReactorOutputPath(configuration);
         Assert.True(File.Exists(reactorPath),
             $"Reactor canonical unacceptable-reject file not found at {reactorPath}");
@@ -72,7 +72,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Proactor file exists at the NFR-1 mandated path
+        // Assert — Proactor file exists at the mandated path
         var proactorPath = ProactorOutputPath(configuration);
         Assert.True(File.Exists(proactorPath),
             $"Proactor canonical unacceptable-reject file not found at {proactorPath}");
@@ -89,7 +89,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — subscription must name both deadLetterRoutingKey and invalidMessageRoutingKey (AC-5, FR-1(1))
+        // Assert — subscription must name both deadLetterRoutingKey and invalidMessageRoutingKey
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("deadLetterRoutingKey:", content);
         Assert.Contains("invalidMessageRoutingKey:", content);
@@ -106,7 +106,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — subscription must name both deadLetterRoutingKey and invalidMessageRoutingKey (AC-5, FR-1(1))
+        // Assert — subscription must name both deadLetterRoutingKey and invalidMessageRoutingKey
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("deadLetterRoutingKey:", content);
         Assert.Contains("invalidMessageRoutingKey:", content);
@@ -123,7 +123,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Reject is called with Unacceptable (AC-5)
+        // Assert — Reject is called with Unacceptable
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("Reject(", content);
         Assert.Contains("Unacceptable", content);
@@ -140,7 +140,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — RejectAsync is called with Unacceptable (AC-5, FR-14)
+        // Assert — RejectAsync is called with Unacceptable
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("RejectAsync(", content);
         Assert.Contains("Unacceptable", content);
@@ -157,7 +157,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — invalid-channel arrival polled inside the bounded retry loop (NFR-2, AC-5)
+        // Assert — invalid-channel arrival polled inside the bounded retry loop
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("GetMessageFromInvalidChannel", content);
         Assert.Contains("Stopwatch", content);
@@ -176,7 +176,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — invalid-channel arrival polled inside the bounded retry loop (NFR-2, AC-5)
+        // Assert — invalid-channel arrival polled inside the bounded retry loop
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("GetMessageFromInvalidChannelAsync", content);
         Assert.Contains("Stopwatch", content);
@@ -195,7 +195,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — rejection reason "Unacceptable" and original-topic assertion (AC-5)
+        // Assert — rejection reason "Unacceptable" and original-topic assertion
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("keys.RejectionReason", content);
         Assert.Contains("keys.OriginalTopic", content);
@@ -213,7 +213,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — rejection reason "Unacceptable" and original-topic assertion (AC-5)
+        // Assert — rejection reason "Unacceptable" and original-topic assertion
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("keys.RejectionReason", content);
         Assert.Contains("keys.OriginalTopic", content);
@@ -232,7 +232,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
         await generator.GenerateAsync(configuration);
 
         // Assert — DLQ absence: single bounded GetMessageFromDeadLetterQueue call asserting MT_NONE
-        // (AC-5, AC-20 exemption — single receive outside the retry loop)
+        // (a single receive outside the retry loop)
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("GetMessageFromDeadLetterQueue", content);
         Assert.Contains("MT_NONE", content);
@@ -250,7 +250,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
         await generator.GenerateAsync(configuration);
 
         // Assert — DLQ absence: single bounded GetMessageFromDeadLetterQueueAsync call asserting MT_NONE
-        // (AC-5, AC-20 exemption — single receive outside the retry loop)
+        // (a single receive outside the retry loop)
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("GetMessageFromDeadLetterQueueAsync", content);
         Assert.Contains("MT_NONE", content);

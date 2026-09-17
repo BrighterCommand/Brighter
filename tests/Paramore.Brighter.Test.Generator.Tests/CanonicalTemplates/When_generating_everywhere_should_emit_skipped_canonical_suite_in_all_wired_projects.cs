@@ -8,7 +8,7 @@ using Xunit;
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
 /// <summary>
-/// Structural integration gate for FR-13 (AC-13), FR-14, and FR-21 (ADR 0067 stage (i)).
+/// Structural integration gate for the generate-everywhere rule (ADR 0067 stage (i)).
 ///
 /// After a full regeneration with `./generate-test.sh`, every wired gateway configuration's
 /// Generated/Reactor and Generated/Proactor directories must contain the complete canonical
@@ -21,12 +21,12 @@ namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 /// - That the generated tests compile   — the solution build is the gate for that.
 /// - That the generated tests pass      — that requires a live broker and is the fix phase.
 ///
-/// References: FR-13, AC-13, FR-14, FR-21, ADR 0067 "generate everywhere immediately", stage (i).
+/// Reference: ADR 0067 "generate everywhere immediately", stage (i).
 /// </summary>
 public class GeneratingEverywhereShouldEmitSkippedCanonicalSuiteTests
 {
     // The eleven canonical template base names — one per canonical behaviour.
-    // FR-2, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, FR-15, FR-16, FR-17, FR-22 (FR-21).
+    // FR-2, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, FR-15, FR-16, FR-17, FR-22.
     private static readonly string[] CANONICAL_TEMPLATE_NAMES =
     [
         "When_requeuing_a_failed_message_with_delay_should_redeliver_after_delay",               // FR-2
@@ -43,7 +43,7 @@ public class GeneratingEverywhereShouldEmitSkippedCanonicalSuiteTests
     ];
 
     // Canonical template base name → conformance-ledger FR column, mirroring the generator's
-    // authoritative CANONICAL_TEMPLATE_FR_COLUMNS map (FR-21 / ADR 0067). Used to resolve the
+    // authoritative CANONICAL_TEMPLATE_FR_COLUMNS map (ADR 0067). Used to resolve the
     // ledger cell a given generated file must agree with.
     private static readonly IReadOnlyDictionary<string, string> TEMPLATE_FR_COLUMNS =
         new Dictionary<string, string>
@@ -62,7 +62,7 @@ public class GeneratingEverywhereShouldEmitSkippedCanonicalSuiteTests
         };
 
     // The exact count of wired gateway configurations declared across the ten wired
-    // test projects (FR-13). This is a regression guard: a new wiring changes the count.
+    // test projects. This is a regression guard: a new wiring changes the count.
     private const int EXPECTED_WIRED_CONFIGURATION_COUNT = 24;
 
     private readonly string _repoRoot;
@@ -87,7 +87,7 @@ public class GeneratingEverywhereShouldEmitSkippedCanonicalSuiteTests
     {
         // Arrange — resolved in constructor
 
-        // Assert — both variants must agree on the configuration count (FR-13).
+        // Assert — both variants must agree on the configuration count.
         Assert.Equal(EXPECTED_WIRED_CONFIGURATION_COUNT, _reactorGeneratedDirs.Count);
         Assert.Equal(EXPECTED_WIRED_CONFIGURATION_COUNT, _proactorGeneratedDirs.Count);
     }
@@ -97,7 +97,7 @@ public class GeneratingEverywhereShouldEmitSkippedCanonicalSuiteTests
     {
         // Arrange — resolved in constructor
 
-        // Assert — every wired Generated/Reactor directory contains the full canonical suite (AC-13, FR-14)
+        // Assert — every wired Generated/Reactor directory contains the full canonical suite
         var missing = new List<string>();
 
         foreach (var dir in _reactorGeneratedDirs)
@@ -120,7 +120,7 @@ public class GeneratingEverywhereShouldEmitSkippedCanonicalSuiteTests
     {
         // Arrange — resolved in constructor
 
-        // Assert — every wired Generated/Proactor directory contains the full canonical suite (AC-13, FR-14)
+        // Assert — every wired Generated/Proactor directory contains the full canonical suite
         var missing = new List<string>();
 
         foreach (var dir in _proactorGeneratedDirs)

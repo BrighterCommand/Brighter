@@ -13,7 +13,7 @@ namespace Paramore.Brighter.Test.Generator.Tests.MessagingGatewayGenerator;
 /// Asserts:
 ///   1. <see cref="Generators.MessagingGatewayGenerator"/> (source) contains no branch referencing
 ///      <c>HasSupportToDelayedMessages</c>, <c>HasSupportToDeadLetterQueue</c>, or
-///      <c>HasSupportToRequeue</c> (FR-10(4), AC-10(c)).
+///      <c>HasSupportToRequeue</c>.
 ///   2. The three retained gates (<c>confirming_posting</c>, <c>no_broker_created</c>,
 ///      <c>assume_channel</c>/<c>validate_channel</c>) still skip their templates when their
 ///      flags are false — proving the retained branches survived the cleanup.
@@ -57,7 +57,7 @@ public class WhenGatesRetiredShouldLeaveNoBranchKeyedOnTheThreeGates : IDisposab
         // Act
         var sourceText = File.ReadAllText(generatorSource);
 
-        // Assert — the three retired gates are absent from the source (FR-10(4), AC-10(c))
+        // Assert — the three retired gates are absent from the source
         Assert.False(sourceText.Contains("HasSupportToDelayedMessages"),
             "HasSupportToDelayedMessages must not appear — its gate branches are retired (ADR 0066 Step C)");
 
@@ -185,7 +185,7 @@ public class WhenGatesRetiredShouldLeaveNoBranchKeyedOnTheThreeGates : IDisposab
     /// <summary>
     /// The legacy gating mechanism matched a closed list of template names. If anyone ever
     /// reintroduces gating by SUBSTRING instead, a canonical template whose name happens to contain
-    /// "requeuing" and "with_delay" — as the real FR-2 template
+    /// "requeuing" and "with_delay" — as the real requeue-with-delay template
     /// (When_requeuing_a_failed_message_with_delay_should_redeliver_after_delay) does — would be
     /// silently gated off. This plants such a template and proves it is emitted.
     /// </summary>

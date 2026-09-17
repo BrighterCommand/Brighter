@@ -76,7 +76,7 @@ public sealed record LedgerResolutionResult(
 
 /// <summary>
 /// Read-only, network-free cross-check audit between in-tree Deferred Skip markers and the
-/// conformance ledger (ADR 0067, FR-13, FR-21).
+/// conformance ledger (ADR 0067).
 ///
 /// Two directions are enforced:
 /// <list type="number">

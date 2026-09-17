@@ -6,7 +6,7 @@ using Xunit;
 namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 
 /// <summary>
-/// FR-8 asserts that rejection metadata is stamped onto a rejected message. A transport that
+/// The contract asserts that rejection metadata is stamped onto a rejected message. A transport that
 /// dead-letters through a native broker mechanism - RabbitMQ's DLX, Azure Service Bus's own
 /// dead-letter queue - routes the untouched original and stamps nothing, so its provider declares
 /// that by returning <c>string.Empty</c> for every key in <c>RejectionMetadataKeys</c>. The

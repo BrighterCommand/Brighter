@@ -9,18 +9,18 @@ using Xunit;
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
 /// <summary>
-/// Verifies that the canonical delayed-send templates (FR-9) emit both a Reactor and a
+/// Verifies that the canonical delayed-send templates emit both a Reactor and a
 /// Proactor variant that:
 ///   - call <c>SendWithDelay</c> (Reactor) / <c>SendWithDelayAsync</c> (Proactor) on the
-///     producer surface with a 5 s delay (AC-9, FR-9);
-///   - assert an immediate single bounded receive before the delay yields MT_NONE (AC-9, AC-20
-///     exemption — the before-D arm is a single receive, NOT the bounded retry loop);
-///   - assert arrival INSIDE the bounded retry loop (500 ms poll, 30 s ceiling — NFR-2) after
-///     the delay (AC-9, the after-D arm);
+///     producer surface with a 5 s delay;
+///   - assert an immediate single bounded receive before the delay yields MT_NONE (the
+///     before-delay arm is a single receive, NOT the bounded retry loop);
+///   - assert arrival INSIDE the bounded retry loop (500 ms poll, 30 s ceiling) after
+///     the delay (the after-delay arm);
 ///   - contain no reference to a scheduler, native-delay API, Thread.Sleep, or Task.Delay in
-///     the after-D arm (AC-21, NFR-3, NFR-2);
+///     the after-D arm;
 ///   - emit the conditional ledger-driven Skip pattern so the Deferred marker is supplied
-///     by the conformance ledger, not hard-coded in the template (FR-21).
+///     by the conformance ledger, not hard-coded in the template.
 /// </summary>
 public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants : IDisposable
 {
@@ -55,7 +55,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Reactor file exists at the expected path (NFR-1)
+        // Assert — Reactor file exists at the expected path
         var reactorPath = ReactorOutputPath(configuration);
         Assert.True(File.Exists(reactorPath),
             $"Reactor canonical delayed-send file not found at {reactorPath}");
@@ -72,7 +72,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Proactor file exists at the expected path (NFR-1)
+        // Assert — Proactor file exists at the expected path
         var proactorPath = ProactorOutputPath(configuration);
         Assert.True(File.Exists(proactorPath),
             $"Proactor canonical delayed-send file not found at {proactorPath}");
@@ -89,7 +89,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — sync variant drives SendWithDelay on the producer surface (AC-9, FR-9)
+        // Assert — sync variant drives SendWithDelay on the producer surface
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("SendWithDelay(", content);
         Assert.Contains("TimeSpan.FromSeconds(5)", content);
@@ -106,7 +106,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — async variant drives SendWithDelayAsync on the producer surface (AC-9, FR-9, FR-14)
+        // Assert — async variant drives SendWithDelayAsync on the producer surface
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("SendWithDelayAsync(", content);
         Assert.Contains("TimeSpan.FromSeconds(5)", content);
@@ -123,7 +123,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — before-D arm: a single Receive asserting MT_NONE (AC-9, AC-20 exemption;
+        // Assert — before-D arm: a single Receive asserting MT_NONE (a single receive outside the retry loop;
         // this must NOT be inside the bounded Stopwatch retry loop)
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("MT_NONE", content);
@@ -141,7 +141,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — before-D arm: a single ReceiveAsync asserting MT_NONE (AC-9, AC-20 exemption)
+        // Assert — before-D arm: a single ReceiveAsync asserting MT_NONE (a single receive outside the retry loop)
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("MT_NONE", content);
         Assert.Contains("ReceiveAsync(", content);
@@ -158,7 +158,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — after-D arm uses the bounded retry loop (NFR-2, AC-20)
+        // Assert — after-D arm uses the bounded retry loop
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("Stopwatch", content);
         Assert.Contains("TimeSpan.FromSeconds(30)", content);
@@ -176,7 +176,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — after-D arm uses the bounded retry loop (NFR-2, AC-20)
+        // Assert — after-D arm uses the bounded retry loop
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("Stopwatch", content);
         Assert.Contains("TimeSpan.FromSeconds(30)", content);
@@ -194,7 +194,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — bounded retry loop replaces fixed sleep (NFR-2)
+        // Assert — bounded retry loop replaces fixed sleep
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.DoesNotContain("Thread.Sleep", content);
         Assert.DoesNotContain("Task.Delay", content);
@@ -211,7 +211,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — bounded retry loop replaces fixed sleep (NFR-2)
+        // Assert — bounded retry loop replaces fixed sleep
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.DoesNotContain("Thread.Sleep", content);
         Assert.DoesNotContain("Task.Delay", content);
@@ -228,7 +228,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — no mechanism assertions (AC-21, NFR-3)
+        // Assert — no mechanism assertions
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.DoesNotContain("scheduler", content, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("RedrivePolicy", content, StringComparison.OrdinalIgnoreCase);
@@ -247,7 +247,7 @@ public class WhenGeneratingDelayedSendShouldEmitBeforeAndAfterArmsBothVariants :
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — no mechanism assertions (AC-21, NFR-3)
+        // Assert — no mechanism assertions
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.DoesNotContain("scheduler", content, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("RedrivePolicy", content, StringComparison.OrdinalIgnoreCase);

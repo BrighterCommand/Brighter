@@ -4,7 +4,7 @@ namespace Paramore.Brighter.Test.Generator.Tests.ConformanceAudit;
 
 /// <summary>
 /// A Deferred ledger cell records that a behaviour is knowingly not conformant, and the sign-off
-/// token names the maintainer who accepted that deferral (ADR 0067, FR-13, AC-24). A placeholder
+/// token names the maintainer who accepted that deferral (ADR 0067). A placeholder
 /// handle satisfies the shape of a sign-off without naming anybody, so it lets a deferral enter
 /// the ledger with no accountable owner — the gap the sign-off exists to close.
 ///

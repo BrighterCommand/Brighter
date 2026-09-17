@@ -41,12 +41,12 @@ public class RmqSyncMessageGatewayProvider
     private static readonly Uri s_amqpUri = new("amqp://guest:guest@localhost:5672/%2f");
     private readonly RmqMessagingGatewayConnection _connection;
 
-    // FR-2 / FR-9: prove RMQ.Sync's delay via the gateway's scheduler-delegation seam
+    // Delayed requeue and delayed send: prove RMQ.Sync's delay via the scheduler-delegation seam
     // (the same mechanism proven for RMQ.Async / Classic / Kafka / Redis / MSSQL), not the
     // native x-delayed-message exchange plugin. We present a plain (non-delay) exchange so
     // RmqMessageProducer reports DelaySupported == false and routes a non-zero delay to
-    // IAmAMessageProducer.Scheduler — producer.Scheduler for FR-9 send-with-delay, and the
-    // consumer factory's scheduler for FR-2 delayed requeue (forwarded to the requeue
+    // IAmAMessageProducer.Scheduler — producer.Scheduler for send-with-delay, and the
+    // consumer factory's scheduler for a delayed requeue (forwarded to the requeue
     // producer). One shared wall-clock scheduler re-publishes to the topic. Lazily created;
     // disposed in CleanUp.
     //
@@ -215,7 +215,7 @@ public class RmqSyncMessageGatewayProvider
         }
     }
 
-    // FR-5: RMQ.Sync has no invalid-message channel. Its rejection path is a native BasicReject
+    // Unacceptable rejections: RMQ.Sync has no invalid-message channel. Its path is a native BasicReject
     // that dead-letters through the single configured DLX (x-dead-letter-routing-key), and neither
     // RmqMessageConsumer nor RmqSubscription models a separate invalid destination. This hook makes
     // a GENUINE bounded read against an invalid queue bound (by the {topic}.Invalid convention the
@@ -494,7 +494,7 @@ public class RmqSyncMessageGatewayProvider
             // The delivery budget is NOT enforced here. Reactor and Proactor own it: they call
             // UpdateHandledCount, test HandledCountReached(RequeueCount), and reject with
             // DeliveryError when it is spent. This wrapper used to do the same thing at channel
-            // level, which meant the FR-23 conformance behaviour could pass on the harness's copy
+            // level, which meant the budget-exhaustion behaviour could pass on the harness's copy
             // of the rule while the product's copy was untested - and would have kept passing had
             // the two diverged. Tracking the original message id is harness bookkeeping, so it
             // stays; deciding when a message dies is production behaviour, so it does not.
@@ -557,7 +557,7 @@ public class RmqSyncMessageGatewayProvider
             // The delivery budget is NOT enforced here. Reactor and Proactor own it: they call
             // UpdateHandledCount, test HandledCountReached(RequeueCount), and reject with
             // DeliveryError when it is spent. This wrapper used to do the same thing at channel
-            // level, which meant the FR-23 conformance behaviour could pass on the harness's copy
+            // level, which meant the budget-exhaustion behaviour could pass on the harness's copy
             // of the rule while the product's copy was untested - and would have kept passing had
             // the two diverged. Tracking the original message id is harness bookkeeping, so it
             // stays; deciding when a message dies is production behaviour, so it does not.

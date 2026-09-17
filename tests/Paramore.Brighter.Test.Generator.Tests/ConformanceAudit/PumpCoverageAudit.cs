@@ -30,7 +30,7 @@ public sealed record RequiredPumpBehaviour(
 /// <param name="Kind">
 /// The violation category. <c>PumpBehaviourNotCovered</c> when no pump variant covers the behaviour
 /// at all; <c>PumpBehaviourVariantNotCovered</c> when one variant covers it and another does not,
-/// which is the FR-14 parity failure.
+/// which is the parity failure this audit exists to catch.
 /// </param>
 /// <param name="Behaviour">The <see cref="RequiredPumpBehaviour.Description"/> left uncovered.</param>
 /// <param name="Detail">What the audit looked for, and where.</param>
@@ -59,7 +59,7 @@ public sealed record PumpCoverageResult(IReadOnlyList<PumpCoverageViolation> Vio
 /// ledger leans on loses its coverage.
 /// </para>
 /// <para>
-/// Coverage is required in <em>both</em> pump variants. FR-14 makes Reactor/Proactor parity the
+/// Coverage is required in <em>both</em> pump variants: Reactor/Proactor parity is the
 /// standard the ledger's cells are read against, and the <c>MessageDispatch</c> tree carries a
 /// <c>Reactor</c> and a <c>Proactor</c> directory for exactly that reason. A behaviour surviving in
 /// one of them proves half of what the ledger claims, so it is reported rather than accepted.
@@ -109,7 +109,7 @@ public static class PumpCoverageAudit
         ["tests", "Paramore.Brighter.Core.Tests", "MessageDispatch"];
 
     /// <summary>
-    /// The pump variants FR-14 requires parity across, named as their directories under
+    /// The pump variants parity is required across, named as their directories under
     /// <see cref="s_dispatchPathSegments"/>.
     /// </summary>
     private static readonly string[] s_pumpVariants = ["Reactor", "Proactor"];
@@ -138,7 +138,7 @@ public static class PumpCoverageAudit
     /// <summary>
     /// Reports what <paramref name="behaviour"/> has lost, in the terms whoever reads the failure
     /// needs to act: <c>PumpBehaviourNotCovered</c> when no variant names it at all (a deletion),
-    /// <c>PumpBehaviourVariantNotCovered</c> when one pump kept it and another dropped it (an FR-14
+    /// <c>PumpBehaviourVariantNotCovered</c> when one pump kept it and another dropped it (a
     /// parity break), and <c>PumpBehaviourCoverageHollowedOut</c> when a file still bears the name
     /// but no longer asserts (go and read that file).
     /// </summary>

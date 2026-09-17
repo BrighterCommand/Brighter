@@ -9,15 +9,15 @@ using Xunit;
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 
 /// <summary>
-/// Verifies that the canonical fallback-ladder templates (FR-6) emit both a Reactor and a
+/// Verifies that the canonical fallback-ladder templates emit both a Reactor and a
 /// Proactor variant that:
-///   - name the file When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq (NFR-1);
-///   - create the subscription with deadLetterRoutingKey ONLY (no invalidMessageRoutingKey — AC-6, FR-1(2));
-///   - call _channel.Reject with an Unacceptable MessageRejectionReason (AC-6);
-///   - poll for DLQ arrival INSIDE the bounded retry loop (Stopwatch, 500 ms, 60 s — NFR-2);
-///   - assert the rejection-reason key equals "Unacceptable" on the DLQ message (AC-6);
+///   - name the file When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq;
+///   - create the subscription with deadLetterRoutingKey ONLY (no invalidMessageRoutingKey);
+///   - call _channel.Reject with an Unacceptable MessageRejectionReason;
+///   - poll for DLQ arrival INSIDE the bounded retry loop (Stopwatch, 500 ms, 60 s);
+///   - assert the rejection-reason key equals "Unacceptable" on the DLQ message;
 ///   - emit the conditional ledger-driven Skip so the Deferred marker is supplied by the
-///     conformance ledger, not hard-coded in the template (FR-21).
+///     conformance ledger, not hard-coded in the template.
 /// </summary>
 public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants : IDisposable
 {
@@ -52,7 +52,7 @@ public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Reactor file exists at the NFR-1 mandated path
+        // Assert — Reactor file exists at the mandated path
         var reactorPath = ReactorOutputPath(configuration);
         Assert.True(File.Exists(reactorPath),
             $"Reactor canonical DLQ-fallback file not found at {reactorPath}");
@@ -69,7 +69,7 @@ public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Proactor file exists at the NFR-1 mandated path
+        // Assert — Proactor file exists at the mandated path
         var proactorPath = ProactorOutputPath(configuration);
         Assert.True(File.Exists(proactorPath),
             $"Proactor canonical DLQ-fallback file not found at {proactorPath}");
@@ -86,7 +86,7 @@ public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — subscription names deadLetterRoutingKey only; no invalidMessageRoutingKey (AC-6, FR-1(2))
+        // Assert — subscription names deadLetterRoutingKey only; no invalidMessageRoutingKey
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("deadLetterRoutingKey:", content);
         Assert.DoesNotContain("invalidMessageRoutingKey:", content);
@@ -103,7 +103,7 @@ public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — subscription names deadLetterRoutingKey only; no invalidMessageRoutingKey (AC-6, FR-1(2))
+        // Assert — subscription names deadLetterRoutingKey only; no invalidMessageRoutingKey
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("deadLetterRoutingKey:", content);
         Assert.DoesNotContain("invalidMessageRoutingKey:", content);
@@ -120,7 +120,7 @@ public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — Reject is called with Unacceptable (AC-6)
+        // Assert — Reject is called with Unacceptable
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("Reject(", content);
         Assert.Contains("Unacceptable", content);
@@ -137,7 +137,7 @@ public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — RejectAsync is called with Unacceptable (AC-6, FR-14)
+        // Assert — RejectAsync is called with Unacceptable
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("RejectAsync(", content);
         Assert.Contains("Unacceptable", content);
@@ -154,7 +154,7 @@ public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — DLQ arrival polled inside the bounded retry loop (NFR-2, AC-6)
+        // Assert — DLQ arrival polled inside the bounded retry loop
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("GetMessageFromDeadLetterQueue", content);
         Assert.Contains("Stopwatch", content);
@@ -173,7 +173,7 @@ public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — DLQ arrival polled inside the bounded retry loop (NFR-2, AC-6)
+        // Assert — DLQ arrival polled inside the bounded retry loop
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("GetMessageFromDeadLetterQueueAsync", content);
         Assert.Contains("Stopwatch", content);
@@ -192,7 +192,7 @@ public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — rejection-reason key equals "Unacceptable" on DLQ message (AC-6)
+        // Assert — rejection-reason key equals "Unacceptable" on DLQ message
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
         Assert.Contains("keys.RejectionReason", content);
         Assert.Contains("RejectionReason.Unacceptable.ToString()", content);
@@ -209,7 +209,7 @@ public class WhenGeneratingUnacceptableDlqOnlyShouldEmitDlqFallbackBothVariants 
         // Act
         await generator.GenerateAsync(configuration);
 
-        // Assert — rejection-reason key equals "Unacceptable" on DLQ message (AC-6)
+        // Assert — rejection-reason key equals "Unacceptable" on DLQ message
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
         Assert.Contains("keys.RejectionReason", content);
         Assert.Contains("RejectionReason.Unacceptable.ToString()", content);

@@ -10,24 +10,24 @@ namespace Paramore.Brighter.Test.Generator.Tests.Cleanup;
 ///
 /// Asserts:
 ///   1. None of the four legacy template filenames exists under
-///      tools/.../Templates/MessagingGateway/{Reactor,Proactor}/ (FR-10(3), FR-12, FR-19).
+///      tools/.../Templates/MessagingGateway/{Reactor,Proactor}/.
 ///   2. No generated copy of any of the four remains under any
-///      tests/Paramore.Brighter.*.Tests/**/Generated/ directory (AC-10(b), AC-12, AC-22).
+///      tests/Paramore.Brighter.*.Tests/**/Generated/ directory.
 ///   3. No messaging-gateway template that purports to exercise delayed requeue calls
-///      Requeue/RequeueAsync without a non-null TimeSpan (AC-12).
+///      Requeue/RequeueAsync without a non-null TimeSpan.
 /// </summary>
 public class WhenLegacyTemplatesDeletedShouldLeaveNoTemplateOrGeneratedCopy
 {
     // The legacy gated template base names — exactly this closed list (ADR 0066 "Step C").
     // IMPORTANT: match these exactly. The substring-matching hazard (ADR 0066) means
-    // a glob like *with_delay* would also match the canonical FR-2 template
+    // a glob like *with_delay* would also match the canonical requeue-with-delay template
     // (When_requeuing_a_failed_message_with_delay_should_redeliver_after_delay).
     //
     // ADR 0066 listed four. The fourth,
     // When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue, is deliberately
     // NOT here: retiring it removed the only coverage of requeue-budget exhaustion reaching the
     // dead-letter queue, which is a behaviour distinct from an explicit Reject and the one ADR 0040
-    // and ADR 0046 actually specify. It has returned as the canonical FR-23 behaviour - ledger
+    // and ADR 0046 actually specify. It has returned as the canonical budget-exhaustion behaviour - ledger
     // gated like every other, rather than gated on a per-transport capability flag - so asserting
     // its absence would now assert the coverage gap rather than the cleanup.
     private static readonly string[] LEGACY_TEMPLATE_NAMES =
@@ -38,8 +38,8 @@ public class WhenLegacyTemplatesDeletedShouldLeaveNoTemplateOrGeneratedCopy
     ];
 
     // Substrings in a template name that indicate it purports to exercise delayed requeue.
-    // Templates with these substrings must pass a non-null TimeSpan to Requeue/RequeueAsync (AC-12).
-    // Note: the canonical FR-22 and FR-15 templates legitimately call Requeue without a positive delay
+    // Templates with these substrings must pass a non-null TimeSpan to Requeue/RequeueAsync.
+    // Note: the canonical plain-requeue and zero-delay templates legitimately call Requeue without a delay
     // (plain requeue and zero-delay, respectively), and neither contains the word "delay" in its name.
     // This check is scoped to templates whose name implies delayed requeue behavior.
     private static readonly string[] DELAYED_REQUEUE_NAME_INDICATORS =
@@ -86,7 +86,7 @@ public class WhenLegacyTemplatesDeletedShouldLeaveNoTemplateOrGeneratedCopy
                 found.Add(proactorPath);
         }
 
-        // Assert — no legacy template files remain (FR-10(3), FR-12, FR-19)
+        // Assert — no legacy template files remain
         Assert.True(found.Count == 0,
             $"Legacy template files still present — delete them (ADR 0066 Step C):\n" +
             string.Join("\n", found.Select(f => $"  {f}")));
@@ -114,7 +114,7 @@ public class WhenLegacyTemplatesDeletedShouldLeaveNoTemplateOrGeneratedCopy
             }
         }
 
-        // Assert — no generated copies remain (AC-10(b), AC-12, AC-22)
+        // Assert — no generated copies remain
         Assert.True(found.Count == 0,
             $"Generated copies of legacy templates still present — manually delete them " +
             $"(ADR 0066 Step C; the generator never deletes stale files):\n" +
@@ -145,7 +145,7 @@ public class WhenLegacyTemplatesDeletedShouldLeaveNoTemplateOrGeneratedCopy
 
             // The template must call Requeue/RequeueAsync with a non-null TimeSpan argument.
             // A call like _channel.Requeue(msg) or channel.RequeueAsync(msg) with no TimeSpan
-            // argument is the defect FR-12 addressed. We accept TimeSpan.FromSeconds(...)
+            // argument is the defect this guard addresses. We accept TimeSpan.FromSeconds(...)
             // and TimeSpan.Zero as non-null, but a bare Requeue(msg) / Requeue(msg, null)
             // with no TimeSpan argument is a violation.
             var hasRequeue = content.Contains("Requeue(") || content.Contains("RequeueAsync(");
@@ -162,7 +162,7 @@ public class WhenLegacyTemplatesDeletedShouldLeaveNoTemplateOrGeneratedCopy
             }
         }
 
-        // Assert — every delayed-requeue template passes a TimeSpan (AC-12, FR-12)
+        // Assert — every delayed-requeue template passes a TimeSpan
         Assert.True(violations.Count == 0,
             $"Messaging-gateway template(s) that purport to exercise delayed requeue call " +
             $"Requeue/RequeueAsync without a non-null TimeSpan:\n" +
