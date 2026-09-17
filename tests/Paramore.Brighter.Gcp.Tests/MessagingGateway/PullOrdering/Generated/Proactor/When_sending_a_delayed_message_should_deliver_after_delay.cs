@@ -63,12 +63,12 @@ public class WhenSendingADelayedMessageShouldDeliverAfterDelayAsync : IAsyncLife
         // Assert — before-D arm: a single bounded receive, deliberately shorter than the 5 s delay,
         // should yield MT_NONE. The window must be less than the delay so a correctly-delayed message
         // is not observed here, yet long enough to catch a gateway that ignores the delay and delivers
-        // immediately (AC-9, AC-20 exemption: this is the lower-bound negative assertion, NOT the retry loop)
+        // immediately. A single receive, not a poll loop: this asserts the message is absent.
         var beforeDelay = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(2000));
         Assert.Equal(MessageType.MT_NONE, beforeDelay.Header.MessageType);
 
-        // Assert — after-D arm: bounded retry loop (500 ms poll, 30 s ceiling — NFR-2, AC-20)
-        // waits for the message to arrive after the delay elapses
+        // Assert — once the delay has elapsed: poll every 500 ms, giving up after 30 s, and
+        // wait for the message to arrive
         var received = new Message();
         var stopwatch = Stopwatch.StartNew();
         while (stopwatch.Elapsed < TimeSpan.FromSeconds(30))

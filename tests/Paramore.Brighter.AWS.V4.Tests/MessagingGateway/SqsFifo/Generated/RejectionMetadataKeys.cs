@@ -14,7 +14,7 @@ namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SqsFifo;
 /// returning <c>string.Empty</c> for every key (never <c>null</c>). Reject-to-DLQ/invalid
 /// behaviours then assert the message's arrival at the dead-letter/invalid destination
 /// unconditionally, and skip the metadata sub-assertions when the provider does not stamp
-/// metadata (the FR-8 relaxation for native-dead-letter transports).
+/// metadata (the relaxation granted to native-dead-letter transports).
 /// </summary>
 public sealed record RejectionMetadataKeys(
     string OriginalTopic,

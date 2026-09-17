@@ -21,7 +21,7 @@ namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SnsFifo;
 /// </summary>
 /// <remarks>
 /// <para>
-/// FR-23 asks whether a message that exhausts its delivery budget reaches the dead-letter queue.
+/// The behaviour under test: a message that exhausts its delivery budget reaches the dead-letter queue.
 /// That budget is enforced by the pump - <see cref="global::Paramore.Brighter.ServiceActivator.Reactor"/> and <see cref="global::Paramore.Brighter.ServiceActivator.Proactor"/> call
 /// <c>UpdateHandledCount</c>, test <c>HandledCountReached(RequeueCount)</c>, and reject with
 /// <see cref="RejectionReason.DeliveryError"/> when it is spent - and by nothing else. A test that

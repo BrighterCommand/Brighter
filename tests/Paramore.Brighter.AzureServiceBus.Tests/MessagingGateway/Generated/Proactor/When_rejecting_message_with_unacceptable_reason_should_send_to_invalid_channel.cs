@@ -66,7 +66,7 @@ public class WhenRejectingMessageWithUnacceptableReasonShouldSendToInvalidChanne
 
         await _channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.Unacceptable, "Test unacceptable message"));
 
-        // Assert — invalid-channel arrival: bounded retry loop (60 s ceiling, 500 ms between attempts — NFR-2, AC-5)
+        // Assert — the message reaches the invalid-message channel: poll every 500 ms, give up after 60 s
         var invalidMessage = new Message();
         var stopwatch = Stopwatch.StartNew();
         while (stopwatch.Elapsed < TimeSpan.FromSeconds(60))
@@ -87,7 +87,8 @@ public class WhenRejectingMessageWithUnacceptableReasonShouldSendToInvalidChanne
         Assert.True(invalidMessage.Header.Bag.ContainsKey(keys.RejectionReason));
         Assert.Equal(RejectionReason.Unacceptable.ToString(), invalidMessage.Header.Bag[keys.RejectionReason].ToString());
 
-        // Assert — DLQ must be empty: single bounded receive (AC-20 exemption, AC-5)
+        // Assert — nothing reached the dead-letter queue. A single receive rather than a poll
+        // loop: the claim is that no message arrives, so polling could only wait out the ceiling.
         var dlqMessage = await _messageGatewayProvider.GetMessageFromDeadLetterQueueAsync(_subscription);
         Assert.Equal(MessageType.MT_NONE, dlqMessage.Header.MessageType);
     }

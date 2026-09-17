@@ -42,13 +42,14 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync :
     }
 
     /// <summary>
-    /// FR-23: a message whose handler keeps deferring is requeued until its delivery budget is
+    /// A message whose handler keeps deferring is requeued until its delivery budget is
     /// exhausted, and then lands on the dead-letter queue.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Distinct from FR-4, which is an explicit Reject. Nothing here ever rejects the message: the
-    /// budget runs out on its own, which is the behaviour ADR 0040 and ADR 0046 specify.
+    /// Distinct from the rejection behaviours, which reject explicitly. Nothing here ever rejects
+    /// the message: the budget runs out on its own, which is the behaviour ADR 0040 and ADR 0046
+    /// specify.
     /// </para>
     /// <para>
     /// This behaviour drives a real Brighter pump rather than calling Requeue on the channel. The
@@ -91,7 +92,7 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync :
 
         var pumping = Task.Factory.StartNew(() => pump.Run(), TaskCreationOptions.LongRunning);
 
-        // Assert — bounded retry loop: 60 s ceiling, 500 ms between attempts (NFR-2, AC-20, AC-25)
+        // Assert — the message reaches the dead-letter queue: poll every 500 ms, give up after 60 s
         var dlqMessage = new Message();
         var stopwatch = Stopwatch.StartNew();
         while (stopwatch.Elapsed < TimeSpan.FromSeconds(60))

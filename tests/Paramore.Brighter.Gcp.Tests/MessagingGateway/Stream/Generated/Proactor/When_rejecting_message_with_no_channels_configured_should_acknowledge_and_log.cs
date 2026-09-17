@@ -44,7 +44,7 @@ public class WhenRejectingMessageWithNoChannelsConfiguredShouldAcknowledgeAndLog
     [Fact(Skip = "Deferred: #4240 — no channels configured: acknowledge and log not yet conformant for GCP / Stream (maintainer sign-off)")]
     public async Task When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log_async()
     {
-        // Arrange — neither DLQ nor invalid channel configured (FR-7, AC-7, FR-1(2))
+        // Arrange — neither a dead-letter queue nor an invalid-message channel is configured
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
         _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!,
             _messageGatewayProvider.GetOrCreateChannelName(),
@@ -62,16 +62,16 @@ public class WhenRejectingMessageWithNoChannelsConfiguredShouldAcknowledgeAndLog
         await _producer.SendAsync(message1);
         await _producer.SendAsync(message2);
 
-        // Act — receive M1 and reject it with DeliveryError; no DLQ or invalid channel configured
+        // Act — receive the first message and reject it; no destination is configured for it
         var received1 = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
         Assert.NotEqual(MessageType.MT_NONE, received1.Header.MessageType);
 
         var rejected = await _channel.RejectAsync(received1, new MessageRejectionReason(RejectionReason.DeliveryError, "Test rejection with no channels configured"));
 
-        // Assert — RejectAsync returns true: message is removed, not redelivered (AC-7)
+        // Assert — RejectAsync returns true: the message is removed, not redelivered
         Assert.True(rejected, "RejectAsync should return true when no channels are configured");
 
-        // Assert — bounded retry loop: M2 received next without blocking (NFR-2, AC-7, AC-20)
+        // Assert — the message queued behind it arrives next, without blocking
         var received2 = new Message();
         var stopwatch = Stopwatch.StartNew();
         while (stopwatch.Elapsed < TimeSpan.FromSeconds(30))

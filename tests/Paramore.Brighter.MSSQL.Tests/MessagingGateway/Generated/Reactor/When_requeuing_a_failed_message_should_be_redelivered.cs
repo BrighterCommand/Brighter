@@ -61,7 +61,7 @@ public class WhenRequeuingAFailedMessageShouldBeRedelivered : IDisposable
         var requeued = _channel.Requeue(received);
         Assert.True(requeued);
 
-        // Assert — bounded retry loop: 500 ms poll, 30 s ceiling (NFR-2, AC-20, AC-25)
+        // Assert — the requeued message is redelivered: poll every 500 ms, give up after 30 s
         var redelivered = new Message();
         var stopwatch = Stopwatch.StartNew();
         while (stopwatch.Elapsed < TimeSpan.FromSeconds(30))

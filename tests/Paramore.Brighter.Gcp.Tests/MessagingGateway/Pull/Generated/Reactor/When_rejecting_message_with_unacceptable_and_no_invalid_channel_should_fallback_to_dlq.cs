@@ -39,7 +39,7 @@ public class WhenRejectingMessageWithUnacceptableAndNoInvalidChannelShouldFallba
     [Fact(Skip = "Deferred: #4240 — fallback: unacceptable, DLQ-only not yet conformant for GCP / Pull (maintainer sign-off)")]
     public void When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq()
     {
-        // Arrange — DLQ configured only; no invalid channel (FR-6, AC-6, FR-1(2))
+        // Arrange — a dead-letter queue is configured, but no invalid-message channel
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
         _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!,
             _messageGatewayProvider.GetOrCreateChannelName(),
@@ -60,7 +60,7 @@ public class WhenRejectingMessageWithUnacceptableAndNoInvalidChannelShouldFallba
 
         _channel.Reject(received, new MessageRejectionReason(RejectionReason.Unacceptable, "Test unacceptable message — no invalid channel"));
 
-        // Assert — DLQ arrival: bounded retry loop (60 s ceiling, 500 ms between attempts — NFR-2, AC-6)
+        // Assert — the message reaches the dead-letter queue: poll every 500 ms, give up after 60 s
         var dlqMessage = new Message();
         var stopwatch = Stopwatch.StartNew();
         while (stopwatch.Elapsed < TimeSpan.FromSeconds(60))

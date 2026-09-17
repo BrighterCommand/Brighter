@@ -60,10 +60,10 @@ public interface IAmAMessageGatewayProactorProvider
     /// </summary>
     /// <remarks>
     /// The retry belongs to the caller, not here. A test polls this in a bounded loop whose ceiling
-    /// and interval NFR-2 states, and an implementation that also retries internally overruns that
-    /// ceiling - leaving the caller's loop to re-test an expired stopwatch and never run a second
-    /// iteration - while making AC-20's absence checks wait out the full bound on every run, for a
-    /// message asserted never to arrive. Enforced by <c>DeadLetterPollContractAudit</c>.
+    /// and interval the test itself states, and an implementation that also retries internally
+    /// overruns that ceiling - leaving the caller's loop to re-test an expired stopwatch and never
+    /// run a second iteration - while making the checks that assert a message never arrives wait
+    /// out the full bound on every run. Enforced by <c>DeadLetterPollContractAudit</c>.
     /// </remarks>
     /// <param name="subscription">The subscription configuration.</param>
     /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
@@ -78,10 +78,10 @@ public interface IAmAMessageGatewayProactorProvider
     /// </summary>
     /// <remarks>
     /// The retry belongs to the caller, not here. A test polls this in a bounded loop whose ceiling
-    /// and interval NFR-2 states, and an implementation that also retries internally overruns that
-    /// ceiling - leaving the caller's loop to re-test an expired stopwatch and never run a second
-    /// iteration - while making AC-20's absence checks wait out the full bound on every run, for a
-    /// message asserted never to arrive. Enforced by <c>DeadLetterPollContractAudit</c>.
+    /// and interval the test itself states, and an implementation that also retries internally
+    /// overruns that ceiling - leaving the caller's loop to re-test an expired stopwatch and never
+    /// run a second iteration - while making the checks that assert a message never arrives wait
+    /// out the full bound on every run. Enforced by <c>DeadLetterPollContractAudit</c>.
     /// </remarks>
     /// <param name="subscription">The subscription configuration.</param>
     /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>

@@ -44,7 +44,7 @@ public class WhenRejectingMessageWithUnknownReasonShouldSendToDlqAsync : IAsyncL
     [Fact(Skip = "Deferred: #4240 — reject with None reason to DLQ not yet conformant for GCP / Pull (maintainer sign-off)")]
     public async Task When_rejecting_message_with_unknown_reason_should_send_to_dlq_async()
     {
-        // Arrange — both DLQ and invalid channel configured (FR-17, AC-18, FR-1(2))
+        // Arrange — both a dead-letter queue and an invalid-message channel are configured
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
         _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!,
             _messageGatewayProvider.GetOrCreateChannelName(),
@@ -66,7 +66,7 @@ public class WhenRejectingMessageWithUnknownReasonShouldSendToDlqAsync : IAsyncL
 
         await _channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.None, "Test unknown rejection reason"));
 
-        // Assert — DLQ arrival: bounded retry loop (60 s ceiling, 500 ms between attempts — NFR-2, AC-18)
+        // Assert — the message reaches the dead-letter queue: poll every 500 ms, give up after 60 s
         var dlqMessage = new Message();
         var stopwatch = Stopwatch.StartNew();
         while (stopwatch.Elapsed < TimeSpan.FromSeconds(60))
@@ -92,7 +92,8 @@ public class WhenRejectingMessageWithUnknownReasonShouldSendToDlqAsync : IAsyncL
             Assert.Equal(_publication.Topic!.Value, dlqMessage.Header.Bag[keys.OriginalTopic].ToString());
         }
 
-        // Assert — invalid channel must be empty: single bounded receive (AC-20 exemption, AC-18)
+        // Assert — nothing reached the invalid-message channel. A single receive rather than a
+        // poll loop: the claim is that no message arrives, so polling would wait out the ceiling.
         var invalidMessage = await _messageGatewayProvider.GetMessageFromInvalidChannelAsync(_subscription);
         Assert.Equal(MessageType.MT_NONE, invalidMessage.Header.MessageType);
     }

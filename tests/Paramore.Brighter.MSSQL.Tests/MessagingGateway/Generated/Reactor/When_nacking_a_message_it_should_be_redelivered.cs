@@ -54,13 +54,13 @@ public class WhenNackingAMessageItShouldBeRedelivered : IDisposable
 
         _producer.Send(message);
 
-        // Act — receive the message and nack it (FR-16, AC-17)
+        // Act — receive the message and nack it
         var received = _channel.Receive(TimeSpan.FromMilliseconds(300));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
         _channel.Nack(received);
 
-        // Assert — bounded retry loop: 500 ms poll, 30 s ceiling; nacked message redelivered (NFR-2, AC-17, AC-20)
+        // Assert — the nacked message is redelivered: poll every 500 ms, give up after 30 s
         var redelivered = new Message();
         var stopwatch = Stopwatch.StartNew();
         while (stopwatch.Elapsed < TimeSpan.FromSeconds(30))
@@ -79,7 +79,8 @@ public class WhenNackingAMessageItShouldBeRedelivered : IDisposable
     [Fact(Skip = "Deferred: #4240 — Nack redelivers not yet conformant for MSSQL / MSSQLMessagingGateway (maintainer sign-off)")]
     public void When_nacking_first_of_two_messages_should_redeliver_nacked_then_receive_second()
     {
-        // Arrange — two queued messages: M1 is nacked and redelivered; M2 is not blocked (FR-16, AC-17)
+        // Arrange — two queued messages: the first is nacked and must come back, and the one
+        // queued behind it must not be blocked while that happens
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
         _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!,
             _messageGatewayProvider.GetOrCreateChannelName(),
@@ -97,13 +98,13 @@ public class WhenNackingAMessageItShouldBeRedelivered : IDisposable
         _producer.Send(message1);
         _producer.Send(message2);
 
-        // Act — receive M1 and nack it
+        // Act — receive the first message and nack it
         var received1 = _channel.Receive(TimeSpan.FromMilliseconds(300));
         Assert.NotEqual(MessageType.MT_NONE, received1.Header.MessageType);
 
         _channel.Nack(received1);
 
-        // Assert — bounded retry loop: M1 redelivered before M2 (AC-17, AC-20)
+        // Assert — the nacked message comes back before the one queued behind it
         var redelivered = new Message();
         var stopwatch = Stopwatch.StartNew();
         while (stopwatch.Elapsed < TimeSpan.FromSeconds(30))
@@ -120,7 +121,7 @@ public class WhenNackingAMessageItShouldBeRedelivered : IDisposable
 
         _channel.Acknowledge(redelivered);
 
-        // Assert — bounded retry loop: M2 received next, not blocked behind redelivered M1 (AC-17, AC-20)
+        // Assert — the following message arrives next, not blocked behind the redelivered one
         var received2 = new Message();
         var stopwatch2 = Stopwatch.StartNew();
         while (stopwatch2.Elapsed < TimeSpan.FromSeconds(30))

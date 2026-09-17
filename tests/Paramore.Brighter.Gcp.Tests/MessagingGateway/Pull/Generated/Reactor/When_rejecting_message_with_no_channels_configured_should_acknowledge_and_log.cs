@@ -38,7 +38,7 @@ public class WhenRejectingMessageWithNoChannelsConfiguredShouldAcknowledgeAndLog
     [Fact]
     public void When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log()
     {
-        // Arrange — neither DLQ nor invalid channel configured (FR-7, AC-7, FR-1(2))
+        // Arrange — neither a dead-letter queue nor an invalid-message channel is configured
         _publication = _messageGatewayProvider.CreatePublication(_messageGatewayProvider.GetOrCreateRoutingKey());
         _subscription = _messageGatewayProvider.CreateSubscription(_publication.Topic!,
             _messageGatewayProvider.GetOrCreateChannelName(),
@@ -56,16 +56,16 @@ public class WhenRejectingMessageWithNoChannelsConfiguredShouldAcknowledgeAndLog
         _producer.Send(message1);
         _producer.Send(message2);
 
-        // Act — receive M1 and reject it with DeliveryError; no DLQ or invalid channel configured
+        // Act — receive the first message and reject it; no destination is configured for it
         var received1 = _channel.Receive(TimeSpan.FromMilliseconds(5000));
         Assert.NotEqual(MessageType.MT_NONE, received1.Header.MessageType);
 
         var rejected = _channel.Reject(received1, new MessageRejectionReason(RejectionReason.DeliveryError, "Test rejection with no channels configured"));
 
-        // Assert — Reject returns true: message is removed, not redelivered (AC-7)
+        // Assert — Reject returns true: the message is removed, not redelivered
         Assert.True(rejected, "Reject should return true when no channels are configured");
 
-        // Assert — bounded retry loop: M2 received next without blocking (NFR-2, AC-7, AC-20)
+        // Assert — the message queued behind it arrives next, without blocking
         var received2 = new Message();
         var stopwatch = Stopwatch.StartNew();
         while (stopwatch.Elapsed < TimeSpan.FromSeconds(30))

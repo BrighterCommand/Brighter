@@ -65,7 +65,7 @@ public class WhenRejectingMessageWithDeliveryErrorShouldSendToDlqAsync : IAsyncL
 
         await _channel.RejectAsync(received, new MessageRejectionReason(RejectionReason.DeliveryError, "Test delivery error"));
 
-        // Assert — bounded retry loop: 60 s ceiling, 500 ms between attempts (NFR-2, AC-4)
+        // Assert — the message reaches the dead-letter queue: poll every 500 ms, give up after 60 s
         var dlqMessage = new Message();
         var stopwatch = Stopwatch.StartNew();
         while (stopwatch.Elapsed < TimeSpan.FromSeconds(60))

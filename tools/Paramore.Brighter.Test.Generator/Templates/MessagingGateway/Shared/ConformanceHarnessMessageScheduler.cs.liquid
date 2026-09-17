@@ -13,17 +13,17 @@ using Paramore.Brighter;
 namespace {{ Namespace }}.MessagingGateway{{ Prefix }};
 
 /// <summary>
-/// A minimal wall-clock message scheduler for the conformance harness (FR-2, FR-9).
+/// A minimal wall-clock message scheduler for the conformance harness.
 /// </summary>
 /// <remarks>
 /// <para>
 /// A transport with no native delayed delivery honours a requested delay by delegating to the
-/// scheduler seam: a producer's <c>SendWithDelay</c> for FR-9, and the consumer factory's
-/// scheduler for FR-2's delayed requeue. The conformance suite tests the <em>gateway's</em>
+/// scheduler seam: a producer's <c>SendWithDelay</c> for a delayed send, and the consumer
+/// factory's scheduler for a delayed requeue. The conformance suite tests the <em>gateway's</em>
 /// delay-delegation contract, not Brighter's scheduler implementations (which have their own
 /// tests), so the harness supplies a scheduler that honours the delay by wall-clock and
 /// re-publishes the message to its topic once the delay elapses - exactly the
-/// universal-by-wall-clock behaviour FR-2 and FR-9 assert.
+/// universal-by-wall-clock behaviour the delayed-send and delayed-requeue tests assert.
 /// </para>
 /// <para>
 /// Everything that varies between transports is in <paramref name="republish"/>: the caller builds
@@ -31,7 +31,7 @@ namespace {{ Namespace }}.MessagingGateway{{ Prefix }};
 /// producer, a producer registry, or <c>null</c> when there is nothing to dispose. Everything
 /// left - timers, scheduler identity, cancellation, failure reporting and disposal - is the same
 /// for every transport, so it lives here and is proved once. The same instance is shared by a
-/// provider's producer path (FR-9) and its consumer path (FR-2).
+/// provider's producer path (delayed send) and its consumer path (delayed requeue).
 /// </para>
 /// <para>
 /// No broker is needed to exercise the machinery: a caller supplying its own delegate drives the
@@ -102,7 +102,7 @@ public sealed class ConformanceHarnessMessageScheduler(Func<Message, IDisposable
         CancellationToken cancellationToken = default
     ) => Task.FromResult(Schedule(message, at));
 
-    // ReScheduler is not exercised by the FR-2 / FR-9 conformance behaviours.
+    // ReScheduler is not exercised by the delayed-send or delayed-requeue behaviours.
 
     /// <inheritdoc />
     public bool ReScheduler(string schedulerId, DateTimeOffset at) => false;
@@ -219,7 +219,7 @@ public sealed class ConformanceHarnessMessageScheduler(Func<Message, IDisposable
             // Redelivery is best-effort, so a broker error does not fail the harness - but it must
             // not be silent either. Unlogged, a scheduler that failed to republish and a transport
             // that ignored the delay produce the same red test: the after-delay arm timing out with
-            // no message and no exception. The FR-2 and FR-9 verdicts in the conformance ledger are
+            // no message and no exception. The delayed-send and delayed-requeue verdicts in the ledger are
             // read off those results, so the two have to be tellable apart.
             Console.Error.WriteLine(
                 $"ConformanceHarnessMessageScheduler: republish of {message.Id} to {message.Header.Topic} failed; "

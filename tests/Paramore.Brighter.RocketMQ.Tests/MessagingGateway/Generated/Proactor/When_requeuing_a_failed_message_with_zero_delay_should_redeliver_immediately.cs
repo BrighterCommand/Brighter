@@ -60,7 +60,7 @@ public class WhenRequeuingAFailedMessageWithZeroDelayShouldRedeliverImmediatelyA
 
         await _producer.SendAsync(message);
 
-        // Act — receive and requeue with explicit TimeSpan.Zero (FR-15, AC-16)
+        // Act — receive the message and requeue it with an explicit TimeSpan.Zero
         var received = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(300));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
 
@@ -68,9 +68,9 @@ public class WhenRequeuingAFailedMessageWithZeroDelayShouldRedeliverImmediatelyA
         var requeued = await _channel.RequeueAsync(received, TimeSpan.Zero);
         Assert.True(requeued);
 
-        // Assert — bounded retry loop (500 ms poll, 30 s ceiling — NFR-2, AC-20, AC-16).
-        // TimeSpan.Zero must not be special-cased: the message arrives on the first iteration,
-        // and elapsed time from the Requeue call to receipt must be less than 5 s (AC-16).
+        // Assert — poll every 500 ms, giving up after 30 s. TimeSpan.Zero must not be
+        // special-cased: the message arrives on the first iteration, and the time from the
+        // Requeue call to receipt must be less than 5 s.
         var redelivered = new Message();
         while (stopwatch.Elapsed < TimeSpan.FromSeconds(30))
         {
