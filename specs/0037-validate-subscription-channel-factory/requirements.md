@@ -356,6 +356,8 @@ Given the `CombinedChannelFactory` of AC-6 and a plain `Subscription<FakeChannel
 When the rule is evaluated,
 Then exactly one `Error` is produced for `greeting-sub`, whose `Message` contains the display names of both inner factories in constructor order, and does not name `Paramore.Brighter.CombinedChannelFactory` as the type the subscription will be handed.
 
+This configuration is flat, so the prohibition binds without exception. **D5** concerns only the *nested* case of AC-10 and does not relax this criterion: any wording of the message must continue to satisfy it.
+
 **AC-8** (FR-3 direct arm) — *A user subclass of a channel factory is accepted.*
 Given a `DerivedChannelFactory` (deriving from `DeclaredChannelFactory`) set as `options.DefaultChannelFactory`, and a `DeclaringSubscription` with `ChannelFactory` null,
 When the rule is evaluated,
@@ -370,6 +372,8 @@ Then exactly one `Error` is produced — and, as a companion assertion, calling 
 Given `options.DefaultChannelFactory = new CombinedChannelFactory([new CombinedChannelFactory([new DeclaredChannelFactory()])])` and a `DeclaringSubscription`,
 When the rule is evaluated,
 Then exactly one `Error` is produced, matching the runtime behaviour of `CombinedChannelFactory`, which also fails to route this subscription.
+
+Per **D5**, the message for this configuration may name `Paramore.Brighter.CombinedChannelFactory` among the candidate types even though it does not route. That is accepted; this criterion asserts the verdict, not the wording.
 
 **AC-10a** (FR-3 null `D`, direct arm, C-13) — *A null declared type is a mismatch in the direct arm.*
 Given a `NullDeclaringSubscription` named `null-sub` with `ChannelFactory` null and `options.DefaultChannelFactory = new DeclaredChannelFactory()`,
@@ -549,11 +553,16 @@ Then they all pass.
   - **C-9** gains one double, `NullDeclaringSubscription`.
   - **AC-10a**, **AC-10b** and **AC-10c** are new; **AC-15** now defines "token" as a word-boundary match and pins the assertion to a regex.
 
+  A second, narrower re-opening followed the round-5 review, which found ADR 0072 citing a **D5** that this document had never recorded — and using it to bound an approved acceptance criterion. Restricted to exactly that:
+  - **D5** is added to *Maintainer decisions already taken*, stating the nested-composite rendering that is accepted and, explicitly, that it licenses nothing about AC-7.
+  - **AC-7** and **AC-10** gain a cross-reference to D5. No Given/When/Then is altered: AC-7's assertion and AC-10's verdict are unchanged.
+
 - **Origin.** Issue #4334, prompted by #4331, in which two sample applications had shipped with `Subscription<T>` where an `MsSqlSubscription<T>` was required and had never been able to start. Compilation succeeded, CI compiled the samples, and nothing detected the defect until someone tried to run them.
 - **Maintainer decisions already taken** (not to be re-opened by design or implementation):
   - **D1** — severity is `ValidationSeverity.Error` (see C-1).
   - **D3** — a subscription type defined *outside* this repository that declares no `ChannelFactoryType` override will be an `Error` that blocks startup, and that is **accepted** rather than softened (C-10). Rationale: custom transports are rare, the fix is one line, and softening the rule for an unverifiable population would weaken it exactly where the AWS SQS and Postgres defects lived until this specification. Raised by the round-2 adversarial review; decided by the maintainer.
   - **D4** — a `ChannelFactoryType` override that returns `null` is an `Error` in **both** arms, not skipped (FR-3's null-`D` clause). The combined arm's verdict already followed from FR-3's *iff*; the direct arm's is new breakage, accepted as C-13. Raised by the round-2 adversarial review of ADR 0072; decided by the maintainer.
+  - **D5** — the nested-composite message may name `Paramore.Brighter.CombinedChannelFactory` among the types the subscription will be handed, even though that type does not in fact route. For `CombinedChannelFactory([CombinedChannelFactory([…])])` the inner composite's own type is what `FactoryTypes` reports, so it is what FR-5's `{F-list}` renders; a subscription declaring it is selected by the outer composite and then rejected by the inner one. Filtering it out would leave an empty candidate set and select **T4**, whose wording says *less* about what is actually configured, so the rendering is **accepted** rather than special-cased. This is a message-quality limitation, not a change to any verdict: AC-10's `Error` is unaffected, and AC-7 continues to hold in its own non-nested configuration — D5 licenses nothing about AC-7. Raised by the round-2 adversarial review of ADR 0072, re-examined in round 3; decided by the maintainer.
   - **D2** — correcting every wrong or missing `ChannelFactoryType` declaration ships with the rule, in this specification (FR-7 to FR-11), rather than being deferred. Originally scoped to the two *wrong* overrides (`GcpPubSubSubscription`, `MqttSubscription`); the adversarial review of these requirements found three transports with **no** override at all (`SqsSubscription` in both AWS packages, `PostgresSubscription`), which under D1 would have blocked working hosts. The maintainer widened D2 to cover all five.
 - **Grounding references** (HOW belongs in the ADR):
   - `src/Paramore.Brighter/Subscription.cs:48` (`ChannelFactory`), `:172` (`ChannelFactoryType`).
