@@ -180,8 +180,9 @@ channel goes on to receive the next message without blocking. The asserted outco
 acknowledge-and-continue; the `_and_log` suffix in the mandated test name (NFR-1) is retained for
 continuity with the hand-written tests, and logging itself is not asserted.
 
-*Example:* send `M1` then `M2`; receive `M1`; `Reject(M1, DeliveryError)` returns `true`; the next
-receive yields `M2`.
+*Example:* send `M1` and `M2`; receive whichever arrives first, call it `MR`;
+`Reject(MR, DeliveryError)` returns `true`; a bounded retry loop then yields the other message, and
+`MR` does not reappear. On an ordered transport `MR` is `M1`, but the test does not require it.
 
 **FR-8 — Rejection metadata stamping.**
 Generate a test proving that a rejected message routed to the DLQ or invalid channel carries the
@@ -517,7 +518,10 @@ design decisions recorded in ADR 0067.
   FR-9, FR-15, FR-16 and FR-22: **an arrival retry loop polls at a 500 ms interval, up to a 30 s
   ceiling for a channel arrival and a 60 s ceiling for a rejection-destination arrival** (the
   dead-letter queue or the invalid-message channel), returning as soon as a message arrives and
-  failing if the ceiling is reached with none. Rejection destinations get the longer bound because
+  failing if the ceiling is reached with none. Where an acceptance criterion names a **target**
+  rather than any arrival (AC-7's "the other message", AC-17's "both ids"), the loop returns as soon
+  as that target is satisfied, acknowledging non-matching receipts so a head-of-line-blocking
+  transport can make progress; the ceiling and poll interval are unchanged. Rejection destinations get the longer bound because
   reaching one is a broker-side move that follows a delivery budget being spent, not a single
   redelivery.
   The **positive delay** used by the FR-2 and FR-9 tests is **5 s**, comfortably inside the 30 s
@@ -540,6 +544,38 @@ design decisions recorded in ADR 0067.
   native versus Brighter fallback. It asserts only that the observable behaviour holds, and only
   against the channel and producer surfaces. The related prohibition on reintroducing capability
   gates lives in FR-10 and OOS-1.
+- **NFR-4 (Ordering neutrality).** The suite MUST NOT assert the **relative delivery order** of two
+  messages, and MUST NOT assume it. Ordering is a property of the transport, not a Brighter
+  behaviour, and the targeted transports do not share one: some guarantee FIFO per queue or
+  partition, some guarantee it only within a declared group or ordering key, and some — SNS/SQS
+  Standard and GCP Pub/Sub without an ordering key — guarantee nothing. A multi-message arm MUST
+  identify each received message **by id** against the messages it sent, and state its assertions
+  over the **set** of ids observed within the NFR-2 bound. Where an arm must prove a *redelivery*, it
+  does so by observing an id **a second time after** the release (`Nack`/`Requeue`), never by its
+  position in the sequence. Transports are also at-least-once unless they state otherwise, so arms
+  MUST tolerate repeat receipts; an exact-count assertion over received messages is forbidden.
+  This is a special case of NFR-3: delivery order is a transport mechanism, and the suite does not
+  assert mechanism.
+
+  **A guarantee the transport *does* offer is still void across a delay.** Where a delay is honoured
+  by delegating to the scheduler seam — the universal fallback for a transport with no native
+  delayed delivery (FR-2, FR-9) — the scheduler **re-publishes** the message once the delay elapses.
+  A re-publish is a **new enqueue**: it lands at the tail of the queue, partition or message group,
+  behind anything sent in the interim. So a delayed requeue or delayed send **de-orders the message
+  relative to its peers even on a transport that guarantees ordering**, and even within a FIFO group
+  or a single partition, because the guarantee covers the order of enqueues and the re-publish *is*
+  one. No arm may assume a delayed message keeps its position. **This is a property of the delay
+  mechanism, not of any transport**, so it holds for every configuration — including those that
+  guarantee ordering for plain delivery.
+
+  ⚠️ **Owed:** a per-configuration statement of which transports guarantee ordering for plain
+  delivery. Verified so far: `AWS{,.V4} / Sns|SqsStandard` **none**; `GCP / Pull` and `GCP / Stream`
+  **none**; `GCP / PullOrdering` and `StreamOrdering` **per ordering key**; `AWS{,.V4} /
+  Sns|SqsFifo` **per group, but harness-induced** — `FifoMessageBuilder` stamps one partition key per
+  *builder instance*, so it is a property of the test harness, not of the configuration. The
+  remaining configurations (Kafka, RMQ ×3, Redis, Postgres, MSSQL, AzureServiceBus, RocketMQ, MQTT)
+  are **not yet verified against their provider code** and MUST NOT be recorded as ordered until they
+  are. Publishing an unverified guarantee here would repeat the defect this NFR exists to prevent.
 
 ### Constraints and Assumptions
 
@@ -632,8 +668,11 @@ faces of that boundary — mechanism proofs and internal-mechanics proofs respec
   `channel.Reject(message, Unacceptable)` is called, *then* the DLQ consumer receives the message
   with rejection reason `"Unacceptable"`.
 - **AC-7 (FR-7).** *Given* a channel with neither DLQ nor invalid channel and two queued messages
-  `M1` and `M2`, *when* `channel.Reject(M1, DeliveryError)` is called, *then* it returns `true` and
-  the next receive yields `M2`.
+  `M1` and `M2`, *when* the channel receives one of them — whichever the transport delivers first,
+  call it `MR` — and `channel.Reject(MR, DeliveryError)` is called, *then* it returns `true`; and a
+  bounded receive-retry loop (NFR-2) yields the **other** message within the ceiling, with `MR`'s id
+  absent from every receipt in that window. **Which of the two is delivered first is not asserted:
+  ordering is a transport property, not a Brighter behaviour (NFR-4).**
 - **AC-8 (FR-8).** *Given* a rejected message on the DLQ, *when* its header bag is inspected using
   the provider-supplied key names, *then* the universal semantic set is present and correct:
   original topic equal to the data topic, original message type equal to `"MT_COMMAND"` (the test
@@ -697,8 +736,14 @@ faces of that boundary — mechanism proofs and internal-mechanics proofs respec
   the same call and are asserted by AC-25, not here.
 - **AC-17 (FR-16).** *Given* a received message `M`, *when* `channel.Nack(M)` or `NackAsync(M)` is
   called, *then* a subsequent receive within the bounded retry loop yields a message with `M`'s id
-  and body; and, given a second queued message `M2`, after nacking `M` the redelivered `M` is
-  received and then `M2` is received.
+  and body. *And*, given two queued messages `M1` and `M2`, *when* the channel receives one of them —
+  whichever the transport delivers first, call it `MN` — and nacks it, *then* a bounded
+  receive-retry loop (NFR-2), **acknowledging each message it receives**, observes **both** ids
+  within the ceiling: a **second** receipt of `MN`'s id, which is a redelivery by definition because
+  `MN` was already received once and released; and a receipt of the other message's id, proving it
+  was not blocked behind the redelivery. **The two may arrive in either order: ordering is a
+  transport property, not a Brighter behaviour (NFR-4).** Repeat receipts beyond the first of each id
+  are ignored, so an at-least-once transport does not fail the arm.
 - **AC-18 (FR-17).** *Given* a channel with a dead-letter routing key, *when*
   `channel.Reject(M, new MessageRejectionReason(RejectionReason.None, "..."))` is called, *then* the
   DLQ consumer receives the message with rejection reason `"None"` and original-topic equal to the
