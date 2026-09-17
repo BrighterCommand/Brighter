@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
@@ -136,5 +137,6 @@ public class FactoryErrorHandlingTests
         public void Add(IHandleRequests instance) { }
         public void Add(IHandleRequestsAsync instance) { }
         public void Dispose() => PipelineScope?.Dispose();
+        public ValueTask DisposeAsync() => PipelineScope?.DisposeAsync() ?? default;
     }
 }

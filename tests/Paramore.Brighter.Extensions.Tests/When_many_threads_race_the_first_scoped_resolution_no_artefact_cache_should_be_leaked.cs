@@ -114,5 +114,6 @@ public class ManyThreadsRaceFirstScopedResolutionTests
         public void Add(IHandleRequests instance) { }
         public void Add(IHandleRequestsAsync instance) { }
         public void Dispose() => PipelineScope?.Dispose();
+        public ValueTask DisposeAsync() => PipelineScope?.DisposeAsync() ?? default;
     }
 }

@@ -37,7 +37,7 @@ namespace Paramore.Brighter
     /// handler instances the pipeline has created so they can be released.
     /// </para>
     /// </remarks>
-    public interface IAmALifetime : IDisposable
+    public interface IAmALifetime : IDisposable, IAsyncDisposable
     {
         /// <summary>
         /// The DI scope this handler pipeline resolves from, or null when it has none. Released when

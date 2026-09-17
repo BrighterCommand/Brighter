@@ -24,6 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 
@@ -42,6 +44,9 @@ namespace Paramore.Brighter
         private readonly List<IHandleRequestsAsync> _trackedAsyncObjects = new List<IHandleRequestsAsync>();
         private readonly IAmAHandlerFactoryAsync? _asyncHandlerFactory;
         private readonly IAmAScope? _pipelineScope;
+        //an int rather than a bool so Dispose/DisposeAsync/the finalizer can claim it with a single atomic
+        //Interlocked.Exchange, making release run exactly once whichever of the three runs first
+        private int _released;
 
         public HandlerLifetimeScope(IAmAHandlerFactorySync handlerFactorySync, IAmAScope? pipelineScope = null)
             : this(handlerFactorySync, null, pipelineScope)
@@ -81,7 +86,87 @@ namespace Paramore.Brighter
             Log.TrackingAsyncHandlerInstance(s_logger, instance.GetHashCode(), instance.GetType());
         }
 
+        /// <summary>
+        /// Disposes the pipeline, releasing every tracked handler and then the pipeline's own scope.
+        /// <para>
+        /// This is the synchronous path — the finalizer, or a caller that used <c>using</c> rather than
+        /// <c>await using</c>. Prefer <see cref="DisposeAsync"/> where the caller can await: releasing the
+        /// pipeline scope synchronously blocks on its disposal rather than awaiting it.
+        /// </para>
+        /// </summary>
         public void Dispose()
+        {
+            try { ReleaseUnmanagedResources(); }
+            finally { GC.SuppressFinalize(this); }
+        }
+
+        /// <summary>
+        /// Disposes the pipeline asynchronously: releases every tracked handler (via the handler
+        /// factories' own synchronous <c>Release</c> — neither <see cref="IAmAHandlerFactorySync"/> nor
+        /// <see cref="IAmAHandlerFactoryAsync"/> offers an async release for an individual handler), then
+        /// awaits the pipeline's own scope's <see cref="IAmAScope.DisposeAsync"/> rather than blocking on
+        /// it. Preferred on the Proactor pump thread, and by any async caller: an <see cref="IAmAScope"/>
+        /// implementation whose disposal performs genuine async work is awaited rather than blocked on.
+        /// </summary>
+        public async ValueTask DisposeAsync()
+        {
+            //release once only; shares the guard with Dispose so an explicit dispose followed by another
+            //(in either form) must not release twice
+            if (Interlocked.Exchange(ref _released, 1) != 0) return;
+
+            try
+            {
+                ReleaseTrackedHandlers();
+
+                //dispose the pipeline scope handle last and unconditionally, holding any failure
+                try
+                {
+                    if (_pipelineScope is not null)
+                        await _pipelineScope.DisposeAsync().ConfigureAwait(false);
+                }
+                catch (Exception exception)
+                {
+                    Log.FailedToDisposePipelineScope(s_logger, exception);
+                }
+            }
+            finally
+            {
+                GC.SuppressFinalize(this);
+            }
+        }
+
+        /// <summary>
+        /// Releases every tracked handler and disposes the pipeline's own scope, best-effort. A finalizer
+        /// must never let an exception escape — that terminates the process — so this is swallowed here;
+        /// an explicit <see cref="Dispose"/>/<see cref="DisposeAsync"/> still logs a release failure via
+        /// <see cref="ReleaseUnmanagedResources"/>'s own per-item handling.
+        /// </summary>
+        ~HandlerLifetimeScope()
+        {
+            try { ReleaseUnmanagedResources(); }
+            catch { /* swallowed: a finalizer must not throw */ }
+        }
+
+        private void ReleaseUnmanagedResources()
+        {
+            //release once only; an explicit Dispose followed by another (in either form) must not release
+            //twice
+            if (Interlocked.Exchange(ref _released, 1) != 0) return;
+
+            ReleaseTrackedHandlers();
+
+            //dispose the pipeline scope handle last and unconditionally, holding any failure
+            try
+            {
+                _pipelineScope?.Dispose();
+            }
+            catch (Exception exception)
+            {
+                Log.FailedToDisposePipelineScope(s_logger, exception);
+            }
+        }
+
+        private void ReleaseTrackedHandlers()
         {
             //release every tracked handler, sync then async, catching per item so one failing
             //Release does not skip the rest or leave the tracking lists uncleared
@@ -114,16 +199,6 @@ namespace Paramore.Brighter
             //clear our tracking so this scope does not outlive its disposal holding references
             _trackedObjects.Clear();
             _trackedAsyncObjects.Clear();
-
-            //dispose the pipeline scope handle last and unconditionally, holding any failure
-            try
-            {
-                _pipelineScope?.Dispose();
-            }
-            catch (Exception exception)
-            {
-                Log.FailedToDisposePipelineScope(s_logger, exception);
-            }
         }
 
         private static partial class Log

@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
@@ -67,6 +68,7 @@ public class HandlerFactoryReleaseDisposalTests
         public void Add(IHandleRequests instance) { }
         public void Add(IHandleRequestsAsync instance) { }
         public void Dispose() => PipelineScope?.Dispose();
+        public ValueTask DisposeAsync() => PipelineScope?.DisposeAsync() ?? default;
     }
 
     // Counts disposals rather than latching a bool, so a second Dispose is visible

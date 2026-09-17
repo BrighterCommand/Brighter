@@ -27,6 +27,7 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Collections.Generic;
 using System.Runtime.ExceptionServices;
+using System.Threading.Tasks;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Validation;
@@ -35,7 +36,8 @@ using Paramore.Brighter.Inbox.Attributes;
 
 namespace Paramore.Brighter
 {
-    public partial class PipelineBuilder<TRequest> : IAmAPipelineBuilder<TRequest>, IAmAnAsyncPipelineBuilder<TRequest>
+    public partial class PipelineBuilder<TRequest>
+        : IAmAPipelineBuilder<TRequest>, IAmAnAsyncPipelineBuilder<TRequest>, IAsyncDisposable
         where TRequest : class, IRequest
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<PipelineBuilder<TRequest>>();
@@ -292,6 +294,19 @@ namespace Paramore.Brighter
         /// </summary>
         public void Dispose()
             => _instanceScopes.Each(s => s.Dispose());
+
+        /// <summary>
+        /// Disposes all instance scopes created by this builder, asynchronously. Prefer this from an
+        /// async caller (<c>await using</c>): each <see cref="IAmALifetime"/>'s own scope handle is
+        /// awaited rather than blocked on.
+        /// </summary>
+        public async ValueTask DisposeAsync()
+        {
+            foreach (var scope in _instanceScopes)
+            {
+                await scope.DisposeAsync().ConfigureAwait(false);
+            }
+        }
 
         private IHandleRequests<TRequest> BuildPipeline(RequestHandler<TRequest> implicitHandler,
             IRequestContext requestContext, IAmALifetime instanceScope)
