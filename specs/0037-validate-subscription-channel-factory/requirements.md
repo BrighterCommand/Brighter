@@ -546,7 +546,7 @@ Then they all pass.
 
 ## Additional Context
 
-- **Amendments after approval.** This document was approved, then re-opened once and re-approved. The round-2 adversarial review of ADR 0072 found that the ADR was deciding things the requirements owned. Rather than let the ADR deviate, the following were amended here and nothing else was touched:
+- **Amendments after approval.** This document was approved, then re-opened **twice** and re-approved. The first re-opening followed the round-2 adversarial review of ADR 0072, which found that the ADR was deciding things the requirements owned. Rather than let the ADR deviate, the following were amended here and nothing else was touched:
   - **FR-3** gains the null-`D` clause for both arms (D4).
   - **FR-5** item 2 admits `no ChannelFactoryType` when `D` is null; the remedy table is restated as five ordered, total conditions, adding **T4** for an empty candidate set.
   - **NFR-6** and **C-8** gain **C-13**, the new direct-arm breakage.
