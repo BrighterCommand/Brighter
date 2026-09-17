@@ -201,6 +201,11 @@ private IReadOnlyList<Type>? _factoryTypes;
 /// These are the identities this factory routes on: it can serve a subscription exactly when
 /// that subscription's <see cref="Subscription.ChannelFactoryType"/> is one of them.
 /// </summary>
+/// <remarks>
+/// The list is built on first read and cached. This property is <b>not</b> thread-safe: concurrent
+/// first reads may each build a list, so every read yields an <i>equal</i> list but not necessarily
+/// the same instance. Callers needing concurrent access must synchronise.
+/// </remarks>
 public IReadOnlyList<Type> FactoryTypes =>
     _factoryTypes ??= _factories.Select(f => f.GetType()).ToList();
 ```
@@ -393,6 +398,10 @@ lambdas call; only the *evaluation* repeats, on a path that is about to throw an
 | `IsCompatible(Type? declared, Arm arm, IReadOnlyList<Type> candidates)` | *deciding* — FR-3's two arms, the null-`declared` case, and nothing else. Takes the arm explicitly: it is the discriminator `ResolveCandidates` returns, never re-derived by testing `F is CombinedChannelFactory` again |
 | `DisplayName(Type)` | *doing* — FR-5's display-name format |
 
+`Arm` is a private nested `enum { Direct, Combined }` on `ConsumerValidationRules`, and
+`ResolveCandidates` returns `(Arm, IReadOnlyList<Type>)`. Both are private to the rule class; nothing
+here is new public surface.
+
 `ResolveCandidates` returns the arm and the candidate list together, because they are a single fact
 about one subscription and separating them would let a caller pair a combined list with a direct
 comparison. Keeping the arm as an explicit discriminator (rather than re-testing `F is
@@ -437,7 +446,7 @@ change of wording. Both are now settled in `requirements.md` rather than asserte
 
 So the rule implements FR-3 and FR-5 as approved; nothing here is a deviation.
 
-#### 3. Message rendering — `DisplayName` and the four remedy templates
+#### 3. Message rendering — `DisplayName` and the five remedy templates
 
 `Type.FullName` is unusable directly: for `Subscription<FakeChannelFactoryRequest>` it embeds
 `Version=`, `Culture=` and `PublicKeyToken=`, which AC-14 forbids. `Type.Name` is unusable in the
@@ -463,16 +472,45 @@ Known simplification: nested types render with CLR's `+` separator. No acceptanc
 one — C-9's `AlphaBus`/`BetaBus` doubles are *namespaces*, not nested types — and handling `+`
 would add branching for a case the feature does not have.
 
-The message is assembled as a body plus one of FR-5's four remedy literals, appended last so that
-AC-13/13a/13b/13c's "ends with" assertions hold. Only the four remedy literals are normative; the
-body wording below is this ADR's proposal, constrained by AC-12, AC-14 and AC-15:
+The message is assembled as a body plus one of FR-5's five remedy literals, appended last so that
+AC-13/13a/13b/13c's "ends with" assertions hold. Only the five remedy literals are normative; the
+body wording below is this ADR's proposal, constrained by AC-10a, AC-10c, AC-12, AC-14 and AC-15.
+
+The body is **two independently varying clauses**, not a pair of fixed templates. The amended FR-5
+admits a null `D` (item 2) and an empty candidate set (T4), and those two vary *different* clauses,
+so a pair of templates cannot cover the space — it leaves the null-`D` cells rendering
+`declares ChannelFactoryType ''`, which fails AC-10a, and the empty-candidate cell rendering
+`one of ''`:
 
 ```
-direct   : Subscription type '{S}' declares ChannelFactoryType '{D}' but will be handed '{F}' {remedy}
-combined : Subscription type '{S}' declares ChannelFactoryType '{D}' but will be handed one of '{F-list}' {remedy}
+body            : Subscription type '{S}' {declared-clause} but {handed-clause} {remedy}
+
+{declared-clause}, on D:
+  D is non-null                → declares ChannelFactoryType '{D}'
+  D is null                    → declares no ChannelFactoryType
+
+{handed-clause}, on arm and candidate set:
+  direct                       → will be handed '{F}'
+  combined, non-empty          → will be handed one of '{F-list}'
+  combined, empty              → will be handed no channel factory at all
 ```
 
-Two lexical constraints shaped that wording and are easy to breach accidentally:
+The clauses are selected independently, which renders the cells the round-2 amendment created
+acceptance criteria for rather than patching around them:
+
+- **Null `D`, direct arm (AC-10a)** — `Subscription type 'S' declares no ChannelFactoryType but will
+  be handed 'F' — use a subscription type whose ChannelFactoryType is F`. The declared clause carries
+  the literal `no ChannelFactoryType` that AC-10a asserts "in place of a declared type name", and it
+  is the same wording C-13's release-note obligation names, so the two agree by construction.
+- **Null `D`, combined arm (AC-10b)** — the same declared clause with the `{F-list}` handed clause.
+- **Empty candidate set (AC-10c)** — `… but will be handed no channel factory at all — add a channel
+  factory to the combined channel factory`. `{F-list}` is never interpolated, so the body cannot
+  render `one of ''`, and the message still contains no `is one of:`.
+
+Both clause sets satisfy AC-15: `ChannelFactoryType` is excluded by the criterion's own `(?!Type)`
+lookahead, and `no channel factory at all` is lower-case prose, not the token.
+
+Three lexical constraints shaped that wording and are easy to breach accidentally:
 
 - AC-15 forbids any occurrence of the **token** `ChannelFactory` that is neither preceded by `.` nor
   part of `ChannelFactoryType`, where "token" is now defined in the requirements as a word-boundary
@@ -481,9 +519,14 @@ Two lexical constraints shaped that wording and are easy to breach accidentally:
   so the body may render any of them freely. The body still says "channel factory" in lower-case prose
   where it refers to the concept, because that reads better, not because AC-15 compels it.
 - AC-7 forbids naming `Paramore.Brighter.CombinedChannelFactory` **as the type the subscription will
-  be handed**. The rule never does: in the combined arm `{F-list}` is built from
-  `FactoryTypes`, which reports the *inner* factories, and the outer composite's own type never
-  enters it.
+  be handed**. The *outer* composite's type never enters `{F-list}`, which is built from
+  `FactoryTypes` and reports the inner factories. The rule does name it in one case — when an inner
+  factory is itself a `CombinedChannelFactory` — and AC-7's configuration (AC-6's flat
+  `CombinedChannelFactory([DeclaredChannelFactory, NonMatchingChannelFactory])`) has no nesting, so
+  the criterion holds. That case is accepted immediately below as a known message-quality limitation;
+  it is **not** excused by re-scoping AC-7 to the outer composite.
+- AC-13a and AC-13c forbid the substring `configure a channel factory of type` anywhere in a T3a/T3b
+  message, so the body must not paraphrase the suppressed half.
 
 **The nested case renders an honest message that is not a working remedy, and we accept that.** AC-10
 requires an `Error` for `CombinedChannelFactory([CombinedChannelFactory([DeclaredChannelFactory])])`
@@ -500,18 +543,17 @@ composite; the inner composite scans its own `[DeclaredChannelFactory]` for a fa
 word is deliberately "matches", not "routes", and the distinction bites exactly here.
 
 We accept it rather than special-case it. The message's *first* half — "either configure a channel
-factory of type `Paramore.Brighter.MessagingGateway.…DeclaredChannelFactory`" — is a working remedy,
-and it is the half a developer should follow; nesting composites is a configuration that is broken
+factory of type `Paramore.Brighter.Core.Tests.Validation.TestDoubles.DeclaredChannelFactory`" — is a
+working remedy, and it is the half a developer should follow; nesting composites is a configuration that is broken
 whatever the subscription declares, so no rendering of this message describes a route that works.
 Filtering the nested type out of `{F-list}` would leave an empty list and select T4, whose "add a
 channel factory to the combined channel factory" is *less* informative about what is actually there.
 Recorded under Negative as a known message-quality limitation.
-- AC-13a and AC-13c forbid the substring `configure a channel factory of type` anywhere in a T3a/T3b
-  message, so the body must not paraphrase the suppressed half.
 
 `{F-list}` joins display names with `", "` in constructor order. The separator is defined **once** and
 shared between body and remedy, so the two cannot disagree. An **empty** candidate set never reaches
-`{F-list}`: FR-5's template **T4** is selected first and renders "— add a channel factory to the
+`{F-list}` on **either** side: FR-5's template **T4** is selected first for the remedy, and the
+handed-clause's empty form keeps it out of the body. T4 renders "— add a channel factory to the
 combined channel factory", which names the actual fault and satisfies NFR-2's demand for a remedy,
 where an empty list interpolated into T2/T3b would have ended the message at "is one of:" with nothing
 after it. T4 is combined-arm only — the direct arm's candidate set is always exactly one type.
@@ -601,7 +643,7 @@ Sequenced so each step is independently testable, and structural changes precede
    constructor is untouched and no existing behaviour changes.
 2. **The display-name formatter** as a private static on `ConsumerValidationRules`, covered by
    AC-12/AC-14/AC-15's message assertions.
-3. **`ChannelFactoryCompatible`**, with `ResolveCandidates` / `IsCompatible` / the four templates.
+3. **`ChannelFactoryCompatible`**, with `ResolveCandidates` / `IsCompatible` / the five templates.
    AC-1 to AC-13c and AC-19 all exercise this against C-9's doubles with no container and no host.
 4. **Registration** in `RegisterConsumerValidationSpecs`. AC-16, AC-17 and AC-17a then exercise the
    host-start behaviour in `tests/Paramore.Brighter.Extensions.Tests`, which must declare its **own**
@@ -774,9 +816,9 @@ These are real, and five of them are accepted breakage.
   case gets its own constraint and its own release note rather than being absorbed silently;
   `ValidatePipelines` is opt-in and `throwOnError: false` unblocks every case except C-12; and ADR
   0073's sweep exists so the in-repo class cannot silently return.
-- **Risk: the message assertions become a maintenance tax.** *Mitigation*: only the four remedy
-  literals are normative; the body wording is this ADR's and may be revised as long as AC-12, AC-14
-  and AC-15 hold. Defining `{F-list}`'s separator once removes the most likely inconsistency.
+- **Risk: the message assertions become a maintenance tax.** *Mitigation*: only the five remedy
+  literals are normative; the body wording is this ADR's and may be revised as long as AC-10a,
+  AC-10c, AC-12, AC-14 and AC-15 hold. Defining `{F-list}`'s separator once removes the most likely inconsistency.
 - **Risk: a null `ChannelFactoryType` from an out-of-repo override.** *Mitigation*: handled as a
   defined input — a mismatch in both arms, guarded explicitly — rather than left to the framework's
   `"Rule evaluation failed"` path, which would block startup with the wrong `Source` and an unhelpful
