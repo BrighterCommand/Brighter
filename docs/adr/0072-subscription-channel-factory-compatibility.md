@@ -1,7 +1,7 @@
 ---
 id: 0072-subscription-channel-factory-compatibility
 title: "Validate Subscription and Channel Factory Compatibility at Startup"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-09-15
@@ -19,7 +19,7 @@ Date: 2026-09-15
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
