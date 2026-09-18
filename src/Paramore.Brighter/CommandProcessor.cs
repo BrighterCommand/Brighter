@@ -1426,7 +1426,7 @@ namespace Paramore.Brighter
             var subscription = _replySubscriptions?.FirstOrDefault(s => s.RequestType == typeof(TResponse));
 
             if (subscription is null)
-                throw new InvalidOperationException($"No Subscription registered fpr replies of type {typeof(T)}");
+                throw new InvalidOperationException($"No Subscription registered for replies of type {typeof(TResponse)}");
             
             if (_responseChannelFactory is null)
                 throw new InvalidOperationException("No ResponseChannelFactory registered");
