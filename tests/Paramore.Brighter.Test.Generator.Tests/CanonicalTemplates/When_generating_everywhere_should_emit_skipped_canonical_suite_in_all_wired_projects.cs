@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using Paramore.Brighter.Test.Generator;
 using Xunit;
 
 namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
@@ -25,42 +26,16 @@ namespace Paramore.Brighter.Test.Generator.Tests.CanonicalTemplates;
 /// </summary>
 public class GeneratingEverywhereShouldEmitSkippedCanonicalSuiteTests
 {
-    // The eleven canonical template base names — one per canonical behaviour. The tags are the
-    // behaviour columns of the conformance ledger: FR-2, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9,
-    // FR-15, FR-16, FR-17, FR-22.
-    private static readonly string[] CANONICAL_TEMPLATE_NAMES =
-    [
-        "When_requeuing_a_failed_message_with_delay_should_redeliver_after_delay",               // FR-2
-        "When_rejecting_message_with_delivery_error_should_send_to_dlq",                          // FR-4
-        "When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel",         // FR-5
-        "When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq", // FR-6
-        "When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log",           // FR-7
-        "When_rejecting_message_should_include_metadata",                                          // FR-8
-        "When_sending_a_delayed_message_should_deliver_after_delay",                               // FR-9
-        "When_requeuing_a_failed_message_with_zero_delay_should_redeliver_immediately",            // FR-15
-        "When_nacking_a_message_it_should_be_redelivered",                                         // FR-16
-        "When_rejecting_message_with_unknown_reason_should_send_to_dlq",                           // FR-17
-        "When_requeuing_a_failed_message_should_be_redelivered",                                   // FR-22
-    ];
+    // The canonical behaviours, taken from the generator's own map rather than copied. A local copy
+    // drifted from it once already: it stopped at eleven entries while the generator emitted twelve,
+    // so the behaviour it omitted was generated into every wired configuration and checked in none.
+    // Reading the generator's map is what makes "the full canonical suite" mean the same thing here
+    // as it does in the generator.
+    private static IReadOnlyDictionary<string, string> TEMPLATE_FR_COLUMNS
+        => CanonicalBehaviours.TEMPLATE_FR_COLUMNS;
 
-    // Canonical template base name → conformance-ledger FR column, mirroring the generator's
-    // authoritative CANONICAL_TEMPLATE_FR_COLUMNS map (ADR 0067). Used to resolve the
-    // ledger cell a given generated file must agree with.
-    private static readonly IReadOnlyDictionary<string, string> TEMPLATE_FR_COLUMNS =
-        new Dictionary<string, string>
-        {
-            ["When_requeuing_a_failed_message_with_delay_should_redeliver_after_delay"]                = "FR-2",
-            ["When_rejecting_message_with_delivery_error_should_send_to_dlq"]                          = "FR-4",
-            ["When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel"]         = "FR-5",
-            ["When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq"] = "FR-6",
-            ["When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log"]          = "FR-7",
-            ["When_rejecting_message_should_include_metadata"]                                          = "FR-8",
-            ["When_sending_a_delayed_message_should_deliver_after_delay"]                              = "FR-9",
-            ["When_requeuing_a_failed_message_with_zero_delay_should_redeliver_immediately"]           = "FR-15",
-            ["When_nacking_a_message_it_should_be_redelivered"]                                         = "FR-16",
-            ["When_rejecting_message_with_unknown_reason_should_send_to_dlq"]                          = "FR-17",
-            ["When_requeuing_a_failed_message_should_be_redelivered"]                                  = "FR-22",
-        };
+    // The canonical file base names, which are the keys of that same map.
+    private static IEnumerable<string> CANONICAL_TEMPLATE_NAMES => TEMPLATE_FR_COLUMNS.Keys;
 
     // The exact count of wired gateway configurations declared across the ten wired
     // test projects. This is a regression guard: a new wiring changes the count.
@@ -83,6 +58,34 @@ public class GeneratingEverywhereShouldEmitSkippedCanonicalSuiteTests
         _proactorGeneratedDirs = FindGeneratedVariantDirs(testsRoot, "Proactor");
     }
 
+    /// <summary>
+    /// Reports, for each supplied generated directory, the canonical files that are absent from it.
+    /// This is the presence check both variant gates apply; it is exposed so that a canary test can
+    /// establish that the check actually notices an absent canonical behaviour, which a gate that
+    /// scans the real tree can never demonstrate while the tree is correct.
+    /// </summary>
+    /// <param name="generatedDirs">The Generated/Reactor or Generated/Proactor directories to scan.</param>
+    /// <param name="variant">The variant name used to label each reported path.</param>
+    /// <returns>One entry per absent canonical file, empty when every directory holds the full suite.</returns>
+    public static IReadOnlyList<string> FindMissingCanonicalFiles(
+        IEnumerable<string> generatedDirs,
+        string variant)
+    {
+        var missing = new List<string>();
+
+        foreach (var dir in generatedDirs)
+        {
+            foreach (var templateName in CANONICAL_TEMPLATE_NAMES)
+            {
+                var filePath = Path.Combine(dir, $"{templateName}.cs");
+                if (!File.Exists(filePath))
+                    missing.Add($"  {variant}: {filePath}");
+            }
+        }
+
+        return missing;
+    }
+
     [Fact]
     public void When_generating_everywhere_should_find_exactly_twenty_wired_configurations()
     {
@@ -99,17 +102,7 @@ public class GeneratingEverywhereShouldEmitSkippedCanonicalSuiteTests
         // Arrange — resolved in constructor
 
         // Assert — every wired Generated/Reactor directory contains the full canonical suite
-        var missing = new List<string>();
-
-        foreach (var dir in _reactorGeneratedDirs)
-        {
-            foreach (var templateName in CANONICAL_TEMPLATE_NAMES)
-            {
-                var filePath = Path.Combine(dir, $"{templateName}.cs");
-                if (!File.Exists(filePath))
-                    missing.Add($"  Reactor: {filePath}");
-            }
-        }
+        var missing = FindMissingCanonicalFiles(_reactorGeneratedDirs, "Reactor");
 
         Assert.True(missing.Count == 0,
             $"Canonical Reactor files absent after regeneration — run ./generate-test.sh and rebuild:\n" +
@@ -122,17 +115,7 @@ public class GeneratingEverywhereShouldEmitSkippedCanonicalSuiteTests
         // Arrange — resolved in constructor
 
         // Assert — every wired Generated/Proactor directory contains the full canonical suite
-        var missing = new List<string>();
-
-        foreach (var dir in _proactorGeneratedDirs)
-        {
-            foreach (var templateName in CANONICAL_TEMPLATE_NAMES)
-            {
-                var filePath = Path.Combine(dir, $"{templateName}.cs");
-                if (!File.Exists(filePath))
-                    missing.Add($"  Proactor: {filePath}");
-            }
-        }
+        var missing = FindMissingCanonicalFiles(_proactorGeneratedDirs, "Proactor");
 
         Assert.True(missing.Count == 0,
             $"Canonical Proactor files absent after regeneration — run ./generate-test.sh and rebuild:\n" +
