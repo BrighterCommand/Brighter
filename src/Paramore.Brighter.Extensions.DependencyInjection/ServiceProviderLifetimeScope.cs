@@ -278,7 +278,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// disposes the loser, mirroring <see cref="EnsureRootScopePublished"/>'s own race-handling —
         /// not <c>LazyInitializer.EnsureInitialized</c>'s no-<c>syncLock</c> overload, whose documented
         /// contract lets the factory run more than once under concurrent first callers and silently
-        /// discards (never disposes) every result but the one that publishes.
+        /// discards (never disposes) every result but the one that publishes. Also mirrors
+        /// <see cref="EnsureRootScopePublished"/>'s post-publish reclaim: a concurrent <see cref="Dispose"/>
+        /// that read <c>_ownedFallbackCache</c> as <see langword="null"/> before this call published it
+        /// would otherwise never dispose it, since disposal runs at most once. All four teardown paths
+        /// claim <c>_ownedFallbackCache</c> with the same atomic exchange this method reclaims it with, so
+        /// exactly one side ever disposes a given instance.
         /// </remarks>
         private ScopedArtefactCache ResolveOwnedArtefactCache(IServiceProvider scopeProvider)
         {
@@ -296,6 +301,18 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 created.Dispose();
                 return winner;
             }
+
+            if (Volatile.Read(ref _disposed) != 0)
+            {
+                //won the publish, but a concurrent Dispose read _ownedFallbackCache as null before we
+                //published and already ran its one-shot teardown, so nothing else will ever dispose what
+                //we just published. Reclaim it (if a teardown path has not since claimed it via the same
+                //atomic exchange) and throw — the scope this resolution needed is gone.
+                if (Interlocked.CompareExchange(ref _ownedFallbackCache, null, created) == created)
+                    created.Dispose();
+                throw Disposed();
+            }
+
             return created;
         }
 
@@ -625,7 +642,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     try { DisposeScope(rootScope); }
                     catch (Exception e) { Log.FailedToDisposeScope(s_logger, e); }
                 }
-                _ownedFallbackCache?.Dispose();
+                //claim _ownedFallbackCache with the same atomic exchange ResolveOwnedArtefactCache
+                //reclaims it with, so a resolution publishing concurrently with this Dispose is disposed
+                //exactly once, by whichever side actually holds the reference.
+                Interlocked.Exchange(ref _ownedFallbackCache, null)?.Dispose();
             }
             // Note: Don't clear singleton instances as they may be shared
         }
@@ -660,7 +680,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     try { await DisposeScopeAsync(rootScope).ConfigureAwait(false); }
                     catch (Exception e) { Log.FailedToDisposeScope(s_logger, e); }
                 }
-                _ownedFallbackCache?.Dispose();
+                Interlocked.Exchange(ref _ownedFallbackCache, null)?.Dispose();
             }
         }
 
@@ -692,7 +712,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 var rootScope = Interlocked.Exchange(ref _scope, null);
                 if (rootScope != null)
                     DisposeScope(rootScope);
-                _ownedFallbackCache?.Dispose();
+                Interlocked.Exchange(ref _ownedFallbackCache, null)?.Dispose();
             }
         }
 
@@ -719,7 +739,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 var rootScope = Interlocked.Exchange(ref _scope, null);
                 if (rootScope != null)
                     await DisposeScopeAsync(rootScope).ConfigureAwait(false);
-                _ownedFallbackCache?.Dispose();
+                Interlocked.Exchange(ref _ownedFallbackCache, null)?.Dispose();
             }
         }
 
