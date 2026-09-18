@@ -1,7 +1,7 @@
 # Bugfix: Canonical FR-7 and FR-16 two-message arms assume broker delivery order, so they fail on unordered SNS/SQS Standard queues
 
 **Linked Issue**: _(none — surfaced by CI on `2e650c36e`)_
-**Status**: Verified (generator + build; broker execution is owed to CI — see Fix)
+**Status**: ✅ Verified end to end — `aws-ci` green on `f7ad18d6f` with every arm RUN (0 skipped, 0 failed)
 
 ## Symptom
 
@@ -308,8 +308,13 @@ which the regression test does **not** pin — it is honoured here deliberately.
 | `./generate-test.sh` | exit 0 — **exactly 96** generated files changed, **and nothing else**: 48 × each arm across 24 wired configurations × Reactor + Proactor, precisely the Scope Notes' count |
 | `dotnet build Brighter.slnx` | **0 errors** |
 
-⚠️ **NOT yet proven, and this is the whole point of the fix:** that the two behaviours actually hold
-on an **unordered** transport. No test has ever been able to tell before now. `aws-ci` on the next
-run is the first real evidence either way — **if it goes red, that is a genuine transport finding,
-not a defective test**, and the four `AWS{,.V4} / Sns|SqsStandard` FR-7/FR-16 ledger cells change.
-The cells are deliberately left at `Pass` pending that run.
+✅ **PROVEN ON A REAL BROKER — `aws-ci` green on `f7ad18d6f`** (run 35275879441). ⭐ **Checked by
+name, not taken from the green tick:** every arm RAN — **0 Skipped, 0 Failed** across 48 identities
+(2 SDK majors × 4 configurations × Reactor/Proactor × 3 facts), each seen **twice** because the job
+runs the suite twice, so both attempts are green and the non-determinism is gone.
+
+⭐⭐ **This is the first evidence that FR-7 and FR-16 hold on an UNORDERED transport.** No test could
+tell before: the two messages were first indistinguishable, then distinguishable but order-dependent.
+The four `AWS{,.V4} / Sns|SqsStandard` cells are therefore **earned, not inherited** — they stay
+`Pass` and need no ledger change. The single-message nack arm still passes everywhere, so the scope
+guard held.
