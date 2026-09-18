@@ -184,15 +184,6 @@ reads `DatabaseName`. It is not inert everywhere, though: the MySQL migration ru
 MongoDB adapters do read it, and it defaults to `"Brighter"`, so put it back if you adapt this to
 either.
 
-### A note on log levels
-
-`MsSqlMessageQueue` logs its connection string at `Debug`, and the connection string above carries
-an `sa` password. It does not reach the console as the sample stands — but in `GreetingsSender`
-that is an accident of ordering rather than a property of the configuration. That application does
-set `MinimumLevel.Debug()` with a console sink; the producer registry is simply built inside the
-`AddProducers` callback, which runs before Brighter swaps your `ILoggerFactory` into
-`ApplicationLogging`. Move that construction after `Build()` and the password lands on stdout.
-
 ## Further reading
 
 [Use MSSQL for Transport, Outbox and Inbox](https://brightercommand.gitbook.io/paramore-brighter-documentation/transports/mssqlmessagebroker/mssqltransportinboxandoutbox)

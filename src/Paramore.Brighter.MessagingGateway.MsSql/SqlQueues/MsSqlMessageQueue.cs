@@ -31,7 +31,11 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _connectionProvider = connectionProvider;
-            Log.MsSqlMessageQueueCtor(s_logger, _configuration.ConnectionString, _configuration.QueueStoreTable);
+            if (s_logger.IsEnabled(LogLevel.Debug))
+            {
+                var builder = new SqlConnectionStringBuilder(_configuration.ConnectionString);
+                Log.MsSqlMessageQueueCtor(s_logger, builder.DataSource, builder.InitialCatalog, _configuration.QueueStoreTable);
+            }
             ContinueOnCapturedContext = false;
         }
 
@@ -251,8 +255,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
 
         private static partial class Log
         {
-            [LoggerMessage(LogLevel.Debug, "MsSqlMessageQueue({ConnectionString}, {QueueStoreTable})")]
-            public static partial void MsSqlMessageQueueCtor(ILogger logger, string connectionString, string queueStoreTable);
+            [LoggerMessage(LogLevel.Debug, "MsSqlMessageQueue({DataSource}, {InitialCatalog}, {QueueStoreTable})")]
+            public static partial void MsSqlMessageQueueCtor(ILogger logger, string dataSource, string initialCatalog, string queueStoreTable);
 
             [LoggerMessage(LogLevel.Debug, "Send<{CommandType}>(..., {Topic})")]
             public static partial void Send(ILogger logger, string? commandType, RoutingKey topic);
