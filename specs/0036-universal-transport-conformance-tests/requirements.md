@@ -351,10 +351,18 @@ Every canonical template MUST be produced in both a Reactor variant driving `IAm
 **FR-15 — An explicit zero delay does not delay.**
 Generate a canonical test asserting that `channel.Requeue(M, TimeSpan.Zero)` behaves as an immediate
 plain requeue: the message is received on the **first** iteration of the plain-requeue bounded retry
-loop (NFR-2), and the elapsed time from the `Requeue` call to receipt is less than FR-2's positive
-delay (5s). This proves `TimeSpan.Zero` is not special-cased into an error or an unbounded wait, and
-is not treated as a positive delay. (FR-2's own before-`D` arm, not FR-15, is what prevents a
-delay-ignoring gateway from being mistaken for a conforming one.)
+loop (NFR-2), and the elapsed time **from the return of the `Requeue` call** to receipt is less than
+FR-2's positive delay (5s). This proves `TimeSpan.Zero` is not special-cased into an error or an
+unbounded wait, and is not treated as a positive delay. (FR-2's own before-`D` arm, not FR-15, is
+what prevents a delay-ignoring gateway from being mistaken for a conforming one.)
+
+The measurement starts when `Requeue` **returns**, not when it is called. The call's own duration is
+a round trip to the broker to issue the instruction — a `ChangeMessageVisibility`, a `nack`, a list
+push — and it is the cost of *asking*, not a delay *applied to the message*. Charging it to the
+budget measures the harness's network latency rather than the gateway's treatment of
+`TimeSpan.Zero`, and on a remote broker it can consume the whole budget on its own while the
+gateway is behaving perfectly. The obligation here is about what the gateway does with the zero, so
+the window opens once the zero has been handed over.
 
 FR-15 is scoped to the **explicit `TimeSpan.Zero` argument only**. The omitted and explicitly-null
 spellings both belong to FR-22: the signature is
@@ -731,9 +739,11 @@ faces of that boundary — mechanism proofs and internal-mechanics proofs respec
   match the established `When_...` conventions.
 - **AC-16 (FR-15).** *Given* a received message, *when* `channel.Requeue(message, TimeSpan.Zero)` is
   called, *then* `Requeue` returns `true` and the message is received on the **first** iteration of
-  the plain-requeue bounded retry loop, with elapsed time from the `Requeue` call to receipt less
-  than FR-2's positive delay (5s). The `Requeue(message, null)` and `Requeue(message)` spellings are
-  the same call and are asserted by AC-25, not here.
+  the plain-requeue bounded retry loop, with elapsed time **from the return of the `Requeue` call**
+  to receipt less than FR-2's positive delay (5s). The call's own duration is excluded: it is the
+  cost of issuing the instruction to the broker, not a delay applied to the message. The
+  `Requeue(message, null)` and `Requeue(message)` spellings are the same call and are asserted by
+  AC-25, not here.
 - **AC-17 (FR-16).** *Given* a received message `M`, *when* `channel.Nack(M)` or `NackAsync(M)` is
   called, *then* a subsequent receive within the bounded retry loop yields a message with `M`'s id
   and body. *And*, given two queued messages `M1` and `M2`, *when* the channel receives one of them —
