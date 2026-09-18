@@ -204,19 +204,38 @@ Welcome! Here's how to get started:
 
 ### Generated Tests
 
-**New to this?** Start with the guides:
+Brighter has many implementations of the same few roles — an outbox over eight stores, a messaging
+gateway over a dozen transports — and they must all behave the same way to an application. So the
+tests that prove that behaviour are **written once, as a Liquid template, and generated into every
+implementation's test project** from a `test-configuration.json` there. No per-implementation copy
+exists to drift, and no implementation quietly lacks one.
+
+Two families are generated:
+
+| Family | What it proves | Where |
+|---|---|---|
+| **Outbox** | Outbox store behaviour — sync, async, causation tracking | 8 test projects (MSSQL, PostgreSQL, MySQL, SQLite, DynamoDB ×2, MongoDB, GCP) |
+| **Messaging gateway** | **Transport conformance** — twelve canonical consumer/producer behaviours (requeue, requeue-with-delay, nack, the five reject-and-route behaviours, delayed send, dead-lettering), each in a synchronous **Reactor** and an asynchronous **Proactor** variant | 12 test projects, as **24 configurations** |
+
+The transport half has a **conformance matrix** —
+[`specs/0036-universal-transport-conformance-tests/conformance-status.md`](specs/0036-universal-transport-conformance-tests/conformance-status.md)
+— which is the single source of truth for what each transport is known to do. The generator reads
+it: a cell reading `Pass` or `Fixed` runs the test, and a cell reading
+`Deferred -> #NNNN (sign-off: @handle)` skips it while naming the issue. **Those `Deferred` cells
+are the work queue** — each is a known, accepted gap with a filed issue behind it.
+
+**Start with the guides** — they are the long-form answers, and the reference doc below is the
+lookup table:
 
 - [Transport conformance — getting started](docs/guides/transport-conformance-getting-started.md) —
-  what the generated suite proves, what it deliberately does not, how to read the conformance
-  matrix, and how to find work to pick up.
+  what the suite proves, what it deliberately does **not** prove, how to read the matrix, how to run
+  one transport locally, and how to pick up work.
 - [Adding a new transport](docs/guides/transport-conformance-new-transport.md) — the end-to-end
-  checklist, and the audits that will fail you.
+  checklist, the provider contract, and the audits that will fail you.
 - [Adding a new canonical behaviour](docs/guides/transport-conformance-new-behaviour.md) — every
-  file a thirteenth behaviour touches, and how its ledger column starts life.
-
-- Brighter uses a test generation tool to ensure consistency across provider implementations (e.g., outbox/inbox implementations for different databases).
-- Generated tests provide a baseline test suite that all providers must pass, ensuring consistent behavior across implementations.
-- The test generator uses Liquid templates to create test code based on a `test-configuration.json` file in each test project.
+  file a thirteenth behaviour touches, and how its ledger column starts life as `Unknown`.
+- [`.agent_instructions/generated_tests.md`](.agent_instructions/generated_tests.md) — the full
+  reference: every template, every configuration key, every feature flag.
 
 #### How to Generate Tests
 
