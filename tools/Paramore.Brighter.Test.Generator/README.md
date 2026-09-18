@@ -82,6 +82,9 @@ reads it to decide whether a given test runs or is skipped:
 
 ## Reference
 
+- **Guides** — [getting started](../../docs/guides/transport-conformance-getting-started.md) ·
+  [adding a transport](../../docs/guides/transport-conformance-new-transport.md) ·
+  [adding a behaviour](../../docs/guides/transport-conformance-new-behaviour.md).
 - [`.agent_instructions/generated_tests.md`](../../.agent_instructions/generated_tests.md) — the
   full reference: every template, every configuration key, every feature flag, the regeneration
   recipe, the tree audit, and the CI-flakiness rules.

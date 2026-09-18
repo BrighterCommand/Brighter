@@ -204,6 +204,16 @@ Welcome! Here's how to get started:
 
 ### Generated Tests
 
+**New to this?** Start with the guides:
+
+- [Transport conformance — getting started](docs/guides/transport-conformance-getting-started.md) —
+  what the generated suite proves, what it deliberately does not, how to read the conformance
+  matrix, and how to find work to pick up.
+- [Adding a new transport](docs/guides/transport-conformance-new-transport.md) — the end-to-end
+  checklist, and the audits that will fail you.
+- [Adding a new canonical behaviour](docs/guides/transport-conformance-new-behaviour.md) — every
+  file a thirteenth behaviour touches, and how its ledger column starts life.
+
 - Brighter uses a test generation tool to ensure consistency across provider implementations (e.g., outbox/inbox implementations for different databases).
 - Generated tests provide a baseline test suite that all providers must pass, ensuring consistent behavior across implementations.
 - The test generator uses Liquid templates to create test code based on a `test-configuration.json` file in each test project.
