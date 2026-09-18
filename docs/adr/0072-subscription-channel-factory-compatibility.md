@@ -444,9 +444,7 @@ nothing else — AC-10's verdict and AC-7's prohibition both stand unchanged. `F
 reports an inner `CombinedChannelFactory` by its own concrete type, so for
 `CombinedChannelFactory([CombinedChannelFactory([DeclaredChannelFactory])])` `{F-list}` is literally
 `Paramore.Brighter.CombinedChannelFactory`. FR-3's word is "matches", not "routes", and the
-distinction bites exactly here. Filtering the nested type out would empty `{F-list}` and select T4,
-which says *less* about what is configured, so the rendering is left alone. The consequence, and why
-it is tolerable, is under Negative.
+distinction bites exactly here. The consequence, and why it is tolerable, is under Negative.
 
 `{F-list}` joins display names with `", "` in constructor order. The separator is defined **once** and
 shared between body and remedy, so the two cannot disagree. An empty candidate set reaches `{F-list}`
@@ -536,8 +534,9 @@ Sequenced so each step is independently testable, and structural changes precede
 2. **The display-name formatter** as a private static on `ConsumerValidationRules`, covered by
    AC-12/AC-14/AC-15's message assertions.
 3. **`ChannelFactoryCompatible`**, with `ResolveCandidates` / `IsCompatible` / the five templates.
-   AC-1 to AC-13c and AC-19 all exercise this against C-9's doubles with no container and no host.
-4. **Registration** in `RegisterConsumerValidationSpecs`. AC-16, AC-17 and AC-17a then exercise the
+   AC-1 to AC-13c, AC-19 and AC-30 all exercise this against C-9's doubles with no container and no
+   host.
+4. **Registration** in `RegisterConsumerValidationSpecs`. AC-16, AC-17, AC-17a and AC-18 then exercise the
    host-start behaviour in `tests/Paramore.Brighter.Extensions.Tests`, which must declare its **own**
    copies of the doubles — test projects here do not reference one another (C-9).
 5. **The five corrections**, one per gateway assembly, each with AC-20 to AC-26 in that gateway's own
@@ -675,7 +674,8 @@ These are real, and five of them are accepted breakage.
 - **The combined arm restates `CombinedChannelFactory`'s routing predicate.** Two places now encode
   "exact type equality, non-recursive". The cost of the `FactoryTypes` choice over `CanRoute`, pinned
   by AC-9's companion assertion rather than eliminated.
-- **The finding message is pinned by literal assertions.** T1/T2/T3a/T3b and AC-15's token rule mean
+- **The finding message is pinned by literal assertions.** All five remedy literals
+  (T1/T2/T3a/T3b/T4) and AC-15's token rule mean
   the message text is effectively public API. Improving the wording later breaks tests, and AC-15's
   `ChannelFactoryType` carve-out is a constraint future editors will not guess.
 - **A private display-name formatter that others will want.** Type rendering is a general need —
