@@ -98,36 +98,39 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// so the write-through never ran and the override was never applied (D18). A rule about
         /// registrations, not values — it must not compare the override's affinity with the resolved
         /// object's, since an override carrying <see cref="ScopeAffinity.AlwaysNew"/> (the option's own
-        /// default) is by value indistinguishable from an override that was never applied. Declines to
-        /// fire when the override itself is unreadable (registered by factory delegate) — that shape is
-        /// <see cref="UnreadableOverride"/>'s to report, and this rule has no value to name in its message.
+        /// default) is by value indistinguishable from an override that was never applied. Still fires when
+        /// the override itself is unreadable (registered by factory delegate) — the defeat is real either
+        /// way, so declining here would silently drop the Error for a genuine misconfiguration; the message
+        /// omits the affinity value in that case instead, since <see cref="UnreadableOverride"/> separately
+        /// reports the unreadable-registration half of the same misconfiguration.
         /// </summary>
-        /// <returns>A simple specification reporting an Error naming the affinity the override carries,
-        /// that the resolved <see cref="IBrighterOptions"/> was supplied by the application rather than by
-        /// Brighter, the remedy, and the guidance page.</returns>
+        /// <returns>A simple specification reporting an Error naming the affinity the override carries (or
+        /// omitting it when the override's value cannot be read), that the resolved
+        /// <see cref="IBrighterOptions"/> was supplied by the application rather than by Brighter, the
+        /// remedy, and the guidance page.</returns>
         public static ISpecification<ScopeConfiguration> DefeatedOptIn()
             => new Specification<ScopeConfiguration>(
                 c =>
                 {
                     var lastOverride = c.AffinityOverrideRegistrations.LastOrDefault();
                     if (lastOverride is null) return true; // no opt-in registered — nothing to defeat
-                    if (lastOverride.ImplementationInstance is not ScopeAffinityOverride)
-                        return true; // unreadable — UnreadableOverride() already reports this shape
 
                     var lastUnkeyedOptions = c.BrighterOptionsRegistrations.LastOrDefault(d => d.ServiceKey is null);
                     return lastUnkeyedOptions is not null && lastUnkeyedOptions.IsBrighterRegistered;
                 },
                 c =>
                 {
-                    var affinity = ((ScopeAffinityOverride)c.AffinityOverrideRegistrations.Last().ImplementationInstance!).Affinity;
+                    var overrideInstance = c.AffinityOverrideRegistrations.Last().ImplementationInstance as ScopeAffinityOverride;
+                    var registered = overrideInstance is not null
+                        ? $"AddBrighterRequestScope registered affinity {overrideInstance.Affinity}"
+                        : "An affinity override is registered";
                     return new ValidationError(
                         ValidationSeverity.Error,
                         "Brighter options registration",
-                        $"AddBrighterRequestScope registered affinity {affinity}, but the resolved " +
-                        $"{nameof(IBrighterOptions)} was supplied by the application rather than by Brighter, so " +
-                        "the override was never applied. Configure Brighter's options through AddBrighter/" +
-                        "AddConsumers instead of registering IBrighterOptions directly. " +
-                        "See docs/guides/lifetimes-and-scoping.md for guidance.");
+                        $"{registered}, but the resolved {nameof(IBrighterOptions)} was supplied by the " +
+                        "application rather than by Brighter, so the override was never applied. Configure " +
+                        "Brighter's options through AddBrighter/AddConsumers instead of registering " +
+                        "IBrighterOptions directly. See docs/guides/lifetimes-and-scoping.md for guidance.");
                 });
 
         /// <summary>
