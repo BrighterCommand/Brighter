@@ -443,7 +443,7 @@ The `ChannelFactoryType` carve-out is required: FR-5's remedy clause, which AC-1
 Regex.Matches(message, @"(?<![.\w])ChannelFactory(?!Type)")
 ```
 
-and MUST find no match. Two test sites assert this rule (`Core.Tests` and, for AC-26f, the gateway projects); writing it any other way is a defect in the test, not in the message.
+and MUST find no match. This rule is asserted in `Core.Tests`, the only project whose acceptance criteria produce a `Message` for it to run against — the AC-25/AC-26 gateway criteria assert assignability, inner-factory selection, or the absence of findings, none of which renders a message. Writing the assertion any other way is a defect in the test, not in the message.
 
 ### Severity and blocking
 
@@ -546,7 +546,7 @@ Then they all pass.
 
 ## Additional Context
 
-- **Amendments after approval.** This document was approved, then re-opened **twice** and re-approved. The first re-opening followed the round-2 adversarial review of ADR 0072, which found that the ADR was deciding things the requirements owned. Rather than let the ADR deviate, the following were amended here and nothing else was touched:
+- **Amendments after approval.** This document was approved, then re-opened **three times** and re-approved. The first re-opening followed the round-2 adversarial review of ADR 0072, which found that the ADR was deciding things the requirements owned. Rather than let the ADR deviate, the following were amended here and nothing else was touched:
   - **FR-3** gains the null-`D` clause for both arms (D4).
   - **FR-5** item 2 admits `no ChannelFactoryType` when `D` is null; the remedy table is restated as five ordered, total conditions, adding **T4** for an empty candidate set.
   - **NFR-6** and **C-8** gain **C-13**, the new direct-arm breakage.
@@ -556,6 +556,9 @@ Then they all pass.
   A second, narrower re-opening followed the round-5 review, which found ADR 0072 citing a **D5** that this document had never recorded — and using it to bound an approved acceptance criterion. Restricted to exactly that:
   - **D5** is added to *Maintainer decisions already taken*, stating the nested-composite rendering that is accepted and, explicitly, that it licenses nothing about AC-7.
   - **AC-7** and **AC-10** gain a cross-reference to D5. No Given/When/Then is altered: AC-7's assertion and AC-10's verdict are unchanged.
+
+  A third, still narrower re-opening followed the round-7 review, which found **AC-15**'s test-site note naming a second site that cannot exist. Restricted to exactly that:
+  - **AC-15**'s note no longer claims the gateway projects assert its regex "for AC-26f". AC-26f's Then is "no findings are produced", so it renders no `Message` for the regex to run against, and no criterion in the AC-25/AC-26 family asserts a `Message` at all. The note now names `Core.Tests` as the only site, and says why. AC-15's normative regex is unchanged.
 
 - **Origin.** Issue #4334, prompted by #4331, in which two sample applications had shipped with `Subscription<T>` where an `MsSqlSubscription<T>` was required and had never been able to start. Compilation succeeded, CI compiled the samples, and nothing detected the defect until someone tried to run them.
 - **Maintainer decisions already taken** (not to be re-opened by design or implementation):
