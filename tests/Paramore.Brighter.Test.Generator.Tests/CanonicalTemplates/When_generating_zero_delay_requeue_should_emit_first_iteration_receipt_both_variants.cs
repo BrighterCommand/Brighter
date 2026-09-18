@@ -28,6 +28,10 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
     private const string LEDGER_KEY = "Kafka / Classic";
     private const string FR_COLUMN = "FR-15";
 
+    private const string STOPWATCH_START = "Stopwatch.StartNew()";
+    private const string REACTOR_ZERO_DELAY_REQUEUE_CALL = "Requeue(received, TimeSpan.Zero)";
+    private const string PROACTOR_ZERO_DELAY_REQUEUE_CALL = "RequeueAsync(received, TimeSpan.Zero)";
+
     private readonly string _testDirectory;
     private readonly ILogger<Generators.MessagingGatewayGenerator> _logger;
 
@@ -141,6 +145,56 @@ public class WhenGeneratingZeroDelayRequeueShouldEmitFirstIterationReceiptBothVa
         // Assert — elapsed time from Requeue call to receipt is asserted less than 5 s
         var content = await File.ReadAllTextAsync(ReactorOutputPath());
         Assert.Contains("TimeSpan.FromSeconds(5)", content);
+    }
+
+    [Fact]
+    public async Task When_generating_zero_delay_requeue_reactor_should_start_the_stopwatch_after_requeue_returns()
+    {
+        // Arrange
+        var ledger = PassLedger();
+        var configuration = BuildConfiguration();
+        var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
+
+        // Act
+        await generator.GenerateAsync(configuration);
+
+        // Assert — the window is measured from the RETURN of Requeue, so the call's own broker
+        // round trip is not charged to the 5 s budget. Started before the call, the budget pays
+        // for issuing the instruction as well as for the redelivery it exists to measure.
+        var content = await File.ReadAllTextAsync(ReactorOutputPath());
+        var requeueIndex = content.IndexOf(REACTOR_ZERO_DELAY_REQUEUE_CALL, StringComparison.Ordinal);
+        var stopwatchIndex = content.IndexOf(STOPWATCH_START, StringComparison.Ordinal);
+
+        Assert.True(requeueIndex >= 0, $"Expected the generated Reactor file to call {REACTOR_ZERO_DELAY_REQUEUE_CALL}");
+        Assert.True(stopwatchIndex >= 0, $"Expected the generated Reactor file to start a {STOPWATCH_START}");
+        Assert.True(requeueIndex < stopwatchIndex,
+            $"Expected {STOPWATCH_START} to appear AFTER {REACTOR_ZERO_DELAY_REQUEUE_CALL}, so the requeue "
+            + $"call's own duration is excluded from the elapsed window; found the stopwatch at {stopwatchIndex} "
+            + $"and the requeue at {requeueIndex}.");
+    }
+
+    [Fact]
+    public async Task When_generating_zero_delay_requeue_proactor_should_start_the_stopwatch_after_requeue_returns()
+    {
+        // Arrange
+        var ledger = PassLedger();
+        var configuration = BuildConfiguration();
+        var generator = new Generators.MessagingGatewayGenerator(_logger, ledger);
+
+        // Act
+        await generator.GenerateAsync(configuration);
+
+        // Assert — as the Reactor variant, against the async surface
+        var content = await File.ReadAllTextAsync(ProactorOutputPath());
+        var requeueIndex = content.IndexOf(PROACTOR_ZERO_DELAY_REQUEUE_CALL, StringComparison.Ordinal);
+        var stopwatchIndex = content.IndexOf(STOPWATCH_START, StringComparison.Ordinal);
+
+        Assert.True(requeueIndex >= 0, $"Expected the generated Proactor file to call {PROACTOR_ZERO_DELAY_REQUEUE_CALL}");
+        Assert.True(stopwatchIndex >= 0, $"Expected the generated Proactor file to start a {STOPWATCH_START}");
+        Assert.True(requeueIndex < stopwatchIndex,
+            $"Expected {STOPWATCH_START} to appear AFTER {PROACTOR_ZERO_DELAY_REQUEUE_CALL}, so the requeue "
+            + $"call's own duration is excluded from the elapsed window; found the stopwatch at {stopwatchIndex} "
+            + $"and the requeue at {requeueIndex}.");
     }
 
     [Fact]
