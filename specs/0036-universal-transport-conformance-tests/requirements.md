@@ -576,14 +576,36 @@ design decisions recorded in ADR 0067.
   mechanism, not of any transport**, so it holds for every configuration — including those that
   guarantee ordering for plain delivery.
 
-  ⚠️ **Owed:** a per-configuration statement of which transports guarantee ordering for plain
-  delivery. Verified so far: `AWS{,.V4} / Sns|SqsStandard` **none**; `GCP / Pull` and `GCP / Stream`
-  **none**; `GCP / PullOrdering` and `StreamOrdering` **per ordering key**; `AWS{,.V4} /
-  Sns|SqsFifo` **per group, but harness-induced** — `FifoMessageBuilder` stamps one partition key per
-  *builder instance*, so it is a property of the test harness, not of the configuration. The
-  remaining configurations (Kafka, RMQ ×3, Redis, Postgres, MSSQL, AzureServiceBus, RocketMQ, MQTT)
-  are **not yet verified against their provider code** and MUST NOT be recorded as ordered until they
-  are. Publishing an unverified guarantee here would repeat the defect this NFR exists to prevent.
+  **Ordering for plain delivery, per configuration.** Every row below was read off the provider and
+  gateway code cited beside it; none is inferred from a transport's reputation. The column records
+  what the configuration guarantees for a plain send-then-receive, *before* the delay clause above
+  is applied — which voids any of these guarantees.
+
+  | Configuration | Guarantee | Where that is settled |
+  |---|---|---|
+  | `AWS{,.V4} / Sns\|SqsStandard` | **none** | Standard queues and topics are unordered by definition |
+  | `AWS{,.V4} / Sns\|SqsFifo` | **per group — harness-induced** | `FifoMessageBuilder` stamps one partition key per *builder instance*, so the messages of one arm share a group. A property of the harness, not of the configuration |
+  | `GCP / Pull`, `GCP / Stream` | **none** | no `EnableMessageOrdering`, no ordering key |
+  | `GCP / PullOrdering`, `GCP / StreamOrdering` | **per ordering key** | the ordering key is what the configuration exists to exercise |
+  | `Kafka / Classic`, `Kafka / Consumer` | **total, per topic** | both publications are `NumPartitions = 1`, so every message lands in the one partition Kafka orders. `KafkaPublication` defaults `EnableIdempotence = true` and `MaxInFlightRequestsPerConnection = 1`, and neither provider overrides them, so a producer retry cannot reorder either |
+  | `Kafka / PartitionKey` | **per key — harness-induced** | the publication is `NumPartitions = 2`, so the topic is genuinely unordered; the arm's two messages stay in one partition only because `FifoMessageBuilder` gives one random key per *builder instance*. **The same shape as the AWS FIFO row, and the same caution applies** |
+  | `RMQ.Async / Classic`, `RMQ.Async / Quorum`, `RMQ.Sync` | **per queue** | one `BasicConsume` against one queue; AMQP delivers a queue's messages to a single consumer in publish order, for classic and quorum alike |
+  | `Redis` | **per queue** | the producer appends (`AddItemToList`) and the consumer takes from the head (`BlockingRemoveStartFromList`) — a FIFO list |
+  | `Postgres` | **per queue** | the dequeue is `ORDER BY "id"` over an insertion-ordered key, `FOR UPDATE SKIP LOCKED` |
+  | `MSSQL` | **per topic** | the dequeue is `select top(1) … order by Id` with `(rowlock, readpast)` |
+  | `AzureServiceBus` | **none** | ASB guarantees FIFO only for session-enabled entities. The gateway can carry a `SessionId`, but the conformance provider never sets one and no entity is declared `RequiresSession` |
+  | `RocketMQ` | **none** | the canonical topics resolve to `TopicType.Normal`; a `MessageGroup` is set only for a FIFO topic or a non-empty partition key, and the canonical builder supplies neither |
+  | `MQTT` | **none** | publish and subscribe are both QoS 1 (`AtLeastOnce`), which permits duplicate and re-ordered redelivery, and nothing pins the in-flight window to 1 |
+
+  ⚠️ **Two rows are ordered only by accident of the harness** — `AWS{,.V4} / Sns|SqsFifo` and
+  `Kafka / PartitionKey`. Neither may be read as a transport guarantee, and an arm that passes only
+  on those two is passing for the reason that produced this NFR in the first place.
+
+  ⚠️ **RabbitMQ voids its own guarantee on requeue, at *any* delay.** `RmqMessageConsumer.Requeue`
+  re-publishes the message and only then acknowledges the original, so a requeued message goes to
+  the tail of the queue even when the delay is `TimeSpan.Zero`. The delay clause above reaches this
+  case by a different route: here it is the *requeue mechanism*, not the scheduler seam, that
+  re-enqueues.
 
 ### Constraints and Assumptions
 
