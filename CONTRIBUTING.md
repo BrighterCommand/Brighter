@@ -223,8 +223,15 @@ To generate tests for all test projects, run one of the following scripts from t
 ```
 
 **For a specific test project:**
+
+The generator uses the **current working directory** as its output root, so you must run it from
+inside the test project directory. Build the generator first — the build copies the Liquid templates
+into `bin/`, and without it the generator runs against stale cached templates.
+
 ```bash
-dotnet run --project tools/Paramore.Brighter.Test.Generator -- --file tests/[YourTestProject]/test-configuration.json
+dotnet build tools/Paramore.Brighter.Test.Generator
+cd tests/[YourTestProject]
+dotnet run --no-build --project ../../tools/Paramore.Brighter.Test.Generator
 ```
 
 #### When to Regenerate Tests
@@ -233,11 +240,24 @@ dotnet run --project tools/Paramore.Brighter.Test.Generator -- --file tests/[You
 - When adding a new provider implementation that needs the standard test suite
 - When updating test patterns to ensure all providers follow the new pattern
 
-#### Customizing Generated Tests
+#### Never Edit a Generated Test
 
-- Generated tests can be customized after generation for provider-specific edge cases
-- Each test project should have a `test-configuration.json` file specifying provider-specific details
-- See [ADR 0035](docs/adr/0035-geneated-test.md) for more details on the test generation architecture
+Generated test files are overwritten every time the generator runs, so any hand-edit is silently
+lost on the next `./generate-test.sh`. Provider-specific behaviour has three designated seams
+instead:
+
+- **The provider class.** Each test project hand-writes the provider implementing the generated
+  `IAmAMessageGatewayReactorProvider` / `…ProactorProvider` (or the outbox equivalents). This is
+  where transport-specific setup, cleanup and dead-letter reads belong.
+- **`test-configuration.json`.** Each test project has one; it carries the provider-specific
+  details and the feature flags that decide which templates are generated at all.
+- **The Liquid template.** If the change is to the behaviour under test rather than to one
+  transport's plumbing, edit the template and regenerate every project.
+
+See [ADR 0035](docs/adr/0035-generated-test.md) for the test generation architecture, and
+[`.agent_instructions/generated_tests.md`](.agent_instructions/generated_tests.md) for the full
+reference — every template, every configuration key, every feature flag, and the regeneration
+recipe.
 
 ## Documentation
 

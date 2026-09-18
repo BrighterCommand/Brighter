@@ -1,8 +1,13 @@
-# Testing Guide - RabbitMQ mTLS
+# RabbitMQ mTLS Testing Guide
+
+This guide covers **only** the RabbitMQ mutual-TLS test suite. For testing Brighter in general see
+[CONTRIBUTING.md](CONTRIBUTING.md); for the generated transport conformance suites see
+[`.agent_instructions/generated_tests.md`](.agent_instructions/generated_tests.md).
 
 ## Quick Reference for Building and Testing
 
-**Important**: Always run from repository root: `/home/darren/w/brighter/Brighter`
+**Important**: always run the commands below from the repository root — the checkout directory of
+your clone, whatever it is called.
 
 ---
 
