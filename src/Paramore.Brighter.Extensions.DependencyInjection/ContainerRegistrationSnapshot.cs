@@ -37,8 +37,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     /// single artefact; together they are everything the scope-configuration rules read from the collection.
     /// </summary>
     /// <remarks>
-    /// Nothing calls this type yet - it is landed inert in T7.0a, ahead of the rules that read it in T7.1
-    /// and T7.5.
+    /// Constructed by <c>BrighterPipelineValidationExtensions</c> at <c>ValidatePipelines()</c> call time
+    /// and read by every rule in <c>ScopeConfigurationRules</c>.
     /// </remarks>
     internal sealed class ContainerRegistrationSnapshot
     {

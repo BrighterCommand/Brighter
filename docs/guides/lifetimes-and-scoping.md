@@ -159,7 +159,7 @@ This warning inspects only the artefact's own constructor parameters directly �
 
 ### Defeated opt-in (FR-22.4, Error)
 
-**Cause.** An affinity override (`AddBrighterRequestScope(...)`) is registered, but the `IBrighterOptions` the container will actually resolve — the last unkeyed registration — was supplied by your application (`services.AddSingleton<IBrighterOptions>(...)` or similar), not by Brighter's own `AddBrighter`/`AddConsumers`. Only Brighter's own registration carries the write-through that applies the override, so the affinity you asked for was never applied.
+**Cause.** An affinity override (`AddBrighterRequestScope(...)`) is registered, but the `IBrighterOptions` the container will actually resolve — the last unkeyed registration — was supplied by your application (`services.AddSingleton<IBrighterOptions>(...)` or similar), not by Brighter's own `AddBrighter`/`AddConsumers`. Only Brighter's own registration carries the write-through that applies the override, so the affinity you asked for was never applied. When the override was itself registered by factory delegate (see "Unreadable override" below), this message omits the affinity value it cannot read and the Unreadable override warning is reported alongside it.
 
 **Remedy.** Remove your application's own `IBrighterOptions` registration, and configure the same options through `AddBrighter(Action<BrighterOptions>)` or `AddConsumers`'s options action instead — set `DefaultScopeAffinity` there, or keep using `AddBrighterRequestScope(...)` once nothing else is registering `IBrighterOptions` directly. Until this is fixed, the override has no effect at all: the affinity in force is whatever your own `IBrighterOptions` object carries — `ScopeAffinity.AlwaysNew` (the option's own default) unless your application set it to something else.
 
@@ -177,9 +177,9 @@ This warning inspects only the artefact's own constructor parameters directly �
 
 ### Unreadable override (FR-17, Warning)
 
-**Cause.** An affinity override is registered by factory delegate (`services.AddSingleton(sp => new ScopeAffinityOverride(...))` or similar) rather than as a constructed instance. The override still takes effect — the write-through resolves it normally — but this validator cannot read its value without resolving it, so it cannot detect whether a *later* conflicting registration (the previous message) is present.
+**Cause.** An affinity override is registered by factory delegate (`services.AddSingleton(sp => new ScopeAffinityOverride(...))` or similar) rather than as a constructed instance. The override still takes effect — the write-through resolves it normally — but this validator cannot read its value without resolving it, so it cannot detect whether a *later* conflicting registration (the previous message) is present. This is unless the Defeated opt-in error above is also reported, in which case the override applies to nothing — fix that first, since in that case there is no value for this warning's "still takes effect" to describe.
 
-**Remedy.** Register the override as a constructed instance instead of a factory delegate — `services.AddSingleton(new ScopeAffinityOverride(ScopeAffinity.JoinAmbient))`, or simply use `AddBrighterRequestScope(...)`, which registers this way already. Until this is fixed, the override's own affinity still applies as normal; what is lost is only this validator's ability to warn you if a second, conflicting `AddBrighterRequestScope`/override registration is added later.
+**Remedy.** Register the override as a constructed instance instead of a factory delegate — `services.AddSingleton(new ScopeAffinityOverride(ScopeAffinity.JoinAmbient))`, or simply use `AddBrighterRequestScope(...)`, which registers this way already. Until this is fixed, the override's own affinity still applies as normal (unless the Defeated opt-in error above is also reported); what is lost is only this validator's ability to warn you if a second, conflicting `AddBrighterRequestScope`/override registration is added later.
 
 ## 7. The transaction consequence: `Publish` subscribers and the outbox
 
