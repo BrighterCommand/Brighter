@@ -38,12 +38,20 @@ namespace Paramore.Brighter
     public interface IAmAMessageMapperFactoryAsync
     {
         /// <summary>
+        /// Offers a DI scope for the transform pipeline being built to share across every mapper and
+        /// transform it creates. A factory with no container to scope returns <c>null</c>.
+        /// </summary>
+        /// <returns>A pipeline scope handle, or <c>null</c> if this factory offers none.</returns>
+        IAmAScope? CreatePipelineScope();
+
+        /// <summary>
         /// Creates the specified message mapper type, returning a <see cref="Lease{T}"/> that identifies this
         /// resolution so it can later be released back to this factory.
         /// </summary>
         /// <param name="messageMapperType">Type of the message mapper.</param>
+        /// <param name="scope">The pipeline scope to resolve from, if this factory offered one.</param>
         /// <returns>A lease over the created mapper, or <c>null</c> if none could be created.</returns>
-        Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType);
+        Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType, IAmAScope? scope = null);
 
         /// <summary>
         /// Releases the mapper resolution identified by <paramref name="lease"/> once the pipeline that owns it

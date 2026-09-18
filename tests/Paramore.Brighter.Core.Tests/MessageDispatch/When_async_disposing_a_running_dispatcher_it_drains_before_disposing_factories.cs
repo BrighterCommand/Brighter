@@ -104,9 +104,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             public DispatcherState? StateAtDispose { get; private set; }
             public Func<DispatcherState>? ReadDispatcherState { get; set; }
 
+            public IAmAScope? CreatePipelineScope() => null;
+
             //MyEventMessageMapper carries no transform attributes, so Create is never asked for a transform;
             //only the factory's disposal at teardown matters here
-            public Lease<IAmAMessageTransform>? Create(Type transformerType) => null;
+            public Lease<IAmAMessageTransform>? Create(Type transformerType, IAmAScope? scope = null) => null;
             public void Release(Lease<IAmAMessageTransform>? lease) { }
 
             public void Dispose()

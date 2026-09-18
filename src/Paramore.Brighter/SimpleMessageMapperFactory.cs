@@ -45,11 +45,17 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
+        /// Offers no pipeline scope: the caller's factory method owns whatever it returns.
+        /// </summary>
+        public IAmAScope? CreatePipelineScope() => null;
+
+        /// <summary>
         /// Creates the specified message mapper type.
         /// </summary>
         /// <param name="messageMapperType">Type of the message mapper.</param>
+        /// <param name="scope">Ignored: this factory offers no pipeline scope.</param>
         /// <returns>IAmAMessageMapper.</returns>
-        public Lease<IAmAMessageMapper>? Create(Type messageMapperType)
+        public Lease<IAmAMessageMapper>? Create(Type messageMapperType, IAmAScope? scope = null)
         {
             var mapper = _factoryMethod(messageMapperType);
             return mapper is null ? null : Lease<IAmAMessageMapper>.Untracked(mapper);

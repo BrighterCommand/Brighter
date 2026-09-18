@@ -44,12 +44,14 @@ namespace Paramore.Brighter
         /// <param name="messageTransformerFactory">The factory used to create transforms</param>
         /// <param name="messageMapperLease">The lease over the message mapper that forms the pipeline sink</param>
         /// <param name="mapperRegistry">The registry the message mapper came from, required to release it when the pipeline is disposed</param>
+        /// <param name="scope">The pipeline's own DI scope, if one was offered when the pipeline was built</param>
         public UnwrapPipelineAsync(
             IEnumerable<Lease<IAmAMessageTransformAsync>> transformLeases,
             IAmAMessageTransformerFactoryAsync? messageTransformerFactory,
             Lease<IAmAMessageMapperAsync<TRequest>> messageMapperLease,
-            IAmAMessageMapperRegistryAsync? mapperRegistry = null
-            ) : base(messageMapperLease, transformLeases, mapperRegistry)
+            IAmAMessageMapperRegistryAsync? mapperRegistry = null,
+            IAmAScope? scope = null
+            ) : base(messageMapperLease, transformLeases, mapperRegistry, scope)
         {
             if (messageTransformerFactory != null)
             {

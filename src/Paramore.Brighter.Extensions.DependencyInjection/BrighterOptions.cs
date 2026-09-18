@@ -67,6 +67,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Configures the lifetime of any transformers. Defaults to Transient
         /// </summary>
         public ServiceLifetime TransformerLifetime { get; set; } = ServiceLifetime.Transient;
+
+        /// <summary>
+        /// Whether a pipeline should adopt an ambient DI scope its caller already owns, or always
+        /// create and own its own. Defaults to <see cref="ScopeAffinity.AlwaysNew"/>. Applies to
+        /// <see cref="ServiceLifetime.Scoped"/> handler, mapper and transformer lifetimes only.
+        /// </summary>
+        public ScopeAffinity DefaultScopeAffinity { get; set; } = ScopeAffinity.AlwaysNew;
     }
 
     public interface IBrighterOptions
@@ -141,6 +148,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Configures the lifetime of any transformers.
         /// </summary>
         ServiceLifetime TransformerLifetime { get; set; }
+
+        /// <summary>
+        /// Whether a pipeline should adopt an ambient DI scope its caller already owns, or always
+        /// create and own its own. Applies to <see cref="ServiceLifetime.Scoped"/> handler, mapper
+        /// and transformer lifetimes only.
+        /// </summary>
+        ScopeAffinity DefaultScopeAffinity { get; set; }
 
    }
 }

@@ -17,18 +17,21 @@ namespace Paramore.Brighter
         protected TransformLifetimeScopeAsync? InstanceScope;
 
         private readonly IAmAMessageMapperRegistryAsync? _mapperRegistry;
+        private readonly IAmAScope? _pipelineScope;
         private int _released;
 
         protected TransformPipelineAsync(
             Lease<IAmAMessageMapperAsync<TRequest>> messageMapperLease,
             IEnumerable<Lease<IAmAMessageTransformAsync>> transformLeases,
-            IAmAMessageMapperRegistryAsync? mapperRegistry = null)
+            IAmAMessageMapperRegistryAsync? mapperRegistry = null,
+            IAmAScope? pipelineScope = null)
         {
             MapperLease = messageMapperLease ?? throw new ArgumentNullException(nameof(messageMapperLease));
             TransformLeases = transformLeases as IReadOnlyList<Lease<IAmAMessageTransformAsync>> ?? transformLeases.ToArray();
             //materialise the transform instances once for execution; the leases stay for release
             Transforms = TransformLeases.Select(lease => lease.Instance).ToArray();
             _mapperRegistry = mapperRegistry;
+            _pipelineScope = pipelineScope;
         }
 
         /// <summary>
@@ -81,7 +84,13 @@ namespace Paramore.Brighter
                     {
                         if (_mapperRegistry is not null)
                             await _mapperRegistry.ReleaseAsync(MapperLease).ConfigureAwait(false);
-                    }).ConfigureAwait(false);
+                    },
+                    releaseScopeAsync: async () =>
+                    {
+                        if (_pipelineScope is not null)
+                            await _pipelineScope.DisposeAsync().ConfigureAwait(false);
+                    },
+                    requestType: typeof(TRequest).Name).ConfigureAwait(false);
             }
             finally
             {
@@ -114,7 +123,9 @@ namespace Paramore.Brighter
             //because that scope only exists when a transformer factory was supplied
             TransformPipelineDrain.Drain(
                 disposeScope: () => InstanceScope?.Dispose(),
-                releaseMapper: () => _mapperRegistry?.Release(MapperLease));
+                releaseMapper: () => _mapperRegistry?.Release(MapperLease),
+                releaseScope: () => _pipelineScope?.Dispose(),
+                requestType: typeof(TRequest).Name);
         }
     }
 }

@@ -23,6 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -44,7 +46,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection;
 public class BrighterValidationHostedService : IHostedService
 {
     private readonly IOptions<BrighterPipelineValidationOptions> _options;
-    private readonly IAmAPipelineValidator _validator;
+    private readonly IEnumerable<IAmAPipelineValidator> _validators;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<BrighterValidationHostedService> _logger;
 
@@ -52,17 +54,17 @@ public class BrighterValidationHostedService : IHostedService
     /// Initializes a new instance of the <see cref="BrighterValidationHostedService"/> class.
     /// </summary>
     /// <param name="options">Validation options controlling whether this service acts or defers to the consumer.</param>
-    /// <param name="validator">The pipeline validator.</param>
+    /// <param name="validators">The pipeline validators. Results from every registered validator are combined.</param>
     /// <param name="serviceProvider">The service provider for resolving optional dependencies.</param>
     /// <param name="logger">The logger.</param>
     public BrighterValidationHostedService(
         IOptions<BrighterPipelineValidationOptions> options,
-        IAmAPipelineValidator validator,
+        IEnumerable<IAmAPipelineValidator> validators,
         IServiceProvider serviceProvider,
         ILogger<BrighterValidationHostedService> logger)
     {
         _options = options;
-        _validator = validator;
+        _validators = validators;
         _serviceProvider = serviceProvider;
         _logger = logger;
     }
@@ -73,7 +75,7 @@ public class BrighterValidationHostedService : IHostedService
         if (_options.Value.ConsumerOwnsValidation)
             return Task.CompletedTask;
 
-        var result = _validator.Validate();
+        var result = PipelineValidationResult.Combine(_validators.Select(v => v.Validate()).ToArray());
 
         if (_options.Value.ThrowOnError)
         {

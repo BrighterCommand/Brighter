@@ -68,6 +68,14 @@ public static class BrighterPipelineValidationExtensions
         builder.Services.TryAddSingleton<IAmATransformerResolvabilityProbe>(
             new ServiceCollectionTransformerResolvabilityProbe(builder.Services));
 
+        builder.Services.TryAddSingleton(sp =>
+        {
+            var mapperRegistryBuilder = sp.GetService<ServiceCollectionMessageMapperRegistryBuilder>();
+            return new ValidationMapperRegistry(mapperRegistryBuilder != null
+                ? () => ServiceCollectionExtensions.MessageMapperRegistry(sp)
+                : null);
+        });
+
         builder.Services.TryAddSingleton<IAmAPipelineValidator>(sp =>
         {
             var subscriberRegistry = sp.GetService<IAmASubscriberRegistryInspector>()
@@ -81,16 +89,33 @@ public static class BrighterPipelineValidationExtensions
 
             var inbox = ResolveInboxConfiguration(sp)?.Inbox;
             var outbox = sp.GetService<IAmAnOutboxProducerMediator>()?.Outbox;
-            
-            var mapperRegistryBuilder = sp.GetService<ServiceCollectionMessageMapperRegistryBuilder>();
-            Func<MessageMapperRegistry>? mapperRegistryFactory = mapperRegistryBuilder != null
-                ? () => ServiceCollectionExtensions.MessageMapperRegistry(sp)
-                : null;
+
+            var mapperRegistry = sp.GetRequiredService<ValidationMapperRegistry>();
             var transformerProbe = sp.GetService<IAmATransformerResolvabilityProbe>();
 
             return new PipelineValidator(
                 pipelineBuilder, publications, subscriptions, consumerSpecList, inbox, outbox,
-                providerRegistrations, mapperRegistryFactory, transformerProbe);
+                providerRegistrations, mapperRegistry.Factory, transformerProbe);
+        });
+
+        // ADR 0074's validator, registered beside the core one — AddSingleton, not TryAdd, because TryAdd
+        // tests the service type and would never add a second implementation of it. The snapshot is
+        // captured here, above the delegate, matching ValidationProviderRegistrations' and
+        // ServiceCollectionTransformerResolvabilityProbe's own ValidatePipelines()-call-time capture point.
+        var registrationSnapshot = new ContainerRegistrationSnapshot(builder.Services);
+        builder.Services.AddSingleton<IAmAPipelineValidator>(sp =>
+        {
+            var subscriberRegistry = sp.GetService<IAmASubscriberRegistryInspector>()
+                ?? (IAmASubscriberRegistryInspector)sp.GetRequiredService<ServiceCollectionSubscriberRegistry>();
+            var pipelineBuilder = new PipelineBuilder<IRequest>(subscriberRegistry, ResolveInboxConfiguration(sp));
+
+            return new ScopeConfigurationValidator(
+                sp.GetService<IBrighterOptions>(),
+                registrationSnapshot,
+                pipelineBuilder,
+                ResolvePublications(sp),
+                ResolveSubscriptions(sp),
+                sp.GetRequiredService<ValidationMapperRegistry>());
         });
 
         builder.Services.AddSingleton<IHostedService, BrighterValidationHostedService>();

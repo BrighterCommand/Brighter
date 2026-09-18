@@ -30,6 +30,7 @@ using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
@@ -70,13 +71,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (configure != null)
                 services.Configure(configure);
 
-            // Register IBrighterOptions resolved from IOptions<BrighterOptions>
-            services.TryAddSingleton<IBrighterOptions>(sp =>
-                sp.GetRequiredService<IOptions<BrighterOptions>>().Value);
-
             return BrighterHandlerBuilder(
                 services,
-                sp => (BrighterOptions)sp.GetRequiredService<IBrighterOptions>());
+                sp => sp.GetRequiredService<IOptions<BrighterOptions>>().Value);
         }
 
         /// <summary>
@@ -94,7 +91,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (configure == null)
                 throw new ArgumentNullException(nameof(configure));
 
-            services.TryAddSingleton<IBrighterOptions>(configure);
             return BrighterHandlerBuilder(
                 services,
                 configure);
@@ -143,6 +139,23 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             IServiceCollection services,
             Func<IServiceProvider, BrighterOptions> optionsFunc)
         {
+            // Every registration path funnels through here - this is the one place that registers
+            // IBrighterOptions, so a registered ScopeAffinityOverride reaches it regardless of path (FR-17)
+            RegisterBrighterOptions(services, optionsFunc);
+
+            // ADR 0072 step 5 - the ambient-scope diagnostics singleton, latched per Brighter
+            // container (D19). Falls back to a no-op logger when the host never called AddLogging(),
+            // so a container-backed factory asking for this singleton cannot fail construction on a
+            // host that has no interest in logging at all.
+            services.TryAddSingleton(sp => new AmbientScopeDiagnostics(
+                (ILogger<AmbientScopeDiagnostics>?)sp.GetService(typeof(ILogger<AmbientScopeDiagnostics>))
+                ?? NullLogger<AmbientScopeDiagnostics>.Instance));
+
+            // ADR 0072 step 5 - the per-request-scope artefact cache a borrowed ambient's Scoped
+            // resolution routes through, so two pipelines sharing one ambient share one artefact
+            // instance rather than one each.
+            services.TryAddScoped<ScopedArtefactCache>();
+
             // DO NOT build intermediate provider - defer all resolution
             // Create registries - they always register as Transient, actual lifetime managed by ServiceProviderHandlerFactory
             var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
@@ -221,6 +234,45 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             return builder
                 .UseExternalLuggageStore<NullLuggageStore>();
+        }
+
+        /// <summary>
+        /// Registers this path's <see cref="IBrighterOptions"/> descriptor, applying a registered
+        /// <see cref="ScopeAffinityOverride"/> to it at first resolution, and records the descriptor's
+        /// identity so a validator can later ask whether it is still the effective one - all without
+        /// resolving anything here. A no-op where an unkeyed <see cref="IBrighterOptions"/> descriptor
+        /// is already registered, so a host that registers its own keeps it.
+        /// </summary>
+        /// <param name="services">The collection to register into.</param>
+        /// <param name="optionsFunc">This registration path's own options factory.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="services"/> or
+        /// <paramref name="optionsFunc"/> is <see langword="null"/>.</exception>
+        private static void RegisterBrighterOptions(
+            IServiceCollection services,
+            Func<IServiceProvider, BrighterOptions> optionsFunc)
+        {
+            if (services is null) throw new ArgumentNullException(nameof(services));
+            if (optionsFunc is null) throw new ArgumentNullException(nameof(optionsFunc));
+
+            // TryAddSingleton spelled out, because the descriptor we add has to be one we can hand on:
+            // a validator's rule asks whether the effective IBrighterOptions descriptor is this one.
+            // ServiceKey is part of the test because that is what TryAdd itself matches on - without
+            // it, a host with a KEYED IBrighterOptions would get no Brighter registration at all.
+            if (services.Any(d => d.ServiceType == typeof(IBrighterOptions) && d.ServiceKey is null))
+                return;
+
+            var descriptor = ServiceDescriptor.Singleton<IBrighterOptions>(sp =>
+            {
+                var options = optionsFunc(sp)
+                    ?? throw new InvalidOperationException("The Brighter options factory returned null.");
+                var over = sp.GetService<ScopeAffinityOverride>();
+                if (over is not null)
+                    options.DefaultScopeAffinity = over.Affinity; // D18: the extension wins
+                return options;
+            });
+
+            services.Add(descriptor);
+            services.AddSingleton(new BrighterOptionsRegistration(descriptor));
         }
 
         /// <summary>

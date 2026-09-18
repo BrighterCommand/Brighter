@@ -111,7 +111,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         private sealed class DisposeCountingTransformerFactory : IAmAMessageTransformerFactory, IDisposable
         {
             public int DisposeCount { get; private set; }
-            public Lease<IAmAMessageTransform>? Create(Type transformerType) => null;
+            public IAmAScope? CreatePipelineScope() => null;
+            public Lease<IAmAMessageTransform>? Create(Type transformerType, IAmAScope? scope = null) => null;
             public void Release(Lease<IAmAMessageTransform>? lease) { }
             public void Dispose() => DisposeCount++;
         }
