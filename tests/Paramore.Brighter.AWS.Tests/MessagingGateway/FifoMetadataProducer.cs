@@ -6,13 +6,12 @@ using Paramore.Brighter.MessagingGateway.AWSSQS;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway;
 
-// Supplies the FIFO metadata the transport-agnostic canonical messages omit: a MessageGroupId
-// (FIFO requires one) and a unique MessageDeduplicationId (a fresh id per send) so that two
-// identical-content messages are not collapsed by content-based deduplication — without which the
-// second of two look-alike messages is silently dropped and "receive the next message" asserts see
-// MT_NONE. Delegates everything else to the wrapped producer. Shared by the SQS FIFO and SNS FIFO
-// conformance providers (the wrapped producer is SqsMessageProducer or SnsMessageProducer
-// respectively; both implement the sync and async producer interfaces).
+// Supplies the FIFO metadata the transport-agnostic canonical messages omit: a MessageGroupId (FIFO
+// requires one) and a MessageDeduplicationId, which is mandatory here because every conformance FIFO
+// queue and topic is created with content-based deduplication switched off, and a FIFO send carrying
+// neither is rejected outright. Delegates everything else to the wrapped producer. Shared by the SQS
+// FIFO and SNS FIFO conformance providers (the wrapped producer is SqsMessageProducer or
+// SnsMessageProducer respectively; both implement the sync and async producer interfaces).
 internal sealed class FifoMetadataProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync
 {
     private const string ConformanceMessageGroup = "conformance";
@@ -75,9 +74,11 @@ internal sealed class FifoMetadataProducer : IAmAMessageProducerSync, IAmAMessag
             message.Header.PartitionKey = new PartitionKey(ConformanceMessageGroup);
         }
 
-        // A fresh id per send, not message.Id: the canonical suite reuses one message builder, so its
-        // two "distinct" messages share an id and body. FIFO would treat the second as a duplicate and
-        // drop it; a unique dedup id per send makes every send a distinct FIFO message.
+        // Mandatory, not defensive: the conformance FIFO queues and topics are all created with
+        // contentBasedDeduplication: false, and the gateway sets MessageDeduplicationId only when the
+        // bag carries one (SqsMessageSender.SetFifoQueueProperties, SnsMessagePublisher
+        // .ConfigureFifoSettings), so without this stamp every FIFO send is rejected. A fresh id per
+        // send keeps each send a distinct FIFO message whatever the message itself carries.
         message.Header.Bag[HeaderNames.DeduplicationId] = Uuid.NewAsString();
     }
 }
