@@ -39,7 +39,7 @@ public class WhenRejectingMessageWithNoChannelsConfiguredShouldAcknowledgeAndLog
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
-    [Fact]
+    [Fact(Skip = "Deferred: #4240 — no channels configured: acknowledge and log not yet conformant for GCP / PullOrdering (maintainer sign-off)")]
     public void When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log()
     {
         // Arrange — neither a dead-letter queue nor an invalid-message channel is configured

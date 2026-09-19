@@ -45,7 +45,7 @@ public class WhenRejectingMessageWithNoChannelsConfiguredShouldAcknowledgeAndLog
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact]
+    [Fact(Skip = "Deferred: #4240 — no channels configured: acknowledge and log not yet conformant for GCP / Pull (maintainer sign-off)")]
     public async Task When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log_async()
     {
         // Arrange — neither a dead-letter queue nor an invalid-message channel is configured

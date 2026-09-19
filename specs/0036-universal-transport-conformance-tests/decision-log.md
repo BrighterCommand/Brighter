@@ -554,3 +554,69 @@ terminal-cleanup gate stays open. Generator suite **190/190**; `dotnet build Bri
 a *conformance onboarding*, not a merge conflict to paper over: give it a `LedgerKey`, port the provider,
 certify it, and bump the configuration count — and where a new configuration is a variant of a certified
 one, prove the variant is actually exercised before letting it inherit the sibling's result.
+
+---
+
+## Reversed: GCP / Pull + / PullOrdering — the emulator's five `Pass` cells do not hold on real Pub/Sub (2026-09-19)
+
+**Both GCP Pull rows move FR-7, FR-9, FR-15, FR-16 and FR-22 to `Deferred -> #4240 (sign-off:
+@iancooper)`.** This reverses the cells set by "Resolved: GCP / Pull — Phase 4, emulator run
+(2026-07-30)" above, and it reverses them for the reason that entry itself flagged: *"No real-GCP
+credentials were available, so the emulator is the only local infra; CI runs GCP against real
+Pub/Sub."* The emulator redelivers promptly. Real Pub/Sub does not.
+
+### Evidence — actual CI errors, four consecutive `gcp-ci` runs, not inference
+
+`gcp-ci` runs against the real `iancooper` Pub/Sub project on every push. It has been red on this
+branch run after run, while being **green on `master` 5 runs out of 5** — because the failing tests
+are this branch's generated conformance suite and do not exist on `master`.
+
+| behaviour | FR | failed in | worst measured |
+|---|---|---|---|
+| `…_with_zero_delay_should_redeliver_immediately` | FR-15 | **4 of 4 runs, both rows, both variants** | `elapsed: 00:00:27.27` against a 5 s bound |
+| `…_nacking_a_message_it_should_be_redelivered` | FR-16 | 3 of 4 runs | `Assert.Contains() Failure: Item not found in set` after a 30 s poll |
+| `…_requeuing_a_failed_message_should_be_redelivered` | FR-22 | 3 of 4 runs | `Actual: MT_NONE` after a 30 s poll |
+| `…_rejecting_message_with_no_channels_configured…` | FR-7 | 1 of 4 runs | `Actual: MT_NONE` after a 30 s poll |
+| `…_sending_a_delayed_message_should_deliver_after_delay` | FR-9 | 1 of 4 runs | `Actual: MT_NONE` after a 30 s poll |
+
+Every one of those assertions sits **after** a bounded poll loop, not on an unretried receive — so
+none of these is the harness failing to look. And in the runs where FR-16/FR-22/FR-9 *pass*, they
+pass slowly: `Pull.Reactor` took **28 s**, **24 s** and **22 s** against **30 s** bounds. They are
+2–8 s from red on a good day, which is why which cells go red changes from run to run.
+
+### Root cause — one, and it is a property of the service
+
+**On Pub/Sub Pull, redelivery waits for the ack deadline to expire.**
+`ModifyAckDeadline(ackId, 0)` — `GcpPullMessageConsumer.cs:349` (sync), `:384-388` (async) —
+succeeds and is ignored as a prompt-redelivery instruction. Four checks:
+
+- The call is not failing: the generated test asserts `Assert.True(requeued)` *before* the
+  stopwatch, and every failure is on a later assertion. Valid ack id, no exception.
+- The delay is not our own backoff: `RequeueDelay` defaults to `TimeSpan.Zero`
+  (`Subscription.cs:228`), so `RetryPolicy` is left **null** (`GcpPubSubMessageGateway.cs:369-377`).
+- The delay tracks the ack deadline: the conformance subscription sets `ackDeadlineSeconds: 10`
+  (`GcpPullMessageGatewayProvider.cs:168`) and measured elapsed is 13.65 / 15.21 / 18.66 / 27.27 s
+  — always above 10, never below.
+- It was already written down in our own tree: `GcpPullMessageGatewayProvider.cs:166-167` says
+  *"Nack is a no-op for Pub/Sub: redelivery waits for the ack deadline to expire."*
+
+### ADR 0067 deferral preconditions
+
+1. **Evidence, not inference** — actual assertion text and stack frames above, from four runs.
+2. **Implementation attempted** — the gateway already issues the documented nack; the harness
+   already polls with bounded loops; the subscription already sits at **10 s, which is Pub/Sub's
+   minimum ack deadline**. There is no remaining in-scope remedy: a 5 s bound cannot be met above a
+   10 s floor.
+3. **Residual blocker genuinely external** — redelivery latency on Cloud Pub/Sub Pull is the
+   service's behaviour, not Brighter's.
+
+**FR-15's 5 s bound was deliberately not loosened.** It is normative in `requirements.md` FR-15 /
+AC-16, and loosening a bound to make a transport pass is the failure mode ADR 0067 exists to stop.
+
+**FR-9 is downgraded from `Fixed (#4240)`, and that is worth stating plainly:** the delayed-send fix
+this branch made is real and stays in the code. What the downgrade says is only that real Pub/Sub
+Pull does not deliver it reliably enough for the cell to be *claimed*.
+
+**The lead not chased:** prompt nack is a **StreamingPull** property. `GCP / Stream` and
+`GCP / StreamOrdering` are wholly `Deferred` — so the mode in which this might conform is the one
+nothing has yet measured. That belongs to #4240, not to this branch.
