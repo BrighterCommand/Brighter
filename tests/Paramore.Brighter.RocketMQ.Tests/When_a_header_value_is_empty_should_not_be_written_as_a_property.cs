@@ -47,7 +47,12 @@ namespace Paramore.Brighter.RocketMQ.Tests;
 /// executes and nothing else in this repository would notice the guards being removed.
 /// </para>
 /// </remarks>
+// "RocketMQ" is the trait every test in this project carries, broker-dependent or not, so it
+// cannot select this class. The second value can: rocketmq-ci is commented out in ci.yml, and
+// without a selector for the broker-free tests there is no way to run these in CI without also
+// running the 47 that need a broker. Any future broker-free RocketMQ test should carry it too.
 [Trait("Category", "RocketMQ")]
+[Trait("Category", "RocketMQBrokerFree")]
 public class RocketMqEmptyHeaderPropertyTests
 {
     private static RocketMqPublication APublication() => new()
