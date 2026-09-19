@@ -235,6 +235,49 @@ Owns: every counted value in the fact ledger — blast-radius buckets, net lines
 declaration lines, commit count, task/requirement/ADR extraction — each produced by a bounded
 `git`/`gh`/`grep`/`awk` pipeline, never by reading `tasks.md` or the diff in full.
 
+#### Blast radius, without reading the diff
+
+`FILES` is the elected source's file list (`gh pr diff {n} --name-only` or `git diff --name-only
+"{mb}..{head}"`). Six buckets, always all listed even when zero, with `other` as the **complement**
+so the six counts sum to the total by identity rather than by care:
+
+```bash
+FILES | grep -cE '^src/'      ; FILES | grep -cE '^tests/'
+FILES | grep -cE '^docs/'     ; FILES | grep -cE '^specs/'
+FILES | grep -cE '^\.github/' ; FILES | grep -vcE '^(src/|tests/|docs/|specs/|\.github/)'
+FILES | wc -l
+```
+
+Net lines (`+a/−b`) per bucket:
+
+```bash
+# git source
+git diff --numstat "{mb}..{head}" | awk '{a+=$1; d+=$2} END {print a+0, d+0}'
+# PR source — gh pr diff has no --numstat, so the patch is fetched a second time for this
+gh pr diff {n} | grep -cE '^\+([^+]|$)' ; gh pr diff {n} | grep -cE '^-([^-]|$)'
+```
+
+Public-API declaration lines, restricted to `src/`:
+
+```bash
+# git source
+git diff -U0 "{mb}..{head}" -- src/ \
+  | grep -cE '^[+-][[:space:]]*(public|protected)[^[:alnum:]_]'
+# PR source — track the current file from the +++ header
+gh pr diff {n} | awk '/^\+\+\+ b\//{f=substr($2,3)}
+                      f ~ /^src\// && /^[+-][ \t]*(public|protected)[^A-Za-z0-9_]/ {c++}
+                      END {print c+0}'
+```
+
+Commit count, never `git rev-list --count` (keeps the tool surface inside what the repo grants):
+
+```bash
+git log --oneline "{mb}..{head}" | wc -l
+```
+
+Emit `## Blast radius`'s `Measured from {gh pr diff #N (head {sha}) | git diff {merge-base
+sha}..{head sha}}` line, naming exactly one source.
+
 ### Step 6 — Section synthesis
 
 Owns: assembling the eight `## ` sections from the fact ledger alone. No shell call happens in this
