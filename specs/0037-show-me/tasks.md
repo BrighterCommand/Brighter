@@ -115,7 +115,7 @@ Three exceptions, each stated where it occurs: **T5.5** deliberately leaves its 
     - Check: **AC-5** — the `missing` run prints FR-2's template with the word `missing`, and the `stale` run prints it with `stale: names '0099-does-not-exist'`; both offer **both** remedies (pass a spec id with the worked `/spec:show-me 0036-scoped-lifetime-per-pipeline` example, and `/spec:switch`); neither writes any file. **AC-4 (branch-independent form)** — with the file restored, the no-argument run targets `specs/0037-show-me/` and says so **before** the FR-3 gate speaks; the FR-3 gate then refuses it (tasks unchecked), which is the correct and expected outcome at this point and writes nothing.
   - Traces to: FR-2; AC-4, AC-5; ADR 0072 Step 1.
 
-- [ ] **T1.5 — VERIFY: Step 2's completeness gate refuses an incomplete spec with the right message and writes nothing.**
+- [x] **T1.5 — VERIFY: Step 2's completeness gate refuses an incomplete spec with the right message and writes nothing.**
   - Implementation should:
     - Run exactly the three bounded `grep`s of ADR 0072 Step 2 against `specs/{dir}/tasks.md` — `grep -cE '^[[:space:]]*-[[:space:]]\[[ xX]\]'` for the total, `grep -cE '^[[:space:]]*-[[:space:]]\[ \]'` for unchecked, `grep -m3 -E '^[[:space:]]*-[[:space:]]\[ \]'` for the first three unchecked titles — and **never** `Read` the file (spec 0036's is 229 KB; NFR-3).
     - Emit FR-3's three messages verbatim for absent / zero-checkbox / unchecked>0, with `{n} of {total}` and the three titles one per line.
