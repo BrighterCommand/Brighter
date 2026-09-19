@@ -396,6 +396,13 @@ does not identify a file. Gloss any internal type name on first use (A-2).
 synthesise the narrative from `requirements.md`, `tasks.md` and the commits instead — no factor is
 affected by the absence.
 
+An individual `.adr-list` entry that Step 5 could not resolve to exactly one file (FR-16 row 7) is
+named inline, using Step 5's own ledger text verbatim — `{entry} — ADR file not found in
+docs/adr/.` for zero matches, or `{entry} — ambiguous ADR number, matches: {filenames}; .adr-list
+should name the full filename instead.` for more than one (a bare number colliding across specs,
+C-9). The narrative continues normally with whatever ADRs did resolve; the unresolved entry carries
+no factor consequence and is marked `not available` for `## Inputs used`.
+
 #### `## Blast radius`
 
 Purely a rendering of ledger rows Steps 3 and 5 already produced — no new measurement or judgement
