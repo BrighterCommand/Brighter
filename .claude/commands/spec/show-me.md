@@ -403,6 +403,38 @@ should name the full filename instead.` for more than one (a bare number collidi
 C-9). The narrative continues normally with whatever ADRs did resolve; the unresolved entry carries
 no factor consequence and is marked `not available` for `## Inputs used`.
 
+#### `## Breaking changes`
+
+Measured: public-API declaration lines in the spec diff (`src/` only); the `release_notes.md`
+bullet boundaries when a section was read; the final `Total breaking-change items: {n}` count line.
+Judged: what constitutes one item, its classification set, and its one-sentence migration.
+
+Derive items from the spec's own artefacts: the ADRs' *Consequences* sections, `requirements.md`,
+and the public-API declaration lines in the spec diff. Emit one bullet per item — a one-sentence
+statement of what breaks, its classification as a **set** of one or more of source / binary /
+behavioural / compatibility (e.g. "source and binary"), and the migration in one sentence. End with
+`Total breaking-change items: {n}` matching the bullet count.
+
+When a `release_notes.md` section for the spec was read, follow **the catalogue's own bullet
+boundaries** as the tie-break for what counts as one item, rather than re-partitioning them; when
+the counts disagree, add `release_notes.md records {m} items; this summary identifies {n}`.
+
+**FR-16 row 5** (no `release_notes.md` section): add the line `No release_notes.md section found for
+this spec; this list is derived from the ADRs and the diff.` — **unless row 14 is also active** (the
+spec branch is not determinable, so no diff exists at all): row 14's own line already states the
+fallback accurately, and stating "…and the diff" would be false when there is none, so row 14 wins
+and row 5's line is not additionally emitted.
+
+**FR-16 row 14** (branch not determinable, carried over from Step 3): derive the item list from the
+ADRs' *Consequences* sections and `requirements.md` only, add the line `No diff measured — this
+list is derived from the ADRs and requirements.md only; public-API declaration lines could not be
+inspected.`, and keep the count line present — F2 is still computed from whatever items were found,
+not suppressed by the degradation.
+
+Zero items: the section contains exactly `No breaking changes identified for this spec.` and `Total
+breaking-change items: 0` — no absence line is added even if one would otherwise apply, since there
+is nothing for it to qualify.
+
 #### `## Blast radius`
 
 Purely a rendering of ledger rows Steps 3 and 5 already produced — no new measurement or judgement
