@@ -305,6 +305,37 @@ or the full diff. If an extraction could not be completed, report the value as `
 (FR-8) or `not available` (FR-15) **with the reason** — never as zero, never omitted. Check exit
 status, not just empty output, so a failed extraction is never indistinguishable from a real zero.
 
+#### `.adr-list`, `.issue-number`, and the `release_notes.md` section
+
+`cat specs/{dir}/.adr-list`. **Normalise each entry first by stripping a leading `docs/adr/`**,
+then resolve with `ls docs/adr/ | grep -E "^{normalised entry}"` — the strip is load-bearing,
+because `ls docs/adr/` emits bare filenames and a path-prefixed entry can never match without it.
+Tolerate both entry shapes present in this repository — a bare filename
+(`0062-pg-advisory-lock-sha256.md`) and a path-prefixed entry
+(`docs/adr/0040-asyncapi-document-generation.md`) — so the **shape** is never the reason an entry
+fails; whether it resolves is purely a question of whether the named file exists. For each ADR that
+resolves, record one ledger row with its resolved path, title and Status, read from the ADR's own
+front matter/body by `head -14` plus `grep`.
+
+- **`.adr-list` missing or empty** — ledger row for FR-16 row 6; `## What changed and why` states
+  `No ADRs recorded for this spec.` and is synthesised from `requirements.md`, `tasks.md` and the
+  commits instead. No factor consequence.
+- **An entry does not resolve to exactly one file** (FR-16 row 7) — a bare number matching no file:
+  `{entry} — ADR file not found in docs/adr/.` A bare number matching more than one file (C-9):
+  `{entry} — ambiguous ADR number, matches: {filenames}; .adr-list should name the full filename
+  instead.` Either way the narrative continues with the remaining ADRs, the entry is marked `not
+  available` in `## Inputs used`, and the run succeeds.
+
+`cat specs/{dir}/.issue-number`. Missing, empty or whitespace-only ⇒ the metadata block's linked
+issue reads `none` and `## Inputs used` marks it `not available: not present` (FR-16 row 10). No
+factor consequence.
+
+Locate a `release_notes.md` section for the spec by `grep -n` against the file's own heading
+convention (`### Title (spec NNNN)`), then `grep -A` for its bullets. Absence ⇒ FR-16 row 5: `##
+Breaking changes` adds the line `No release_notes.md section found for this spec; this list is
+derived from the ADRs and the diff.` `release_notes.md` is **never** modified and never a
+prerequisite for the run.
+
 ### Step 6 — Section synthesis
 
 Owns: assembling the eight `## ` sections from the fact ledger alone. No shell call happens in this
