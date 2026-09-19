@@ -150,6 +150,35 @@ from Step 3 onward is a degradation (FR-16), not a refusal.
 Owns: resolving the spec's git branch (or recording it as not determinable), the base ref, and the
 merge-base sha — the coordinates every later measurement is taken against.
 
+Let `name` = the spec directory name with the leading `NNNN-` removed. Try, in order, stopping at
+the first that succeeds:
+
+```bash
+git rev-parse --verify --quiet "refs/remotes/origin/spec/${name}"   # rule 1, remote-tracking wins
+git rev-parse --verify --quiet "refs/heads/spec/${name}"            # rule 1, local fallback
+git rev-parse --abbrev-ref HEAD                                     # rule 2, if it contains ${name}
+git log --oneline "{base}..HEAD" -- "specs/{dir}/"                  # rule 3, non-empty ⇒ HEAD
+```
+
+When both a remote-tracking and a local branch of that name exist, the **remote-tracking branch
+wins** — it is the last-pushed state a PR reviewer sees and the state a discovered PR's diff
+reflects.
+
+Resolve the base ref the same way: `origin/master` when `git rev-parse --verify --quiet
+origin/master` succeeds, else `master`. Take the merge base with an explicit `git merge-base {base}
+{head}` — not `git diff`'s three-dot form — because the sha itself must be reported.
+
+Emit, verbatim except for the bracketed values:
+`Ref used: {full ref} at {sha}; base ref {base ref} at {sha}; merge base {sha}.`
+and, only when rule 1 selected the remote-tracking ref while a local branch of the same name sits at
+a **different** sha:
+`Local branch {name} is at {sha} and differs from the measured ref.`
+— omitted entirely when the two shas are equal.
+
+If all three rules fail, the branch is **not determinable**: record a ledger row `spec branch | not
+determinable | rules 1–3 tried` and continue past this step — no absence discovered from here on
+stops the run (FR-16 rows 12–15; handled in Step 5/6, not here).
+
 ### Step 4 — PR discovery and diff-source election
 
 Owns: finding the one pull request for the spec branch (if any) and electing exactly one diff
