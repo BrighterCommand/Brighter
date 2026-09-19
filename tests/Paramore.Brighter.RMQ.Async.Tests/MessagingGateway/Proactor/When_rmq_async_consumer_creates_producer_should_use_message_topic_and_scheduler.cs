@@ -70,7 +70,7 @@ public class RMQMessageConsumerProducerTopicSchedulerTestsAsync : IAsyncDisposab
             rmqConnection,
             queueName,
             topic,
-            isDurable: false,
+            isDurable: true,
             scheduler: _scheduler);
 
         new QueueFactory(rmqConnection, queueName, new RoutingKeys(topic))

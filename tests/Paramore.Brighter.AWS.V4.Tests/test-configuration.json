@@ -8,11 +8,9 @@
       "MessageGatewayProvider": "Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SnsStandardMessageGatewayProvider",
       "Category": "Sns",
       "CollectionName": "Sns",
+      "LedgerKey": "AWS.V4 / SnsStandard",
       "HasSupportToPublishConfirmation": false,
-      "HasSupportToDeadLetterQueue": true,
-      "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": true,
-      "HasSupportToRequeue": true,
       "ReceiveMessageTimeoutInMilliseconds": 4000
     },
     "SnsFifo": {
@@ -22,11 +20,9 @@
       "MessageBuilder": "FifoMessageBuilder",
       "Category": "Sns",
       "CollectionName": "SnsFifo",
+      "LedgerKey": "AWS.V4 / SnsFifo",
       "HasSupportToPublishConfirmation": false,
-      "HasSupportToDeadLetterQueue": true,
-      "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": true,
-      "HasSupportToRequeue": true,
       "ReceiveMessageTimeoutInMilliseconds": 4000
     },
     "SqsStandard": {
@@ -35,11 +31,9 @@
       "MessageGatewayProvider": "Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SqsStandardMessageGatewayProvider",
       "Category": "Sqs",
       "CollectionName": "SqsStandard",
+      "LedgerKey": "AWS.V4 / SqsStandard",
       "HasSupportToPublishConfirmation": false,
-      "HasSupportToDeadLetterQueue": true,
-      "HasSupportToDelayedMessages": true,
       "HasSupportToValidateBrokerExistence": true,
-      "HasSupportToRequeue": true,
       "ReceiveMessageTimeoutInMilliseconds": 4000
     },
     "SqsFifo": {
@@ -49,11 +43,9 @@
       "MessageBuilder": "FifoMessageBuilder",
       "Category": "Sqs",
       "CollectionName": "SqsFifo",
+      "LedgerKey": "AWS.V4 / SqsFifo",
       "HasSupportToPublishConfirmation": false,
-      "HasSupportToDeadLetterQueue": true,
-      "HasSupportToDelayedMessages": false,
       "HasSupportToValidateBrokerExistence": true,
-      "HasSupportToRequeue": true,
       "ReceiveMessageTimeoutInMilliseconds": 4000
     }
   }

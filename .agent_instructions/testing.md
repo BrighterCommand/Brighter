@@ -156,3 +156,23 @@ A run in `review-after` that drops any of these is defective — it is not "a di
   - Get approval for the test
   - Implement the code to make it pass
   - This ensures you're building the right behavior from the start
+
+### RabbitMQ: run each suite against the broker version it targets
+
+The two RabbitMQ suites do not target the same broker, and pointing one at the other's version
+produces a wall of red that is not a regression.
+
+- **`RMQ.Async` runs on 4.2 and 4.3+.** `RmqSubscription.isDurable` defaults to `true` there (#4355),
+  so a default subscription declares a queue 4.3 accepts.
+- **`RMQ.Sync` runs on 4.2 only.** It targets the RabbitMQ 3.x line through `RabbitMQ.Client` 6.x, so
+  its `isDurable` default is deliberately still `false`. RabbitMQ **4.3 removed transient
+  non-exclusive queues**, so on a 4.3+ broker every queue declaration is rejected with
+  `INTERNAL_ERROR - Feature 'transient_nonexcl_queues' is deprecated`. Measured against 4.3.5:
+  **46 failed / 35 passed / 3 skipped**. This applies to the package, not just its tests — a default
+  subscription from `Paramore.Brighter.MessagingGateway.RMQ.Sync` is rejected by 4.3+ too.
+
+`docker-compose-rmq.yaml` is pinned to 4.2 for this reason and CI uses it, so `rabbitmq-sync-ci` is
+green. **Check the broker version before reading a local RabbitMQ failure** — `docker ps` will show
+an unrelated 4.3 container holding 5672 on a developer machine. Do not "fix" the `isDurable: false`
+sites in `Paramore.Brighter.RMQ.Sync.Tests` to make a 4.3 run pass; they match the product default
+the package deliberately keeps.

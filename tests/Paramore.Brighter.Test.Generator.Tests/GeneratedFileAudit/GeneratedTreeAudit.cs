@@ -183,7 +183,7 @@ public sealed class GeneratedTreeAudit
             expected.UnionWith(outboxGenerator.Plan(configuration)
                 .Concat(messagingGatewayGenerator.Plan(configuration))
                 .Select(plannedFile => Path.GetFullPath(plannedFile.DestinationPath))
-                .Where(IsUnderAGeneratedFolder));
+                .Where(path => IsUnderAGeneratedFolder(path, testsRoot)));
         }
 
         return expected;
@@ -244,8 +244,21 @@ public sealed class GeneratedTreeAudit
         }
     }
 
-    private static bool IsUnderAGeneratedFolder(string path) =>
-        Segments(path).SkipLast(1).Contains(GENERATED_FOLDER_NAME, StringComparer.Ordinal);
+    /// <summary>
+    /// Whether <paramref name="path"/> lands under a <c>Generated/</c> directory somewhere beneath
+    /// <paramref name="testsRoot"/>.
+    /// </summary>
+    /// <remarks>
+    /// The question is asked of the path relative to <paramref name="testsRoot"/>, because that is
+    /// the only part of it the walk that builds the on-disk set ever sees. Asked of the absolute
+    /// path instead, a checkout that happened to live under a directory named <c>Generated</c>
+    /// would answer yes for every planned file - so the expected set would claim files the walk
+    /// never collects, and the audit would report them missing on a tree that is perfectly correct.
+    /// </remarks>
+    private static bool IsUnderAGeneratedFolder(string path, string testsRoot) =>
+        Segments(Path.GetRelativePath(testsRoot, path))
+            .SkipLast(1)
+            .Contains(GENERATED_FOLDER_NAME, StringComparer.Ordinal);
 
     private static string[] Segments(string path) =>
         path.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],

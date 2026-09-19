@@ -6,11 +6,9 @@
     "MessageGatewayProvider": "Paramore.Brighter.Redis.Tests.MessagingGateway.RedisMessageGatewayProvider",
     "Category": "Redis",
     "CollectionName": "RedisMessagingGateway",
+    "LedgerKey": "Redis / RedisMessagingGateway",
     "HasSupportToPublishConfirmation": false,
-    "HasSupportToDeadLetterQueue": true,
-    "HasSupportToDelayedMessages": false,
     "HasSupportToValidateBrokerExistence": false,
-    "HasSupportToRequeue": true,
     "HasSupportToValidateInfrastructure": false
   }
 }

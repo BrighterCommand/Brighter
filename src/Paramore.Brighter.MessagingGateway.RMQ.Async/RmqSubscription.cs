@@ -86,7 +86,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
         /// <param name="requeueDelay">The delay to the delivery of a requeue message; defaults to 0</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
-        /// <param name="isDurable">The durability of the queue definition in the broker.</param>
+        /// <param name="isDurable">The durability of the queue definition in the broker; defaults to true.
+        /// RabbitMQ 4.3 deprecates transient non-exclusive queues and refuses to declare them by default, so a
+        /// non-durable queue cannot be created there unless the broker is configured to permit the feature.</param>
         /// <param name="messagePumpType">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="highAvailability">Should we mirror the queue over multiple nodes</param>
@@ -110,7 +112,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
             TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0,
             TimeSpan? unacceptableMessageLimitWindow = null,
-            bool isDurable = false,
+            bool isDurable = true,
             MessagePumpType messagePumpType = MessagePumpType.Unknown,
             IAmAChannelFactory? channelFactory = null,
             bool highAvailability = false,
@@ -149,7 +151,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
         /// <param name="requeueDelay">The number of milliseconds to delay the delivery of a requeue message for.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
-        /// <param name="isDurable">The durability of the queue definition in the broker.</param>
+        /// <param name="isDurable">The durability of the queue definition in the broker; defaults to true.
+        /// RabbitMQ 4.3 deprecates transient non-exclusive queues and refuses to declare them by default, so a
+        /// non-durable queue cannot be created there unless the broker is configured to permit the feature.</param>
         /// <param name="messagePumpType">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="highAvailability">Should we mirror the queue over multiple nodes</param>
@@ -173,7 +177,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
             TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0,
             TimeSpan? unacceptableMessageLimitWindow = null,
-            bool isDurable = false,
+            bool isDurable = true,
             MessagePumpType messagePumpType = MessagePumpType.Proactor,
             IAmAChannelFactory? channelFactory = null,
             bool highAvailability = false,

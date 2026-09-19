@@ -20,10 +20,8 @@
     "Subscription": "Paramore.Brighter.MessagingGateway.MsSql.MsSqlSubscription",
     "Category": "MSSQL",
     "CollectionName": "MSSQLMessagingGateway",
+    "LedgerKey": "MSSQL / MSSQLMessagingGateway",
     "HasSupportToPublishConfirmation": false,
-    "HasSupportToDeadLetterQueue": false,
-    "HasSupportToDelayedMessages": false,
-    "HasSupportToRequeue": true,
     "HasSupportToValidateBrokerExistence": false
   }
 }
