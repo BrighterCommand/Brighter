@@ -180,7 +180,7 @@ Three exceptions, each stated where it occurs: **T5.5** deliberately leaves its 
     - Check: **AC-19** — the run **succeeds** and writes `specs/0002-sqs-cleanup/show-me.md`; `## Blast radius` contains `Spec branch not determinable — no diff measured.` plus an enumeration of the three rules tried; the risk table shows **F1 `Medium`**; the metadata block's spec-branch, head-sha and merge-base-sha lines each read exactly `undetermined`; its base-ref line still names `origin/master` with its sha; its PR-reference line reads `none found`; generation date, spec directory and linked issue are populated normally and all eight H2 headings are present.
   - Traces to: FR-10, FR-16 rows 12 and 15; AC-19; ADR 0072 Step 3.
 
-- [ ] **T2.4 — VERIFY: Step 4 discovers the PR by the stated rule and elects exactly one diff source (FR-20).**
+- [x] **T2.4 — VERIFY: Step 4 discovers the PR by the stated rule and elects exactly one diff source (FR-20).**
   - Implementation should:
     - Strip any remote prefix from the branch name, run `gh pr list --head "spec/${name}" --state all --json number,url,headRefName,createdAt`, and keep **only** results whose `headRefName` equals that name exactly — the filter is load-bearing because `gh` matches loosely (ADR 0072 Step 4).
     - One result ⇒ that PR. More than one ⇒ **highest number wins**, and the ledger records `{k} pull requests found for branch {branch}; using #{n} (highest number).` for `## Blast radius`. Zero results or a **non-zero exit** from `gh` ⇒ no PR, FR-16 rows 1–2.
