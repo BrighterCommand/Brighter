@@ -120,6 +120,31 @@ selecting `missing`, `empty`, or `stale: names '{value}'` for the bracketed word
 Owns: refusing to summarise a spec whose `tasks.md` is absent, has zero checkboxes, or has any
 unchecked box — printing the exact refusal and writing nothing.
 
+Run exactly these three bounded `grep`s against `specs/{dir}/tasks.md` — never `Read` the file
+(spec 0036's is 229 KB) — and check each command's **exit status**, not just its output, so a
+failed extraction is never reported as a real zero:
+
+```bash
+test -f "specs/{dir}/tasks.md"
+grep -cE '^[[:space:]]*-[[:space:]]\[[ xX]\]' "specs/{dir}/tasks.md"   # total
+grep -cE '^[[:space:]]*-[[:space:]]\[ \]'      "specs/{dir}/tasks.md"   # unchecked
+grep -m3 -E '^[[:space:]]*-[[:space:]]\[ \]'   "specs/{dir}/tasks.md"   # first three titles
+```
+
+- **`tasks.md` absent** — stop and print exactly:
+  `Spec {dir} has no tasks.md — /spec:show-me runs only against a finished spec. Current phase:
+  run /spec:status.`
+- **`tasks.md` present, zero checkboxes** — stop and print exactly:
+  `Spec {dir}'s tasks.md contains no task checkboxes — nothing to summarise.`
+- **`tasks.md` present, ≥ 1 unchecked checkbox** — stop and print exactly:
+  `Spec {dir} is not finished: {n} of {total} tasks are still unchecked. First unfinished: {first
+  three unchecked task titles, one per line}. /spec:show-me runs only against a finished spec.`
+
+**The precondition gate's contract, stated once: if any check in Steps 1–2 fails, print the exact
+message given and stop; do not proceed to Step 3; do not write, create or touch any file.** This is
+the only circumstance in which the command declines to produce output — every absence discovered
+from Step 3 onward is a degradation (FR-16), not a refusal.
+
 ### Step 3 — Spec branch, base ref, merge base
 
 Owns: resolving the spec's git branch (or recording it as not determinable), the base ref, and the
