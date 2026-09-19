@@ -175,9 +175,20 @@ a **different** sha:
 `Local branch {name} is at {sha} and differs from the measured ref.`
 — omitted entirely when the two shas are equal.
 
-If all three rules fail, the branch is **not determinable**: record a ledger row `spec branch | not
-determinable | rules 1–3 tried` and continue past this step — no absence discovered from here on
-stops the run (FR-16 rows 12–15; handled in Step 5/6, not here).
+If all three rules fail, the branch is **not determinable**. This does not stop the run — no
+absence discovered from here on does. Record the ledger row `spec branch | not determinable | rules
+1–3 tried` and carry these four consequences into Step 6 (FR-16 rows 12–15):
+
+- **`## Blast radius`** states `Spec branch not determinable — no diff measured.` followed by the
+  rules tried, and **F1 scores Medium**.
+- **The metadata block**'s spec-branch, head-commit-sha and merge-base-sha lines each read the
+  single word `undetermined`. The base ref is still resolved and named normally — it does not
+  depend on the spec branch.
+- **The PR-reference line** reads `none found`, because FR-20's PR discovery needs the branch name.
+- **`## Where to look first`** takes its defined fallback with no paths (row 13), and
+  **`## Breaking changes`** adds the line stating public-API declaration lines could not be
+  inspected while still carrying a count line (row 14) — both built where those sections are
+  written, in Phase 3, and cross-referenced here so the four behaviours stay in step.
 
 ### Step 4 — PR discovery and diff-source election
 
