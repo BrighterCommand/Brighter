@@ -72,7 +72,7 @@ Three exceptions, each stated where it occurs: **T5.5** deliberately leaves its 
 
 *(ADR 0072 Key Components 1–3, Steps 0–2; FR-1, FR-2, FR-3, NFR-6, NFR-8)*
 
-- [ ] **T1.1 — STRUCTURAL: Create `.claude/commands/spec/show-me.md` with front matter, the Step 0 pre-flight block, and the Step 0–8 heading skeleton.**
+- [x] **T1.1 — STRUCTURAL: Create `.claude/commands/spec/show-me.md` with front matter, the Step 0 pre-flight block, and the Step 0–8 heading skeleton.**
   - Create the file with the front matter ADR 0072 *Technology Choices* fixes verbatim: `allowed-tools` listing `Bash(cat:*)`, `Bash(ls:*)`, `Bash(test:*)`, `Bash(grep:*)`, `Bash(head:*)`, `Bash(wc:*)`, `Bash(awk:*)`, `Bash(date:*)`, `Bash(git log:*)`, `Bash(git diff:*)`, `Bash(git rev-parse:*)`, `Bash(git merge-base:*)`, `Bash(git ls-files:*)`, `Bash(git branch:*)`, `Bash(gh pr list:*)`, `Bash(gh pr view:*)`, `Bash(gh pr diff:*)`, `Read`, `Write`, `Glob`, `Grep`; `description: Summarise a finished spec and give an advisory merge-risk read`; `argument-hint: [spec-id]`.
   - The three `gh` verbs are declared narrowly and **never** `Bash(gh:*)`, so FR-18's confinement is checkable by reading the front matter (AC-30's second half). No `gh run`, `gh api`, `gh checks`, `git rev-list`, `sed` or `sort` appears anywhere in the file.
   - Add the Step 0 pre-flight block in the family's pre-executed-shell style (`switch.md` is the precedent): an `## Available specifications` heading followed by `` !`ls -1d specs/*/ 2>/dev/null` ``.
@@ -80,7 +80,7 @@ Three exceptions, each stated where it occurs: **T5.5** deliberately leaves its 
   - Acceptance check: front matter parses and carries all three fields (`allowed-tools`, `description`, `argument-hint`); **`grep -oE 'gh [a-z]+ [a-z]+' .claude/commands/spec/show-me.md | grep -vE '^gh pr (view|list|diff)$'` returns no output at all** — every two-word `gh` invocation in the file is one of the three allowed verbs, and the check fails loudly by producing a line if any other appears; Step headings 0–8 all present in order.
   - Traces to: NFR-6, AC-53, AC-30; ADR 0072 Key Components 1 and *Technology Choices*, Step 0.
 
-- [ ] **T1.2 — STRUCTURAL: Add the role split, the fact-ledger contract and the global invariants block.**
+- [x] **T1.2 — STRUCTURAL: Add the role split, the fact-ledger contract and the global invariants block.**
   - Add the three-role table verbatim in substance: **Measurer** (ADR 0072) owns every value NFR-1 requires identical between runs, by `git`/`gh`/`grep`/`awk` invocations whose output is a count, a sha, a ref name or a short line list; **Classifier** (ADR 0073) owns round/finding/severity/resolution tallies and F1–F5 levels, reading only Measurer-produced extracts; **Synthesiser** owns prose. State the two crossing prohibitions: the Measurer never paraphrases, and **the Synthesiser never counts** (no shell calls during Step 6).
   - Define the fact-ledger row shape — `{input or metric} | {value} | {command or path it came from} | used | not available: {reason}` — as an **in-context** table, never a file, and state why (FR-18 permits exactly one write; a marker file is forbidden by FR-13 and Out of Scope). Note the verification consequence: because the ledger is in-context, a Classifier row is observable **in the session transcript**, which is where several Phase 4 tasks assert against it.
   - State the traceability rule the rest of the file depends on: **a section may state only values present in the ledger, and must name the ledger row it came from** (NFR-7).
@@ -90,7 +90,7 @@ Three exceptions, each stated where it occurs: **T5.5** deliberately leaves its 
   - Acceptance check: the file contains the role table, the five-column ledger row shape, the "Synthesiser never counts" and "no step branches on the level" sentences, and the two POSIX regexes literally.
   - Traces to: NFR-1, NFR-7, FR-13, FR-18; ADR 0072 Key Components 1 and 3, *Technology Choices*; ADR 0073 Decision and Key Components 1.
 
-- [ ] **T1.3 — VERIFY: Step 1 resolves a given spec-id by the three-rule set, taking `$ARGUMENTS` whole.**
+- [x] **T1.3 — VERIFY: Step 1 resolves a given spec-id by the three-rule set, taking `$ARGUMENTS` whole.**
   - Implementation should:
     - Take `$ARGUMENTS` **whole** — trim leading/trailing whitespace, strip wrapping quotes, preserve internal whitespace verbatim — and never split on whitespace (FR-1; ADR 0072 Step 1).
     - Match over Step 0's line list **by the executing model**, not by a shell `for` loop, and say why in one line (an unquoted loop variable splits `0021-Expose Unacceptable Message Window` into four tokens).
