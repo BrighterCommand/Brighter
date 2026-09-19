@@ -106,6 +106,15 @@ Apply this ordered rule set, stopping at the first rule that yields exactly one 
 - **No match** — stop without writing any file and print exactly:
   `No spec matches '{arg}'. Run /spec:status to list specs.`
 
+**With no argument.** Read `specs/.current-spec` (`cat specs/.current-spec`) and target the spec
+directory it names, verified with `test -d "specs/{value}"`. Whitespace-only content is treated as
+`empty`. If the file is missing, empty, whitespace-only, or names a directory that does not exist
+under `specs/`, stop without writing any file and print exactly:
+`No spec id given and no usable current spec (specs/.current-spec is {missing|empty|stale: names
+'{value}'}). Pass a spec id (/spec:show-me 0036-scoped-lifetime-per-pipeline) or run /spec:switch
+first.`
+selecting `missing`, `empty`, or `stale: names '{value}'` for the bracketed word.
+
 ### Step 2 — Completeness check
 
 Owns: refusing to summarise a spec whose `tasks.md` is absent, has zero checkboxes, or has any
