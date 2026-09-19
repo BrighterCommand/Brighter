@@ -573,7 +573,7 @@ are this branch's generated conformance suite and do not exist on `master`.
 
 | behaviour | FR | failed in | worst measured |
 |---|---|---|---|
-| `…_with_zero_delay_should_redeliver_immediately` | FR-15 | **4 of 4 runs, both rows, both variants** | `elapsed: 00:00:27.27` against a 5 s bound |
+| `…_with_zero_delay_should_redeliver_immediately` | FR-15 | **4 of 4 runs, both rows, both variants** | elapsed **7.12 s to 27.27 s** against a 5 s bound |
 | `…_nacking_a_message_it_should_be_redelivered` | FR-16 | 3 of 4 runs | `Assert.Contains() Failure: Item not found in set` after a 30 s poll |
 | `…_requeuing_a_failed_message_should_be_redelivered` | FR-22 | 3 of 4 runs | `Actual: MT_NONE` after a 30 s poll |
 | `…_rejecting_message_with_no_channels_configured…` | FR-7 | 1 of 4 runs | `Actual: MT_NONE` after a 30 s poll |
@@ -597,8 +597,12 @@ succeeds and is ignored as a prompt-redelivery instruction. Four checks:
 - The delay is not our own backoff: `RequeueDelay` defaults to `TimeSpan.Zero`
   (`Subscription.cs:228`), so `RetryPolicy` is left **null** (`GcpPubSubMessageGateway.cs:369-377`).
 - The delay tracks the ack deadline: the conformance subscription sets `ackDeadlineSeconds: 10`
-  (`GcpPullMessageGatewayProvider.cs:168`) and measured elapsed is 13.65 / 15.21 / 18.66 / 27.27 s
-  — always above 10, never below.
+  (`GcpPullMessageGatewayProvider.cs:168`), and the eleven measured elapsed times cluster around and
+  above it — 7.12, 10.21, 12.69, 13.65, 14.22, 15.21, 18.66, 18.77, 21.88, 23.73, 27.27 s.
+  **Every one is well past the 5 s bound; none is remotely prompt.** The 7.12 s outlier is not a
+  counter-example: the test's stopwatch starts when `Requeue` *returns*, whereas the deadline clock
+  started earlier, when the message was received — so elapsed-since-requeue is expected to fall
+  short of a full deadline period sometimes.
 - It was already written down in our own tree: `GcpPullMessageGatewayProvider.cs:166-167` says
   *"Nack is a no-op for Pub/Sub: redelivery waits for the ack deadline to expire."*
 
