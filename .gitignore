@@ -351,6 +351,7 @@ ralph.log
 
 # AI agent session state
 PROMPT.md
+PROMPT-*.md
 
 # TDD review gear (ADR 0071) — untracked working state, not a spec artifact.
 # Holds which gear a spec is currently being run in (review-before | review-after).

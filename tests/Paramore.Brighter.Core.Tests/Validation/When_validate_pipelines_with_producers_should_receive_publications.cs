@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Validation;
@@ -54,8 +55,8 @@ public class ValidatePipelinesWithProducersTests
         var provider = services.BuildServiceProvider();
 
         // Act — resolve validator and run validation
-        var validator = provider.GetRequiredService<IAmAPipelineValidator>();
-        var result = validator.Validate();
+        var validators = provider.GetServices<IAmAPipelineValidator>();
+        var result = PipelineValidationResult.Combine(validators.Select(v => v.Validate()).ToArray());
 
         // Assert — validation should detect the missing RequestType on the publication
         Assert.False(result.IsValid);
@@ -85,8 +86,8 @@ public class ValidatePipelinesWithProducersTests
         var provider = services.BuildServiceProvider();
 
         // Act
-        var validator = provider.GetRequiredService<IAmAPipelineValidator>();
-        var result = validator.Validate();
+        var validators = provider.GetServices<IAmAPipelineValidator>();
+        var result = PipelineValidationResult.Combine(validators.Select(v => v.Validate()).ToArray());
 
         // Assert — no producer validation errors
         Assert.DoesNotContain(result.Errors, e => e.Source.Contains("Publication"));

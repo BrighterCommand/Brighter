@@ -86,7 +86,9 @@ public class AsyncMessagePumpMapperReleaseThrowsTests
     private sealed class ThrowingOnReleaseMessageMapperFactoryAsync(Func<Type, IAmAMessageMapperAsync> factoryMethod)
         : IAmAMessageMapperFactoryAsync
     {
-        public Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType) => new Lease<IAmAMessageMapperAsync>(factoryMethod(messageMapperType));
+        public IAmAScope? CreatePipelineScope() => null;
+
+        public Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType, IAmAScope? scope = null) => new Lease<IAmAMessageMapperAsync>(factoryMethod(messageMapperType));
 
         public void Release(Lease<IAmAMessageMapperAsync>? lease) =>
             throw new InvalidOperationException("mapper release failed");

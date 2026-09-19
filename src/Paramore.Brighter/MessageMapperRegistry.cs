@@ -75,11 +75,20 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
+        /// Offers a DI scope for the transform pipeline being built, forwarded from whichever of the sync
+        /// and async mapper factories this registry owns offers one first.
+        /// </summary>
+        /// <returns>A pipeline scope handle, or <c>null</c> if neither factory offers one.</returns>
+        public IAmAScope? CreatePipelineScope() =>
+            _messageMapperFactory?.CreatePipelineScope() ?? _messageMapperFactoryAsync?.CreatePipelineScope();
+
+        /// <summary>
         /// Gets this instance.
         /// </summary>
         /// <typeparam name="TRequest">The type of the t request.</typeparam>
+        /// <param name="scope">The pipeline scope to resolve from, if one was offered.</param>
         /// <returns>IAmAMessageMapper&lt;TRequest&gt;.</returns>
-        public Lease<IAmAMessageMapper<TRequest>>? Get<TRequest>() where TRequest : class, IRequest
+        public Lease<IAmAMessageMapper<TRequest>>? Get<TRequest>(IAmAScope? scope = null) where TRequest : class, IRequest
         {
             if (_messageMapperFactory is null)
                 return null;
@@ -94,7 +103,7 @@ namespace Paramore.Brighter
             if (messageMapperType is null)
                 return null;
 
-            var lease = _messageMapperFactory.Create(messageMapperType);
+            var lease = _messageMapperFactory.Create(messageMapperType, scope);
             switch (lease?.Instance)
             {
                 case null:
@@ -118,8 +127,9 @@ namespace Paramore.Brighter
         /// Gets this instance.
         /// </summary>
         /// <typeparam name="TRequest">The type of the t request.</typeparam>
+        /// <param name="scope">The pipeline scope to resolve from, if one was offered.</param>
         /// <returns>IAmAMessageMapperAsync&lt;TRequest&gt;.</returns>
-        public Lease<IAmAMessageMapperAsync<TRequest>>? GetAsync<TRequest>() where TRequest : class, IRequest
+        public Lease<IAmAMessageMapperAsync<TRequest>>? GetAsync<TRequest>(IAmAScope? scope = null) where TRequest : class, IRequest
         {
             if (_messageMapperFactoryAsync is null)
                 return null;
@@ -134,7 +144,7 @@ namespace Paramore.Brighter
             if (messageMapperType is null)
                 return null;
 
-            var lease = _messageMapperFactoryAsync.Create(messageMapperType);
+            var lease = _messageMapperFactoryAsync.Create(messageMapperType, scope);
             switch (lease?.Instance)
             {
                 case null:

@@ -31,11 +31,17 @@ namespace Paramore.Brighter.ServiceActivator
     public class ControlBusMessageMapperFactory : IAmAMessageMapperFactory
     {
         /// <summary>
+        /// Offers no pipeline scope: the control bus mappers are plain objects holding no resources.
+        /// </summary>
+        public IAmAScope? CreatePipelineScope() => null;
+
+        /// <summary>
         /// Creates the specified message mapper type.
         /// </summary>
         /// <param name="messageMapperType">Type of the message mapper.</param>
+        /// <param name="scope">Ignored: this factory offers no pipeline scope.</param>
         /// <returns>IAmAMessageMapper.</returns>
-        public Lease<IAmAMessageMapper>? Create(Type messageMapperType)
+        public Lease<IAmAMessageMapper>? Create(Type messageMapperType, IAmAScope? scope = null)
         {
             if (messageMapperType == typeof (ConfigurationCommandMessageMapper))
             {

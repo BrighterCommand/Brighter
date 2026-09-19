@@ -76,7 +76,9 @@ public class MediatorUnresolvableMapperReplyTests
 
     private sealed class NullReturningMapperFactoryAsync : IAmAMessageMapperFactoryAsync
     {
-        public Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType) => null;
+        public IAmAScope? CreatePipelineScope() => null;
+
+        public Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType, IAmAScope? scope = null) => null;
 
         public void Release(Lease<IAmAMessageMapperAsync>? lease) { }
 

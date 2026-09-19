@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
@@ -18,7 +19,7 @@ public class TransientHandlerCapturedProviderTests
         var provider = collection.BuildServiceProvider();
 
         var factory = new ServiceProviderHandlerFactory(provider);
-        var lifetime = new TestLifetimeScope();
+        var lifetime = new TestLifetimeScope(factory.CreatePipelineScope());
 
         //act — the handler is not IDisposable and resolves its collaborator lazily from the injected
         //IServiceProvider, exactly as FluentValidationRequestHandler does. That provider belongs to the
@@ -38,9 +39,12 @@ public class TransientHandlerCapturedProviderTests
 
     private sealed class TestLifetimeScope : IAmALifetime
     {
+        public TestLifetimeScope(IAmAScope? pipelineScope = null) => PipelineScope = pipelineScope;
+        public IAmAScope? PipelineScope { get; }
         public void Add(IHandleRequests instance) { }
         public void Add(IHandleRequestsAsync instance) { }
-        public void Dispose() { }
+        public void Dispose() => PipelineScope?.Dispose();
+        public ValueTask DisposeAsync() => PipelineScope?.DisposeAsync() ?? default;
     }
 
     private interface IDependencyService;

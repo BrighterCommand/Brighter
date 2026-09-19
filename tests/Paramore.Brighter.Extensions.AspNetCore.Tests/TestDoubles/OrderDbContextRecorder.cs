@@ -1,0 +1,54 @@
+#region Licence
+/* The MIT License (MIT)
+Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+
+#endregion
+
+namespace Paramore.Brighter.Extensions.AspNetCore.Tests.TestDoubles;
+
+/// <summary>
+/// Records the <see cref="IOrderDbContext"/> a controller action captured for itself, and the one the
+/// handler it <c>Send</c>s to was constructed with, so a test can compare the two after the HTTP
+/// request has completed and both pipelines have been torn down. Register as a singleton in the
+/// container under test.
+/// </summary>
+public sealed class OrderDbContextRecorder
+{
+    /// <summary>
+    /// The <see cref="IOrderDbContext"/> the controller action captured for itself.
+    /// </summary>
+    public IOrderDbContext? ControllerInstance { get; private set; }
+
+    /// <summary>
+    /// The <see cref="IOrderDbContext"/> the handler was constructed with.
+    /// </summary>
+    public IOrderDbContext? HandlerInstance { get; private set; }
+
+    /// <summary>
+    /// Records the controller action's own <see cref="IOrderDbContext"/>.
+    /// </summary>
+    public void RecordController(IOrderDbContext context) => ControllerInstance = context;
+
+    /// <summary>
+    /// Records the handler's own <see cref="IOrderDbContext"/>.
+    /// </summary>
+    public void RecordHandler(IOrderDbContext context) => HandlerInstance = context;
+}

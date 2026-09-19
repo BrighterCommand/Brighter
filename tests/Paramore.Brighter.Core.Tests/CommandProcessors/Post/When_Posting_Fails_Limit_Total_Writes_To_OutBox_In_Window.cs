@@ -96,6 +96,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         }
         internal sealed class EmptyHandlerFactorySync : IAmAHandlerFactorySync
         {
+            public IAmAScope? CreatePipelineScope() => null;
+
             public IHandleRequests Create(Type handlerType, IAmALifetime lifetime)
             {
                 return null!;

@@ -44,11 +44,13 @@ namespace Paramore.Brighter.Validation;
 /// validation-provider check runs over handler pipelines; null (the default) leaves it inert.</param>
 /// <param name="mapperRegistryFactory">Optional factory that builds the mapper registry used to describe a
 /// publication's transforms. The validator invokes it at most once — lazily, the first time a validation
-/// rule needs the registry — and takes ownership of the registry it returns, disposing it at teardown only
-/// if it was built. Taking a factory rather than a live instance keeps that ownership transfer
-/// explicit — the validator disposes only a registry it created — so a caller cannot hand in a registry it
-/// still uses elsewhere and have it disposed underneath them. Together with <paramref name="transformerProbe"/>
-/// it enables the producer wrap-transform check.</param>
+/// rule needs the registry. The registry it returns may be forced by the caller and shared with it — a
+/// factory that always resolves to the same underlying registry lets another validator sharing this one's
+/// inputs force it first and both read the same instance. That sharing is safe because
+/// <see cref="MessageMapperRegistry.Dispose"/> claims with a single
+/// <see cref="System.Threading.Interlocked.Exchange(ref int, int)"/>, so whichever owner disposes it last
+/// does so exactly once. Together with <paramref name="transformerProbe"/> it enables the producer
+/// wrap-transform check.</param>
 /// <param name="transformerProbe">Optional probe answering whether a declared transformer type is resolvable.
 /// Together with <paramref name="mapperRegistryFactory"/> it enables the producer wrap-transform check.</param>
 public class PipelineValidator(

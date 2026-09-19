@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
@@ -49,8 +50,8 @@ public class ValidatePipelinesProviderRegistrationTests
         var provider = services.BuildServiceProvider();
 
         // Act — resolve the validator and run validation through the full DI path
-        var validator = provider.GetRequiredService<IAmAPipelineValidator>();
-        var result = validator.Validate();
+        var validators = provider.GetServices<IAmAPipelineValidator>();
+        var result = PipelineValidationResult.Combine(validators.Select(v => v.Validate()).ToArray());
 
         // Assert — a (B) Warning surfaces naming the request and the three provider calls; warnings never block
         Assert.True(result.IsValid);

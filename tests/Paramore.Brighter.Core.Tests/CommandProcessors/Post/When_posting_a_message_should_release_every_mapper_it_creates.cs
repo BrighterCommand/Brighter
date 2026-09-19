@@ -80,7 +80,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             public int CreateCount => _createCount;
             public int ReleaseCount => _releaseCount;
 
-            public Lease<IAmAMessageMapper>? Create(Type messageMapperType)
+            public IAmAScope? CreatePipelineScope() => null;
+
+            public Lease<IAmAMessageMapper>? Create(Type messageMapperType, IAmAScope? scope = null)
             {
                 Interlocked.Increment(ref _createCount);
                 return new Lease<IAmAMessageMapper>(new MyCommandMessageMapper());

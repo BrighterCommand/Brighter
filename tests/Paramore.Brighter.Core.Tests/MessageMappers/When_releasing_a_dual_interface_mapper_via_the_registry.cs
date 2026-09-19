@@ -79,7 +79,9 @@ namespace Paramore.Brighter.Core.Tests.MessageMappers
         {
             public IAmAMessageMapper? Released { get; private set; }
 
-            public Lease<IAmAMessageMapper>? Create(Type messageMapperType) => null;
+            public IAmAScope? CreatePipelineScope() => null;
+
+            public Lease<IAmAMessageMapper>? Create(Type messageMapperType, IAmAScope? scope = null) => null;
 
             public void Release(Lease<IAmAMessageMapper>? lease) => Released = lease!.Instance;
         }
@@ -88,7 +90,9 @@ namespace Paramore.Brighter.Core.Tests.MessageMappers
         {
             public IAmAMessageMapperAsync? Released { get; private set; }
 
-            public Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType) => null;
+            public IAmAScope? CreatePipelineScope() => null;
+
+            public Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType, IAmAScope? scope = null) => null;
 
             public void Release(Lease<IAmAMessageMapperAsync>? lease) => Released = lease!.Instance;
 

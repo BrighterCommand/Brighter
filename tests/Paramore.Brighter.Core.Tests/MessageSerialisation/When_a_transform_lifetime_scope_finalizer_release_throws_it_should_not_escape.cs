@@ -103,7 +103,9 @@ public class TransformLifetimeScopeFinalizerReleaseTests
         //recorded before the throw so the test can prove the finalizer genuinely reached the release
         public static int ReleaseAttempts => Volatile.Read(ref s_releaseAttempts);
 
-        public Lease<IAmAMessageTransform>? Create(Type transformerType) => null;
+        public IAmAScope? CreatePipelineScope() => null;
+
+        public Lease<IAmAMessageTransform>? Create(Type transformerType, IAmAScope? scope = null) => null;
 
         public void Release(Lease<IAmAMessageTransform>? lease)
         {
@@ -119,7 +121,9 @@ public class TransformLifetimeScopeFinalizerReleaseTests
         //recorded before the throw so the test can prove the finalizer genuinely reached the release
         public static int ReleaseAttempts => Volatile.Read(ref s_releaseAttempts);
 
-        public Lease<IAmAMessageTransformAsync>? Create(Type transformerType) => null;
+        public IAmAScope? CreatePipelineScope() => null;
+
+        public Lease<IAmAMessageTransformAsync>? Create(Type transformerType, IAmAScope? scope = null) => null;
 
         public void Release(Lease<IAmAMessageTransformAsync>? lease)
         {

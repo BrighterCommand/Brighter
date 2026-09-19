@@ -26,6 +26,8 @@ using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Collections.Generic;
+using System.Runtime.ExceptionServices;
+using System.Threading.Tasks;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Validation;
@@ -34,7 +36,8 @@ using Paramore.Brighter.Inbox.Attributes;
 
 namespace Paramore.Brighter
 {
-    public partial class PipelineBuilder<TRequest> : IAmAPipelineBuilder<TRequest>, IAmAnAsyncPipelineBuilder<TRequest>
+    public partial class PipelineBuilder<TRequest>
+        : IAmAPipelineBuilder<TRequest>, IAmAnAsyncPipelineBuilder<TRequest>, IAsyncDisposable
         where TRequest : class, IRequest
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<PipelineBuilder<TRequest>>();
@@ -44,6 +47,7 @@ namespace Paramore.Brighter
         private readonly IAmAHandlerFactorySync? _syncHandlerFactory;
         private readonly InboxConfiguration? _inboxConfiguration;
         private readonly IAmAHandlerFactoryAsync? _asyncHandlerFactory;
+        private readonly bool _isolateSubscribers;
         private readonly List<IAmALifetime> _instanceScopes = new List<IAmALifetime>();
         //GLOBAL! cache of handler attributes - won't change post-startup so avoid re-calculation. Method to clear cache below (if a broken test brought you here)
         private static readonly ConcurrentDictionary<Type, IOrderedEnumerable<RequestHandlerAttribute>> s_preAttributesMemento = new ConcurrentDictionary<Type, IOrderedEnumerable<RequestHandlerAttribute>>();
@@ -56,14 +60,17 @@ namespace Paramore.Brighter
         /// <param name="subscriberRegistry">A <see cref="IAmASubscriberRegistry"/> subscriber registry</param>
         /// <param name="syncHandlerFactory">An <see cref="IAmAHandlerFactoryAsync"/>providing a callback to the user code to create instances of handlers</param>
         /// <param name="inboxConfiguration">Do we have a global attribute to add an inbox</param>
+        /// <param name="isolateSubscribers">Does this build isolate each subscriber's pipeline from the others (a Publish dispatch) rather than a single dispatch (a Send)</param>
         public PipelineBuilder(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactorySync syncHandlerFactory,
-            InboxConfiguration? inboxConfiguration = null) 
+            InboxConfiguration? inboxConfiguration = null,
+            bool isolateSubscribers = false)
         {
             _subscriberRegistry = subscriberRegistry;
             _syncHandlerFactory = syncHandlerFactory;
             _inboxConfiguration = inboxConfiguration;
+            _isolateSubscribers = isolateSubscribers;
         }
 
         /// <summary>
@@ -73,14 +80,17 @@ namespace Paramore.Brighter
         /// <param name="subscriberRegistry">A <see cref="IAmASubscriberRegistry"/> subscriber registry</param>
         /// <param name="asyncHandlerFactory">An <see cref="IAmAHandlerFactoryAsync"/>providing a callback to the user code to create instances of handlers</param>
         /// <param name="inboxConfiguration">Do we have a global attribute to add an inbox</param>
+        /// <param name="isolateSubscribers">Does this build isolate each subscriber's pipeline from the others (a Publish dispatch) rather than a single dispatch (a Send)</param>
         public PipelineBuilder(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactoryAsync asyncHandlerFactory,
-            InboxConfiguration? inboxConfiguration = null)
+            InboxConfiguration? inboxConfiguration = null,
+            bool isolateSubscribers = false)
         {
             _subscriberRegistry = subscriberRegistry;
             _asyncHandlerFactory = asyncHandlerFactory;
             _inboxConfiguration = inboxConfiguration;
+            _isolateSubscribers = isolateSubscribers;
         }
 
         /// <summary>
@@ -187,19 +197,27 @@ namespace Paramore.Brighter
                 observerTypes.Each(observer =>
                 {
                     var context = observerTypes.Length == 1 ? requestContext : requestContext.CreateCopy();
+
+                    using var suppression = _isolateSubscribers ? AmbientScopeSuppression.Suppress() : null;
+
                     var instanceScope = GetSyncInstanceScope();
                     var handler = (RequestHandler<TRequest>?)_syncHandlerFactory.Create(observer, instanceScope);
                     if (handler is null)
                         throw new ConfigurationException($"Handler Factory could not construct handler of type {observer}");
                     var pipeline = BuildPipeline(handler, context, instanceScope);
                     pipeline.AddToLifetime(instanceScope);
-                    
+
                     pipelines.Add(pipeline);
                 });
 
                 return pipelines;
             }
-            catch (Exception e) when (e is not ConfigurationException)
+            catch (AmbientScopeSourceException ambientEx)
+            {
+                ExceptionDispatchInfo.Capture(ambientEx.InnerException!).Throw();
+                throw; // unreachable - satisfies the compiler
+            }
+            catch (Exception e) when (e is not ConfigurationException and not AmbientScopeSourceException)
             {
                 throw new ConfigurationException("Error when building pipeline, see inner Exception for details", e);
             }
@@ -232,20 +250,28 @@ namespace Paramore.Brighter
                 observerTypes.Each(observer =>
                 {
                     var context = observerTypes.Length == 1 ? requestContext : requestContext.CreateCopy();
+
+                    using var suppression = _isolateSubscribers ? AmbientScopeSuppression.Suppress() : null;
+
                     var instanceScope = GetAsyncInstanceScope();
                     var handler = (RequestHandlerAsync<TRequest>?)_asyncHandlerFactory.Create(observer, instanceScope);
                     if (handler is null)
-                        throw new ConfigurationException($"Handler Factory could not construct handler of type {observer}"); 
+                        throw new ConfigurationException($"Handler Factory could not construct handler of type {observer}");
                     var pipeline = BuildAsyncPipeline(handler, context, instanceScope,
                         continueOnCapturedContext);
                     pipeline.AddToLifetime(instanceScope);
-                    
+
                     pipelines.Add(pipeline);
                 });
 
                 return pipelines;
             }
-            catch (Exception e) when(!(e is ConfigurationException))
+            catch (AmbientScopeSourceException ambientEx)
+            {
+                ExceptionDispatchInfo.Capture(ambientEx.InnerException!).Throw();
+                throw; // unreachable - satisfies the compiler
+            }
+            catch (Exception e) when (e is not ConfigurationException and not AmbientScopeSourceException)
             {
                 throw new ConfigurationException("Error when building pipeline, see inner Exception for details", e);
             }
@@ -268,6 +294,19 @@ namespace Paramore.Brighter
         /// </summary>
         public void Dispose()
             => _instanceScopes.Each(s => s.Dispose());
+
+        /// <summary>
+        /// Disposes all instance scopes created by this builder, asynchronously. Prefer this from an
+        /// async caller (<c>await using</c>): each <see cref="IAmALifetime"/>'s own scope handle is
+        /// awaited rather than blocked on.
+        /// </summary>
+        public async ValueTask DisposeAsync()
+        {
+            foreach (var scope in _instanceScopes)
+            {
+                await scope.DisposeAsync().ConfigureAwait(false);
+            }
+        }
 
         private IHandleRequests<TRequest> BuildPipeline(RequestHandler<TRequest> implicitHandler,
             IRequestContext requestContext, IAmALifetime instanceScope)
@@ -569,9 +608,9 @@ namespace Paramore.Brighter
             if(_syncHandlerFactory is null)
                 throw new NullReferenceException("HandlerFactorySync is null");
 
-            var scope = new HandlerLifetimeScope(_syncHandlerFactory);
+            var scope = new HandlerLifetimeScope(_syncHandlerFactory, _syncHandlerFactory.CreatePipelineScope());
             _instanceScopes.Add(scope);
-            
+
             return scope;
         }
 
@@ -579,10 +618,10 @@ namespace Paramore.Brighter
         {
             if(_asyncHandlerFactory is null)
                 throw new NullReferenceException("AsyncHandlerFactory is null");
-            
-            var scope = new HandlerLifetimeScope(_asyncHandlerFactory);
+
+            var scope = new HandlerLifetimeScope(_asyncHandlerFactory, _asyncHandlerFactory.CreatePipelineScope());
             _instanceScopes.Add(scope);
-            
+
             return scope;
         }
 
