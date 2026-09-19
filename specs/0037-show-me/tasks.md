@@ -134,7 +134,7 @@ Three exceptions, each stated where it occurs: **T5.5** deliberately leaves its 
 
 *(FR-10, FR-20, FR-16 rows 5–7, 10, 12–15, NFR-3)*
 
-- [ ] **T2.1 — STRUCTURAL: Create the shared synthetic fixture `specs/9999-show-me-fixture/` and its resolvable branch refs.**
+- [x] **T2.1 — STRUCTURAL: Create the shared synthetic fixture `specs/9999-show-me-fixture/` and its resolvable branch refs.**
   - This is the **one** fixture on this branch with a genuinely resolvable spec branch that is not `specs/0037-show-me/`. It is created **once, here**, used by **T2.2, T2.4, T2.5, T3.9, T4.2 and T6.3** for successful runs and by **T3.3, T3.7, T3.8, T3.10 and T6.5** with temporary modifications on top, and torn down **once**, at the close of **T6.5**. Do not recreate or delete it between those tasks. Read the **synthetic-fixture rule** above before starting.
   - Create the directory with exactly these three tracked files:
     - `tasks.md` — exactly **two** lines matching `^[[:space:]]*-[[:space:]]\[x\]`, with plain titles (no task-type tag), so FR-3's gate reports 2 of 2 checked and passes, and FR-9's per-tag counts come out `0/0/0/0/2` with `untagged` as the complement.
