@@ -340,6 +340,52 @@ Breaking changes` adds the line `No release_notes.md section found for this spec
 derived from the ADRs and the diff.` `release_notes.md` is **never** modified and never a
 prerequisite for the run.
 
+### Step 5R — Review-history measurement
+
+Owns: measuring the elected PR's comment history as a **structural skeleton**, never as raw JSON
+(ADR 0073 Key Components 1–2) — the inputs Step 5R.7 (Phase 4) and `## How it was built`/F3/F4
+(Phases 4–5) are built from. Runs only when Step 4 elected a PR; produces ledger rows in the same
+`{input or metric} | {value} | {command} | used | not available: {reason}` shape as Step 5.
+
+```bash
+# 5R.1 census — one line per comment
+gh pr view {n} --json comments --jq '.comments[] | "\(.createdAt)\t\(.author.login)\t\(.body|length)"'
+
+# 5R.2 structural skeleton — one invocation, boundary/heading/title lines only
+gh pr view {n} --json comments \
+  --jq '.comments[] | "===\(.createdAt)\t\(.author.login)\t\(.body|length)", (.body|split("\n")[])' \
+  | grep -E '^===|^#{1,6}[[:space:]]|^[0-9]+\.[[:space:]]\*\*|^\*\*Fix'
+
+# 5R.3 inline review submission stubs
+gh pr view {n} --json reviews --jq '.reviews[] | "\(.submittedAt)\t\(.author.login)\t\(.state)"'
+
+# 5R.6 author date of the commit that first added tasks.md
+git log --diff-filter=A --format='%aI' "{base}..{head}" -- "specs/{dir}/tasks.md" | tail -1
+```
+
+**The skeleton (5R.2) is a named step with its own projection, never a shortcut through the
+census.** On the calibration PR #4282 the raw `--json comments` payload is 68,837 bytes; the
+skeleton is 10,151 — an 85% reduction. Reading the raw JSON "just to be safe" is the regression
+that restores the case for delegating this measurement to a sub-agent, which ADR 0073 argued away.
+
+Both `--jq` projections are arguments to the allow-listed `gh pr view`, never piped to a standalone
+`jq` binary. The skeleton filter's four alternatives capture, in order: the comment boundary with
+its timestamp, author and length; any ATX heading at any level; a top-level numbered item whose
+title is bold; and the `**Fix N — …**` shape a verdict item uses when it sits outside its own
+heading. The patterns use POSIX classes per Step 2's BSD-compatibility rule, and **no rule anywhere
+in this procedure keys on heading level** — on the calibration PR, round 2 heads its findings
+sequence `### New findings` while round 3 heads the same thing `## New findings`, and their items
+are `#### 1.` and `### 1.` respectively; a rule keyed to one level would score one round zero.
+
+5R.4 pulls **bounded body slices**, never a whole comment: only from comments 5R.2 marked as
+carrying a findings sequence or a numbered disposition reply, and only between the located heading
+and the next heading.
+
+`gh` exiting non-zero at any of 5R.1/5R.2/5R.3 is FR-16 rows 1–2: the ledger row reads `not
+available: gh unavailable`, `## How it was built` takes its defined no-PR line, and **F3 and F4
+both score Medium**. Check **exit status**, not empty output — a PR with no comments and a failed
+`gh` look identical on stdout (NFR-3).
+
 ### Step 6 — Section synthesis
 
 Owns: assembling the eight `## ` sections from the fact ledger alone. No shell call happens in this
