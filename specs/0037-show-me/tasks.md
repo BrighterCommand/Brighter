@@ -305,7 +305,7 @@ Three exceptions, each stated where it occurs: **T5.5** deliberately leaves its 
   - Traces to: FR-7, FR-11, FR-16 row 14; AC-37; ADR 0072 Step 3.
   - **No new command-file content (2026-09-19)**: T3.4's row-14 rule already matches this task's Implementation bullets verbatim, so nothing was merged for T3.5 — it is pure re-verification against a different fixture. Verified: 0033's `.adr-list` ADR (0062) has one genuine breaking item (the `pg_locks` namespace-visibility change — an operator/tooling-facing behavioural break, judged consistent with how T3.4 classified spec 0034's span-reparenting item), so the row-14 line appears (the zero-item override does not apply here) and F2 reads Medium for n=1.
 
-- [ ] **T3.6 — VERIFY: `## Did it ship what it said?` extracts exactly one row per declared top-level id, in order, with a summing count line — the mechanical half.**
+- [x] **T3.6 — VERIFY: `## Did it ship what it said?` extracts exactly one row per declared top-level id, in order, with a summing count line — the mechanical half.**
   - *(This task owns everything NFR-1 requires identical between runs: which rows exist, in what order, and the arithmetic of the count line. The statuses that fill those rows are judged, and are T3.7's subject. The split follows NFR-1's own boundary — determinism is claimed for the row set, explicitly not for the statuses.)*
   - Implementation should:
     - Build the **row set mechanically** (ADR 0072 Step 5/6: this is why NFR-1 can require the row count and id set to be identical between runs while leaving statuses judged). A numbered requirement is an id matching `(FR|NFR)-[0-9]+` **declared** at the start of a heading or a bold lead-in — not one merely cross-referenced in another requirement's prose.
