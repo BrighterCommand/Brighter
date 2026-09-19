@@ -470,6 +470,40 @@ values themselves are judged and defined separately) — and end with the count 
 Shipped with deviation: {b} · Deferred: {c} · Dropped: {d} · Withdrawn: {w} · Unverifiable: {e} (of
 {total})`, where `{total}` equals the row count and the six terms sum to it by construction.
 
+#### `## Did it ship what it said?` — statuses and evidence (judged half)
+
+Judged: every row's status, one-line paraphrase, evidence and (for non-`Shipped` rows) its reason
+and follow-up; the `Shipped beyond the requirements` list.
+
+For each row, read the requirement's own text in `requirements.md` together with `tasks.md`, the
+spec diff, and any resolved ADRs to decide one status from the set `Shipped` / `Shipped with
+deviation` / `Deferred` / `Dropped` / `Withdrawn` / `Unverifiable`:
+
+- `Shipped` — built as declared; no reason required.
+- `Shipped with deviation` — built, but materially different from what was declared (a narrower
+  scope, a different mechanism, a documented trade-off) — state the deviation in one sentence.
+- `Deferred` — not yet built, with a stated intention to build it later.
+- `Withdrawn` — explicitly removed or superseded by a **recorded decision** taken during the spec's
+  own lifecycle (in `requirements.md`, an ADR, a task, or the PR review thread) — cite where the
+  decision is recorded.
+- `Dropped` — not built, with no recorded decision to withdraw it — an absence, not a decision.
+- `Unverifiable` — the evidence needed to judge it (a task, a diff line, a review comment) could not
+  be found or read within the run's budget.
+
+Give every row whose status is not `Shipped` a one-sentence reason in the evidence column, and every
+`Deferred`/`Dropped`/`Withdrawn` row a follow-up: a GitHub issue number, the requirement that
+supersedes it, or exactly `no follow-up recorded`.
+
+**Sub-numbered clauses**: address each sub-clause (`FR-27.1`, `FR-27.2`, …) individually inside its
+parent row's paraphrase and evidence — never a separate row for the clause. When sub-clauses have
+different outcomes, the row takes the **least-shipped** status among them under the precedence
+`Shipped` < `Shipped with deviation` < `Unverifiable` < `Deferred` < `Withdrawn` < `Dropped`, and the
+evidence column names which sub-clause differs.
+
+Follow the table with a `Shipped beyond the requirements` list — one bullet per piece of work found
+in `tasks.md` that no numbered requirement covers — or, if none, the line `Nothing shipped outside
+the numbered requirements.`
+
 #### `## Blast radius`
 
 Purely a rendering of ledger rows Steps 3 and 5 already produced — no new measurement or judgement
