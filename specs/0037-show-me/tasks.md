@@ -266,7 +266,7 @@ Three exceptions, each stated where it occurs: **T5.5** deliberately leaves its 
     - Check: **AC-12 (branch-independent form)** — the `0033` narrative is between 150 and 600 words by the same whitespace-token count NFR-2 defines; it names `0062-pg-advisory-lock-sha256` **by stem** with the ADR's real title and its Status as written in that file; its relative link resolves from `specs/0033-pg-advisory-lock-sha256/` (check by opening the link target path); and `grep -nE 'ADR [0-9]{4}' show-me.md` finds **no** occurrence that is not accompanied by its filename stem. **AC-40** — the `0031` run's section contains exactly `No ADRs recorded for this spec.` and the narrative still names what changed, drawn from `requirements.md`/`tasks.md`/commits; the risk table's factor levels are unaffected by the absence.
   - Traces to: FR-6, FR-16 row 6, C-9, A-2, NFR-2; AC-12, AC-40, AC-51; ADR 0072 Step 6.
 
-- [ ] **T3.3 — VERIFY: An `.adr-list` entry that cannot be resolved to exactly one file degrades per FR-16 row 7 without stopping the run.**
+- [x] **T3.3 — VERIFY: An `.adr-list` entry that cannot be resolved to exactly one file degrades per FR-16 row 7 without stopping the run.**
   - Implementation should:
     - Detect the two cases with the normalised match from T2.7 (`ls docs/adr/ | grep -E "^{entry with any leading docs/adr/ stripped}"`): **zero** matches ⇒ `{entry} — ADR file not found in docs/adr/.`; **more than one** match (a bare number, C-9) ⇒ `{entry} — ambiguous ADR number, matches: {filenames}; .adr-list should name the full filename instead.`
     - Continue the narrative with the remaining ADRs, mark the unresolved entry `not available` in `## Inputs used`, and let the run succeed. **No factor consequence** (FR-16 row 7).
