@@ -483,7 +483,7 @@ cell in the ledger resolves to the **single umbrella issue [#4240](https://githu
 |---|---|---|
 | `AzureServiceBus / AzureServiceBusMessagingGateway` | all 11 | infra — no broker, no credentials |
 | `GCP / Stream` + `/ StreamOrdering` | all 11 each | streaming pull unrunnable on the emulator |
-| `GCP / Pull` + `/ PullOrdering` | FR-2/4/5/6/8/17 | emulator cannot exercise IAM/DLQ; `Reject` == `Acknowledge` |
+| `GCP / Pull` + `/ PullOrdering` | FR-2/4/5/6/8/17 — ⚠️ **extended to ALL 12 columns on 2026-09-19**, see *"Reversed: GCP / Pull + / PullOrdering"* below | emulator cannot exercise IAM/DLQ; `Reject` == `Acknowledge`. The five later cells: real Pub/Sub does not redeliver promptly ([#4321](https://github.com/BrighterCommand/Brighter/issues/4321)) |
 | `RocketMQ / RocketMQMessagingGateway` | FR-2, FR-15 | upstream no-op `Requeue` (`ChangeInvisibleDuration` commented out) |
 | `RMQ.Async / Classic`, `/ Quorum`, `RMQ.Sync / RmqSyncMessagingGateway` | FR-5 | `BasicReject` routes to the DLX, not a distinct invalid channel |
 | `Redis / RedisMessagingGateway`, `MSSQL / MSSQLMessagingGateway` | FR-16 | destructive read → `Nack` is a no-op |
@@ -583,6 +583,8 @@ Every one of those assertions sits **after** a bounded poll loop, not on an unre
 none of these is the harness failing to look. And in the runs where FR-16/FR-22/FR-9 *pass*, they
 pass slowly: `Pull.Reactor` took **28 s**, **24 s** and **22 s** against **30 s** bounds. They are
 2–8 s from red on a good day, which is why which cells go red changes from run to run.
+
+**This root cause already has an issue: [#4321](https://github.com/BrighterCommand/Brighter/issues/4321)**, *"GCP Pub/Sub: Requeue(message, TimeSpan.Zero) does not redeliver immediately on real Pub/Sub"*. Per the maintainer ruling above, the deferred **cells** track to the umbrella #4240; #4321 is where the *defect* is investigated. ⚠️ **With these cells deferred, `gcp-ci` is green — so #4321 no longer has a CI signal.**
 
 ### Root cause — one, and it is a property of the service
 
