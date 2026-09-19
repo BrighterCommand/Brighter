@@ -1,0 +1,144 @@
+---
+allowed-tools: Bash(cat:*), Bash(ls:*), Bash(test:*), Bash(grep:*), Bash(head:*), Bash(wc:*), Bash(awk:*), Bash(date:*), Bash(git log:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git ls-files:*), Bash(git branch:*), Bash(gh pr list:*), Bash(gh pr view:*), Bash(gh pr diff:*), Read, Write, Glob, Grep
+description: Summarise a finished spec and give an advisory merge-risk read
+argument-hint: [spec-id]
+---
+
+## Available specifications
+
+!`ls -1d specs/*/ 2>/dev/null`
+
+## Your Task
+
+Summarise the finished spec named by `$ARGUMENTS` (or the current spec, if none is given) into
+`specs/{spec}/show-me.md`: what changed and why, breaking changes, a requirement-by-requirement
+reconciliation, how it was built, blast radius, an advisory Low/Medium/High merge-risk read, where
+to look first, and a full provenance table.
+
+The procedure runs in the order below, because each step consumes the previous step's fact-ledger
+rows: **scaffolding → precondition gate → branch/PR/diff resolution → measurement → section
+synthesis → review-history classification → risk scoring → write → budget check → docs.**
+
+## Roles, the fact ledger, and global invariants
+
+*(Referenced by every step below; stated once here rather than repeated.)*
+
+### The three roles
+
+| Role | Stereotype | Owns | Mechanism |
+|------|-----------|------|-----------|
+| **Measurer** | information holder | Every value NFR-1 requires identical between runs | `git`/`gh`/`grep`/`awk` invocations whose output is a count, a sha, a ref name or a short line list |
+| **Classifier** | decider | The review-round/finding/severity/resolution tallies and F1–F5's levels | Applying the Definitions' stated rules to Measurer-produced extracts; emits ledger rows, never prose |
+| **Synthesiser** | decider | All prose | Rendering each section's lines from ledger rows alone |
+
+Two crossing prohibitions hold throughout: **the Measurer never paraphrases**, and **the
+Synthesiser never counts** — no shell call happens during Step 6. The Classifier may read only
+Measurer-produced extracts, never the full comment bodies it derives from, and every row it emits
+carries the rule it applied and the line it applied it to, not just a value.
+
+### The fact ledger
+
+An in-context table, built up as the command measures — never a file, since this command permits
+exactly one `Write` and a marker file would give some other command something to read as a gate.
+Each row has the shape:
+
+`{input or metric} | {value} | {command or path it came from} | used | not available: {reason}`
+
+Because the ledger is in-context rather than on disk, a Classifier row is observable in the
+session transcript — which is where several verification steps assert against it.
+
+**Traceability rule**: a section may state only values present in the ledger, and must name the
+ledger row it came from.
+
+**The ledger's one deliberate exception**: `PROMPT.md` and its `PROMPT-*.md` companions get no
+ledger row at all. A row would surface them in `## Inputs used`, and they must never be cited.
+
+### Global invariants
+
+- **One `Write` only.** The command creates or modifies exactly one file, `specs/{dir}/show-me.md`.
+- **No step may branch on the level.** The three levels — Low, Medium, High — are rendered values,
+  never conditions any step tests, in `## Risk assessment (advisory)` or the session report.
+- **Skeleton-first for PR comments.** A PR's comment history is measured as a structural skeleton
+  (heading, numbered-title and reply lines only) before any body text; the full comment JSON is
+  never read into context.
+- **BSD-compatible POSIX-class regexes only** — macOS `grep` has no `\b`:
+  - task checkbox: `^[[:space:]]*-[[:space:]]\[[ xX]\]`
+  - public-API declaration line: `^[+-][[:space:]]*(public|protected)[^[:alnum:]_]`
+
+### Why no sub-agent
+
+This command runs entirely in the main agent. The README's stated rationale for delegating to a
+sub-agent — that a `Plan` sub-agent has no file-editing tool, so it is harder to let it do damage —
+is empty here, because the whole command is read-only apart from one `Write`. Against delegation: a
+clean-context sub-agent would have to be handed the entire fact ledger and every extract in its
+prompt, or re-read the inputs itself and spend the extraction budget twice; and delegated judgement
+is unauditable — the ledger row and the transcript are what make a Classifier tally checkable at
+all.
+
+### Step 0 — Pre-flight
+
+Owns: the candidate spec-directory list, seeded above in `## Available specifications` for free on
+every invocation.
+
+### Step 1 — Resolve the target spec
+
+Owns: turning `$ARGUMENTS` (or, absent, `specs/.current-spec`) into exactly one spec directory, or
+stopping with an ambiguity/no-match/missing/empty/stale message and writing nothing.
+
+**With an argument.** Take `$ARGUMENTS` **whole**: trim leading/trailing whitespace, strip wrapping
+quotes, preserve internal whitespace verbatim. Never split on whitespace —
+`specs/0021-Expose Unacceptable Message Window/` is a real directory, and an unquoted shell loop
+variable would split it into four tokens. For this reason the match is performed by the executing
+model reading Step 0's line list, not by a shell `for` loop.
+
+Candidates are only the directory entries `## Available specifications` lists — never
+`specs/README.md`, `specs/dlq-review-findings.md`, or a dotfile such as `specs/.current-spec`.
+
+Apply this ordered rule set, stopping at the first rule that yields exactly one match:
+
+1. Exact directory-name match (`0036-scoped-lifetime-per-pipeline`).
+2. Exact four-digit id match (`0036`).
+3. Case-insensitive substring match on the directory name (`scoped-lifetime`).
+
+- **More than one match** — stop without writing any file and print exactly:
+  `Ambiguous spec id '{arg}' — matches: {list of matching directory names}. Re-run with the full
+  directory name.`
+- **No match** — stop without writing any file and print exactly:
+  `No spec matches '{arg}'. Run /spec:status to list specs.`
+
+### Step 2 — Completeness check
+
+Owns: refusing to summarise a spec whose `tasks.md` is absent, has zero checkboxes, or has any
+unchecked box — printing the exact refusal and writing nothing.
+
+### Step 3 — Spec branch, base ref, merge base
+
+Owns: resolving the spec's git branch (or recording it as not determinable), the base ref, and the
+merge-base sha — the coordinates every later measurement is taken against.
+
+### Step 4 — PR discovery and diff-source election
+
+Owns: finding the one pull request for the spec branch (if any) and electing exactly one diff
+source — the PR diff or a local `git diff` — never both.
+
+### Step 5 — Bounded extraction
+
+Owns: every counted value in the fact ledger — blast-radius buckets, net lines, public-API
+declaration lines, commit count, task/requirement/ADR extraction — each produced by a bounded
+`git`/`gh`/`grep`/`awk` pipeline, never by reading `tasks.md` or the diff in full.
+
+### Step 6 — Section synthesis
+
+Owns: assembling the eight `## ` sections from the fact ledger alone. No shell call happens in this
+step; the ledger is read, not re-derived.
+
+### Step 7 — Write
+
+Owns: the single `Write` of `specs/{spec}/show-me.md` — the only file this command ever creates or
+modifies.
+
+### Step 8 — Budget self-check and session report
+
+Owns: checking the written file's word count against its budget (revising and re-writing if
+outside it) and printing the session report: path written, created-or-replaced, overall risk
+level, and the advisory reminder.
