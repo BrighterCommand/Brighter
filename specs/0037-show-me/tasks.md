@@ -154,7 +154,7 @@ Three exceptions, each stated where it occurs: **T5.5** deliberately leaves its 
   - Acceptance check: `git ls-files specs/9999-show-me-fixture/` lists all three files; `git rev-parse refs/remotes/origin/spec/show-me-fixture` and `git rev-parse refs/heads/spec/show-me-fixture` both print `$FIXTURE_HEAD`; `grep -cE '^[[:space:]]*-[[:space:]]\[x\]' specs/9999-show-me-fixture/tasks.md` returns `2` and the unchecked count returns `0`.
   - Traces to: FR-10, FR-17, NFR-8, C-4; ADR 0072 Step 3 and Key Components 3.
 
-- [ ] **T2.2 — VERIFY: Step 3 resolves the spec branch, base ref and merge base, preferring the remote-tracking ref.**
+- [x] **T2.2 — VERIFY: Step 3 resolves the spec branch, base ref and merge base, preferring the remote-tracking ref.**
   - Implementation should:
     - Compute `name` = the spec directory name with the leading `NNNN-` removed, then try in order: `git rev-parse --verify --quiet refs/remotes/origin/spec/${name}` (rule 1, **remote-tracking wins**), `refs/heads/spec/${name}` (rule 1 local fallback), `git rev-parse --abbrev-ref HEAD` when the checked-out branch name contains `${name}` (rule 2), `git log --oneline "{base}..HEAD" -- "specs/{dir}/"` non-empty ⇒ `HEAD` (rule 3) — ADR 0072 Step 3.
     - Resolve the base ref as `origin/master` when `git rev-parse --verify --quiet origin/master` succeeds, else `master`, and name the chosen ref **and its sha** (FR-10).
