@@ -435,6 +435,41 @@ Zero items: the section contains exactly `No breaking changes identified for thi
 breaking-change items: 0` — no absence line is added even if one would otherwise apply, since there
 is nothing for it to qualify.
 
+#### `## Did it ship what it said?` — row set (mechanical half)
+
+Measured: which rows exist, their order, and the count line's arithmetic — this is exactly NFR-1's
+determinism claim for this section, and exactly this much of it: the statuses that fill the rows are
+judged and defined separately.
+
+Build the row set from three declaration-shape `grep`s against `requirements.md`, never a full
+`Read` for this part:
+
+```bash
+grep -nE '^\*\*(FR|NFR)-[0-9]+'                              "specs/{dir}/requirements.md"
+grep -nE '^#{1,6}.*(FR|NFR)-[0-9]+'                           "specs/{dir}/requirements.md"
+grep -nE '^[[:space:]]*[-*][[:space:]]*\*\*(FR|NFR)-[0-9]+'   "specs/{dir}/requirements.md"
+```
+
+Take the union of the three, extracting each match's `(FR|NFR)-[0-9]+` id. The `[0-9]+` anchor stops
+at a literal `.`, so a sub-numbered clause (`FR-27.3`) is captured as its parent id (`FR-27`) and
+never creates a row of its own — deduplicating to the unique id set is what folds it in. That unique
+set **is** the row set: coverage is 100% by construction, since all three declaration shapes feed
+the same union and nothing merely cross-referenced in prose is captured.
+
+Order the rows `FR-1 … FR-n`, then `NFR-1 … NFR-n`, numerically — never by first-appearance order in
+the file.
+
+`requirements.md` missing (FR-16 row 8): the section contains exactly `No requirements.md found for
+this spec — scope reconciliation is not possible.`; **F5 scores Medium**.
+
+Zero declared ids (FR-16 row 9): the section contains exactly `requirements.md declares no numbered
+requirements — nothing to reconcile.`, with no table and no count line; **F5 scores Medium**.
+
+Otherwise, emit the table — columns requirement id, one-line paraphrase, status, evidence (the
+values themselves are judged and defined separately) — and end with the count line: `Shipped: {a} ·
+Shipped with deviation: {b} · Deferred: {c} · Dropped: {d} · Withdrawn: {w} · Unverifiable: {e} (of
+{total})`, where `{total}` equals the row count and the six terms sum to it by construction.
+
 #### `## Blast radius`
 
 Purely a rendering of ledger rows Steps 3 and 5 already produced — no new measurement or judgement
