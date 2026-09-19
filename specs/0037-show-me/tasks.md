@@ -325,7 +325,7 @@ Three exceptions, each stated where it occurs: **T5.5** deliberately leaves its 
     - Check: **AC-15 (row set)** — the `0031` table has exactly **12** rows (FR-1…FR-6 then NFR-1…NFR-6) and **no** row for any AC id; the `0033` table has exactly **8**; the `0034` table has exactly **15** (FR-1…FR-9 then NFR-1…NFR-6). In each, the rows are in FR-then-NFR ascending order, the count line's `(of {total})` equals the row count, and the six terms sum to it. **Shape control** — run the three declaration greps by hand against each `requirements.md` and confirm the union of their matches is exactly the row set the command produced, with no id present in one and absent in the other.
   - Traces to: FR-8, NFR-1, NFR-3, NFR-7; AC-15 (row set); ADR 0072 Steps 5–6.
 
-- [ ] **T3.7 — VERIFY: Each reconciliation row carries a status from the allowed set, a reason, follow-up text, and the least-shipped fold for sub-clauses — the judged half.**
+- [x] **T3.7 — VERIFY: Each reconciliation row carries a status from the allowed set, a reason, follow-up text, and the least-shipped fold for sub-clauses — the judged half.**
   - *(NFR-1 explicitly exempts these from its determinism claim; they are judged from evidence, and two runs may legitimately differ. What must hold is that each value is in range, justified, and consistent with that same run's own count line.)*
   - Implementation should:
     - Give every row a status from the set `Shipped` / `Shipped with deviation` / `Deferred` / `Dropped` / `Withdrawn` / `Unverifiable`, and every non-`Shipped` row a one-sentence reason.
