@@ -386,6 +386,47 @@ available: gh unavailable`, `## How it was built` takes its defined no-PR line, 
 both score Medium**. Check **exit status**, not empty output — a PR with no comments and a failed
 `gh` look identical on stdout (NFR-3).
 
+#### Step 5R.7 — Classification (stages A–D)
+
+Owns: turning 5R.2's skeleton and 5R.4's bounded slices into the Classifier's round/finding rows,
+applying the Definitions' `Finding` and `Review round` clauses in order — quoted verbatim below,
+never paraphrased, since paraphrasing them is how the review rounds that produced them get undone.
+Stages E–H (attach/dedup, phase exclusion, severity, resolution) are later tasks; this stage only
+qualifies, locates, splits and groups.
+
+**A — Qualify.** Per `Review round` (b): a comment is part of a round "only if it contains at least
+one finding — a numbered item that names a file, symbol, requirement or behaviour in the change
+under review and asserts a defect, risk or requested change." Task-completion reports, progress
+updates, CI notifications and finding-free discussion replies are **not** rounds, even under the
+same `Claude finished @user's task` preamble a genuine round's own tracking comment also carries —
+the discriminator is the presence of numbered findings in the body, never the preamble text.
+**Judgement point 1** is only the residual case: a comment that *has* numbered items whose
+assertions may or may not be defects.
+
+**B — Locate the findings sequence.** In order, stopping at the first that applies:
+
+1. A heading whose text names new findings (e.g. `### New findings`, `## New findings`) —
+   **level-agnostic** — its numbered items running to the next heading at the same or higher level.
+2. Failing that, the single numbered list describing defects/risks/requested changes.
+3. **Excluded: fix-verdict sections.** Per `Finding`: "...a numbered or titled section that grades
+   the *previous* round's fixes, e.g. `### Verdict on each fix`/`## Fix #1 — …: ✅`, which is
+   evidence for `Resolved`/`Acknowledged` status, never a source of a new finding, even where one
+   such verdict item is qualified or flags a residual concern."
+4. **Excluded: the trailing unnumbered aside.** Per `Finding`: "A trailing titled-but-unnumbered
+   aside after the findings sequence — e.g. a closing `Smaller notes` section — is never itself a
+   source of findings, however many bullets it contains or what they assert."
+
+**C — Split container items.** Per `Finding`: "A numbered item that is itself a **container** for
+several distinct sub-issues (e.g. a 'smaller items' bucket of five bullets, itself numbered as one
+item in the findings sequence) counts as one finding per sub-issue, not one." The discriminator
+against B.4 is **numbering, not content**: `### 10. Smaller items` is item 10 of the sequence;
+`### Smaller notes` has no number. Deciding whether a bucket's bullets are genuinely distinct
+sub-issues is **judgement point 2**.
+
+**D — Group comments into passes.** Three conjunctive tests from `Review round` (a): same author;
+the later comment's numbering continues the earlier's without restarting; posted within 15 minutes
+of each other. A comment whose numbering restarts at 1 begins a new round.
+
 ### Step 6 — Section synthesis
 
 Owns: assembling the eight `## ` sections from the fact ledger alone. No shell call happens in this
