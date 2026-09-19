@@ -378,6 +378,24 @@ section with no content to report states the absence instead of being omitted (F
 
 Each section's synthesis rule is defined below, under its own heading.
 
+#### `## What changed and why`
+
+Measured: the `.adr-list` entry set; each resolved ADR's title and Status, read from its own front
+matter/body; the resolved relative link path. Judged: 150–600 words of prose (NFR-2's
+whitespace-token count) stating what the spec set out to fix, what a Brighter user can now do or
+what now behaves differently, and the one or two decisions that most shaped the result — never a
+bullet dump, never a copy-paste of an ADR's *Decision* section.
+
+Name **every** ADR resolved from `.adr-list` at least once, each with its title and current Status,
+linked relatively with the filename stem visible in the link text:
+`[{title} ({stem})](../../docs/adr/{stem}.md)`. A bare-number reference (`ADR 0070`) is forbidden
+anywhere in the file — `docs/adr/` carries duplicate numbers across specs (C-9), so a number alone
+does not identify a file. Gloss any internal type name on first use (A-2).
+
+`.adr-list` missing or empty (FR-16 row 6): state exactly `No ADRs recorded for this spec.` and
+synthesise the narrative from `requirements.md`, `tasks.md` and the commits instead — no factor is
+affected by the absence.
+
 #### `## Blast radius`
 
 Purely a rendering of ledger rows Steps 3 and 5 already produced — no new measurement or judgement
