@@ -102,8 +102,57 @@ public class AzureServiceBusMessageGatewayProvider
 
     // ── Reactor (sync) path ─────────────────────────────────────────────────
 
+    /// <summary>
+    /// Provisions the topic before a producer is handed out.
+    /// <para>
+    /// The gateway creates a missing topic lazily, on the first send. That is fine when one thread
+    /// sends first, and it is a race when several do:
+    /// <c>When_multiple_threads_try_to_post_a_message_at_the_same_time_should_not_throw_exception</c>
+    /// sends from four threads at once against a topic that does not exist yet, so four creates for
+    /// the same name reach Azure together. The losers get HTTP 409 — <c>SubCode=40901</c> ("another
+    /// conflicting operation is in progress") while a sibling create is still running, or
+    /// <c>SubCode=40900</c> ("not allowed in the resource's current state") while the winner's topic
+    /// is still settling.
+    /// </para>
+    /// <para>
+    /// The race is in the harness's arrangement, not in Brighter: the test is about concurrent
+    /// <em>sends</em>, and provisioning concurrently is incidental to it. Creating the topic once,
+    /// before any thread sends, removes the race rather than waiting out the throttle — which also
+    /// means it does not depend on the namespace's tier, where management-operation limits live.
+    /// </para>
+    /// <para>
+    /// This is the producer-side twin of <see cref="EnsureSubscriptionExistsAsync"/>, and it is
+    /// skipped for any publication that is not asking for creation, so the tests that assert on
+    /// missing infrastructure still find it missing.
+    /// </para>
+    /// </summary>
+    private static async Task EnsureTopicExistsAsync(AzureServiceBusPublication publication)
+    {
+        if (publication.MakeChannels != OnMissingChannel.Create)
+            return;
+
+        var administrationClient = new AdministrationClientWrapper(ASBCreds.ASBClientProvider);
+        var topicName = publication.Topic!.Value;
+
+        if (await administrationClient.TopicExistsAsync(topicName))
+            return;
+
+        try
+        {
+            await administrationClient.CreateTopicAsync(topicName);
+        }
+        catch (ServiceBusException e)
+            when (e.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
+        {
+            // Someone else created it between the check and the create. The topic is there, which
+            // is the whole point of this call.
+        }
+    }
+
     public IAmAMessageProducerSync CreateProducer(AzureServiceBusPublication publication)
     {
+        EnsureTopicExistsAsync(publication).GetAwaiter().GetResult();
+
         var factory = new AzureServiceBusMessageProducerFactory(
             ASBCreds.ASBClientProvider,
             [publication],
@@ -267,6 +316,8 @@ public class AzureServiceBusMessageGatewayProvider
         AzureServiceBusPublication publication,
         CancellationToken cancellationToken = default)
     {
+        await EnsureTopicExistsAsync(publication);
+
         var factory = new AzureServiceBusMessageProducerFactory(
             ASBCreds.ASBClientProvider,
             [publication],
