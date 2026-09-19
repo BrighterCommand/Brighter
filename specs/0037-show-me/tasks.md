@@ -241,7 +241,7 @@ Three exceptions, each stated where it occurs: **T5.5** deliberately leaves its 
 
 *(ADR 0072 Step 6; the Synthesiser reads ledger rows and makes no shell call)*
 
-- [ ] **T3.1 — VERIFY: The document's header, metadata block and eight H2 sections are emitted in FR-5's fixed order.**
+- [x] **T3.1 — VERIFY: The document's header, metadata block and eight H2 sections are emitted in FR-5's fixed order.**
   - Implementation should:
     - Emit `# Show me — {spec directory name}` followed by a metadata block with one line each for: generation date (ISO-8601), spec directory path, linked issue (from `.issue-number`, or `none`), spec branch (**the full ref** actually used), head commit sha (short), base ref and merge-base sha (short), and PR reference (number and URL, or `none found`) — every value a ledger projection (FR-5; ADR 0072 Key Components 3).
     - Emit the eight H2 sections with FR-5's **exact** spellings, in order, **all always present**: `## What changed and why`, `## Breaking changes`, `## Did it ship what it said?`, `## How it was built`, `## Blast radius`, `## Risk assessment (advisory)`, `## Where to look first`, `## Inputs used`.
