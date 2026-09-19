@@ -103,7 +103,7 @@ Three exceptions, each stated where it occurs: **T5.5** deliberately leaves its 
     - Check: **AC-1a** — `0002` prints `Ambiguous spec id '0002' — matches: …` naming **all three** `0002-*` directory names and asks for the full directory name; `sqs-cleanup` resolves to `specs/0002-sqs-cleanup/`. **AC-3** — `kafka-widget` prints `No spec matches 'kafka-widget'. Run /spec:status to list specs.` **AC-35** — the four-word argument resolves to `specs/0021-Expose Unacceptable Message Window/` (it must **not** attempt a match on `0021-Expose` alone and must not error), and `README.md` yields the no-match message because `specs/README.md` is a file, not a candidate directory. In all five runs `git status --porcelain` is unchanged and no `show-me.md` is created anywhere. If the `sqs-cleanup` resolution proceeds and writes, **delete `specs/0002-sqs-cleanup/show-me.md` afterwards** per the cleanup rule.
   - Traces to: FR-1, C-1; AC-1a, AC-3, AC-35; ADR 0072 Step 1.
 
-- [ ] **T1.4 — VERIFY: Step 1's no-argument path targets the current spec and names missing/empty/stale precisely.**
+- [x] **T1.4 — VERIFY: Step 1's no-argument path targets the current spec and names missing/empty/stale precisely.**
   - Implementation should:
     - With no argument, `cat specs/.current-spec` (verified format: the bare directory name, e.g. `0037-show-me`) and `test -d "specs/{value}"` (FR-2; ADR 0072 Step 1).
     - Select the correct word — `missing` / `empty` / `stale: names '{value}'` — inside FR-2's single message template, print it verbatim, and stop without writing.
