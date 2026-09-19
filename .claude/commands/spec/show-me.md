@@ -341,6 +341,52 @@ prerequisite for the run.
 Owns: assembling the eight `## ` sections from the fact ledger alone. No shell call happens in this
 step; the ledger is read, not re-derived.
 
+#### Header and metadata block
+
+Emit `# Show me — {spec directory name}` (the directory name only, not its full path), then, each on
+its own line:
+
+```
+Generated: {today's date, ISO-8601}
+Spec: specs/{dir}/
+Issue: {`.issue-number` value, or `none`}
+Spec branch: {the full ref Step 3 resolved, or `undetermined` — FR-16 row 15}
+Head commit: {short sha, or `undetermined`}
+Base ref: {base ref} at {short sha}
+Merge base: {short sha, or `undetermined`}
+Pull request: {`#{n} {url}`, or `none found`}
+```
+
+Every value is the matching ledger row (FR-5); none is recomputed here. When Step 3 recorded the
+spec branch as not determinable, the spec-branch, head-commit and merge-base lines each read the
+single word `undetermined` (FR-16 row 15) — the base ref is still resolved and named normally, and
+the rest of the block is populated as usual.
+
+#### The eight H2 sections
+
+Emit these headings, with these exact spellings, in this exact order, **all always present** — a
+section with no content to report states the absence instead of being omitted (FR-16):
+
+1. `## What changed and why`
+2. `## Breaking changes`
+3. `## Did it ship what it said?`
+4. `## How it was built`
+5. `## Blast radius`
+6. `## Risk assessment (advisory)`
+7. `## Where to look first`
+8. `## Inputs used`
+
+Each section's synthesis rule is defined below, under its own heading.
+
+#### `## Blast radius`
+
+Purely a rendering of ledger rows Steps 3 and 5 already produced — no new measurement or judgement
+happens here. Render, in order: the `Measured from …` line (Step 5); the six-bucket file-count table
+with `other` as the stated complement; the per-bucket net-lines counts; the public-API declaration
+line count restricted to `src/`; the commit count. When Step 3 recorded the spec branch as not
+determinable, replace all of the above with its FR-16 row 12 text — `Spec branch not determinable —
+no diff measured.` followed by the three rules tried — and still score F1 Medium, per Step 3.
+
 ### Step 7 — Write
 
 Owns: the single `Write` of `specs/{spec}/show-me.md` — the only file this command ever creates or
