@@ -513,6 +513,24 @@ line count restricted to `src/`; the commit count. When Step 3 recorded the spec
 determinable, replace all of the above with its FR-16 row 12 text — `Spec branch not determinable —
 no diff measured.` followed by the three rules tried — and still score F1 Medium, per Step 3.
 
+#### `## Where to look first`
+
+Measured: the spec diff's file list (already produced by Step 5) — the candidate set this section
+selects from. Judged: the 3–7 paths chosen, their order, and each one's reason.
+
+When a spec diff was measured, list **3–7 paths** drawn from the spec diff's file list, most-
+important first, each with a one-line reason of **≤ 25 words**. Every listed path must exist in the
+spec diff — never a path invented from general repository knowledge. If the diff touches no files
+under `src/`, draw the list from whatever it does touch and say so in one sentence before the list.
+`Read` a candidate file only where its path is not self-explanatory (e.g. a test fixture whose name
+does not indicate its purpose), and charge that read against the NFR-3 remainder from the 25-full-
+read budget.
+
+**FR-16 row 13** (no diff measured — spec branch not determinable, carried over from Step 3): the
+section contains exactly `No diff measured — spec branch not determinable, so no files can be
+ranked. Start from specs/{spec dir}/tasks.md and the ADRs listed in specs/{spec dir}/.adr-list.` —
+no paths are listed, and FR-14's 3–7-path rule does not apply.
+
 ### Step 7 — Write
 
 Owns: the single `Write` of `specs/{spec}/show-me.md` — the only file this command ever creates or
