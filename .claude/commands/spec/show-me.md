@@ -195,6 +195,40 @@ absence discovered from here on does. Record the ledger row `spec branch | not d
 Owns: finding the one pull request for the spec branch (if any) and electing exactly one diff
 source — the PR diff or a local `git diff` — never both.
 
+Strip any remote prefix from the resolved branch name, then:
+
+```bash
+gh pr list --head "spec/${name}" --state all --json number,url,headRefName,createdAt
+```
+
+Keep **only** results whose `headRefName` equals `spec/${name}` exactly — `gh`'s own matching is
+loose, so this filter is load-bearing.
+
+- **Exactly one result** — that is the spec's PR.
+- **More than one result** — the **highest number** wins (PR numbers are monotonic with creation),
+  and the ledger records `{k} pull requests found for branch {branch}; using #{n} (highest
+  number).` for `## Blast radius`.
+- **Zero results, or a non-zero exit from `gh`** (unavailable, unauthenticated, offline) — no PR
+  (FR-16 rows 1–2). `## How it was built` then states `No pull request found for branch {branch}
+  — no external review findings available.` (for the `gh`-failure variant, the ledger additionally
+  records `not available: gh unavailable`); **F3 and F4 both score Medium**; the branch may still
+  be resolvable, so blast radius is still measured — from `git diff`, never from a PR that does not
+  exist.
+
+`.issue-number` is **never** consulted here — it names the spec's tracking *issue*, not its PR
+(spec 0036's `.issue-number` is 4256 while its PR is #4282), and feeds only the metadata block's
+linked-issue line.
+
+Elect **exactly one** diff source, never mixed or averaged:
+
+```bash
+gh pr diff {n} --name-only      # a PR was found and this succeeds ⇒ the PR diff is the spec diff
+git diff --name-only "{mb}..{head}"   # otherwise
+```
+
+Name the chosen source (its ref/PR number and shas) — this is what `## Blast radius`'s `Measured
+from …` line reports.
+
 ### Step 5 — Bounded extraction
 
 Owns: every counted value in the fact ledger — blast-radius buckets, net lines, public-API
