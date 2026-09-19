@@ -167,7 +167,7 @@ Three exceptions, each stated where it occurs: **T5.5** deliberately leaves its 
     - Check: **AC-11 / FR-10** — run 1's `## Blast radius` carries `Ref used: refs/remotes/origin/spec/show-me-fixture at {sha}; base ref origin/master at {sha}; merge base {sha}.` with the **full** ref spelling (not `spec/show-me-fixture`, not `origin/spec/show-me-fixture`), and the metadata block repeats the same ref and shas; run 1 carries **no** `Local branch …` line, because the two refs are equal. **AC-47** — run 2 still names `refs/remotes/origin/spec/show-me-fixture` at `$FIXTURE_HEAD` as the measured ref (**not** the local branch, proving remote-wins is an ordering property) and carries the line `Local branch spec/show-me-fixture is at {short $FIXTURE_PREV} and differs from the measured ref.` **Rule-order control** — in both runs, rule 2 is not what fired: the checked-out branch is `spec/show-me`, which does not contain the string `show-me-fixture`.
   - Traces to: FR-10, C-4; AC-11, AC-47; ADR 0072 Step 3.
 
-- [ ] **T2.3 — VERIFY: A non-determinable branch degrades across four sections without failing the run (FR-16 rows 12–15).**
+- [x] **T2.3 — VERIFY: A non-determinable branch degrades across four sections without failing the run (FR-16 rows 12–15).**
   - Implementation should:
     - When all three FR-10 rules fail, record a ledger row `spec branch | not determinable | rules 1–3 tried`, and continue past Step 3 — no absence below the gate stops the run (ADR 0072 Key Components 2).
     - Row 12: `## Blast radius` states `Spec branch not determinable — no diff measured.` **followed by the rules it tried**, and F1 = Medium.
