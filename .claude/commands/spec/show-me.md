@@ -177,7 +177,7 @@ a **different** sha:
 
 If all three rules fail, the branch is **not determinable**. This does not stop the run — no
 absence discovered from here on does. Record the ledger row `spec branch | not determinable | rules
-1–3 tried` and carry these four consequences into Step 6 (FR-16 rows 12–15):
+1–3 tried` and carry these five consequences into Step 6 (FR-16 rows 12–15):
 
 - **`## Blast radius`** states `Spec branch not determinable — no diff measured.` followed by the
   rules tried, and **F1 scores Medium**.
@@ -188,7 +188,11 @@ absence discovered from here on does. Record the ledger row `spec branch | not d
 - **`## Where to look first`** takes its defined fallback with no paths (row 13), and
   **`## Breaking changes`** adds the line stating public-API declaration lines could not be
   inspected while still carrying a count line (row 14) — both built where those sections are
-  written, in Phase 3, and cross-referenced here so the four behaviours stay in step.
+  written, in Phase 3, and cross-referenced here so behaviours stay in step.
+- **`## Inputs used`** marks both the `pull request` and `git history` rows `not available: spec
+  branch not determinable` — neither was ever measured, so marking either `used` would violate the
+  traceability rule. This is distinct from FR-16 rows 1–2's `gh`-specific reasons: here the branch
+  itself, not `gh`, is why nothing was measured.
 
 ### Step 4 — PR discovery and diff-source election
 
@@ -530,6 +534,31 @@ read budget.
 section contains exactly `No diff measured — spec branch not determinable, so no files can be
 ranked. Start from specs/{spec dir}/tasks.md and the ADRs listed in specs/{spec dir}/.adr-list.` —
 no paths are listed, and FR-14's 3–7-path rule does not apply.
+
+#### `## Inputs used`
+
+Wholly measured — a projection of the ledger, with no judged content: one row per input, `used` or
+`not available: {one-line reason}`, and nothing else. This section is excluded from NFR-2's word
+budget (everything from this heading to end of file).
+
+Emit one row for each of: `requirements.md`, `tasks.md`, `.adr-list` (**plus one further row per ADR
+it names, identified by slug** — not folded into the `.adr-list` row), `.issue-number`,
+`release_notes.md` section, git history, pull request, review comments, CI checks. Mark each `used`
+when the ledger recorded a value from it, or `not available: {reason}` using the ledger's own
+recorded reason verbatim (e.g. `not available: gh unavailable`, `not available: not present`) —
+never a re-worded paraphrase.
+
+**The git-tracking test, applied before any path is written anywhere in the file, not only here**:
+`git ls-files --error-unmatch {path}`. A path that fails it is dropped or replaced — this is one test
+that catches both the gitignored literal `PROMPT.md` and the merely-untracked `PROMPT-*.md`
+companions (FR-17), since the rule is "not tracked in git", not "not gitignored". Every repository
+path written anywhere in `show-me.md` is relative to the repository root (NFR-5); no token,
+credential, absolute machine-local path, or untracked file's contents is ever written.
+
+**`PROMPT.md`/`PROMPT-*.md` get no ledger row and no mention anywhere in the file** (FR-16 row 11,
+FR-17) — their absence is normal and unremarkable, not a degradation to report. They may inform the
+Synthesiser's own reading of the spec's background, but never appear as a citation, a link, or an
+`Inputs used` row.
 
 ### Step 7 — Write
 
