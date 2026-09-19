@@ -278,6 +278,33 @@ git log --oneline "{mb}..{head}" | wc -l
 Emit `## Blast radius`'s `Measured from {gh pr diff #N (head {sha}) | git diff {merge-base
 sha}..{head sha}}` line, naming exactly one source.
 
+#### The 25-full-read budget
+
+| Input | Mechanism | Counts toward 25? |
+|---|---|---|
+| `tasks.md` | `grep -c` / `grep -m3` extraction only | no |
+| `requirements.md` | declared-id `grep`s, then **one** full `Read` for paraphrases | 1 |
+| `.adr-list`, `.issue-number`, `.current-spec` | `cat` | no |
+| each ADR named in `.adr-list` | `head -14` (front matter) + `grep -A 25 '^## Consequences'` | **excluded** |
+| `release_notes.md` section | `grep -n` for the spec's heading, then `grep -A` for its bullets | no |
+| files for `## Where to look first` | `Read` on demand, only where the diff path list is not self-explanatory | the remainder |
+
+The ADR exclusion is what keeps a 15-ADR spec inside the cap.
+
+Derive FR-9's per-tag task counts from the same checkbox `grep` family, with `untagged` as the
+**complement** so the parts always sum to the total:
+
+```bash
+CHECKBOXES='^[[:space:]]*-[[:space:]]\[[ xX]\]'
+grep -E "$CHECKBOXES" "specs/{dir}/tasks.md" | grep -cE '(TEST \+ IMPLEMENT|STRUCTURAL|PROJECT|DOC)'   # per tag, one grep each
+grep -E "$CHECKBOXES" "specs/{dir}/tasks.md" | grep -vcE '(TEST \+ IMPLEMENT|STRUCTURAL|PROJECT|DOC)'  # untagged, the complement
+```
+
+**NFR-3's degradation rule.** Read in bounded chunks or by targeted extraction, never the full file
+or the full diff. If an extraction could not be completed, report the value as `Unverifiable`
+(FR-8) or `not available` (FR-15) **with the reason** — never as zero, never omitted. Check exit
+status, not just empty output, so a failed extraction is never indistinguishable from a real zero.
+
 ### Step 6 — Section synthesis
 
 Owns: assembling the eight `## ` sections from the fact ledger alone. No shell call happens in this
