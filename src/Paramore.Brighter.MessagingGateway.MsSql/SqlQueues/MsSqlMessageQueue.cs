@@ -166,10 +166,11 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
 
         public int NumberOfMessageReady(string topic)
         {
-            var sql = $"select COUNT(*) from [{_configuration.QueueStoreTable}] where Topic='{topic}'";
+            var sql = $"select COUNT(*) from [{_configuration.QueueStoreTable}] where Topic=@topic";
             using var connection = _connectionProvider.GetConnection();
             var sqlCmd = connection.CreateCommand();
             sqlCmd.CommandText = sql;
+            sqlCmd.Parameters.Add(CreateDbDataParameter("topic", topic));
             object? count = sqlCmd.ExecuteScalar();
             
             if (count is null) return 0;
