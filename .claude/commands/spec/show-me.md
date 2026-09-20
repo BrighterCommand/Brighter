@@ -359,6 +359,10 @@ gh pr view {n} --json comments \
 # 5R.3 inline review submission stubs
 gh pr view {n} --json reviews --jq '.reviews[] | "\(.submittedAt)\t\(.author.login)\t\(.state)"'
 
+# 5R.5 CI rollup, one token per entry, plus its length
+gh pr view {n} --json statusCheckRollup --jq '.statusCheckRollup[] | (.conclusion // .state // .status // "UNKNOWN")'
+gh pr view {n} --json statusCheckRollup --jq '.statusCheckRollup | length'
+
 # 5R.6 author date of the commit that first added tasks.md
 git log --diff-filter=A --format='%aI' "{base}..{head}" -- "specs/{dir}/tasks.md" | tail -1
 ```
@@ -381,10 +385,25 @@ are `#### 1.` and `### 1.` respectively; a rule keyed to one level would score o
 carrying a findings sequence or a numbered disposition reply, and only between the located heading
 and the next heading.
 
+**5R.5's three-way fallback exists because `statusCheckRollup` is not a uniform array.** Verified on
+PR #4282, which returns 28 entries: 26 are `CheckRun` (`conclusion` populated, `state` null) and 2
+are `StatusContext` (`state` populated, `name`/`status`/`conclusion` all null — one such entry,
+`license/cla`, carries `state: "SUCCESS"`). Reading `.conclusion` alone would classify those two
+entries as unrecognised — Medium under F4's catch-all (Step 6) — when their actual state is
+`SUCCESS`. A `CheckRun` still in progress also has a null `conclusion`, with its live value in
+`.status`; that is the third fallback term. Count each projected token with `grep -c` per value plus
+a **complement bucket** for every other value, so the tally sums to `.statusCheckRollup | length` by
+identity, never by care — the same idiom Step 5's blast-radius bucket count already uses. No `sort`,
+no `uniq`.
+
 `gh` exiting non-zero at any of 5R.1/5R.2/5R.3 is FR-16 rows 1–2: the ledger row reads `not
 available: gh unavailable`, `## How it was built` takes its defined no-PR line, and **F3 and F4
 both score Medium**. Check **exit status**, not empty output — a PR with no comments and a failed
-`gh` look identical on stdout (NFR-3).
+`gh` look identical on stdout (NFR-3). `gh` failing at 5R.5 specifically, or a PR whose rollup is
+empty or absent, is **FR-16 row 4**: the ledger row for the CI tally reads `not available: {reason}`,
+`## Risk assessment (advisory)` records `CI: no checks found for {sha}` as F4's measured value, and
+**F4 scores Medium** — distinct from rows 1–2, which cover no PR / no `gh` at all, not a PR with an
+empty rollup.
 
 #### Step 5R.7 — Classification (stages A–D)
 
@@ -707,6 +726,43 @@ with `other` as the stated complement; the per-bucket net-lines counts; the publ
 line count restricted to `src/`; the commit count. When Step 3 recorded the spec branch as not
 determinable, replace all of the above with its FR-16 row 12 text — `Spec branch not determinable —
 no diff measured.` followed by the three rules tried — and still score F1 Medium, per Step 3.
+
+#### `## Risk assessment (advisory)`
+
+Owns: an advisory read — Low, Medium or High — from five named factors (FR-11), the overall level
+(FR-12) and the advisory framing (FR-13). Built in stages — this section currently defines **F4
+only**; the shared factor-mapping procedure, the remaining four factors, the overall-level
+computation and the advisory framing are later.
+
+Measured (Step 5R.5): one token per `statusCheckRollup` entry via the three-way fallback projection,
+and the rollup's own length. Judged: nothing — F4's mapping is a total, mechanical read of the tally
+below; no severity word or free judgement enters it.
+
+**F4 — CI state.** Cite the tally, not just the level, e.g. `28 checks: 26 CheckRun, 2 StatusContext;
+conclusions/states: 5 SUCCESS, 22 SKIPPED, 1 FAILURE`. Evaluated downward from High, stopping at the
+first column that holds:
+
+- **High** — any check concluded `FAILURE`, `CANCELLED`, `TIMED_OUT` or `STARTUP_FAILURE`.
+- **Medium** — no PR was found; the rollup is empty or absent; any check is `PENDING`,
+  `IN_PROGRESS`, `QUEUED`, or concluded `NEUTRAL` or `ACTION_REQUIRED`; any conclusion/state value
+  this list gives no other rule for (the catch-all for anything unrecognised); or the result is not
+  determinable (e.g. `gh` unavailable).
+- **Low** — a PR was found, the rollup returned ≥ 1 check, and **every** check concluded `SUCCESS`
+  or `SKIPPED`.
+
+When more than one column is satisfied collectively across the whole rollup — e.g. one `NEUTRAL`
+check alongside a separate `TIMED_OUT` check — F4 takes the *highest* matching column: High.
+
+Deliberately **not** GitHub's branch-protection "required check" sense — that setting is outside
+C-10's `gh pr view`-only allow-list, and several `ci.yml` jobs are fork-gated and legitimately report
+`SKIPPED` on ordinary PRs, which is what keeps the Low column reachable at all (C-10, Definitions —
+`CI check`).
+
+**FR-16 row 4** (a PR was found but its `statusCheckRollup` is empty or absent for the head commit,
+including `gh` failing at 5R.5 specifically): record `CI: no checks found for {sha}` — the head
+commit sha Step 3 resolved — as F4's measured value instead of a tally; **F4 scores Medium**. This is
+distinct from FR-16 rows 1–2 (no PR found at all, or `gh` unavailable outright), which also score F4
+Medium but via `## How it was built`'s no-PR line, not this row's measured-value text.
 
 #### `## Where to look first`
 
