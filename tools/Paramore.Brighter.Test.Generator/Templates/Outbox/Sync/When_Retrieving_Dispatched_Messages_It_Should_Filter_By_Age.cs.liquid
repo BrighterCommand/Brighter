@@ -35,6 +35,7 @@ using System.Linq;
 namespace {{ Namespace }}.Outbox{{ Prefix }}.Sync;
 {% if Category != null %}
 [Trait("Category", "{{Category}}")]{% endif %}
+{% if CollectionName != null %}[Collection("{{CollectionName}}")]{% endif %}
 public class WhenRetrievingDispatchedMessagesItShouldFilterByAge : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;

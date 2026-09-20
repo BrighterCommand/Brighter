@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 namespace {{ Namespace }}.Outbox{{ Prefix }}.Async;
 
 {% if Category != null %}[Trait("Category", "{{Category}}")]{% endif %}
+{% if CollectionName != null %}[Collection("{{CollectionName}}")]{% endif %}
 
 public class WhenStoringAMessageWithARelativeDataSchemaItShouldBeReadBackAsync : IAsyncLifetime
 {

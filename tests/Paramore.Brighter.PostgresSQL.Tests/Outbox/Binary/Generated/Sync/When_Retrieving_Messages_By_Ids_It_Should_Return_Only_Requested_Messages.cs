@@ -35,6 +35,7 @@ using System.Linq;
 namespace Paramore.Brighter.PostgresSQL.Tests.Outbox.Binary.Sync;
 
 [Trait("Category", "PostgresSql")]
+[Collection("PostgresBinaryOutbox")]
 public class WhenRetrievingMessagesByIdsItShouldReturnOnlyRequestedMessages : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;

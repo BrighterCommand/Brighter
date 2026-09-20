@@ -35,6 +35,7 @@ using System.Linq;
 namespace Paramore.Brighter.Gcp.Tests.Outbox.SpannerText.Sync;
 
 [Trait("Category", "Spanner")]
+[Collection("SpannerTextOutbox")]
 public class WhenAddingAMessageItShouldBeStoredWithAllProperties : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;

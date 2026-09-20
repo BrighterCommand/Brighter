@@ -35,6 +35,7 @@ using System.Linq;
 namespace Paramore.Brighter.MSSQL.Tests.Outbox.Text.Sync;
 
 [Trait("Category", "MSSQL")]
+[Collection("MSSQLTextOutbox")]
 public class WhenDeletingOneMessageItShouldBeRemovedFromOutbox : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;
