@@ -427,6 +427,43 @@ sub-issues is **judgement point 2**.
 the later comment's numbering continues the earlier's without restarting; posted within 15 minutes
 of each other. A comment whose numbering restarts at 1 begins a new round.
 
+**E — Attach inline comments and dedup.** Take 5R.3's review-submission stubs (one
+`{submittedAt}\t{author}\t{state}` line per submission) and attribute each to "whichever round's
+tracking comment was posted within 15 minutes of them (before or after) and describes the same
+finding" (`Review round` (a)), comparing **timestamp only**. **The 15-minute window is the whole of
+the attachment test — the submission's author field is read off the stub but never compared against
+the tracking comment's author.** Per
+`Review round` (a): "A round's inline PR review comments belong to that round regardless of author
+login even when it differs from the round's tracking-comment author — this repository's review
+workflow posts a round's tracking comment and its inline comments under different bot logins
+(`claude` vs `claude[bot]`)." **Dedup.** Per `Finding`: "When the same review pass posts an issue
+both as an inline PR review comment and as a restatement inside its own tracking comment, this is
+one finding, not two — the inline comment is the finding of record"; the tracking-comment
+restatement is evidence of the same finding, never a second one.
+
+**Known limitation — recorded as a ledger row, never hidden.** Inline review comment **bodies** are
+unreachable inside the allow-list: `gh pr view --json reviews` returns `"body": ""` for every
+submission, `gh pr view --comments` renders only issue comments, and only `gh api` — forbidden by
+C-10 — would return them. The command therefore reads the tracking comment's **restatement**, and
+treats the submission count as a **corroborating cardinality check** on the round's inline finding
+count, never a repair: a mismatch between the submission count and the restated-finding count is a
+ledger row, not something this procedure resolves on its own.
+
+**F — Exclude specification-phase passes.** Applied to the **pass**, after grouping (stage D), so a
+two-part pass is included or excluded as one unit — **D before F**. Per `Review round` (c), any of
+three **disjunctive** tests suffices: (i) self-identification as a requirements/design/tasks review
+(e.g. produced by `/spec:review requirements|design|tasks`, or its title names the phase, as in
+"design only"); (ii) posted before the commit that first adds `specs/{target spec}/tasks.md` to the
+branch, **by author date** (5R.6) — "a later rebase can move a commit's committer date without
+changing when the file was actually written, so committer date is not used for this test"; (iii)
+every finding the pass raises cites only paths under `specs/{target spec}/` or `docs/adr/`, with no
+finding citing a source or test file in the diff. An excluded pass contributes **zero** rounds and
+**zero** findings, and increments the counter FR-9 renders as `Specification-phase review passes
+excluded: {n}`.
+
+**Number surviving passes.** Passes that pass stage F are numbered `Round 1`..`Round k` in
+chronological order — **F before numbering**, so an excluded pass never consumes a round number.
+
 ### Step 6 — Section synthesis
 
 Owns: assembling the eight `## ` sections from the fact ledger alone. No shell call happens in this
