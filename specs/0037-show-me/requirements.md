@@ -266,8 +266,8 @@ otherwise-unconnected DTOs — the command may stand down, provided it gives an 
 reason naming why the fired test's evidence does not cohere into a drawable relationship. Both the
 raise and the stand-down are judgement-derived and NFR-1 says so; what NFR-1 does *not* permit
 varying is whether a test fired in the first place (that stays mechanical). A stand-down is never a
-silent skip: it is answered by (e)'s fourth line, exactly as a fired-and-answered test is answered by
-one of (e)'s other lines.
+silent skip: it is answered by (e)'s **stand-down line**, exactly as a fired-and-answered test is
+answered by one of (e)'s other lines.
 
 **(c) What is drawn, and in which format.** A diagram shows a relationship in the change under
 review. It never decorates, never restates the blast-radius numbers, and never draws a structure the
@@ -296,36 +296,41 @@ grain: cut detail, or draw the narrower relationship.
 
 **(e) When no diagram is drawn — defined fallbacks.** `## What changed and why` must carry exactly
 one of these lines whenever it contains no diagram (including when the fired trigger's diagram was
-placed in `## Where to look first` instead, per (a) — that case uses the fourth line below, naming
-where the diagram actually is). The command never omits both the diagram and the line, and never
-draws a guessed diagram in place of one:
+placed in `## Where to look first` instead, per (a) — that case uses **the placed-elsewhere line**
+below, naming where the diagram actually is). The command never omits both the diagram and the line, and never
+draws a guessed diagram in place of one. **Each line below is named, and every cross-reference to
+these lines — here, in (b), in (f), in FR-16 and in the acceptance criteria — uses that name, never
+an ordinal.** A line's position in this list carries no meaning and must never be cited: inserting a
+line would silently invalidate every ordinal reference elsewhere in this document, which is a defect
+this naming exists to make impossible.
 
-- no test fired and the command did not exercise (b)'s raise:
+- **the no-trigger line** — no test fired and the command did not exercise (b)'s raise:
   `No diagram: {a} files changed under src/ across {b} director{y|ies}, {c} changed public API
   declaration lines, {d} ADRs — no structural relationship to draw.` with `{a}`, `{b}`, `{c}`, `{d}`
   the measured values the trigger tested.
-- a test fired but the command exercised (b)'s stand-down, because the evidence did not cohere into a
-  drawable relationship:
+- **the stand-down line** — a test fired but the command exercised (b)'s stand-down, because the
+  evidence did not cohere into a drawable relationship:
   `No diagram: {which test(s)} fired, but {one-sentence reason the evidence does not cohere into a
   relationship}.`
-- a test fired, the relationship was drawable, and the drawn diagram was placed in
-  `## Where to look first` instead (per (a)):
+- **the placed-elsewhere line** — a test fired, the relationship was drawable, and the drawn diagram
+  was placed in `## Where to look first` instead (per (a)):
   `No diagram here: the change's shape is drawn as a path tree in ## Where to look first.`
-- a test fired but NFR-3's 25-file read budget was exhausted before the command could read enough
-  source to draw the relationship accurately:
+- **the budget line** — a test fired but NFR-3's 25-file read budget was exhausted before the command
+  could read enough source to draw the relationship accurately:
   `No diagram: the read budget was exhausted before the relationship could be read accurately.`
-- no spec diff was measured (FR-16 row 12):
+- **the no-diff line** — no spec diff was measured (FR-16 row 12):
   `No diagram: spec branch not determinable, so no change could be drawn.`
 
 `## Where to look first` carries no such line **except** when it is the section actually carrying the
-diagram that a `## What changed and why` trigger fired for (the third bullet above) — otherwise an
+diagram that a `## What changed and why` trigger fired for (**the placed-elsewhere line** above) — otherwise an
 absent tree there needs no explanation, since FR-6's line is the file's single statement about
 diagrams for the ordinary case.
 
 **(f) Budget.** Any source-code reads needed to draw a diagram accurately come out of NFR-3's single
 25-file whole-run budget. That budget is **per run, not per diagram**: a run that draws two diagrams
 still reads at most 25 files in full across the entire run. There is no separate diagram budget and
-no per-diagram allowance. Reaching the cap produces (e)'s second line, never a partially-read guess.
+no per-diagram allowance. Reaching the cap produces (e)'s **budget line**, never a partially-read
+guess.
 
 **FR-7 — `## Breaking changes` enumerates consumer-affecting changes, each classified, or states
 there are none.**
@@ -639,7 +644,7 @@ exactly as follows (each row has a matching acceptance criterion):
 | 9 | `requirements.md` present but declaring zero numbered requirements (FR-8's counting rule) | `Did it ship what it said?` contains exactly `requirements.md declares no numbered requirements — nothing to reconcile.`, with no shipped-as-planned line, no deviation list and no count line; F5 = Medium. |
 | 10 | `.issue-number` missing, empty or whitespace-only | The metadata block's linked issue reads `none`; `Inputs used` marks `.issue-number` as `not available: not present`. No factor consequence. |
 | 11 | `PROMPT.md` (or a `PROMPT-*.md` companion) absent | No mention anywhere in the output; its absence is normal and is not recorded in `Inputs used`. |
-| 12 | Spec branch not determinable (FR-10) | `Blast radius` states `Spec branch not determinable — no diff measured.` followed by the rules it tried; `How it was built` reports the commit count per FR-9's fallback; `What changed and why` carries FR-6 (e)'s third line; F1 = Medium. |
+| 12 | Spec branch not determinable (FR-10) | `Blast radius` states `Spec branch not determinable — no diff measured.` followed by the rules it tried; `How it was built` reports the commit count per FR-9's fallback; `What changed and why` carries FR-6 (e)'s **no-diff line**; F1 = Medium. |
 | 13 | Spec branch not determinable — effect on `Where to look first` (FR-14) | The section contains exactly: `No diff measured — spec branch not determinable, so no files can be ranked. Start from specs/{spec dir}/tasks.md and the ADRs listed in specs/{spec dir}/.adr-list.` It lists no paths and no diagram, and FR-14's 3–7-path rule does not apply. |
 | 14 | Spec branch not determinable — effect on `Breaking changes` (FR-7) | The item list is derived from the ADRs' *Consequences* sections and `requirements.md` only, and the section adds the line `No diff measured — this list is derived from the ADRs and requirements.md only; public-API declaration lines could not be inspected.` The count line is still present, and F2 is computed from the items found. |
 | 15 | Spec branch not determinable — effect on the metadata block (FR-5) | The metadata block's spec-branch, head-sha and merge-base-sha lines are each replaced with the single word `undetermined`. The base ref (FR-10's `origin/master`-or-`master` rule) does **not** depend on the spec branch and is still resolved and named normally. The PR reference reads `none found` — FR-20's PR discovery needs the spec branch's name to query `gh pr list --head`, which is unavailable in this state. Generation date, spec directory and issue are populated normally; the metadata block is still present in full. |
@@ -1300,7 +1305,7 @@ types.
 worth drawing is the path-tree relationship among the paths `## Where to look first` already lists,
 **when** the command runs, **then** `## Where to look first` carries that diagram under FR-14's
 optional-tree rule, `## What changed and why` contains no fenced block and contains exactly the
-third FR-6 (e) fallback line naming that the diagram is in `## Where to look first`, and the diagram
+FR-6 (e) **placed-elsewhere line** naming that the diagram is in `## Where to look first`, and the diagram
 still satisfies FR-6 (c)'s attribution rule and (d)'s size caps.
 
 **AC-66** *(Definitions — Public API declaration line, FR-10, FR-6 D2)* **Given** a spec diff
