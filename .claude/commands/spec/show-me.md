@@ -464,6 +464,40 @@ excluded: {n}`.
 **Number surviving passes.** Passes that pass stage F are numbered `Round 1`..`Round k` in
 chronological order — **F before numbering**, so an excluded pass never consumes a round number.
 
+**G — Severity.** Read **only** from a marker in the finding's **title**. Per `Finding severity`:
+"a trailing parenthetical or italicised tag immediately after the title text (e.g. `*(medium)*`,
+`*(low — a question, not a defect)*`) or a leading bracketed tag (e.g. `[High]`). Matched
+case-insensitively after stripping markdown emphasis and surrounding punctuation, taking the first
+word of the marker and ignoring anything after a dash/colon within it (`*(low — a question, not a
+defect)*` → `low`)." Map `critical`→Critical, `high`→High, `medium`→Medium, `low`→Low, `nit`→Low.
+**"A severity word appearing anywhere else — in the finding's body prose, or restated inside a
+tracking-comment summary of an inline finding — is not matched"**, per `Finding severity` — this is
+deliberate, so a finding's own prose (e.g. "…so low blast radius, but…") is never mistaken for its
+marker. A finding with no title marker, or a marker word outside the five-word set, is
+**unclassified**, risk-scored as Medium by F3 but reported in FR-9's own `{u}` slot — distinct from
+`{m}`'s count of genuine `Medium` calls, so a reader can see how much of a round's Medium weight
+came from an actual severity word versus an absence of one.
+
+**H — Resolution.** Per finding, in this precedence, stopping at the first that applies:
+
+1. **The author's reply, per item.** Per `Resolved finding`, a reply stating the finding "was
+   addressed by the fix made for another finding in the same round" resolves it — deciding whether
+   a reply's wording crosses that bar is **judgement point 3**. Per `Acknowledged finding`, a reply
+   "accepting it as understood but explicitly taking no code change (‘acknowledged, no action’, ‘by
+   design’, ‘deliberate, leaving as-is’, ‘won't fix’, ‘accepted for now, will revisit if it's hit’,
+   ‘tracked separately’)" is **Acknowledged — not Resolved**.
+2. **A commit on the spec branch**, made after the finding was posted, that "changes the code or
+   document the finding names" — `git log --format='%H %aI' {mb}..{head} -- {path}`, filtered to
+   commits after the finding's post time.
+3. **The PR thread marks it resolved/outdated.**
+4. None of the above: per `Open finding`, "neither resolved nor acknowledged" — **Open**.
+
+**One input, two questions — stated once so a later edit does not collapse it.** Stage B.3 excludes
+the fix-verdict section (`### Verdict on each fix`/`## Fix #N — …: ✅`) as a source of *new*
+findings. Stage H **admits the same section** as *evidence of resolution* for findings stage B
+already located elsewhere. The same text answers two different questions at two different stages;
+simplifying it to "the verdict section doesn't count" would silently break resolution tallying.
+
 ### Step 6 — Section synthesis
 
 Owns: assembling the eight `## ` sections from the fact ledger alone. No shell call happens in this
