@@ -38,7 +38,7 @@ public class AsyncRmqMessageConsumerMultipleTopicTests : IAsyncDisposable, IDisp
         var queueName = new ChannelName(Guid.NewGuid().ToString());
 
         _messageProducer = new RmqMessageProducer(rmqConnection);
-        _messageConsumer = new RmqMessageConsumer(rmqConnection, queueName , topics, false, false);
+        _messageConsumer = new RmqMessageConsumer(rmqConnection, queueName , topics, isDurable: true, highAvailability: false);
 
         new QueueFactory(rmqConnection, queueName, topics).CreateAsync().GetAwaiter().GetResult();
     }

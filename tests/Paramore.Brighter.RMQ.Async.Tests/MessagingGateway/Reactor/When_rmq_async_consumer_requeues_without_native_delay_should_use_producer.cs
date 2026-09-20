@@ -72,7 +72,7 @@ public class RmqMessageConsumerDelayTests : IDisposable
         _channel = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection))
             .CreateSyncChannel(subscription);
 
-        new QueueFactory(rmqConnection, queueName, new RoutingKeys(topic))
+        new QueueFactory(rmqConnection, queueName, new RoutingKeys(topic), isDurable: subscription.IsDurable)
             .CreateAsync()
             .GetAwaiter()
             .GetResult();

@@ -31,7 +31,7 @@ public class RmqValidateExistingInfrastructureTests : IDisposable
             connection: rmqConnection, 
             queueName: queueName, 
             routingKey: routingKey, 
-            isDurable: false, 
+            isDurable: true, 
             highAvailability: false, 
             makeChannels: OnMissingChannel.Validate);
 
