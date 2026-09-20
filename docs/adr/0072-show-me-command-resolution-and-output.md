@@ -24,15 +24,31 @@ Accepted
 Spec 0037 asks for a new slash command, `/spec:show-me [spec-id]`, that runs after a spec's
 implementation is finished and writes one durable markdown file, `specs/NNNN-name/show-me.md`,
 summarising what the spec actually changed and how risky it looks to merge. The material already
-exists — ADRs, `requirements.md`, `tasks.md`, the git history, the pull request and its review
-rounds — but it is scattered and asymmetric in cost, so "is this safe to merge?" has been an ad hoc
-judgement re-derived from scratch in every session.
+exists — ADRs, `requirements.md`, `tasks.md`, the git history and the pull request — but it is
+scattered and asymmetric in cost, so "is this safe to merge?" has been an ad hoc judgement
+re-derived from scratch in every session. (An earlier revision of this spec also drew on the pull
+request's review rounds and CI state. Both left the command's scope: the pull request already
+presents them, and `/spec:review code` assesses the code properly. See
+[ADR 0073](0073-show-me-advisory-risk-model.md).)
 
 **Parent Requirement**: [specs/0037-show-me/requirements.md](../../specs/0037-show-me/requirements.md)
 
 **Scope**: This ADR covers command invocation, spec/branch/PR resolution, and output file
-structure. A separate ADR (to follow) covers review-history decomposition and the risk-scoring
-model (FR-9, FR-11–FR-13).
+structure. Two sibling ADRs cover the rest: [ADR 0073](0073-show-me-advisory-risk-model.md) decides
+the advisory risk model (FR-11–FR-13), and
+[ADR 0077](0077-show-me-visual-explanation.md) decides the visual-explanation capability and the
+Explainer role (FR-6's `##### Visual explanation`, FR-14's optional tree).
+
+### Where this ADR sits
+
+| ADR | Decides |
+| --- | --- |
+| **[0072](0072-show-me-command-resolution-and-output.md)** *(this one)* | What the command is, how it resolves its target, and the shape of the file it writes |
+| [0073](0073-show-me-advisory-risk-model.md) | How the advisory risk level is computed, and how it stays advisory |
+| [0077](0077-show-me-visual-explanation.md) | When the command draws a diagram, what it may draw, and who is allowed to read code to draw it |
+
+The sentence that unifies all three: **the command states only what it has measured, names what it
+measured it from, and changes nothing.**
 
 ### What requirements.md already fixed, and what it left open
 
@@ -97,12 +113,14 @@ first **measures** the spec with bounded shell commands into an in-context *fact
 **synthesises** the output sections from that ledger alone, then writes `show-me.md` in one `Write`
 call.
 
-The organising principle is a two-role split, applied throughout:
+The organising principle is a two-stage split, applied throughout. The command is one prompt file,
+not a program, so these are named stages of a single ordered procedure rather than components; each
+name is shorthand for the rule it holds:
 
-| Role | Stereotype | Owns | Mechanism |
-|------|-----------|------|-----------|
-| **Measurer** | information holder | Every value NFR-1 requires to be identical between runs | `git`/`gh`/`grep`/`awk` invocations whose output is a count, a sha, a ref name or a short line list |
-| **Synthesiser** | decider | Every value NFR-1 names as judgement-derived, plus all prose | The executing model's own reading, constrained to cite ledger entries |
+| Stage | Produces | Mechanism | The rule it holds |
+|------|------|-----------|------|
+| **Measurer** | Every value NFR-1 requires to be identical between runs | `git`/`gh`/`grep`/`awk` invocations whose output is a count, a sha, a ref name or a short line list | Never paraphrases |
+| **Synthesiser** | Every value NFR-1 names as judgement-derived, plus all prose | The executing model's own reading, constrained to cite ledger entries | Runs no shell call and counts nothing |
 
 Nothing crosses the line in either direction: the Measurer never paraphrases and the Synthesiser
 never counts. FR-15's `## Inputs used` table is written *from* the ledger, which is what makes
@@ -651,6 +669,3 @@ mechanical/judged split, which is the structural idea this ADR rests on.
   - [`.agent_instructions/adr_frontmatter.md`](../../.agent_instructions/adr_frontmatter.md) — "the
     number is a non-unique ordering hint; identity is the filename stem", which is what FR-6's
     slug rule implements.
-  - [`.agent_instructions/design_principles.md`](../../.agent_instructions/design_principles.md) —
-    Responsibility-Driven Design; the Measurer/Synthesiser split is this document's "knowing" and
-    "deciding" stereotypes applied to a command procedure rather than to classes.
