@@ -39,6 +39,9 @@ Brighter contributors (sorted alphabeticaly)
 **[MikeFreeman](https://github.com/MikeFreeman-Flagstone)**
  * Archiver Fixes
 
+**[Irakli Gabisonia](https://github.com/gabisonia)**
+ * Various fixes
+
 **[Abhishek Gajavilli](https://github.com/Abhishek84313)**
   * Various fixes
   
