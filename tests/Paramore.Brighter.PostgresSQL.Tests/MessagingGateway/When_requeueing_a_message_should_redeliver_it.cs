@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading;
@@ -10,7 +11,7 @@ using Xunit;
 namespace Paramore.Brighter.PostgresSQL.Tests.MessagingGateway;
 
 [Trait("Category", "PostgresSql")]
-public class PostgreSqlMessageConsumerRequeueTests
+public class PostgreSqlMessageConsumerRequeueTests : IDisposable
 {
     private readonly Message _message;
     private readonly IAmAProducerRegistry _producerRegistry; 
@@ -49,21 +50,44 @@ public class PostgreSqlMessageConsumerRequeueTests
         _channelFactory = new PostgresChannelFactory(new PostgresMessagingGatewayConnection(testHelper.Configuration));
     }
 
-    [Fact]
-    public void When_requeueing_a_message()
+    [Theory]
+    [InlineData(100)]
+    [InlineData(1500)]
+    public void When_requeueing_a_message_should_redeliver_it(int requeueDelayInMilliseconds)
     {
+        // Arrange
         ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(_message);
-        var channel = _channelFactory.CreateSyncChannel(_subscription);
+        using var channel = _channelFactory.CreateSyncChannel(_subscription);
         var message = channel.Receive(TimeSpan.FromMilliseconds(2000));
-        Assert.True(channel.Requeue(message, TimeSpan.FromMilliseconds(100)));
+        Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
+        Assert.Equal(_message.Id, message.Id);
 
-        Thread.Sleep(TimeSpan.FromMilliseconds(100));
-        
-        var requeuedMessage = channel.Receive(TimeSpan.FromMilliseconds(1000));
+        // Act
+        Assert.True(channel.Requeue(message, TimeSpan.FromMilliseconds(requeueDelayInMilliseconds)));
 
-        //clear the queue
+        // Assert
+        var requeuedMessage = new Message();
+        var stopwatch = Stopwatch.StartNew();
+        while (stopwatch.Elapsed < TimeSpan.FromSeconds(5))
+        {
+            requeuedMessage = channel.Receive(TimeSpan.FromSeconds(1));
+            if (requeuedMessage.Header.MessageType != MessageType.MT_NONE)
+            {
+                break;
+            }
+
+            Thread.Sleep(TimeSpan.FromMilliseconds(200));
+        }
+
+        Assert.Equal(MessageType.MT_COMMAND, requeuedMessage.Header.MessageType);
         channel.Acknowledge(requeuedMessage);
 
-        Assert.Equal(message.Body.Value, requeuedMessage.Body.Value);
+        Assert.Equal(_message.Id, requeuedMessage.Id);
+        Assert.Equal(_message.Body.Value, requeuedMessage.Body.Value);
+    }
+
+    public void Dispose()
+    {
+        _producerRegistry.Dispose();
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -10,7 +11,7 @@ using Xunit;
 namespace Paramore.Brighter.PostgresSQL.Tests.MessagingGateway;
 
 [Trait("Category", "PostgresSql")]
-public class PostgreSqlMessageConsumerRequeueTestsAsync : IDisposable
+public class PostgreSqlMessageConsumerRequeueAsyncTests : IDisposable
 {
     private readonly Message _message;
     private readonly IAmAProducerRegistry _producerRegistry;
@@ -18,7 +19,7 @@ public class PostgreSqlMessageConsumerRequeueTestsAsync : IDisposable
     private readonly PostgresSubscription<MyCommand> _subscription;
     private readonly RoutingKey _topic;
 
-    public PostgreSqlMessageConsumerRequeueTestsAsync()
+    public PostgreSqlMessageConsumerRequeueAsyncTests()
     {
         var myCommand = new MyCommand { Value = "Test" };
         string correlationId = Guid.NewGuid().ToString();
@@ -48,22 +49,40 @@ public class PostgreSqlMessageConsumerRequeueTestsAsync : IDisposable
         _channelFactory = new PostgresChannelFactory(new PostgresMessagingGatewayConnection(testHelper.Configuration));
     }
 
-    [Fact]
-    public async Task When_requeueing_a_message_async()
+    [Theory]
+    [InlineData(100)]
+    [InlineData(1500)]
+    public async Task When_requeueing_a_message_should_redeliver_it_async(int requeueDelayInMilliseconds)
     {
+        // Arrange
         await _producerRegistry.LookupAsyncBy(_topic).SendAsync(_message);
-        var channel = await _channelFactory.CreateAsyncChannelAsync(_subscription);
+        await using var channel = await _channelFactory.CreateAsyncChannelAsync(_subscription);
         var message = await channel.ReceiveAsync(TimeSpan.FromMilliseconds(2000));
-        Assert.True(await channel.RequeueAsync(message, TimeSpan.FromMilliseconds(100)));
+        Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
+        Assert.Equal(_message.Id, message.Id);
 
-        await Task.Delay(TimeSpan.FromMilliseconds(100));
-        
-        var requeuedMessage = await channel.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
+        // Act
+        Assert.True(await channel.RequeueAsync(message, TimeSpan.FromMilliseconds(requeueDelayInMilliseconds)));
 
-        //clear the queue
+        // Assert
+        var requeuedMessage = new Message();
+        var stopwatch = Stopwatch.StartNew();
+        while (stopwatch.Elapsed < TimeSpan.FromSeconds(5))
+        {
+            requeuedMessage = await channel.ReceiveAsync(TimeSpan.FromSeconds(1));
+            if (requeuedMessage.Header.MessageType != MessageType.MT_NONE)
+            {
+                break;
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(200));
+        }
+
+        Assert.Equal(MessageType.MT_COMMAND, requeuedMessage.Header.MessageType);
         await channel.AcknowledgeAsync(requeuedMessage);
 
-        Assert.Equal(message.Body.Value, requeuedMessage.Body.Value);
+        Assert.Equal(_message.Id, requeuedMessage.Id);
+        Assert.Equal(_message.Body.Value, requeuedMessage.Body.Value);
     }
         
     public void Dispose()
