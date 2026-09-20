@@ -666,6 +666,39 @@ Follow the table with a `Shipped beyond the requirements` list — one bullet pe
 in `tasks.md` that no numbered requirement covers — or, if none, the line `Nothing shipped outside
 the numbered requirements.`
 
+#### `## How it was built`
+
+Measured: total tasks and the count per task-type tag in `tasks.md` (Step 5's per-tag `grep`
+family, with `untagged` as the stated complement); the commit count since the merge base (Step 5).
+**Rendered, never recomputed**: one line per surviving review round, read straight from Step 5R.7's
+Classifier rows (stages A–H, all built) — this section performs **no** counting of its own; a round
+tally, a severity split or a resolution split all come from the ledger, or they do not appear.
+
+Render, in order:
+
+1. `{total} tasks: {a} TEST + IMPLEMENT, {b} STRUCTURAL, {c} PROJECT, {d} DOC, {e} untagged.`
+2. `{n} commits since the merge base.`
+3. One line per surviving round, in Step 5R.7's post-exclusion numbering, in FR-9's exact shape:
+   `Round {i}: {n} findings ({c} Critical, {h} High, {m} Medium, {l} Low, {u} unclassified) — {r}
+   resolved, {a} acknowledged, {o} open.` `{m}` and `{u}` stay in their own slots even though stage
+   G scores both Medium for F3 — FR-9 reports them separately so a reader can see how much of a
+   round's Medium weight came from an actual severity call versus an absence of one.
+4. A totals line summing every round's findings/resolved/acknowledged/open across all surviving
+   rounds.
+5. `Specification-phase review passes excluded: {n}` (or `none`) — and **nothing more** about those
+   passes; what they contained is Out of Scope for this section.
+
+**FR-16 row 1/2** (no PR found for the spec branch, or `gh` unavailable): items 3–5 above are
+replaced by the line Step 4 already defined — `No pull request found for branch {branch} — no
+external review findings available.` — and **F3 and F4 both score Medium** (Step 4's own
+consequence, not recomputed here); items 1–2 (task shape, commit count) still render normally, since
+neither depends on a PR.
+
+**FR-16 row 3** (a PR was found, but Step 5R.7 stage F excluded every surviving pass, or otherwise
+produced zero rounds): state `Pull request #{n} has no recorded implementation review rounds.`
+**plus** the `Specification-phase review passes excluded: {n}` line — never silently omitted — and
+**F3 scores Medium**.
+
 #### `## Blast radius`
 
 Purely a rendering of ledger rows Steps 3 and 5 already produced — no new measurement or judgement
