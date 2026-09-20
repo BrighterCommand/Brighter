@@ -33,6 +33,7 @@ using Xunit;
 namespace Paramore.Brighter.Gcp.Tests.Outbox.Firestore.Causation;
 
 [Trait("Category", "Firestore")]
+[Collection("FirestoreOutbox")]
 public class CausationTrackingOutboxTests : CausationTrackingOutboxBaseTests<Paramore.Brighter.Firestore.FirestoreTransaction>
 {
     private readonly FirestoreOutboxProvider _outboxProvider = new();

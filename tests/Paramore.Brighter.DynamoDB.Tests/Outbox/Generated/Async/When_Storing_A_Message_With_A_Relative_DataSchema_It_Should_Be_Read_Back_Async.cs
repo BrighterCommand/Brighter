@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 namespace Paramore.Brighter.DynamoDB.Tests.Outbox.Async;
 
 [Trait("Category", "DynamoDB")]
+[Collection("DynamoDBOutbox")]
 
 public class WhenStoringAMessageWithARelativeDataSchemaItShouldBeReadBackAsync : IAsyncLifetime
 {
