@@ -730,17 +730,66 @@ no diff measured.` followed by the three rules tried — and still score F1 Medi
 #### `## Risk assessment (advisory)`
 
 Owns: an advisory read — Low, Medium or High — from five named factors (FR-11), the overall level
-(FR-12) and the advisory framing (FR-13). Built in stages — this section currently defines **F4
-only**; the shared factor-mapping procedure, the remaining four factors, the overall-level
-computation and the advisory framing are later.
+(FR-12) and the advisory framing (FR-13). Built in stages — this section now maps all five factors;
+the overall-level computation and the advisory framing are later.
 
-Measured (Step 5R.5): one token per `statusCheckRollup` entry via the three-way fallback projection,
-and the rollup's own length. Judged: nothing — F4's mapping is a total, mechanical read of the tally
-below; no severity word or free judgement enters it.
+**The shared factor-mapping procedure, stated once and applied five times, never per-factor.** For
+factor F with evidence set E: evaluate F's **High** condition over the whole of E; if it holds, F is
+High, and no further column is evaluated. Otherwise evaluate **Medium** over the whole of E; if it
+holds, F is Medium. Otherwise F is **Low**. Evaluating downward from High, and stopping at the first
+hit, is equivalent to evaluating all three and taking the maximum — FR-11's mapping is total by
+construction, so at least one column always holds — but it cannot produce "no column matched", and
+it makes "the highest matching column wins" a property of evaluation order rather than a comparison
+performed after the fact. This is what "collectively satisfied" means in each factor's Medium/High
+column below: the whole of a factor's evidence is weighed at once, not row-by-row or finding-by-
+finding. Three worked examples: a `Deferred` row with a recorded follow-up alongside a separate
+`Dropped` row stating `no follow-up recorded` puts **F5** at High; an acknowledged finding in one
+round alongside a separate open Critical finding in another round puts **F3** at High; a rollup
+containing one `NEUTRAL` check alongside a separate `TIMED_OUT` check puts **F4** at High. F1 and F2
+are scalar counts over disjoint ranges, so the downward evaluation is vacuous for them — they are
+still evaluated; one rule with two vacuous applications is cheaper to keep correct than one rule
+with two exceptions.
+
+**The handoff rule: a factor mapping never re-derives its own input.** F1 reads Step 5's `src/`
+bucket integer; F2 reads the `Total breaking-change items: {n}` line `## Breaking changes` already
+emitted; F3 reads the Classifier's round rows (Step 5R.7, all stages); F4 reads Step 5R.5's rollup
+tally; F5 reads the `Shipped: … (of {total})` count line and each non-`Shipped` row's follow-up text
+`## Did it ship what it said?` already emitted. Re-partitioning breaking-change items or re-judging a
+requirement status inside this table would judge the same evidence twice and could disagree with the
+section printed earlier in the file. The consequence is a sequencing constraint: **this table is
+synthesised after the sections it projects from** — Step 6 runs 6.a (sections 1–5), then 6.b (this
+section), then 6.c (sections 7–8); assembly into FR-5's fixed order happens at Step 7.
+
+Emit one table row per factor — factor, measured value, level — citing the value, not just the level
+(e.g. `76 files under src/`, `14 items`, `11 findings over 3 implementation review rounds; 9
+resolved, 2 acknowledged, 0 open`, the CI tally, the `Shipped: …` count line): each cell a ledger
+row's evidence field, never recomputed here.
+
+**F1 — Product-code blast radius** — files changed under `src/` (Step 5).
+
+- **High** — > 50. **Medium** — 11–50. **Low** — ≤ 10.
+
+**F2 — Breaking changes** — the `## Breaking changes` section's `Total breaking-change items: {n}`
+count line.
+
+- **High** — ≥ 4. **Medium** — 1–3. **Low** — 0.
+
+**F3 — Review findings** — the state of findings across **all** implementation review rounds (Step
+5R.7), not just one round.
+
+- **High** — ≥ 1 **open** finding of severity High or Critical.
+- **Medium** — no PR found or no implementation review round ran; **or** ≥ 1 acknowledged finding;
+  **or** ≥ 1 open finding of severity Medium or Low (including unclassified).
+- **Low** — ≥ 1 round ran, **and** every finding is resolved, **and** no finding is open or
+  acknowledged.
+
+This repository's review workflows do not require a severity word, so findings are often
+unclassified and count as Medium; but even where a word is given, `nit`/`low`/`medium` dominate in
+practice, so F3 reaches High rarely — a true reading of the evidence, not a defect, since the
+mapping is total and F3's Medium column is what actually carries the common cases.
 
 **F4 — CI state.** Cite the tally, not just the level, e.g. `28 checks: 26 CheckRun, 2 StatusContext;
-conclusions/states: 5 SUCCESS, 22 SKIPPED, 1 FAILURE`. Evaluated downward from High, stopping at the
-first column that holds:
+conclusions/states: 5 SUCCESS, 22 SKIPPED, 1 FAILURE`.
 
 - **High** — any check concluded `FAILURE`, `CANCELLED`, `TIMED_OUT` or `STARTUP_FAILURE`.
 - **Medium** — no PR was found; the rollup is empty or absent; any check is `PENDING`,
@@ -749,9 +798,6 @@ first column that holds:
   determinable (e.g. `gh` unavailable).
 - **Low** — a PR was found, the rollup returned ≥ 1 check, and **every** check concluded `SUCCESS`
   or `SKIPPED`.
-
-When more than one column is satisfied collectively across the whole rollup — e.g. one `NEUTRAL`
-check alongside a separate `TIMED_OUT` check — F4 takes the *highest* matching column: High.
 
 Deliberately **not** GitHub's branch-protection "required check" sense — that setting is outside
 C-10's `gh pr view`-only allow-list, and several `ci.yml` jobs are fork-gated and legitimately report
@@ -763,6 +809,19 @@ including `gh` failing at 5R.5 specifically): record `CI: no checks found for {s
 commit sha Step 3 resolved — as F4's measured value instead of a tally; **F4 scores Medium**. This is
 distinct from FR-16 rows 1–2 (no PR found at all, or `gh` unavailable outright), which also score F4
 Medium but via `## How it was built`'s no-PR line, not this row's measured-value text.
+
+**F5 — Requirement fidelity** — the `## Did it ship what it said?` reconciliation table.
+
+- **High** — ≥ 1 `Deferred`, `Dropped`, or `Withdrawn` row stating `no follow-up recorded`.
+- **Medium** — ≥ 1 `Shipped with deviation` or `Unverifiable` row; **or** ≥ 1 `Deferred`/`Dropped`/
+  `Withdrawn` row that **does** state a follow-up issue or superseding requirement — this includes a
+  `Withdrawn` row that cites both the withdrawal decision and a follow-up/supersession.
+- **Low** — every numbered requirement row is `Shipped`, with no exception.
+
+Any row that is not `Shipped` lands in Medium if it states a follow-up; only a gap left *unrecorded*
+reaches High. **FR-16 rows 8–9** (no `requirements.md`, or zero
+declared ids — both carried over from `## Did it ship what it said?`): **F5 scores Medium** in
+either case, with no reconciliation table to read a value from.
 
 #### `## Where to look first`
 
