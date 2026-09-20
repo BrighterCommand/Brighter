@@ -823,6 +823,21 @@ reaches High. **FR-16 rows 8–9** (no `requirements.md`, or zero
 declared ids — both carried over from `## Did it ship what it said?`): **F5 scores Medium** in
 either case, with no reconciliation table to read a value from.
 
+**The overall level.** Computed mechanically as the **maximum** of the five factor levels over
+`Low < Medium < High` (FR-12) — never an average, never a vote. Emit `**Overall risk:
+{Low|Medium|High}**` on its own line, followed by **2–5 sentences** of rationale that reference at
+least the factor(s) that set the level.
+
+The Synthesiser may state a **higher** overall level than the computed maximum, with an explicit
+one-sentence reason naming what the factors miss — but **never** a lower one. Before Step 7's
+`Write`, run two assertions over the assembled section: the stated level is **≥** the computed
+maximum, and, if it is strictly greater, a raising sentence is present.
+
+*Example (C-8, spec 0036)*: F1 High (76 files under `src/`), F2 High (14 breaking-change items), F3
+Medium (11 findings over 3 rounds — 9 resolved, 2 acknowledged, 0 open), F4 and F5 as measured →
+**Overall risk: High**, set by F1 and F2 as the maximum. F3's Medium does not pull the level down,
+because the overall level is the maximum of all five factors, not their average.
+
 #### `## Where to look first`
 
 Measured: the spec diff's file list (already produced by Step 5) — the candidate set this section
