@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+
 namespace Paramore.Brighter.MessagingGateway.MsSql;
 
 /// <summary>
@@ -29,6 +31,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql;
 /// </summary>
 public class MsSqlQueueBuilder
 {
+    private const int MAX_IDENTIFIER_LENGTH = 128;
+
     private const string QUEUE_TABLE_DDL = 
         """
         CREATE TABLE [{0}] 
@@ -42,7 +46,7 @@ public class MsSqlQueueBuilder
 
     private const string QUEUE_TABLE_INDEX_DDL =
         """
-        CREATE NONCLUSTERED INDEX [IX_{0}_Topic] ON [{0}] ([Topic] ASC)
+        CREATE NONCLUSTERED INDEX [{0}] ON [{1}] ([Topic] ASC)
         """;
     
     private const string QUEUE_EXISTS_SQL = 
@@ -51,36 +55,83 @@ public class MsSqlQueueBuilder
                     SELECT 1
                     FROM sys.tables t
                     INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
-                    WHERE t.name = '{0}' AND s.name = '{1}'
+                    WHERE t.name = {0} AND s.name = {1}
                 ) SELECT 1 AS TableExists; ELSE SELECT 0 AS TableExists;
         """;
     
     /// <summary>
     /// Get the DDL statements to create a Queue table in MS SQL Server
     /// </summary>
-    /// <param name="queueTableName">The name you want to use for the queue table</param>
+    /// <param name="queueTableName">
+    /// The literal table name, without schema qualification or quoting, up to 128 characters.
+    /// </param>
     /// <returns>The required DDL as a <see cref="string"/></returns>
+    /// <exception cref="ArgumentException">The table name is null, blank, or longer than 128 characters.</exception>
     public static string GetDDL(string queueTableName)
     {
-        return string.Format(QUEUE_TABLE_DDL, queueTableName);
+        ValidateIdentifier(queueTableName, nameof(queueTableName));
+        return string.Format(QUEUE_TABLE_DDL, queueTableName.Replace("]", "]]"));
     }
     
     /// <summary>
     /// Get the DDL statement to create an index on the Topic column for the Queue table
     /// </summary>
-    /// <param name="queueTableName">The name of the queue table to create the index for</param>
+    /// <param name="queueTableName">
+    /// The literal table name, up to 119 characters to leave room for the index name's
+    /// <c>IX_</c> prefix and <c>_Topic</c> suffix.
+    /// </param>
     /// <returns>The required DDL as a <see cref="string"/></returns>
+    /// <exception cref="ArgumentException">
+    /// The table name is null or blank, or the derived index name exceeds 128 characters.
+    /// </exception>
     public static string GetIndexDDL(string queueTableName)
     {
-        return string.Format(QUEUE_TABLE_INDEX_DDL, queueTableName);
+        ValidateIdentifier(queueTableName, nameof(queueTableName));
+        string indexName = $"IX_{queueTableName}_Topic";
+        ValidateIdentifier(indexName, nameof(queueTableName));
+        return string.Format(QUEUE_TABLE_INDEX_DDL,
+            indexName.Replace("]", "]]"), queueTableName.Replace("]", "]]"));
     }
 
     /// <summary>
     /// Get the SQL statements required to test for the existence of a Queue table in MS SQL Server
     /// </summary>
-    /// <param name="queueTableName">The name that was used for the Queue table</param>
-    /// <param name="schemaName">The schema name for the Queue table. Defaults to 'dbo'</param>
+    /// <param name="queueTableName">
+    /// The literal table name, without schema qualification or quoting, up to 128 characters.
+    /// </param>
+    /// <param name="schemaName">
+    /// The literal schema name, up to 128 characters. Defaults to <c>dbo</c>;
+    /// pass <see langword="null"/> to use the caller's default schema.
+    /// </param>
     /// <returns>The required SQL as a <see cref="string"/></returns>
-    public static string GetExistsQuery(string queueTableName, string schemaName = "dbo") =>
-        string.Format(QUEUE_EXISTS_SQL, queueTableName, schemaName);
+    /// <remarks>
+    /// Pass <see langword="null"/> for <paramref name="schemaName"/> to match the default schema
+    /// used by the unqualified table and index DDL.
+    /// </remarks>
+    /// <exception cref="ArgumentException">
+    /// The table name is null or blank, a non-null schema name is blank, or either name exceeds 128 characters.
+    /// </exception>
+    public static string GetExistsQuery(string queueTableName, string? schemaName = "dbo")
+    {
+        ValidateIdentifier(queueTableName, nameof(queueTableName));
+        if (schemaName != null)
+            ValidateIdentifier(schemaName, nameof(schemaName));
+
+        return string.Format(QUEUE_EXISTS_SQL, QuoteSqlLiteral(queueTableName),
+            schemaName == null ? "SCHEMA_NAME()" : QuoteSqlLiteral(schemaName));
+    }
+
+    private static string QuoteSqlLiteral(string value) => $"N'{value.Replace("'", "''")}'";
+
+    private static void ValidateIdentifier(string name, string parameterName)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("SQL Server identifiers must not be null or blank.", parameterName);
+
+        if (name.Length > MAX_IDENTIFIER_LENGTH)
+        {
+            throw new ArgumentException(
+                $"SQL Server identifiers must not exceed {MAX_IDENTIFIER_LENGTH} characters.", parameterName);
+        }
+    }
 }
