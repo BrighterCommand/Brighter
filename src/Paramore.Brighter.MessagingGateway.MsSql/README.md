@@ -57,8 +57,14 @@ gateway issues against the queue is unqualified, so it reads through the default
 creating the table anywhere else would put it where the gateway does not look. `SchemaName` still
 applies to the Outbox and the Inbox.
 
-To create the table yourself, use `MsSqlQueueBuilder.GetDDL` and `GetIndexDDL`, or the following as
-a reference for SQL Server:
+To create the table yourself, use `MsSqlQueueBuilder.GetDDL` and `GetIndexDDL`. These accept literal
+names without schema qualification or quoting, escape closing brackets, and validate the table
+and derived index name lengths. `GetExistsQuery` escapes table and schema names as Unicode SQL
+literals. Its schema defaults to `dbo` for compatibility; pass `schemaName: null` to check the
+caller's default schema, matching the unqualified DDL. The gateway still rejects names containing
+`]` because its runtime queue statements do not escape them.
+
+The following is reference SQL for creating the table:
 
 ```sql
         PRINT 'Creating Queue table'
