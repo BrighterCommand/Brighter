@@ -5,7 +5,7 @@ status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-09-19
-summary: "/spec:show-me is implemented as two artefacts with one seam: a measurement script that performs every mechanically countable measurement and emits one JSON object, and the prompt file .claude/commands/spec/show-me.md that consumes it and synthesises. A precondition gate (FR-1/FR-2/FR-3 stops) sits above both writes; the JSON is persisted as the gitignored fact ledger specs/{spec}/.show-me-ledger.json so each remote input is fetched once; reads are budgeted in bytes rather than file count; and show-me.md is emitted in a single Write. The script's implementation language is left open."
+summary: "/spec:show-me is implemented as two artefacts with one seam: a measurement script that performs every mechanically countable measurement and emits one JSON object, and the prompt file .claude/commands/spec/show-me.md that consumes it and synthesises. A precondition gate (FR-1/FR-2/FR-3 stops) sits above both writes; the JSON is persisted as the gitignored fact ledger specs/{spec}/.show-me-ledger.json so each remote input is fetched once; reads are budgeted in bytes rather than file count; and show-me.md is emitted in a single Write. The measurement script is a C# file-based app, run with dotnet run and needing no build step."
 tags:
   - "meta"
   - "api-design"
@@ -23,10 +23,9 @@ narrative of deviations rather than a row per declared requirement.
 
 Amended again 2026-09-21 to track the amended `requirements.md` (FR-21, NFR-9, and the rewritten
 FR-4/FR-18/NFR-3). The deterministic half moves out of shell pipelines embedded in this document's
-prose and into a delivered measurement script emitting JSON — Alternative 1, previously rejected here
-and now the Decision; the fact ledger becomes a second, gitignored written file rather than an
-in-context table; and NFR-3's read budget is denominated in bytes rather than in a count of files.
-The script's implementation language is deliberately left to this phase and is **not yet settled**.
+prose and into a delivered measurement script — a C# file-based app writing its JSON to the fact
+ledger; the ledger becomes a second, gitignored written file; and NFR-3's read budget is denominated
+in bytes rather than in a count of files.
 
 ## Context
 
@@ -117,33 +116,36 @@ sections from it, then writes `show-me.md` in one `Write` call. The JSON is also
 *fact ledger* `specs/{spec}/.show-me-ledger.json`, so a run resolves and fetches each remote input
 once.
 
-**The seam is the decision.** Earlier revisions of this ADR put the measurement in shell pipelines
-embedded in the prompt file's prose, and rejected a script on the ground that "the pipelines are
-deterministic *because they are pipelines*, whoever types them". That ground is false, and the
-design review that followed proved it: four of its twenty findings are defects in those very
-pipelines — a declared-id `grep` returning `0` where the answer is `28` because a `\|` escape leaked
-in from the markdown table cell holding it, a word-count `awk` returning `16` where the answer is
-`8` because it does not exclude fenced blocks, an invariant `grep` firing three false positives by
-matching `if` inside `diff`, and one stated pattern drifting into three variants across the document.
-A pipeline written in prose is not code that runs; it is a description of code, and it acquires the
-escaping, the line-wrapping and the drift of the prose around it. None of those four defects is
-detectable by reading the file, and none is testable. Moving them into one artefact that executes
-makes them both.
+**The seam is the decision: measurement lives in code that runs, never in prose that describes
+code.** A shell pipeline written into a markdown document is not code — it is a description of code,
+and it inherits the escaping, line-wrapping and drift of the prose around it. Such a description can
+be read and believed but never executed, so a defect in it is invisible to review and untouchable by
+a test.
+
+The evidence is this spec's own design review, which found four defects of exactly that kind: a
+declared-id `grep` returning `0` against a correct answer of `28`, because the markdown table cell
+holding the pattern required a `\|` escape that became part of the pattern; a word-count `awk`
+returning `16` against a correct answer of `8`, because it did not exclude fenced blocks; an
+invariant `grep` firing three false positives by matching `if` inside `diff`; and one stated pattern
+present in three mutually inconsistent variants. Every one was undetectable by reading the file and
+untestable in place. In an executable artefact, all four are ordinary bugs with ordinary tests
+(NFR-9).
 
 The organising principle is therefore a two-stage split with a real boundary. Each name is shorthand
 for the rule it holds:
 
 | Stage | Is | Produces | The rule it holds |
 |------|------|-----------|------|
-| **Measurer** | **The measurement script** — one executable artefact beside the command file | Every value NFR-1 requires to be identical between runs, as JSON on stdout | Counts; never paraphrases, never judges |
+| **Measurer** | **The measurement script** — one executable artefact beside the command file | Every value NFR-1 requires to be identical between runs, as one JSON object written to the fact ledger | Counts; never paraphrases, never judges |
 | **Synthesiser** | **The executing model**, reading the command file | Every value NFR-1 names as judgement-derived, plus all prose | Reads the JSON and cites it; runs no measurement and counts nothing |
 
-That table answers a question earlier revisions left implicit: *Measurer* and *Synthesiser* are not
-roles a reader has to infer from context, they are the script and the model respectively.
+*Measurer* and *Synthesiser* are not roles to be inferred from context: they are the script and the
+model, named here so that every later reference to either has one referent.
 
 Nothing crosses the line in either direction: the Measurer never paraphrases and the Synthesiser
-never counts. The difference from earlier revisions is that this is now enforced by where the code
-lives rather than by an instruction the model is asked to follow. FR-15's `## Inputs used` table is
+never counts. This is enforced by where the code lives rather than by an instruction the model is
+asked to follow: the prompt is granted no tool that could measure anything (Technology Choices).
+FR-15's `## Inputs used` table is
 written *from* the ledger, which is what makes FR-16's degradation auditable and NFR-7's
 traceability checkable rather than merely asserted.
 
@@ -174,8 +176,8 @@ traceability checkable rather than merely asserted.
 │            + per-ADR front matter/Status/Consequences       │
 │            + .issue-number · release_notes.md section       │
 │            + blast-radius stats                             │
-│          ⇣ emits ONE JSON object on stdout                  │
-│          ⇣ persists it: specs/{spec}/.show-me-ledger.json   │
+│          ⇣ writes ONE JSON object to the fact ledger        │
+│            specs/{spec}/.show-me-ledger.json                │
 └─────────────────────────────────────────────────────────────┘
         │
         ▼
@@ -190,15 +192,21 @@ traceability checkable rather than merely asserted.
 ```
 
 The gate's two steps are labelled by **what they require**, not by the requirement numbers that
-impose it. Earlier revisions read `FR-1 / FR-2 → stop msg`, which cannot be understood without
-opening `requirements.md` alongside; a reader of an architecture diagram should be able to see what
-stops a run without cross-referencing three documents. The codes stay in the prose below, where
-there is room to state them with their context.
+impose it: a reader of an architecture diagram should be able to see what stops a run without
+opening `requirements.md` alongside. The codes stay in the prose below, where there is room to state
+them with their context.
 
 The gate deliberately sits above **both** writes, not merely above the `Write` call. The measurement
-script supplies the task-checkbox counts Step 2 reads, so it necessarily runs first — but it emits
-to stdout, and the ledger is written only once the gate has passed. A run that stops here leaves the
-repository byte-for-byte unchanged (FR-3, AC-7, AC-71).
+script supplies the task-checkbox counts Step 2 reads, so it necessarily runs first — and this is
+why it has two ways out. When the spec is incomplete it writes **no** ledger, reports the gate facts
+(the unchecked count and the first three unchecked task titles) on **stderr**, and exits with a
+distinct code; the command turns that into FR-3's stop message. Only when the gate passes does it
+write the ledger. A run that stops here therefore leaves the repository byte-for-byte unchanged
+(FR-3, AC-7, AC-71).
+
+Stderr is the right channel for that small payload for the same measured reason the ledger is a file
+rather than a stream: under `dotnet run` the compiler's diagnostics land on **stdout**, leaving
+stderr clean (Technology Choices).
 
 ### Key Components
 
@@ -212,18 +220,31 @@ Beside it sit the other two delivered artefacts: the **measurement script** (FR-
 **sibling test script** (NFR-9). No library, no solution project, nothing under `src/` or `tests/`,
 and no sub-agent.
 
-**On the script's language.** `requirements.md` deliberately does not fix it, constraining only that
-there be exactly one such artefact, what it emits, that every stated pattern is implemented in it
-exactly once, and that it may be permitted to run only by an allow-list entry naming its own path.
-Choosing between a shell script, an awk program, a Python script and a small .NET tool is this
-phase's job. The repository's one precedent for an executable artefact in this family,
-`.claude/commands/adr/generate_adr_index.awk`, is an argument for awk on grounds of consistency; the
-script's actual work — shelling out to `git` and `gh`, parsing their output, and emitting
-well-formed JSON with correct escaping — is an argument against it, because awk has no JSON support
-and hand-rolled string escaping is precisely the class of defect this seam exists to eliminate.
-**This ADR does not settle it**; it records that the choice is open, that it is narrow (the contract
-is one JSON object on stdout and an exit code), and that whichever is chosen must be invocable from
-a fresh checkout with no build step (NFR-6).
+**The script is a C# file-based app**, `.claude/commands/spec/show_me_facts.cs`, run as
+`dotnet run .claude/commands/spec/show_me_facts.cs <spec directory>`. `requirements.md` leaves the
+language open by design — it is a design concern — so this ADR settles it. Three reasons, each
+measured against this repository on 2026-09-22:
+
+- **Every contributor provably has the toolchain.** Brighter is a .NET repository; nobody can build
+  it without the SDK. CI installs `10.0.x` alongside `9.0.x`, and no `global.json` pins anything
+  lower, so the .NET 10 SDK that file-based apps require is already the floor. Nothing new is
+  introduced to anyone's machine. Python is not comparable here: the repository contains **zero**
+  `.py` files, and it ships **8 `.sh` and 4 `.ps1`** precisely because `CONTRIBUTING.md` documents
+  both "On Linux/macOS" and "On Windows" paths — so a Python script would either add a prerequisite
+  Windows contributors do not have or force a second script, and FR-21 allows exactly one.
+- **A real JSON serializer, because hand-rolled escaping is the defect class being eliminated.** The
+  seam exists because a `\|` escape silently changed a pattern's meaning. awk — the one precedent,
+  and otherwise the natural choice — has no JSON support, so choosing it would mean hand-writing
+  string escaping in the very artefact built to stop that kind of error. `System.Text.Json` escapes
+  quotes, backslashes and non-ASCII correctly without being asked.
+- **No build step, as NFR-6 requires.** `dotnet run <file>.cs` needs no project, no restore and no
+  build command. Measured here: ~7.8 s on the first run, ~1.3 s after an edit, ~0.2 s warm, against
+  a command that is already making `gh` network calls. Running it from inside the repository tree
+  was verified not to be disturbed by the root `Directory.Build.props`.
+
+The costs are real and accepted: the .NET 10 SDK becomes a hard requirement for anyone running
+`/spec:show-me`, and the first run after a change pays a compile. The `dotnet run` diagnostics
+stream is handled under Technology Choices.
 
 **No sub-agent.** `/spec:requirements`, `/spec:design`, `/spec:tasks` and `/spec:review` all delegate
 to a sub-agent; `/spec:status` and `/spec:gear` — the two read-and-report commands — do not.
@@ -252,17 +273,23 @@ section's defined fallback text, and continues. No absence below the gate stops 
 
 #### 3. The fact ledger
 
-The JSON object the measurement script emits, held in context for the run and **also persisted** to
-`specs/{spec}/.show-me-ledger.json` (FR-4). Earlier revisions of this ADR described it as "an
-in-context table — never a file, since FR-18 permits exactly one write"; FR-18 now permits two, and
-the second is this. Persisting it is what lets the script fetch each remote input once instead of
-re-running `gh pr diff` for every value derived from it.
+One JSON object, written by the measurement script to
+`specs/{spec}/.show-me-ledger.json` and read back by the command (FR-4). It is the seam's only
+payload: the script writes it, the command reads it, and nothing else passes between them.
 
-It is **working state, not a deliverable**: `.gitignore` carries an exact-match entry for it, so
-`git status --porcelain` is unchanged by a run except for `show-me.md` itself (AC-30, AC-74), and it
-is therefore untracked — which is exactly why FR-17 and NFR-5 forbid `show-me.md` citing it or
+**The file is the contract, not the script's stdout.** `dotnet run` prints build diagnostics on
+stdout rather than stderr (Technology Choices), so a stream contract would hold on a warm run and
+break on any recompile. A file the program writes itself cannot be corrupted by its toolchain, so
+the payload goes there and the exit code carries success or failure. Writing it once is also what
+lets the run fetch each remote input once: `gh pr list` and `gh pr diff` are invoked at most once
+per run (AC-73).
+
+The ledger is **working state, not a deliverable**. `.gitignore` carries an exact-match entry for
+it, so `git status --porcelain` is unchanged by a run except for `show-me.md` itself (AC-30, AC-74),
+and it is therefore untracked — which is why FR-17 and NFR-5 forbid `show-me.md` citing it or
 listing it in `## Inputs used`. Every fact it carries is attributed instead to the artefact the
-script counted it from. Each entry records `{input or metric} | {value} | {command or path it came
+script counted it from. It is replaced wholly on each run, never merged into, so a stale ledger is
+not a reachable state. Each entry records `{input or metric} | {value} | {command or path it came
 from} | used | not available: {reason}`. The ledger is the single source for:
 
 - FR-5's metadata block (branch ref, head sha, base ref, merge-base sha, PR reference, issue);
@@ -294,38 +321,47 @@ takes an optional argument (AC-53 requires all three fields):
 ```yaml
 ---
 allowed-tools: Bash(ls:*), Bash(cat:*), Bash(test:*), Bash(wc:*),
-  Bash(<the measurement script, named by its own path>:*),
+  Bash(dotnet run .claude/commands/spec/show_me_facts.cs:*),
   Bash(git ls-files:*), Read, Write, Glob, Grep
 description: Summarise a finished spec and give an advisory merge-risk read
 argument-hint: [spec-id]
 ---
 ```
 
-**The list shrank, and that is the seam paying for itself.** Every `git` and `gh` verb the earlier
-front matter declared — `git log`, `git diff`, `git rev-parse`, `git merge-base`, `git branch`,
-`gh pr list`, `gh pr view`, `gh pr diff` — was there to let the *prompt file* measure. Measurement
-now happens in the script, so the command file needs none of them. What remains is Step 0's
-pre-flight listing, the `wc -c` affordability probe NFR-3 requires before each read, `git ls-files`
-for FR-17's tracking test, the script invocation itself, and `Read`/`Write`.
+The prompt declares only what the *prompt* does. It measures nothing, so it needs no `git log`,
+`git diff`, `git rev-parse`, `git merge-base`, `git branch` or `gh` verb: those live in the script.
+What remains is Step 0's pre-flight listing, the `wc -c` affordability probe NFR-3 requires before
+each read, `git ls-files` for FR-17's tracking test, the script invocation, and `Read`/`Write`.
 
-**`Bash(awk:*)` is gone, deliberately.** The earlier revision declared it and defended it on the
-ground that sibling commands (`approve.md`, `design.md`) declare it too, so no settings change was
-needed. That defence is about *where the grant is written*, not about *how wide it is*: awk provides
-`system()` and `"cmd" | getline`, so `Bash(awk:*)` is a general command-execution grant wherever it
-appears. FR-18 and C-10 now forbid an interpreter grant for this command in either location, and the
-command file no longer needs awk for anything, so it is simply removed.
+**No interpreter is granted.** `Bash(dotnet run:*)` would permit running arbitrary code, as would
+`Bash(awk:*)`, `Bash(sh:*)` or `Bash(python3:*)` — awk and shell trivially, and `dotnet run` because
+it compiles and runs whatever file it is handed. The single entry therefore names the script's own
+path, `Bash(dotnet run .claude/commands/spec/show_me_facts.cs:*)`, so that removing the script leaves
+the entry permitting nothing (FR-18, C-10, AC-82).
 
-**The script's own entry is written once the language is chosen** (Key Components 1). Whatever the
-language, the entry names the script's **path**, not its interpreter, so that it permits that one
-program and nothing else.
+**The script's output goes to a file, because `dotnet run` writes its diagnostics to stdout.** This
+was measured, not assumed: running a file-based app with the two streams captured separately puts
+the compiler's warnings on **stdout** and leaves **stderr empty**, so stdout reads as two warning
+lines followed by the JSON, and a JSON parser rejects it. The pollution appears only when the file
+is recompiled — a warm run is clean — which makes a stdout contract worse than simply wrong: it
+would hold in testing and fail on a fresh clone, in CI, or after any edit.
 
-**One consequence to accept honestly.** The earlier revision claimed AC-30 — "every `gh` invocation
-is one of `gh pr list` or `gh pr diff`" — was "checkable by reading fourteen lines of front matter".
-It no longer is: the `gh` calls now live inside the script, where the front matter cannot constrain
-them. The check moves to the script's source, which is a smaller and more honest surface to audit
-than prose describing pipelines, and NFR-9's test script is the mechanism that keeps it checked. But
-it is a move, not a free win, and the command file no longer demonstrates FR-18's confinement on its
-own.
+The payload therefore goes to the fact ledger, which the program writes itself and no toolchain can
+interleave with, and the **exit code** carries success or failure (Key Components 3). This is not a
+workaround for C#; a file is the more robust channel for any language, and it costs nothing here
+because FR-4 already requires the ledger to be written.
+
+Two consequences follow. **Stderr stays clean and is therefore usable** for the small payload FR-3's
+gate needs — the unchecked count and the first three unchecked task titles — which must reach the
+command *without* a ledger being written, since a run that stops at the gate leaves the repository
+byte-for-byte unchanged (AC-7, AC-71). And **FR-21 as currently written specifies stdout**, so this
+ADR is ahead of its requirement on that one point; the requirement needs the same correction.
+
+**FR-18's confinement is audited in the script, not in the front matter.** The `gh` calls live in
+the script now, so the front matter cannot constrain them and AC-30 is checked against the script's
+source. That is a smaller surface to audit than prose describing pipelines, and NFR-9's test script
+keeps it checked — but it is a move, not a free win, and it is recorded as a cost under
+Consequences.
 
 **No `git rev-list`, no `sed`, no `sort`.** Commit counts use `git log --oneline {mb}..{head} | wc -l`
 rather than `git rev-list --count`, and multi-line extracts use `grep -A`/`awk` rather than `sed`, so
@@ -497,10 +533,9 @@ Summing the fixed rows: 65,536 + 229,159 + 303,715 + 95,967 = **694,377**, leavi
 no file is opened whose measured size the remaining allowance does not cover, so the total cannot
 exceed the cap (AC-52, AC-76, AC-78).
 
-**The full diff is banned for a reason worth stating.** At 4,081,673 bytes — roughly 1.24 M tokens —
-it **exceeds the context window outright**. A run attempting it would not degrade, it would fail.
-Earlier revisions banned it without ever saying why, which invites a reader to treat the ban as
-negotiable.
+**The full diff is banned, and the reason is stated so the ban does not read as negotiable.** At
+4,081,673 bytes — roughly 1.24 M tokens — it **exceeds the context window outright**. A run
+attempting it would not degrade, it would fail.
 
 Note that `requirements.md`'s
 declared-id grep gives FR-8's *declared-id set* mechanically — which is why NFR-1 can require that
@@ -585,15 +620,16 @@ one-line advisory reminder — with no error and no refusal whatever the level, 
 - **NFR-3's budget is met by arithmetic, not by restraint.** Every read is priced in bytes and
   checked with `wc -c` before it is issued, so the cap cannot be exceeded by a run that behaves
   correctly — not because large inputs are avoided, but because the fixed costs sum to 694,377 of a
-  948,576 general allowance with the diagram reserve untouched (AC-52, AC-76, AC-78). This replaces
-  an earlier claim that `tasks.md` and the diff were "never read — only counted": both are now read,
-  and the budget accommodates them.
+  948,576 general allowance with the diagram reserve untouched (AC-52, AC-76, AC-78). `tasks.md` and
+  the `src/`-scoped diff are both read in the ordinary way; the budget accommodates them rather than
+  the design avoiding them.
 - **The refusal surface is still one block, and the second write did not widen it.** The stops that
   depend on *the spec the command was pointed at* all sit in Steps 1–2 above both writes, so AC-7's
   "byte-for-byte unchanged" remains a property of step ordering. The script runs above the gate — it
-  supplies the counts the gate reads — but it only emits to stdout there; the ledger is written below
-  the gate, with the deliverable. FR-21 adds a fourth stop, for the script being absent, unreadable,
-  failing or emitting unparseable output, and it writes nothing either (AC-71, AC-72).
+  supplies the counts the gate reads — but on a failing gate it writes nothing and reports on stderr;
+  the ledger is written below the gate, with the deliverable. FR-21 adds a fourth stop, for the
+  script being absent, unreadable, failing or writing an unparseable ledger, and it writes nothing
+  either (AC-71, AC-72).
 - **The arithmetic that acceptance tests check is identity, not effort.** `other` as a bucket
   complement, `untagged` as a tag complement, and the count lines derived from the rows they count
   all make the sums correct by construction (AC-18, AC-15).
@@ -606,12 +642,10 @@ one-line advisory reminder — with no error and no refusal whatever the level, 
 
 ### Negative
 
-- **The fact ledger is a second written file, with everything that implies.** Earlier revisions of
-  this ADR listed the opposite as the cost — "nothing is cached… because FR-18 permits exactly one
-  written file and there is therefore nowhere to put a cache" — and accepted re-running the whole
-  `git`/`gh` sequence every time. FR-18 now permits two writes and the ledger is the second, so that
-  cost is gone: `gh pr list` and `gh pr diff` are each invoked at most once per run (AC-73). What
-  replaces it is a smaller but real cost. A file now appears in every spec directory a run touches;
+- **The fact ledger is a second written file, with everything that implies.** It buys the run its
+  single fetch — `gh pr list` and `gh pr diff` are each invoked at most once (AC-73) — and it is the
+  channel the script's output travels on at all. The cost is real. A file now appears in every spec
+  directory a run touches;
   it is kept out of `git status` only by a `.gitignore` entry, so the guarantee is one line away from
   being lost; and because it is untracked, FR-17 and NFR-5 forbid `show-me.md` ever citing it, which
   means a reader cannot follow a number back to the ledger it came from — only to the artefact the
@@ -624,8 +658,8 @@ one-line advisory reminder — with no error and no refusal whatever the level, 
   constrains these to stay grounded in cited evidence; it does not make them deterministic, and this
   ADR does not claim otherwise.
 - **The budgets can still bind on a large spec.** NFR-2's 2,000 counted words are estimated against
-  post-rescope spec 0036 at roughly **1,350** — more headroom than the 1,600–1,750 an earlier
-  revision assumed, because FR-8 dropped from a row per requirement to one line plus deviations. That
+  post-rescope spec 0036 at roughly **1,350**, the headroom coming from FR-8 having dropped from a
+  row per requirement to one line plus deviations. That
   figure is an **estimate, not a measurement**: no complete `show-me.md` has ever been generated, so
   the first real run is also the first real test of it. A spec with 25 breaking-change items and 40
   numbered requirements would still force the narrative toward FR-6's 150-word floor, and Step 8's
@@ -639,33 +673,32 @@ one-line advisory reminder — with no error and no refusal whatever the level, 
   contracts. When `tasks.md` starts using a shape the regex misses, NFR-3's rule applies — report
   `Unverifiable`/`not available` with a reason, never zero — but the command will not notice the
   drift on its own.
-- **The script is a new artefact to maintain, in a family that had almost none.** This is the cost
-  the earlier revision rejected the script to avoid, and it is real: a second delivered file, a third
-  counting its test, a language choice to defend, and an allow-list entry to keep narrow. It is
-  accepted because the alternative was proved worse — four defects in prose pipelines that no reader
-  could see and no test could catch — and because NFR-9 gives the new artefact the regression net the
-  old one never had. *(An earlier revision listed "two `gh pr diff` invocations for the PR path" here,
-  because added and removed lines needed separate passes over the same patch. The ledger retires that
-  cost: the patch is fetched once.)*
+- **The script is a new artefact to maintain, in a family that had almost none.** A second delivered
+  file, a third counting its test, a language whose floor is now the .NET 10 SDK, and an allow-list
+  entry to keep narrow. It is accepted because the alternative is worse — four defects in prose
+  pipelines that no reader could see and no test could catch (Alternative 1) — and because NFR-9
+  gives the new artefact a regression net that the prose it replaces could never have had.
+- **A compile on the first run.** `dotnet run` on a file-based app costs about 7.8 s cold and 1.3 s
+  after an edit, settling to 0.2 s warm. Against a command that already makes `gh` network calls this
+  is minor, but it is not nothing on a fresh clone or in CI, and it is the price of the JSON
+  serializer that keeps escaping out of hand-written code.
 
 ### Risks and Mitigations
 
 **Risk**: The Synthesiser quietly recomputes a number the Measurer already owns — counting
 breaking-change bullets by eye, or estimating a file count — and NFR-1's determinism guarantee
 silently lapses.
-- **Mitigation**: The split is now enforced by where the code lives, not only by instruction — the
-  command file has no `git`, `gh` or `awk` grant left to recompute anything with (Technology Choices),
-  which is a stronger guarantee than the earlier revision's "forbids shell calls during Step 6".
+- **Mitigation**: The split is enforced by where the code lives, not by instruction — the command
+  file is granted no `git`, `gh` or interpreter tool it could recompute anything with (Technology
+  Choices), so the Synthesiser has nothing to count *with*.
   AC-32 tests it by comparing two runs' mechanical fields; AC-34 tests that every count is
   attributable to a listed input; AC-70 tests that the command file contains no pipeline computing a
   value the script owns.
 
-**Risk**: The second write becomes a third, or the ledger acquires a meaning it was not given. An
-earlier revision of this ADR listed the hazard as "a future edit adds a second write — a cache, a
-marker, a `.last-run` file"; that edit has now been made deliberately, so the guard rail has to move
-rather than simply be restated. The specific danger is that a persisted JSON file sitting in a spec
-directory is exactly the shape of thing another command could start reading as a gate, or that a
-later change starts merging into it instead of replacing it and reintroduces staleness.
+**Risk**: The second write becomes a third, or the ledger acquires a meaning it was not given. A
+persisted JSON file sitting in a spec directory is exactly the shape of thing another command could
+start reading as a gate, or that a later change starts merging into rather than replacing,
+reintroducing staleness.
 - **Mitigation**: FR-4 fixes the count at exactly two writes and names both. The ledger is replaced
   wholly on every run, never appended to or merged into, so a stale ledger is not a reachable state.
   FR-13 and the Out of Scope list still forbid any marker file another command could read as a gate,
@@ -694,45 +727,20 @@ and a real zero gets reported where "could not measure" is the truth.
 
 ## Alternatives Considered
 
-### Alternative 1: A helper script or compiled tool invoked by the command — **ACCEPTED**
+### Alternative 1: Keep measuring in shell pipelines written into the command file
 
-Put the deterministic half — branch resolution, PR discovery, bucket counting, checkbox counting —
-in a script or small program under `.claude/`, and have the command file call it and synthesise
-around its JSON output.
+Leave the deterministic half where earlier drafts had it — `git`, `gh`, `grep` and `awk` pipelines
+quoted inside the prompt's prose — and rely on their being pipelines to make them reproducible.
 
-**This is now the Decision.** It is kept here, rather than deleted, because an earlier revision of
-this ADR rejected it, and the four grounds it gave are worth recording as falsified — three of them
-by evidence that arrived afterwards, and one that was never sound.
-
-- *"There is no precedent in the `/spec:*` family… the only executable artefact anywhere nearby is
-  `generate_adr_index.awk`."* **Self-refuting as written.** It names the precedent in the sentence
-  that denies one exists. `generate_adr_index.awk` is an executable artefact in this very family,
-  invoked from five documented call sites across `adr.md`, `design.md`, `approve.md`, the ADR README
-  and `adr_frontmatter.md`. "A new category" was the wrong description; "a second instance" was the
-  right one.
-- *"It adds a maintenance and review surface — a script with no test project in a repository whose
-  entire test discipline is C#, plus a new allow-list entry."* **Half true, and the half that was
-  true is now addressed.** NFR-9 delivers a sibling test script, so the artefact is not untested; the
-  observation that the repository has no shell-test harness was correct, and the answer is a script
-  that needs none rather than a C# project that would breach this spec's own no-`src/`-no-`tests/`
-  boundary. The allow-list entry is real and is accepted, narrowed to the script's own path.
-- *"The determinism it would buy is already available: the pipelines in Step 5 are deterministic
-  because they are pipelines, whoever types them."* **False, and demonstrably so.** The design review
-  that followed found four defects in exactly those pipelines: a declared-id `grep` returning `0`
-  against a correct answer of `28`, because the markdown table cell holding it required a `\|`
-  escape that became part of the pattern; a word-count `awk` returning `16` against a correct answer
-  of `8`, because it did not exclude fenced blocks; an invariant `grep` firing three false positives
-  by matching `if` inside `diff`; and one stated pattern drifting into three variants across the
-  document. A pipeline in prose is not code that runs — it is a description of code, subject to the
-  escaping and line-wrapping of the prose around it, verifiable by no one and testable by nothing.
-- *"It would not touch the genuinely variable half."* **True, and never the claim.** FR-7's item
-  boundaries and FR-8's statuses are judgement by NFR-1's own admission. The seam is not proposed to
-  make judgement deterministic; it is proposed to make the *mechanical* half actually mechanical, so
-  that NFR-1's split means something.
-
-**What this ADR does not settle** is the script's language. `requirements.md` deliberately leaves it
-open, and the trade-offs are recorded under Key Components 1: awk has precedent on its side, and no
-JSON support against it.
+**Rejected because the reproducibility is illusory.** The argument for it was that a pipeline is
+deterministic whoever types it. A pipeline that *runs* is; a pipeline *transcribed into a markdown
+document* is a description that no one executes and no test can reach, and it carries the document's
+escaping with it. This spec's own design review found four defects of that kind, set out in the
+Decision above, including a pattern silently altered by the `\|` escape its table cell required.
+Two further grounds were offered at the time and do not survive either: that a script would be "a new
+category" in this family — `.claude/commands/adr/generate_adr_index.awk` is an executable artefact
+in it already, invoked from five documented call sites — and that a script would be untested, which
+NFR-9 now answers.
 
 ### Alternative 2: Push more of the output into `gh`/`git` one-liners, with minimal synthesis
 
@@ -766,9 +774,9 @@ easier question.
 Implement `/spec:show-me` as a thin prompt that shells out to a program which does everything,
 including generating the markdown, with the model used only to fill in narrative slots.
 
-**Rejected because** — note that this is *not* the seam Alternative 1 proposes, and is rejected on
-grounds that survive its acceptance. Alternative 1 gives the script the measuring and leaves every
-judged section to the model; this alternative gives the program the document.
+**Rejected because** — note that this is *not* the seam the Decision takes. The Decision gives the
+script the measuring and leaves every judged section to the model; this alternative gives the
+program the document, which is a different and much larger claim.
 
 - The narrative slots are most of the point. FR-6 (150–600 words), FR-7's migrations, FR-12's
   rationale and FR-14's reasons are the sections a reader actually reads; templating around them
@@ -790,7 +798,40 @@ regardless. [ADR 0077](0077-show-me-visual-explanation.md) reaches the same conc
 stage that reads source, and for an additional reason that applies only there: the read set is a
 shared per-run budget, and a sub-agent reports a count where the run needs a set.
 
-### Alternative 5: Read `tasks.md` and the diff in full and let the model count
+### Alternative 5: Write the measurement script in awk, Python, or shell
+
+Three candidates for the script's language, all rejected in favour of the C# file-based app settled
+under Key Components 1. Each was assessed against this repository on 2026-09-22 rather than in the
+abstract.
+
+- **awk** is the incumbent's language: `.claude/commands/adr/generate_adr_index.awk` is the one
+  executable artefact in this family, so awk wins on consistency and on needing nothing installed.
+  **Rejected because it has no JSON support.** The script's whole output is one JSON object, and awk
+  would mean hand-writing the escaping of quotes, backslashes and non-ASCII — the precise class of
+  defect this seam exists to eliminate, given that the seam's motivating bug was a `\|` escape
+  silently changing a pattern. Choosing awk would rebuild the hazard inside the artefact meant to
+  remove it. Its error handling is also poor for a script that must distinguish "`gh` returned
+  nothing" from "`gh` failed" (NFR-4, FR-16): `"cmd" | getline` does not surface an exit status
+  without contortion.
+- **Python** is the best technical fit and was measured as such: a probe emitted valid JSON on a
+  clean stdout with an empty stderr, shelled out to `git` with real exit codes, and ran in 0.05 s
+  with no compile step and no warm/cold distinction. **Rejected on portability within this
+  repository, not on merit.** The repository contains zero `.py` files and ships 8 `.sh` *and* 4
+  `.ps1`, because `CONTRIBUTING.md` documents both "On Linux/macOS" and "On Windows" paths. Python 3
+  is not present by default on Windows, so choosing it means either adding a prerequisite for
+  Windows contributors or shipping a second script — and FR-21 permits exactly one. CI would not
+  catch the gap: all 31 jobs are `ubuntu-latest`.
+- **A POSIX shell script** needs nothing installed and matches the 8 existing `.sh` files.
+  **Rejected for the same JSON reason as awk, more acutely**, and because the measurement involves
+  arithmetic, grouping and multi-field records that shell handles badly. It would also need a `.ps1`
+  twin for the same Windows reason as Python.
+
+The deciding asymmetry is that **the .NET SDK is the one toolchain every contributor to this
+repository provably has** — it cannot be built without one — so C# adds no prerequisite to anyone,
+on any operating system, while giving the script a real JSON serializer. What it costs is a compile
+on first run and a .NET 10 SDK floor, both recorded under Key Components 1.
+
+### Alternative 6: Read `tasks.md` and the diff in full and let the model count
 
 Simply `Read` the 229 KB `tasks.md` and the 517-file diff, and count in-context.
 
