@@ -85,7 +85,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         IBrighterBuilder MapperRegistry(Action<ServiceCollectionMessageMapperRegistryBuilder> registerMappers, Type? defaultMessageMapper = null, Type? asyncDefaultMessageMapper =  null);
         
         /// <summary>
-        /// Scan the assemblies provided for implementations of IAmAMessageMapper and register them with ServiceCollection
+        /// Scan the assemblies provided for public and nested-public synchronous and asynchronous message mappers
+        /// and register them with ServiceCollection. Non-public mappers can be registered explicitly with MapperRegistry.
         /// </summary>
         /// <param name="assemblies">The assemblies to scan</param>
         /// <param name="defaultMessageMapper">We use <see cref="CloudEventJsonMessageMapper"/> as the default if no mapper is specified; you can use this to choose a different default such as <see cref="JsonMessageMapper"/></param>
