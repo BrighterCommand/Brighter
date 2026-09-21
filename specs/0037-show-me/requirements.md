@@ -94,6 +94,9 @@ These terms are used with exactly these meanings throughout this document.
 | **Deviation entry** | One bullet in `## Did it ship what it said?` (FR-8) naming one top-level numbered requirement whose status is **not** `Shipped`, together with that status, its reason, its evidence and — for `Deferred`/`Dropped`/`Withdrawn` — its follow-up. Deviation entries are the only per-requirement items the section enumerates; requirements that shipped as planned are accounted for collectively by FR-8's shipped-as-planned line. |
 | **Diagram** | One fenced code block inside `show-me.md` that draws a relationship in the change under review — a call or data flow, a component interaction, a lifecycle, or a type/file hierarchy. Either a Mermaid block (```` ```mermaid ````) or a plain fenced block holding an ASCII sketch or tree. Governed entirely by FR-6; permitted only in `## What changed and why` (FR-6) and `## Where to look first` (FR-14). A fenced block that is not drawing such a relationship — a quoted log line, a code excerpt, a command — is not a diagram and is not permitted by this document. |
 | **Advisory** | Producing a level and rationale only: no gating, no blocking, no refusal, no label, no comment, no marker file, no change to any approval state, and no behavioural difference between a `Low` result and a `High` result. Whatever the level, the command completes its run and reports per FR-19. |
+| **Measurement script** | The single executable artefact, delivered by this spec and living beside the command file at `.claude/commands/spec/show_me_facts.awk`, that performs every mechanically countable measurement this document defines and emits them as one JSON object on stdout (FR-21). It is part of the command, not an input to it: it is never an `## Inputs used` row (FR-15) and never an FR-16 absence row. |
+| **Fact ledger** | The file `specs/{target spec directory}/.show-me-ledger.json`, holding the JSON the measurement script emitted for the run that wrote it. It is **working state, not a deliverable**: it is gitignored by an exact-match `.gitignore` entry, is never staged or committed, is never cited from `show-me.md` (FR-17, NFR-5), and is written only after the FR-3 precondition passes (FR-3, FR-4, FR-21). It holds measured values only; it never caches fetched diff text. |
+| **Charged bytes** | The number of bytes of file or command output that a read brings into the command's context. A full-content read is charged its whole-file byte count; a targeted or chunked read is charged the byte count of the extract actually brought into context. Bytes that the measurement script reads but does not emit are **not** charged — only its JSON output is. `wc -c` is a size measurement, **not a read**, and is charged nothing. This is the unit NFR-3's budget is denominated in. |
 
 **Public API declaration line — the exact rule.** A line of the spec diff qualifies when it is in a
 file under `src/`, begins with `+` or `-`, and matches this **POSIX extended** pattern, evaluated as
@@ -107,7 +110,10 @@ The dialect is named because the pattern is not portable otherwise. Written for 
 `grep`, the parentheses and an escaped `\|` are read as literal characters and the pattern matches
 neither declaration; and `\s`/`\b` are GNU extensions absent from the BSD `grep` that macOS ships.
 Implementations must use the extended form above verbatim, inside a fenced block rather than a table
-cell, because the alternation `|` cannot appear literally in a markdown table.
+cell, because the alternation `|` cannot appear literally in a markdown table. The pattern is
+implemented in exactly one place — FR-21's measurement script — and never transcribed into the
+command file, a task, an ADR or a table cell, because a pattern carried in markdown prose acquires
+that prose's escaping and a pattern written twice drifts into two patterns.
 
 **Counting is per diff line, not per declaration.** A declaration that is *modified* rather than
 added appears in the diff as one `-` line and one `+` line and therefore contributes **2**; a purely
@@ -159,7 +165,8 @@ first.`
 **FR-3 — The command runs only against a complete spec, and refuses clearly otherwise.**
 Before producing any output, the command checks the target spec is a *complete spec* (see
 Definitions). If not, it stops **without writing or modifying any file** — including leaving any
-pre-existing `show-me.md` untouched — and prints one of:
+pre-existing `show-me.md` and any pre-existing *fact ledger* untouched, and creating neither — and
+prints one of:
 
 - `tasks.md` absent: `Spec {dir} has no tasks.md — /spec:show-me runs only against a finished spec.
   Current phase: run /spec:status.`
@@ -169,17 +176,46 @@ pre-existing `show-me.md` untouched — and prints one of:
   are still unchecked. First unfinished: {first three unchecked task titles, one per line}.
   /spec:show-me runs only against a finished spec.`
 
-This precondition check is the **only** circumstance in which the command declines to produce
-output. It is a precondition on the *input*, not a judgement about the change (contrast FR-13).
+This precondition check is the only circumstance in which the command declines to produce output
+**because of the spec it was pointed at**. It is a precondition on the *input*, not a judgement about
+the change (contrast FR-13). There is exactly one other stop, and it is a precondition on the
+*command's own tooling* rather than on the input: FR-21's measurement-script stop, which fires when
+the script is absent, unreadable, exits non-zero, or emits output the command cannot parse. No third
+stop exists, and no absent or degraded **input** ever stops the command (FR-16).
+
+**Ordering — the gate runs above both writes.** The measurement script supplies the task-checkbox
+counts this gate reads, so the script necessarily runs before the gate is evaluated. That is not a
+write: the script emits its JSON to stdout and the *fact ledger* is written only once this gate has
+passed. A run that stops here therefore leaves the repository byte-for-byte unchanged (NFR-8), with
+no ledger created and no pre-existing ledger touched (AC-7, AC-71).
 
 #### Output file
 
-**FR-4 — The command writes exactly one file, `show-me.md`, in the target spec directory, and
-overwrites it in place on re-run.** The path is `specs/{target spec directory}/show-me.md`, lower
+**FR-4 — The command writes exactly two files — the deliverable `show-me.md` and the gitignored
+*fact ledger* — both in the target spec directory, and overwrites each in place on re-run.**
+
+*The deliverable.* The path is `specs/{target spec directory}/show-me.md`, lower
 case, no suffix or timestamp in the name. If the file already exists, the command **replaces its
 entire contents**; it does not append, does not create a numbered variant (`show-me-2.md`), does not
 write a backup, and does not refuse. Prior versions are recoverable from git history; the command
 does not manage them. The command does not `git add` or commit the file.
+
+*The fact ledger.* The path is `specs/{target spec directory}/.show-me-ledger.json` (Definitions). It
+holds the JSON the measurement script emitted for this run (FR-21) and exists so that one run
+resolves and fetches each remote input at most once rather than invoking `gh pr diff` a second time.
+It is replaced wholly on re-run under exactly the same rules as the deliverable — no append, no
+numbered variant, no backup — and is never staged, committed or pushed. It holds the measured JSON
+only: it never caches fetched diff text, so its size stays bounded by FR-21's stdout cap.
+
+*Why two files do not make a third state in git.* `.gitignore` gains the **exact-match** entry
+`.show-me-ledger.json` — an exact filename, deliberately not a glob, because this repository already
+carries one case-insensitivity gotcha from a wildcard pattern (`*.sqlite`) and a second is not worth
+the saving. The entry matches the file at any depth, so every spec directory's ledger is ignored by
+one line. The consequence is the one that matters: after a successful run `git status --porcelain`
+differs from its before-state **only** by `specs/{spec}/show-me.md` (AC-30, AC-74), and NFR-8's
+safe-re-run guarantee needs only the narrow carve-out it now states.
+
+Exactly these two paths are written. No third file, no marker, no temporary file left behind.
 
 **FR-5 — `show-me.md` has a fixed header and a fixed section set, in a fixed order.**
 The file begins with an H1 `# Show me — {spec directory name}` followed by a metadata block stating,
@@ -315,8 +351,9 @@ this naming exists to make impossible.
 - **the placed-elsewhere line** — a test fired, the relationship was drawable, and the drawn diagram
   was placed in `## Where to look first` instead (per (a)):
   `No diagram here: the change's shape is drawn as a path tree in ## Where to look first.`
-- **the budget line** — a test fired but NFR-3's 25-file read budget was exhausted before the command
-  could read enough source to draw the relationship accurately:
+- **the budget line** — a test fired but NFR-3's read budget, including its 100,000-byte reserve for
+  these reads, was exhausted before the command could read enough source to draw the relationship
+  accurately:
   `No diagram: the read budget was exhausted before the relationship could be read accurately.`
 - **the no-diff line** — no spec diff was measured (FR-16 row 12):
   `No diagram: spec branch not determinable, so no change could be drawn.`
@@ -326,11 +363,13 @@ diagram that a `## What changed and why` trigger fired for (**the placed-elsewhe
 absent tree there needs no explanation, since FR-6's line is the file's single statement about
 diagrams for the ordinary case.
 
-**(f) Budget.** Any source-code reads needed to draw a diagram accurately come out of NFR-3's single
-25-file whole-run budget. That budget is **per run, not per diagram**: a run that draws two diagrams
-still reads at most 25 files in full across the entire run. There is no separate diagram budget and
-no per-diagram allowance. Reaching the cap produces (e)'s **budget line**, never a partially-read
-guess.
+**(f) Budget.** Any source-code reads needed to draw a diagram accurately are charged to NFR-3's
+single whole-run byte budget, and are the only reads permitted to draw on its 100,000-byte reserve.
+That budget is **per run, not per diagram**: a run that draws two diagrams shares one reserve between
+them and stays inside one 1,048,576-byte total across the entire run. There is no separate diagram
+budget and no per-diagram allowance. Before each such read the command checks the file's size with
+`wc -c` (NFR-3) and does not open a file the remaining bytes will not cover. Exhausting the budget
+produces (e)'s **budget line**, never a partially-read guess.
 
 **FR-7 — `## Breaking changes` enumerates consumer-affecting changes, each classified, or states
 there are none.**
@@ -352,9 +391,10 @@ same tree cannot reach different item counts by one of them declining to read. H
 command corroborates the list and — if the counts disagree — must say so in one line
 (`release_notes.md records {m} items; this summary identifies {n}`).
 
-The read is bounded like every other: it is one file read against FR-18's budget. If that budget is
-already exhausted when the section is reached, the section is **not** read, and this is the one case
-in which a present section goes unread — it is recorded in `## Inputs used` as
+The read is bounded like every other: it is a targeted extraction of the spec's section, charged in
+bytes against **NFR-3's** budget, with the file's size measured by `wc -c` first. If the bytes
+remaining do not cover it when the section is reached, the section is **not** read, and this is the
+one case in which a present section goes unread — it is recorded in `## Inputs used` as
 `not available: read budget exhausted before release_notes.md section could be read` (a distinct
 reason string from row 5's absence case), the FR-16 row 5 line is **not** emitted (the section is
 present; saying it was not found would be false, which NFR-7 forbids), and the tie-break below falls
@@ -594,7 +634,11 @@ and one row per source file read in full for a diagram (FR-6) — each marked `u
 `release_notes.md` section is always read unless the read budget was exhausted, and that one case is
 a `not available:` reason like any other (FR-16 row 5a), so every row resolves to exactly one of the
 two marks. There is no row for review comments and no row for CI checks:
-neither is an input to this command. This section is what makes FR-16's degradation auditable, and it
+neither is an input to this command. There is likewise **no row for the measurement script and no row
+for the fact ledger** (Definitions): both are parts of the command itself rather than inputs to it,
+the ledger is untracked by design, and FR-17 forbids `show-me.md` naming an untracked path at all —
+so a ledger row could not be written without making the file dangle for every other reader. This
+section is what makes FR-16's degradation auditable, and it
 is excluded from the length budget in NFR-2.
 
 #### Source discovery
@@ -626,6 +670,68 @@ looking at. Exactly one source is used; the command never reports two sets of nu
 The PR is used for two things only: its number and URL in the metadata block, and its diff. Nothing
 else on the PR — comments, reviews, labels, checks — is read (FR-18).
 
+#### Measurement
+
+**FR-21 — Every mechanically countable value is produced by one delivered script that emits JSON,
+and the command consumes that JSON rather than recomputing anything.** *(Numbered FR-21 as the next
+free id after FR-20; it belongs logically with FR-10 and NFR-1.)*
+
+*The split.* The script **measures**; the command file **synthesises**. Nothing mechanically
+countable is computed in the command file, and nothing judgement-derived is computed in the script.
+
+*The artefact.* One awk program, `.claude/commands/spec/show_me_facts.awk`, invoked
+`awk -f .claude/commands/spec/show_me_facts.awk <spec directory>` from the repository root — the same
+language and the same invocation shape as this repository's existing executable artefact in this
+family, `.claude/commands/adr/generate_adr_index.awk` (NFR-6, C-10).
+
+*What the script owns.* Exactly the fields NFR-1 lists as mechanically countable, plus the inputs
+those fields depend on: spec-branch and base-ref resolution and their shas including FR-10's
+local-versus-remote-tracking divergence line; PR discovery under FR-20 and the chosen diff source;
+`## Blast radius`'s six bucket file counts and net lines and their total; the distinct-immediate-
+subdirectory-of-`src/` count; the changed public API declaration line count; the commit count since
+the merge base; `tasks.md`'s checkbox total, checked count, unchecked count, first three unchecked
+titles and per-tag counts; FR-8's *declared id* set and `{total}`; `.adr-list` entry resolution; and
+whether a `release_notes.md` section for the spec exists.
+
+*One implementation of every stated pattern.* The **Public API declaration line** rule's POSIX
+extended pattern (Definitions) and FR-8's declared-id regex are each implemented **once**, in this
+script, and nowhere else in the delivered artefacts. This is the whole point of the requirement: a
+pattern written into markdown prose acquires the prose's escaping, and a pattern written more than
+once drifts. Neither failure is detectable by reading the command file.
+
+*The contract.* The script writes **one JSON object to stdout and nothing else** — no progress text,
+no warnings interleaved — carrying at minimum a `schema_version` integer and one named field per
+value above, with a null (never a zero, never an omission) for any value that is not determinable.
+Its stdout must be **≤ 65,536 bytes**, which is what makes it affordable to read under NFR-3 without
+a pre-check. **This figure is a chosen cap, not a measurement**: no ledger has yet been generated, so
+there is no observed size to calibrate against, and the cap is set roughly an order of magnitude
+above the expected low-single-digit-KB object precisely so that it binds on a defect rather than on
+normal output. It exits `0` when it produced a parseable object and non-zero otherwise.
+
+*The ledger.* Having emitted that object, and **only once the FR-3 precondition has passed**, the
+same object is written to the *fact ledger* (FR-4). This is what lets one run resolve and fetch each
+remote input at most once (FR-18): `gh pr list` and `gh pr diff` are each invoked at most once per
+run. The ledger holds these measured values only and never caches fetched diff text. A stop under
+FR-1, FR-2 or FR-3 writes no ledger and modifies no existing one.
+
+*Modes.* The script is invoked at most twice per run: once before the deliverable is written, to
+produce the facts above; and once after it is written, to apply NFR-2's mechanical word-count rule to
+the generated `show-me.md` and report the counted total, the number of excluded fenced-block lines,
+and whether the total is inside the 400–2,000 range. The second invocation reads and writes nothing
+else and does not touch the ledger.
+
+*Offline.* With no network and no `gh` the script still exits `0` and still emits a complete object,
+with the PR fields null and a stated reason, so NFR-4's guarantee is unaffected.
+
+*The one failure mode, with defined text.* If the script is absent, is unreadable, exits non-zero, or
+emits output the command cannot parse as a single JSON object, the command **stops without writing or
+modifying any file** — no `show-me.md`, no ledger — and prints exactly:
+`/spec:show-me could not run its measurement script ({path}): {absent|unreadable|exited {code}|output was not a single JSON object}. No file was written. This is a tooling fault, not a fault in spec {dir} — re-run after restoring the script.`
+The command **must not** fall back to computing these values inline, and **must not** write a
+partial, guessed or zero-filled `show-me.md`. A missing measurer is not a missing input: FR-16's
+"no absence fails the command" governs the spec's inputs, and the script is part of the command, so
+it has no FR-16 row and no `## Inputs used` row (FR-15).
+
 #### Degradation, provenance and safety
 
 **FR-16 — Every optional input has a defined absence behaviour; no absence fails the command.**
@@ -637,7 +743,7 @@ exactly as follows (each row has a matching acceptance criterion):
 | 1 | No PR found for the spec branch (FR-20) | The metadata block's PR reference reads `none found`; `Inputs used` marks the pull-request row `not available: no PR found for branch {branch}`; blast radius is measured from `git diff` (FR-10, FR-20). No factor consequence. |
 | 2 | `gh` unavailable, unauthenticated, or offline | Same as row 1, with the reason recorded in `Inputs used` as `not available: gh unavailable`. Blast radius still measured from git. No factor consequence. |
 | 5 | No `release_notes.md` section for the spec — the section is **absent**, not merely unread (FR-7) | `Breaking changes` is derived from ADRs and the diff, and adds the line `No release_notes.md section found for this spec; this list is derived from the ADRs and the diff.` No failure, no modification of `release_notes.md`. |
-| 5a | A `release_notes.md` section for the spec **exists** but FR-18's read budget was exhausted before it could be read (FR-7 — the only case in which a present section goes unread) | `Breaking changes` is derived from ADRs and the diff, and adds the line `A release_notes.md section exists for this spec but was not read: the file-read budget was exhausted. This list is derived from the ADRs and the diff.` Row 5's "not found" line is **not** emitted. `Inputs used` marks the `release_notes.md` row `not available: read budget exhausted before release_notes.md section could be read`. FR-7's tie-break falls back to its no-catalogue rule. No failure, no modification of `release_notes.md`. |
+| 5a | A `release_notes.md` section for the spec **exists** but NFR-3's read budget was exhausted before it could be read (FR-7 — the only case in which a present section goes unread) | `Breaking changes` is derived from ADRs and the diff, and adds the line `A release_notes.md section exists for this spec but was not read: the read budget was exhausted. This list is derived from the ADRs and the diff.` Row 5's "not found" line is **not** emitted. `Inputs used` marks the `release_notes.md` row `not available: read budget exhausted before release_notes.md section could be read`. FR-7's tie-break falls back to its no-catalogue rule. No failure, no modification of `release_notes.md`. |
 | 6 | `.adr-list` missing or empty | `What changed and why` states `No ADRs recorded for this spec.` and is synthesised from `requirements.md`, `tasks.md` and the commits. D3 (FR-6) cannot fire; D1 and D2 are evaluated normally. No factor consequence. |
 | 7 | An entry in `.adr-list` cannot be resolved to exactly one file in `docs/adr/` | `.adr-list` entries are ordinarily the full filename including its `.md` extension (e.g. `0070-per-pipeline-di-scope-for-mapper-and-transform-factories.md`), which resolves unambiguously on its own. If an entry is instead a bare number (or otherwise doesn't match any file): `What changed and why` names it as `{entry} — ADR file not found in docs/adr/.` If it's a bare number matching more than one file (C-9): `{entry} — ambiguous ADR number, matches: {filenames}; .adr-list should name the full filename instead.` Either way the narrative continues with the remaining ADRs, the entry is marked `not available` in `Inputs used`, it does not count toward D3, and the run succeeds. No factor consequence. |
 | 8 | `requirements.md` missing | `Did it ship what it said?` contains exactly `No requirements.md found for this spec — scope reconciliation is not possible.`; F5 = Medium. |
@@ -668,17 +774,25 @@ file and its companions (`PROMPT-calls.md`, `PROMPT-history.md`, …) are gitign
 way the test that matters is "not tracked in git", which is what actually determines whether a
 reference would dangle for every other reader, regardless of which mechanism (gitignore or simple
 absence from the index) made a given path untracked. The same rule applies to any other untracked
-path (e.g. `specs/**/.current-gear`), and to paths named inside a diagram (FR-6 (c)). Every path,
+path (e.g. `specs/**/.current-gear`), and to paths named inside a diagram (FR-6 (c)). It applies with
+no exception to this command's **own** *fact ledger*, `specs/{spec}/.show-me-ledger.json`: the ledger
+is gitignored by design (FR-4), so `show-me.md` must not name it, link to it, cite it as evidence, or
+list it in `## Inputs used` (FR-15) — every fact the ledger carries is attributed instead to the
+artefact the measurement script counted it from, which is what NFR-7 already requires. The
+measurement script's own path is tracked and would therefore be citable, but it is not an input
+either and is not cited. Every path,
 ADR and issue reference written into `show-me.md` must resolve for a reader who has only the
 repository.
 
-**FR-18 — The command performs no writes other than `show-me.md`, and reads nothing on GitHub but
-the PR's identity and its diff.**
-It must not modify `release_notes.md`, `requirements.md`, `tasks.md`, any ADR, any approval marker
-(`.requirements-approved`, `.design-approved`, `.tasks-approved`, `.code-approved`),
-`specs/.current-spec`, or `.current-gear`. It must not stage, commit, push, branch, checkout, stash
-or rebase. It must not post, edit or resolve any GitHub comment, apply or remove a label, or change
-PR state.
+**FR-18 — The command performs no writes other than its own two files, and reads nothing on GitHub
+but the PR's identity and its diff.**
+Its only writes are the two FR-4 names: `specs/{spec}/show-me.md` and the gitignored *fact ledger*
+`specs/{spec}/.show-me-ledger.json`. It must not modify `release_notes.md`, `requirements.md`,
+`tasks.md`, any ADR, any approval marker (`.requirements-approved`, `.design-approved`,
+`.tasks-approved`, `.code-approved`), `specs/.current-spec`, or `.current-gear`. It must not stage,
+commit, push, branch, checkout, stash or rebase. It must not post, edit or resolve any GitHub
+comment, apply or remove a label, or change PR state. Both writes are made by the command or by
+FR-21's measurement script acting as part of it; no other process is invoked that writes anything.
 
 Its GitHub access is read-only and confined to **`gh pr list`** (FR-20's discovery query) and
 **`gh pr diff`** (the spec diff), both already present in the repository's `.claude/settings.json`
@@ -686,13 +800,37 @@ allow-list (`Bash(gh pr list:*)`, `Bash(gh pr diff:*)`). `gh pr view` remains pe
 allow-list but is **not required** by this command: PR number and URL come from the `gh pr list`
 query. No `gh run`, `gh api` or `gh checks` invocation is permitted, and **no query that retrieves PR
 comments, reviews or `statusCheckRollup` is permitted** — review history and CI state are out of
-scope (FR-9, Out of Scope), so the command must not fetch them even incidentally. The command
-therefore requires **no new allow-list entry**.
+scope (FR-9, Out of Scope), so the command must not fetch them even incidentally. Each of those two
+`gh` commands is invoked **at most once per run**, which is what the fact ledger exists to make
+possible (FR-4, FR-21).
+
+**One new allow-list entry is required, and exactly one.** FR-21 delivers a measurement script and
+the allow-list carries no entry that would permit invoking it: there is no `Bash(awk:*)`, no
+`Bash(bash:*)`, no `Bash(sh:*)`, no `Bash(jq:*)` and no path-scoped script entry of any kind. This
+spec adds the single entry
+
+```
+Bash(awk -f .claude/commands/spec/show_me_facts.awk:*)
+```
+
+which permits **that one program** to be run in the invocation shape the repository's existing
+executable artefact already uses (`awk -f <path> <args>`, as `generate_adr_index.awk` is invoked).
+It deliberately does **not** grant `Bash(awk:*)`. The distinction is not cosmetic: POSIX awk provides
+`system()` and `"cmd" | getline`, so a general awk grant would confer arbitrary command execution and
+would make the `deny` list's `curl`/`wget`/`ssh` entries bypassable. A path-scoped entry confers
+neither.
+
+Two things this entry is **not** needed for, both verified against the current allow-list: `wc -c` —
+the affordability probe NFR-3 requires before every read — is already covered by the existing
+`Bash(wc:*)` entry, and every `git` command this document names is already covered by the existing
+`git status`/`log`/`diff`/`show`/`branch`/`rev-parse`/`ls-files` entries. No other addition, removal
+or widening of the allow-list is in scope.
 
 **FR-19 — The command reports a short summary to the caller.**
-On success it prints, in the session: the path written, whether it created or replaced the file, the
-overall risk level, and the one-line reminder that the level is advisory. On any FR-1/FR-2/FR-3 stop
-it prints only that stop message.
+On success it prints, in the session: the path written — `specs/{spec}/show-me.md` only; the *fact
+ledger* is working state and is never reported — whether it created or replaced that file, the
+overall risk level, and the one-line reminder that the level is advisory. On any FR-1/FR-2/FR-3 stop,
+or on FR-21's measurement-script stop, it prints only that stop message.
 
 ### Non-functional Requirements
 
@@ -728,9 +866,16 @@ in the same entry, bullet or diagram, but its wording, granularity and the bound
 may vary. Because F2 and F5 feed FR-12's maximum, the **overall level may in principle vary with
 them**; this is acknowledged rather than asserted away.
 
+**Every field in the first list above is produced by FR-21's measurement script and copied — not
+recomputed — into `show-me.md`.** That is what makes this requirement checkable rather than
+aspirational: determinism is a property of running one implementation twice, not a property a
+document can assert about prose that describes a shell pipeline.
+
 **NFR-2 — Readable in one sitting, with a mechanically countable budget.**
 The counted body of `show-me.md` must be between **400 and 2,000 words**. The count is defined
-mechanically so it can be checked by a script: count whitespace-delimited tokens containing at least
+mechanically so it can be checked by a script, and **FR-21's measurement script is that script** — it
+applies this rule to the generated file in its word-count mode and reports the total, so the check is
+executed rather than merely defined. The rule: count whitespace-delimited tokens containing at least
 one alphanumeric character, over every line of the file **except** (a) the H1 and the metadata block
 above the first H2, (b) any line that begins with `|` after trimming (pipe-table rows, including
 separator rows — this now includes `## Blast radius`'s bucket table, FR-10), (c) every line from the
@@ -769,27 +914,80 @@ above 400, so 400 remains the correct, reachable floor and was not lowered by th
 `What changed and why` section must remain understandable by a contributor who has not read the
 spec's ADRs.
 
-**NFR-3 — Bounded cost, with a stated degradation when the budget binds.** A single run must complete
-without reading the full spec diff into context: it may read summary statistics
-(`--numstat`/`--name-only`) for the whole diff, and the full content of at most **25** individual
-files. Targeted reads of each ADR named in `.adr-list` — its front matter plus its `Status` and
-`Consequences` headings — do **not** count toward the 25, because they are small and bounded by the
-ADR list length; this keeps FR-6/FR-7's per-ADR obligations satisfiable for a spec with many ADRs.
+**NFR-3 — Bounded cost, measured in bytes, with a stated degradation when the budget binds.**
 
-**The 25 is per run, not per artefact and not per diagram.** Source files read in order to draw a
-diagram accurately (FR-6) come out of this same budget, and a run that draws two diagrams still reads
-at most 25 files in full across the whole run. There is no second budget and no per-diagram
-allowance. When the budget is exhausted before a diagram's relationship can be read accurately, the
-command emits FR-6 (e)'s budget line and draws nothing — it never infers a call flow from file names,
-diff statistics or a partial read.
+**The budget.** A single run may bring at most **1,048,576 *charged bytes*** (Definitions) into
+context. The unit is bytes because the unit is what the old cap got wrong: across spec 0036's 76
+changed `src/` files the mean is 8,226 B, the median 4,035 B, the p90 11,666 B and the max 88,957 B,
+so a cap counting *files* priced a 4 KB file and an 89 KB file identically and could not bound a run
+at all. 1,048,576 B is ~300 K tokens at the ~3.5 B/token rate these measurements derive from — about
+30% of a 1 M context window, leaving the synthesis itself room to run.
 
-When a required artefact is too large to read whole (spec 0036's `tasks.md` is 229 KB), the command
-must **degrade by chunking, never by skipping**: it reads the file in bounded chunks, or by targeted
-extraction of the constructs it needs (checkbox lines, headings, task-type tags, tables), and must
-never silently omit data needed for FR-3's completeness check, FR-8's per-requirement evidence, or
-FR-9's task-shape counts. If any required extraction could not be completed, the affected value is
-reported as `Unverifiable` (FR-8) or `not available` (FR-15) with the reason — it is never reported
-as zero or omitted.
+**The file-count cap is retired.** The rule "the full content of at most 25 individual files" and
+every citation of a *25-file read budget* are withdrawn and replaced by this byte budget. The number
+25 no longer has any meaning in this document as a read budget; where it still appears it is FR-14's
+≤ 25-word reason cap, which is unrelated and unchanged.
+
+**The ADR-read exemption is retired too.** It was justified "because they are small". Measured, that
+is false: spec 0036's seven `.adr-list` ADRs total **702,087 B** whole (mean ~100 KB, max 138,105 B).
+Their *targeted* reads — front matter plus `## Status` plus `## Consequences` — total **95,967 B**
+(mean 13,710 B, max 20,709 B), which is affordable but is not nothing, so it is charged like every
+other read rather than exempted. FR-6/FR-7's per-ADR obligations stay satisfiable: 95,967 B is 9% of
+the budget for a seven-ADR spec, and 15 ADRs at the measured mean is 205,650 B, or 20%.
+
+**Affordability is checked before anything is opened.** Before every full-content read the command
+determines the file's size with `wc -c`. **`wc -c` is a size measurement, not a read**: it costs no
+charged bytes, requires no new allow-list entry (`Bash(wc:*)` is already present) and may be applied
+to any path, including one the run will never open. If the measured size exceeds the bytes remaining,
+that file is **not** read in full; it is read by targeted extraction or bounded chunks instead
+(see *Degradation* below). No read is ever issued blind.
+
+**A reserve is held for FR-6's source reads.** Of the 1,048,576 B, the last **100,000 B** may be
+spent only on source files read to draw a diagram accurately (FR-6 (f)). Everything else — the
+script's JSON, `tasks.md`, the diff, ADR extracts, `requirements.md`, the `release_notes.md` section
+— draws on the remaining 948,576 B. The reserve is sized from the measured spread: 100,000 B is ≥ 8
+files at the p90 of 11,666 B, ≥ 24 at the median of 4,035 B, and ≥ 1 even at the max of 88,957 B.
+The reserve exists to make diagram affordability a **guarantee rather than an artefact of read
+order**: without it, whether a diagram can be drawn would depend on whether `requirements.md`
+happened to be read whole or extracted first, and this document specifies no read order. That
+order-dependence would make AC-56 and AC-78 unassertable and would let the visual-explanation
+capability fail silently on the very change it was designed for.
+
+**What is affordable, measured on spec 0036 at merge base `6145913a0..spec/scoped-lifetime-per-pipeline`.**
+`tasks.md` may be read **in full** — 229,159 B, 22% of the budget; the "229 KB scare case" was never
+the problem. The **`src/`-scoped diff is permitted** — 303,715 B, 29%. Summary statistics for the
+whole diff (`--numstat`/`--name-only`/`--stat`) are permitted — `git diff --stat` alone is 31,929 B,
+3%.
+
+**The full diff is banned, and not as a policy choice.** No `git diff` or `gh pr diff` may be issued
+without either a pathspec restricting it or a summary-only flag. Spec 0036's full 517-file diff is
+**4,081,673 B ≈ 1.24 M tokens** — it **exceeds the context window outright**. This is a hard wall: a
+run that attempted it would not degrade, it would fail. The ban is stated here rather than left
+implicit because the previous revision banned the full diff without ever saying why, and a reader who
+does not know the number will reasonably assume the ban is negotiable.
+
+**Worst case, measured — the calibration run fits by construction.** Against the 948,576 B general
+allowance: the script's JSON at its FR-21 cap (≤ 65,536) + `tasks.md` in full (229,159) + the
+`src/`-scoped diff (303,715) + seven targeted ADR extracts (95,967) = **694,377 B**, leaving
+254,199 B. `wc -c` then shows `requirements.md` at 273,674 B — more than remains — so it is read by
+targeted extraction rather than in full, exactly as *Degradation* requires; `release_notes.md` at
+118,145 B whole still fits. The 100,000 B reserve is untouched and available to FR-6. The total can
+never exceed 1,048,576 B, because no file is opened whose measured size the remaining allowance does
+not cover.
+
+**The budget is per run, not per artefact and not per diagram.** Source files read to draw a diagram
+(FR-6) are charged to this same budget. A run drawing two diagrams has one reserve between them.
+There is no second budget and no per-diagram allowance. When the budget is exhausted before a
+diagram's relationship can be read accurately, the command emits FR-6 (e)'s **budget line** and draws
+nothing — it never infers a call flow from file names, diff statistics or a partial read.
+
+**Degradation — chunk, never skip.** When a required artefact does not fit the bytes remaining, the
+command reads it in bounded chunks, or by targeted extraction of the constructs it needs (checkbox
+lines, headings, task-type tags, tables, a named `release_notes.md` section, a named requirement's
+paragraph), and must never silently omit data needed for FR-3's completeness check, FR-8's
+per-requirement evidence, or FR-9's task-shape counts. If any required extraction could not be
+completed, the affected value is reported as `Unverifiable` (FR-8) or `not available` (FR-15) with
+the reason — it is never reported as zero or omitted.
 
 **NFR-4 — Works offline.** With no network and no `gh`, the command must still produce a complete
 `show-me.md` from local artefacts and git alone, degrading per FR-16 and recording the reason in
@@ -800,11 +998,24 @@ machine-local paths, or the contents of files that are **not tracked in git** in
 same tracking test as FR-17, which covers both gitignored and merely untracked paths, and which binds
 diagram content as well as prose). All repository paths written are relative to the repository root.
 
-**NFR-6 — Convention conformance.** The command file follows the existing `/spec:*` conventions
-(front matter with `allowed-tools`, `description`, `argument-hint`; `$ARGUMENTS`; documented in
-`.claude/commands/spec/README.md` alongside the other commands). `show-me.md` is valid markdown whose
-relative links all resolve from its location in the spec directory, and whose fenced blocks are
-closed.
+**NFR-6 — Convention conformance.** This spec delivers three artefacts and all three follow the
+conventions of the family they join.
+
+- *The command file*, `.claude/commands/spec/show-me.md`, follows the existing `/spec:*` conventions
+  (front matter with `allowed-tools`, `description`, `argument-hint`; `$ARGUMENTS`; documented in
+  `.claude/commands/spec/README.md` alongside the other commands).
+- *The measurement script*, `.claude/commands/spec/show_me_facts.awk` (FR-21), sits beside the
+  command file and follows the repository's one existing precedent for an executable artefact in this
+  family, `.claude/commands/adr/generate_adr_index.awk`, in every respect: it is an awk program, it
+  carries the same `#!/usr/bin/awk -f` shebang line, it is committed **non-executable (mode
+  `100644`)** because `awk -f` reads it rather than executing it, and it is invoked
+  `awk -f <path> <args>` from the repository root. `.claude/commands/spec/README.md` documents it
+  alongside `/spec:show-me`, naming what it emits and that it is not invoked directly by a user.
+- *Its test script*, `.claude/commands/spec/show_me_facts_test.sh` (NFR-9), also sits beside the
+  command file. Unlike the awk program it **is** executed directly, so it carries a `#!/usr/bin/env sh`
+  shebang and is committed executable (mode `100755`).
+- *The generated `show-me.md`* is valid markdown whose relative links all resolve from its location
+  in the spec directory, and whose fenced blocks are closed.
 
 **NFR-7 — Traceable claims.** Every factual claim in `show-me.md` must be attributable to a listed
 input: counts to the artefact they were counted from, requirement statuses to a task id / file path /
@@ -813,8 +1024,56 @@ the command read. The command must not assert behaviour it has not read evidence
 draw structure it has not read evidence for.
 
 **NFR-8 — Safe re-run.** Re-running the command on a spec whose inputs have changed (e.g. new commits
-on the branch) must leave the repository in a state differing only in `show-me.md`'s contents, and a
-stop under FR-1/FR-2/FR-3 must leave the repository byte-for-byte unchanged.
+on the branch) must leave the repository in a state differing only in `show-me.md`'s contents and, as
+the single narrow carve-out, in the contents of the gitignored *fact ledger*
+`specs/{spec}/.show-me-ledger.json` (FR-4). Because the ledger is gitignored, that carve-out is
+invisible to `git status --porcelain`, which must be byte-identical before and after a successful run
+except for `show-me.md` (AC-30, AC-74). A stop under FR-1, FR-2, FR-3 or FR-21 must leave the
+repository byte-for-byte unchanged, ledger included — no ledger is created and no existing ledger is
+touched on a stop.
+
+**NFR-9 — The measurement script is covered by an executable test that runs against real fixtures.**
+FR-21's script is the single point at which every mechanically countable value in this document is
+computed, so an undetected defect in it silently falsifies `show-me.md` rather than failing loudly.
+It is therefore delivered with a **sibling test script**,
+`.claude/commands/spec/show_me_facts_test.sh`, beside the program it tests.
+
+*What it is.* A plain executable shell script that invokes the awk program under test. **No test
+framework, no new solution project, and nothing added under `src/` or `tests/`** — this spec has no
+C# component and that boundary is unchanged. This is a deliberate choice against the family's status
+quo, not an oversight in it: the only executable artefact anywhere in `.claude/` today is
+`generate_adr_index.awk`, it has no tests at all, there is no shell-test framework anywhere in this
+repository, every project under `tests/` is C#/xUnit, and no CI workflow lints or tests anything
+under `.claude/`. "Nothing runs it automatically" is the pre-existing condition of this whole family;
+this requirement leaves a regression net behind where there was none.
+
+*What it does.* It invokes the measurement script against **named, tracked fixtures**, asserts on
+fields of the emitted JSON, prints which assertion failed, and **exits non-zero if any assertion
+fails**. The fixtures and the facts asserted are, at minimum:
+
+| Fixture | Asserted |
+|---|---|
+| `specs/9999-show-me-fixture/` | 3 declared ids; 2 task checkboxes, 0 unchecked |
+| `specs/0033-pg-advisory-lock-sha256/` | 8 declared ids; 5 task checkboxes, 0 unchecked |
+| `specs/0002-sqs-cleanup/` | **0** declared ids — the FR-16 row 9 case — with 6 checkboxes, 0 unchecked; the run must report zero, not fail |
+| `specs/0036-scoped-lifetime-per-pipeline/` *(C-8)* | 37 declared ids; 82 task checkboxes, 0 unchecked |
+
+Every figure in that table was measured against the real fixture directories on 2026-09-21, not
+estimated.
+
+*Two regressions it must specifically pin,* because both were observed live and both are the reason
+FR-21 exists: the declared-id count must be non-zero for every fixture that declares ids (the pattern
+once returned **0** where the answer was **28**, an escaped `\|` having leaked in from a markdown
+table cell); and the NFR-2 word-count mode must exclude fenced blocks (it once returned **16** where
+the answer was **8**, over-counting roughly 2x by counting inside fences).
+
+*One invariant it checks over the command file itself*: the delivered
+`.claude/commands/spec/show-me.md` contains no branch on the risk level (FR-13), tested in a way that
+cannot match the letters `if` inside an unrelated word such as `diff` — a false-positive class
+already observed three times.
+
+*What it is not.* It is not a gate, not wired into CI by this spec, and not a prerequisite for
+running `/spec:show-me`. It is a script a person or a task runs.
 
 ### Constraints and Assumptions
 
@@ -876,10 +1135,25 @@ stop under FR-1/FR-2/FR-3 must leave the repository byte-for-byte unchanged.
   a concurrent branch is acceptable". This is permanent and structural, which is why FR-6 forbids
   bare-number ADR references throughout `show-me.md` and FR-16 row 7 defines what happens when an
   `.adr-list` entry cannot be resolved to exactly one file.
-- **C-10** The repository's `.claude/settings.json` `gh` allow-list is exactly `gh pr view`,
-  `gh pr list`, `gh pr diff`, `gh issue view`, `gh issue list` — there is **no** run-query or
-  `gh api` entry. FR-18 confines the command to `gh pr list` and `gh pr diff`, both inside that list,
-  so this spec introduces no settings change.
+- **C-10** The repository's `.claude/settings.json` **`gh`** allow-list is exactly `gh pr view`,
+  `gh pr list`, `gh pr diff`, `gh issue view`, `gh issue list` — there is **no** run-query and **no**
+  `gh api` entry, and this spec adds neither. FR-18 confines the command's GitHub access to
+  `gh pr list` and `gh pr diff`, both already inside that list, so **no `gh` entry changes**.
+  The wider allow-list is a different matter. It permits `Read`, `Glob`, `Grep` and a fixed set of
+  `Bash(…)` prefixes — among them `Bash(wc:*)`, which already covers NFR-3's affordability probe, and
+  the `git` read commands this document names — but it contains **no `Bash(awk:*)`, no
+  `Bash(bash:*)`, no `Bash(sh:*)`, no `Bash(jq:*)` and no path-scoped script entry**. FR-21's
+  measurement script therefore cannot be invoked under the allow-list as it stands, and **this spec
+  adds exactly one entry**, `Bash(awk -f .claude/commands/spec/show_me_facts.awk:*)`, permitting that
+  one program in the `awk -f <path>` shape the precedent artefact already uses. A general
+  `Bash(awk:*)` grant is deliberately **not** requested: awk provides `system()` and
+  `"cmd" | getline`, so it would confer arbitrary command execution and make the `deny` list's
+  `curl`/`wget`/`ssh` entries bypassable. The precedent artefact,
+  `.claude/commands/adr/generate_adr_index.awk`, has no entry at all and runs by per-invocation
+  approval from five documented call sites; this spec chooses the narrow entry instead, because
+  `/spec:show-me` is meant to complete in one turn without a permission prompt in the middle of a
+  measurement. That single addition is the whole settings change this spec makes (FR-18, Out of
+  Scope).
 - **A-1** Assumption: a finished spec's `tasks.md` is an accurate record of what was built — the
   command reconciles against it rather than re-deriving intent from the diff.
 - **A-2** Assumption: the reader of `show-me.md` knows Brighter as a library but has not read this
@@ -908,8 +1182,15 @@ stop under FR-1/FR-2/FR-3 must leave the repository byte-for-byte unchanged.
 - **Gating merge in any form**: blocking, required checks, CI integration, PR labels, requesting
   changes, or any marker file that another command could read as a gate (FR-13).
 - **Posting to GitHub**: no PR comments, no PR description updates, no issue comments (FR-18).
-- **Any change to `.claude/settings.json`'s allow-list.** The command is defined to fit the existing
-  entries (C-10, FR-18).
+- **Any change to `.claude/settings.json` beyond the single path-scoped entry FR-21's measurement
+  script needs.** One entry is added, `Bash(awk -f .claude/commands/spec/show_me_facts.awk:*)`,
+  because no existing entry covers it (C-10). Everything else about the file is out of scope: no `gh`
+  entry is added, removed or widened; **no general interpreter grant** (`Bash(awk:*)`, `bash`, `sh`,
+  `jq`) is requested; the `deny` list is untouched; and the command's GitHub access stays inside the
+  `gh pr list` / `gh pr diff` entries that already exist (FR-18).
+- **Any change to `.gitignore` beyond the single exact-match entry `.show-me-ledger.json`.** That one
+  line is added so the *fact ledger* leaves `git status --porcelain` clean (FR-4, NFR-8, AC-30). No
+  existing pattern is edited, and no wildcard form is used.
 - **Rendered images.** Diagrams are fenced text — ASCII or Mermaid (FR-6 (c)). No PNG, SVG, image
   file, external rendering service, or generated asset of any kind is produced or linked.
 - **Diagram-only output.** A diagram never replaces the prose it illustrates; FR-6's 150–600-word
@@ -963,9 +1244,11 @@ states which of missing/empty/stale applies and offers both remedies (pass an id
 **when** the command is run, **then** no file is written, and the output states `2 of 82` and lists
 the first three (here: both) unchecked task titles.
 
-**AC-7** *(FR-3, NFR-8)* **Given** a target spec with an existing `show-me.md` and an unchecked task,
-**when** the command is run, **then** the existing `show-me.md` is byte-for-byte unchanged and no
-other file in the repository is modified.
+**AC-7** *(FR-3, FR-21, NFR-8)* **Given** a target spec with an existing `show-me.md` and an unchecked
+task, **when** the command is run, **then** the existing `show-me.md` is byte-for-byte unchanged and
+no other file in the repository is created or modified — including, explicitly,
+`specs/{spec}/.show-me-ledger.json`, which is not created if it was absent and is byte-for-byte
+unchanged if it was present, because the FR-3 gate runs above both writes (FR-3, FR-21).
 
 **AC-8** *(FR-3)* **Given** `specs/0005-defer-message-on-error/` — a spec directory present on
 `master` that contains a `requirements.md` and no `tasks.md` — **when**
@@ -1086,11 +1369,14 @@ either filename, no link to either, and no reference to any path that
 `git ls-files --error-unmatch` reports as untracked — including inside any diagram; every relative
 link in `show-me.md` resolves to an existing tracked repository path.
 
-**AC-30** *(FR-18)* **Given** a successful run, **when** `git status --porcelain` is compared before
-and after, **then** the only difference is `specs/{spec}/show-me.md`, and no commit, push, branch,
-label, comment or PR state change occurred; **and when** the commands the run issued are inspected,
-**then** every `gh` invocation is one of `gh pr list` or `gh pr diff`, none is `gh run`, `gh api` or
-`gh checks`, and none requests PR comments, reviews or `statusCheckRollup`.
+**AC-30** *(FR-18, FR-4)* **Given** a successful run, **when** `git status --porcelain` is compared
+before and after, **then** the only difference is `specs/{spec}/show-me.md` — the *fact ledger* that
+the same run wrote to `specs/{spec}/.show-me-ledger.json` does **not** appear, because `.gitignore`
+carries the exact-match entry for it, which `git check-ignore -v specs/{spec}/.show-me-ledger.json`
+confirms — and no commit, push, branch, label, comment or PR state change occurred; **and when** the
+commands the run issued are inspected, **then** every `gh` invocation is one of `gh pr list` or
+`gh pr diff`, none is `gh run`, `gh api` or `gh checks`, none requests PR comments, reviews or
+`statusCheckRollup`, and `gh pr diff` was invoked **at most once**.
 
 **AC-31** *(FR-19)* **Given** a successful run, **when** the session output is read, **then** it
 states the written path, created-vs-replaced, the overall level, and that the level is advisory.
@@ -1210,17 +1496,23 @@ each, **then** every ADR reference in `show-me.md` carries the filename stem, ea
 resolves to the file the `.adr-list` entry named, and no reference identifies an ADR by bare number
 alone.
 
-**AC-52** *(NFR-3)* **Given** a spec with 15 ADRs in `.adr-list` and a 229 KB `tasks.md`, **when** the
-command runs, **then** it completes, it reads no more than 25 files in full (targeted front-matter /
-`Status` / `Consequences` reads of the 15 ADRs excluded from that count), `tasks.md` is processed by
-targeted extraction or bounded chunks rather than skipped, FR-9's task counts and FR-8's evidence are
-complete, and no value is reported as zero or omitted because a read was skipped.
+**AC-52** *(NFR-3)* **Given** a spec with 15 ADRs in `.adr-list` and a 229,159-byte `tasks.md`,
+**when** the command runs, **then** it completes; its total *charged bytes* are ≤ 1,048,576; every
+full-content read was preceded by a `wc -c` of that path and no read was issued whose measured size
+exceeded the bytes then remaining; `tasks.md` is read **in full** (229,159 B, 22% of the budget)
+rather than chunked or skipped; the 15 targeted ADR extracts are charged to the budget rather than
+exempted from it; FR-9's task counts and FR-8's evidence are complete; and no value is reported as
+zero or omitted because a read was skipped.
 
-**AC-53** *(NFR-6)* **Given** the delivered command file, **when** it is inspected, **then** it has
-front matter with `allowed-tools`, `description` and `argument-hint` and consumes `$ARGUMENTS` in the
-style of the other `.claude/commands/spec/*.md` files, `.claude/commands/spec/README.md` lists
-`/spec:show-me` in its command catalogue, and every relative link in a generated `show-me.md`
-resolves from the spec directory.
+**AC-53** *(NFR-6)* **Given** the three delivered artefacts, **when** they are inspected, **then** the
+command file has front matter with `allowed-tools`, `description` and `argument-hint` and consumes
+`$ARGUMENTS` in the style of the other `.claude/commands/spec/*.md` files; the measurement script and
+its test script both sit in `.claude/commands/spec/`; `git ls-files --stage` shows the awk program at
+mode `100644` with a `#!/usr/bin/awk -f` first line, matching
+`.claude/commands/adr/generate_adr_index.awk`, and the test script at mode `100755`;
+`.claude/commands/spec/README.md` lists `/spec:show-me` in its command catalogue **and** documents the
+measurement script; and every relative link in a generated `show-me.md` resolves from the spec
+directory.
 
 **AC-54** *(FR-8)* **Given** a complete spec declaring 28 top-level ids of which 26 are judged
 `Shipped`, one is `Shipped with deviation` and one is `Deferred` with a recorded follow-up issue,
@@ -1256,8 +1548,9 @@ FR-6 (b)'s raise, **then** `## What changed and why` contains no fenced block at
 declaration lines, `1` ADR); **and when** a run instead does exercise the raise, **then** it carries
 one diagram and an explicit one-sentence reason for drawing it, and no `No diagram:` line.
 
-**AC-58** *(FR-6, NFR-3)* **Given** a run in which D1 fires but the 25-file read budget is exhausted
-before the command can read the types the relationship needs, **when** the command runs, **then** the
+**AC-58** *(FR-6, NFR-3)* **Given** a run in which D1 fires but NFR-3's read budget — including its
+100,000-byte FR-6 reserve — is exhausted before the command can read the types the relationship
+needs, **when** the command runs, **then** the
 run still succeeds, `## What changed and why` contains no fenced block, it contains exactly the line
 `No diagram: the read budget was exhausted before the relationship could be read accurately.`, and no
 diagram names any type the command did not read.
@@ -1288,10 +1581,10 @@ CI check tally and no `F3`/`F4` row; `## Inputs used` has no review-comments row
 row; and no `gh` invocation in the run requested PR comments, reviews or `statusCheckRollup`.
 
 **AC-63** *(NFR-3, FR-6)* **Given** a run that draws one diagram in `## What changed and why` and one
-in `## Where to look first`, **when** the run's file reads are counted, **then** the total number of
-files read in full across the entire run — including every source file read for either diagram, and
-excluding only the targeted ADR front-matter/`Status`/`Consequences` reads — is ≤ 25, and no
-per-diagram allowance was applied.
+in `## Where to look first`, **when** the run's reads are totalled in *charged bytes* — including
+every source file read for either diagram and every targeted ADR extract, and excluding only the
+`wc -c` probes, which are not reads — **then** the total is ≤ 1,048,576; the two diagrams drew on one
+shared 100,000-byte reserve rather than one each; and no per-diagram allowance was applied.
 
 **AC-64** *(FR-6)* **Given** a run in which D2 fires (the spec diff changes 10 public API declaration
 lines) but those ten lines are ten unrelated one-line property additions spread across ten otherwise
@@ -1322,8 +1615,9 @@ diff that changes `src/Directory.Build.props` plus four files all inside
 files under `src/` and **1** distinct immediate subdirectory of `src/`, D1 does **not** fire (its
 second clause requires ≥ 2), and a second run over the same tree reports the identical pair.
 
-**AC-68** *(FR-7, FR-16 row 5a, FR-15, NFR-7)* **Given** a spec for which `release_notes.md` **does**
-contain a section, but FR-18's file-read budget is exhausted before that section is reached, **when**
+**AC-68** *(FR-7, FR-16 row 5a, FR-15, NFR-3, NFR-7)* **Given** a spec for which `release_notes.md`
+**does** contain a section, but NFR-3's read budget is exhausted before that section is reached,
+**when**
 the command runs, **then** `## Breaking changes` carries the row 5a line stating that a section
 exists but was not read because the budget was exhausted, does **not** carry row 5's "no
 release_notes.md section found" line, `## Inputs used` marks the `release_notes.md` row
@@ -1335,6 +1629,96 @@ byte-identical before and after.
 read budget is intact, **when** the command runs, **then** the section **is** read (the command has
 no discretion to skip it), `## Inputs used` marks the `release_notes.md` row `used`, and neither
 FR-16 row 5's nor row 5a's line appears anywhere in the output.
+
+**AC-70** *(FR-21, NFR-1)* **Given** the delivered measurement script and the tracked fixture
+`specs/9999-show-me-fixture/`, **when** it is invoked as
+`awk -f .claude/commands/spec/show_me_facts.awk specs/9999-show-me-fixture` from the repository root,
+**then** its stdout is a **single** well-formed JSON object and nothing else, it carries a
+`schema_version` field and one named field per value FR-21 lists, its declared-id total is **3** and
+its task fields report **2** checkboxes with **0** unchecked, its total size is ≤ 65,536 bytes, and
+its exit code is `0`; **and when** the delivered command file is searched, **then** it contains no
+shell pipeline computing any of those values itself.
+
+**AC-71** *(FR-21, FR-3, NFR-8)* **Given** a target spec with an unchecked task and no pre-existing
+`specs/{spec}/.show-me-ledger.json`, **when** the command is run, **then** it prints the FR-3 stop
+message, `specs/{spec}/show-me.md` is not created, `specs/{spec}/.show-me-ledger.json` **does not
+exist afterwards**, and `git status --porcelain` is byte-identical before and after; **and given**
+the same spec with a pre-existing ledger, **when** the command is run, **then** that ledger is
+byte-for-byte unchanged.
+
+**AC-72** *(FR-21)* **Given** each of four states of the measurement script in turn — absent, present
+but unreadable, present and readable but exiting non-zero, and present and exiting `0` but emitting
+output that is not a single JSON object — **when** the command is run against an otherwise complete
+spec, **then** in every case it prints FR-21's measurement-script stop message naming which of the
+four applies, writes no `show-me.md` and no ledger, leaves the repository byte-for-byte unchanged,
+and **does not** compute any measured value inline or emit a partial, guessed or zero-filled
+`show-me.md`.
+
+**AC-73** *(FR-21, FR-18, FR-4)* **Given** a successful run against a spec whose PR is discovered,
+**when** the commands the run issued are inspected in order, **then** `gh pr list` was invoked at most
+once and `gh pr diff` was invoked **at most once**, and `specs/{spec}/.show-me-ledger.json` afterwards
+parses as JSON, contains the same PR number, diff source, bucket counts and public-API declaration
+line count that `show-me.md` reports, and contains **no** raw diff text.
+
+**AC-74** *(FR-4, NFR-8)* **Given** a successful run, **when** the repository is inspected afterwards,
+**then** `specs/{spec}/.show-me-ledger.json` exists, `git check-ignore -v` reports it ignored by the
+exact-match `.gitignore` entry `.show-me-ledger.json`, `git ls-files --error-unmatch` on it fails
+(it is untracked), and `git status --porcelain` differs from its before-state only by
+`specs/{spec}/show-me.md`; **and when** the command is run a second time, **then** the ledger's
+contents are wholly replaced and no `.show-me-ledger-2.json` or `.show-me-ledger.json.bak` exists.
+
+**AC-75** *(FR-17, NFR-5, FR-15)* **Given** a successful run, **when** `show-me.md` is searched,
+**then** it contains no occurrence of the string `.show-me-ledger.json`, no occurrence of the
+measurement script's path, and `## Inputs used` has **no row** for either — while every count it
+reports is still attributed to the artefact it was counted from (NFR-7).
+
+**AC-76** *(NFR-3)* **Given** a successful run, **when** the commands the run issued are inspected in
+order, **then** every full-content read of a file was preceded by a `wc -c` of that same path; no
+read was issued whose `wc -c`-measured size exceeded the bytes then remaining; the `wc -c` probes
+themselves are charged nothing; and the run's total *charged bytes* are ≤ 1,048,576.
+
+**AC-77** *(NFR-3, FR-10, FR-20)* **Given** a spec whose diff touches 517 files and whose full diff is
+4,081,673 bytes, **when** the command runs, **then** no `git diff` or `gh pr diff` was issued without
+either a pathspec restricting it or a summary-only flag (`--numstat`, `--name-only`, `--stat`); the
+`src/`-scoped diff (303,715 bytes) **was** read; the run completed; and its total charged bytes are
+≤ 1,048,576.
+
+**AC-78** *(NFR-3, FR-6, C-8)* **Given** spec 0036 on its calibration branch, **when** the command
+runs, **then** the run completes; `tasks.md` is read **in full** (229,159 bytes); the seven ADR
+targeted extracts are charged to the budget (95,967 bytes) rather than exempted; at the point FR-6's
+source reads begin, at least **100,000 bytes** remain available to them; `## What changed and why`
+carries a diagram and **not** FR-6 (e)'s budget line; and the run's total charged bytes are
+≤ 1,048,576.
+
+**AC-79** *(NFR-9)* **Given** `.claude/commands/spec/show_me_facts_test.sh`, **when** it is run from
+the repository root with the calibration branch present (C-8), **then** it invokes the measurement
+script against `specs/9999-show-me-fixture/`, `specs/0033-pg-advisory-lock-sha256/`,
+`specs/0002-sqs-cleanup/` and `specs/0036-scoped-lifetime-per-pipeline/`; asserts the declared-id
+totals **3, 8, 0 and 37** and the checkbox totals **2, 5, 6 and 82** with zero unchecked in each;
+exits `0` when every assertion holds; and, **when** any single asserted value is perturbed, prints
+which assertion failed and exits **non-zero**; **and when** the script is inspected, **then** it
+invokes no test framework, no `dotnet` command, and no file under `src/` or `tests/`.
+
+**AC-80** *(NFR-9, NFR-2, FR-21)* **Given** a `show-me.md` whose counted body holds exactly **8**
+tokens outside its fenced blocks and whose single fenced block holds **8** further tokens, **when**
+the measurement script's word-count mode is run over it, **then** it reports **8**, not 16 — fenced
+lines, `|`-leading lines, the H1/metadata block and everything from `## Inputs used` onward all
+excluded per NFR-2; **and when** the same file is grown to a conforming body, **then** the script
+reports a total inside 400–2,000 and says so.
+
+**AC-81** *(NFR-9, FR-13)* **Given** the delivered command file, **when** the test script's FR-13
+invariant check runs over it, **then** the check reports **no** branch on the risk level, and it does
+so without matching the letters `if` inside an unrelated word — demonstrated by a fixture line
+containing `git diff` and `gh pr diff` and no conditional, over which the check must report zero
+matches.
+
+**AC-82** *(FR-18, C-10, Out of Scope)* **Given** `.claude/settings.json` after this spec has shipped,
+**when** it is inspected, **then** its `allow` array contains **exactly one** entry that was not
+present before — `Bash(awk -f .claude/commands/spec/show_me_facts.awk:*)`; it contains no
+`Bash(awk:*)`, `Bash(bash:*)`, `Bash(sh:*)` or `Bash(jq:*)` entry; its `gh` entries are unchanged and
+still contain no `gh run` and no `gh api` entry; its `deny` array is unchanged; **and given**
+`.gitignore`, **then** it contains exactly one added line, the exact-match `.show-me-ledger.json`,
+with no wildcard form and no existing pattern edited.
 
 ## Additional Context
 
@@ -1403,8 +1787,9 @@ the command into a Measurer (which runs bounded shell commands into a fact ledge
 (which writes prose "from that ledger alone", with no new shell calls), under the rule that "nothing
 crosses the line in either direction". A diagram sits across that line: the reading is measurement,
 the drawing is synthesis. **This requirements document deliberately does not resolve it and does not
-name any internal role.** FR-6 states only *what must be true* — the reads come out of NFR-3's single
-25-file per-run budget, everything named is attributable to a listed input (NFR-7), and a run that
+name any internal role.** FR-6 states only *what must be true* — the reads are charged to NFR-3's
+single per-run byte budget and are the only reads permitted to draw on its 100,000-byte reserve,
+everything named is attributable to a listed input (NFR-7), and a run that
 cannot read enough emits FR-6 (e)'s budget line rather than guessing. Whether that is satisfied by
 extending the Measurer's extraction step, by granting the Synthesiser a bounded read, or by some
 other arrangement is a decision for the ADR amendment that follows this one. Nothing in FR-6 requires
@@ -1461,5 +1846,6 @@ continuity):
   added to; sub-agent and model policy.
 - `docs/adr/0072-show-me-command-resolution-and-output.md` — the Measurer/Synthesiser split and the
   Step 5 extraction budget that FR-6's diagram reads have to fit inside.
-- `.claude/settings.json` — existing read-only `gh pr list`/`gh pr diff` allow-list entries the
-  command must stay within.
+- `.claude/settings.json` — the read-only `gh pr list`/`gh pr diff` entries the command must stay
+  within, the existing `Bash(wc:*)` entry that already covers NFR-3's affordability probe, and the
+  **one new path-scoped entry this spec adds** for FR-21's measurement script (FR-18, C-10).
