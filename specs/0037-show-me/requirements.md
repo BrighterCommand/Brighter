@@ -94,7 +94,7 @@ These terms are used with exactly these meanings throughout this document.
 | **Deviation entry** | One bullet in `## Did it ship what it said?` (FR-8) naming one top-level numbered requirement whose status is **not** `Shipped`, together with that status, its reason, its evidence and — for `Deferred`/`Dropped`/`Withdrawn` — its follow-up. Deviation entries are the only per-requirement items the section enumerates; requirements that shipped as planned are accounted for collectively by FR-8's shipped-as-planned line. |
 | **Diagram** | One fenced code block inside `show-me.md` that draws a relationship in the change under review — a call or data flow, a component interaction, a lifecycle, or a type/file hierarchy. Either a Mermaid block (```` ```mermaid ````) or a plain fenced block holding an ASCII sketch or tree. Governed entirely by FR-6; permitted only in `## What changed and why` (FR-6) and `## Where to look first` (FR-14). A fenced block that is not drawing such a relationship — a quoted log line, a code excerpt, a command — is not a diagram and is not permitted by this document. |
 | **Advisory** | Producing a level and rationale only: no gating, no blocking, no refusal, no label, no comment, no marker file, no change to any approval state, and no behavioural difference between a `Low` result and a `High` result. Whatever the level, the command completes its run and reports per FR-19. |
-| **Measurement script** | The single executable artefact, delivered by this spec and living beside the command file at `.claude/commands/spec/show_me_facts.awk`, that performs every mechanically countable measurement this document defines and emits them as one JSON object on stdout (FR-21). It is part of the command, not an input to it: it is never an `## Inputs used` row (FR-15) and never an FR-16 absence row. |
+| **Measurement script** | The single executable artefact, delivered by this spec and living beside the command file in `.claude/commands/spec/`, that performs every mechanically countable measurement this document defines and emits them as one JSON object on stdout (FR-21). **Its implementation language, filename and invocation form are a design decision, not a requirement** — this document constrains only what it emits, that there is exactly one of it, and how narrowly it may be permitted to run (FR-21, NFR-6, C-10). It is part of the command, not an input to it: it is never an `## Inputs used` row (FR-15) and never an FR-16 absence row. |
 | **Fact ledger** | The file `specs/{target spec directory}/.show-me-ledger.json`, holding the JSON the measurement script emitted for the run that wrote it. It is **working state, not a deliverable**: it is gitignored by an exact-match `.gitignore` entry, is never staged or committed, is never cited from `show-me.md` (FR-17, NFR-5), and is written only after the FR-3 precondition passes (FR-3, FR-4, FR-21). It holds measured values only; it never caches fetched diff text. |
 | **Charged bytes** | The number of bytes of file or command output that a read brings into the command's context. A full-content read is charged its whole-file byte count; a targeted or chunked read is charged the byte count of the extract actually brought into context. Bytes that the measurement script reads but does not emit are **not** charged — only its JSON output is. `wc -c` is a size measurement, **not a read**, and is charged nothing. This is the unit NFR-3's budget is denominated in. |
 
@@ -679,10 +679,19 @@ free id after FR-20; it belongs logically with FR-10 and NFR-1.)*
 *The split.* The script **measures**; the command file **synthesises**. Nothing mechanically
 countable is computed in the command file, and nothing judgement-derived is computed in the script.
 
-*The artefact.* One awk program, `.claude/commands/spec/show_me_facts.awk`, invoked
-`awk -f .claude/commands/spec/show_me_facts.awk <spec directory>` from the repository root — the same
-language and the same invocation shape as this repository's existing executable artefact in this
-family, `.claude/commands/adr/generate_adr_index.awk` (NFR-6, C-10).
+*The artefact.* **Exactly one** executable artefact, delivered by this spec and living beside the
+command file in `.claude/commands/spec/`, taking the target spec directory as its argument and
+invoked from the repository root.
+
+**This document deliberately does not choose its implementation language.** A shell script, an awk
+program, a Python script and a small .NET tool would all satisfy every requirement stated here, and
+the trade-offs between them — precedent, the shape of the allow-list entry each needs, how naturally
+each emits JSON and shells out to `git` and `gh`, and what each costs a reader of this repository —
+are design concerns, not user requirements. The design phase makes that choice and records it with
+its reasoning; this requirement constrains only the four things a user-visible contract must fix:
+that there is **one** such artefact and not several, **what it emits** (below), **that every stated
+pattern is implemented in it exactly once** (below), and **how narrowly it may be permitted to run**
+(FR-18, C-10). NFR-6 adds that whatever is chosen follows the conventions of the family it joins.
 
 *What the script owns.* Exactly the fields NFR-1 lists as mechanically countable, plus the inputs
 those fields depend on: spec-branch and base-ref resolution and their shas including FR-10's
@@ -804,21 +813,22 @@ scope (FR-9, Out of Scope), so the command must not fetch them even incidentally
 `gh` commands is invoked **at most once per run**, which is what the fact ledger exists to make
 possible (FR-4, FR-21).
 
-**One new allow-list entry is required, and exactly one.** FR-21 delivers a measurement script and
-the allow-list carries no entry that would permit invoking it: there is no `Bash(awk:*)`, no
-`Bash(bash:*)`, no `Bash(sh:*)`, no `Bash(jq:*)` and no path-scoped script entry of any kind. This
-spec adds the single entry
+**One new allow-list entry is required, and exactly one — and it must be path-scoped.** FR-21
+delivers a measurement script, and the allow-list carries no entry that would permit invoking it in
+any language: there is no `Bash(bash:*)`, no `Bash(sh:*)`, no `Bash(awk:*)`, no `Bash(python3:*)`,
+no `Bash(dotnet run:*)` and no path-scoped script entry of any kind. This spec therefore adds exactly
+one entry, and that entry must **name the measurement script's own path** so that it permits **that
+one program and nothing else**.
 
-```
-Bash(awk -f .claude/commands/spec/show_me_facts.awk:*)
-```
-
-which permits **that one program** to be run in the invocation shape the repository's existing
-executable artefact already uses (`awk -f <path> <args>`, as `generate_adr_index.awk` is invoked).
-It deliberately does **not** grant `Bash(awk:*)`. The distinction is not cosmetic: POSIX awk provides
-`system()` and `"cmd" | getline`, so a general awk grant would confer arbitrary command execution and
-would make the `deny` list's `curl`/`wget`/`ssh` entries bypassable. A path-scoped entry confers
-neither.
+**A bare interpreter grant is forbidden, whatever the language turns out to be.** The exact entry
+string depends on the language the design phase picks (FR-21) and is fixed there; this requirement
+fixes the property it must have. The distinction is not cosmetic. Every candidate language can
+execute arbitrary commands — awk through `system()` and `"cmd" | getline`, Python through
+`os.system` and `subprocess`, a shell through everything it is — and the measurement script
+legitimately needs that power, because it shells out to `git` and `gh`. So an entry naming the
+*interpreter* rather than the *program* would confer arbitrary command execution on anything, and
+would make the `deny` list's `curl`/`wget`/`ssh` entries bypassable. An entry naming the program
+confers neither, while permitting exactly the run this command needs.
 
 Two things this entry is **not** needed for, both verified against the current allow-list: `wc -c` —
 the affordability probe NFR-3 requires before every read — is already covered by the existing
@@ -1004,16 +1014,17 @@ conventions of the family they join.
 - *The command file*, `.claude/commands/spec/show-me.md`, follows the existing `/spec:*` conventions
   (front matter with `allowed-tools`, `description`, `argument-hint`; `$ARGUMENTS`; documented in
   `.claude/commands/spec/README.md` alongside the other commands).
-- *The measurement script*, `.claude/commands/spec/show_me_facts.awk` (FR-21), sits beside the
-  command file and follows the repository's one existing precedent for an executable artefact in this
-  family, `.claude/commands/adr/generate_adr_index.awk`, in every respect: it is an awk program, it
-  carries the same `#!/usr/bin/awk -f` shebang line, it is committed **non-executable (mode
-  `100644`)** because `awk -f` reads it rather than executing it, and it is invoked
-  `awk -f <path> <args>` from the repository root. `.claude/commands/spec/README.md` documents it
-  alongside `/spec:show-me`, naming what it emits and that it is not invoked directly by a user.
-- *Its test script*, `.claude/commands/spec/show_me_facts_test.sh` (NFR-9), also sits beside the
-  command file. Unlike the awk program it **is** executed directly, so it carries a `#!/usr/bin/env sh`
-  shebang and is committed executable (mode `100755`).
+- *The measurement script* (FR-21) sits beside the command file in `.claude/commands/spec/`. Its
+  language is a design choice, so this requirement fixes conventions rather than a form: whatever is
+  chosen is **invocable directly from a checked-out repository with no build, install, restore or
+  generation step first**, is committed with whatever file mode that invocation actually requires
+  (the repository's one precedent, `.claude/commands/adr/generate_adr_index.awk`, is committed
+  non-executable at mode `100644` because `awk -f` reads it rather than executing it — a script
+  executed by path would instead need `100755`), and carries whatever first-line marker its language
+  conventionally uses. `.claude/commands/spec/README.md` documents it alongside `/spec:show-me`,
+  naming what it emits, how it is invoked, and that it is not invoked directly by a user.
+- *Its test script* (NFR-9) also sits beside the command file, under the same rule: no build step, a
+  file mode matching how it is actually run, and a README mention.
 - *The generated `show-me.md`* is valid markdown whose relative links all resolve from its location
   in the spec directory, and whose fenced blocks are closed.
 
@@ -1035,17 +1046,18 @@ touched on a stop.
 **NFR-9 — The measurement script is covered by an executable test that runs against real fixtures.**
 FR-21's script is the single point at which every mechanically countable value in this document is
 computed, so an undetected defect in it silently falsifies `show-me.md` rather than failing loudly.
-It is therefore delivered with a **sibling test script**,
-`.claude/commands/spec/show_me_facts_test.sh`, beside the program it tests.
+It is therefore delivered with a **sibling test script**, beside the program it tests in
+`.claude/commands/spec/`.
 
-*What it is.* A plain executable shell script that invokes the awk program under test. **No test
-framework, no new solution project, and nothing added under `src/` or `tests/`** — this spec has no
-C# component and that boundary is unchanged. This is a deliberate choice against the family's status
-quo, not an oversight in it: the only executable artefact anywhere in `.claude/` today is
-`generate_adr_index.awk`, it has no tests at all, there is no shell-test framework anywhere in this
-repository, every project under `tests/` is C#/xUnit, and no CI workflow lints or tests anything
-under `.claude/`. "Nothing runs it automatically" is the pre-existing condition of this whole family;
-this requirement leaves a regression net behind where there was none.
+*What it is.* A single directly-runnable script that invokes the measurement script and checks its
+output. Its language is a design choice like the measurement script's, and need not be the same one.
+**No test framework, no new solution project, and nothing added under `src/` or `tests/`** — this
+spec has no C# component and that boundary is unchanged. This is a deliberate choice against the
+family's status quo, not an oversight in it: the only executable artefact anywhere in `.claude/`
+today is `generate_adr_index.awk`, it has no tests at all, there is no shell-test framework anywhere
+in this repository, every project under `tests/` is C#/xUnit, and no CI workflow lints or tests
+anything under `.claude/`. "Nothing runs it automatically" is the pre-existing condition of this
+whole family; this requirement leaves a regression net behind where there was none.
 
 *What it does.* It invokes the measurement script against **named, tracked fixtures**, asserts on
 fields of the emitted JSON, prints which assertion failed, and **exits non-zero if any assertion
@@ -1141,19 +1153,19 @@ running `/spec:show-me`. It is a script a person or a task runs.
   `gh pr list` and `gh pr diff`, both already inside that list, so **no `gh` entry changes**.
   The wider allow-list is a different matter. It permits `Read`, `Glob`, `Grep` and a fixed set of
   `Bash(…)` prefixes — among them `Bash(wc:*)`, which already covers NFR-3's affordability probe, and
-  the `git` read commands this document names — but it contains **no `Bash(awk:*)`, no
-  `Bash(bash:*)`, no `Bash(sh:*)`, no `Bash(jq:*)` and no path-scoped script entry**. FR-21's
-  measurement script therefore cannot be invoked under the allow-list as it stands, and **this spec
-  adds exactly one entry**, `Bash(awk -f .claude/commands/spec/show_me_facts.awk:*)`, permitting that
-  one program in the `awk -f <path>` shape the precedent artefact already uses. A general
-  `Bash(awk:*)` grant is deliberately **not** requested: awk provides `system()` and
-  `"cmd" | getline`, so it would confer arbitrary command execution and make the `deny` list's
-  `curl`/`wget`/`ssh` entries bypassable. The precedent artefact,
-  `.claude/commands/adr/generate_adr_index.awk`, has no entry at all and runs by per-invocation
-  approval from five documented call sites; this spec chooses the narrow entry instead, because
-  `/spec:show-me` is meant to complete in one turn without a permission prompt in the middle of a
-  measurement. That single addition is the whole settings change this spec makes (FR-18, Out of
-  Scope).
+  the `git` read commands this document names — but it contains **no entry for any script
+  interpreter** (`bash`, `sh`, `awk`, `python3`, `dotnet run`) **and no path-scoped script entry**.
+  FR-21's measurement script therefore cannot be invoked under the allow-list as it stands in any
+  language, and **this spec adds exactly one entry**, naming the script's own path so that it permits
+  that one program and nothing else. The exact string depends on the language the design phase
+  chooses and is fixed there; the constraint that it be path-scoped rather than an interpreter grant
+  is fixed here, because every candidate language can execute arbitrary commands and an interpreter
+  grant would make the `deny` list's `curl`/`wget`/`ssh` entries bypassable (FR-18). The precedent
+  artefact, `.claude/commands/adr/generate_adr_index.awk`, has no entry at all and runs by
+  per-invocation approval from five documented call sites; this spec chooses the narrow entry
+  instead, because `/spec:show-me` is meant to complete in one turn without a permission prompt in
+  the middle of a measurement. That single addition is the whole settings change this spec makes
+  (FR-18, Out of Scope).
 - **A-1** Assumption: a finished spec's `tasks.md` is an accurate record of what was built — the
   command reconciles against it rather than re-deriving intent from the diff.
 - **A-2** Assumption: the reader of `show-me.md` knows Brighter as a library but has not read this
@@ -1183,11 +1195,12 @@ running `/spec:show-me`. It is a script a person or a task runs.
   changes, or any marker file that another command could read as a gate (FR-13).
 - **Posting to GitHub**: no PR comments, no PR description updates, no issue comments (FR-18).
 - **Any change to `.claude/settings.json` beyond the single path-scoped entry FR-21's measurement
-  script needs.** One entry is added, `Bash(awk -f .claude/commands/spec/show_me_facts.awk:*)`,
-  because no existing entry covers it (C-10). Everything else about the file is out of scope: no `gh`
-  entry is added, removed or widened; **no general interpreter grant** (`Bash(awk:*)`, `bash`, `sh`,
-  `jq`) is requested; the `deny` list is untouched; and the command's GitHub access stays inside the
-  `gh pr list` / `gh pr diff` entries that already exist (FR-18).
+  script needs.** One entry is added, naming that script's own path, because no existing entry covers
+  it in any language (C-10); its exact string is fixed by the design phase along with the language.
+  Everything else about the file is out of scope: no `gh` entry is added, removed or widened; **no
+  interpreter grant** (`bash`, `sh`, `awk`, `python3`, `dotnet run`) is requested, whatever the
+  language turns out to be; the `deny` list is untouched; and the command's GitHub access stays
+  inside the `gh pr list` / `gh pr diff` entries that already exist (FR-18).
 - **Any change to `.gitignore` beyond the single exact-match entry `.show-me-ledger.json`.** That one
   line is added so the *fact ledger* leaves `git status --porcelain` clean (FR-4, NFR-8, AC-30). No
   existing pattern is edited, and no wildcard form is used.
@@ -1506,13 +1519,15 @@ zero or omitted because a read was skipped.
 
 **AC-53** *(NFR-6)* **Given** the three delivered artefacts, **when** they are inspected, **then** the
 command file has front matter with `allowed-tools`, `description` and `argument-hint` and consumes
-`$ARGUMENTS` in the style of the other `.claude/commands/spec/*.md` files; the measurement script and
-its test script both sit in `.claude/commands/spec/`; `git ls-files --stage` shows the awk program at
-mode `100644` with a `#!/usr/bin/awk -f` first line, matching
-`.claude/commands/adr/generate_adr_index.awk`, and the test script at mode `100755`;
+`$ARGUMENTS` in the style of the other `.claude/commands/spec/*.md` files; **exactly one** measurement
+script and **exactly one** test script sit in `.claude/commands/spec/`, both tracked by git; **and
+when** each is run from a freshly cloned checkout with no build, install, restore or generation step
+performed first, **then** each runs — and the mode `git ls-files --stage` reports for each is the one
+its invocation actually requires (`100755` where the file is executed by path, `100644` where an
+interpreter is named and reads it, as `.claude/commands/adr/generate_adr_index.awk` is);
 `.claude/commands/spec/README.md` lists `/spec:show-me` in its command catalogue **and** documents the
-measurement script; and every relative link in a generated `show-me.md` resolves from the spec
-directory.
+measurement script, naming what it emits and how it is invoked; and every relative link in a
+generated `show-me.md` resolves from the spec directory.
 
 **AC-54** *(FR-8)* **Given** a complete spec declaring 28 top-level ids of which 26 are judged
 `Shipped`, one is `Shipped with deviation` and one is `Deferred` with a recorded follow-up issue,
@@ -1631,8 +1646,8 @@ no discretion to skip it), `## Inputs used` marks the `release_notes.md` row `us
 FR-16 row 5's nor row 5a's line appears anywhere in the output.
 
 **AC-70** *(FR-21, NFR-1)* **Given** the delivered measurement script and the tracked fixture
-`specs/9999-show-me-fixture/`, **when** it is invoked as
-`awk -f .claude/commands/spec/show_me_facts.awk specs/9999-show-me-fixture` from the repository root,
+`specs/9999-show-me-fixture/`, **when** it is invoked from the repository root in the form NFR-6
+fixes, with `specs/9999-show-me-fixture` as its target-spec argument,
 **then** its stdout is a **single** well-formed JSON object and nothing else, it carries a
 `schema_version` field and one named field per value FR-21 lists, its declared-id total is **3** and
 its task fields report **2** checkboxes with **0** unchecked, its total size is ≤ 65,536 bytes, and
@@ -1690,14 +1705,14 @@ source reads begin, at least **100,000 bytes** remain available to them; `## Wha
 carries a diagram and **not** FR-6 (e)'s budget line; and the run's total charged bytes are
 ≤ 1,048,576.
 
-**AC-79** *(NFR-9)* **Given** `.claude/commands/spec/show_me_facts_test.sh`, **when** it is run from
+**AC-79** *(NFR-9)* **Given** the delivered test script, **when** it is run from
 the repository root with the calibration branch present (C-8), **then** it invokes the measurement
 script against `specs/9999-show-me-fixture/`, `specs/0033-pg-advisory-lock-sha256/`,
 `specs/0002-sqs-cleanup/` and `specs/0036-scoped-lifetime-per-pipeline/`; asserts the declared-id
 totals **3, 8, 0 and 37** and the checkbox totals **2, 5, 6 and 82** with zero unchecked in each;
 exits `0` when every assertion holds; and, **when** any single asserted value is perturbed, prints
 which assertion failed and exits **non-zero**; **and when** the script is inspected, **then** it
-invokes no test framework, no `dotnet` command, and no file under `src/` or `tests/`.
+invokes no test framework and reads or runs no file under `src/` or `tests/`.
 
 **AC-80** *(NFR-9, NFR-2, FR-21)* **Given** a `show-me.md` whose counted body holds exactly **8**
 tokens outside its fenced blocks and whose single fenced block holds **8** further tokens, **when**
@@ -1714,11 +1729,14 @@ matches.
 
 **AC-82** *(FR-18, C-10, Out of Scope)* **Given** `.claude/settings.json` after this spec has shipped,
 **when** it is inspected, **then** its `allow` array contains **exactly one** entry that was not
-present before — `Bash(awk -f .claude/commands/spec/show_me_facts.awk:*)`; it contains no
-`Bash(awk:*)`, `Bash(bash:*)`, `Bash(sh:*)` or `Bash(jq:*)` entry; its `gh` entries are unchanged and
-still contain no `gh run` and no `gh api` entry; its `deny` array is unchanged; **and given**
-`.gitignore`, **then** it contains exactly one added line, the exact-match `.show-me-ledger.json`,
-with no wildcard form and no existing pattern edited.
+present before; that entry **names the measurement script's own path**, so that removing the script
+would leave the entry permitting nothing; it is **not** an interpreter grant — no added entry permits
+running arbitrary programs in the script's language (`bash`, `sh`, `awk`, `python3`, `dotnet run` or
+equivalent), which is demonstrated by showing that the entry does not permit a second, differently-named
+program in that same language to run; its `gh` entries are unchanged and still contain no `gh run`
+and no `gh api` entry; its `deny` array is unchanged; **and given** `.gitignore`, **then** it contains
+exactly one added line, the exact-match `.show-me-ledger.json`, with no wildcard form and no existing
+pattern edited.
 
 ## Additional Context
 
