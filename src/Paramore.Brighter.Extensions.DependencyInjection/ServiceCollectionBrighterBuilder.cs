@@ -158,7 +158,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         }
 
         /// <summary>
-        /// Scan the assemblies provided for implementations of IAmAMessageMapper and register them with ServiceCollection
+        /// Scan the assemblies provided for public and nested-public synchronous and asynchronous message mappers
+        /// and register them with ServiceCollection. Non-public mappers can be registered explicitly with MapperRegistry.
         /// </summary>
         /// <param name="assemblies">The assemblies to scan</param>
         /// <param name="defaultMessageMapper">We use <see cref="CloudEventJsonMessageMapper"/> as the default if no mapper is specified; you can use this to choose a different default such as <see cref="JsonMessageMapper"/></param>
@@ -270,7 +271,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             var mappers =
                 from ti in assemblies.SelectMany(GetLoadableTypes).Distinct()
-                where ti is { IsClass: true, IsAbstract: false, IsInterface: false }
+                where ti is { IsClass: true, IsAbstract: false, IsInterface: false } && (ti.IsPublic || ti.IsNestedPublic)
                 from i in ti.GetInterfaces()
                 where i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IAmAMessageMapper<>)
                 select new { RequestType = i.GenericTypeArguments.First(), HandlerType = ti };
@@ -285,7 +286,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             var mappers =
                 from ti in assemblies.SelectMany(GetLoadableTypes).Distinct()
-                where ti is { IsClass: true, IsAbstract: false, IsInterface: false }
+                where ti is { IsClass: true, IsAbstract: false, IsInterface: false } && (ti.IsPublic || ti.IsNestedPublic)
                 from i in ti.GetInterfaces()
                 where i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IAmAMessageMapperAsync<>)
                 select new { RequestType = i.GenericTypeArguments.First(), HandlerType = ti };
