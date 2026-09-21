@@ -104,8 +104,10 @@ forbids, because that is how it shapes the decision below.
 The closest prior art in this repository is
 [ADR 0071: Shiftable Review Gear for the TDD Approval Gate](0071-tdd-review-gear.md) — the only other
 ADR that designs a `/spec:*` command's own behaviour rather than Brighter's C# runtime. Like this
-one, it records a decision about the project's own agent tooling; unlike the library's usual
-interface-heavy ADRs, neither has a C# component at all. There is no other prior art for this shape.
+one, it records a decision about the project's own agent tooling rather than about a type a consumer
+will ever reference — which stays true of this ADR even though it settles on a C# measurement
+script, because that script is build tooling beside the command file and no part of the shipped
+library. There is no other prior art for this shape.
 
 ## Decision
 

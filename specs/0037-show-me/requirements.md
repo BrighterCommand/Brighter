@@ -94,8 +94,8 @@ These terms are used with exactly these meanings throughout this document.
 | **Deviation entry** | One bullet in `## Did it ship what it said?` (FR-8) naming one top-level numbered requirement whose status is **not** `Shipped`, together with that status, its reason, its evidence and — for `Deferred`/`Dropped`/`Withdrawn` — its follow-up. Deviation entries are the only per-requirement items the section enumerates; requirements that shipped as planned are accounted for collectively by FR-8's shipped-as-planned line. |
 | **Diagram** | One fenced code block inside `show-me.md` that draws a relationship in the change under review — a call or data flow, a component interaction, a lifecycle, or a type/file hierarchy. Either a Mermaid block (```` ```mermaid ````) or a plain fenced block holding an ASCII sketch or tree. Governed entirely by FR-6; permitted only in `## What changed and why` (FR-6) and `## Where to look first` (FR-14). A fenced block that is not drawing such a relationship — a quoted log line, a code excerpt, a command — is not a diagram and is not permitted by this document. |
 | **Advisory** | Producing a level and rationale only: no gating, no blocking, no refusal, no label, no comment, no marker file, no change to any approval state, and no behavioural difference between a `Low` result and a `High` result. Whatever the level, the command completes its run and reports per FR-19. |
-| **Measurement script** | The single executable artefact, delivered by this spec and living beside the command file in `.claude/commands/spec/`, that performs every mechanically countable measurement this document defines and emits them as one JSON object on stdout (FR-21). **Its implementation language, filename and invocation form are a design decision, not a requirement** — this document constrains only what it emits, that there is exactly one of it, and how narrowly it may be permitted to run (FR-21, NFR-6, C-10). It is part of the command, not an input to it: it is never an `## Inputs used` row (FR-15) and never an FR-16 absence row. |
-| **Fact ledger** | The file `specs/{target spec directory}/.show-me-ledger.json`, holding the JSON the measurement script emitted for the run that wrote it. It is **working state, not a deliverable**: it is gitignored by an exact-match `.gitignore` entry, is never staged or committed, is never cited from `show-me.md` (FR-17, NFR-5), and is written only after the FR-3 precondition passes (FR-3, FR-4, FR-21). It holds measured values only; it never caches fetched diff text. |
+| **Measurement script** | The single executable artefact, delivered by this spec and living beside the command file in `.claude/commands/spec/`, that performs every mechanically countable measurement this document defines and writes them as one JSON object to the *fact ledger* (FR-21). **Its implementation language, filename and invocation form are a design decision, not a requirement** — this document constrains only what it emits, that there is exactly one of it, and how narrowly it may be permitted to run (FR-21, NFR-6, C-10). It is part of the command, not an input to it: it is never an `## Inputs used` row (FR-15) and never an FR-16 absence row. |
+| **Fact ledger** | The file `specs/{target spec directory}/.show-me-ledger.json`, holding the JSON the measurement script wrote for the run that produced it. It is the **only** channel by which measured values reach the command. It is **working state, not a deliverable**: it is gitignored by an exact-match `.gitignore` entry, is never staged or committed, is never cited from `show-me.md` (FR-17, NFR-5), and is written only after the FR-3 precondition passes (FR-3, FR-4, FR-21). It holds measured values only; it never caches fetched diff text. |
 | **Charged bytes** | The number of bytes of file or command output that a read brings into the command's context. A full-content read is charged its whole-file byte count; a targeted or chunked read is charged the byte count of the extract actually brought into context. Bytes that the measurement script reads but does not emit are **not** charged — only its JSON output is. `wc -c` is a size measurement, **not a read**, and is charged nothing. This is the unit NFR-3's budget is denominated in. |
 
 **Public API declaration line — the exact rule.** A line of the spec diff qualifies when it is in a
@@ -185,8 +185,9 @@ stop exists, and no absent or degraded **input** ever stops the command (FR-16).
 
 **Ordering — the gate runs above both writes.** The measurement script supplies the task-checkbox
 counts this gate reads, so the script necessarily runs before the gate is evaluated. That is not a
-write: the script emits its JSON to stdout and the *fact ledger* is written only once this gate has
-passed. A run that stops here therefore leaves the repository byte-for-byte unchanged (NFR-8), with
+write: on a spec that fails this gate the script writes **no** ledger at all, reporting the gate
+facts on its standard error stream instead (FR-21), so the *fact ledger* comes into existence only
+once the gate has passed. A run that stops here therefore leaves the repository byte-for-byte unchanged (NFR-8), with
 no ledger created and no pre-existing ledger touched (AC-7, AC-71).
 
 #### Output file
@@ -205,7 +206,7 @@ holds the JSON the measurement script emitted for this run (FR-21) and exists so
 resolves and fetches each remote input at most once rather than invoking `gh pr diff` a second time.
 It is replaced wholly on re-run under exactly the same rules as the deliverable — no append, no
 numbered variant, no backup — and is never staged, committed or pushed. It holds the measured JSON
-only: it never caches fetched diff text, so its size stays bounded by FR-21's stdout cap.
+only: it never caches fetched diff text, so its size stays bounded by FR-21's cap.
 
 *Why two files do not make a third state in git.* `.gitignore` gains the **exact-match** entry
 `.show-me-ledger.json` — an exact filename, deliberately not a glob, because this repository already
@@ -708,34 +709,54 @@ script, and nowhere else in the delivered artefacts. This is the whole point of 
 pattern written into markdown prose acquires the prose's escaping, and a pattern written more than
 once drifts. Neither failure is detectable by reading the command file.
 
-*The contract.* The script writes **one JSON object to stdout and nothing else** — no progress text,
-no warnings interleaved — carrying at minimum a `schema_version` integer and one named field per
-value above, with a null (never a zero, never an omission) for any value that is not determinable.
-Its stdout must be **≤ 65,536 bytes**, which is what makes it affordable to read under NFR-3 without
-a pre-check. **This figure is a chosen cap, not a measurement**: no ledger has yet been generated, so
-there is no observed size to calibrate against, and the cap is set roughly an order of magnitude
-above the expected low-single-digit-KB object precisely so that it binds on a defect rather than on
-normal output. It exits `0` when it produced a parseable object and non-zero otherwise.
+*The contract is the ledger file, not a stream.* Every measured value reaches the command by exactly
+one route: the script writes **one JSON object** to the *fact ledger* (FR-4), carrying at minimum a
+`schema_version` integer and one named field per value above, with a null (never a zero, never an
+omission) for any value that is not determinable. It exits `0` when it wrote a complete, parseable
+ledger and non-zero otherwise, so the exit code — not any parsing of the script's output — is what
+tells the command whether to proceed.
 
-*The ledger.* Having emitted that object, and **only once the FR-3 precondition has passed**, the
-same object is written to the *fact ledger* (FR-4). This is what lets one run resolve and fetch each
-remote input at most once (FR-18): `gh pr list` and `gh pr diff` are each invoked at most once per
-run. The ledger holds these measured values only and never caches fetched diff text. A stop under
-FR-1, FR-2 or FR-3 writes no ledger and modifies no existing one.
+**Data the command must parse never travels on standard output.** A script's standard output is not
+wholly its own: the toolchain that runs it may write compiler, restore or runtime diagnostics there,
+and on some toolchains it demonstrably does. Those appear only when the script is recompiled or its
+dependencies change, so a standard-output contract is one that holds under test and fails on a fresh
+checkout or in CI. A file the script writes itself has no such exposure. The two small payloads that
+must reach the command *without* a ledger existing — FR-3's gate facts, and the word-count result
+below — travel on **standard error**, which carries no toolchain diagnostics, and neither is bulk
+data.
+
+*The cap.* The ledger must be **≤ 65,536 bytes**, which is what makes it affordable to read under
+NFR-3 without a pre-check. **This figure is a chosen cap, not a measurement**: no ledger has yet been
+generated, so there is no observed size to calibrate against, and the cap is set roughly an order of
+magnitude above the expected low-single-digit-KB object precisely so that it binds on a defect rather
+than on normal output.
+
+*When the ledger is written.* **Only once the FR-3 precondition has passed.** Writing it is what lets
+one run resolve and fetch each remote input at most once (FR-18): `gh pr list` and `gh pr diff` are
+each invoked at most once per run. The ledger holds measured values only and never caches fetched
+diff text. A stop under FR-1, FR-2 or FR-3 writes no ledger and modifies no existing one.
+
+*The write is atomic.* A partially-written ledger must never be observable, and a script that fails
+partway through must leave any pre-existing ledger byte-for-byte unchanged and must create none where
+none existed. Whatever mechanism achieves this leaves no temporary artefact behind (FR-4). Without
+this rule a failed run could leave a truncated ledger that the next run reads as fact, which is the
+one way this design could produce a confidently wrong `show-me.md`.
 
 *Modes.* The script is invoked at most twice per run: once before the deliverable is written, to
 produce the facts above; and once after it is written, to apply NFR-2's mechanical word-count rule to
-the generated `show-me.md` and report the counted total, the number of excluded fenced-block lines,
-and whether the total is inside the 400–2,000 range. The second invocation reads and writes nothing
-else and does not touch the ledger.
+the generated `show-me.md` and report — on standard error, per the contract above — the counted
+total, the number of excluded fenced-block lines, and whether the total is inside the 400–2,000
+range. The second invocation writes no file at all and does not touch the ledger.
 
-*Offline.* With no network and no `gh` the script still exits `0` and still emits a complete object,
+*Offline.* With no network and no `gh` the script still exits `0` and still writes a complete ledger,
 with the PR fields null and a stated reason, so NFR-4's guarantee is unaffected.
 
 *The one failure mode, with defined text.* If the script is absent, is unreadable, exits non-zero, or
-emits output the command cannot parse as a single JSON object, the command **stops without writing or
-modifying any file** — no `show-me.md`, no ledger — and prints exactly:
-`/spec:show-me could not run its measurement script ({path}): {absent|unreadable|exited {code}|output was not a single JSON object}. No file was written. This is a tooling fault, not a fault in spec {dir} — re-run after restoring the script.`
+exits `0` having written a ledger the command cannot parse as a single JSON object, the command
+**stops without writing or modifying any file** — no `show-me.md`, and no ledger beyond whatever the
+atomicity rule above already guarantees, which is none where none existed and the previous one
+untouched where one did — and prints exactly:
+`/spec:show-me could not run its measurement script ({path}): {absent|unreadable|exited {code}|ledger was not a single JSON object}. No file was written. This is a tooling fault, not a fault in spec {dir} — re-run after restoring the script.`
 The command **must not** fall back to computing these values inline, and **must not** write a
 partial, guessed or zero-filled `show-me.md`. A missing measurer is not a missing input: FR-16's
 "no absence fails the command" governs the spec's inputs, and the script is part of the command, so
@@ -1051,8 +1072,9 @@ It is therefore delivered with a **sibling test script**, beside the program it 
 
 *What it is.* A single directly-runnable script that invokes the measurement script and checks its
 output. Its language is a design choice like the measurement script's, and need not be the same one.
-**No test framework, no new solution project, and nothing added under `src/` or `tests/`** — this
-spec has no C# component and that boundary is unchanged. This is a deliberate choice against the
+**No test framework, no new solution project, and nothing added under `src/` or `tests/`** —
+whatever language the two scripts are written in, they sit beside the command file and form no part
+of the product build, and that boundary is unchanged. This is a deliberate choice against the
 family's status quo, not an oversight in it: the only executable artefact anywhere in `.claude/`
 today is `generate_adr_index.awk`, it has no tests at all, there is no shell-test framework anywhere
 in this repository, every project under `tests/` is C#/xUnit, and no CI workflow lints or tests
@@ -1648,11 +1670,13 @@ FR-16 row 5's nor row 5a's line appears anywhere in the output.
 **AC-70** *(FR-21, NFR-1)* **Given** the delivered measurement script and the tracked fixture
 `specs/9999-show-me-fixture/`, **when** it is invoked from the repository root in the form NFR-6
 fixes, with `specs/9999-show-me-fixture` as its target-spec argument,
-**then** its stdout is a **single** well-formed JSON object and nothing else, it carries a
-`schema_version` field and one named field per value FR-21 lists, its declared-id total is **3** and
-its task fields report **2** checkboxes with **0** unchecked, its total size is ≤ 65,536 bytes, and
-its exit code is `0`; **and when** the delivered command file is searched, **then** it contains no
-shell pipeline computing any of those values itself.
+**then** its exit code is `0`, and `specs/9999-show-me-fixture/.show-me-ledger.json` exists and is a
+**single** well-formed JSON object, carrying a `schema_version` field and one named field per value
+FR-21 lists, with a declared-id total of **3** and task fields reporting **2** checkboxes and **0**
+unchecked, and a total size ≤ 65,536 bytes; **and when** the command file is searched, **then** it
+contains no pipeline computing any of those values itself; **and when** the script's standard output
+is inspected, **then** the command parsed nothing from it — the run's outcome is determined by the
+exit code and the ledger alone, so any diagnostic the toolchain writes there is harmless.
 
 **AC-71** *(FR-21, FR-3, NFR-8)* **Given** a target spec with an unchecked task and no pre-existing
 `specs/{spec}/.show-me-ledger.json`, **when** the command is run, **then** it prints the FR-3 stop
@@ -1662,12 +1686,13 @@ the same spec with a pre-existing ledger, **when** the command is run, **then** 
 byte-for-byte unchanged.
 
 **AC-72** *(FR-21)* **Given** each of four states of the measurement script in turn — absent, present
-but unreadable, present and readable but exiting non-zero, and present and exiting `0` but emitting
-output that is not a single JSON object — **when** the command is run against an otherwise complete
+but unreadable, present and readable but exiting non-zero, and present and exiting `0` having written
+a ledger that is not a single JSON object — **when** the command is run against an otherwise complete
 spec, **then** in every case it prints FR-21's measurement-script stop message naming which of the
-four applies, writes no `show-me.md` and no ledger, leaves the repository byte-for-byte unchanged,
-and **does not** compute any measured value inline or emit a partial, guessed or zero-filled
-`show-me.md`.
+four applies, writes no `show-me.md`, leaves `git status --porcelain` byte-identical to its
+before-state, and **does not** compute any measured value inline or emit a partial, guessed or
+zero-filled `show-me.md`; **and** in the first three states no ledger is created where none existed
+and any pre-existing ledger is byte-for-byte unchanged, per FR-21's atomicity rule.
 
 **AC-73** *(FR-21, FR-18, FR-4)* **Given** a successful run against a spec whose PR is discovered,
 **when** the commands the run issued are inspected in order, **then** `gh pr list` was invoked at most
@@ -1737,6 +1762,14 @@ program in that same language to run; its `gh` entries are unchanged and still c
 and no `gh api` entry; its `deny` array is unchanged; **and given** `.gitignore`, **then** it contains
 exactly one added line, the exact-match `.show-me-ledger.json`, with no wildcard form and no existing
 pattern edited.
+
+**AC-83** *(FR-21, FR-4)* **Given** a measurement script that fails partway through writing its
+ledger, **when** the command is run against a spec that has **no** pre-existing ledger, **then** no
+`specs/{spec}/.show-me-ledger.json` exists afterwards and no temporary or partial artefact is left
+beside it; **and given** the same failure against a spec whose ledger already exists, **then** that
+ledger is byte-for-byte identical to its before-state; **and when** a successful run is interrupted
+and repeated, **then** at no point does a reader of the ledger observe a truncated or
+half-written object.
 
 ## Additional Context
 
