@@ -63,28 +63,48 @@ three (Gcp, MSSQL, PostgresSQL), `Paramore.Test.Helpers` by one (MQTT), and
 `Paramore.Brighter` itself is referenced — directly or transitively through the gateway — by all
 twelve.
 
-**Two project rules pull against each other here.**
-`.agent_instructions/testing.md` *Test Scope and Isolation* carries three bullets, and the third is
-the one that bites:
+**Two project rules govern this, and they share one purpose.**
+`.agent_instructions/testing.md` *Test Scope and Isolation* carries three bullets:
 
 > - Do not expose more than is necessary from an assembly
 >   - An assembly is a module, it's surface area should be as narrow as possible.
 >   - Do not make export classes or methods from a module to test them; we only test exports from
 >     modules, not implementation details.
 
-**This decision contravenes that third bullet, and the ADR says so plainly rather than calling it a
-tension.** Publishing a predicate from `Paramore.Brighter` so that twelve test projects can call it
-is exactly "export … methods from a module to test them". FR-12 grants the exception expressly —
-**one new public type** notwithstanding NFR-5 — after reasoning that only the core assembly is
-referenced by all twelve. An exception granted by an approved requirement is the right way to break
-a project rule; doing it silently is not.
+The goal they serve is a module that is **narrow and deep**, not wide and shallow, and tests that sit
+**at the module's exports**. Both bullets — and the *No InternalsVisibleTo* rule beside them — warn
+against the same failure: **coupling a test to the module's implementation details**. Read that way
+the third bullet is conditional, not absolute. It forbids widening the surface to reach *inside*.
+The question it poses is therefore: **is there a path through the module's existing exports to the
+behaviour under test?** If there is, widening is unjustified. If there is not, exporting may be what
+it takes to test the behaviour at all — and the right response is to widen honestly and record what
+was widened.
 
-The alternative that would have kept the guard invisible is closed by a second rule. *No
-InternalsVisibleTo* is categorical: "**NEVER** use `InternalsVisibleTo` to expose internal classes
-for testing." So the choice is between a declared public widening and twelve copies of the guard.
-(That section's own prescription — "make the interface **public** so it can be injected through the
-public API" — is about injecting a dependency for testing and is **not** a licence for this; it is
-cited here only for the prohibition, not as endorsement.)
+**Here there is no such path, and the widening reveals something about the module rather than
+concealing something.** `Paramore.Brighter` exports `Subscription.ChannelFactoryType` and
+`IAmAChannelFactory`, but nothing that expresses the *relationship* between them — whether a given
+subscription's declaration is one this module can actually route on. That relationship is a real
+term of the module's contract: `CombinedChannelFactory` already depends on it at runtime, and gets it
+wrong silently when a subscription inherits the default. The predicate is not an implementation
+detail hoisted into view so a test can reach it; it is a rule of the module's own contract that the
+module had never named. FR-12's permission for **one new public type** notwithstanding NFR-5 is
+therefore not an exception grudgingly spent — it is the requirement recognising the same gap.
+
+The corroboration is C-10. Out-of-repo gateway authors face this defect with no remedy, and a rule
+belonging to the module is one they can apply to their own assemblies. An export that only a test
+could ever want would not have that property; this one does, which is the sign it belongs on the
+module rather than beside it.
+
+**`InternalsVisibleTo` is rejected for the reason behind the rule, not merely by the rule.** It is
+forbidden outright — "**NEVER** use `InternalsVisibleTo` to expose internal classes for testing" —
+because it makes `internal` a lie. The comfort of `internal` is that a member may be refactored
+freely, since every dependency on it lives inside the module; once tests in another assembly bind to
+it that is false, and refactoring breaks them. The member has been made public in effect, just to a
+narrower audience, while the keyword claims otherwise. Honest widening is preferable precisely
+because it forces the question this section just answered — *why does this belong on the module?* —
+and that question is where the design insight is. (The section's own prescription, "make the
+interface **public** so it can be injected through the public API", is about injecting a dependency
+for testing; it is cited here for its prohibition, not as endorsement of this shape.)
 
 **Twelve near-identical tests are a drift hazard.** FR-12 states it directly: "Copying the predicate
 into twelve test projects is not acceptable — twelve copies of a guard drift." The repository
@@ -380,17 +400,17 @@ Structural changes precede behavioural ones, and each step is independently test
 
 ### Negative
 
-- **A permanently public type in the shipped core package whose only in-repo consumer is a test
-  guard.** `SubscriptionChannelFactoryDeclaration` is part of `Paramore.Brighter`'s API surface and
-  carries the versioning commitment that implies. This sits in tension with
-  `.agent_instructions/testing.md`'s *Test Scope and Isolation* rule that an assembly's "surface
-  area should be as narrow as possible", and it **contravenes** that section's third bullet — "Do
-  not make export classes or methods from a module to test them" — under the exception FR-12 grants
-  expressly. `InternalsVisibleTo`, which would have avoided the exposure, is forbidden outright by
-  the same document. It is the narrowest option that reaches all twelve test projects *and* the
-  out-of-repo gateway authors of C-10; a generator-emitted predicate would be narrower still on
-  public surface alone, and is rejected under Alternatives Considered for the C-10 reason. Narrowed
-  as far as it can be: one static type, two methods, no new result type.
+- **A permanent widening of the shipped core package's surface, whose only in-repo consumer is a
+  test guard.** `SubscriptionChannelFactoryDeclaration` is part of `Paramore.Brighter`'s API and
+  carries the versioning commitment that implies. The Context argues this is an honest widening
+  rather than a breach — there is no path through existing exports to the behaviour, and the rule it
+  names belongs to the module — but the cost is real either way, and a reader who does not accept
+  that argument should read this as surface spent to make a guard testable. It is the narrowest
+  option that reaches all twelve test projects *and* C-10's out-of-repo authors; a generator-emitted
+  predicate would be narrower on public surface alone and is rejected under Alternatives Considered
+  for the C-10 reason. Narrowed as far as it can be: one static type, two methods, no new result
+  type. The honest test of the argument is whether anyone outside this repository ever calls it; if
+  in practice nobody does, the widening was a testing concession after all.
 - **Twelve generated files and twelve configuration entries** are added to the repository, and the
   generated-tree audit will then require them to stay in step. A flag or path change that is not
   regenerated becomes a CI failure in the `build` job.
@@ -450,10 +470,10 @@ Structural changes precede behavioural ones, and each step is independently test
   narrow-surface rule any better. It requires eleven new project references, eleven places for a
   thirteenth gateway to be forgotten, against one configuration line. And a test assembly cannot
   serve the out-of-repo gateway authors of C-10, who face the identical defect.
-- **`InternalsVisibleTo` on `Paramore.Brighter`.** Rejected because
-  `.agent_instructions/testing.md` forbids it categorically — "**NEVER** use `InternalsVisibleTo` to
-  expose internal classes for testing" — and names the deliberate public widening chosen here as
-  the alternative. It would in any case need twelve public-key-qualified entries, the assembly
+- **`InternalsVisibleTo` on `Paramore.Brighter`.** Rejected; the reasoning is in Context and is not
+  repeated here. In short: it is forbidden categorically, and the reason is that it makes `internal`
+  a lie — the member becomes public to a narrower audience while the keyword still promises it can
+  be refactored freely. It would in any case need twelve public-key-qualified entries, the assembly
   being strong-named.
 - **A generator-emitted predicate** — one Liquid template rendering the predicate itself into each
   of the twelve test projects, exactly as `SharedGenerator` already renders four helper files into
