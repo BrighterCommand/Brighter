@@ -48,8 +48,16 @@ namespace Paramore.Brighter.Test.Generator.Generators;
 /// An optional predicate that, when returning <c>true</c> for a template file name, leaves that
 /// template out of the suite.
 /// </param>
+/// <param name="PrepareModel">
+/// An optional action invoked with a template's path and <paramref name="Model"/> immediately
+/// before that template is rendered, so a suite can set per-template state on the model. It runs
+/// after <paramref name="Ignore"/> has already chosen the templates, so it can only change what a
+/// rendered file contains, never which files the suite owns - which is why planning a suite can
+/// ignore it.
+/// </param>
 public sealed record GenerationSuite(
     string Prefix,
     string TemplateFolderName,
     object Model,
-    Func<string, bool>? Ignore = null);
+    Func<string, bool>? Ignore = null,
+    Action<string, object>? PrepareModel = null);

@@ -206,11 +206,8 @@ public class MsSqlMessagingGateway(IAmARelationalDatabaseConfiguration configura
         _ensured[makeChannels] = true;
     }
 
-    // GetDDL formats the name into CREATE TABLE [{0}] and escapes nothing, so the one character
-    // that matters is ']' — it closes the bracket and everything after it is free SQL. Everything
-    // else a bracketed identifier legally holds is allowed through, hyphens and spaces and dots
-    // included: queue tables are routinely named after a GUID, and a stricter rule here would
-    // reject names this gateway has always accepted.
+    // The runtime queue statements interpolate bracketed names without escaping ']', so keep
+    // rejecting it here even though the public DDL builder can safely quote it.
     private string ValidatedQueueTableName(OnMissingChannel makeChannels)
     {
         var queueTable = Configuration.QueueStoreTable;

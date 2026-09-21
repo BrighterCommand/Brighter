@@ -119,6 +119,20 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
+        /// Begins the fluent interface with a global inbox configuration.
+        /// </summary>
+        /// <remarks>
+        /// Used with <see cref="NoExternalBus"/>. Calling <see cref="ExternalBus"/> replaces this configuration
+        /// with that method's inbox configuration, including when its argument is omitted or null.
+        /// </remarks>
+        /// <param name="inboxConfiguration">The global inbox configuration, or <see langword="null"/> for no global inbox.</param>
+        /// <returns>An <see cref="INeedAHandlers"/> to configure the handlers.</returns>
+        public static INeedAHandlers StartNew(InboxConfiguration? inboxConfiguration)
+        {
+            return new CommandProcessorBuilder { _inboxConfiguration = inboxConfiguration };
+        }
+
+        /// <summary>
         /// Supplies the specified handler configuration, so that we can register subscribers and the handler factory used to create instances of them
         /// </summary>
         /// <param name="handlerConfiguration">The handler configuration.</param>
@@ -310,6 +324,7 @@ namespace Paramore.Brighter
                     policyRegistry: _policyRegistry,
                     resilienceResiliencePipelineRegistry: _resiliencePipelineRegistry,
                     featureSwitchRegistry: _featureSwitchRegistry,
+                    inboxConfiguration: _inboxConfiguration,
                     instrumentationOptions: _instrumetationOptions.Value,
                     requestSchedulerFactory: _requestSchedulerFactory);
             }

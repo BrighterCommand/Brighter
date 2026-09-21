@@ -33,6 +33,7 @@ using Xunit;
 namespace Paramore.Brighter.Gcp.Tests.Outbox.SpannerText.Causation;
 
 [Trait("Category", "Spanner")]
+[Collection("SpannerTextOutbox")]
 public class CausationTrackingOutboxTests : CausationTrackingOutboxBaseTests<System.Data.Common.DbTransaction>
 {
     private readonly SpannerTextOutboxProvider _outboxProvider = new();

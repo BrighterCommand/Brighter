@@ -1,0 +1,94 @@
+using System.Text;
+using Paramore.Brighter.JsonConverters;
+using Paramore.Brighter.MessagingGateway.MQTT;
+using Xunit;
+
+namespace Paramore.Brighter.MQTT.Tests;
+
+/// <summary>
+/// The arrival handler's contract for a payload it cannot turn into a <see cref="Message"/>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// MQTTnet hands every arriving payload to a callback registered on its own dispatch loop. The
+/// handler deserialises that payload and writes the result into the channel the consumer's
+/// <c>Receive</c> reads from. Neither step is safe on a payload someone else published: a literal
+/// <c>null</c> document deserialises to <c>null</c>, and a malformed one throws.
+/// </para>
+/// <para>
+/// A <c>null</c> written into the channel reaches the pump, which dereferences
+/// <c>Message.Header</c> and fails on an unrelated thread. A throw escapes into MQTTnet's dispatch
+/// loop rather than into any caller. Either way one poison message published by anybody on the
+/// topic takes down a consumer, so the handler must drop what it cannot read.
+/// </para>
+/// <para>
+/// Exercised without a broker, through <see cref="MqttMessageCreator"/> — the public inverse of
+/// <see cref="MqttMessagePublisher.CreateMqttMessage"/>, and the MQTT counterpart of
+/// <c>KafkaMessageCreator</c>, which <c>Paramore.Brighter.Kafka.Tests</c> covers the same way.
+/// </para>
+/// <para>
+/// ⚠️ Keep the <c>[Trait("Category", "MQTT")]</c> below: <c>mqtt-ci</c> filters on
+/// <c>Category=MQTT</c>, and the <c>build</c> job runs an explicit list of four projects that does
+/// not include this one, so a test here without that trait runs in NEITHER job.
+/// </para>
+/// </remarks>
+[Trait("Category", "MQTT")]
+public class MqttPayloadDeserialisationTests
+{
+    [Fact]
+    public void When_a_payload_cannot_be_deserialised_should_be_dropped_rather_than_written()
+    {
+        // Arrange — the two payloads a publisher can put on the topic that the handler cannot
+        // turn into a message: one that deserialises to null, one that does not parse at all
+        var deserialisesToNull = Encoding.UTF8.GetBytes("null");
+        var malformed = Encoding.UTF8.GetBytes("{ this is not json");
+
+        // Act
+        var fromNull = MqttMessageCreator.CreateMessage(deserialisesToNull, "test/topic");
+        var fromMalformed = MqttMessageCreator.CreateMessage(malformed, "test/topic");
+
+        // Assert — both are dropped, and neither throws out of the handler
+        Assert.Null(fromNull);
+        Assert.Null(fromMalformed);
+    }
+
+    [Fact]
+    public void When_a_payload_carries_an_illegal_header_value_should_be_dropped_rather_than_escaping()
+    {
+        // Arrange - payloads that parse as JSON but carry a value no header field will accept.
+        // ContentType is the reachable case: MessageHeader exposes System.Net.Mime.ContentType
+        // through a public setter with no registered converter, so it is populated as a POCO and
+        // its own setters validate. Those setters are user code, so what they throw is NOT
+        // remapped to JsonException the way the Utf8JsonReader's own faults are.
+        var illegalMediaType = Encoding.UTF8.GetBytes(
+            "{\"header\":{\"contentType\":{\"mediaType\":\"garbage\"}}}");     // FormatException
+        var emptyMediaType = Encoding.UTF8.GetBytes(
+            "{\"header\":{\"contentType\":{\"mediaType\":\"\"}}}");             // ArgumentException
+        var nullContentType = Encoding.UTF8.GetBytes(
+            "{\"header\":{\"contentType\":null}}");                            // NullReferenceException
+
+        // Act / Assert - each is dropped. A throw here reaches MQTTnet's dispatch loop rather
+        // than any caller, so one such payload would stop the consumer for every other message.
+        Assert.Null(MqttMessageCreator.CreateMessage(illegalMediaType, "test/topic"));
+        Assert.Null(MqttMessageCreator.CreateMessage(emptyMediaType, "test/topic"));
+        Assert.Null(MqttMessageCreator.CreateMessage(nullContentType, "test/topic"));
+    }
+
+    [Fact]
+    public void When_a_payload_is_a_valid_message_should_be_returned_for_writing()
+    {
+        // Arrange — a well-formed message, so the test above cannot pass by dropping everything
+        var message = new Message(
+            new MessageHeader(Id.Random(), new RoutingKey("test/topic"), MessageType.MT_EVENT),
+            new MessageBody("{ \"value\": 42 }"));
+        var payload = Encoding.UTF8.GetBytes(
+            System.Text.Json.JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
+
+        // Act
+        var deserialised = MqttMessageCreator.CreateMessage(payload, "test/topic");
+
+        // Assert
+        Assert.NotNull(deserialised);
+        Assert.Equal(message.Body.Value, deserialised!.Body.Value);
+    }
+}

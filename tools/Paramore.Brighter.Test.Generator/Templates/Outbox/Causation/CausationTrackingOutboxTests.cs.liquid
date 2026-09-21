@@ -33,6 +33,7 @@ using Xunit;
 namespace {{ Namespace }}.Outbox{{ Prefix }}.Causation;
 {% if Category != null %}
 [Trait("Category", "{{Category}}")]{% endif %}
+{% if CollectionName != null %}[Collection("{{CollectionName}}")]{% endif %}
 public class CausationTrackingOutboxTests : CausationTrackingOutboxBaseTests<{{ Transaction }}>
 {
     private readonly {{ OutboxProvider }} _outboxProvider = new();

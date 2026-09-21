@@ -33,6 +33,7 @@ using Xunit;
 namespace Paramore.Brighter.MSSQL.Tests.Outbox.Binary.Causation;
 
 [Trait("Category", "MSSQL")]
+[Collection("MSSQLBinaryOutbox")]
 public class CausationTrackingOutboxTests : CausationTrackingOutboxBaseTests<System.Data.Common.DbTransaction>
 {
     private readonly MSSQLBinaryOutboxProvider _outboxProvider = new();

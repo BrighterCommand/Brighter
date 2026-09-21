@@ -1385,7 +1385,7 @@ namespace Paramore.Brighter
             {
                 if (requestContext?.ResilienceContext != null)
                 {
-                    resiliencePipeline.Execute(_ => action, requestContext.ResilienceContext);
+                    resiliencePipeline.Execute(_ => action(), requestContext.ResilienceContext);
                 }
                 else
                 {
