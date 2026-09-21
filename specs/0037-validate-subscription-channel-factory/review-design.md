@@ -1,285 +1,290 @@
-# Review: design — 0037-validate-subscription-channel-factory (ADR 0073, round 4)
+# Review: design — 0037-validate-subscription-channel-factory (ADR 0073, round 5)
 
-**Date**: 2026-09-21
+**Date**: 2026-09-22
 **Threshold**: 60
 **Verdict**: NEEDS WORK
 
 8 findings at or above threshold 60. Address these before approving.
 
-> **Verification note.** All nine findings re-checked against the working tree before filing; **all
-> nine hold, none rejected, and no grounding error was found in the reviewer's own evidence this
-> round.** Findings 1, 2, 3 and 7 are defects **round 3's fixes introduced** — including, for the
-> **fourth consecutive round**, a stale copy of a superseded argument (finding 3), and, for the
-> **second consecutive round**, an assertion added to discharge AC-27's "at most once" that does not
-> discharge it (findings 1 and 2). The pattern is recorded in `PROMPT.md`: an assertion is not a
-> guard until someone has said what would make it fail.
+> **Verification note.** All eleven findings re-checked against the working tree; **all eleven hold,
+> none rejected, and no grounding error in the reviewer's own evidence for the second round running.**
+> Three are defects round 4's fixes introduced (findings 1, 2, 3), and **finding 2 is the more serious
+> kind: a false claim that round 4 wrote into the approved `requirements.md` as part of the fourth
+> amendment.** Finding 3 is the **fifth consecutive round** to find a stale copy of a rewritten passage
+> — this time in the architecture diagram, the exact artefact round 5 was told to check and the main
+> agent did not check before committing.
+>
+> **Threshold trend: 7 → 4 → 7 → 8 → 8. This has not converged.** The character of the findings has
+> changed, though: rounds 1-4 found the design wrong; round 5 finds it under-specified and
+> inconsistently described. See the note after the summary.
 
 ## Findings
 
-### 1. The replacement ancestry assertion contradicts `Sweep`'s own subsumption contract — it forbids a base/derived pair the design explicitly permits, and would fail a correct sweep (Score: 80)
+### 1. `Subject`'s identity for a generic subject is now unspecified — round 4's fix deleted the only passage that pinned it, and step 2's synthetic generic assertion cannot be written without it (Score: 78)
 
-Round 3 replaced distinctness with ancestry. The new assertion is stated **unconditionally**: no
-`Subject` may have another `Subject` from the same result in its base chain. But `Sweep`'s subsumption
-is **conditional** — it drops a derived candidate *only* when that candidate declares no
-`ChannelFactoryType` of its own, and the Risks section says so in terms. So a sound `Sweep` result may
-legitimately contain both a base and a derived type, and in exactly that case the generated test fails
-on correct behaviour.
+`Sweep` returns `IReadOnlyList<(Type Subject, string? Reason)>`. For a subject that is an open generic
+definition, the document never says whether `Subject` carries the **open definition** (`Foo<>`) or the
+**closed construction** produced by the closing step (`Foo<Command>`). Round 4's finding 5 had to
+establish this as a fact of the design ("where `Subject` values are closed constructions") in order to
+argue about the ancestry assertion — and the fix removed that assertion, so the only passage from which
+the reader could infer `Subject`'s identity is gone. What remains pulls both ways: the Subsumption
+bullet says "the candidate set holds open definitions (`Foo<>`)" and subjects are "the candidates that
+survive step 2", pointing to *open*; the Read-and-check bullet produces an instance from the closed type
+and passes "the value and the type" to `Check`, pointing to *closed*.
 
-Work the case through. Take `Foo<T> : Subscription` declaring
-`override Type ChannelFactoryType => typeof(FooChannelFactory)`, and `FooBar : Foo<Bar>` also
-declaring its own override. Step 2 drops neither (both declare). Step 3 closes `Foo<>` to
-`Foo<Command>`. Result = `{ Foo<Command>, FooBar }`, both `Reason` null — a correct, sound result. Now
-the template's third assertion: `FooBar`'s base chain yields `Foo<Bar>`, reduced by
-`GetGenericTypeDefinition()` to `Foo<>`; the other `Subject` `Foo<Command>` reduces to `Foo<>`; they
-match → **assertion fails**. The guard reports a subsumption defect where there is none, and a
-maintainer's only remedies are to delete the derived override or to edit a generated file.
+Load-bearing in three places:
 
-This is not a hypothetical corner the document ignores — it is the shape the document itself
-introduces. Step 2 of the Implementation Approach adds "a synthetic generic subscription in
-`Core.Tests` that declares its own override", and the Risks bullet promises that such a type "is never
-dropped". The moment that shape appears in a *gateway* assembly, the generated guard rejects it.
+- **Implementation step 2** adds "a generic subscription that declares its own override", and the
+  `Core.Tests` convention is `result.Single(e => e.Subject == typeof(X))`. For that synthetic, `typeof(X)`
+  is either `typeof(X<>)` or `typeof(X<Command>)` — they do not compare equal, so one of the two
+  assertions never matches. Two developers write different tests and one gets a green test finding
+  nothing.
+- **`AdditionalExpectedSubjects`** is a list of configured names rendered as `typeof(...)` literals. If a
+  future second declaring subject is generic, the template must render either the open literal or a
+  closed one with the representative argument appended, and a configuration string cannot express the
+  closed form without the template supplying `Paramore.Brighter.Command`.
+- **Ordering** is "by `Subject.FullName` using ordinal comparison", and `` Foo`1 `` sorts differently from
+  `` Foo`1[[Paramore.Brighter.Command…]] ``; the reason text uses `Type.FullName`, so messages differ too.
 
-The same split shows up against the requirements. FR-12's Scope and AC-27 state the obligation
-**unconditionally** — "A base/derived pair in the same assembly (e.g. `RocketSubscription` and
-`RocketMqSubscription<T>`) MUST be reported at most once" — which is what the template asserts and
-what `Sweep` does *not* implement. So the document holds two incompatible contracts: the template's
-(and the requirement's) unconditional one, and `Sweep`'s narrowed one.
+**Evidence**: ADR:213 the signature; ADR:239-241 "the candidate set holds open definitions (`Foo<>`)";
+ADR:250-251 "A surviving candidate that is an open generic definition is closed with `MakeGenericType`
+before it can be read"; ADR:258-260 "The value and the type are passed to `Check`"; ADR:404-405
+`result.Single(e => e.Subject == typeof(X))`. A grep for `Subject` returns no line stating which form
+the entry carries — confirmed independently by the main agent.
 
-**Evidence**: ADR, Subsumption bullet: "A candidate is dropped when it does not itself declare
-`ChannelFactoryType` (looked up with `BindingFlags.DeclaredOnly`) and an ancestor in its base chain is
-also a candidate in the same assembly." ADR, Risks: "It drops a derived candidate only when that type
-declares no `ChannelFactoryType` of its own… **A derived type that *does* declare an override is never
-dropped.**" ADR, template bullet: "The third discharges AC-27's "a base/derived pair reported at most
-once": **no `Subject` in the result has another `Subject` from the same result in its base chain**".
-`requirements.md` FR-12 Scope: "A base/derived pair in the same assembly … MUST be reported at most
-once."
-
-**Recommendation**: Make the assertion match `Sweep`'s contract, not a stricter reading of it: *no
-`Subject` that declares no `ChannelFactoryType` of its own has another `Subject` from the same result
-in its base chain* — or, if the unconditional reading is the intended one, change subsumption to drop
-every derived candidate with a candidate ancestor and reconcile the Risks bullet. Either way, resolve
-it in one place and state which reading of FR-12's MUST the design takes. **Note for the maintainer:
-the requirement's wording is the imprecise half.** Conditional subsumption is the correct behaviour —
-a derived type declaring its own override may disagree with its base and must be reported — so this
-points at a fourth amendment to `requirements.md` under working convention 1, not at a design change.
+**Recommendation**: Add one sentence to the `Sweep` contract fixing `Subject` as the type *as read* (the
+closed construction for a generic subject) or as the candidate *as discovered* (the open definition) —
+pick one. If closed, state that the template renders a generic `AdditionalExpectedSubjects` entry as
+`typeof(Foo<Paramore.Brighter.Command>)` using the same representative argument as the closing step, and
+that step 2's synthetic assertion uses the closed literal.
 
 ---
 
-### 2. The ancestry assertion is never exercised over the twelve real assemblies — each returns exactly one subject — and it misses the subsumption failure that keeps the derived and drops the base (Score: 75)
+### 2. The exact-set assertion cannot detect a misaimed `SubscriptionType` — the expected set is derived from the same configuration value that aims the sweep. The false claim is in the ADR twice and in the amended requirements (Score: 72)
 
-Ancestry *can* fail, and it does fail on the cited regression, so it is not vacuous in principle as
-distinctness was. But over the twelve shipped assemblies it is evaluated only ever against a
-**one-element list**, where it has no possible failure — and the ADR, which is otherwise candid about
-untested paths, never says so.
+Of the four failure modes the ADR derives for the new assertion, three hold and one does not:
 
-Every shipped gateway assembly contains exactly two `Subscription` subclasses: a non-generic base
-declaring the override and a generic derived declaring none. Subsumption drops the derived. Result
-length = 1, for all twelve, today and after 0072 adds its three base-class overrides. Consequently:
+- *Subsumption over-reporting* — expected `{RocketSubscription}`, reported
+  `{RocketSubscription, RocketMqSubscription<…>}` → **fails**. ✔
+- *Subsumption inverted* — expected `{RocketSubscription}`, reported `{RocketMqSubscription<…>}`, `Reason`
+  null → **fails**, and correctly noted that non-emptiness would not. ✔
+- *Candidate discovery finds nothing* — `{}` against a non-empty expected set → **fails**. ✔
+- *"A `SubscriptionType` pointed at the wrong assembly … yields an empty or foreign set"* — **does not fail
+  on that account.** `SubscriptionType` now does double duty: the template renders it both as
+  `typeof(X).Assembly` (the locator) and as the expected subject. A misaim therefore moves the assembly
+  under sweep and the expectation *together*, and the assertion is self-consistent — the set can never be
+  "foreign", because the configuration is the only definition of what is foreign.
 
-- **non-empty** passes on one entry;
-- **every `Reason` null** is the only assertion doing work;
-- **ancestry** is trivially true (a type is never in its own base chain) and is never exercised by any
-  real input.
+The misaim *is* caught, by three mechanisms the ADR does not credit. A cross-gateway misaim usually fails
+to **compile**, because no gateway test project references a second gateway (C-9's topology). A misaim to
+`Paramore.Brighter` itself (`Paramore.Brighter.Subscription`, reachable from all twelve) sweeps that
+assembly and reports `{Subscription}` — matching the configuration exactly — failing only on the **reason**
+check, because `Subscription.ChannelFactoryType` is `typeof(InMemoryChannelFactory)`. And the
+thirteenth-gateway **audit** catches it structurally: the misaimed directory is named by zero
+configurations and another by two. What the exact set genuinely adds over non-emptiness is the *wrong type
+in the right assembly* case (e.g. MQTT's configuration naming `MqttSubscription<T>`), which the audit's
+namespace comparison cannot see. That is the true division of labour.
 
-Worse, it is one-sided. Consider subsumption regressing in the *other* direction — the `DeclaredOnly`
-predicate inverted, or the ancestor tested rather than the candidate, so the **base** is dropped and
-the derived kept. Result = `{ RocketMqSubscription<Command> }`: one entry, `Reason` null (the derived
-inherits the base's override value), no ancestry pair. All three assertions pass. The sweep has
-silently stopped reporting `RocketSubscription` — the type the configuration names and the only one
-the base-class override lives on — and the guard is green. That is precisely the "vacuous pass this
-design exists to prevent", reached through the step the ancestry assertion was added to protect.
+This matters beyond tidiness: the "ask what fails it" derivation is this passage's whole justification, it
+has been rewritten three times, and each previous version failed on one of its own enumerated claims.
+**The same wrong claim was written into `requirements.md` as part of the fourth amendment**, so a future
+reader finds two sources agreeing.
 
-The document even provides the missing assertion for free. The configured
-`GatewayConformance.SubscriptionType` is, in all twelve rows of the ADR's own table, exactly the
-non-generic base that survives subsumption (`SqsSubscription`, `RocketSubscription`, `RmqSubscription`,
-…), and the template already renders `typeof(X)` to get `.Assembly`. Asserting `result` contains
-`typeof(X)` as a `Subject` holds today for all twelve, catches the inverted-subsumption case, and
-catches a `SubscriptionType` pointed at the wrong assembly — which non-emptiness does not.
+**Evidence**: ADR:290-293 "A `SubscriptionType` pointed at the wrong assembly, or candidate discovery that
+finds nothing, yields an empty or foreign set — **fails**."; ADR:226-228 repeats it in the anti-vacuous
+paragraph; ADR:323 "renders both as `typeof(X).Assembly` to locate the sweep and as the expected subject";
+`requirements.md:521` "…which is a stronger guard than "at most once" and additionally catches a sweep
+aimed at the wrong assembly."; `src/Paramore.Brighter/Subscription.cs:172`
+`public virtual Type ChannelFactoryType => typeof(InMemoryChannelFactory);`.
 
-**Evidence**: `grep -rn "override Type ChannelFactoryType" --include="*.cs"
-src/Paramore.Brighter.MessagingGateway.*` → **9** hits, every one on a non-generic base class; twelve
-gateway `*Subscription.cs` files each declaring exactly **2** `Subscription`-derived classes. Spot
-check: `RocketMqSubscription.cs:10` `class RocketSubscription : Subscription`, `:50` the override,
-`:117` `class RocketMqSubscription<T> : RocketSubscription` with no override. So subsumption reduces
-every assembly to a single subject. Contrast the candour applied to the analogous case: "**The
-generic-closing path has no shipped type to exercise it.** After subsumption, all twelve assemblies
-resolve to a non-generic base."
-
-**Recommendation**: Add the assertion that the configured subject appears in the result — which is
-what actually discharges "the sweep examined the right thing" — and demote non-emptiness to a
-consequence of it. Then state plainly, as the generic-closing risk already does, that the ancestry
-assertion is a regression trip-wire with no shipped input that exercises it, and cover the
-inverted-subsumption direction with a `Core.Tests` case over a synthetic base/derived pair.
+**Recommendation**: Replace the wrong-assembly claim in all three places with what holds — the exact set
+catches the *wrong subject in the swept assembly*; a *misaimed assembly* is caught by the missing project
+reference, by the reason check, and by the thirteenth-gateway audit — and say plainly that the assertion
+cannot catch it, because expectation and locator are one value. The `requirements.md` sentence is a
+correction to the fourth amendment, not a fifth.
 
 ---
 
-### 3. Fourth stale copy of the superseded (D7) argument survives in the grounded-reference list: "the unnamed rule this ADR's Context turns on" (Score: 68)
+### 3. Fifth stale copy: the architecture diagram still states the contract round 4 replaced — "one entry per candidate" (Score: 72)
 
-The predicted drift is there, and round 3 introduced it. Commit `6d29b664b` added the
-`CombinedChannelFactory` grounded-reference line describing the comparison as "the unnamed rule this
-ADR's Context turns on" — pure D7 framing, in which the justification was that the module already
-depends on a rule it has *never named*. Commit `26280cabb` then removed that argument from Context
-entirely: "never named", "unnamed", "design signal", "term of the contract" and "evidence" no longer
-appear anywhere in Context. Under D8, Context turns on **FR-12's express permission** plus **where the
-rule lives** — not on the rule being unnamed. So the References section describes Context as it was two
-commits ago, and a reader who follows the pointer finds no such argument.
+Round 4's finding 4 was this contract stated two ways. The fix rewrote the prose to "one entry per subject"
+and defined the two terms as "used precisely from here on" — and left the diagram's copy of the superseded
+wording untouched, eight lines above. A term is now used two ways in one document, in the passage a reader
+skims first.
 
-**Evidence**: `grep -n "unnamed"` over the ADR returns exactly one hit, line 592 — "…in each creation
-method, the unnamed rule this ADR's Context turns on, with the `ConfigurationException` on no match."
-The same grep for "design signal", "term of the contract", "never named" and "two tests" returns
-nothing anywhere in the file.
+**Evidence**: ADR:153 — `│        one entry per candidate; Reason null = sound          │` against ADR:214-216
+"**candidates** are the types step 1 finds, and **subjects** are the candidates that survive step 2's
+subsumption. `Sweep` returns **one entry per subject**".
 
-**Recommendation**: Rewrite that reference line to the D8 framing — e.g. "the same comparison the guard
-makes, implemented inline at three call sites; the runtime dependency that makes *where the rule lives*
-the question this ADR decides". Then sweep the whole file for *descriptions of* Context, not just
-Context itself.
+**Recommendation**: "one entry per subject; Reason null = sound". While there, reconcile "surviving
+candidate" (:250) and "what it examined" (:224, :400) with the new vocabulary — a subsumed candidate *was*
+examined and gets no entry, so "reports every subject it examined" is the accurate form.
 
 ---
 
-### 4. `Sweep`'s contract is stated two ways: "one entry per candidate it examined" versus a Subsumption step that drops examined candidates (Score: 66)
+### 4. Four of the six reason paths have no test anywhere in the design — including `Check`'s null branch and every reason `Sweep` owns (Score: 70)
 
-The `Sweep` signature paragraph and the anti-vacuous-pass paragraph both define the result as covering
-everything examined. The Subsumption step then removes candidates that *were* examined — it had to read
-their `DeclaredOnly` members and walk their base chains to decide. Both statements are therefore false
-as written, and the second is load-bearing: the whole anti-vacuous-pass argument is "a contract that
-cannot express 'I examined these and they were sound' cannot rule it out", and the contract as
-implemented cannot express that for any subsumed type. The one class of type the guard is *least* able
-to account for is exactly the class the ancestry assertion is supposed to protect.
+Six ways a reason can be produced: `Check`'s **null**, **not-a-channel-factory** and **inherited-default**
+branches, plus three that "belong to `Sweep` rather than `Check`" — bad arity/unsatisfied constraints, an
+uninitialised instance that cannot be produced, and a read that throws. The document specifies assertions
+for exactly two (AC-28's shapes, re-covered by the fourth sweep case). The other four are specified
+behaviour with no specified test:
 
-It also makes "It is empty only when the assembly contains no candidates at all" an unproved claim
-rather than a contract term: it holds only because a root candidate can never have a candidate ancestor
-in the same assembly, which the ADR never states.
+- **`Check`'s null branch** is invented by this ADR (FR-12 has two conditions) and is load-bearing three
+  times: `MockSubscription` "reports it under the **null** branch"; `NullDeclaringSubscription` "is reported
+  under the **null** branch by design"; and C-13's out-of-repo null override is the real shape it catches.
+  Yet the `Core.Tests` cases are deliberately subject-scoped, so nothing asserts either entry. **A `Check`
+  whose null branch returned `null` (sound) would pass every assertion in the design.**
+- **A read that throws → a reason** is the behaviour the ADR defends at length against ADR 0064's "rules
+  must not catch", on the ground that "Nothing is swallowed". No test asserts it, and no double throws on
+  read — the ADR is explicit that `MockSubscription` "reads `null` rather than throwing". **An
+  implementation that caught the exception and emitted a `null` reason satisfies the exact-set assertion,
+  the twelve reason-null checks, and the fourth case.** A silent vacuous pass in the one place Risks says
+  the mechanism must be actionable.
+- The same swallow-to-null defect is undetectable for "an uninitialised instance cannot be produced". (A
+  *silent skip* in either path **is** caught, because the subject goes missing from the exact set — worth
+  saying, since it is the design's strongest new property.)
 
-**Evidence**: ADR: "It returns **one entry per candidate it examined** … It is empty only when the
-assembly contains no candidates at all." And: "**It reports what it examined, not only what failed, and
-that is deliberate.**" Against: "**Subsumption.** A candidate is dropped when…".
+**Evidence**: ADR:196-204 the three named branches; ADR:262-272 "Three reasons belong to `Sweep` rather than
+`Check` … Nothing is swallowed — the sweep still fails, with more information."; ADR:402-405 subject-scoped
+assertions; ADR:425-434 the seam analysis, which names only "a `Sweep` that read the wrong property, passed
+`null` to `Check`, or discarded the read value entirely"; ADR:553-561 Risks.
 
-**Recommendation**: Define the term once — *candidates* (step 1's set) versus *subjects* (what survives
-step 2) — and restate the contract as "one entry per subject", with an explicit sentence on why
-subsumed candidates need no entry (their value is their base's by construction) and why the result is
-never empty when candidates exist.
-
----
-
-### 5. "The same reduction the Subsumption bullet specifies" is not sufficient in the template, where `Subject` values are closed constructions (Score: 65)
-
-Subsumption runs **before** closing, so its comparison is *reduced ancestor* against *open definition*;
-only one side needs reducing, and the bullet says exactly that. The template operates on the sweep's
-**output**, where any generic `Subject` has already been closed with `MakeGenericType`. There, both
-sides can be constructed generics: an ancestor `Foo<Bar>` must be compared against a `Subject` of
-`Foo<Command>`. Reducing only the ancestor (the "same reduction") yields `Foo<>` against `Foo<Command>`
-— no match, and the assertion silently loses the case it was written for. The template must reduce
-**both** sides. Two developers would implement this differently.
-
-**Evidence**: ADR, Subsumption: "Subsumption runs before closing, so the candidate set holds open
-definitions (`Foo<>`) while a base chain yields closed constructions (`Foo<Bar>`); an ancestor that is
-a constructed generic is therefore reduced with `GetGenericTypeDefinition()` before the comparison."
-ADR, template: "constructed generics reduced with `GetGenericTypeDefinition()` — the same reduction the
-Subsumption bullet specifies."
-
-**Recommendation**: Spell the template's comparison out as its own rule: normalise *both* the `Subject`
-and each base-chain entry with `IsConstructedGenericType ? GetGenericTypeDefinition() : t`, then
-compare — and delete "the same reduction the Subsumption bullet specifies", because it is not the same
-reduction.
+**Recommendation**: Add to step 2 (a) a `Check` case for the null branch with literal arguments, and (b) one
+`Core.Tests` double whose `ChannelFactoryType` getter **throws** on an uninitialised instance, asserting its
+entry carries a non-null reason naming the exception type — that single double converts the ADR-0064 rebuttal
+from an argument into a tested property. If the arity/constraint and cannot-instantiate reasons are to stay
+untested, say so and say why (a silent skip is caught by the exact set; a swallowed fault is not).
 
 ---
 
-### 6. `design_principles.md`'s "do not add new types without necessity" is cited as a governing rule while Context now concedes the type is not necessary — never reconciled (Score: 62)
+### 5. `AdditionalExpectedSubjects` is under-specified, and `SubscriptionType`'s new double duty imposes an unstated invariant (Score: 68)
 
-D8's honesty has a cost the document does not pay. Context now states that a path through existing
-exports exists, that the widening is "**not forced by impossibility**", and that it was "chosen over an
-alternative that would also have worked" — which is, in the cited principle's own terms, a new type
-added without necessity. The References section lists that principle among the project rules this ADR
-is argued against, with no gloss and no argument that requirements permission discharges a design
-principle. Under D6 and D7 the tension did not arise (the export was claimed to be a missing contract
-term); under D8 it arises squarely and is unaddressed. The `testing.md` obligation is handled
-explicitly at four sites; this one nowhere.
+Round 4 introduced this key in two sentences. Missing: its **type and default** (a `List<string>` of
+fully-qualified names? null or empty when absent? — it is absent in all twelve today, so the template must
+render a valid expected-set expression regardless); **what the template renders from it** (inferable as
+further `typeof(...)` literals, but not for a generic subject — finding 1); **the thirteenth-gateway
+audit's** relationship to it (the audit asserts each gateway directory is "named by exactly one
+`GatewayConformance.SubscriptionType`" — if `AdditionalExpectedSubjects` counted, the very case the key
+exists for would make a directory "named by two" and fail; the exclusion is right but unstated, and the
+passages are 60 lines apart); and **the twelve-row table's** silence (headed `SubscriptionType` only,
+introduced as "The twelve values", so absence is indistinguishable from omission).
 
-**Evidence**: `.agent_instructions/design_principles.md:32` — "- Do not add new types without
-necessity." ADR Context: "So this widening is **not forced by impossibility**. It is authorised by the
-requirements, on reachability grounds, and chosen over an alternative that would also have worked." ADR
-References: "…Responsibility-Driven Design and "do not add new types without necessity"." (no
-qualification).
+The unstated invariant matters most. `SubscriptionType` used to be any subscription type in the gateway
+assembly — a pure locator. It is now "the subscription type expected to be reported", which silently
+requires the configured type to be a **subject**: to declare its own `ChannelFactoryType`, or at least be a
+root candidate. Naming the generic derived type (`MqttSubscription<T>`), previously a perfectly good
+locator, now produces a red test with a set-mismatch message that does not explain why.
 
-**Recommendation**: Add one sentence in Context or Negative stating that the necessity test is not met
-on its own terms, that FR-12's express permission is what overrides it, and that the ADR treats the
-requirement as the higher authority — then qualify the References line the way the `testing.md` line
-now is.
+**Evidence**: ADR:313-318 and :321-325 (the two introducing passages); ADR:348-361 (the one-column table);
+ADR:377-383 (the audit — "named by exactly one `GatewayConformance.SubscriptionType`").
 
----
-
-### 7. The `Core.Tests` subject enumeration is incomplete: C-9's double set gives 0072 **four** `Subscription` subclasses to add, not one, and their getter shape is unpinned (Score: 62)
-
-Round 3's fix is right about `MockSubscription` and right that whole-result assertions would fail — but
-its enumeration of what else lands in that assembly names only `NullDeclaringSubscription`. C-9's
-closed double set contains four `Subscription` subclasses: `DeclaringSubscription`,
-`NonMatchingSubscription`, `NullDeclaringSubscription` and `AlphaBus.AlphaSubscription`. None exists
-today, so all four arrive with 0072, in `tests/Paramore.Brighter.Core.Tests/Validation/`. Three are
-sound *if* their overrides are constant `typeof(...)` expressions — but C-9 only pins them as
-"identity-only… it overrides `ChannelFactoryType` and nothing else", which is exactly what
-`MockSubscription` is, and `MockSubscription` is an auto-property that reads `null` on an uninitialised
-instance. The ADR's account of which `Core.Tests` subjects are unsound therefore rests on an unstated
-assumption about how 0072 writes three doubles this ADR does not mention. The Risks bullet inherits the
-gap: after 0072 plus this ADR's own types, `Core.Tests` holds nine `Subscription` subclasses, of which
-the bullet accounts for one.
-
-**Evidence**: `requirements.md:231-234` — `DeclaringSubscription`, `NonMatchingSubscription`,
-`NullDeclaringSubscription`, and "plus `AlphaBus.AlphaSubscription` declaring the former";
-`requirements.md:320` places the closed set in `tests/Paramore.Brighter.Core.Tests/Validation/`. A grep
-for `Subscription` subclasses in `Core.Tests` today returns exactly one match, `MockSubscription` —
-confirming the ADR's "the only `Subscription` subclass in `Core.Tests` today".
-
-**Recommendation**: Name all four of 0072's subscription doubles, state which are sound under `Check`
-and which are not, and add the one-line constraint the design actually depends on: C-9's subscription
-doubles must declare `ChannelFactoryType` as an expression-bodied `typeof(...)`, not an auto-property,
-or the sweep reports them under the **null** branch.
+**Recommendation**: Give the key a type and default, state that the expected set is `SubscriptionType` ∪
+`AdditionalExpectedSubjects`, state that the audit counts `SubscriptionType` only and why, note in the table
+that the key is absent in all twelve today, and write the invariant down: `SubscriptionType` MUST name a type
+that survives subsumption.
 
 ---
 
-### 8. The subsumption rule is now expressed twice in the same repository, and only the *other* duplication is recorded as a cost (Score: 60)
+### 6. The exact-set assertion makes 5 of the 12 generated sweeps red until ADR 0072's corrections land, and no step records the ordering constraint (Score: 65)
 
-Round 3's fix correctly withdrew "the template is three lines of arrangement", but stopped at conceding
-that the template "carries logic" and did not follow the consequence: the base-chain walk plus
-`GetGenericTypeDefinition()` reduction is `Sweep`'s subsumption rule, re-expressed in the generated
-test. The ADR records one duplicated judgement as an accepted cost, in detail, with its drift
-consequence spelled out (`Check`'s inherited-default branch versus 0072's T3a/T3b). It records nothing
-for this one, while the Positive section still claims "One definition of "sound declaration", in one
-place, used by twelve tests" and the Risks mitigation still says the template holds "nothing in it that
-decides whether a declaration is sound". The second is literally true — ancestry is not soundness — but
-it reads as reassurance about a template that now encodes half of step 2's algorithm, and a change to
-the subsumption rule must now be made in two places.
+The generated test asserts every `Reason` is `null`. Against the working tree that is false in five of twelve
+assemblies, by this specification's own count: FR-7 (GcpPubSub) and FR-8 (MQTT) declare an
+`IAmAMessageConsumerFactory`, so their subject reports **not-a-channel-factory**; FR-9 (AWSSQS), FR-10
+(AWSSQS.V4) and FR-11 (Postgres) declare no override at all, so their non-generic base is a root candidate
+reporting **inherited-default**. Step 4 commits the twelve generated files and step 6 adds the CI step, with
+no statement that 0072's FR-7 to FR-11 corrections must merge first. Two developers sequence this
+differently, and one turns the `build` job red on every pull request. The ADR is *aware* of the fact — Risks
+says "all nine today, and all twelve once 0072 adds its three" — it never draws the scheduling conclusion,
+which is the one thing an implementer needs.
 
-**Evidence**: ADR Negative: "**The inherited-default judgement is expressed twice in the same package,
-and that is accepted.** … The cost is that a change to what "inherited default" means must be made in
-both." No comparable bullet exists for subsumption. ADR Risks: "the template arranges the call and
-makes three assertions, one of them the ancestry check … the only logic the template carries."
+**Evidence**: `requirements.md:160-176` FR-7 to FR-11; ADR:281-285 the reason-null assertion; ADR:554-557
+Risks; ADR:468-480 (step 4) and :482 (step 6) — no ordering note.
 
-**Recommendation**: Add a Negative bullet stating that the subsumption rule is expressed in `Sweep` and
-again in the template, that the second exists because there is no other way to assert the first over a
-real assembly, and that a change to subsumption is a change to both. Qualify the Positive bullet to
-"one definition of *sound declaration*". **If the assertion moves out of the template (see findings 1
-and 2), this finding dissolves** — which is a point in favour of doing so.
+**Recommendation**: Add a clause to step 4 or a Negative bullet: the twelve sweeps are red in five assemblies
+until 0072's FR-7 to FR-11 land, so steps 4 and 6 sequence after those corrections — and say what happens if
+0072 slips (the generated files may be committed; the CI step must not be enabled).
 
 ---
 
-### 9. FR-12's express-permission quote is truncated at the clause that changes its force (Score: 55)
+### 7. C-9's "identity-only … every `IAmAChannelFactory` member throws" rule is applied to three *subscription* doubles, which have no such members — and the two helper types the design needs are never named (Score: 62)
 
-The quotation is accurate as far as it goes but stops mid-sentence with a closing quote and no ellipsis,
-dropping FR-12's own gloss: NFR-5 "constrains changes to *existing* abstractions". That clause says
-NFR-5 is not in tension with a new type at all. The ADR's "expressly permitted notwithstanding NFR-5",
-read alone, implies a rule overridden by exception — which is the reading that makes "authorised testing
-concession" sound like a debt. The requirement's actual position is weaker in obligation and stronger in
-permission than the ADR's paraphrase.
+The `Core.Tests` paragraph says "Three doubles, all identity-only in C-9's sense — every `IAmAChannelFactory`
+member throws:" and lists three **subscriptions**. A `Subscription` subclass implements no
+`IAmAChannelFactory` member, so the obligation cannot bind, and C-9's rule is explicitly about the *channel
+factory* doubles (it names `CreateSyncChannel`, `CreateAsyncChannel`, `CreateAsyncChannelAsync`). Meanwhile
+the design silently requires two types it never names: the not-an-`IAmAChannelFactory` type the second double
+declares, and the sound `IAmAChannelFactory` that AC-29's double declares — the latter being the one type
+here to which C-9's throw-rule genuinely applies.
 
-**Evidence**: `requirements.md` FR-12: "Introducing **one new public type** to host the predicate is
-therefore expressly permitted notwithstanding NFR-5, which constrains changes to *existing*
-abstractions." ADR: "…is therefore expressly permitted notwithstanding NFR-5" (quote closes here).
-NFR-5 confirms the gloss: "No public API change to existing abstractions… `IAmAChannelFactory`,
-`Subscription` and `IAmConsumerOptions` keep their current members."
+**Evidence**: ADR:385-400 the three-doubles list; `requirements.md:236` "Every `IAmAChannelFactory` member on
+these doubles MUST therefore throw (`CreateSyncChannel`, `CreateAsyncChannel`, `CreateAsyncChannelAsync`)."
 
-**Recommendation**: Quote the full sentence, or close with an ellipsis and add the gloss in prose — the
-distinction between "NFR-5 overridden" and "NFR-5 not engaged" is the difference between a concession
-and a non-issue.
+**Recommendation**: Split the list: three subscription doubles (no `IAmAChannelFactory` members, so C-9's
+throw-rule is inapplicable — say so), plus the two types they declare — a non-factory marker type and one
+sound channel-factory double to which C-9's rule *does* apply. Name both.
+
+---
+
+### 8. The Subsumption bullet quotes FR-12 truncated at the exact clause the fourth amendment added (Score: 62)
+
+Round 4's finding 9 was a truncated FR-12 quote whose dropped clause changed its force; the fix quoted *that*
+clause in full and left this one. The amended Scope reads "MUST be reported at most once **when the derived
+type declares no `ChannelFactoryType` of its own**"; the ADR quotes "a base/derived pair … MUST be reported at
+most once", the ellipsis swallowing the example and the condition landing outside the quotation marks. The
+sentence after does convey the condition, so the design is not wrong — but the quoted requirement text is the
+superseded wording, in the one paragraph where the conditional reading is the whole point.
+
+**Evidence**: ADR:245-247; `requirements.md:193` as amended.
+
+**Recommendation**: Quote the amended clause with its condition inside the quotation marks, as the template
+paragraph already does.
+
+---
+
+### 9. The frontmatter `summary` describes dedup unconditionally and omits the decision's new centre of gravity (Score: 55)
+
+`summary` says the sweep reads the property "de-duplicating base/derived pairs by subsumption" — not false,
+but it is the pre-amendment framing, and a reader who stops there takes away the unconditional obligation that
+cost round 4 a requirements amendment. It also predates the round-4 rewrite in substance: the
+exact-subject-set assertion is now the design's principal claim and the summary says only that the tests "are
+generated from a single new Liquid template"; `AdditionalExpectedSubjects` is absent.
+
+**Evidence**: ADR:8.
+
+**Recommendation**: "…de-duplicating a base/derived pair only where the derived type declares no override of
+its own; the twelve generated per-gateway tests assert the reported subject set exactly, plus all reasons
+null, and carry no reflection logic."
+
+---
+
+### 10. The CI step can pass vacuously if a generated file is missing (Score: 50)
+
+The `build` job runs twelve projects with `--filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests"`.
+If a project's generated file were absent the filter selects nothing, and `dotnet test` reports "No test
+matches the given testcase filter" without failing on most runners — the guard's CI step then passes while
+guarding eleven assemblies. The generated-tree audit in the same job does cover missing files, which is why
+this is a 50, but the ADR nowhere records that the step's non-vacuity depends on a *different* step.
+
+**Evidence**: ADR:364-366 the filter and `--no-build`; ADR:468-470 the audit as what catches absence.
+
+**Recommendation**: One clause in the CI paragraph: the step's non-vacuity rests on the generated-tree audit,
+which fails when any of the twelve files is missing; or pass a fail-on-no-tests switch where the runner
+supports it.
+
+---
+
+### 11. Two term slips left by round 4's vocabulary change (Score: 40)
+
+"an empty result would pass identically over twelve sound subscriptions and over zero candidates" (:226) — a
+single gateway assembly has *one* subject, not twelve; the comparison is per-assembly. And :250 says "A
+surviving candidate that is an open generic definition", where the paragraph above has just named that a
+*subject*.
+
+**Evidence**: ADR:224-230, ADR:250.
+
+**Recommendation**: "over a sound assembly and over zero candidates"; "A subject that is an open generic
+definition".
 
 ---
 
@@ -288,52 +293,66 @@ and a non-issue.
 | Score Range | Count |
 |-------------|-------|
 | 90-100 (Critical) | 0 |
-| 70-89 (High) | 2 |
-| 50-69 (Medium) | 7 |
-| 0-49 (Low) | 0 |
+| 70-89 (High) | 4 |
+| 50-69 (Medium) | 6 |
+| 0-49 (Low) | 1 |
 
-**Total findings**: 9
+**Total findings**: 11
 **Findings at or above threshold (60)**: 8
 
-## Round-3 fixes verified
+## Convergence assessment
 
-1. **Finding 1 (85) — distinctness assertion vacuous.** *Partial, and introduced new problems.* The
-   replacement is a genuine improvement: unlike distinctness, ancestry does fail on the cited
-   `RocketSubscription` / `RocketMqSubscription<Command>` regression, and the paragraph explaining why
-   distinctness was wrong is correct and well argued. But the replacement is unconditional where
-   `Sweep`'s subsumption is conditional, so it rejects a correct result (finding 1); it is evaluated
-   only against one-element lists over all twelve shipped assemblies and misses the
-   inverted-subsumption direction entirely (finding 2); and its generic reduction is under-specified
-   for the closed `Subject` values it actually sees (finding 5).
-2. **Finding 2 (75) — fourth case assembly-scoped; `Core.Tests` holds an unsound subscription.**
-   *Complete, with one gap.* The new paragraph states the whole-assembly sweep and
-   `result.Single(e => e.Subject == typeof(X))` scoping, gives the correct reason, and declines the
-   type-scoped overload. Gap: the enumeration of what 0072 adds names one of four doubles and leaves
-   their getter shape unpinned (finding 7).
-3. **Finding 3 (75) — two-readings argument not entitled to the design-signal bullet.** *Complete in
-   Context, incomplete downstream.* Context is fully re-derived onto FR-12's express permission, and
-   all three `testing.md` quotations verified word-for-word. But the References grounded-reference line
-   still describes Context in D7's terms (finding 3), the `design_principles.md` necessity citation is
-   now in open tension and unaddressed (finding 6), and the FR-12 quote is truncated (finding 9).
-4. **Finding 4 (70) — stale Architecture Overview edges.** *Complete.* The `Core.Tests` edge reads
-   `Check + Sweep` and the box carries both missing cases. Matches the prose.
-5. **Finding 5 (68) — shared-test-support alternative kept C-10 as a criterion.** *Complete.*
-   Consistent with Context, the Positive bullet and the generator-emitted-predicate entry; C-10 is a
-   benefit at all of them.
-6. **Finding 6 (68) — `CombinedChannelFactory.cs:33` wrong line.** *Complete.* `:34`, `:46`, `:59`
-   verified as the three creation-method call sites, cited correctly at both sites.
-7. **Finding 7 (65) — honest check answerable in-repo; non-test consumer unaddressed.** *Complete.*
-   Two new Negative bullets answer the check "no" in-repo, name `CombinedChannelFactory` and 0072's
-   rule as considered-and-not-taken with reasons, and record the two-site duplication as accepted.
-   `0072:457` verified.
+**Threshold counts: 7 → 4 → 7 → 8 → 8.** Five rounds, 50 findings, none rejected. But the *character* has
+changed, and that is the signal worth acting on:
 
-## Grounded references sampled and correct
+- **Rounds 1-4 found the design wrong** — a failures-only contract, a justification that collapsed, an
+  assertion that could not fail, an assertion that failed correct behaviour.
+- **Round 5 finds almost nothing wrong with the design.** Of eight at-threshold findings, one is a false
+  claim (2), one is stale duplication (3), one is a real specification gap that matters (4), and the rest are
+  under-specification (1, 5), a missing scheduling note (6), and quotation/description accuracy (7, 8).
 
-`Subscription.cs:35/172/213/258`; `Command.cs:42`; `CombinedChannelFactory.cs:34/:46/:59`; all nine
-`override Type ChannelFactoryType` line numbers and their non-generic hosts;
-`RocketMqSubscription.cs:10/:50/:117-118`; `MockSubscription` at `:85-87`; `TestConfiguration.cs:38`;
-`ci.yml:228`, `:361`, `:708`; fourteen existing `test-configuration.json` files, every one carrying
-`Namespace`, with AzureServiceBus, MQTT and RMQ.Sync absent as claimed; the reference topology
-(`Base.Test` three, `Test.Helpers` one, `ServiceActivator` six); `SharedGenerator`'s four root-level
-templates; `GeneratedTreeAudit` building its expected set from `OutboxGenerator.Plan` and
-`MessagingGatewayGenerator.Plan`. **No grounding errors found this round.**
+That is the profile of a document whose *decisions* have settled and whose *prose* has not. The remedy 0072
+used at the same point is on record: round 4 of that ADR diagnosed that Key Components drew 18 of 24 findings
+from 46% of the document, and the `8d03b94c6` tidy re-derived that section wholesale (424 → 278 lines),
+after which findings fell 5 → 2 → 2 → 0. **The same diagnosis fits here**, and patching site-by-site has now
+produced a stale copy in five consecutive rounds.
+
+## Round-4 fixes verified
+
+1. **Finding 1 (80) — ancestry assertion rejects a correct result.** *Complete.* The assertion is gone,
+   replaced by an exact-set assertion with no reflection, and the reason it was wrong is recorded against the
+   Risks bullet it contradicted. The requirements amendment fixes the imprecise half in FR-12 Scope and AC-27,
+   and the *Amendments* entry accurately describes what changed ("No other criterion is altered" — verified:
+   `grep -n "at most once"` returns only :193, :519 and the amendment prose). Cosmetic: the fourth-amendment
+   paragraph is inserted *before* the third's, so the section reads first, second, fourth, third.
+2. **Finding 2 (75) — assertion never exercised; inverted subsumption missed.** *Complete, with one wrong
+   claim introduced.* Exactly-one-subject is a real assertion over the twelve, and inverted subsumption now
+   genuinely fails. But the misaimed-`SubscriptionType` failure mode does not hold (finding 2).
+3. **Finding 3 (68) — fourth stale copy in the grounded references.** *Complete.* The
+   `CombinedChannelFactory` line now matches Context. A **fifth** stale copy stands in the diagram (finding 3).
+4. **Finding 4 (66) — `Sweep`'s contract stated two ways.** *Partial.* The prose fix is good and the
+   non-emptiness claim is now proved (the proof is sound: ancestry is finite and acyclic, so a non-empty
+   candidate set has a root, and a root is never dropped). The diagram retains the old wording (finding 3) and
+   two term slips remain (finding 11).
+5. **Finding 5 (65) — template's generic reduction under-specified.** *Dissolved, and it took the pinning with
+   it.* With no reflection in the template there is no reduction to specify — but round-4 finding 5 was the
+   only place stating that a generic `Subject` is the closed construction, and its deletion leaves that
+   unspecified (finding 1).
+6. **Finding 6 (62) — necessity principle unreconciled.** *Complete.* Context concedes the type is not
+   necessary on the principle's own terms and states FR-12 as the overriding authority; References matches.
+7. **Finding 7 (62) — `Core.Tests` enumeration incomplete.** *Complete.* All four of C-9's subscription
+   doubles are named and the expression-bodied-`typeof` requirement is stated as a constraint. Verified:
+   `MockSubscription` at `:85-87` is still the only `Subscription` subclass in `Core.Tests`, and is
+   `public override Type ChannelFactoryType { get; }` assigned in the constructor. The surrounding paragraph's
+   misapplication of C-9's throw-rule is pre-existing and untouched (finding 7).
+8. **Finding 8 (60) — subsumption rule expressed twice.** *Complete, by dissolution.* Both the Positive bullet
+   and the Risks mitigation are corrected to match, with an honest note that an earlier draft had put the rule
+   in the template.
+
+## Grounding sampled and correct
+
+`Subscription.cs:172`/`:213`; `Command.cs:42`; `CombinedChannelFactory.cs:34`/`:46`/`:59`; `ci.yml:228`,
+`:361`, `:708`; twelve `src/Paramore.Brighter.MessagingGateway.*` directories, no thirteenth; 24 non-abstract
+gateway `Subscription` subclasses in twelve base/derived pairs; fourteen existing `test-configuration.json`
+files with AzureServiceBus, MQTT and RMQ.Sync absent; the amended FR-12 Scope and AC-27 quoted correctly.
+**No grounding errors found this round.**
