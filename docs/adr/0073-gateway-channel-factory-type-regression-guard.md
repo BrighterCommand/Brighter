@@ -64,36 +64,57 @@ three (Gcp, MSSQL, PostgresSQL), `Paramore.Test.Helpers` by one (MQTT), and
 twelve.
 
 **Two project rules govern this, and they share one purpose.**
-`.agent_instructions/testing.md` *Test Scope and Isolation* carries three bullets:
+`.agent_instructions/testing.md` *Test Scope and Isolation* carries two bullets; the second, *do not
+export to test*, reads:
 
 > - Do not expose more than is necessary from an assembly
 >   - An assembly is a module, it's surface area should be as narrow as possible.
 >   - Do not make export classes or methods from a module to test them; we only test exports from
 >     modules, not implementation details.
 
-The goal they serve is a module that is **narrow and deep**, not wide and shallow, and tests that sit
-**at the module's exports**. Both bullets — and the *No InternalsVisibleTo* rule beside them — warn
-against the same failure: **coupling a test to the module's implementation details**. Read that way
-the third bullet is conditional, not absolute. It forbids widening the surface to reach *inside*.
-The question it poses is therefore: **is there a path through the module's existing exports to the
-behaviour under test?** If there is, widening is unjustified. If there is not, exporting may be what
-it takes to test the behaviour at all — and the right response is to widen honestly and record what
-was widened.
+The goal it serves is a module that is **narrow and deep**, not wide and shallow, and tests that sit
+**at the module's exports**. That bullet — and the *No InternalsVisibleTo* rule beside it — warn
+against the same failure: **coupling a test to the module's implementation details**. The same file's
+§ *Narrow and deep — and when widening the surface is legitimate* draws the consequence: *do not
+export to test* is conditional, not absolute, and the question it poses before any widening is
+**is there a path through the module's existing exports to the behaviour under test?** — "if there
+is, widening is unjustified".
 
-**Here there is no such path, and the widening reveals something about the module rather than
-concealing something.** `Paramore.Brighter` exports `Subscription.ChannelFactoryType` and
-`IAmAChannelFactory`, but nothing that expresses the *relationship* between them — whether a given
-subscription's declaration is one this module can actually route on. That relationship is a real
-term of the module's contract: `CombinedChannelFactory` already depends on it at runtime, and gets it
-wrong silently when a subscription inherits the default. The predicate is not an implementation
-detail hoisted into view so a test can reach it; it is a rule of the module's own contract that the
-module had never named. FR-12's permission for **one new public type** notwithstanding NFR-5 is
-therefore not an exception grudgingly spent — it is the requirement recognising the same gap.
+**That question turns entirely on what "the behaviour under test" is taken to be, and the two
+readings answer it differently. This ADR should be read as taking the second.** Read as *are the
+twelve gateway assemblies' declarations sound?*, a path plainly exists:
+`Subscription.ChannelFactoryType`, `IAmAChannelFactory` and `InMemoryChannelFactory` are all already
+public, so the comparison can be written from outside the module entirely — and the
+generator-emitted predicate under Alternatives Considered does exactly that, in twelve generated test
+files, adding nothing to the shipped package. On that reading the widening is unjustified and the
+alternative wins; this ADR does not pretend otherwise.
 
-The corroboration is C-10. Out-of-repo gateway authors face this defect with no remedy, and a rule
-belonging to the module is one they can apply to their own assemblies. An export that only a test
-could ever want would not have that property; this one does, which is the sign it belongs on the
-module rather than beside it.
+**Read as *which declarations can this module route on?*, no export reaches it — and that is the
+reading the design rests on.** `Paramore.Brighter` exports `Subscription.ChannelFactoryType` and
+`IAmAChannelFactory`, but nothing that expresses the *relationship* between them. The relationship is
+not hypothetical and does not begin with this decision: `CombinedChannelFactory` already implements
+it at runtime — `_factories.FirstOrDefault(f => f.GetType() == subscription.ChannelFactoryType)`
+(`CombinedChannelFactory.cs:33`) — and throws `ConfigurationException` when a subscription that
+inherited the default finds no match. So the module already depends on this
+rule internally and has simply never named it — which is the case § *Narrow and deep* describes when
+it says "**Having to widen is a design signal, not just a cost.** If no existing export reaches the
+behaviour, the module's contract may be missing a name for something it already depends on
+internally", and asks "what the new export *says about the module*". The predicate is not an
+implementation detail hoisted into view so a test can reach it; it is a term of the module's own
+contract that the module had never stated. FR-12's permission for **one new public type**
+notwithstanding NFR-5 is therefore not an exception grudgingly spent — it is the requirement
+recognising the same gap.
+
+C-10 is the **evidence** that this is the second case and not the first, rather than a criterion this
+design is selected against. The requirements do not ask the feature to reach out-of-repo gateway
+authors — C-10 accepts that neither the corrections nor the sweep reaches them. What C-10 establishes
+is that a caller which is not a test genuinely wants this rule: the author of a community gateway
+faces the identical defect, and a rule that lives on the module is one they can apply to their own
+assembly. That is the discriminator § *Narrow and deep* sets — "a widening that other callers would
+genuinely want is a real term of the contract … a widening that only a test could ever want is a
+smell" — and it is what separates this export from one that exists only to be called by a test. The after-the-fact check the same
+section prescribes — does anything other than a test ever call it? — still applies, and is recorded
+under Negative.
 
 **`InternalsVisibleTo` is rejected for the reason behind the rule, not merely by the rule.** It is
 forbidden outright — "**NEVER** use `InternalsVisibleTo` to expose internal classes for testing" —
@@ -131,7 +152,8 @@ job.
   │        -> string?   null = sound, else the reason            │  beyond IsAssignableFrom
   │                                                              │
   │   Sweep(Assembly gatewayAssembly)                            │
-  │        -> IReadOnlyList<string>  the reasons, ordered        │
+  │     -> IReadOnlyList<(Type Subject, string? Reason)>         │
+  │        one entry per candidate; Reason null = sound          │
   │                                                              │
   │   candidates -> subsume -> close generics -> read -> Check   │
   │                                     │                        │
@@ -231,8 +253,9 @@ this costs no new public type. Four steps:
   and its `ChannelFactoryType` read through the virtual property. The value and the type are passed
   to `Check`. No member-level reflection is needed for the read.
 
-Two further reasons belong to `Sweep` rather than `Check`: a type for which an uninitialised
-instance cannot be produced, and a read that throws. A throw is converted into a reason naming the
+Three reasons belong to `Sweep` rather than `Check`: a generic definition whose arity or constraints
+the representative argument does not satisfy (above), a type for which an uninitialised instance
+cannot be produced, and a read that throws. A throw is converted into a reason naming the
 type, the exception type and its message, so that one run reports every offending type rather than
 stopping at the first. This does not contradict ADR 0064's "rules must not catch", once that rule's
 reason is stated correctly. 0064 forbids a rule catching because the `Specification<T>` framework
@@ -250,9 +273,13 @@ class and a generator — plus edits to `TestConfiguration`, `Program.cs` and `G
 
 - `Templates/GatewayConformance/When_sweeping_the_gateway_assembly_should_find_no_invalid_channel_factory_declaration.cs.liquid`
   — one template, rendering one `[Fact]` in a class named `GatewayChannelFactoryDeclarationTests`.
-  The test asserts **both** halves of `Sweep`'s contract: that the result is non-empty, so the sweep
-  is known to have examined something, and that every `Reason` is `null`. Asserting only the second
-  would be the vacuous pass described above.
+  The test asserts **all three** of AC-27's conjuncts: that the result is non-empty, so the sweep is
+  known to have examined something; that every `Reason` is `null`; and that the `Subject` values are
+  distinct, which is AC-27's "a base/derived pair reported at most once" and the only place
+  subsumption is guarded over the twelve real assemblies. Asserting only the second would be the
+  vacuous pass described above; asserting only the first two would let a subsumption regression
+  report `RocketSubscription` and `RocketMqSubscription<Command>` as two sound entries and still
+  pass.
   The naming follows `.agent_instructions/testing.md`: the file is named for the test method, the
   class for the behaviour.
 - `Configuration/GatewayConformanceConfiguration.cs` and a `GatewayConformance` section on
@@ -298,13 +325,16 @@ The other nine gain the section in the file they already have. The twelve values
 
 **The guard runs in CI's `build` job, not in the transport jobs.** The generated test carries no
 `Category` and no `Collection` attribute, and the `build` job gains one step running the twelve
-projects with `--filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" --no-build`. The
-`build` job already compiles the whole solution, so this costs seconds and needs no broker. It is
+projects with
+`--configuration Release --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" --no-build`.
+The configuration is named explicitly because `--no-build` otherwise looks for a Debug build the
+`build` job never produced. That job already compiles the whole solution, so this costs seconds and
+needs no broker. It is
 placed there for the reason the generator audit is placed there — a guard that needs no
 infrastructure should not be gated on infrastructure. Three concrete facts make this load-bearing
 rather than tidiness: `.github/workflows/ci.yml:228` runs the MQTT project with
 `--filter "Category=MQTT&…"` and `:361` runs Kafka with `--filter "Category=Kafka&…"`, so an
-untagged test in those projects would never be selected; and the RocketMQ job (`:769`) is entirely
+untagged test in those projects would never be selected; and the RocketMQ job (`:708-769`) is entirely
 commented out, so a sweep living only there would never run at all.
 
 **A thirteenth gateway cannot be forgotten.** A new test in
@@ -333,9 +363,17 @@ doubles, all identity-only in C-9's sense — every `IAmAChannelFactory` member 
   assertable only because `Sweep` reports what it examined.
 
 AC-28 calls `Check` with both arguments written literally, which is the Evident Data the assertion
-is about and is exactly the `(subscriptionType, declaredFactoryType)` shape FR-12 specifies. The
-reading path it does not exercise is covered positively by the twelve sweeps and negatively by
-AC-29.
+is about and is exactly the `(subscriptionType, declaredFactoryType)` shape FR-12 specifies. That
+leaves the *reading* path — candidate discovery, subsumption, closing, the uninitialised read, and
+the hand-off of the value read into `Check` — exercised only over declarations that are sound: the
+twelve sweeps assert every `Reason` is `null`, and all three doubles above are sound by
+construction. A `Sweep` that read the wrong property, passed `null` to `Check`, or discarded the
+read value entirely would leave every one of those green. **A fourth case closes that seam**: a
+sweep over the two AC-28 doubles, asserting their entries carry the expected non-null `Reason`. It
+is the only assertion in the design that the reading path can produce a failure at all, and it
+reuses the doubles AC-28 already declares. AC-29's double is a *positive* case — it demonstrates
+that a type whose constructor cannot succeed is nonetheless examined — and is not a negative
+exercise of the reading path.
 
 ### Technology Choices
 
@@ -360,9 +398,10 @@ Structural changes precede behavioural ones, and each step is independently test
 1. **`SubscriptionChannelFactoryDeclaration.Check`** in `src/Paramore.Brighter`, with AC-28's two
    synthetic subscriptions and their doubles in `Core.Tests`. Pure; no reflection machinery yet.
 2. **`SubscriptionChannelFactoryDeclaration.Sweep`** — candidates, subsumption, closing, the
-   uninitialised read — with AC-29's constructor-cannot-succeed double in `Core.Tests`. A synthetic
-   generic subscription that declares its own override is added here, because no shipped type
-   exercises the closing path (see Risks).
+   uninitialised read — with AC-29's constructor-cannot-succeed double in `Core.Tests`, and the
+   sweep-over-the-AC-28-doubles case that gives the reading path its only negative assertion. A
+   synthetic generic subscription that declares its own override is added here too, because no
+   shipped type exercises the closing path (see Risks).
 3. **Generator additions** — configuration section, `GatewayConformanceGenerator` with its
    `Suites` / `SuitesFor` / `Plan` trio, and the template. `Program.cs` invokes the new generator;
    `GeneratedTreeAudit.ExpectedFilesUnder` adds its `Plan` alongside `OutboxGenerator.Plan` and
@@ -370,8 +409,10 @@ Structural changes precede behavioural ones, and each step is independently test
 4. **The twelve configurations** — nine edits, three new files — then `./generate-test.sh`, and the
    twelve generated files are committed. `SharedGenerator` is left alone: it will render its four
    helper files into the three new conformance-only projects as well. Those files reference only
-   `Paramore.Brighter` and `Paramore.Brighter.Observability`, both already available in every
-   gateway test project, so they compile; they land in the project root, which is outside the
+   `Paramore.Brighter` (which contains the `Observability` namespace — it is not a separate package)
+   and xunit, the latter through fully-qualified `Xunit.Assert` calls rather than a `using`, so a
+   usings-only check misses it. Both are already present in every gateway test project, so they
+   compile; they land in the project root, which is outside the
    generated-tree audit's `Generated/` scope, so no CI job depends on them. Twelve unused files is
    the accepted cost of not making a behavioural change to a shared generator that FR-12 does not
    ask for.
@@ -403,14 +444,15 @@ Structural changes precede behavioural ones, and each step is independently test
 - **A permanent widening of the shipped core package's surface, whose only in-repo consumer is a
   test guard.** `SubscriptionChannelFactoryDeclaration` is part of `Paramore.Brighter`'s API and
   carries the versioning commitment that implies. The Context argues this is an honest widening
-  rather than a breach — there is no path through existing exports to the behaviour, and the rule it
-  names belongs to the module — but the cost is real either way, and a reader who does not accept
-  that argument should read this as surface spent to make a guard testable. It is the narrowest
-  option that reaches all twelve test projects *and* C-10's out-of-repo authors; a generator-emitted
-  predicate would be narrower on public surface alone and is rejected under Alternatives Considered
-  for the C-10 reason. Narrowed as far as it can be: one static type, two methods, no new result
-  type. The honest test of the argument is whether anyone outside this repository ever calls it; if
-  in practice nobody does, the widening was a testing concession after all.
+  rather than a breach — a path through existing exports reaches the *gateways'* soundness, but none
+  reaches the module's own rule about which declarations it can route on, which `CombinedChannelFactory`
+  already depends on unnamed — and the cost is real either way; a reader who reads "the behaviour
+  under test" the other way should read this as surface spent to make a guard testable. A
+  generator-emitted predicate is narrower on public surface and is rejected under Alternatives
+  Considered on the design signal, not on width. Narrowed as far as it can be: one static type, two
+  methods, no new result type. The honest test of the argument is whether anyone outside this
+  repository ever calls it; if in practice nobody does, the widening was a testing concession after
+  all.
 - **Twelve generated files and twelve configuration entries** are added to the repository, and the
   generated-tree audit will then require them to stay in step. A flag or path change that is not
   regenerated becomes a CI failure in the `build` job.
@@ -479,12 +521,14 @@ Structural changes precede behavioural ones, and each step is independently test
   of the twelve test projects, exactly as `SharedGenerator` already renders four helper files into
   every configured project root. This is strictly narrower than the chosen design on public surface:
   it reaches all twelve, it cannot drift (one template), and it adds **nothing** to the shipped
-  package. It is rejected on two grounds that public-surface width does not capture. First, C-10: a
-  template-emitted copy lives only in this repository, so it cannot be pointed at a community
-  gateway author's own assembly, and out-of-repo authors face the identical defect with no remedy.
-  Second, a guard whose logic ships in the package is one the package can be held to; a guard that
-  exists only in twelve generated test files is a private convention. That is what the public
-  surface buys, and it is the honest reason to spend it.
+  package. **On surface width alone it wins**, and Context says so. It is rejected on the second of
+  § *Narrow and deep*'s two tests, which width does not capture: it leaves a rule the module's own
+  runtime already depends on sitting outside the module, in twelve generated test files, where no
+  consumer of the package can see it or rely on it. A guard whose logic ships in the package is one
+  the package can be held to; one that exists only in this repository's test tree is a private
+  convention. C-10 is the evidence that the rule has a non-test consumer — a community gateway
+  author faces the identical defect and a template-emitted copy can never reach them — which is what
+  marks this a real term of the contract rather than a testing concession.
 - **Hand-write the sweep in each of the twelve projects.** Rejected for the reason FR-12 gives:
   twelve copies drift, and the thirteenth gateway then depends on someone remembering. ADR 0070
   already settled that conformance tests are generator-owned by default.
@@ -510,7 +554,7 @@ Structural changes precede behavioural ones, and each step is independently test
   - [ADR 0037 — Add Messaging Gateway Generated Tests](0037-add-messaging-gateway-generated-test.md) (Accepted) — established Liquid-template gateway tests and `MessagingGatewayConfiguration`; the pattern `GatewayConformanceGenerator` follows. Not superseded.
   - [ADR 0070 — Generator-Owned Rejection and Delay Conformance Tests](0070-generator-owned-rejection-and-delay-conformance.md) (Proposed) — conformance tests are generator-owned by default for every gateway configuration; this guard is another. Not superseded.
   - [ADR 0035 — Test Generation Tool](0035-generated-test.md) (Accepted) — the generator's original rationale. Not superseded.
-- Project rules: [.agent_instructions/testing.md](../../.agent_instructions/testing.md) — *No InternalsVisibleTo*, *Test Scope and Isolation*, test and file naming, one class per file; [.agent_instructions/generated_tests.md](../../.agent_instructions/generated_tests.md) — never edit generated files, `SuitesFor(...)` and the generated-tree audit; [.agent_instructions/design_principles.md](../../.agent_instructions/design_principles.md) — Responsibility-Driven Design and "do not add new types without necessity".
+- Project rules: [.agent_instructions/testing.md](../../.agent_instructions/testing.md) — *Narrow and deep — and when widening the surface is legitimate* (the two tests this decision is argued against), *No InternalsVisibleTo*, *Test Scope and Isolation*, test and file naming, one class per file; [.agent_instructions/generated_tests.md](../../.agent_instructions/generated_tests.md) — never edit generated files, `SuitesFor(...)` and the generated-tree audit; [.agent_instructions/design_principles.md](../../.agent_instructions/design_principles.md) — Responsibility-Driven Design and "do not add new types without necessity".
 - External references: GitHub issue [#4334](https://github.com/BrighterCommand/Brighter/issues/4334), prompted by [#4331](https://github.com/BrighterCommand/Brighter/issues/4331).
 - Grounded code references (verified against the working tree):
   - `src/Paramore.Brighter/Subscription.cs:172` — `public virtual Type ChannelFactoryType => typeof(InMemoryChannelFactory)`; `:213` — the `MessagePumpType.Unknown` `ConfigurationException`; `Subscription` is non-abstract (`:35`) and `Subscription<T>` is at `:258`.
@@ -520,5 +564,5 @@ Structural changes precede behavioural ones, and each step is independently test
   - `tools/Paramore.Brighter.Test.Generator/` — `Program.cs`, `Generators/{BaseGenerator,SharedGenerator,OutboxGenerator,MessagingGatewayGenerator,GenerationSuite,PlannedFile}.cs`, `Configuration/TestConfiguration.cs`, and `Templates/{MessagingGateway/{Reactor,Proactor},Outbox/{Sync,Async,Causation}}`.
   - `tests/Paramore.Brighter.Test.Generator.Tests/GeneratedFileAudit/GeneratedTreeAudit.cs` — the expected set built from `OutboxGenerator.Plan` and `MessagingGatewayGenerator.Plan`, and its scope note that only the `Generated/` tree is audited.
   - `tests/Paramore.Brighter.Redis.Tests/MessagingGateway/Generated/{Reactor,Proactor}` and `tests/Paramore.Brighter.RMQ.Async.Tests/MessagingGateway/{Classic,Quorum}/Generated/…` — the two existing output shapes the conformance path must not collide with.
-  - `.github/workflows/ci.yml` — the `build` job's `dotnet build --configuration Release` and generator-audit step; `:228` MQTT's `Category=MQTT` filter; `:361` Kafka's `Category=Kafka` filter; `:769` the commented-out RocketMQ job.
+  - `.github/workflows/ci.yml` — the `build` job's `dotnet build --configuration Release` and generator-audit step; `:228` MQTT's `Category=MQTT` filter; `:361` Kafka's `Category=Kafka` filter; `:708-769` the commented-out RocketMQ job, declared at `:708`.
   - `src/Directory.Build.props` — `BrighterTargetFrameworks` (`netstandard2.0;net8.0;net9.0;net10.0`) and `TreatWarningsAsErrors`; `tests/Directory.Build.props` — `BrighterTestTargetFrameworks` (`net9.0;net10.0`).
