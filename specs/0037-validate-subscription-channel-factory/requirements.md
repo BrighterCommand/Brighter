@@ -190,7 +190,7 @@ Condition 2 is what catches the AWSSQS/Postgres class of defect; a guard that on
 
 **Where the predicate lives is a design decision for the ADR**, but one constraint is fixed here: AC-27 requires a caller in each of the twelve gateway test projects, and no shared test-support assembly reaches all twelve (`Paramore.Brighter.Base.Test` is referenced by three, `Paramore.Test.Helpers` by one, `Paramore.Brighter.ServiceActivator` by six — AWS, AWS.V4, MQTT, RMQ.Async, RMQ.Sync, RocketMQ). Only `Paramore.Brighter` itself is referenced by all of them. Introducing **one new public type** to host the predicate is therefore expressly permitted notwithstanding NFR-5, which constrains changes to *existing* abstractions. Copying the predicate into twelve test projects is not acceptable — twelve copies of a guard drift.
 
-**Scope.** Generic subscription types MUST be closed against a representative `IRequest` before the property is read where the mechanism requires it, honouring each type's constraints (`GcpPubSubSubscription<T> where T : class, IRequest` differs from `MqttSubscription<T> where T : IRequest`). A base/derived pair in the same assembly (e.g. `RocketSubscription` and `RocketMqSubscription<T>`) MUST be reported at most once.
+**Scope.** Generic subscription types MUST be closed against a representative `IRequest` before the property is read where the mechanism requires it, honouring each type's constraints (`GcpPubSubSubscription<T> where T : class, IRequest` differs from `MqttSubscription<T> where T : IRequest`). A base/derived pair in the same assembly (e.g. `RocketSubscription` and `RocketMqSubscription<T>`) MUST be reported at most once **when the derived type declares no `ChannelFactoryType` of its own** — its value is then its base's by construction, so the two cannot disagree and a second report says nothing new. A derived type that **does** declare its own override MUST be reported in its own right, because it can disagree with its base and a guard that hid it would be blind to exactly the declaration the author wrote. Stated conditionally on purpose: an unconditional "at most once" would require dropping a derived override that differs from its base, which inverts the guard's purpose.
 - Example: a hypothetical `FooSubscription` added to a Foo gateway assembly with no override fails condition 2; one declaring `typeof(FooMessageConsumerFactory)` fails condition 1.
 
 **FR-13 — Findings are one-per-subscription and deterministic.**
@@ -516,7 +516,9 @@ This needs `Paramore.Brighter.ServiceActivator`, which `AWS.Tests`, `AWS.V4.Test
 **AC-27** (FR-12) — *Every shipped gateway subscription passes both conditions, in every gateway assembly.*
 Given every non-abstract type assignable to `Subscription` in a shipped messaging-gateway assembly,
 When the sweep reads its `ChannelFactoryType`,
-Then the type implements `IAmAChannelFactory` and is not `typeof(InMemoryChannelFactory)`, for every type found, with a base/derived pair reported at most once.
+Then the type implements `IAmAChannelFactory` and is not `typeof(InMemoryChannelFactory)`, for every type found, with a base/derived pair reported at most once **where the derived type declares no `ChannelFactoryType` of its own** (FR-12's Scope); a derived type declaring its own override is reported in its own right.
+
+In each of the twelve shipped gateway assemblies this resolves to **exactly one** reported subject — the non-generic base that carries the override — because all nine existing overrides, and the three FR-9 to FR-11 adds, sit on that base while every generic derived type declares none. The sweep test MAY therefore assert the reported subject set exactly, which is a stronger guard than "at most once" and additionally catches a sweep aimed at the wrong assembly. An assembly that later declares an override on a second type acquires a second expected subject; that is a deliberate, visible change.
 
 There MUST be **one such sweep test in each of the twelve gateway test projects** enumerated in C-9 — a test project can only sweep assemblies it references, and none references more than one gateway, so a single sweep in one project would leave eleven assemblies unguarded. A newly added thirteenth gateway acquires its own sweep.
 
@@ -546,7 +548,7 @@ Then they all pass.
 
 ## Additional Context
 
-- **Amendments after approval.** This document was approved, then re-opened **three times** and re-approved. The first re-opening followed the round-2 adversarial review of ADR 0072, which found that the ADR was deciding things the requirements owned. Rather than let the ADR deviate, the following were amended here and nothing else was touched:
+- **Amendments after approval.** This document was approved, then re-opened **four times** and re-approved. The first re-opening followed the round-2 adversarial review of ADR 0072, which found that the ADR was deciding things the requirements owned. Rather than let the ADR deviate, the following were amended here and nothing else was touched:
   - **FR-3** gains the null-`D` clause for both arms (D4).
   - **FR-5** item 2 admits `no ChannelFactoryType` when `D` is null; the remedy table is restated as five ordered, total conditions, adding **T4** for an empty candidate set.
   - **NFR-6** and **C-8** gain **C-13**, the new direct-arm breakage.
@@ -556,6 +558,10 @@ Then they all pass.
   A second, narrower re-opening followed the round-5 review, which found ADR 0072 citing a **D5** that this document had never recorded — and using it to bound an approved acceptance criterion. Restricted to exactly that:
   - **D5** is added to *Maintainer decisions already taken*, stating the nested-composite rendering that is accepted and, explicitly, that it licenses nothing about AC-7.
   - **AC-7** and **AC-10** gain a cross-reference to D5. No Given/When/Then is altered: AC-7's assertion and AC-10's verdict are unchanged.
+
+  A **fourth** re-opening followed the round-4 review of **ADR 0073**, which found that this document stated the base/derived dedup obligation **unconditionally** while the only mechanism that can satisfy it is necessarily conditional — subsumption may drop a derived type only when that type declares no override of its own, since a derived type that declares one may disagree with its base and must be reported. The ADR had been made to assert the unconditional reading, and would then have failed a correct sweep. The requirement was the imprecise half. Restricted to exactly that:
+  - **FR-12's Scope** qualifies "reported at most once" with the condition, and says why an unconditional reading would invert the guard's purpose.
+  - **AC-27** carries the same qualification in its Then clause, and records that the twelve shipped assemblies each resolve to exactly one reported subject — which licenses (without requiring) an exact-subject-set assertion in the sweep test. No other criterion is altered.
 
   A third, still narrower re-opening followed the round-7 review, which found **AC-15**'s test-site note naming a second site that cannot exist. Restricted to exactly that:
   - **AC-15**'s note no longer claims the gateway projects assert its regex "for AC-26f". AC-26f's Then is "no findings are produced", so it renders no `Message` for the regex to run against, and no criterion in the AC-25/AC-26 family asserts a `Message` at all. The note now names `Core.Tests` as the only site, and says why. AC-15's normative regex is unchanged.
