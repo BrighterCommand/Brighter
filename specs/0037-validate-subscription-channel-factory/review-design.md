@@ -1,309 +1,349 @@
-# Review: design — 0037-validate-subscription-channel-factory (ADR 0073, round 2)
+# Review: design — 0037-validate-subscription-channel-factory (ADR 0073, round 3)
 
 **Date**: 2026-09-21
 **Threshold**: 60
 **Verdict**: NEEDS WORK
 
-4 findings at or above threshold 60. Address these before approving.
+7 findings at or above threshold 60. Address these before approving.
 
-> **Verification note.** Every finding below was re-checked against the working tree by the main
-> agent before filing (standing convention: agent findings are claims, not facts). **All ten hold.**
-> Two supporting details were corrected in the filing: finding 5's Xunit call count (nineteen lines,
-> not eighteen), and finding 10's line citation. No finding was rejected.
+> **Verification note.** Every finding was re-checked against the working tree by the main agent
+> before filing. **All ten hold; none rejected.** Three of them are defects introduced by round 2's
+> own fixes (findings 1, 2 and 6), and one of those — finding 1 — means round-2 finding 4 was **not
+> fixed at all**. Round 2's fix count therefore goes 4 at threshold → 7, on a document that improved
+> in other respects. That is the cost of patching an argument instead of re-deriving it, which is
+> this spec's oldest recorded lesson.
 
 ## Findings
 
-### 1. `Sweep`'s return type is stated two different ways — the Architecture Overview diagram still carries the pre-D6 contract (Score: 85)
+### 1. The template's new third assertion is vacuous — `Subject` distinctness cannot fail, and cannot catch the subsumption regression the ADR says it catches (Score: 85)
 
-Probe 2 is confirmed. D6 changed `Sweep` to return one entry per examined candidate as
-`IReadOnlyList<(Type Subject, string? Reason)>`. Four of the five places that describe the return
-were updated; the Architecture Overview diagram was not. It still says the method returns a list of
-*strings*, and glosses them as "the reasons" — i.e. failures only, the exact contract D6 withdrew,
-and the exact contract the immediately following section spends eight lines arguing against ("A
-sweep returning failures alone cannot distinguish a sound assembly from one it never looked at").
+Round 2's fix for AC-27's "reported at most once" clause added a third assertion to the generated
+template: that `Subject` values are distinct. The ADR then justifies it with a concrete example. That
+example is wrong, and it is wrong in a way that shows the assertion guards nothing.
 
-A developer who implements from the diagram writes `IReadOnlyList<string> Sweep(Assembly)`; the
-generated template at line 253, which asserts "the result is non-empty … and that every `Reason` is
-`null`", then does not compile. This is the signature duplication-drift defect of this spec,
-surviving into round 2.
+`Sweep` is specified to return "**one entry per candidate it examined**", with candidates drawn from
+`Assembly.GetTypes()` (which yields no duplicates) and generics closed with `MakeGenericType`. Every
+entry's `Subject` is therefore a distinct `Type` **by construction** — two distinct open definitions
+cannot close to the same type. In particular, the ADR's own stated failure case — a subsumption
+regression reporting `RocketSubscription` *and* `RocketMqSubscription<Command>` — produces two
+*distinct* `Type` objects, so a distinctness assertion passes over it exactly as the first two
+assertions do. The assertion cannot fail under any behaviour of `Sweep` consistent with its stated
+contract, so AC-27's at-most-once clause is still guarded nowhere over the twelve real assemblies —
+which is precisely what round-2 finding 4 asked to be fixed.
 
-**Evidence**: ADR lines 133-134, the only stale one of nine `Sweep` references:
+What would actually guard the clause is an assertion about the *relationship* between subjects (no
+reported `Subject` has another reported `Subject` in its base chain, matching on the generic type
+definition — the same reduction the Subsumption bullet specifies), or a per-gateway expected subject
+set. Both are real work and neither is in the design.
+
+**Evidence**: ADR lines 211-214 — "It returns **one entry per candidate it examined**, carrying the
+subject type and its `Reason`". ADR lines 276-282 — "that the `Subject` values are distinct, which is
+AC-27's 'a base/derived pair reported at most once' … asserting only the first two would let a
+subsumption regression report `RocketSubscription` and `RocketMqSubscription<Command>` as two sound
+entries and still pass." `typeof(RocketSubscription) != typeof(RocketMqSubscription<Command>)`, so
+those two entries *are* distinct.
+
+**Recommendation**: Replace the distinctness assertion with an ancestry assertion — no `Subject` in
+the result has another `Subject` from the same result in its base chain, reducing constructed
+generics with `GetGenericTypeDefinition()` — and correct the justifying sentence. If distinctness is
+kept at all, describe it as what it is: a restatement of `Sweep`'s contract, not a guard on
+subsumption.
+
+---
+
+### 2. The new fourth test case is specified as "a sweep over the two AC-28 doubles", but `Sweep` is assembly-scoped and that assembly already contains a subscription whose `ChannelFactoryType` reads instance state (Score: 75)
+
+`Sweep`'s only parameter is an `Assembly`. The design offers no way to sweep a *subset* of types.
+Both the new fourth case ("a sweep over the two AC-28 doubles") and AC-29's case
+("`Sweep(itsOwnAssembly)`") therefore sweep the whole `Paramore.Brighter.Core.Tests` assembly, and
+the ADR never says how the resulting set is narrowed to the doubles under test. Two developers will
+implement this differently: one filters the result by `Subject`, one asserts over the whole result
+(and it then breaks the first time any `Subscription` subclass is added to `Core.Tests`).
+
+This is not hypothetical. `Core.Tests` already contains `MockSubscription`, whose override is an
+**auto-property assigned in the constructor** — so on an uninitialised instance it returns `null`,
+and the sweep will report it with the *null* branch's reason ("declares no channel factory type").
+ADR 0072 will additionally add `NullDeclaringSubscription` (C-9's closed double set), which overrides
+`ChannelFactoryType` to return `null` and will likewise be reported. So a
+`Sweep(Core.Tests.Assembly)` returns unsound entries for types that have nothing to do with AC-28 or
+AC-29, and the design's own Risks bullet ("Today none does — all nine overrides are constant
+`typeof(...)` expressions") is true only of the *shipped gateways*, not of the assembly the new test
+sweeps.
+
+**Evidence**: ADR line 211 —
+`public static IReadOnlyList<(Type Subject, string? Reason)> Sweep(Assembly gatewayAssembly)`. ADR
+lines 371-374 — "**A fourth case closes that seam**: a sweep over the two AC-28 doubles, asserting
+their entries carry the expected non-null `Reason`." ADR line 362 — "It appears among
+`Sweep(itsOwnAssembly)`'s subjects". Working tree:
+`tests/Paramore.Brighter.Core.Tests/MessagingGateway/When_constructing_a_channel_with_combined_factory.cs:85-87`:
+
+```csharp
+public class MockSubscription : Subscription
+{
+    public override Type ChannelFactoryType { get; }
+```
+
+assigned from a constructor argument, so `null` on an uninitialised instance. It is the only
+`Subscription` subclass in `Core.Tests` today. Requirements C-9 lists
+`NullDeclaringSubscription : Subscription` — "Overrides `ChannelFactoryType` to return `null`".
+
+**Recommendation**: State explicitly that the `Core.Tests` cases sweep the whole assembly and assert
+only over the entries whose `Subject` is the double under test
+(`result.Single(e => e.Subject == typeof(X))`), and add a sentence noting that other `Subscription`
+subclasses in `Core.Tests` — `MockSubscription` today, `NullDeclaringSubscription` from 0072 — will
+appear with non-null reasons, which is why the assertions must be subject-scoped. If a type-scoped
+overload is intended instead, say so and account for it against FR-12's one-new-public-type
+allowance.
+
+---
+
+### 3. The two-readings argument is not entitled to the design-signal bullet, and "§ *Narrow and deep*'s two tests" misdescribes the rule's structure (Score: 75)
+
+The decision to add the type is settled (D7) and this finding does not re-litigate it. The
+*expression* of the argument does not hold up against the rule it cites.
+
+(a) **The antecedent is unsatisfied.** The design-signal bullet the ADR leans on is explicitly
+conditional: "**Having to widen is a design signal, not just a cost.** *If no existing export reaches
+the behaviour*, the module's contract may be missing a name for something it already depends on
+internally." The ADR concedes, in the immediately preceding paragraph, that under the other reading
+"a path plainly exists" and "the alternative wins". A conditional whose antecedent the document
+itself declares satisfiable cannot be invoked by choosing a different description of the behaviour;
+the rule's antecedent is about *the behaviour under test*, and the behaviour under test in this
+design — what the twelve sweeps and AC-27/28/29 actually assert — is reading 1's "are the gateway
+assemblies' declarations sound?". Nothing in the design tests "which declarations can this module
+route on" except by calling the proposed export. That is the circularity round 2 set out to remove,
+relocated from C-10 into the choice of reading.
+
+(b) **There are not "two tests".** `testing.md` § *Narrow and deep* has one test (the path test),
+then guidance on what a *necessary* widening signals, then an after-the-fact check. The design-signal
+material is not a second, independent criterion for choosing between alternatives — it is what to
+conclude *once the path test has already failed*. So rejecting the generator-emitted predicate "on
+the second of § *Narrow and deep*'s two tests" applies to an option that widens nothing a rule which
+only speaks about widenings — and which, for an option with a path, prescribes the opposite ("test
+through that path").
+
+**Evidence**: `.agent_instructions/testing.md:109-129`, verbatim structure: bullet 1 the goal; bullet
+2 "Read that way, 'do not export to test' is **conditional, not absolute** … Before widening, ask:
+**is there a path through the module's existing exports to the behaviour under test?** — If there is,
+widening is unjustified — test through that path. — If there is not, exporting may be the only way…";
+bullet 3 "**Having to widen is a design signal, not just a cost.** If no existing export reaches the
+behaviour…"; bullet 4 "The honest check, after the fact…". ADR lines 83-90 ("a path plainly exists …
+the alternative wins; this ADR does not pretend otherwise") and line 525 ("rejected on the second of
+§ *Narrow and deep*'s two tests"); the phrase also survives in the References line at :557.
+
+**Recommendation**: Stop deriving the justification from § *Narrow and deep*'s conditional. State
+plainly what is true and sufficient: FR-12 *expressly permits* one new public type notwithstanding
+NFR-5 (`requirements.md:191` — "Introducing **one new public type** to host the predicate is
+therefore expressly permitted notwithstanding NFR-5"), on the stated ground that only
+`Paramore.Brighter` is referenced by all twelve test projects. Cite § *Narrow and deep* for the
+*obligation* it does create — widen honestly, record what was widened, apply the after-the-fact check
+— and drop the "two tests" framing and the claim that the alternative fails a second test of that
+section.
+
+---
+
+### 4. The Architecture Overview's edges are stale: `Core.Tests` is shown calling only `Check`, and the new fourth case is missing from the box (Score: 70)
+
+Round 2 corrected `Sweep`'s *signature* in the diagram but not the diagram's *edges*. `Core.Tests`
+calls `Sweep` in at least three of the four cases the design now specifies — AC-29's
+`Sweep(itsOwnAssembly)`, the new sweep-over-the-AC-28-doubles case, and the synthetic generic that
+exercises the closing path (Implementation step 2) — yet the arrow from the `Core.Tests` box is
+labelled `Check`, and the box lists only "AC-28 synthetic negatives" and "AC-29 constructs-nothing".
+The one case the ADR calls "the only assertion in the design that the reading path can produce a
+failure at all" does not appear in the diagram at all. This is the same class of defect as round-2
+finding 1, in the same artefact.
+
+**Evidence**: ADR lines 162-169:
 
 ```
-  │   Sweep(Assembly gatewayAssembly)                            │
-  │        -> IReadOnlyList<string>  the reasons, ordered        │
+        │ Sweep                                  │ Check
+  ┌─────┴──────────────────────────┐    ┌────────┴─────────────────────────┐
+  │ 12 GENERATED sweep tests       │    │ Core.Tests, hand-written         │
+  │ one per gateway test project   │    │  - AC-28 synthetic negatives     │
+  │ from ONE Liquid template       │    │  - AC-29 constructs-nothing      │
 ```
 
-against line 189:
+against ADR line 362 ("`Sweep(itsOwnAssembly)`"), lines 371-373 (the fourth case) and lines 401-404
+(step 2's synthetic generic).
 
-> **`public static IReadOnlyList<(Type Subject, string? Reason)> Sweep(Assembly gatewayAssembly)`**
-> — the sweep. It returns **one entry per candidate it examined**…
-
-The other three references (line 253 template, line 331 AC-29, line 362 step 2) all agree with line
-189. The frontmatter `summary` does not state a return type, so it is not in conflict.
-
-**Recommendation**: Change the diagram line to `-> IReadOnlyList<(Type Subject, string? Reason)>`
-with the gloss "one entry per candidate; Reason null = sound", so the diagram carries the property
-the design's central argument depends on.
+**Recommendation**: Label the `Core.Tests` edge `Check + Sweep` and add the two missing lines to the
+box ("AC-28 doubles swept — reading path's negative", "synthetic generic — closing path").
 
 ---
 
-### 2. Context's "there is no such path through existing exports" is contradicted by the ADR's own generator-emitted-predicate alternative (Score: 72)
+### 5. Fifth site of the argument: the shared-test-support-assembly alternative still rejects on C-10 as one of "three grounds", contradicting C-10's demotion from criterion to evidence (Score: 68)
 
-This is probe 3. The widening is licensed in Context by a single test: *is there a path through the
-module's existing exports to the behaviour under test?* The ADR answers no. But Alternatives
-Considered then describes a design that reaches exactly that behaviour using nothing but existing
-exports — `Subscription.ChannelFactoryType`, `IAmAChannelFactory` and `InMemoryChannelFactory` are
-all already public — and concedes it works: "it reaches all twelve, it cannot drift (one template),
-and it adds **nothing** to the shipped package."
+Context now says C-10 is "the **evidence** that this is the second case and not the first, **rather
+than a criterion this design is selected against**", and that "the requirements do not ask the
+feature to reach out-of-repo gateway authors". The Alternatives Considered entry for widening a
+shared test-support assembly was not updated: it rejects that option "on three grounds", the third of
+which is C-10 used exactly as a selection criterion. (The generator-emitted-predicate entry *was*
+updated to the evidence framing; this neighbouring entry was not.)
 
-Under `.agent_instructions/testing.md` as the ADR itself quotes it, that is dispositive: "If there
-is, widening is unjustified — test through that path." The ADR escapes this only by redefining the
-behaviour under test as *the relationship the module has never named* — that is, as the new export
-itself, which is circular: the behaviour is inside the module only because this decision puts it
-there.
+**Evidence**: ADR lines 108-109 — "C-10 is the **evidence** … rather than a criterion this design is
+selected against." ADR lines 510-514 — "Rejected on three grounds. … And a test assembly cannot serve
+the out-of-repo gateway authors of C-10, who face the identical defect."
 
-That leaves C-10 as the sole discriminator, and C-10 does not carry that weight. C-10 is an
-**accepted exposure**, not a goal: "D2 … corrects the five in-repo cases and FR-12's sweep guards
-the twelve shipped gateway assemblies, but **neither reaches out-of-repo types**." The requirements
-settle that out-of-repo authors are *not* reached. The Negative bullet promotes reaching them into a
-selection criterion — "the narrowest option that reaches all twelve test projects *and* C-10's
-out-of-repo authors" — which makes the claim true by construction, since the second conjunct is the
-thing that excludes the rival. The alternative's second ground ("a guard whose logic ships in the
-package is one the package can be held to") is asserted, not argued, and is the only non-circular
-support the rejection has.
-
-This is not a claim that the decision is wrong — it may well be right, and testing.md's own "a
-widening that other callers would genuinely want is a real term of the contract" supports it. The
-claim is that the ADR's stated justification does not survive its own Alternatives section.
-
-**Evidence**: ADR line 83: "**Here there is no such path**…". ADR lines 480-482: "This is strictly
-narrower than the chosen design on public surface: it reaches all twelve, it cannot drift (one
-template), and it adds **nothing** to the shipped package." `.agent_instructions/testing.md:117`:
-"If there is, widening is unjustified — test through that path." `requirements.md` C-10 (line 265):
-"neither reaches out-of-repo types."
-
-**Recommendation**: Either (a) state honestly that a path through existing exports does exist — the
-generator-emitted predicate — and rest the decision on testing.md's *second* test ("Having to widen
-is a design signal… A widening that other callers would genuinely want is a real term of the
-contract"), which is the argument the ADR is actually making; or (b) keep the "no path" claim but
-say precisely what behaviour has no path, and reconcile it with the Alternatives bullet. Drop "and
-C-10's out-of-repo authors" from the narrowest-option claim, or mark it explicitly as a criterion
-this ADR adds beyond the requirements. **(a) is the recommended route** — see finding 6, which makes
-it nearly free.
+**Recommendation**: Rewrite that third ground the way the generator-emitted entry was rewritten — the
+objection is that the rule would sit outside the module (C-10 being the evidence that a non-test
+caller wants it), not that the requirements ask the feature to reach out-of-repo authors. Or reduce
+it to "two grounds" and drop the C-10 clause, since the first two grounds (new public surface in a
+test assembly; eleven project references) already carry the rejection.
 
 ---
 
-### 3. No test anywhere asserts that `Sweep` ever returns a non-null `Reason` — and line 337 misdescribes AC-29 as covering that negatively (Score: 70)
+### 6. `CombinedChannelFactory.cs:33` is the wrong line — a citation added in round 2 as the anchor of the central argument (Score: 68)
 
-The design's failure paths divide cleanly: `Check`'s failure branches are exercised with literal
-arguments (AC-28), and `Sweep`'s composition — candidate discovery, subsumption, closing, the
-uninitialised read, and the hand-off of the read value into `Check` — is exercised only over cases
-that are **sound**. The twelve generated tests assert every `Reason` is `null`. Step 2's two
-Core.Tests doubles are both sound: AC-29's constructor-cannot-succeed double "declares a sound
-factory type" and appears "with a `null` `Reason`"; the generic-closing double "declares its own
-override". So a `Sweep` that read the wrong property, passed `null` to `Check`, or discarded the
-read value entirely would leave every test in this design green.
+The quoted expression is at line **34**, and it occurs three times (34, 46, 59 — `CreateSyncChannel`,
+`CreateAsyncChannel`, `CreateAsyncChannelAsync`). Line 33 is the method signature. This matters more
+than an ordinary off-by-one because this citation is the sole grounding for reading 2's claim that
+"`CombinedChannelFactory` already implements it at runtime", and it appears only in the body, not in
+the verified grounded-references list at the end.
 
-The ADR asserts otherwise, and contradicts itself doing so: line 337-338 claims the reading path is
-"covered positively by the twelve sweeps and **negatively by AC-29**", but lines 331-333 define
-AC-29's double as producing a `null` `Reason` — a positive case. There is no negative case for the
-reading path anywhere in the design.
+**Evidence**:
 
-**Evidence**: ADR lines 331-333: "a subscription whose constructor cannot succeed … **but which
-declares a sound factory type**. It appears among `Sweep(itsOwnAssembly)`'s subjects with a `null`
-`Reason`". ADR line 337-338: "The reading path it does not exercise is covered positively by the
-twelve sweeps and negatively by AC-29." ADR line 253: "the result is non-empty … and that every
-`Reason` is `null`."
+```
+$ grep -n "FirstOrDefault" src/Paramore.Brighter/CombinedChannelFactory.cs
+21:        get => _factories.OfType<IAmAChannelFactoryWithScheduler>().FirstOrDefault()?.Scheduler;
+34:        var factory = _factories.FirstOrDefault(f => f.GetType() == subscription.ChannelFactoryType);
+46:        var factory = _factories.FirstOrDefault(f => f.GetType() == subscription.ChannelFactoryType);
+59:        var factory = _factories.FirstOrDefault(f => f.GetType() == subscription.ChannelFactoryType);
+```
 
-**Recommendation**: Add a Core.Tests case that runs `Sweep` over an assembly (or a filtered
-candidate set) containing the two AC-28 doubles and asserts their entries carry the expected
-non-null `Reason` — the doubles already exist, they are already in `Core.Tests`, and this closes the
-read→`Check` seam. Then fix line 337-338, which is wrong about AC-29 either way.
+ADR line 96-97 — "(`CombinedChannelFactory.cs:33`)".
+
+**Recommendation**: Cite `CombinedChannelFactory.cs:34, :46, :59` (three call sites strengthens the
+"already depends on this rule" point), and add it to the grounded-references list so it is covered by
+the "verified against the working tree" claim.
 
 ---
 
-### 4. AC-27's "reported at most once" clause has no assertion in the generated template (Score: 65)
+### 7. The "honest check" is already answerable in-repo, and the ADR does not address the obvious non-test consumer that exists (Score: 65)
 
-AC-27's *Then* has three conjuncts: implements `IAmAChannelFactory`, is not `InMemoryChannelFactory`,
-"**with a base/derived pair reported at most once**". The generated template asserts only two things
-— non-empty, and every `Reason` null. A subsumption regression that reported both
-`RocketSubscription` and `RocketMqSubscription<Command>` would produce two entries, both with `null`
-reasons, and the test would pass. The at-most-once property — which the ADR spends a whole bullet
-designing (generic-definition reduction, `BindingFlags.DeclaredOnly`) and which FR-12's Scope
-paragraph states as a MUST — is therefore guarded nowhere over the twelve real assemblies.
+§ *Narrow and deep*'s after-the-fact check is "does anything other than a test ever call it? If
+nothing ever does, it was a testing concession after all, and should be revisited." The ADR defers
+this to future observation ("if in practice nobody does") while its own Negative bullet already
+answers it for this repository: "whose only in-repo consumer is a test guard."
 
-The ADR's only coverage statement for subsumption is oblique: "No shipped assembly has that shape
-today, so step 2's synthetic types cover it" (line 216), and that sentence is about the
-`FooBar : Foo<Bar>` generic-definition case specifically, not about the twelve shipped pairs.
+That is avoidable, and the ADR never says why it was not avoided. Two in-repo non-test consumers of
+the same judgement already exist or are being built in the sibling: `CombinedChannelFactory` (the
+runtime match the ADR cites as proof the rule is real) and ADR 0072's startup rule, whose T3a/T3b
+case turns on exactly `D == typeof(InMemoryChannelFactory)` — FR-12's condition 2. The design
+therefore ships a *second* expression of the inherited-default judgement in the same package without
+stating which is authoritative, which is the drift hazard FR-12 invokes against twelve copies, at a
+smaller scale. Whether or not refactoring 0072's rule onto `Check` is in scope, the ADR should say so
+and say why; as written, its strongest available support for the design-signal argument is left on
+the table.
 
-**Evidence**: `requirements.md:519` — "Then the type implements `IAmAChannelFactory` and is not
-`typeof(InMemoryChannelFactory)`, for every type found, **with a base/derived pair reported at most
-once**." FR-12 Scope (`requirements.md:193`): "A base/derived pair in the same assembly (e.g.
-`RocketSubscription` and `RocketMqSubscription<T>`) MUST be reported at most once." ADR lines
-252-255 describe the template as asserting exactly two things.
+**Evidence**: `.agent_instructions/testing.md:127-129` (the honest check). ADR lines 444-445,
+453-455. ADR 0072:457 — "**T3a/T3b's suppression is architectural, not cosmetic.** When `D` is
+`InMemoryChannelFactory` the subscription is a plain `Subscription`/`Subscription<T>` …".
 
-**Recommendation**: Have the template also assert that `Subject` values are distinct — one line,
-costs nothing, and directly discharges AC-27's third conjunct. Say so in the "asserts **both**
-halves" sentence, which then becomes three.
-
----
-
-### 5. Step 4's `SharedGenerator` compile claim omits the Xunit dependency (Score: 55)
-
-Probe 5. The conclusion holds, but the stated reason is incomplete. `DefaultMessageAssertion.cs.liquid`
-— one of the four helper files — calls `Xunit.Assert` on nineteen lines. So the rendered helpers
-reference `Paramore.Brighter`, `Paramore.Brighter.Observability` **and xunit**. All three new
-conformance-only projects do carry `<PackageReference Include="xunit" />`, so the files do compile;
-but the ADR's argument as written does not establish that, and a reader checking the claim finds a
-dependency the ADR says is not there.
-
-(Note also that `Paramore.Brighter.Observability` is not a separate package — it is a namespace
-inside `src/Paramore.Brighter`, with no project directory of its own — so the "both already
-available" phrasing suggests two assemblies where there is one. Minor, folded in here.)
-
-**Evidence**: `grep -c "Xunit\.Assert"
-tools/Paramore.Brighter.Test.Generator/Templates/DefaultMessageAssertion.cs.liquid` → `19`. A
-usings-only check misses it: the file's only `using` is `using Paramore.Brighter;`, because Xunit is
-fully qualified at every call site. All three csprojs (`AzureServiceBus`, `MQTT`, `RMQ.Sync`)
-contain `<PackageReference Include="xunit" />`. `ls -d src/Paramore.Brighter.Observability` → no
-such directory; `src/Paramore.Brighter/Observability/` is the namespace's home.
-
-**Recommendation**: Amend step 4 to "reference only `Paramore.Brighter` (which contains the
-`Observability` namespace) and xunit, all three already present in every gateway test project".
+**Recommendation**: Add a sentence to the Negative bullet (or to Context) stating whether 0072's rule
+is expected to consume `Check` and, if not, why the duplication of the inherited-default judgement is
+accepted — and note in the Negative bullet that the in-repo answer to the honest check is already
+"no", so the future test is about out-of-repo callers only.
 
 ---
 
-### 6. The rule that licenses the widening now exists in `testing.md` and the ADR neither cites nor references it (Score: 55)
+### 8. "All three of AC-27's conjuncts" — non-emptiness is not one of AC-27's conjuncts (Score: 50)
 
-Commit `f966f8c3b` added `.agent_instructions/testing.md` § *Narrow and deep — and when widening the
-surface is legitimate* (lines 109-129), which states the conditional reading, the "is there a path
-through existing exports" test, the "widen honestly and record what was widened and why (in the ADR,
-or the PR)" instruction, the "a widening that only a test could ever want is a smell" discriminator,
-and the "does anything other than a test ever call it?" after-the-fact check. The ADR's Context
-reproduces all five, near-verbatim, as its own interpretation of the quoted bullets — and its
-References line cites only "*No InternalsVisibleTo*, *Test Scope and Isolation*, test and file
-naming, one class per file".
+AC-27's Then clause has three parts: implements `IAmAChannelFactory`; is not
+`typeof(InMemoryChannelFactory)`; base/derived pair reported at most once. Non-emptiness is the ADR's
+own (good) anti-vacuous-pass requirement, not something AC-27 states. Calling the template's three
+assertions "all three of AC-27's conjuncts" misattributes one of them and silently merges AC-27's
+first two conjuncts into "every `Reason` is `null`". Cosmetic — it does not change what gets built —
+but the sentence is the one a reader checks AC-27 coverage against.
 
-The effect is to weaken the ADR's own position: the Negative bullet concedes "a reader who does not
-accept that argument should read this as surface spent to make a guard testable", when the argument
-is not the ADR's to accept or reject — it is a project rule with a named section the ADR could
-simply point at.
+**Evidence**: `requirements.md` AC-27 — "Then the type implements `IAmAChannelFactory` and is not
+`typeof(InMemoryChannelFactory)`, for every type found, with a base/derived pair reported at most
+once." ADR lines 276-277 — "The test asserts **all three** of AC-27's conjuncts: that the result is
+non-empty…".
 
-**Evidence**: `.agent_instructions/testing.md:109` — `### Narrow and deep — and when widening the
-surface is legitimate`; compare :114-118 with ADR :74-81, and :140-145 with ADR :98-107. ADR :513
-References entry names four things from testing.md, none of them *Narrow and deep*.
-
-**Recommendation**: Cite the section by name in Context ("as `.agent_instructions/testing.md`
-§ *Narrow and deep* puts it") and add it to the References line. Then finding 2's question — which
-of that section's two tests this decision passes — has to be answered explicitly, which is the
-point.
+**Recommendation**: "The test asserts three things: that the result is non-empty (this ADR's
+anti-vacuous-pass requirement, not AC-27's); that every `Reason` is `null` (AC-27's first two
+conjuncts); and … (AC-27's at-most-once clause)."
 
 ---
 
-### 7. "*Test Scope and Isolation* carries three bullets" — the section carries eight bullet lines (Score: 50)
+### 9. The blockquote of the *do not export to test* bullet silently drops half of it (Score: 45)
 
-The quoted block is verbatim-accurate, but it is an excerpt of one top-level bullet and two of its
-four sub-bullets, presented as the section's full content. The section has two top-level bullets
-with two and four sub-bullets respectively — eight bullet lines in all. Nothing gets built
-differently, but a grounded claim about a cited source is wrong, and the ADR's numbering ("the third
-bullet", twice more at :76-77) does not survive a reader opening the file.
+The bullet has four sub-bullets in `testing.md`; the ADR quotes two with no ellipsis. The two omitted
+ones ("By following the rules for only testing behaviors, you only need to write tests for the
+behaviors exposed from the module not its details" and "Private or Internal classes … do not need
+tests") are the ones most directly about *what* a test should target, so trimming them shapes the
+reader's view of the rule the ADR then argues against.
 
-Worth noting against round 1: that round's highest finding was this same passage quoting `:103-104`
-and omitting `:105`, the bullet that prohibited the act. `:105` is now included; the description of
-the section's extent was not corrected with it.
+**Evidence**: `.agent_instructions/testing.md:103-107` has four sub-bullets under "Do not expose more
+than is necessary from an assembly"; ADR lines 70-73 quote two.
 
-**Evidence**: `.agent_instructions/testing.md:100-107` — `- Only test exports from an assembly`
-(+2 sub-bullets at :101-102) and `- Do not expose more than is necessary from an assembly` (+4
-sub-bullets at :104-107, of which the ADR quotes two). ADR :67: "*Test Scope and Isolation* carries
-three bullets:".
-
-**Recommendation**: "carries two bullets; the relevant one reads:" and, since the ADR refers to "the
-third bullet" twice more, name it instead ("*do not export to test*").
+**Recommendation**: Add a trailing `> - …` or quote all four.
 
 ---
 
-### 8. The CI step as described would fail: `--no-build` without `--configuration Release` (Score: 45)
+### 10. "All nine overrides are constant `typeof(...)`" will be stale the moment 0072 lands (Score: 40)
 
-The `build` job runs `dotnet build --configuration Release`; the ADR's step is described as
-`--filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" --no-build`. `dotnet test
---no-build` defaults to the Debug configuration, which the job never built, so the step errors with
-"was not built" on all twelve. The existing transport jobs all pass `--configuration Release`
-explicitly.
+The Risks bullet's mitigation rests on there being nine overrides, all constant. ADR 0072 adds three
+(the "declaring no override at all" cases) and rewrites two, so on merge there will be twelve. The
+claim is true of today's tree and the substance survives, but the count is dated and the reader
+cannot tell whether "nine" is deliberate.
 
-**Evidence**: `.github/workflows/ci.yml:59-60` — `- name: Build` / `run: dotnet build
---configuration Release`. `:228` and `:361` both include `--configuration Release` on their `dotnet
-test` lines. ADR :302-303 quotes the new step without it. (Scored low because the ADR's fragment
-does not claim to be the full command line.)
+**Evidence**: ADR line 476. ADR Context lines 41-43 — "Five of the twelve … three declaring no
+override at all — … ADR 0072 corrects those five."
 
-**Recommendation**: Include `--configuration Release` in the quoted fragment.
+**Recommendation**: "all twelve overrides after 0072's corrections (nine today) are constant
+`typeof(...)` expressions".
 
 ---
-
-### 9. "Two further reasons belong to `Sweep` rather than `Check`" arguably undercounts (Score: 40)
-
-Three reasons are Sweep-only, not two: a generic definition of unexpected arity or unsatisfied
-constraints (line 227-229), a type for which an uninitialised instance cannot be produced, and a
-read that throws. Reading "further" as "further to the one just described" makes the sentence
-correct, so this is scored low and flags the ambiguity rather than the count — but the closing
-reason is the one an implementer is most likely to miss, and it is not enumerated where the
-Sweep-reason set is enumerated.
-
-**Evidence**: ADR :227-229 "A definition of any other arity, or one whose constraints the
-representative does not satisfy, **yields a reason**"; ADR :234-235 "**Two further reasons** belong
-to `Sweep` rather than `Check`: a type for which an uninitialised instance cannot be produced, and a
-read that throws."
-
-**Recommendation**: "Three reasons belong to `Sweep` rather than `Check`:" and list the closing
-failure with the other two.
-
----
-
-### 10. `ci.yml:769` is the commented RocketMQ *test step*, not the job declaration (Score: 35)
-
-Probe 4: `:228` (MQTT `Category=MQTT&Fragile!=CI`) and `:361` (Kafka
-`Category=Kafka&Category!=Confluent&Fragile!=CI`) are both exact. `:769` is the final line of the
-file and is the commented-out `RocketMQ Tests` run line; the commented `rocketmq-ci:` job
-declaration is at `:708`. The substantive claim — the job is entirely commented out — is true.
-
-**Evidence**: `grep -n -i rocketmq .github/workflows/ci.yml` → `707:#  TODO: Rafael Andrade is
-working on how to run RocketMQ on GHA`, `708:#  rocketmq-ci:`, … and `wc -l` → `769`.
-
-**Recommendation**: Cite `:708-769`, or `:708` for the job declaration.
 
 ## Summary
 
 | Score Range | Count |
 |-------------|-------|
 | 90-100 (Critical) | 0 |
-| 70-89 (High) | 3 |
+| 70-89 (High) | 4 |
 | 50-69 (Medium) | 4 |
-| 0-49 (Low) | 3 |
+| 0-49 (Low) | 2 |
 
 **Total findings**: 10
-**Findings at or above threshold (60)**: 4
+**Findings at or above threshold (60)**: 7
 
----
+## Round-2 fixes verified
 
-## Probes not upheld
+- **Finding 1 (85) — diagram carried the pre-D6 `Sweep` contract**: **partial, and it introduced a
+  new problem.** The signature in the diagram now matches the tuple contract at all five sites, so
+  the stated defect is closed. But the diagram's *edges* were not revisited: `Core.Tests` is still
+  shown calling only `Check`, and the new fourth case is absent from its box (finding 4 above).
+- **Finding 2 (72) — "no path through existing exports" contradicted by the ADR's own
+  alternative**: **partial.** The contradicted sentence is gone, no "there is simply no path" remnant
+  survives, and C-10 is demoted in Context, the Negative bullet and the generator-emitted-predicate
+  entry. Two gaps: the replacement argument invokes a conditional the ADR itself declares unsatisfied
+  and misdescribes § *Narrow and deep* as offering "two tests" (finding 3); and a fifth site — the
+  shared-test-support-assembly alternative — still uses C-10 as a selection criterion (finding 5).
+- **Finding 3 (70) — nothing asserted `Sweep` can return a non-null `Reason`**: **partial, and it
+  introduced a new problem.** The fourth case is stated consistently in both places (synthetic-types
+  paragraph and Implementation step 2), and the withdrawal of the "AC-29 covers it negatively" claim
+  is clean and explicit. But `Sweep` is assembly-scoped and the ADR never says how the case is
+  narrowed to the two doubles — and `Core.Tests` already contains `MockSubscription`, whose
+  auto-property override returns `null` on an uninitialised instance, so the sweep of that assembly
+  will report unrelated non-null reasons (finding 2).
+- **Finding 4 (65) — AC-27's "at most once" clause had no assertion**: **not fixed.** The assertion
+  added (`Subject` distinctness) is guaranteed by `Sweep`'s own contract and passes over the exact
+  regression the ADR cites as its justification, so the clause remains unguarded over the twelve real
+  assemblies (finding 1).
 
-**Probe 1 (a fourth stale copy of the withdrawn surface-widening claim): not found.** A grep over the
-ADR for the withdrawn framing's vocabulary returns only the reframed passages at :90-91 and :406,
-plus unrelated exception-type mentions. The three passages `5625be4cc` touched are mutually
-consistent and no fourth copy survives. Finding 2 is a *different* defect in the reframed argument,
-not a stale copy of the old one.
+Of the six sub-threshold round-2 fixes checked, all are correct: *Test Scope and Isolation* does carry
+two top-level bullets and the ADR names the second correctly; § *Narrow and deep* is now cited in
+Context and References; `--configuration Release` is in the CI fragment; "three reasons belong to
+`Sweep`" matches the three stated; `ci.yml:708-769` is exact (`:708` is `#  rocketmq-ci:`, `:769` is
+the file's last line); and `Observability` is a namespace in `Paramore.Brighter` with the xunit
+dependency now noted.
 
 ## Grounded references sampled and correct
 
-`Subscription.cs:35/:172/:213/:258`; `Command.cs:42`; the nine `ChannelFactoryType` overrides at
-RocketMQ `:50`, GcpPubSub `:108`, Redis `:32`, Kafka `:162`, MQTT `:35`; `RocketMqSubscription.cs:10/:117-118`;
-`GcpPubSubSubscription.cs:158-159`; `TestConfiguration.cs:38`; the reference topology
-(`ServiceActivator` by exactly six — AWS, AWS.V4, MQTT, RMQ.Async, RMQ.Sync, RocketMQ; `Base.Test` by
-exactly three — Gcp, MSSQL, PostgresSQL; `Paramore.Test.Helpers` by one — MQTT; each of the twelve
-referencing exactly one gateway); fourteen existing `test-configuration.json` files, all carrying
-`Namespace`, nine of them in gateway projects; exactly twelve `src/Paramore.Brighter.MessagingGateway.*`
-directories, each matching its root namespace; the two existing generated output shapes (Redis
-`MessagingGateway/Generated/{Reactor,Proactor}`, RMQ.Async `MessagingGateway/{Classic,Quorum}/Generated`);
-`GeneratedTreeAudit.ExpectedFilesUnder` built from `OutboxGenerator.Plan` and
-`MessagingGatewayGenerator.Plan`; `MessagingGatewayGenerator`'s `Suites`/`SuitesFor`/`Plan` trio; the
-four `SharedGenerator` helper templates.
+`Subscription.cs:35/172/213/258`, `Command.cs:42`, `RocketMqSubscription.cs:10/50/117-118`, the
+Redis/MQTT/Kafka/MsSql/AzureServiceBus override line numbers, `TestConfiguration.cs:38`,
+`ci.yml:228/:361`, fourteen existing `test-configuration.json` files (nine of the twelve gateway
+projects have one; AzureServiceBus, MQTT and RMQ.Sync do not), twelve
+`src/Paramore.Brighter.MessagingGateway.*` directories each with a root namespace equal to its
+directory name.
