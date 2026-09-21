@@ -64,15 +64,27 @@ three (Gcp, MSSQL, PostgresSQL), `Paramore.Test.Helpers` by one (MQTT), and
 twelve.
 
 **Two project rules pull against each other here.**
-`.agent_instructions/testing.md` *Test Scope and Isolation* says "Do not expose more than is
-necessary from an assembly — An assembly is a module, it's surface area should be as narrow as
-possible." The same document's *No InternalsVisibleTo* section is categorical: "**NEVER** use
-`InternalsVisibleTo` to expose internal classes for testing", and prescribes the alternative —
-"make the interface **public** so it can be injected through the public API", i.e. widen the public
-surface deliberately rather than smuggle access. The escape hatch that would have kept the guard
-invisible is closed by rule, so the choice is between a deliberate public widening and twelve
-copies of the guard. FR-12 resolves it by expressly permitting **one new public type**
-notwithstanding NFR-5.
+`.agent_instructions/testing.md` *Test Scope and Isolation* carries three bullets, and the third is
+the one that bites:
+
+> - Do not expose more than is necessary from an assembly
+>   - An assembly is a module, it's surface area should be as narrow as possible.
+>   - Do not make export classes or methods from a module to test them; we only test exports from
+>     modules, not implementation details.
+
+**This decision contravenes that third bullet, and the ADR says so plainly rather than calling it a
+tension.** Publishing a predicate from `Paramore.Brighter` so that twelve test projects can call it
+is exactly "export … methods from a module to test them". FR-12 grants the exception expressly —
+**one new public type** notwithstanding NFR-5 — after reasoning that only the core assembly is
+referenced by all twelve. An exception granted by an approved requirement is the right way to break
+a project rule; doing it silently is not.
+
+The alternative that would have kept the guard invisible is closed by a second rule. *No
+InternalsVisibleTo* is categorical: "**NEVER** use `InternalsVisibleTo` to expose internal classes
+for testing." So the choice is between a declared public widening and twelve copies of the guard.
+(That section's own prescription — "make the interface **public** so it can be injected through the
+public API" — is about injecting a dependency for testing and is **not** a licence for this; it is
+cited here only for the prohibition, not as endorsement.)
 
 **Twelve near-identical tests are a drift hazard.** FR-12 states it directly: "Copying the predicate
 into twelve test projects is not acceptable — twelve copies of a guard drift." The repository
@@ -133,16 +145,19 @@ Negative, and the options it was chosen over are in Alternatives Considered.
 
 **`public static string? Check(Type subscriptionType, Type? declaredFactoryType)`** — the pure
 predicate FR-12 requires. It returns `null` when the declaration is sound, and otherwise the single
-reason it is not. It evaluates three conditions in order and returns the first that fails:
+reason it is not. It evaluates three named branches in order and returns the first that fails. They
+are **named, not numbered**, because FR-12 numbers its own two conditions differently and the two
+schemes would otherwise be read for each other:
 
-1. `declaredFactoryType is null` → *"… declares no channel factory type (`ChannelFactoryType`
-   returned null)."*
-2. `!typeof(IAmAChannelFactory).IsAssignableFrom(declaredFactoryType)` → *"… declares `{full name}`,
-   which does not implement `Paramore.Brighter.IAmAChannelFactory`."*
-3. `declaredFactoryType == typeof(InMemoryChannelFactory)` → *"… declares
+- **null** — `declaredFactoryType is null` → *"… declares no channel factory type
+  (`ChannelFactoryType` returned null)."*
+- **not-a-channel-factory** (FR-12's condition 1) —
+  `!typeof(IAmAChannelFactory).IsAssignableFrom(declaredFactoryType)` → *"… declares `{full name}`,
+  which does not implement `Paramore.Brighter.IAmAChannelFactory`."*
+- **inherited-default** (FR-12's condition 2) — `declaredFactoryType == typeof(InMemoryChannelFactory)` → *"… declares
    `Paramore.Brighter.InMemoryChannelFactory`. A shipped gateway subscription must declare its own
-   transport's channel factory; a type that does not override `ChannelFactoryType` inherits this
-   default."*
+  transport's channel factory; a type that does not override `ChannelFactoryType` inherits this
+  default."*
 
 `subscriptionType` is used only to name the subject; a null argument throws
 `ArgumentNullException`. Every type in a reason is rendered with `Type.FullName`, because eight
@@ -151,10 +166,21 @@ would read "expected `ChannelFactory`, got `ChannelFactory`" — the same reason
 the rule's messages. The reason is a `string?` rather than a result record; see Alternatives
 Considered.
 
-**`public static IReadOnlyList<string> Sweep(Assembly gatewayAssembly)`** — the sweep. It returns
-the reasons for every unsound declaration in the assembly, ordered by the subject type's `FullName`
-using ordinal comparison, and is empty when the assembly is sound. `Assembly.GetTypes()` order is
-not specified, so the sort is what makes repeated runs byte-identical. Four steps:
+**`public static IReadOnlyList<(Type Subject, string? Reason)> Sweep(Assembly gatewayAssembly)`** —
+the sweep. It returns **one entry per candidate it examined**, carrying the subject type and its
+`Reason` — `null` when that declaration is sound. It is empty only when the assembly contains no
+candidates at all. Entries are ordered by `Subject.FullName` using ordinal comparison;
+`Assembly.GetTypes()` order is not specified, so the sort is what makes repeated runs
+byte-identical.
+
+**It reports what it examined, not only what failed, and that is deliberate.** A sweep returning
+failures alone cannot distinguish a sound assembly from one it never looked at: an empty result
+would pass identically over twelve sound subscriptions and over zero candidates, so a refactor that
+moved the subscription types or a `SubscriptionType` pointed at the wrong assembly would leave the
+guard green while guarding nothing. That is the vacuous pass this design exists to prevent, and a
+contract that cannot express "I examined these and they were sound" cannot rule it out. It is also
+what makes AC-29 assertable — see the synthetic types below. A `ValueTuple` carries the pair, so
+this costs no new public type. Four steps:
 
 - **Candidates.** Non-abstract classes whose base chain reaches `Paramore.Brighter.Subscription`.
   The base chain is walked explicitly rather than tested with `IsAssignableFrom`, because
@@ -162,7 +188,13 @@ not specified, so the sort is what makes repeated runs byte-identical. Four step
   assembly contains one.
 - **Subsumption.** A candidate is dropped when it does not itself declare `ChannelFactoryType`
   (looked up with `BindingFlags.DeclaredOnly`) and an ancestor in its base chain is also a candidate
-  in the same assembly. This is FR-12's "a base/derived pair … MUST be reported at most once": a
+  in the same assembly. **Ancestry is matched on the generic type *definition*.** Subsumption runs
+  before closing, so the candidate set holds open definitions (`Foo<>`) while a base chain yields
+  closed constructions (`Foo<Bar>`); an ancestor that is a constructed generic is therefore reduced
+  with `GetGenericTypeDefinition()` before the comparison. Without that reduction a
+  `FooBar : Foo<Bar>` declaring no override would never match its own base and would be reported
+  twice — or, read the other way, silently dropped. No shipped assembly has that shape today, so
+  step 2's synthetic types cover it. This is FR-12's "a base/derived pair … MUST be reported at most once": a
   derived type that adds no override cannot disagree with its base. In every shipped assembly this
   reduces the pair to its non-generic base — `RocketMqSubscription<T>` to `RocketSubscription`
   (`src/Paramore.Brighter.MessagingGateway.RocketMQ/RocketMqSubscription.cs:117` and `:10`),
@@ -182,18 +214,25 @@ not specified, so the sort is what makes repeated runs byte-identical. Four step
 Two further reasons belong to `Sweep` rather than `Check`: a type for which an uninitialised
 instance cannot be produced, and a read that throws. A throw is converted into a reason naming the
 type, the exception type and its message, so that one run reports every offending type rather than
-stopping at the first. This is deliberately unlike ADR 0064's "rules must not catch", which governs
-startup validation rules whose exceptions must reach the host; a test guard that stops at the first
-fault hides the rest of the answer, and nothing is swallowed — the sweep still fails, with more
-information. A `ReflectionTypeLoadException` from `GetTypes()` is allowed to propagate: it means the
+stopping at the first. This does not contradict ADR 0064's "rules must not catch", once that rule's
+reason is stated correctly. 0064 forbids a rule catching because the `Specification<T>` framework
+**already** wraps rule evaluation in a `try`/`catch` and converts any rule-body exception into a
+`ValidationSeverity.Error` finding (ADR 0064:165) — a rule that caught would be duplicating a
+service it is already given. A static sweep has no such surrounding framework, so catching per type
+is how it obtains the **equivalent** behaviour: one fault becomes one reported reason instead of
+terminating the run. Nothing is swallowed — the sweep still fails, with more information. A `ReflectionTypeLoadException` from `GetTypes()` is allowed to propagate: it means the
 test project's references are broken, not that a declaration is wrong.
 
 **The twelve sweep tests are generator-owned**, following ADR 0037's precedent for
 messaging-gateway tests and ADR 0070's decision that conformance tests are generator-owned by
-default. Four additions to `tools/Paramore.Brighter.Test.Generator`:
+default. Three new files in `tools/Paramore.Brighter.Test.Generator` — a template, a configuration
+class and a generator — plus edits to `TestConfiguration`, `Program.cs` and `GeneratedTreeAudit`:
 
 - `Templates/GatewayConformance/When_sweeping_the_gateway_assembly_should_find_no_invalid_channel_factory_declaration.cs.liquid`
   — one template, rendering one `[Fact]` in a class named `GatewayChannelFactoryDeclarationTests`.
+  The test asserts **both** halves of `Sweep`'s contract: that the result is non-empty, so the sweep
+  is known to have examined something, and that every `Reason` is `null`. Asserting only the second
+  would be the vacuous pass described above.
   The naming follows `.agent_instructions/testing.md`: the file is named for the test method, the
   class for the behaviour.
 - `Configuration/GatewayConformanceConfiguration.cs` and a `GatewayConformance` section on
@@ -214,7 +253,12 @@ One sweep is emitted per **project**, not per gateway variant — AC-27 asks for
 
 **Three gateway test projects need a `test-configuration.json` that does not exist today**:
 `Paramore.Brighter.AzureServiceBus.Tests`, `Paramore.Brighter.MQTT.Tests` and
-`Paramore.Brighter.RMQ.Sync.Tests`. Theirs carry a `GatewayConformance` section and nothing else.
+`Paramore.Brighter.RMQ.Sync.Tests`. Theirs carry `Namespace` and a `GatewayConformance` section, and
+nothing else. `Namespace` is required, not incidental: it is a top-level property defaulting to
+`string.Empty` (`Configuration/TestConfiguration.cs:38`), and the template renders
+`{{ Namespace }}.MessagingGateway.Generated.Conformance`, so omitting it yields
+`namespace .MessagingGateway.Generated.Conformance`, which fails to compile *after* generation
+rather than at configuration load. All fourteen existing configurations carry it.
 The other nine gain the section in the file they already have. The twelve values:
 
 | Test project | `GatewayConformance.SubscriptionType` |
@@ -258,13 +302,15 @@ existing `CombinedChannelFactory` and channel tests, one class per file, with th
 `Validation/TestDoubles/`, whose double set C-9 declares closed for the rule's own criteria. Three
 doubles, all identity-only in C-9's sense — every `IAmAChannelFactory` member throws:
 
-- a subscription with no `ChannelFactoryType` override, for AC-28's condition-2 shape;
-- a subscription overriding it with a type that is not an `IAmAChannelFactory`, for AC-28's
-  condition-1 shape;
+- a subscription with no `ChannelFactoryType` override, so it inherits the default — AC-28's
+  **inherited-default** shape (FR-12's condition 2);
+- a subscription overriding it with a type that is not an `IAmAChannelFactory` — AC-28's
+  **not-a-channel-factory** shape (FR-12's condition 1);
 - a subscription whose constructor cannot succeed — it calls `base(...)` with
   `MessagePumpType.Unknown`, so `Subscription.cs:213` throws — but which declares a sound factory
-  type. It appears in `Sweep(itsOwnAssembly)` with no reason against it, and can only do so because
-  no constructor ran. That is AC-29.
+  type. It appears among `Sweep(itsOwnAssembly)`'s subjects with a `null` `Reason`, and can only do
+  so because no constructor ran — a constructed instance would have thrown. That is AC-29, and it is
+  assertable only because `Sweep` reports what it examined.
 
 AC-28 calls `Check` with both arguments written literally, which is the Evident Data the assertion
 is about and is exactly the `(subscriptionType, declaredFactoryType)` shape FR-12 specifies. The
@@ -301,15 +347,17 @@ Structural changes precede behavioural ones, and each step is independently test
    `Suites` / `SuitesFor` / `Plan` trio, and the template. `Program.cs` invokes the new generator;
    `GeneratedTreeAudit.ExpectedFilesUnder` adds its `Plan` alongside `OutboxGenerator.Plan` and
    `MessagingGatewayGenerator.Plan`, or the twelve new files are all reported as orphans.
-4. **`SharedGenerator` becomes conditional** on the configuration declaring an outbox or a
-   messaging-gateway section. Without this, the three conformance-only configurations would each
-   drag four unrelated shared helpers into a project root that never asked for them. All fourteen
-   existing configurations declare one of those sections, so their output is unchanged.
-5. **The twelve configurations** — nine edits, three new files — then `./generate-test.sh`, and the
-   twelve generated files are committed.
-6. **The thirteenth-gateway audit** in `Paramore.Brighter.Test.Generator.Tests`.
-7. **CI** — the `build` job step running the twelve sweeps.
-8. **Documentation** — `.agent_instructions/generated_tests.md` gains the `GatewayConformance`
+4. **The twelve configurations** — nine edits, three new files — then `./generate-test.sh`, and the
+   twelve generated files are committed. `SharedGenerator` is left alone: it will render its four
+   helper files into the three new conformance-only projects as well. Those files reference only
+   `Paramore.Brighter` and `Paramore.Brighter.Observability`, both already available in every
+   gateway test project, so they compile; they land in the project root, which is outside the
+   generated-tree audit's `Generated/` scope, so no CI job depends on them. Twelve unused files is
+   the accepted cost of not making a behavioural change to a shared generator that FR-12 does not
+   ask for.
+5. **The thirteenth-gateway audit** in `Paramore.Brighter.Test.Generator.Tests`.
+6. **CI** — the `build` job step running the twelve sweeps.
+7. **Documentation** — `.agent_instructions/generated_tests.md` gains the `GatewayConformance`
    section and the new template folder in its architecture listing.
 
 ## Consequences
@@ -336,20 +384,23 @@ Structural changes precede behavioural ones, and each step is independently test
   guard.** `SubscriptionChannelFactoryDeclaration` is part of `Paramore.Brighter`'s API surface and
   carries the versioning commitment that implies. This sits in tension with
   `.agent_instructions/testing.md`'s *Test Scope and Isolation* rule that an assembly's "surface
-  area should be as narrow as possible". It is the narrowest option that reaches all twelve test
-  projects, because only `Paramore.Brighter` is referenced by all twelve, and the alternative that
-  would have avoided it — `InternalsVisibleTo` — is forbidden outright by the same document's *No
-  InternalsVisibleTo* rule, whose prescribed remedy is precisely to widen the public surface
-  deliberately. Narrowed as far as it can be: one static type, two methods, no new result type.
+  area should be as narrow as possible", and it **contravenes** that section's third bullet — "Do
+  not make export classes or methods from a module to test them" — under the exception FR-12 grants
+  expressly. `InternalsVisibleTo`, which would have avoided the exposure, is forbidden outright by
+  the same document. It is the narrowest option that reaches all twelve test projects *and* the
+  out-of-repo gateway authors of C-10; a generator-emitted predicate would be narrower still on
+  public surface alone, and is rejected under Alternatives Considered for the C-10 reason. Narrowed
+  as far as it can be: one static type, two methods, no new result type.
 - **Twelve generated files and twelve configuration entries** are added to the repository, and the
   generated-tree audit will then require them to stay in step. A flag or path change that is not
   regenerated becomes a CI failure in the `build` job.
 - **A CI project list to maintain.** The `build` job step names twelve projects. A thirteenth
   gateway must be added to it by hand; the configuration audit catches a missing configuration, not
   a missing CI entry.
-- **`SharedGenerator`'s behaviour changes.** Making it conditional is a behavioural change to an
-  existing generator for the benefit of three new configurations, and its three existing tests gain
-  a fourth.
+- **Twelve unused generated helper files.** `SharedGenerator` renders its four helpers into each of
+  the three new conformance-only projects. They compile and nothing depends on them, and leaving
+  them is deliberate: making `SharedGenerator` conditional would be a behavioural change to a shared
+  generator that FR-12 does not ask for, to remove clutter no CI job fails on.
 - **The netstandard2.0 branch of the read is compiled but never executed here.** Test projects
   target `net9.0;net10.0` (`tests/Directory.Build.props`), so they bind the modern asset. Only a
   netstandard2.0 consumer would run the `FormatterServices` path.
@@ -404,6 +455,16 @@ Structural changes precede behavioural ones, and each step is independently test
   expose internal classes for testing" — and names the deliberate public widening chosen here as
   the alternative. It would in any case need twelve public-key-qualified entries, the assembly
   being strong-named.
+- **A generator-emitted predicate** — one Liquid template rendering the predicate itself into each
+  of the twelve test projects, exactly as `SharedGenerator` already renders four helper files into
+  every configured project root. This is strictly narrower than the chosen design on public surface:
+  it reaches all twelve, it cannot drift (one template), and it adds **nothing** to the shipped
+  package. It is rejected on two grounds that public-surface width does not capture. First, C-10: a
+  template-emitted copy lives only in this repository, so it cannot be pointed at a community
+  gateway author's own assembly, and out-of-repo authors face the identical defect with no remedy.
+  Second, a guard whose logic ships in the package is one the package can be held to; a guard that
+  exists only in twelve generated test files is a private convention. That is what the public
+  surface buys, and it is the honest reason to spend it.
 - **Hand-write the sweep in each of the twelve projects.** Rejected for the reason FR-12 gives:
   twelve copies drift, and the thirteenth gateway then depends on someone remembering. ADR 0070
   already settled that conformance tests are generator-owned by default.
@@ -436,7 +497,7 @@ Structural changes precede behavioural ones, and each step is independently test
   - `src/Paramore.Brighter/IAmAChannelFactory.cs`, `src/Paramore.Brighter/InMemoryChannelFactory.cs` — both in namespace `Paramore.Brighter`; `src/Paramore.Brighter/Command.cs:42` — `public class Command : ICommand`, the representative generic argument.
   - The twenty-four shipped gateway subscription types — twelve base/derived pairs, one per assembly, none of them abstract, with `where T : class, IRequest` on `GcpPubSubSubscription<T>` (`GcpPubSubSubscription.cs:158-159`), `PostgresSubscription<T>` (`PostgresSubscription.cs:118-119`) and `RocketMqSubscription<T>` (`RocketMqSubscription.cs:117-118`), and `where T : IRequest` on the other nine.
   - The nine `override Type ChannelFactoryType` declarations, all on non-generic base classes: RocketMQ `:50`, GcpPubSub `:108`, Redis `:32`, AzureServiceBus `:39`, RMQ.Sync `:67`, RMQ.Async `:73`, Kafka `:162`, MsSql `:32`, MQTT `:35`.
-  - `tools/Paramore.Brighter.Test.Generator/` — `Program.cs`, `Generators/{BaseGenerator,SharedGenerator,MessagingGatewayGenerator,GenerationSuite,PlannedFile}.cs`, `Configuration/TestConfiguration.cs`, and `Templates/{MessagingGateway/{Reactor,Proactor},Outbox/{Sync,Async,Causation}}`.
+  - `tools/Paramore.Brighter.Test.Generator/` — `Program.cs`, `Generators/{BaseGenerator,SharedGenerator,OutboxGenerator,MessagingGatewayGenerator,GenerationSuite,PlannedFile}.cs`, `Configuration/TestConfiguration.cs`, and `Templates/{MessagingGateway/{Reactor,Proactor},Outbox/{Sync,Async,Causation}}`.
   - `tests/Paramore.Brighter.Test.Generator.Tests/GeneratedFileAudit/GeneratedTreeAudit.cs` — the expected set built from `OutboxGenerator.Plan` and `MessagingGatewayGenerator.Plan`, and its scope note that only the `Generated/` tree is audited.
   - `tests/Paramore.Brighter.Redis.Tests/MessagingGateway/Generated/{Reactor,Proactor}` and `tests/Paramore.Brighter.RMQ.Async.Tests/MessagingGateway/{Classic,Quorum}/Generated/…` — the two existing output shapes the conformance path must not collide with.
   - `.github/workflows/ci.yml` — the `build` job's `dotnet build --configuration Release` and generator-audit step; `:228` MQTT's `Category=MQTT` filter; `:361` Kafka's `Category=Kafka` filter; `:769` the commented-out RocketMQ job.
