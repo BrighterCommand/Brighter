@@ -497,14 +497,15 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 if (message.HandledCountReached(RequeueCount))
                 {
-                    var originalMessageId = message.Header.Bag.TryGetValue(Message.OriginalMessageIdHeaderName, out object? value) ? value.ToString() : null;
+                    var originalMessageId = message.Header.Bag.TryGetValue(Message.OriginalMessageIdHeaderName, out object? value) ? value?.ToString() : null;
+                    var messageId = string.IsNullOrEmpty(originalMessageId) ? message.Id.Value : originalMessageId;
 
                     Log.DroppingMessage(s_logger, RequeueCount, message.Id.Value, string.IsNullOrEmpty(originalMessageId)
                             ? string.Empty
                             : $" (original message id {originalMessageId})", Channel.Name, Channel.RoutingKey.Value, Thread.CurrentThread.ManagedThreadId);
 
                     IncrementUnacceptableMessageCount();
-                    return RejectMessage(message, new MessageRejectionReason(RejectionReason.DeliveryError, "Handle count of messages reached; rejecting at limit"));
+                    return RejectMessage(message, new MessageRejectionReason(RejectionReason.DeliveryError, $"Handle Count Exceeded for message {messageId}"));
                 }
             }
 

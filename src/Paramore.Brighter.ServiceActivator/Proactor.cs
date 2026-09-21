@@ -503,7 +503,8 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 if (message.HandledCountReached(RequeueCount))
                 {
-                    var originalMessageId = message.Header.Bag.TryGetValue(Message.OriginalMessageIdHeaderName, out object? value) ? value.ToString() : null;
+                    var originalMessageId = message.Header.Bag.TryGetValue(Message.OriginalMessageIdHeaderName, out object? value) ? value?.ToString() : null;
+                    var messageId = string.IsNullOrEmpty(originalMessageId) ? message.Id.Value : originalMessageId;
 
                     Log.DroppingMessage(s_logger, RequeueCount, message.Id.Value, string.IsNullOrEmpty(originalMessageId)
                             ? string.Empty
@@ -512,7 +513,7 @@ namespace Paramore.Brighter.ServiceActivator
                     IncrementUnacceptableMessageCount();
                     return RejectMessage(message, new MessageRejectionReason(
                         RejectionReason.DeliveryError,
-                        $"Handle Count Exceeded for message {originalMessageId}")
+                        $"Handle Count Exceeded for message {messageId}")
                     );
                 }
             }
