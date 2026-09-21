@@ -223,9 +223,8 @@ byte-identical.
 
 **It reports what it examined, not only what failed, and that is deliberate.** A sweep returning
 failures alone cannot distinguish a sound assembly from one it never looked at: an empty result
-would pass identically over twelve sound subscriptions and over zero candidates, so a refactor that
-moved the subscription types or a `SubscriptionType` pointed at the wrong assembly would leave the
-guard green while guarding nothing. That is the vacuous pass this design exists to prevent, and a
+would pass identically over a sound assembly and over zero candidates, so a refactor that moved the
+subscription types out of the swept assembly would leave the guard green while guarding nothing. That is the vacuous pass this design exists to prevent, and a
 contract that cannot express "I examined these and they were sound" cannot rule it out. It is also
 what makes AC-29 assertable — see the synthetic types below. A `ValueTuple` carries the pair, so
 this costs no new public type. Four steps:
@@ -288,9 +287,21 @@ class and a generator — plus edits to `TestConfiguration`, `Program.cs` and `G
   over-reporting, keeping a derived type it should have dropped, yields an extra subject — **fails**.
   Subsumption inverted, dropping the base and keeping the derived, yields the wrong subject — **fails**,
   where a non-emptiness check would not, because the derived type inherits its base's value and reports
-  a `null` `Reason`. A `SubscriptionType` pointed at the wrong assembly, or candidate discovery that
-  finds nothing, yields an empty or foreign set — **fails**. And it passes only when the sweep examined
-  the assembly the configuration names and reported exactly what that assembly should report.
+  a `null` `Reason`. Candidate discovery that finds nothing yields an empty set against a non-empty
+  expectation — **fails**.
+
+  **One thing it cannot catch, and the division of labour that covers it.** A `SubscriptionType` aimed at
+  the wrong assembly is *not* caught by this assertion: the same value locates the sweep and supplies the
+  expectation, so a misaim moves both together and the comparison stays self-consistent. Three other
+  mechanisms cover it, and it is worth being explicit about which does what. A cross-gateway misaim
+  usually **does not compile**, because no gateway test project references a second gateway (C-9). A
+  misaim to `Paramore.Brighter` itself — the one assembly all twelve reference — sweeps that assembly and
+  reports `{Subscription}`, matching the configuration exactly, and fails on the **reason** check, because
+  `Subscription.ChannelFactoryType` is `typeof(InMemoryChannelFactory)`. A gateway left unconfigured or
+  configured twice fails the **thirteenth-gateway audit**, which maps directories to configurations
+  exactly once. What the exact set adds over all three is the *wrong subject within the right assembly* —
+  a configuration naming `MqttSubscription<T>` rather than `MqttSubscription`, which the audit's namespace
+  comparison cannot see.
 
   Two weaker assertions were tried first and are recorded because the reasoning matters. Asserting the
   `Subject` values are **distinct** cannot fail: candidates come from `Assembly.GetTypes()` and no two
