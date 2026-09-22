@@ -83,6 +83,30 @@ namespace Paramore.Brighter.Sqlite.EntityFrameworkCore
         }
 
         /// <summary>
+        /// Rolls back a transaction
+        /// </summary>
+        public override void Rollback()
+        {
+            var currentTransaction = _context.Database.CurrentTransaction;
+            if (currentTransaction is not null)
+            {
+                currentTransaction.Rollback();
+            }
+        }
+
+        /// <summary>
+        /// Rolls back a transaction
+        /// </summary>
+        public override async Task RollbackAsync(CancellationToken cancellationToken = default)
+        {
+            var currentTransaction = _context.Database.CurrentTransaction;
+            if (currentTransaction is not null)
+            {
+                await currentTransaction.RollbackAsync(cancellationToken);
+            }
+        }
+
+        /// <summary>
         /// Is there a transaction open?
         /// </summary>
         public override bool HasOpenTransaction { get => _context.Database.CurrentTransaction != null; }
