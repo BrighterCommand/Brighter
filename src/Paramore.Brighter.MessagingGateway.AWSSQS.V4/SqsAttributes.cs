@@ -24,7 +24,7 @@ public class SqsAttributes
     /// <param name="contentBasedDeduplication">Enables or disable content-based deduplication</param>
     /// <param name="deduplicationScope">Specifies whether message deduplication occurs at the message group or queue level</param>
     /// <param name="fifoThroughputLimit">Specifies whether the FIFO queue throughput quota applies to the entire queue or per message group</param>
-    /// <param name="maximumMessageSize">The maximum size, in bytes, of a message the queue accepts. Default is null, which leaves the SQS default of 262,144 bytes (256 KiB).</param>
+    /// <param name="maximumMessageSize">The maximum size, in bytes, of a message the queue accepts. Default is null, which leaves the SQS default of 1,048,576 bytes (1 MiB).</param>
     public SqsAttributes(
         TimeSpan? lockTimeout = null,
         TimeSpan? delaySeconds = null,
@@ -69,7 +69,8 @@ public class SqsAttributes
 
     /// <summary>
     /// The maximum size, in bytes, of a message the queue accepts.
-    /// Valid range is 1,024 to 1,048,576 (1 MiB). Null leaves the SQS default of 262,144 bytes (256 KiB).
+    /// Valid range is 1,024 to 1,048,576 (1 MiB). Null leaves the SQS default, which is 1,048,576 bytes (1 MiB) for a
+    /// queue created today; set this only if you want a queue to reject anything larger than a size you choose.
     /// </summary>
     /// <remarks>
     /// Applies to messages sent directly to the queue. Messages delivered by an SNS subscription are limited by the
