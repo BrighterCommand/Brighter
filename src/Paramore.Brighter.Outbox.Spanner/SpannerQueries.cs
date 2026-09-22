@@ -1,6 +1,6 @@
 ﻿namespace Paramore.Brighter.Outbox.Spanner;
 
-public class SpannerQueries : IRelationDatabaseOutboxQueries
+public class SpannerQueries : IRelationDatabaseOutboxQueries, IRelationalDatabaseOutboxCausationQueries
 {
     /// <inheritdoc />
     public string PagedDispatchedCommand => "SELECT * FROM `{0}` WHERE `Dispatched` IS NOT NULL AND `Dispatched` < @DispatchedSince ORDER BY `Timestamp` DESC LIMIT @Take OFFSET @Skip";
@@ -45,4 +45,25 @@ public class SpannerQueries : IRelationDatabaseOutboxQueries
 
     /// <inheritdoc />
     public string GetNumberOfOutstandingMessagesCommand => "SELECT COUNT(1) FROM `{0}` WHERE `Dispatched` IS NULL";
+
+    /// <inheritdoc />
+    public string AddCausationCommand =>
+        "INSERT INTO `{0}` " +
+        "(`MessageId`,`MessageType`,`Topic`,`Timestamp`,`CorrelationId`,`ReplyTo`,`ContentType`,`PartitionKey`,`HeaderBag`,`Body`" +
+        ",`Source`,`Type`,`DataSchema`,`Subject`,`TraceParent`,`TraceState`,`Baggage`, `WorkflowId`, `JobId`, `CausationId`) " +
+        "VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @CorrelationId, @ReplyTo, @ContentType, @PartitionKey, @HeaderBag, @Body, " +
+            "@Source, @Type, @DataSchema, @Subject, @TraceParent, @TraceState, @Baggage, @WorkflowId, @JobId, @CausationId)";
+
+    /// <inheritdoc />
+    public string BulkAddCausationCommand =>
+        "INSERT INTO `{0}` " +
+        "(`MessageId`,`MessageType`,`Topic`,`Timestamp`,`CorrelationId`,`ReplyTo`,`ContentType`,`PartitionKey`,`HeaderBag`,`Body`" +
+        ",`Source`,`Type`,`DataSchema`,`Subject`,`TraceParent`,`TraceState`,`Baggage`, `WorkflowId`, `JobId`, `CausationId`) " +
+        "VALUES {1}";
+
+    /// <inheritdoc />
+    public string ReplayCausationCommand => "UPDATE `{0}` SET `Dispatched` = NULL WHERE `CausationId` = @CausationId";
+
+    /// <inheritdoc />
+    public string CausationColumnExistsCommand => "SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{0}' AND COLUMN_NAME = 'CausationId'";
 }

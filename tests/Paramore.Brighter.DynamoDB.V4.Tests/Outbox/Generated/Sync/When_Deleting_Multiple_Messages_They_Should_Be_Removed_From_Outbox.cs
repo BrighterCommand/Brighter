@@ -35,6 +35,7 @@ using System.Linq;
 namespace Paramore.Brighter.DynamoDB.V4.Tests.Outbox.Sync;
 
 [Trait("Category", "DynamoDB")]
+[Collection("DynamoDBOutbox")]
 public class WhenDeletingMultipleMessagesTheyShouldBeRemovedFromOutbox : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;

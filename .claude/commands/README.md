@@ -7,7 +7,7 @@ This directory contains Claude Code skills (slash commands) that enforce Brighte
 Skills are invoked using slash commands in Claude Code:
 
 ```bash
-/test-first <behavior description>    # TDD with mandatory approval
+/test-first <behavior description>    # TDD with an approval gate (armed by default)
 /adr <title>                          # Create Architecture Decision Record
 /tidy-first <change description>      # Separate structural from behavioral changes
 ```
@@ -147,7 +147,7 @@ Skills are invoked using slash commands in Claude Code:
 ## Skill Categories
 
 ### Development Workflow Skills
-- **`/test-first`** - TDD with approval gate
+- **`/test-first`** - TDD with an approval gate, armed by default (shift it with `/spec:gear`)
 - **`/tidy-first`** - Safe refactoring workflow
 - **`/bugfix:*`** - Diagnosis-first bug workflow (Triage → Confirm → Test-first → Fix → Verify)
 
@@ -235,7 +235,7 @@ These skills enforce practices documented in `.agent_instructions/`:
 
 | Skill | Enforces | Reference |
 |-------|----------|-----------|
-| `/test-first` | TDD approval workflow | [testing.md](../../.agent_instructions/testing.md) lines 11-26 |
+| `/test-first` | TDD approval workflow (gate armed by default) | [testing.md](../../.agent_instructions/testing.md) → "TDD Style" / "The review gear" |
 | `/adr` | ADR creation standards | [documentation.md](../../.agent_instructions/documentation.md) lines 49-62 |
 | `/tidy-first` | Structural/behavioral separation | [code_style.md](../../.agent_instructions/code_style.md) lines 74-83 |
 
@@ -249,7 +249,7 @@ All three make **mandatory workflows enforceable** rather than just documented.
 
 - **Faster workflows**: One command does multi-step processes correctly
 - **Less to remember**: Skills encode the practices, you just invoke them
-- **Built-in guardrails**: Mandatory approval gates prevent mistakes
+- **Built-in guardrails**: Approval gates, armed by default, prevent mistakes
 - **Better habits**: Using skills reinforces best practices
 
 ### For Code Reviews
@@ -439,11 +439,11 @@ Three new skills enforce Brighter's mandatory engineering practices:
 
 | Skill | Enforces | Creates |
 |-------|----------|---------|
-| `/test-first` | TDD with approval | Tests → Implementation → Refactoring |
+| `/test-first` | TDD with an approval gate (armed by default) | Tests → Implementation → Refactoring |
 | `/adr` | Documented decisions | Numbered ADR files |
 | `/tidy-first` | Structural/behavioral separation | Two commits: refactor + feat |
 | `/bugfix:*` | Confirm root cause before fixing | Bug record + regression test + scoped `fix:` commit |
 
-**Key insight**: These skills make the **correct approach the easy path** by automating multi-step workflows and enforcing approval gates.
+**Key insight**: These skills make the **correct approach the easy path** by automating multi-step workflows and enforcing approval gates — and where a gate is a matter of pace rather than principle, they give you a deliberate, visible way to change gear (`/spec:gear`) instead of quietly ignoring it.
 
 **Try them**: Start with `/test-first` for your next feature or `/tidy-first` for your next optimization.

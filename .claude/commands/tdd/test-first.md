@@ -1,16 +1,55 @@
 ---
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion
-description: TDD workflow with mandatory approval before implementation
+description: TDD workflow with an approval gate before implementation (armed by default)
 argument-hint: <behavior description>
 ---
 
 # Test-First Development (TDD with Approval Gate)
 
-You are guiding the user through a Test-Driven Development workflow with a **mandatory approval gate** before implementation.
+You are guiding the user through a Test-Driven Development workflow with an **approval gate** before
+implementation. The gate is **armed by default** — assume it is armed unless a spec command has
+explicitly told you otherwise (see *Review gear*, below).
 
 ## The Behavior to Test
 
 $ARGUMENTS
+
+## Review gear
+
+Which review mode applies is called the **gear** (see
+[ADR 0071](../../../docs/adr/0071-tdd-review-gear.md)):
+
+| Gear | Gate | Meaning |
+|------|------|---------|
+| `review-before` | ✅ armed | Stop after the test and get explicit approval before implementing. **The default.** |
+| `review-after` | ➖ not armed | Write the test, prove RED, then implement without pausing. The user reviews the batch afterwards. |
+
+**This command runs `review-before` unless the invoking command states otherwise in its prompt.**
+
+- Invoked directly by the user (`/test-first <behavior>`) → **`review-before`**, always. Do **not**
+  read `specs/*/.current-gear` yourself. A standalone run must never inherit a mode it did not ask
+  for from whichever spec happens to be current.
+- Invoked by `/bugfix:test` → **`review-before`**, always. Bugfixes are outside this mechanism.
+- Invoked by `/spec:implement` or `/spec:ralph-implement` → those commands resolve the gear for the
+  spec and the specific task, and pass the result in explicitly. Honour what they pass.
+
+If you are ever unsure which gear applies, it is `review-before`. Fail safe, never fail open.
+The user can shift the gear for a spec with `/spec:gear`.
+
+## What the gear does NOT change
+
+`review-after` removes the **human approval pause** and nothing else. Every one of these holds in
+both gears:
+
+- **RED first.** Write the test and observe it fail *for the right reason* before any production
+  code exists. Ungated is not test-after.
+- **The full regression suite**, not just the new test's own `--filter`.
+- **The two-commit shape**: a `feat:`/`test:` commit for the behaviour, then a separate `docs:`
+  commit for any task-list checkbox.
+- **Every test-authoring convention below**, plus the standing ones in
+  [.agent_instructions/testing.md](../../../.agent_instructions/testing.md): TestDoubles one class
+  per file; a distinct request type per new test double so assembly scans do not collide; new closed
+  generics registered with each test project's logging `Initializer.cs`.
 
 ## Workflow Phases
 
@@ -40,6 +79,9 @@ $ARGUMENTS
 
 ### ✅ APPROVAL GATE - User Must Approve Test
 
+**This phase runs when the gear is `review-before` — which is the default, and which you should
+assume unless the invoking command explicitly said `review-after`.**
+
 **CRITICAL: You MUST get explicit user approval before proceeding to implementation.**
 
 Use the AskUserQuestion tool to ask:
@@ -59,11 +101,26 @@ Options:
 
 **Do NOT proceed to implementation without explicit approval.**
 
+#### When the gear is `review-after`
+
+Skip the pause — and **only** the pause. Instead:
+
+1. Confirm you have already proved RED (the test ran and failed for the right reason). If you have
+   not, go back and do it; `review-after` never licenses writing implementation first.
+2. Print one line naming the gear and where it came from, so the run is self-documenting, e.g.
+   `➖ review-after (specs/0027-…/.current-gear, Phase 5) — proceeding to GREEN without pausing`.
+3. Proceed to GREEN.
+
+If anything about the test looks wrong to you — it asserts something the task did not ask for, it
+needs a design decision you cannot make, it duplicates an existing test — **stop and ask anyway**.
+`review-after` is a default for the routine case, not a gag order.
+
 ---
 
 ### 🟢 GREEN Phase - Make Test Pass
 
-**Only execute this phase after receiving approval.**
+**Under `review-before`, only execute this phase after receiving approval.** Under `review-after`,
+proceed once RED is proved.
 
 **Your task:** Write the **minimum code** necessary to make the test pass.
 
@@ -133,7 +190,9 @@ After completing all phases:
 ## Key Principles
 
 **From testing.md:**
-- The approval step is **MANDATORY** when working with an AI coding assistant
+- The approval step is **armed by default** and is only disarmed by a deliberate, scoped, recorded
+  gear shift (`/spec:gear`) — never by assumption, convenience, or a prose instruction in a scratch
+  file
 - Tests should specify behavior, not implementation details
 - Only write code required by tests - no speculative code
 - Tests should use the Arrange/Act/Assert structure
@@ -198,5 +257,7 @@ Should I commit these changes?
 
 - This workflow enforces the TDD approval requirement from .agent_instructions/testing.md
 - The approval gate ensures the test correctly specifies desired behavior before implementation
+- The gate is armed by default; `/spec:gear` is the only supported way to disarm it, and it does so
+  for one spec (optionally one section of its task list) at a time — see ADR 0071
 - Following this workflow provides scope control and better design
 - You may run `/test-first` multiple times to build up functionality incrementally

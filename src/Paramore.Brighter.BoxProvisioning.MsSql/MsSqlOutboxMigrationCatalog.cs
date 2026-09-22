@@ -38,12 +38,13 @@ namespace Paramore.Brighter.BoxProvisioning.MsSql;
 /// (ADR 0057 §3) now sources its DDL from <see cref="FreshInstallDdl"/>, so V1.UpScript is
 /// free to carry the honest historical shape it always represented. V2..V7 are conditional
 /// <c>ALTER TABLE ADD</c> statements guarded by <c>IF COL_LENGTH(...) IS NULL</c> per ADR
-/// 0057 §5, so each one is idempotent and safe to re-execute on chain replay.
+/// 0057 §5, so each one is idempotent and safe to re-execute on chain replay. V8 adds
+/// <c>CausationId</c> (Spec 0027, #2541) plus a replay index on it.
 /// <para>
 /// The MSSQL outbox is the only one of the four relational outboxes whose first-shipped
 /// state matches the "logical pre-V2 baseline" — see the asymmetry note in the
 /// PostgreSQL/MySQL/SQLite outbox catalogs. The accumulated <c>LogicalColumns</c> across
-/// V1..V7 plus the MSSQL housekeeping <c>Id</c> column equals the live builder's column set
+/// V1..V8 plus the MSSQL housekeeping <c>Id</c> column equals the live builder's column set
 /// — verified by the drift test in <c>tests/Paramore.Brighter.MSSQL.Tests/BoxProvisioning</c>.
 /// </para>
 /// </remarks>
@@ -84,6 +85,7 @@ public class MsSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
 
     private static readonly string[] s_v6AddedColumns = ["WorkflowId", "JobId"];
     private static readonly string[] s_v7AddedColumns = ["DataRef", "SpecVersion"];
+    private static readonly string[] s_v8AddedColumns = ["CausationId"];
 
     /// <inheritdoc />
     public string FreshInstallDdl(IAmARelationalDatabaseConfiguration configuration)
@@ -113,7 +115,7 @@ public class MsSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
     /// Returns all migrations for the MSSQL outbox, ordered by version.
     /// </summary>
     /// <param name="configuration">The relational database configuration.</param>
-    /// <returns>An ordered list of migrations from V1 to V7.</returns>
+    /// <returns>An ordered list of migrations from V1 to V8.</returns>
     public IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration configuration)
     {
         var schema = configuration.SchemaName ?? DefaultSchema;
@@ -184,7 +186,16 @@ public class MsSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
                     ("DataRef", "NVARCHAR(255)"),
                     ("SpecVersion", "NVARCHAR(255)")),
                 LogicalColumns: Cumulative(7),
-                SourceReference: "d67dac947 / #3790")
+                SourceReference: "d67dac947 / #3790"),
+
+            new BoxMigration(
+                Version: 8,
+                Description: "Add CausationId column and replay index",
+                UpScript: AddColumns(schema, table, ("CausationId", "NVARCHAR(255)"))
+                    + Environment.NewLine
+                    + AddCausationIndex(schema, table),
+                LogicalColumns: Cumulative(8),
+                SourceReference: "#2541")
         ];
     }
 
@@ -198,6 +209,7 @@ public class MsSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
         if (upToVersion >= 5) { set.UnionWith(s_v5AddedColumns); }
         if (upToVersion >= 6) { set.UnionWith(s_v6AddedColumns); }
         if (upToVersion >= 7) { set.UnionWith(s_v7AddedColumns); }
+        if (upToVersion >= 8) { set.UnionWith(s_v8AddedColumns); }
         return set;
     }
 
@@ -207,4 +219,14 @@ public class MsSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
     private static string AddColumn(string schema, string table, string column, string type) =>
         $"IF COL_LENGTH(N'[{schema}].[{table}]', N'{column}') IS NULL{Environment.NewLine}" +
         $"    ALTER TABLE [{schema}].[{table}] ADD [{column}] {type} NULL;";
+
+    // Idempotent replay index (Spec 0027, #2541) on CausationId — none of the outbox catalogs
+    // indexed any column before V8. The CREATE INDEX is wrapped in EXEC so it compiles at run
+    // time rather than at batch parse time, which decouples it from the CausationId column the
+    // preceding ALTER adds in the same UpScript (avoiding the "invalid column name" deferred-name
+    // resolution trap when adding a column and indexing it in one batch).
+    private static string AddCausationIndex(string schema, string table) =>
+        $"IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = N'idx_{table}_CausationId' " +
+        $"AND [object_id] = OBJECT_ID(N'[{schema}].[{table}]')){Environment.NewLine}" +
+        $"    EXEC('CREATE INDEX [idx_{table}_CausationId] ON [{schema}].[{table}] ([CausationId]);');";
 }

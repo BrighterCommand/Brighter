@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
@@ -52,9 +53,38 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="messageMapperType">The type of mapper to instantiate</param>
         /// <returns>The created mapper instance</returns>
-        public IAmAMessageMapperAsync? Create(Type messageMapperType)
+        public Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType)
         {
-            return _lifetimeScope.GetOrCreate<IAmAMessageMapperAsync>(messageMapperType);
+            var mapper = _lifetimeScope.GetOrCreate<IAmAMessageMapperAsync>(messageMapperType, out var releaseToken);
+            return mapper is null ? null : new Lease<IAmAMessageMapperAsync>(mapper, releaseToken);
+        }
+
+        /// <summary>
+        /// Releases a mapper created by this factory, disposing the per-instance
+        /// <see cref="Microsoft.Extensions.DependencyInjection.IServiceScope"/> a transient mapper was
+        /// resolved from. Without this the scope — and any <see cref="IDisposable"/> mapper it holds —
+        /// is retained until the factory is disposed at shutdown.
+        /// </summary>
+        /// <param name="lease">The lease returned by <see cref="Create"/> for the mapper to release</param>
+        public void Release(Lease<IAmAMessageMapperAsync>? lease)
+        {
+            //over-release of a lease is a harmless no-op, including a null lease
+            if (lease is null) return;
+            _lifetimeScope.Release(lease.ReleaseToken);
+        }
+
+        /// <summary>
+        /// Releases a mapper created by this factory asynchronously, awaiting disposal of the per-instance
+        /// <see cref="Microsoft.Extensions.DependencyInjection.IServiceScope"/> a transient mapper was
+        /// resolved from. Preferred over <see cref="Release"/> on the Proactor pump thread: awaiting an
+        /// <see cref="IAsyncDisposable"/> mapper's disposal does not block the single-threaded
+        /// synchronization context a continuation may need.
+        /// </summary>
+        /// <param name="lease">The lease returned by <see cref="Create"/> for the mapper to release</param>
+        public ValueTask ReleaseAsync(Lease<IAmAMessageMapperAsync>? lease)
+        {
+            if (lease is null) return default;
+            return _lifetimeScope.ReleaseAsync(lease.ReleaseToken);
         }
 
         /// <summary>

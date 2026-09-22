@@ -10,7 +10,7 @@ namespace Paramore.Brighter.Kafka.Tests
         [ModuleInitializer]
         public static void InitializeTestLogger()
         {
-            var logger = new LoggerConfiguration().WriteTo.TestCorrelator().CreateLogger();
+            var logger = new LoggerConfiguration().MinimumLevel.Debug().WriteTo.TestCorrelator().CreateLogger();
             ApplicationLogging.LoggerFactory = new LoggerFactory().AddSerilog(logger);
         }
     }

@@ -25,13 +25,14 @@ public class InboxMessage : IMongoDbCollectionTTL
     /// <param name="contextKey">The context key.</param>
     /// <param name="timeStamp">The time stamp of when the message was created.</param>
     /// <param name="expireAfterSeconds">The expires after X seconds.</param>
-    public InboxMessage(object command, string id, string contextKey, DateTimeOffset timeStamp, long? expireAfterSeconds)
+    public InboxMessage(object command, string id, string contextKey, DateTimeOffset timeStamp, long? expireAfterSeconds, string? causationId = null)
     {
         Id = new InboxMessageId { Id = id, ContextKey = contextKey };
         TimeStamp = timeStamp;
         CommandType = command.GetType().FullName!;
         CommandBody = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
         ExpireAfterSeconds = expireAfterSeconds;
+        CausationId = causationId;
     }
 
     /// <summary>
@@ -59,6 +60,12 @@ public class InboxMessage : IMongoDbCollectionTTL
     /// The TTL for this message
     /// </summary>
     public long? ExpireAfterSeconds { get; set; }
+
+    /// <summary>
+    /// The causation id that links this inbox entry to the outbox messages produced during the handler
+    /// invocation that stored it. Null when the request was stored without a causation id.
+    /// </summary>
+    public string? CausationId { get; set; }
 
     /// <summary>
     /// The inbox message id

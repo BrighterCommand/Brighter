@@ -25,12 +25,18 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.Inbox.Sqlite
 {
-    public class SqliteQueries : IRelationalDatabaseInboxQueries
+    public class SqliteQueries : IRelationalDatabaseInboxQueries, IRelationalDatabaseInboxCausationQueries
     {
         public string AddCommand { get; } = "INSERT INTO {0} (CommandId, CommandType, CommandBody, Timestamp, ContextKey) values (@CommandID, @CommandType, @CommandBody, @Timestamp, @ContextKey)";
 
         public string ExistsCommand { get; } = "SELECT CommandId FROM {0} WHERE CommandId = @CommandID and ContextKey = @ContextKey LIMIT 1";
 
         public string GetCommand { get; } = "SELECT * FROM {0} WHERE CommandId = @CommandID AND ContextKey = @ContextKey";
+
+        public string AddCausationCommand { get; } = "INSERT INTO {0} (CommandId, CommandType, CommandBody, Timestamp, ContextKey, CausationId) values (@CommandID, @CommandType, @CommandBody, @Timestamp, @ContextKey, @CausationId)";
+
+        public string GetCausationIdCommand { get; } = "SELECT CausationId FROM {0} WHERE CommandId = @CommandID AND ContextKey = @ContextKey LIMIT 1";
+
+        public string CausationColumnExistsCommand { get; } = "SELECT 1 FROM pragma_table_info('{0}') WHERE name = 'CausationId'";
     }
 }

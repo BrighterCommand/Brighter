@@ -94,8 +94,10 @@ public class SpannerOutbox(IAmARelationalDatabaseConfiguration configuration, IA
         => ex is SpannerException se && se.RpcException.StatusCode == StatusCode.AlreadyExists;
 
     /// <inheritdoc />
-    protected override IDbDataParameter CreateSqlParameter(string parameterName, object? value) 
-        => new SpannerParameter { ParameterName = parameterName, Value = value ?? DBNull.Value };
+    protected override IDbDataParameter CreateSqlParameter(string parameterName, object? value)
+    {
+        return new SpannerParameter { ParameterName = parameterName, Value = value ?? DBNull.Value };
+    }
 
     /// <inheritdoc />
     protected override IDbDataParameter CreateSqlParameter(string parameterName, DbType dbType, object? value)

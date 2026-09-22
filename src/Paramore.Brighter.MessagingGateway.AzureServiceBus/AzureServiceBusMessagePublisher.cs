@@ -94,8 +94,10 @@ public class AzureServiceBusMessagePublisher
         if (message.Header.ContentType is not null)
             azureServiceBusMessage.ApplicationProperties[ASBConstants.CloudEventsContentType] = message.Header.ContentType.ToString();
        
+        // The Service Bus SDK serialises a Uri application property via Uri.AbsoluteUri, which throws
+        // for a relative URI, so write the dataschema as a string exactly as the source is written above
         if(message.Header.DataSchema is not null)
-            azureServiceBusMessage.ApplicationProperties[ASBConstants.CloudEventsSchema] = message.Header.DataSchema;
+            azureServiceBusMessage.ApplicationProperties[ASBConstants.CloudEventsSchema] = message.Header.DataSchema.ToString();
         
         if (!string.IsNullOrEmpty(message.Header.Subject))
             azureServiceBusMessage.ApplicationProperties[ASBConstants.CloudEventsSubject] = message.Header.Subject;

@@ -41,6 +41,16 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         public string? CorrelationId { get; set; }
 
         /// <summary>
+        /// The causation id that links this outbox message to the inbox entry that produced it. Used as the hash
+        /// key of the Causation Global Secondary Index so a causation's messages can be replayed. Null when the
+        /// message was not produced under a tracked causation, in which case it does not appear in the index.
+        /// </summary>
+        /// <value>The causation id as a <see cref="string"/>. May be <c>null</c>.</value>
+        [DynamoDBGlobalSecondaryIndexHashKey(indexName: "Causation")]
+        [DynamoDBProperty]
+        public string? CausationId { get; set; }
+
+        /// <summary>
         /// The time at which the message was created, formatted as a string yyyy-MM-ddTHH:mm:ss.fffZ
         /// </summary>
         /// <value>The creation time as a <see cref="string"/>. May be <c>null</c>.</value>

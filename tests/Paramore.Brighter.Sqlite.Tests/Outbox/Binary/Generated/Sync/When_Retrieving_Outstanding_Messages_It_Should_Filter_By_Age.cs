@@ -35,6 +35,7 @@ using System.Linq;
 namespace Paramore.Brighter.Sqlite.Tests.Outbox.Binary.Sync;
 
 [Trait("Category", "Sqlite")]
+[Collection("SqliteBinaryOutbox")]
 public class WhenRetrievingOutstandingMessagesItShouldFilterByAge : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;

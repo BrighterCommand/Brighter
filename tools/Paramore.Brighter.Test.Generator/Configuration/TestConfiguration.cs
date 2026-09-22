@@ -76,4 +76,38 @@ public class TestConfiguration
     /// Use this when testing multiple gateway implementations (e.g., RabbitMQ, AWS SNS/SQS, Azure Service Bus).
     /// </summary>
     public Dictionary<string, MessagingGatewayConfiguration>? MessagingGateways { get; set; }
+
+    /// <summary>
+    /// The name of the message builder rendered when a configuration does not name one.
+    /// </summary>
+    public const string DEFAULT_MESSAGE_BUILDER = "DefaultMessageBuilder";
+
+    /// <summary>
+    /// The name of the message assertion rendered when a configuration does not name one.
+    /// </summary>
+    public const string DEFAULT_MESSAGE_ASSERTION = "DefaultMessageAssertion";
+
+    /// <summary>
+    /// Fills in <see cref="MessageBuilder"/> and <see cref="MessageAssertion"/> where the
+    /// configuration does not name them.
+    /// </summary>
+    /// <remarks>
+    /// Applied by <see cref="TestConfigurationLoader"/>, so that every reader of a configuration
+    /// file sees the same root - the generator, which renders from it, and the generated-tree
+    /// audit, which plans from it. It used to be applied by <see cref="Generators.SharedGenerator"/>
+    /// writing back onto the caller's object, which meant it reached the other generators only on
+    /// the path that happened to run that one first, and never reached the audit at all.
+    /// </remarks>
+    internal void ApplySharedDefaults()
+    {
+        if (string.IsNullOrEmpty(MessageBuilder))
+        {
+            MessageBuilder = DEFAULT_MESSAGE_BUILDER;
+        }
+
+        if (string.IsNullOrEmpty(MessageAssertion))
+        {
+            MessageAssertion = DEFAULT_MESSAGE_ASSERTION;
+        }
+    }
 }

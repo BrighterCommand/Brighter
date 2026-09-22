@@ -44,17 +44,17 @@ public class MessageWrapCleanupTests
     
     private sealed class MyReleaseTrackingTransformFactory : IAmAMessageTransformerFactory
     {
-        public IAmAMessageTransform Create(Type transformerType)
+        public Lease<IAmAMessageTransform>? Create(Type transformerType)
         {
-            return new MySimpleTransform();
+            return new Lease<IAmAMessageTransform>(new MySimpleTransform());
         }
 
-        public void Release(IAmAMessageTransform transformer)
+        public void Release(Lease<IAmAMessageTransform>? lease)
         {
-            var disposable = transformer as IDisposable;
+            var disposable = lease!.Instance as IDisposable;
             disposable?.Dispose();
 
-            s_released += "|" + transformer.GetType().Name;
+            s_released += "|" + lease!.Instance.GetType().Name;
         }
     }
 

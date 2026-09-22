@@ -14,8 +14,14 @@ Confirm gate (the active bug above must appear in this list): !`ls -1 bugfixes/*
 **Workflow**: Issue → Triage → Confirm (✋ gate) → **Test-first (✋ gate)** → Fix → Verify
 
 Write the **failing regression test** that pins the confirmed bug. This step is a thin wrapper
-around `/test-first` — it carries the confirmed diagnosis in, and `/test-first`'s own mandatory
+around `/test-first` — it carries the confirmed diagnosis in, and `/test-first`'s own
 IDE-approval gate governs the test before any implementation.
+
+> **Always gated.** The TDD review gear ([ADR 0071](../../../docs/adr/0071-tdd-review-gear.md)) is a
+> spec-workflow mechanism: `/spec:gear` disarms the approval pause for one *spec*, and bugfixes are
+> outside it. Never read `specs/*/.current-gear` here, and never infer a gear from an ungated spec
+> run happening on the same branch. A regression test pins a defect a human already had to reason
+> about at the Confirm gate; it gets read before the fix, every time.
 
 > **Recommended model: `sonnet`.** This step writes a test in the main agent and runs `dotnet`,
 > so it is implementation work — match the model policy for implementation
@@ -44,7 +50,8 @@ Follow `/test-first` exactly:
   (`When_[condition]_should_[behavior]`, one test per file, Arrange/Act/Assert, Evident Data,
   InMemory* for I/O, public exports only) and run it to confirm it fails for the right reason.
 - ✋ **APPROVAL GATE**: `/test-first` requires explicit user approval of the test before any
-  implementation. Honour it — do not write the fix here.
+  implementation. Honour it — do not write the fix here. This gate is unconditional in the bugfix
+  workflow; there is no gear to shift.
 
 If the Scope Notes listed additional defects, write a failing test for each (run `/test-first`
 once per behaviour) so the fix can't leave a known defect uncovered.

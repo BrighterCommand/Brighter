@@ -71,6 +71,12 @@ public sealed class BrighterAsyncContext : IDisposable
     {
         _taskScheduler = new BrighterTaskScheduler(this);
         _synchronizationContext = new BrighterSynchronizationContext(this);
+        //HideScheduler keeps TaskScheduler.Current == Default inside pump work, so the
+        //SynchronizationContext is the *sole* thing an await captures here. This is load-bearing beyond
+        //this class: ServiceProviderLifetimeScope.DisposeScope breaks the pump deadlock by nulling only
+        //the SynchronizationContext for the blocking wait — which is safe only while the scheduler is not
+        //also a capture. Dropping HideScheduler would silently reintroduce that deadlock (symptom: the
+        //pump hangs). See the matching note in DisposeScope.
         _taskFactory = new TaskFactory(
             CancellationToken.None,
             TaskCreationOptions.HideScheduler,

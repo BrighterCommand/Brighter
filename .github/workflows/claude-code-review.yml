@@ -1,27 +1,39 @@
 name: Claude Code Review
 
+# Opt-in only: a maintainer adds the `claude-review` label to a pull request.
+# This workflow does NOT run automatically on open or on push — reviews cost
+# real money, so they are requested rather than assumed. A maintainer can also
+# invoke Claude ad hoc by commenting `@claude review this PR` (see claude.yml).
 on:
   pull_request:
-    types: [opened, synchronize]
-    # Optional: Only run on specific file changes
-    # paths:
-    #   - "src/**/*.ts"
-    #   - "src/**/*.tsx"
-    #   - "src/**/*.js"
-    #   - "src/**/*.jsx"
+    types: [labeled]
 
 jobs:
   claude-review:
-    # Optional: Filter by PR author
-    # if: |
-    #   github.event.pull_request.user.login == 'external-contributor' ||
-    #   github.event.pull_request.user.login == 'new-developer' ||
-    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
+    # Only the `claude-review` label triggers a review. Labelling a draft is a
+    # deliberate request, so drafts are not blocked — nothing runs unlabelled.
+    if: github.event.label.name == 'claude-review'
+
+    # Scoped to the job, NOT to the workflow. GitHub claims a workflow-level
+    # concurrency group before it evaluates a job's `if`, so with the group at
+    # workflow level EVERY `labeled` event on the PR claimed it — and with
+    # cancel-in-progress, a run that then skipped on the `if` still killed a
+    # review already in flight. Observed on #4297: run 35129056175 was cancelled
+    # 33 seconds in by run 35129114484, which was itself `skipped` because the
+    # label that triggered it was `3 - Done`, not `claude-review`. Ordinary
+    # label housekeeping during a review was enough to destroy it.
+    #
+    # Down here the group is claimed only once the `if` has passed, so only a
+    # genuine second review request supersedes the first — which is the
+    # behaviour this was always meant to have.
+    concurrency:
+      group: claude-review-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
 
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: write
       issues: read
       id-token: write
 
@@ -34,8 +46,40 @@ jobs:
       - name: Run Claude Code Review
         id: claude-review
         uses: anthropics/claude-code-action@v1
+        # MCP_TOOL_TIMEOUT (ms): a Task-spawned sub-review agent's own tool
+        # calls are exempt from the main conversation's automatic call
+        # backgrounding, so a sub-agent working through a large diff is more
+        # exposed to this than a top-level call would be. The default is
+        # short enough that a run watched with show_full_output (#4369) cut
+        # off mid-tool-call at ~100-140s wall clock, right as a sub-agent was
+        # mid-review (BrighterCommand/Brighter#4282, 462 files) - no
+        # permission denial, no result event, just a truncated stream. Ten
+        # minutes gives a sub-agent room to actually finish its slice.
+        env:
+          MCP_TOOL_TIMEOUT: "600000"
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          # Temporary diagnostic: the job log otherwise shows only the init and
+          # final result JSON, with nothing in between — no visibility into
+          # which tool calls are actually being denied. Adding Task to
+          # --allowed-tools (below) did not fix the large-diff stall (retested
+          # on #4282: still stalls after "Gather context", permission_denials
+          # still double digits), so this turns on the full turn-by-turn
+          # stream to see what is actually being denied before guessing again.
+          # Remove once the real cause is found and fixed.
+          show_full_output: true
+
+          # Posts a tracking comment up front and keeps the review in it as the
+          # review proceeds, so a run that dies half way still shows what it got
+          # through. It also forces tag mode, which hands Claude the pull request
+          # context (title, body, comments, changed files) without it having to
+          # spend turns fetching them, and delivers the review through
+          # `update_claude_comment` rather than a shell quote that has to survive
+          # the Bash allow-list. Only some events support it; `pull_request` with
+          # the `labeled` action is one of them.
+          track_progress: true
+
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
@@ -49,9 +93,89 @@ jobs:
 
             Use the repository's CLAUDE.md for guidance on style and conventions. Be constructive and helpful in your feedback.
 
-            Use `gh pr comment` with your Bash tool to leave your review as a comment on the PR.
+            Review only. Do not edit files, commit, or push - the review is the
+            deliverable, and the author decides what to change.
+
+            Put findings that belong to a specific line inline with
+            `mcp__github_inline_comment__create_inline_comment`, and the summary
+            and general observations in your tracking comment via
+            `mcp__github_comment__update_claude_comment`.
+
+            Only if updating the tracking comment fails, fall back to
+            `gh pr comment`, and pass the body as a single quoted `--body`
+            argument. Do not build it with a heredoc or `$(...)`: the allow-list
+            matches command prefixes, so a command substitution is refused and
+            the turn is wasted.
+
+            To see the diff, use `gh pr diff` (and `gh pr diff --name-only` for
+            the file list) - it fetches from the GitHub API and works
+            regardless of local git history. Do NOT use `git diff`, `git log`
+            or `git fetch` against `origin/master` or any other ref: the
+            checkout is shallow (`fetch-depth: 1`), those commands are not in
+            the Bash allow-list, and every attempt is denied.
 
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://docs.claude.com/en/docs/claude-code/cli-reference for available options
-          claude_args: '--allowed-tools "Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"'
+          #
+          # --model is pinned deliberately. Left unset, the action follows the
+          # Claude Code default, which drifts to newer, more expensive models as
+          # they ship. Sonnet 5 is $2/$10 per 1M tokens; Fable 5.1 is $10/$50.
+          #
+          # --max-turns is a runaway guard, not the cost lever - the label gate
+          # and the model pin are. It has to leave room for the actual work: a
+          # review reads the diff, then the files around it, then CLAUDE.md and
+          # whichever .agent_instructions/* pages that sends it to, and only
+          # then writes the comment. At 15 it ran out mid-review on a 19-file
+          # pull request and posted nothing, which bills for the reading and
+          # delivers none of the review.
+          #
+          # --allowed-tools accumulates with the list tag mode sets for itself
+          # (Read/Grep/Glob, the comment and CI servers), it does not replace it.
+          # Naming the inline comment tool here is also what installs its MCP
+          # server. --disallowed-tools claws back the write access tag mode grants
+          # by default: it runs with --permission-mode acceptEdits and git
+          # add/commit, and a label asking for a review is not a licence to commit.
+          #
+          # Task is required so Claude can spawn parallel sub-review agents on
+          # a large diff (confirmed working once allowed: BrighterCommand/
+          # Brighter#4282 spawned five). --disallowed-tools already claws back
+          # what Task's default subagent tools would otherwise grant
+          # (Edit/Write/MultiEdit/NotebookEdit, git add/commit), so this does
+          # not reopen the write-access door track_progress's acceptEdits mode
+          # would otherwise leave open.
+          #
+          # Task alone was NOT enough to fix the large-diff stall it was
+          # originally added for. With show_full_output on, the actual cause
+          # turned out to be something else entirely: every sub-agent's first
+          # move was `git fetch origin master` (to diff against it), which is
+          # not in the Bash allow-list below and was denied every single time
+          # (8/8 denials on BrighterCommand/Brighter#4282's retest were this
+          # one command in various forms) - the review stalled retrying a
+          # command it could never be allowed to run, never reaching
+          # `gh pr diff`, which was allowed the whole time. Fixed by steering
+          # the prompt at `gh pr diff` explicitly, above, rather than widening
+          # the allow-list to admit raw git history commands.
+          claude_args: >-
+            --model claude-sonnet-5
+            --max-turns 40
+            --allowed-tools "Task,mcp__github_inline_comment__create_inline_comment,Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"
+            --disallowed-tools "Edit,MultiEdit,Write,NotebookEdit,Bash(git add:*),Bash(git commit:*)"
 
+      # A `labeled` trigger only fires on the add transition, so the label has to
+      # come off again for the next request to fire. `always()` so a failed or
+      # cancelled review still clears it — otherwise re-adding the label is a
+      # no-op and the review can never be re-run.
+      #
+      # On a pull request from a fork, GITHUB_TOKEN is read-only no matter what
+      # the permissions block asks for, so this will 403 and the label has to be
+      # removed by hand. The step never fails the build either way.
+      - name: Clear the claude-review label
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          gh api -X DELETE \
+            "repos/${GITHUB_REPOSITORY}/issues/${PR}/labels/claude-review" \
+            && echo "Label cleared; re-add it to request another review." \
+            || echo "Could not clear the label (fork PR, or already removed) - remove it manually to re-run."

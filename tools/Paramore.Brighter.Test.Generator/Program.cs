@@ -27,7 +27,6 @@ using System;
 using System.CommandLine;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Test.Generator.Configuration;
 using Paramore.Brighter.Test.Generator.Generators;
@@ -38,7 +37,7 @@ var logger = factory.CreateLogger<Program>();
 var configurationFileOptions = new Option<string>("--file")
 {
     Description = "Path to the test configuration JSON file",
-    DefaultValueFactory = _ => "test-configuration.json",
+    DefaultValueFactory = _ => TestConfigurationLoader.ConfigurationFileName,
     Required = false,
 };
 
@@ -70,8 +69,10 @@ if (!File.Exists(configurationFile))
 
 try
 {
-    await using var fs = File.OpenRead(configurationFile);
-    var configuration = JsonSerializer.Deserialize<TestConfiguration>(fs);
+    var configuration = TestConfigurationLoader.Load(
+        configurationFile,
+        defaultDestinationFolder: Directory.GetCurrentDirectory()
+    );
     if (configuration == null)
     {
         logger.LogCritical(
@@ -81,14 +82,10 @@ try
         return -1;
     }
 
-    if (string.IsNullOrEmpty(configuration.DestinationFolder))
-    {
-        configuration.DestinationFolder = Directory.GetCurrentDirectory();
-        logger.LogInformation(
-            "No destination folder specified, going to use {Folder}",
-            configuration.DestinationFolder
-        );
-    }
+    logger.LogInformation(
+        "Generating into {Folder}",
+        configuration.DestinationFolder
+    );
 
     await new SharedGenerator(factory.CreateLogger<SharedGenerator>()).GenerateAsync(configuration);
     await new OutboxGenerator(factory.CreateLogger<OutboxGenerator>()).GenerateAsync(configuration);

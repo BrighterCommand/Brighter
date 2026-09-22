@@ -101,9 +101,9 @@ public class MySqlRunnerMidChainFailureResumeTests : IAsyncLifetime
             realRunner);
         await provisioner.ProvisionAsync();
 
-        //Assert — V6 + V7 now applied; total exactly 5 history rows (V3 synthetic + V4..V7 applied).
+        //Assert — V6..V8 now applied; total exactly 6 history rows (V3 synthetic + V4..V8 applied).
         var rowsAfterRetry = await GetHistoryRowsByVersion();
-        Assert.Equal(5, rowsAfterRetry.Count);
+        Assert.Equal(6, rowsAfterRetry.Count);
 
         for (var v = SeedVersion + 1; v <= ExpectedMigrationVersions.OutboxLatest; v++)
         {
@@ -113,10 +113,11 @@ public class MySqlRunnerMidChainFailureResumeTests : IAsyncLifetime
                 $"V{v} should be an applied migration row on retry");
         }
 
-        //Assert — table now at V7 shape with marker still present.
+        //Assert — table now at V8 shape with marker still present.
         var columnsAfterRetry = await GetTableColumns();
-        Assert.Contains("WorkflowId", columnsAfterRetry); // V6 applied on retry
-        Assert.Contains("DataRef", columnsAfterRetry);    // V7 applied on retry
+        Assert.Contains("WorkflowId", columnsAfterRetry);  // V6 applied on retry
+        Assert.Contains("DataRef", columnsAfterRetry);     // V7 applied on retry
+        Assert.Contains("CausationId", columnsAfterRetry); // V8 applied on retry
         Assert.Equal(1, await GetMarkerRowCount());
     }
 

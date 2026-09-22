@@ -503,7 +503,8 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 if (message.HandledCountReached(RequeueCount))
                 {
-                    var originalMessageId = message.Header.Bag.TryGetValue(Message.OriginalMessageIdHeaderName, out object? value) ? value.ToString() : null;
+                    var originalMessageId = message.Header.Bag.TryGetValue(Message.OriginalMessageIdHeaderName, out object? value) ? value?.ToString() : null;
+                    var messageId = string.IsNullOrEmpty(originalMessageId) ? message.Id.Value : originalMessageId;
 
                     Log.DroppingMessage(s_logger, RequeueCount, message.Id.Value, string.IsNullOrEmpty(originalMessageId)
                             ? string.Empty
@@ -512,7 +513,7 @@ namespace Paramore.Brighter.ServiceActivator
                     IncrementUnacceptableMessageCount();
                     return RejectMessage(message, new MessageRejectionReason(
                         RejectionReason.DeliveryError,
-                        $"Handle Count Exceeded for message {originalMessageId}")
+                        $"Handle Count Exceeded for message {messageId}")
                     );
                 }
             }
@@ -532,9 +533,10 @@ namespace Paramore.Brighter.ServiceActivator
                 throw new MessageMappingException($"Failed to find request type for message {message.Id} ", 
                     new ArgumentNullException(nameof(requestType), "The request type cannot be null."));
 
+            object? pipeline = null;
             try
             {
-                object? pipeline = MakeUnwrapPipeline(requestType);
+                pipeline = MakeUnwrapPipeline(requestType);
 
                 // Call UnwrapAsync on the pipeline
                 var unwrapMethod = pipeline!.GetType().GetMethod("UnwrapAsync");
@@ -563,6 +565,33 @@ namespace Paramore.Brighter.ServiceActivator
             catch (Exception exception)
             {
                 throw new MessageMappingException($"Failed to map message {message.Id} of {requestType.FullName} using transform pipeline ", exception);
+            }
+            finally
+            {
+                // The pipeline owns the message mapper and any transforms; releasing them back to their
+                // factories is deterministic rather than left to the finalizer. TransformPipelineAsync<T>
+                // implements IAsyncDisposable non-generically, so we do not need to know TRequest here.
+                // Release asynchronously: this runs on the single-threaded pump context, so an
+                // IAsyncDisposable mapper/transform must be awaited, not blocked on, or a continuation it
+                // posts back to the pump could deadlock.
+                //
+                // The release runs here, outside the mapping try, and a failure is logged rather than
+                // rethrown: the request is already built by the time this runs, so a throwing
+                // mapper/transform release (or MS DI's sync scope Dispose of an IAsyncDisposable-only
+                // service) must not fall into the catch above and reclassify a successfully-mapped message
+                // as MessageMappingException — which the pump treats as Unacceptable, rejecting and
+                // discarding a good message and, after the limit, shutting the pump down.
+                if (pipeline is IAsyncDisposable pipelineLifetime)
+                {
+                    try
+                    {
+                        await pipelineLifetime.DisposeAsync().ConfigureAwait(false);
+                    }
+                    catch (Exception releaseException)
+                    {
+                        Log.FailedToReleasePipeline(s_logger, releaseException, message.Id.Value, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
+                    }
+                }
             }
         }
 
@@ -619,6 +648,9 @@ namespace Paramore.Brighter.ServiceActivator
             
             [LoggerMessage(LogLevel.Warning, "MessagePump: Failed to map message {Id} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}")]
             public static partial void FailedToMapMessage(ILogger logger, MessageMappingException ex, string id, string? channelName, string routingKey, int managementThreadId);
+
+            [LoggerMessage(LogLevel.Warning, "MessagePump: Failed to release the transform pipeline for message {Id} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}; the message was mapped successfully and is unaffected")]
+            public static partial void FailedToReleasePipeline(ILogger logger, Exception ex, string id, string? channelName, string routingKey, int managementThreadId);
             
             [LoggerMessage(LogLevel.Error, "MessagePump: Failed to dispatch message '{Id}' from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}")]
             public static partial void FailedToDispatchMessage2(ILogger logger, Exception ex, string id, string? channelName, string routingKey, int managementThreadId);

@@ -35,7 +35,7 @@ using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Inbox.DynamoDB.V4;
 
-public class DynamoDbInbox : IAmAnInboxSync, IAmAnInboxAsync
+public class DynamoDbInbox : IAmAnInboxSync, IAmAnInboxAsync, IAmACausationTrackingInbox
 {
     private readonly DynamoDBContext _context;
     private readonly SaveConfig  _saveConfig;
@@ -153,7 +153,7 @@ public class DynamoDbInbox : IAmAnInboxSync, IAmAnInboxAsync
         try
         {
             await _context
-                .SaveAsync(new CommandItem<T>(command, contextKey), _saveConfig, cancellationToken)
+                .SaveAsync(new CommandItem<T>(command, contextKey, ReadCausationId(requestContext)), _saveConfig, cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
         finally
@@ -251,13 +251,59 @@ public class DynamoDbInbox : IAmAnInboxSync, IAmAnInboxAsync
         where T: class, IRequest 
     {
         var asyncSearch = _context.FromQueryAsync<CommandItem<T>>(queryConfig, _fromQueryConfig);
-            
+
         var messages = new List<CommandItem<T>>();
         do
-        { 
+        {
             messages.AddRange(await asyncSearch.GetNextSetAsync().ConfigureAwait(ContinueOnCapturedContext));
         } while (!asyncSearch.IsDone);
 
         return messages;
     }
+
+    /// <inheritdoc />
+    public bool SupportsCausationTracking() => true;
+
+    /// <inheritdoc />
+    public Task<bool> SupportsCausationTrackingAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult(true);
+
+    /// <inheritdoc />
+    public string? GetCausationId(string id, string contextKey, RequestContext? requestContext, int timeoutInMilliseconds = -1)
+    {
+        // Note: Don't add a span here as we call GetCausationIdAsync
+        return GetCausationIdAsync(id, contextKey, requestContext, timeoutInMilliseconds, CancellationToken.None)
+            .ConfigureAwait(ContinueOnCapturedContext)
+            .GetAwaiter()
+            .GetResult();
+    }
+
+    /// <inheritdoc />
+    public async Task<string?> GetCausationIdAsync(string id, string contextKey, RequestContext? requestContext,
+        int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default)
+    {
+        var queryConfig = new QueryOperationConfig
+        {
+            KeyExpression = new KeyIdContextExpression().Generate(id, contextKey),
+            ConsistentRead = true
+        };
+
+        var asyncSearch = _context.FromQueryAsync<CausationItem>(queryConfig, _fromQueryConfig);
+
+        do
+        {
+            var page = await asyncSearch.GetNextSetAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            var match = page.FirstOrDefault();
+            if (match != null)
+                return match.CausationId;
+        } while (!asyncSearch.IsDone);
+
+        return null;
+    }
+
+    // Reads the causation id from the request context bag, if present
+    private static string? ReadCausationId(RequestContext? requestContext)
+        => requestContext?.Bag.TryGetValue(RequestContextBagNames.CausationId, out var value) == true
+            ? value as string
+            : null;
 }

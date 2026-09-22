@@ -56,11 +56,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             headers.Add(new Header(HeaderNames.TOPIC, message.Header.Topic.Value.ToByteArray()));
             headers.Add(new Header(HeaderNames.MESSAGE_ID, message.Header.MessageId.Value.ToByteArray()));
             
-            var timeStampAsString = message.Header.TimeStamp.DateTime != default
-                ? message.Header.TimeStamp.DateTime.ToString(CultureInfo.InvariantCulture)
-                : DateTimeOffset.UtcNow.DateTime.ToString(CultureInfo.InvariantCulture);
+            //Write the timestamp as RFC 3339, normalized to UTC, so that its offset survives the wire.
+            //Writing the offset-less DateTime component instead drops the offset, leaving the read side to
+            //guess: it re-anchors the value to host-local time, so Header.TimeStamp drifts by the host UTC
+            //offset on every hop. This matches the CloudEvents ce_time header, which already round-trips
+            //correctly, and the legacy timestamp header written by the other gateways.
+            var timeStamp = message.Header.TimeStamp.DateTime != default
+                ? message.Header.TimeStamp
+                : DateTimeOffset.UtcNow;
             
-            headers.Add(HeaderNames.TIMESTAMP, timeStampAsString.ToByteArray());
+            headers.Add(HeaderNames.TIMESTAMP, timeStamp.ToRfc3339().ToByteArray());
             
             if (message.Header.ContentType is not null)
                 headers.Add(HeaderNames.CONTENT_TYPE, message.Header.ContentType!.ToString().ToByteArray());

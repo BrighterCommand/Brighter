@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Data.Common;
 using System.Threading.Tasks;
+using Google.Api.Gax;
 using Google.Cloud.Spanner.Data;
 using Paramore.Brighter.Gcp.Tests.Outbox.SpannerText.Async;
 using Paramore.Brighter.Gcp.Tests.Outbox.SpannerText.Sync;
@@ -13,7 +14,10 @@ namespace Paramore.Brighter.Gcp.Tests.Outbox.SpannerText;
 public class SpannerTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProviderAsync
 {
     private readonly RelationalDatabaseConfiguration _configuration = new(
-        Const.ConnectionString,
+        new SpannerConnectionStringBuilder(Const.ConnectionString)
+        {
+            EmulatorDetection = EmulatorDetection.EmulatorOrProduction
+        }.ConnectionString,
         databaseName: "brightertests",
         outBoxTableName: $"test_{Uuid.New():N}",
         binaryMessagePayload: false

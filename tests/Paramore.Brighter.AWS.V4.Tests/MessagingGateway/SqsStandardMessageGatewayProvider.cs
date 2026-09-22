@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.AWS.V4.Tests.Helpers;
+using Paramore.Brighter.AWS.V4.Tests.MessagingGateway.SqsStandard;
 using Paramore.Brighter.AWS.V4.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 
@@ -14,17 +15,31 @@ public class SqsStandardMessageGatewayProvider
       SqsStandard.Reactor.IAmAMessageGatewayReactorProvider
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
+    private readonly AwsTestResourceReaper _reaper;
 
     public SqsStandardMessageGatewayProvider()
     {
         _awsConnection = GatewayFactory.CreateFactory();
+        _reaper = new AwsTestResourceReaper(_awsConnection);
     }
+
+    /// <summary>
+    /// The reaper this provider tracks its names with, so that a test can assert every name the
+    /// provider hands out is registered for deletion. Tracking is hand-written in each provider,
+    /// and a name added without a Track call leaks silently.
+    /// </summary>
+    internal AwsTestResourceReaper Reaper => _reaper;
 
     public RoutingKey GetOrCreateRoutingKey([CallerMemberName] string? testName = null)
     {
-        return new RoutingKey($"sqs-std-{Uuid.New():N}");
+        return new RoutingKey(_reaper.TrackQueue($"sqs-std-{Uuid.New():N}"));
     }
 
+    /// <remarks>
+    /// Not tracked for reaping: CreateSubscription replaces this name with the publication's
+    /// queue, so no queue by this name is ever created. The queue that is created is the one
+    /// <see cref="GetOrCreateRoutingKey"/> tracked.
+    /// </remarks>
     public ChannelName GetOrCreateChannelName([CallerMemberName] string? testName = null)
     {
         return new ChannelName($"sqs-std-ch-{Uuid.New():N}");
@@ -40,18 +55,44 @@ public class SqsStandardMessageGatewayProvider
         };
     }
 
+    // SQS queue names permit only alphanumerics, hyphens and underscores. Map the canonical
+    // dotted DLQ/invalid routing keys onto that alphabet so the queue can be created.
+    private static RoutingKey? ToValidSqsName(RoutingKey? routingKey) =>
+        routingKey is null ? null : new RoutingKey(routingKey.Value.Replace(".", "-"));
+
     public SqsSubscription CreateSubscription(
         RoutingKey routingKey,
         ChannelName channelName,
         OnMissingChannel makeChannel,
-        bool setupDeadLetterQueue = false)
+        RoutingKey? deadLetterRoutingKey = null,
+        RoutingKey? invalidMessageRoutingKey = null)
     {
         // For SQS point-to-point, the channel (queue) must match the publication's queue
         channelName = new ChannelName(routingKey);
 
-        if (setupDeadLetterQueue)
+        // SQS queue names allow only alphanumerics, hyphens and underscores (1–80 chars); the
+        // canonical DLQ/invalid convention ("<topic>.DLQ" / "<topic>.Invalid") uses dots, which
+        // SQS rejects. Adapt the universal naming to the transport's rules — the read hooks below
+        // read from subscription.DeadLetterRoutingKey/InvalidMessageRoutingKey, so they stay consistent.
+        deadLetterRoutingKey = ToValidSqsName(deadLetterRoutingKey);
+        invalidMessageRoutingKey = ToValidSqsName(invalidMessageRoutingKey);
+
+        // The invalid-message queue is created lazily, by the producer the consumer builds on the
+        // first rejection (SqsMessageConsumer.CreateInvalidMessageProducer), so nothing else in
+        // this fixture ever holds its name. The reaper predates the invalid channel and cannot
+        // infer it, so register it here or it leaks exactly as the DLQ used to.
+        if (invalidMessageRoutingKey != null)
         {
-            var deadLetterChannelName = new ChannelName($"{channelName}-dlq");
+            _reaper.TrackQueue(invalidMessageRoutingKey.Value);
+        }
+
+        if (deadLetterRoutingKey != null)
+        {
+            // Named from the routing key the harness was handed rather than derived from the
+            // channel name: the DLQ read hooks find the queue through
+            // subscription.DeadLetterRoutingKey, so the two have to be the same name. Tracked
+            // so that teardown reaps it.
+            var deadLetterChannelName = new ChannelName(_reaper.TrackQueue(deadLetterRoutingKey.Value));
             return new SqsSubscription<MyCommand>(
                 subscriptionName: new SubscriptionName(channelName),
                 channelName: channelName,
@@ -62,7 +103,8 @@ public class SqsStandardMessageGatewayProvider
                 queueAttributes: new SqsAttributes(
                     redrivePolicy: new RedrivePolicy(deadLetterChannelName, 3)
                 ),
-                deadLetterRoutingKey: new RoutingKey(deadLetterChannelName),
+                deadLetterRoutingKey: deadLetterRoutingKey,
+                invalidMessageRoutingKey: invalidMessageRoutingKey,
                 requeueCount: 3
             );
         }
@@ -73,22 +115,86 @@ public class SqsStandardMessageGatewayProvider
             channelType: ChannelType.PointToPoint,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
-            makeChannels: makeChannel
+            makeChannels: makeChannel,
+            invalidMessageRoutingKey: invalidMessageRoutingKey
         );
     }
+
+    public Message GetMessageFromInvalidChannel(SqsSubscription subscription)
+    {
+        return GetMessageFromInvalidChannelAsync(subscription).GetAwaiter().GetResult();
+    }
+
+    public async Task<Message> GetMessageFromInvalidChannelAsync(
+        SqsSubscription subscription,
+        CancellationToken cancellationToken = default)
+    {
+        var invalidSubscription = new SqsSubscription<MyCommand>(
+            subscriptionName: new SubscriptionName(subscription.InvalidMessageRoutingKey!.Value),
+            channelName: new ChannelName(subscription.InvalidMessageRoutingKey!.Value),
+            channelType: ChannelType.PointToPoint,
+            routingKey: subscription.InvalidMessageRoutingKey!,
+            messagePumpType: MessagePumpType.Proactor,
+            makeChannels: OnMissingChannel.Assume
+        );
+
+        IAmAChannelAsync? invalidChannel = null;
+        try
+        {
+            invalidChannel = await new ChannelFactory(_awsConnection)
+                .CreateAsyncChannelAsync(invalidSubscription, cancellationToken);
+
+            var message = await invalidChannel.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
+            if (message.Header.MessageType != MessageType.MT_NONE)
+            {
+                await invalidChannel.AcknowledgeAsync(message, cancellationToken);
+            }
+
+            return message;
+        }
+        catch (Amazon.SQS.Model.QueueDoesNotExistException)
+        {
+            // The invalid channel is created lazily on first send; if nothing was ever routed
+            // there the queue does not exist, which is equivalent to it being empty (MT_NONE).
+            return new Message();
+        }
+        finally
+        {
+            invalidChannel?.Dispose();
+        }
+    }
+
+    public RejectionMetadataKeys RejectionMetadataKeys =>
+        new RejectionMetadataKeys(
+            "originalTopic",
+            "originalMessageType",
+            "rejectionReason",
+            "rejectionMessage",
+            "rejectionTimestamp"
+        );
 
     public void CleanUp(
         IAmAMessageProducerSync? producer,
         IAmAChannelSync? channel,
         IEnumerable<Message> messages)
     {
-        if (channel != null)
+        try
         {
-            channel.Purge();
-            channel.Dispose();
-        }
+            if (channel != null)
+            {
+                channel.Purge();
+                channel.Dispose();
+            }
 
-        producer?.Dispose();
+            producer?.Dispose();
+        }
+        finally
+        {
+            // Purge and Dispose reach AWS and can fail — PurgeQueue alone is throttled to one
+            // call per queue a minute — and a teardown that throws before it reaps is how the
+            // topics and queues leaked in the first place.
+            _reaper.Reap();
+        }
     }
 
     public async Task CleanUpAsync(
@@ -96,15 +202,23 @@ public class SqsStandardMessageGatewayProvider
         IAmAChannelAsync? channel,
         IEnumerable<Message> messages)
     {
-        if (channel != null)
+        try
         {
-            await channel.PurgeAsync();
-            channel.Dispose();
-        }
+            if (channel != null)
+            {
+                await channel.PurgeAsync();
+                channel.Dispose();
+            }
 
-        if (producer != null)
+            if (producer != null)
+            {
+                await producer.DisposeAsync();
+            }
+        }
+        finally
         {
-            await producer.DisposeAsync();
+            // See CleanUp: the reap has to survive a teardown that throws.
+            await _reaper.ReapAsync();
         }
     }
 
@@ -182,19 +296,13 @@ public class SqsStandardMessageGatewayProvider
 
         try
         {
-            for (var i = 0; i < 10; i++)
+            var message = await dlqChannel.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
+            if (message.Header.MessageType != MessageType.MT_NONE)
             {
-                var message = await dlqChannel.ReceiveAsync(TimeSpan.FromSeconds(5), cancellationToken);
-                if (message.Header.MessageType != MessageType.MT_NONE)
-                {
-                    await dlqChannel.AcknowledgeAsync(message, cancellationToken);
-                    return message;
-                }
-
-                await Task.Delay(1000, cancellationToken);
+                await dlqChannel.AcknowledgeAsync(message, cancellationToken);
             }
 
-            return new Message();
+            return message;
         }
         finally
         {

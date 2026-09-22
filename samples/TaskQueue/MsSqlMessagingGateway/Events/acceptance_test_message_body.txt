@@ -1,7 +1,0 @@
-Header
-------
-MessageType=2
-
-Body
-----
-{"Greeting":"Hello World","Id":"60457970-6fe6-482e-aad4-8e802652136c"}

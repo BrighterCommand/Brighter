@@ -51,7 +51,8 @@ namespace Paramore.Brighter.BoxProvisioning.PostgreSql;
 /// <para>
 /// <see cref="IAmABoxMigration.LogicalColumns"/> are lowercase per ADR 0057 §1 so that
 /// detection-by-<c>information_schema.columns</c> (which returns Postgres's folded lowercase
-/// column names) matches without case mismatch. The accumulated columns across V1..V7 plus
+/// column names) matches without case mismatch. V8 adds <c>causationid</c> (Spec 0027, #2541)
+/// plus a replay index on it. The accumulated columns across V1..V8 plus
 /// the Postgres housekeeping (<c>id</c>, <c>messageid</c>) equal the live builder's column
 /// set — verified by the drift test in <c>tests/Paramore.Brighter.PostgresSQL.Tests/BoxProvisioning</c>.
 /// </para>
@@ -72,6 +73,7 @@ public class PostgreSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
 
     private static readonly string[] s_v6AddedColumns = ["workflowid", "jobid"];
     private static readonly string[] s_v7AddedColumns = ["dataref", "specversion"];
+    private static readonly string[] s_v8AddedColumns = ["causationid"];
 
     // Literal historical PostgreSQL outbox DDL extracted from commit 3c30343fa (July 2019).
     // First-shipped state already carried Dispatched — see the born-past-V1 note in the
@@ -125,7 +127,7 @@ public class PostgreSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
     /// Returns all migrations for the PostgreSQL outbox, ordered by version.
     /// </summary>
     /// <param name="configuration">The relational database configuration.</param>
-    /// <returns>An ordered list of migrations from V1 to V7.</returns>
+    /// <returns>An ordered list of migrations from V1 to V8.</returns>
     public IReadOnlyList<IAmABoxMigration> All(IAmARelationalDatabaseConfiguration configuration)
     {
         var schema = configuration.SchemaName ?? DefaultSchema;
@@ -196,7 +198,16 @@ public class PostgreSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
                     ("dataref", "character varying(255)"),
                     ("specversion", "character varying(255)")),
                 LogicalColumns: Cumulative(7),
-                SourceReference: "d67dac947 / #3790")
+                SourceReference: "d67dac947 / #3790"),
+
+            new BoxMigration(
+                Version: 8,
+                Description: "Add causationid column and replay index",
+                UpScript: AddColumns(schema, table, ("causationid", "character varying(255)"))
+                    + Environment.NewLine
+                    + AddCausationIndex(schema, table),
+                LogicalColumns: Cumulative(8),
+                SourceReference: "#2541")
         ];
     }
 
@@ -210,6 +221,7 @@ public class PostgreSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
         if (upToVersion >= 5) { set.UnionWith(s_v5AddedColumns); }
         if (upToVersion >= 6) { set.UnionWith(s_v6AddedColumns); }
         if (upToVersion >= 7) { set.UnionWith(s_v7AddedColumns); }
+        if (upToVersion >= 8) { set.UnionWith(s_v8AddedColumns); }
         return set;
     }
 
@@ -222,4 +234,12 @@ public class PostgreSqlOutboxMigrationCatalog : IAmABoxMigrationCatalog
         // (Order, User, Group, …) parse cleanly. Column names are sourced from the catalog
         // and are already ADR 0057 §1 lowercase, so they are emitted bare.
         $"ALTER TABLE {PgIdentifier.QuoteQualified(schema, table)} ADD COLUMN IF NOT EXISTS {column} {type} NULL;";
+
+    // Idempotent replay index (Spec 0027, #2541) on causationid via Postgres's native
+    // CREATE INDEX IF NOT EXISTS. The index name folds the table identifier to lowercase
+    // (PgIdentifier.Normalize) and is emitted bare so it matches Postgres's natural case-fold;
+    // the indexed table is lowercase-then-quoted via PgIdentifier like the ALTER targets above.
+    private static string AddCausationIndex(string schema, string table) =>
+        $"CREATE INDEX IF NOT EXISTS idx_{PgIdentifier.Normalize(table)}_causationid " +
+        $"ON {PgIdentifier.QuoteQualified(schema, table)} (causationid);";
 }

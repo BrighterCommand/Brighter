@@ -1426,7 +1426,7 @@ namespace Paramore.Brighter
             var subscription = _replySubscriptions?.FirstOrDefault(s => s.RequestType == typeof(TResponse));
 
             if (subscription is null)
-                throw new InvalidOperationException($"No Subscription registered fpr replies of type {typeof(T)}");
+                throw new InvalidOperationException($"No Subscription registered for replies of type {typeof(TResponse)}");
             
             if (_responseChannelFactory is null)
                 throw new InvalidOperationException("No ResponseChannelFactory registered");
@@ -1532,6 +1532,7 @@ namespace Paramore.Brighter
         {
             var context = requestContext ?? _requestContextFactory.Create();
             context.Span = span;
+            context.InstrumentationOptions = _instrumentationOptions;
 #pragma warning disable CS0618 // Type or member is obsolete
             context.Policies = _policyRegistry;
 #pragma warning restore CS0618 // Type or member is obsolete

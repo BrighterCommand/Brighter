@@ -42,7 +42,7 @@ public class SpannerInboxProvisioner : IAmABoxProvisioner
 {
     private static readonly HashSet<string> V1Columns = new(StringComparer.Ordinal)
     {
-        "CommandId", "CommandType", "CommandBody", "Timestamp", "ContextKey"
+        "CommandId", "CommandType", "CommandBody", "Timestamp", "ContextKey", "CausationId"
     };
 
     private readonly IAmABoxMigrationDetectionHelper<SpannerConnection, SpannerTransaction> _detectionHelper;

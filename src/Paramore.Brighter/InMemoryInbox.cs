@@ -59,7 +59,13 @@ namespace Paramore.Brighter
         /// Gets or sets the command body.
         /// </summary>
         /// <value>The command body.</value>
-        public string RequestBody { get; set; }                                                                           
+        public string RequestBody { get; set; }
+
+        /// <summary>
+        /// Gets or sets the causation id linking this inbox entry to the outbox messages produced during the
+        /// handler invocation that stored it. Null when no causation id was supplied.
+        /// </summary>
+        public string? CausationId { get; set; }
         
         /// <summary>
         /// Gets the type of the command.
@@ -106,7 +112,7 @@ namespace Paramore.Brighter
     /// </summary>
     public class InMemoryInbox(TimeProvider timeProvider,
         InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
-        : InMemoryBox<InboxItem>(timeProvider), IAmAnInboxSync, IAmAnInboxAsync
+        : InMemoryBox<InboxItem>(timeProvider), IAmAnInboxSync, IAmAnInboxAsync, IAmACausationTrackingInbox
     {
         private readonly TimeProvider _timeProvider = timeProvider;
         private readonly InstrumentationOptions _instrumentationOptions = instrumentationOptions;
@@ -157,6 +163,7 @@ namespace Paramore.Brighter
                 }
 
                 item.RequestBody = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
+                item.CausationId = ReadCausationId(requestContext);
             }
             finally
             {
@@ -349,5 +356,46 @@ namespace Paramore.Brighter
 
             return Requests.ContainsKey(InboxItem.CreateKey(id, contextKey));
         }
+
+        /// <inheritdoc />
+        public bool SupportsCausationTracking() => true;
+
+        /// <inheritdoc />
+        public Task<bool> SupportsCausationTrackingAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(true);
+
+        /// <inheritdoc />
+        public string? GetCausationId(string id, string contextKey, RequestContext? requestContext,
+            int timeoutInMilliseconds = -1)
+        {
+            ClearExpiredMessages();
+
+            return Requests.TryGetValue(InboxItem.CreateKey(id, contextKey), out InboxItem? inboxItem)
+                ? inboxItem.CausationId
+                : null;
+        }
+
+        /// <inheritdoc />
+        public Task<string?> GetCausationIdAsync(string id, string contextKey, RequestContext? requestContext,
+            int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default)
+        {
+            // Note: Don't create a span here - we call the sync method behind the scenes
+            var tcs = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                tcs.SetCanceled();
+                return tcs.Task;
+            }
+
+            tcs.SetResult(GetCausationId(id, contextKey, requestContext, timeoutInMilliseconds));
+            return tcs.Task;
+        }
+
+        // Reads the causation id from the request context bag, if present
+        private static string? ReadCausationId(RequestContext? requestContext)
+            => requestContext?.Bag.TryGetValue(RequestContextBagNames.CausationId, out var value) == true
+                ? value as string
+                : null;
     }
 }

@@ -24,23 +24,49 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter
 {
-    internal sealed class TransformerFactory<TRequest>(TransformAttribute attribute, IAmAMessageTransformerFactory factory)
+    internal sealed partial class TransformerFactory<TRequest>(TransformAttribute attribute, IAmAMessageTransformerFactory factory)
         where TRequest : class, IRequest
     {
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<TransformerFactory<TRequest>>();
+
         private readonly Type _messageType = typeof(TRequest);
 
-        public IAmAMessageTransform CreateMessageTransformer()
+        public Lease<IAmAMessageTransform> CreateMessageTransformer()
         {
             var transformerType = attribute.GetHandlerType();
-            var transformer = factory.Create(transformerType);
-            if (transformer is null)
+            var lease = factory.Create(transformerType);
+            if (lease is null)
                 throw new ConfigurationException($"Could not create transformer {transformerType} from {factory}");
-            if (attribute is WrapWithAttribute) transformer.InitializeWrapFromAttributeParams(attribute.InitializerParams());
-            if (attribute is UnwrapWithAttribute) transformer.InitializeUnwrapFromAttributeParams(attribute.InitializerParams());
-            return transformer;
+            try
+            {
+                var transformer = lease.Instance;
+                if (attribute is WrapWithAttribute) transformer.InitializeWrapFromAttributeParams(attribute.InitializerParams());
+                if (attribute is UnwrapWithAttribute) transformer.InitializeUnwrapFromAttributeParams(attribute.InitializerParams());
+            }
+            catch (Exception)
+            {
+                //the transformer was created but never returned to the caller, so we own it; release its
+                //lease to the factory rather than leak it before letting the initialization error propagate.
+                //Release/Dispose may throw (a user Release, or MS DI's sync scope Dispose on
+                //netstandard2.0 for an IAsyncDisposable-only transform); log-and-swallow it so it cannot
+                //mask the real initialization error being rethrown, but a repeated failure here (an
+                //unreleased transform scope) is not left invisible.
+                try { factory.Release(lease); }
+                catch (Exception releaseException) { Log.FailedToReleaseTransformerAfterInitFailure(s_logger, releaseException); }
+                throw;
+            }
+            return lease;
+        }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Warning, "Failed to release a transformer after its initialization failed; the initialization error is preserved and rethrown. A repeated failure here points at a transform Release or Dispose that throws, leaking its scope.")]
+            public static partial void FailedToReleaseTransformerAfterInitFailure(ILogger logger, Exception exception);
         }
     }
 }

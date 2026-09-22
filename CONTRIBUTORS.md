@@ -36,8 +36,14 @@ Brighter contributors (sorted alphabeticaly)
 **[A Craven](https://github.com/acraven)**
   * Various fixes
 
-**[@MikeFreeman](https://github.com/MikeFreeman-Flagstone)**
+**[MikeFreeman](https://github.com/MikeFreeman-Flagstone)**
  * Archiver Fixes
+
+**[Irakli Gabisonia](https://github.com/gabisonia)**
+ * Various fixes
+
+**[Abhishek Gajavilli](https://github.com/Abhishek84313)**
+  * Various fixes
   
 **[Bob Gregory](https://github.com/BobFromHuddle)**
   * Various fixes
@@ -178,7 +184,7 @@ Brighter contributors (sorted alphabeticaly)
   * Clean up the ILog constructor
   * Clean up the CancellationToken
 
-**[Jakub Syty](https://github.com/jakoss)
+**[Jakub Syty](https://github.com/jakoss)**
   * Various Fixes
   * MongoDb EF Integration 
 
@@ -199,6 +205,8 @@ Brighter contributors (sorted alphabeticaly)
 **[Joseph Woodward](https://github.com/JosephWoodward)**  
   * Documentation fixes 
   
-**[Wilson](https://github.com/drewsuccess)
+**[Wilson](https://github.com/drewsuccess)**
   * Various fixes
-  
+
+**[Islam Mohamed Zakaria](https://github.com/IslamZakaria)**
+  * Set Kafka LibrdKafka error reporting levels

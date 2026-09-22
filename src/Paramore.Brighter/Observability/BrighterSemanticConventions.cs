@@ -51,6 +51,7 @@ public static class BrighterSemanticConventions
     // Operators querying a trace store can filter / aggregate by this value to size the flip impact.
     public const string BoxMigrationSeedRowCount = "brighter.box.migration.seed.rows";
     public const string BoxType = "paramore.brighter.box.type";
+    public const string CausationId = "paramore.brighter.causation_id";
     public const string CeSource = "cloudevents.event_source";
     public const string CeMessageId = "cloudevents.event_id";
     public const string CeVersion = "cloudevents.event_spec_version";

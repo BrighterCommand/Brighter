@@ -91,7 +91,8 @@ public class PostgreSqlLegacyTableRaceTests : IAsyncLifetime
     [Fact]
     public async Task When_two_inbox_provisioners_race_on_legacy_table_they_should_produce_exactly_one_synthetic_v1()
     {
-        //Arrange — seed a V1 Postgres inbox (V1-only chain) plus a marker command row.
+        //Arrange — seed a V1 Postgres inbox (V1 baseline) plus a marker command row. Spec 0027
+        //(#2541) adds a V2 that introduces causationid, so the chain is now V1→V2.
         new PostgresSqlTestHelper().SetupDatabase();
         PostgreSqlInboxLegacySeeder.SeedAtV1(_connectionString, _inboxTableName);
         await SeedInboxMarkerRow();
@@ -113,17 +114,25 @@ public class PostgreSqlLegacyTableRaceTests : IAsyncLifetime
         //Act — race two provisioners against the same legacy table.
         await Task.WhenAll(provisionerA.ProvisionAsync(), provisionerB.ProvisionAsync());
 
-        //Assert — exactly one synthetic V1 row (Postgres inbox is V1-only — no V2 to apply).
+        //Assert — exactly one synthetic V1 row + one applied V2 (causationid), no duplicates.
         var rowsByVersion = await GetHistoryRowsByVersion(_inboxTableName);
-        Assert.Single(rowsByVersion);
+        Assert.Equal(2, rowsByVersion.Count);
 
         var syntheticDescription = Assert.Contains(1, rowsByVersion);
         Assert.StartsWith("bootstrap: detected at V1", syntheticDescription);
 
-        //Assert — V1 columns intact (commandid, contextkey both present in composite PK) and marker preserved.
+        var appliedV2Description = Assert.Contains(2, rowsByVersion);
+        Assert.False(
+            appliedV2Description.StartsWith("bootstrap:", StringComparison.Ordinal),
+            $"V2 should be an applied migration row, not a synthetic bootstrap row " +
+            $"(description was: '{appliedV2Description}')");
+
+        //Assert — V1 columns intact (commandid, contextkey present in composite PK), the V2
+        //causationid column landed, and the marker is preserved.
         var columns = await GetTableColumns(_inboxTableName);
         Assert.Contains("commandid", columns);
         Assert.Contains("contextkey", columns);
+        Assert.Contains("causationid", columns);
         Assert.True(await InboxMarkerRowExists());
     }
 

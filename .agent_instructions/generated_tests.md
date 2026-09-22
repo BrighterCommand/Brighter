@@ -16,11 +16,13 @@ tools/Paramore.Brighter.Test.Generator/
 │   ├── IAmAMessageBuilder.cs.liquid        ← Message builder interface
 │   ├── IAmAMessageAssertion.cs.liquid      ← Message assertion interface
 │   ├── Outbox/
-│   │   ├── Sync/       ← 13 Liquid templates for sync outbox tests (12 tests + 1 interface)
-│   │   └── Async/      ← 13 Liquid templates for async outbox tests (12 tests + 1 interface)
+│   │   ├── Sync/       ← 14 Liquid templates for sync outbox tests (13 tests + 1 interface)
+│   │   ├── Async/      ← 14 Liquid templates for async outbox tests (13 tests + 1 interface)
+│   │   └── Causation/  ← Liquid template for causation-tracking outbox tests (subclass of CausationTrackingOutboxBaseTests)
 │   └── MessagingGateway/
-│       ├── Reactor/    ← 13 Liquid templates for sync messaging gateway tests (12 tests + 1 interface)
-│       └── Proactor/   ← 13 Liquid templates for async messaging gateway tests (12 tests + 1 interface)
+│       ├── Reactor/    ← 21 Liquid templates for sync messaging gateway tests (20 tests + 1 interface)
+│       ├── Proactor/   ← 21 Liquid templates for async messaging gateway tests (20 tests + 1 interface)
+│       └── Shared/     ← 2 Liquid templates shared by both variants (ConformanceDeferredPump, RejectionMetadataKeys)
 ├── Generators/
 │   ├── BaseGenerator.cs
 │   ├── OutboxGenerator.cs
@@ -37,7 +39,8 @@ tests/Paramore.Brighter.*.Tests/
 ├── Outbox/
 │   └── [Prefix]/Generated/      ← Output directory (do not hand-edit)
 │       ├── Sync/*.cs
-│       └── Async/*.cs
+│       ├── Async/*.cs
+│       └── Causation/*.cs
 └── MessagingGateway/
     └── [Prefix]/Generated/      ← Output directory (do not hand-edit)
         ├── Reactor/*.cs
@@ -48,20 +51,28 @@ tests/Paramore.Brighter.*.Tests/
 
 | Project | Outbox | Messaging Gateway | Variants |
 |---|---|---|---|
-| `Paramore.Brighter.MySQL.Tests` | ✅ | | Text, Binary |
-| `Paramore.Brighter.PostgresSQL.Tests` | ✅ | ✅ | Text, Binary (outbox); single (gateway) |
-| `Paramore.Brighter.MSSQL.Tests` | ✅ | ✅ | Text, Binary (outbox); single (gateway) |
-| `Paramore.Brighter.Sqlite.Tests` | ✅ | | Text, Binary |
-| `Paramore.Brighter.DynamoDB.Tests` | ✅ | | single |
-| `Paramore.Brighter.DynamoDB.V4.Tests` | ✅ | | single |
-| `Paramore.Brighter.MongoDb.Tests` | ✅ | | single |
+| `Paramore.Brighter.AWS.Tests` |  | ✅ | SnsStandard, SnsFifo, SqsStandard, SqsFifo |
+| `Paramore.Brighter.AWS.V4.Tests` |  | ✅ | SnsStandard, SnsFifo, SqsStandard, SqsFifo |
+| `Paramore.Brighter.AzureServiceBus.Tests` |  | ✅ | single |
+| `Paramore.Brighter.DynamoDB.Tests` | ✅ |  | single |
+| `Paramore.Brighter.DynamoDB.V4.Tests` | ✅ |  | single |
 | `Paramore.Brighter.Gcp.Tests` | ✅ | ✅ | Firestore, SpannerBinary, SpannerText (outbox); Pull, PullOrdering, Stream, StreamOrdering (gateway) |
-| `Paramore.Brighter.RMQ.Async.Tests` | | ✅ | Classic, Quorum |
-| `Paramore.Brighter.AWS.Tests` | | ✅ | SnsStandard, SnsFifo, SqsStandard, SqsFifo |
-| `Paramore.Brighter.AWS.V4.Tests` | | ✅ | SnsStandard, SnsFifo, SqsStandard, SqsFifo |
-| `Paramore.Brighter.Kafka.Tests` | | ✅ | Standard, PartitionKey |
-| `Paramore.Brighter.Redis.Tests` | | ✅ | single |
-| `Paramore.Brighter.RocketMQ.Tests` | | ✅ | single |
+| `Paramore.Brighter.Kafka.Tests` |  | ✅ | Classic, Consumer, PartitionKey |
+| `Paramore.Brighter.MQTT.Tests` |  | ✅ | single |
+| `Paramore.Brighter.MSSQL.Tests` | ✅ | ✅ | Text, Binary (outbox); single (gateway) |
+| `Paramore.Brighter.MongoDb.Tests` | ✅ |  | single |
+| `Paramore.Brighter.MySQL.Tests` | ✅ |  | Text, Binary |
+| `Paramore.Brighter.PostgresSQL.Tests` | ✅ | ✅ | Text, Binary (outbox); single (gateway) |
+| `Paramore.Brighter.RMQ.Async.Tests` |  | ✅ | Classic, Quorum |
+| `Paramore.Brighter.RMQ.Sync.Tests` |  | ✅ | single |
+| `Paramore.Brighter.Redis.Tests` |  | ✅ | single |
+| `Paramore.Brighter.RocketMQ.Tests` |  | ✅ | single |
+| `Paramore.Brighter.Sqlite.Tests` | ✅ |  | Text, Binary |
+
+> **All 17 projects carrying a `test-configuration.json` are listed above**, derived from those
+> files. If you add a project or change its variants, rebuild the whole row set from
+> `tests/*/test-configuration.json` rather than editing one line — that is how this table came to
+> be missing three projects and to describe Kafka's variants as they were two renames ago.
 
 ## Templates
 
@@ -78,7 +89,7 @@ Generated into the test project root. These provide common helpers used by both 
 
 ### Outbox Templates
 
-**Sync** (13 templates) and **Async** (13 templates) — each contains 1 provider interface + 12 test scenarios:
+**Sync** (14 templates) and **Async** (14 templates) — each contains 1 provider interface + 13 test scenarios:
 
 | Template | Description |
 |---|---|
@@ -95,6 +106,7 @@ Generated into the test project root. These provide common helpers used by both 
 | `When_Retrieving_All_Messages_They_Should_Include_Dispatched_And_Undispatched` | Full message listing |
 | `When_Retrieving_Outstanding_Messages_It_Should_Filter_By_Age` | Outstanding message age filtering |
 | `When_Retrieving_Dispatched_Messages_It_Should_Filter_By_Age` | Dispatched message age filtering |
+| `When_Storing_A_Message_With_A_Relative_DataSchema_It_Should_Be_Read_Back` | Relative `DataSchema` URI survives round-trip |
 
 Templates containing `Transaction` in the filename are skipped when `SupportsTransactions` is `false`.
 
@@ -112,7 +124,7 @@ Templates containing `Transaction` in the filename are skipped when `SupportsTra
 
 ### Messaging Gateway Templates
 
-**Reactor** (13 templates) and **Proactor** (13 templates) — each contains 1 provider interface + 12 test scenarios:
+**Reactor** (21 templates) and **Proactor** (21 templates) — each contains 1 provider interface + 20 test scenarios:
 
 | Template | Description |
 |---|---|
@@ -123,12 +135,20 @@ Templates containing `Transaction` in the filename are skipped when `SupportsTra
 | `When_a_message_consumer_reads_multiple_messages_should_receive_all_messages` | Batch receive |
 | `When_sending_a_message_should_propagate_activity_context` | OpenTelemetry context propagation |
 | `When_confirming_posting_a_message_should_receive_publish_confirmation` | Publisher confirms |
-| `When_requeuing_a_failed_message_should_receive_message_again` | Basic requeue |
-| `When_requeuing_a_failed_message_with_delay_should_receive_message_again` | Delayed requeue |
-| `When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue` | DLQ redrive |
 | `When_infrastructure_missing_and_assume_channel_should_throw_exception` | Assume mode error |
 | `When_infrastructure_missing_and_validate_channel_should_throw_exception` | Validate mode error |
-| `When_reading_a_delayed_message_via_the_messaging_gateway_should_delay_delivery` | Scheduled delivery |
+| `When_nacking_a_message_it_should_be_redelivered` | Nack redelivery (FR-16) |
+| `When_requeuing_a_failed_message_should_be_redelivered` | Basic requeue |
+| `When_requeuing_a_failed_message_with_delay_should_redeliver_after_delay` | Delayed requeue (FR-2) |
+| `When_requeuing_a_failed_message_with_zero_delay_should_redeliver_immediately` | Zero-delay requeue |
+| `When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue` | Requeue budget exhausted to DLQ (FR-23) |
+| `When_sending_a_delayed_message_should_deliver_after_delay` | Delayed send (FR-9) |
+| `When_rejecting_message_should_include_metadata` | Rejection metadata stamped on the rejected message (FR-8) |
+| `When_rejecting_message_with_delivery_error_should_send_to_dlq` | Delivery-error reject routes to the DLQ |
+| `When_rejecting_message_with_unknown_reason_should_send_to_dlq` | Unknown reason defaults to the DLQ |
+| `When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel` | Unacceptable routes to the invalid channel |
+| `When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq` | Unacceptable falls back to the DLQ when no invalid channel exists |
+| `When_rejecting_message_with_no_channels_configured_should_acknowledge_and_log` | No DLQ and no invalid channel: acknowledge and continue |
 
 Templates are skipped based on feature support flags (see [Feature Flags](#messaging-gateway-feature-flags) below).
 
@@ -211,8 +231,6 @@ To disable transaction tests for providers that don't support them (e.g. MongoDB
     "MessageGatewayProvider": "Paramore.Brighter.Redis.Tests.MessagingGateway.RedisMessageGatewayProvider",
     "Category": "Redis",
     "CollectionName": "RedisMessagingGateway",
-    "HasSupportToDeadLetterQueue": true,
-    "HasSupportToRequeue": true,
     "HasSupportToValidateInfrastructure": false
   }
 }
@@ -238,10 +256,7 @@ This generates tests into:
       "CollectionName": "Classic",
       "ReceiveMessageTimeoutInMilliseconds": 4000,
       "HasSupportToPublishConfirmation": true,
-      "HasSupportToDeadLetterQueue": true,
-      "HasSupportToDelayedMessages": false,
-      "HasSupportToValidateBrokerExistence": true,
-      "HasSupportToRequeue": true
+      "HasSupportToValidateBrokerExistence": true
     },
     "Quorum": {
       "Publication": "Paramore.Brighter.MessagingGateway.RMQ.Async.RmqPublication",
@@ -251,10 +266,7 @@ This generates tests into:
       "CollectionName": "Quorum",
       "ReceiveMessageTimeoutInMilliseconds": 4000,
       "HasSupportToPublishConfirmation": true,
-      "HasSupportToDeadLetterQueue": true,
-      "HasSupportToDelayedMessages": false,
-      "HasSupportToValidateBrokerExistence": true,
-      "HasSupportToRequeue": true
+      "HasSupportToValidateBrokerExistence": true
     }
   }
 }
@@ -278,11 +290,9 @@ Feature flags control which test templates are generated. When a flag is `false`
 | Flag | Default | Skips templates containing | Use case |
 |---|---|---|---|
 | `HasSupportToPublishConfirmation` | `false` | `confirming_posting` | Transport doesn't support publisher confirms |
-| `HasSupportToDelayedMessages` | `false` | `delayed_message`, `with_delay` | No delayed/scheduled message support |
-| `HasSupportToDeadLetterQueue` | `false` | `dead_letter_queue` | No dead letter queue support |
 | `HasSupportToValidateBrokerExistence` | `false` | `no_broker_created` | Transport can't validate broker existence |
-| `HasSupportToRequeue` | `false` | `requeuing` | Transport doesn't support message requeue |
 | `HasSupportToValidateInfrastructure` | **`true`** | `assume_channel`, `validate_channel` | Transport can't validate infrastructure existence |
+| `HasSupportToDetectMissingInfrastructureOnAssume` | **`true`** | `assume_channel` | Transport honours an explicit `Validate` but completes silently against infrastructure that is absent when `OnMissingChannel.Assume` told it not to look (Kafka's KIP-848 consumer — gateway defect, tracked by #4299; drop the flag when fixed) |
 
 ### Messaging Gateway Provider Pattern
 
@@ -428,9 +438,37 @@ If you change a template pattern that also exists in these base classes, update 
 
 ### Important: Generator Does Not Delete Stale Files
 
-The generator only creates or overwrites files — it **never deletes** existing generated files. If you change a feature flag from `true` to `false` (e.g. disabling `HasSupportToDelayedMessages`), you must **manually delete** the previously-generated test files that are no longer wanted. Otherwise stale tests will remain and may fail.
+The generator only creates or overwrites files — it **never deletes** existing generated files. If you change a feature flag from `true` to `false` (e.g. disabling `HasSupportToPublishConfirmation`), you must **manually delete** the previously-generated test files that are no longer wanted. Otherwise stale tests will remain and may fail.
 
-Similarly, if you rename or remove a template, the old generated files remain on disk. Always check for stale files after template changes.
+Similarly, if you rename or remove a template, the old generated files remain on disk.
+
+**You no longer have to check by hand — CI does it, and it will fail the build.** The `build` job runs
+the generated-tree audit, which compares the files the checked-in configurations *would* produce with
+the files actually on disk under a `Generated/` directory, in both directions:
+
+```bash
+dotnet test tests/Paramore.Brighter.Test.Generator.Tests/Paramore.Brighter.Test.Generator.Tests.csproj -f net10.0
+```
+
+- **Missing** — a file a configuration asks for that is not on disk. Run `./generate-test.sh` and
+  commit the result.
+- **Orphan** — a file on disk that no configuration asks for. This is the flipped-flag and
+  deleted-template case above. **The audit cannot tell you which side is wrong**: it reports that the
+  configuration and the tree disagree, not whether the flag or the file is the mistake. Decide that
+  first, then delete by hand — the generator will not do it for you.
+
+The audit reports names, not contents. A template you edited without regenerating leaves every file
+present and every name correct, and the audit stays green — so a green audit means the tree holds the
+files the configuration names, not that it is up to date.
+
+Two things to know when changing the generator itself:
+
+- The expected set comes from `OutboxGenerator.Plan` / `MessagingGatewayGenerator.Plan`, which walk
+  the same `Suites(...)` description `GenerateAsync` walks. **A new suite must be added to
+  `SuitesFor(...)`, not just to the generate path** — a suite that only the generate path knows about
+  is written to disk and then reported as an orphan by the audit.
+- Anything that prepares the model a template renders from belongs in `SuitesFor(...)` too (see
+  `WithPrefix` / `WithDefaultsFrom`), so that planning and generating see the same model.
 
 ## CI Flakiness Guidelines
 

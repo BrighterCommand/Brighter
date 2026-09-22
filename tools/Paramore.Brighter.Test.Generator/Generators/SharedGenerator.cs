@@ -37,22 +37,20 @@ namespace Paramore.Brighter.Test.Generator.Generators;
 public class SharedGenerator(ILogger<SharedGenerator> logger) : BaseGenerator(logger)
 {
     /// <summary>
-    /// Generates shared test infrastructure files, applying default values for
-    /// <see cref="TestConfiguration.MessageBuilder"/> and <see cref="TestConfiguration.MessageAssertion"/> when not specified.
+    /// Generates shared test infrastructure files.
     /// </summary>
+    /// <remarks>
+    /// The defaulting of <see cref="TestConfiguration.MessageBuilder"/> and
+    /// <see cref="TestConfiguration.MessageAssertion"/> used to happen here, by writing back onto
+    /// the caller's configuration - which is how the other two generators came to depend on this
+    /// one having run first, and how the generated-tree audit, which never runs it, came to plan
+    /// from a differently-populated root. It is applied by
+    /// <see cref="TestConfigurationLoader.Load"/> instead, so every reader of a configuration file
+    /// starts from the same root and no generator has to run before another.
+    /// </remarks>
     /// <param name="configuration">The root test configuration containing shared settings and destination folder.</param>
     public async Task GenerateAsync(TestConfiguration configuration)
     {
-        if (string.IsNullOrEmpty(configuration.MessageBuilder))
-        {
-            configuration.MessageBuilder = "DefaultMessageBuilder";
-        }
-
-        if (string.IsNullOrEmpty(configuration.MessageAssertion))
-        {
-            configuration.MessageAssertion = "DefaultMessageAssertion";
-        }
-
         logger.LogInformation("Generating shared class for testing");
         await GenerateAsync(configuration, "", "", configuration);
     }

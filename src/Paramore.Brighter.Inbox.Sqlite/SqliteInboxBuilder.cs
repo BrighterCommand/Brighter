@@ -36,7 +36,8 @@ namespace Paramore.Brighter.Inbox.Sqlite
                 [CommandType] NVARCHAR(256),
                 [CommandBody] NTEXT,
                 [Timestamp] TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                [ContextKey] NVARCHAR(256)
+                [ContextKey] NVARCHAR(256),
+                [CausationId] NVARCHAR(256)
             );
             """;
 
@@ -48,7 +49,8 @@ namespace Paramore.Brighter.Inbox.Sqlite
                 [CommandType] NVARCHAR(256),
                 [CommandBody] BLOB NULL,
                 [Timestamp] TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                [ContextKey] NVARCHAR(256)
+                [ContextKey] NVARCHAR(256),
+                [CausationId] NVARCHAR(256)
             );
             """;
 

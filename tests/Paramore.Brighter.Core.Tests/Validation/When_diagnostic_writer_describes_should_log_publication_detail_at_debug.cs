@@ -58,7 +58,7 @@ public class PipelineDiagnosticWriterPublicationDetailTests
 
         var logger = new SpyLogger();
         var writer = new PipelineDiagnosticWriter(
-            logger, pipelineBuilder, mapperRegistry: mapperRegistry, publications: publications);
+            logger, pipelineBuilder, mapperRegistryFactory: () => mapperRegistry, publications: publications);
 
         // Act
         writer.Describe();

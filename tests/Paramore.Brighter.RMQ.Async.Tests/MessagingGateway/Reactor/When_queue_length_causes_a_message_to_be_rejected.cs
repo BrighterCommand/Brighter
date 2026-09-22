@@ -65,7 +65,7 @@ public class RmqMessageProducerQueueLengthTests : IDisposable
             connection: rmqConnection, 
             queueName: _queueName, 
             routingKey: routingKey, 
-            isDurable: false, 
+            isDurable: true, 
             highAvailability: false,
             batchSize: 5,
             maxQueueLength: 1,

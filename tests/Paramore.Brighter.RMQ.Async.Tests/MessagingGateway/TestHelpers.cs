@@ -33,7 +33,18 @@ using Xunit;
 [assembly: CollectionBehavior(DisableTestParallelization = true)]
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway;
 
-internal sealed class QueueFactory(RmqMessagingGatewayConnection connection, ChannelName channelName, RoutingKeys routingKeys, bool isDurable = false, QueueType queueType = QueueType.Classic)
+/// <summary>
+/// Declares a queue directly, so that a test can stand up the infrastructure its gateway expects to find.
+/// </summary>
+/// <remarks>
+/// <para><paramref name="isDurable"/> defaults to true to match <see cref="RmqSubscription"/>. RabbitMQ 4.3
+/// refuses to declare a transient, non-exclusive queue - the <c>transient_nonexcl_queues</c> feature is
+/// deprecated - so a queue this factory creates for a gateway to read has to be durable to exist at all.</para>
+/// <para>A queue cannot be redeclared under a different durability, so a caller that opts out here must pass
+/// the same value to the consumer or subscription that reads the queue, or the redeclare fails with
+/// <c>PRECONDITION_FAILED</c>.</para>
+/// </remarks>
+internal sealed class QueueFactory(RmqMessagingGatewayConnection connection, ChannelName channelName, RoutingKeys routingKeys, bool isDurable = true, QueueType queueType = QueueType.Classic)
 {
     public async Task CreateAsync()
     {

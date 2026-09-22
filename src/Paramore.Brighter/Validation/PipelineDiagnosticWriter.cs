@@ -22,8 +22,10 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.Validation;
@@ -35,28 +37,58 @@ namespace Paramore.Brighter.Validation;
 /// </summary>
 /// <param name="logger">The logger to write diagnostic output to.</param>
 /// <param name="pipelineBuilder">The pipeline builder used to describe handler pipelines.</param>
-/// <param name="mapperRegistry">Optional mapper registry for resolving publication/subscription mapper info.</param>
+/// <param name="mapperRegistryFactory">Optional factory that builds the mapper registry used to resolve
+/// publication/subscription mapper info. The writer invokes it at most once — lazily, the first time a
+/// publication with a request type is described — and takes ownership of the registry it returns, disposing
+/// it at teardown only if it was built. Taking a factory rather than a live instance keeps that ownership
+/// transfer explicit — the writer disposes only a registry it created — so a caller cannot hand in a registry
+/// it still uses elsewhere and have it disposed underneath them.</param>
 /// <param name="publications">Optional publications to describe.</param>
 /// <param name="subscriptions">Optional subscriptions to describe.</param>
 public class PipelineDiagnosticWriter(
     ILogger logger,
     PipelineBuilder<IRequest> pipelineBuilder,
-    MessageMapperRegistry? mapperRegistry = null,
+    Func<MessageMapperRegistry>? mapperRegistryFactory = null,
     IEnumerable<Publication>? publications = null,
-    IEnumerable<Subscription>? subscriptions = null) : IAmAPipelineDiagnosticWriter
+    IEnumerable<Subscription>? subscriptions = null) : IAmAPipelineDiagnosticWriter, IDisposable
 {
-    private readonly ILogger _logger = logger;
-    private readonly PipelineBuilder<IRequest> _pipelineBuilder = pipelineBuilder;
-    private readonly MessageMapperRegistry? _mapperRegistry = mapperRegistry;
-    private readonly IEnumerable<Publication>? _publications = publications;
-    private readonly IEnumerable<Subscription>? _subscriptions = subscriptions;
+    //built lazily and at most once: a writer with no publications (or none carrying a request type) never
+    //needs the registry, so a factory supplied at construction must not build it — and its two mapper
+    //factories — until a publication is actually described. The writer owns the registry it produces and
+    //disposes only that one, only if it was built.
+    private readonly Lazy<MessageMapperRegistry>? _mapperRegistry = mapperRegistryFactory is null
+        ? null
+        : new Lazy<MessageMapperRegistry>(mapperRegistryFactory);
+
+    //an int rather than a bool so Dispose can claim it with a single atomic Interlocked.Exchange:
+    //an owner and the container disposing concurrently then dispose the registry exactly once
+    private int _disposed;
+
+    /// <summary>
+    /// Disposes the mapper registry this writer built to describe publication transforms.
+    /// </summary>
+    /// <remarks>
+    /// The writer is a singleton that owns its diagnostic-time <see cref="MessageMapperRegistry"/>; the
+    /// container disposes the writer at shutdown. Cascading to the registry drains the mapper factory (and
+    /// any scope it holds) rather than retaining it until the process exits. Idempotent.
+    /// </remarks>
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            return;
+
+        //only a registry that was actually built needs draining; if no publication was described, there is
+        //nothing to dispose
+        if (_mapperRegistry is { IsValueCreated: true })
+            _mapperRegistry.Value.Dispose();
+    }
 
     /// <inheritdoc />
     public void Describe()
     {
-        var descriptions = _pipelineBuilder.Describe().ToList();
-        var publicationList = _publications?.ToList() ?? new List<Publication>();
-        var subscriptionList = _subscriptions?.ToList() ?? new List<Subscription>();
+        var descriptions = pipelineBuilder.Describe().ToList();
+        var publicationList = publications?.ToList() ?? new List<Publication>();
+        var subscriptionList = subscriptions?.ToList() ?? new List<Subscription>();
 
         LogSummary(descriptions.Count, publicationList.Count, subscriptionList.Count);
         LogHandlerPipelines(descriptions);
@@ -76,19 +108,19 @@ public class PipelineDiagnosticWriter(
             parts.Add($"{subscriptionCount} subscription{(subscriptionCount != 1 ? "s" : "")}");
 
         if (parts.Count > 0)
-            _logger.LogInformation("Brighter: {Summary} configured", string.Join(", ", parts));
+            logger.LogInformation("Brighter: {Summary} configured", string.Join(", ", parts));
     }
 
     private void LogHandlerPipelines(List<HandlerPipelineDescription> descriptions)
     {
         if (descriptions.Count == 0) return;
 
-        _logger.LogDebug("=== Handler Pipelines ===");
+        logger.LogDebug("=== Handler Pipelines ===");
 
         foreach (var d in descriptions)
         {
             var asyncLabel = d.IsAsync ? "async" : "sync";
-            _logger.LogDebug("  {HandlerName} ({AsyncLabel})", d.HandlerType.Name, asyncLabel);
+            logger.LogDebug("  {HandlerName} ({AsyncLabel})", d.HandlerType.Name, asyncLabel);
 
             var steps = d.BeforeSteps
                 .Select(s => $"[{s.AttributeType.Name}({s.Step})]");
@@ -96,7 +128,7 @@ public class PipelineDiagnosticWriter(
                         (d.BeforeSteps.Count > 0 ? " → " : "") +
                         d.HandlerType.Name;
 
-            _logger.LogDebug("    Pipeline: {Chain}", chain);
+            logger.LogDebug("    Pipeline: {Chain}", chain);
         }
     }
 
@@ -104,21 +136,22 @@ public class PipelineDiagnosticWriter(
     {
         if (publicationList.Count == 0) return;
 
-        _logger.LogDebug("=== Publications (Outgoing) ===");
+        logger.LogDebug("=== Publications (Outgoing) ===");
 
         foreach (var pub in publicationList)
         {
             var requestTypeName = pub.RequestType?.Name ?? "(no RequestType)";
             var topic = pub.Topic?.Value ?? "(no topic)";
-            _logger.LogDebug("  {RequestType} → {Topic}", requestTypeName, topic);
+            logger.LogDebug("  {RequestType} → {Topic}", requestTypeName, topic);
 
+            //accessing .Value here builds the registry — the first point a described publication needs it
             if (_mapperRegistry != null && pub.RequestType != null)
             {
-                var transformDesc = TransformPipelineBuilder.DescribeTransforms(_mapperRegistry, pub.RequestType);
+                var transformDesc = TransformPipelineBuilder.DescribeTransforms(_mapperRegistry.Value, pub.RequestType);
                 if (transformDesc != null)
                 {
                     var mapperLabel = transformDesc.IsDefaultMapper ? "default" : "custom";
-                    _logger.LogDebug("    Mapper:     {MapperType} ({MapperLabel})",
+                    logger.LogDebug("    Mapper:     {MapperType} ({MapperLabel})",
                         transformDesc.MapperType.Name, mapperLabel);
 
                     var transforms = transformDesc.WrapTransforms;
@@ -126,11 +159,11 @@ public class PipelineDiagnosticWriter(
                     {
                         var transformChain = string.Join(", ",
                             transforms.Select(t => $"[{t.AttributeType.Name}({t.Step})]"));
-                        _logger.LogDebug("    Transforms: {Transforms}", transformChain);
+                        logger.LogDebug("    Transforms: {Transforms}", transformChain);
                     }
                     else
                     {
-                        _logger.LogDebug("    Transforms: (none)");
+                        logger.LogDebug("    Transforms: (none)");
                     }
                 }
             }
@@ -141,12 +174,12 @@ public class PipelineDiagnosticWriter(
     {
         if (subscriptionList.Count == 0) return;
 
-        _logger.LogDebug("=== Subscriptions (Incoming) ===");
+        logger.LogDebug("=== Subscriptions (Incoming) ===");
 
         foreach (var sub in subscriptionList)
         {
-            _logger.LogDebug("  {SubscriptionName} ({PumpType})", sub.Name, sub.MessagePumpType);
-            _logger.LogDebug("    Channel:  {ChannelName} → {RoutingKey}",
+            logger.LogDebug("  {SubscriptionName} ({PumpType})", sub.Name, sub.MessagePumpType);
+            logger.LogDebug("    Channel:  {ChannelName} → {RoutingKey}",
                 sub.ChannelName, sub.RoutingKey);
         }
     }

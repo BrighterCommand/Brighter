@@ -67,15 +67,17 @@ public class SpannerVLatestDriftAgainstRelationalCatalogTests
     [Fact]
     public void Vlatest_inbox_should_equal_every_relational_inbox_catalog_count_except_postgres()
     {
-        // PostgreSQL inbox is V1-only by design (ADR 0057 §E) — its V1 already includes the
-        // ContextKey column that MSSQL/MySQL/Sqlite add at V2, so its catalog returns 1
-        // while the other three return 2. Pin that asymmetry here as a known carve-out: if
-        // PostgreSQL gains a V2 (e.g. an unrelated future column add), this constant flips
-        // from 1 to 2 and the assertion fails — at that point bump VLatestInbox AND fold
-        // PostgreSQL back into the main set.
+        // PostgreSQL inbox is always exactly one version behind the other three (ADR 0057 §E) —
+        // it was born with the ContextKey column that MSSQL/MySQL/Sqlite add at V2, so it skips
+        // that catch-up step. Spec 0027 (#2541) adds CausationId to every relational inbox,
+        // advancing MSSQL/MySQL/Sqlite V2→V3 (== VLatestInbox = 3) and PostgreSQL V1→V2, so its
+        // catalog returns 2 while the other three return 3. Pin that asymmetry here as a known
+        // carve-out: if PostgreSQL ever catches up (a column added to PG but not the others, or
+        // vice-versa), this literal drifts and the assertion fails — at that point re-derive the
+        // carve-out (or fold PostgreSQL back into the main set if it reaches parity).
         Assert.Equal(SpannerBoxMigrationRunner.VLatestInbox, new MsSqlInboxMigrationCatalog().All(Configuration).Count);
         Assert.Equal(SpannerBoxMigrationRunner.VLatestInbox, new MySqlInboxMigrationCatalog().All(Configuration).Count);
         Assert.Equal(SpannerBoxMigrationRunner.VLatestInbox, new SqliteInboxMigrationCatalog().All(Configuration).Count);
-        Assert.Equal(1, new PostgreSqlInboxMigrationCatalog().All(Configuration).Count);
+        Assert.Equal(2, new PostgreSqlInboxMigrationCatalog().All(Configuration).Count);
     }
 }

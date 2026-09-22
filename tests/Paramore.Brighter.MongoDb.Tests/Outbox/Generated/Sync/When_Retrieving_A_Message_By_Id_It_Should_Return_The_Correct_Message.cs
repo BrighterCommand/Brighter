@@ -35,6 +35,7 @@ using System.Linq;
 namespace Paramore.Brighter.MongoDB.Tests.Outbox.Sync;
 
 [Trait("Category", "MongoDB")]
+[Collection("MongoDbOutbox")]
 public class WhenRetrievingAMessageByIdItShouldReturnTheCorrectMessage : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;
