@@ -1,290 +1,206 @@
-# Review: design — 0037-validate-subscription-channel-factory (ADR 0073, round 5)
+# Review: design — 0037-validate-subscription-channel-factory (ADR 0073, round 6)
 
 **Date**: 2026-09-22
 **Threshold**: 60
 **Verdict**: NEEDS WORK
 
-8 findings at or above threshold 60. Address these before approving.
+5 findings at or above threshold 60. Address these before approving.
 
-> **Verification note.** All eleven findings re-checked against the working tree; **all eleven hold,
-> none rejected, and no grounding error in the reviewer's own evidence for the second round running.**
-> Three are defects round 4's fixes introduced (findings 1, 2, 3), and **finding 2 is the more serious
-> kind: a false claim that round 4 wrote into the approved `requirements.md` as part of the fourth
-> amendment.** Finding 3 is the **fifth consecutive round** to find a stale copy of a rewritten passage
-> — this time in the architecture diagram, the exact artefact round 5 was told to check and the main
-> agent did not check before committing.
+> **Verification note.** All eight findings re-checked against the working tree; **all eight hold, none
+> rejected, and no grounding error for the third consecutive round.**
 >
-> **Threshold trend: 7 → 4 → 7 → 8 → 8. This has not converged.** The character of the findings has
-> changed, though: rounds 1-4 found the design wrong; round 5 finds it under-specified and
-> inconsistently described. See the note after the summary.
+> **Threshold trend: 7 → 4 → 7 → 8 → 8 → 5 — the first fall in three rounds**, and the composition
+> changed more than the count. The duplication-drift defect that recurred in five consecutive rounds
+> happened **once** here (finding 2), on material the re-derivation itself added, in the diagram and the
+> step list — both *outside* the section that was re-derived. Key Components' internal consistency is
+> clean: D10 checked at six sites, the candidate/subject vocabulary at all seventeen occurrences, the
+> branch names across the table, Risks, Alternatives and `Core.Tests`. Four of the five at-threshold
+> findings are in material the re-derivation newly **specified** rather than restated. See *Did the
+> re-derivation work?* below.
 
 ## Findings
 
-### 1. `Subject`'s identity for a generic subject is now unspecified — round 4's fix deleted the only passage that pinned it, and step 2's synthetic generic assertion cannot be written without it (Score: 78)
+### 1. The reason-path coverage argument's backstop is false in the one case the guard exists for — an unconfigured second subject that is silently skipped leaves the exact set matching (Score: 70)
 
-`Sweep` returns `IReadOnlyList<(Type Subject, string? Reason)>`. For a subject that is an open generic
-definition, the document never says whether `Subject` carries the **open definition** (`Foo<>`) or the
-**closed construction** produced by the closing step (`Foo<Command>`). Round 4's finding 5 had to
-establish this as a fact of the design ("where `Subject` values are closed constructions") in order to
-argue about the ancestry assertion — and the fix removed that assertion, so the only passage from which
-the reader could infer `Subject`'s identity is gone. What remains pulls both ways: the Subsumption
-bullet says "the candidate set holds open definitions (`Foo<>`)" and subjects are "the candidates that
-survive step 2", pointing to *open*; the Read-and-check bullet produces an instance from the closed type
-and passes "the value and the type" to `Check`, pointing to *closed*.
+Key Components leaves two of the six reason paths unasserted and justifies it with a two-part claim: the
+paths are unreachable, and *if* one were reached, a silent skip would be caught by the exact subject set.
+The second half does not hold generally.
 
-Load-bearing in three places:
+Walk the case. The exact-set assertion compares `Sweep`'s reported subjects against `SubscriptionType` ∪
+`AdditionalExpectedSubjects`. The ADR states the purpose of that union two paragraphs earlier: "An
+assembly that grows a second declaring subscription fails its sweep until that list is updated — which is
+the point: a new gateway subscription type is exactly the event this guard exists to notice."
 
-- **Implementation step 2** adds "a generic subscription that declares its own override", and the
-  `Core.Tests` convention is `result.Single(e => e.Subject == typeof(X))`. For that synthetic, `typeof(X)`
-  is either `typeof(X<>)` or `typeof(X<Command>)` — they do not compare equal, so one of the two
-  assertions never matches. Two developers write different tests and one gets a green test finding
-  nothing.
-- **`AdditionalExpectedSubjects`** is a list of configured names rendered as `typeof(...)` literals. If a
-  future second declaring subject is generic, the template must render either the open literal or a
-  closed one with the representative argument appended, and a configuration string cannot express the
-  closed form without the template supplying `Paramore.Brighter.Command`.
-- **Ordering** is "by `Subject.FullName` using ordinal comparison", and `` Foo`1 `` sorts differently from
-  `` Foo`1[[Paramore.Brighter.Command…]] ``; the reason text uses `Type.FullName`, so messages differ too.
+Now suppose a thirteenth gateway, or growth of an existing one, adds a second declaring subscription that
+is generic with a constraint `typeof(Paramore.Brighter.Command)` does not satisfy — `where T : IEvent`, or
+arity 2. That is precisely the "unsatisfiable arity or constraints" path. The type is **not** in
+`AdditionalExpectedSubjects`; nobody has added it, and its absence is the event being guarded. If the
+implementation silently skips it instead of emitting a reason, the reported set is unchanged, it equals
+the configured expectation exactly, every `Reason` is null, and the test is **green**. The exact-set
+assertion catches nothing, because the skipped subject was never expected.
 
-**Evidence**: ADR:213 the signature; ADR:239-241 "the candidate set holds open definitions (`Foo<>`)";
-ADR:250-251 "A surviving candidate that is an open generic definition is closed with `MakeGenericType`
-before it can be read"; ADR:258-260 "The value and the type are passed to `Check`"; ADR:404-405
-`result.Single(e => e.Subject == typeof(X))`. A grep for `Subject` returns no line stating which form
-the entry carries — confirmed independently by the main agent.
+The claim is true only for a subject *already configured* — skipping such a subject shrinks the set and
+fails. It is false for exactly the class of subject the guard was built to notice. The `Core.Tests` cases
+cannot cover it either, being subject-scoped (`result.Single(e => e.Subject == typeof(X))`), so they too
+only detect the disappearance of a subject the test already names. The parallel claim for the "instance
+cannot be produced" path fails for the same reason.
 
-**Recommendation**: Add one sentence to the `Sweep` contract fixing `Subject` as the type *as read* (the
-closed construction for a generic subject) or as the candidate *as discovered* (the open definition) —
-pick one. If closed, state that the template renders a generic `AdditionalExpectedSubjects` entry as
-`typeof(Foo<Paramore.Brighter.Command>)` using the same representative argument as the closing step, and
-that step 2's synthetic assertion uses the closed literal.
+**Evidence**: ADR:420-427 "The remaining two … are **not** asserted, and that is accepted: both are
+unreachable for any shipped or synthetic type this design declares, and a *silent skip* in either is
+caught by the exact subject set." Against ADR:309-311 "An assembly that grows a second declaring
+subscription fails its sweep until that list is updated — which is the point". And ADR:429-432, the
+subject-scoped `Core.Tests` convention.
 
----
-
-### 2. The exact-set assertion cannot detect a misaimed `SubscriptionType` — the expected set is derived from the same configuration value that aims the sweep. The false claim is in the ADR twice and in the amended requirements (Score: 72)
-
-Of the four failure modes the ADR derives for the new assertion, three hold and one does not:
-
-- *Subsumption over-reporting* — expected `{RocketSubscription}`, reported
-  `{RocketSubscription, RocketMqSubscription<…>}` → **fails**. ✔
-- *Subsumption inverted* — expected `{RocketSubscription}`, reported `{RocketMqSubscription<…>}`, `Reason`
-  null → **fails**, and correctly noted that non-emptiness would not. ✔
-- *Candidate discovery finds nothing* — `{}` against a non-empty expected set → **fails**. ✔
-- *"A `SubscriptionType` pointed at the wrong assembly … yields an empty or foreign set"* — **does not fail
-  on that account.** `SubscriptionType` now does double duty: the template renders it both as
-  `typeof(X).Assembly` (the locator) and as the expected subject. A misaim therefore moves the assembly
-  under sweep and the expectation *together*, and the assertion is self-consistent — the set can never be
-  "foreign", because the configuration is the only definition of what is foreign.
-
-The misaim *is* caught, by three mechanisms the ADR does not credit. A cross-gateway misaim usually fails
-to **compile**, because no gateway test project references a second gateway (C-9's topology). A misaim to
-`Paramore.Brighter` itself (`Paramore.Brighter.Subscription`, reachable from all twelve) sweeps that
-assembly and reports `{Subscription}` — matching the configuration exactly — failing only on the **reason**
-check, because `Subscription.ChannelFactoryType` is `typeof(InMemoryChannelFactory)`. And the
-thirteenth-gateway **audit** catches it structurally: the misaimed directory is named by zero
-configurations and another by two. What the exact set genuinely adds over non-emptiness is the *wrong type
-in the right assembly* case (e.g. MQTT's configuration naming `MqttSubscription<T>`), which the audit's
-namespace comparison cannot see. That is the true division of labour.
-
-This matters beyond tidiness: the "ask what fails it" derivation is this passage's whole justification, it
-has been rewritten three times, and each previous version failed on one of its own enumerated claims.
-**The same wrong claim was written into `requirements.md` as part of the fourth amendment**, so a future
-reader finds two sources agreeing.
-
-**Evidence**: ADR:290-293 "A `SubscriptionType` pointed at the wrong assembly, or candidate discovery that
-finds nothing, yields an empty or foreign set — **fails**."; ADR:226-228 repeats it in the anti-vacuous
-paragraph; ADR:323 "renders both as `typeof(X).Assembly` to locate the sweep and as the expected subject";
-`requirements.md:521` "…which is a stronger guard than "at most once" and additionally catches a sweep
-aimed at the wrong assembly."; `src/Paramore.Brighter/Subscription.cs:172`
-`public virtual Type ChannelFactoryType => typeof(InMemoryChannelFactory);`.
-
-**Recommendation**: Replace the wrong-assembly claim in all three places with what holds — the exact set
-catches the *wrong subject in the swept assembly*; a *misaimed assembly* is caught by the missing project
-reference, by the reason check, and by the thirteenth-gateway audit — and say plainly that the assertion
-cannot catch it, because expectation and locator are one value. The `requirements.md` sentence is a
-correction to the fourth amendment, not a fifth.
+**Recommendation**: Either state the claim accurately — a silent skip is caught only for a subject the
+configuration already expects, and an *unconfigured* subject silently skipped is a genuine vacuous pass
+this design does not detect — or close the hole. The cheapest close is one `Core.Tests` synthetic whose
+constraints `Command` does not satisfy (`where T : IEvent`, one line), asserted to carry a non-null
+reason, making "never a silent skip" tested on the path where a skip is invisible.
 
 ---
 
-### 3. Fifth stale copy: the architecture diagram still states the contract round 4 replaced — "one entry per candidate" (Score: 72)
+### 2. Sixth stale copy: the throwing double and the null-branch `Check` case — both introduced by the re-derivation — appear in no Implementation Approach step, and the diagram's `Core.Tests` box omits the throwing double (Score: 68)
 
-Round 4's finding 4 was this contract stated two ways. The fix rewrote the prose to "one entry per subject"
-and defined the two terms as "used precisely from here on" — and left the diagram's copy of the superseded
-wording untouched, eight lines above. A term is now used two ways in one document, in the passage a reader
-skims first.
+The re-derivation added two test obligations, both the substance of round 5's finding 4: a `Core.Tests`
+double whose `ChannelFactoryType` getter throws on an uninitialised instance, and an explicit assertion of
+`Check`'s **null** branch with literal arguments. Key Components specifies both. Neither reaches the
+passages that *describe* Key Components.
 
-**Evidence**: ADR:153 — `│        one entry per candidate; Reason null = sound          │` against ADR:214-216
-"**candidates** are the types step 1 finds, and **subjects** are the candidates that survive step 2's
-subsumption. `Sweep` returns **one entry per subject**".
+**Step 1** covers `Check` and names only "AC-28's two synthetic subscriptions and their doubles" — the null
+branch is this ADR's own addition, not an AC-28 shape, so it is not there by implication either. **Step 2**
+enumerates its additions exhaustively — "Three further synthetics are added here" — and the three named are
+the generic subscription and the two subsumption pairs. The throwing double is a fourth, and the count says
+three. An implementer working the steps builds neither new case, so round-5 finding 4's fix is documented
+but never scheduled. The **diagram**'s `Core.Tests` box lists the generic and the subsumption pairs but not
+the throwing double — the same class of defect for the sixth consecutive round, this time on a case whose
+whole purpose is to be visible.
 
-**Recommendation**: "one entry per subject; Reason null = sound". While there, reconcile "surviving
-candidate" (:250) and "what it examined" (:224, :400) with the new vocabulary — a subsumed candidate *was*
-examined and gets no entry, so "reports every subject it examined" is the accurate form.
+**Evidence**: ADR:416-418 the throwing double; ADR:420-423 the null-branch requirement; against ADR:480-481
+(step 1), ADR:484-487 (step 2, "**Three** further synthetics"), and ADR:163-171 (the diagram's box).
 
----
-
-### 4. Four of the six reason paths have no test anywhere in the design — including `Check`'s null branch and every reason `Sweep` owns (Score: 70)
-
-Six ways a reason can be produced: `Check`'s **null**, **not-a-channel-factory** and **inherited-default**
-branches, plus three that "belong to `Sweep` rather than `Check`" — bad arity/unsatisfied constraints, an
-uninitialised instance that cannot be produced, and a read that throws. The document specifies assertions
-for exactly two (AC-28's shapes, re-covered by the fourth sweep case). The other four are specified
-behaviour with no specified test:
-
-- **`Check`'s null branch** is invented by this ADR (FR-12 has two conditions) and is load-bearing three
-  times: `MockSubscription` "reports it under the **null** branch"; `NullDeclaringSubscription` "is reported
-  under the **null** branch by design"; and C-13's out-of-repo null override is the real shape it catches.
-  Yet the `Core.Tests` cases are deliberately subject-scoped, so nothing asserts either entry. **A `Check`
-  whose null branch returned `null` (sound) would pass every assertion in the design.**
-- **A read that throws → a reason** is the behaviour the ADR defends at length against ADR 0064's "rules
-  must not catch", on the ground that "Nothing is swallowed". No test asserts it, and no double throws on
-  read — the ADR is explicit that `MockSubscription` "reads `null` rather than throwing". **An
-  implementation that caught the exception and emitted a `null` reason satisfies the exact-set assertion,
-  the twelve reason-null checks, and the fourth case.** A silent vacuous pass in the one place Risks says
-  the mechanism must be actionable.
-- The same swallow-to-null defect is undetectable for "an uninitialised instance cannot be produced". (A
-  *silent skip* in either path **is** caught, because the subject goes missing from the exact set — worth
-  saying, since it is the design's strongest new property.)
-
-**Evidence**: ADR:196-204 the three named branches; ADR:262-272 "Three reasons belong to `Sweep` rather than
-`Check` … Nothing is swallowed — the sweep still fails, with more information."; ADR:402-405 subject-scoped
-assertions; ADR:425-434 the seam analysis, which names only "a `Sweep` that read the wrong property, passed
-`null` to `Check`, or discarded the read value entirely"; ADR:553-561 Risks.
-
-**Recommendation**: Add to step 2 (a) a `Check` case for the null branch with literal arguments, and (b) one
-`Core.Tests` double whose `ChannelFactoryType` getter **throws** on an uninitialised instance, asserting its
-entry carries a non-null reason naming the exception type — that single double converts the ADR-0064 rebuttal
-from an argument into a tested property. If the arity/constraint and cannot-instantiate reasons are to stay
-untested, say so and say why (a silent skip is caught by the exact set; a swallowed fault is not).
+**Recommendation**: Add the null-branch assertion to step 1 and the throwing double to step 2, and add a
+line to the diagram's `Core.Tests` box.
 
 ---
 
-### 5. `AdditionalExpectedSubjects` is under-specified, and `SubscriptionType`'s new double duty imposes an unstated invariant (Score: 68)
+### 3. `AdditionalExpectedSubjects` is not implementable for a generic entry: the ADR fixes what must be rendered (`typeof(Foo<>)`) but not what the configuration string looks like or how arity is recovered (Score: 65)
 
-Round 4 introduced this key in two sentences. Missing: its **type and default** (a `List<string>` of
-fully-qualified names? null or empty when absent? — it is absent in all twelve today, so the template must
-render a valid expected-set expression regardless); **what the template renders from it** (inferable as
-further `typeof(...)` literals, but not for a generic subject — finding 1); **the thirteenth-gateway
-audit's** relationship to it (the audit asserts each gateway directory is "named by exactly one
-`GatewayConformance.SubscriptionType`" — if `AdditionalExpectedSubjects` counted, the very case the key
-exists for would make a directory "named by two" and fail; the exclusion is right but unstated, and the
-passages are 60 lines apart); and **the twelve-row table's** silence (headed `SubscriptionType` only,
-introduced as "The twelve values", so absence is indistinguishable from omission).
+The property table types the key as `List<string>` and fixes the rendering: "A generic entry renders as
+`typeof(Foo<>)`". The other twelve configured values are "Fully-qualified name of the subscription type",
+which for an open generic definition is ``Ns.Foo`1``.
 
-The unstated invariant matters most. `SubscriptionType` used to be any subscription type in the gateway
-assembly — a pure locator. It is now "the subscription type expected to be reported", which silently
-requires the configured type to be a **subject**: to declare its own `ChannelFactoryType`, or at least be a
-root candidate. Naming the generic derived type (`MqttSubscription<T>`), previously a perfectly good
-locator, now produces a red test with a set-mismatch message that does not explain why.
+The template must turn one into the other and nothing says how. A backtick is not legal in a C# type name
+in source, so the string cannot be emitted verbatim. To produce `typeof(Ns.Foo<>)` the generator must strip
+the `` `n `` suffix and emit *n*−1 commas inside the brackets. Alternatively the author writes `Ns.Foo<>`
+directly in JSON, in which case the value is no longer a name `Type.FullName` could produce and the audit's
+namespace comparison must account for it. Two developers implement this two ways and one produces a file
+that does not compile.
 
-**Evidence**: ADR:313-318 and :321-325 (the two introducing passages); ADR:348-361 (the one-column table);
-ADR:377-383 (the audit — "named by exactly one `GatewayConformance.SubscriptionType`").
+`SubscriptionType` escapes the problem only because the table separately forbids a generic value there.
+`AdditionalExpectedSubjects` has no such restriction — it exists precisely for a second declaring type,
+which *can* be generic, and the ADR anticipates that case.
 
-**Recommendation**: Give the key a type and default, state that the expected set is `SubscriptionType` ∪
-`AdditionalExpectedSubjects`, state that the audit counts `SubscriptionType` only and why, note in the table
-that the key is absent in all twelve today, and write the invariant down: `SubscriptionType` MUST name a type
-that survives subsumption.
+**Evidence**: ADR:305-306, the two property rows.
+
+**Recommendation**: One sentence stating the JSON form and the rendering rule — the arity backtick as
+`Type.FullName` reports it, rendered by replacing the suffix with brackets carrying *n*−1 commas — or
+restrict the key to non-generic subjects and say a generic second subject is a future change.
 
 ---
 
-### 6. The exact-set assertion makes 5 of the 12 generated sweeps red until ADR 0072's corrections land, and no step records the ordering constraint (Score: 65)
+### 4. Step 1's candidate rule does not settle whether `Subscription` itself is a candidate, and the `{Subscription}` worked example only holds under one of the two readings (Score: 62)
 
-The generated test asserts every `Reason` is `null`. Against the working tree that is false in five of twelve
-assemblies, by this specification's own count: FR-7 (GcpPubSub) and FR-8 (MQTT) declare an
-`IAmAMessageConsumerFactory`, so their subject reports **not-a-channel-factory**; FR-9 (AWSSQS), FR-10
-(AWSSQS.V4) and FR-11 (Postgres) declare no override at all, so their non-generic base is a root candidate
-reporting **inherited-default**. Step 4 commits the twelve generated files and step 6 adds the CI step, with
-no statement that 0072's FR-7 to FR-11 corrections must merge first. Two developers sequence this
-differently, and one turns the `build` job red on every pull request. The ADR is *aware* of the fact — Risks
-says "all nine today, and all twelve once 0072 adds its three" — it never draws the scheduling conclusion,
-which is the one thing an implementer needs.
+Step 1: "Non-abstract classes whose base chain reaches `Paramore.Brighter.Subscription`." Read strictly, a
+type's base chain is its *ancestors*, so `Subscription` is not a candidate in its own assembly. Read
+inclusively, it is.
 
-**Evidence**: `requirements.md:160-176` FR-7 to FR-11; ADR:281-285 the reason-null assertion; ADR:554-557
-Risks; ADR:468-480 (step 4) and :482 (step 6) — no ordering note.
+Invisible in the twelve gateway assemblies, but the ADR depends on it in the misaim division-of-labour
+argument. `Paramore.Brighter` contains four non-abstract types in the family, only `Subscription` defining
+`ChannelFactoryType`: `Subscription` (`Subscription.cs:35`), `Subscription<T>` (`:258`),
+`InMemorySubscription` (`InMemorySubscription.cs:26`), `InMemorySubscription<T>` (`:78`).
 
-**Recommendation**: Add a clause to step 4 or a Negative bullet: the twelve sweeps are red in five assemblies
-until 0072's FR-7 to FR-11 land, so steps 4 and 6 sequence after those corrections — and say what happens if
-0072 slips (the generated files may be committed; the CI step must not be enabled).
+Under the **inclusive** reading `Subscription` is the root candidate, the other three declare no override
+and have a candidate ancestor, so all three are subsumed and the sweep reports `{Subscription}` — the ADR's
+claim. Under the **strict** reading `Subscription` is not a candidate, so `Subscription<>` and
+`InMemorySubscription` are both roots and neither is subsumed; the sweep reports
+`{Subscription<>, InMemorySubscription}`, which does not match a configuration naming
+`Paramore.Brighter.Subscription`, so the misaim fails on the **set** check rather than the **reason** check
+the ADR names. The References entry hints the inclusive reading is intended — it notes "`Subscription` is
+non-abstract (`:35`)", load-bearing only if `Subscription` can itself be a candidate — but Key Components
+never says so.
 
----
+**Evidence**: ADR:233-235 step 1; ADR:288-290 the misaim example; ADR:702 the References note. Working
+tree: the four types above; `InMemorySubscription.cs` contains no `ChannelFactoryType`.
 
-### 7. C-9's "identity-only … every `IAmAChannelFactory` member throws" rule is applied to three *subscription* doubles, which have no such members — and the two helper types the design needs are never named (Score: 62)
-
-The `Core.Tests` paragraph says "Three doubles, all identity-only in C-9's sense — every `IAmAChannelFactory`
-member throws:" and lists three **subscriptions**. A `Subscription` subclass implements no
-`IAmAChannelFactory` member, so the obligation cannot bind, and C-9's rule is explicitly about the *channel
-factory* doubles (it names `CreateSyncChannel`, `CreateAsyncChannel`, `CreateAsyncChannelAsync`). Meanwhile
-the design silently requires two types it never names: the not-an-`IAmAChannelFactory` type the second double
-declares, and the sound `IAmAChannelFactory` that AC-29's double declares — the latter being the one type
-here to which C-9's throw-rule genuinely applies.
-
-**Evidence**: ADR:385-400 the three-doubles list; `requirements.md:236` "Every `IAmAChannelFactory` member on
-these doubles MUST therefore throw (`CreateSyncChannel`, `CreateAsyncChannel`, `CreateAsyncChannelAsync`)."
-
-**Recommendation**: Split the list: three subscription doubles (no `IAmAChannelFactory` members, so C-9's
-throw-rule is inapplicable — say so), plus the two types they declare — a non-factory marker type and one
-sound channel-factory double to which C-9's rule *does* apply. Name both.
+**Recommendation**: Change step 1 to "Non-abstract classes that **are** `Paramore.Brighter.Subscription`
+or whose base chain reaches it" — the reading the rest of the document assumes, and the one FR-12's
+"assignable to `Subscription`" implies — or state the strict reading and correct the example.
 
 ---
 
-### 8. The Subsumption bullet quotes FR-12 truncated at the exact clause the fourth amendment added (Score: 62)
+### 5. The ADR-0072 ordering constraint is recorded inside step 2, not in steps 4 and 6 that it governs (Score: 62)
 
-Round 4's finding 9 was a truncated FR-12 quote whose dropped clause changed its force; the fix quoted *that*
-clause in full and left this one. The amended Scope reads "MUST be reported at most once **when the derived
-type declares no `ChannelFactoryType` of its own**"; the ADR quotes "a base/derived pair … MUST be reported at
-most once", the ellipsis swallowing the example and the condition landing outside the quotation marks. The
-sentence after does convey the condition, so the design is not wrong — but the quoted requirement text is the
-superseded wording, in the one paragraph where the conditional reading is the whole point.
+Round 5's finding 6 asked for the constraint where an implementer sequencing the work would meet it — "a
+clause to step 4 or a Negative bullet". The fix put the paragraph at the end of **step 2**, where it is a
+non-sequitur: step 2 is `Sweep` plus its synthetics, which have no dependency on FR-7 to FR-11 at all. The
+paragraph's own first sentence announces it is about other steps. Steps 4 and 6 contain no reference
+either way, so a developer executing step 6 — the step that turns the `build` job red if 0072 has slipped
+— reads nothing about it. The re-derivation's commit message claims "steps 4 and 6 now record that they
+sequence after 0072's FR-7 to FR-11"; they do not.
 
-**Evidence**: ADR:245-247; `requirements.md:193` as amended.
+The arithmetic is correct: nine overrides today, 0072 adds three (FR-9, FR-10, FR-11) and corrects two
+(FR-7, FR-8), so five of the twelve report a non-null reason until those land — matching
+`requirements.md:521`.
 
-**Recommendation**: Quote the amended clause with its condition inside the quotation marks, as the template
-paragraph already does.
+**Evidence**: ADR:491-497, the closing paragraph of step 2; against ADR:502-513, steps 4 and 6.
 
----
-
-### 9. The frontmatter `summary` describes dedup unconditionally and omits the decision's new centre of gravity (Score: 55)
-
-`summary` says the sweep reads the property "de-duplicating base/derived pairs by subsumption" — not false,
-but it is the pre-amendment framing, and a reader who stops there takes away the unconditional obligation that
-cost round 4 a requirements amendment. It also predates the round-4 rewrite in substance: the
-exact-subject-set assertion is now the design's principal claim and the summary says only that the tests "are
-generated from a single new Liquid template"; `AdditionalExpectedSubjects` is absent.
-
-**Evidence**: ADR:8.
-
-**Recommendation**: "…de-duplicating a base/derived pair only where the derived type declares no override of
-its own; the twelve generated per-gateway tests assert the reported subject set exactly, plus all reasons
-null, and carry no reflection logic."
+**Recommendation**: Move the paragraph to step 4 and add a clause to step 6.
 
 ---
 
-### 10. The CI step can pass vacuously if a generated file is missing (Score: 50)
+### 6. The `GetGenericTypeDefinition()` reduction lost its coverage statement in the rewrite (Score: 58)
 
-The `build` job runs twelve projects with `--filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests"`.
-If a project's generated file were absent the filter selects nothing, and `dotnet test` reports "No test
-matches the given testcase filter" without failing on most runners — the guard's CI step then passes while
-guarding eleven assemblies. The generated-tree audit in the same job does cover missing files, which is why
-this is a 50, but the ADR nowhere records that the step's non-vacuity depends on a *different* step.
+Step 2 specifies that an ancestor which is a constructed generic is reduced before comparison. All twelve
+shipped pairs are `XSubscription<T> : XSubscription` with a **non-generic** base, so no shipped assembly
+exercises the reduction. The old section said so and claimed coverage — "No shipped assembly has that shape
+today, so step 2's synthetic types cover it." The re-derivation kept the specification and dropped both the
+acknowledgement and the coverage claim, and neither new subsumption pair is specified to have a constructed
+generic base. The replacement sentence, "In every shipped assembly this reduces the pair to its non-generic
+base", is also slightly off: in a non-generic-base pair no reduction happens at all.
 
-**Evidence**: ADR:364-366 the filter and `--no-build`; ADR:468-470 the audit as what catches absence.
+**Evidence**: ADR:240-246 against the removed text in `git show f5ad8419a`.
 
-**Recommendation**: One clause in the CI paragraph: the step's non-vacuity rests on the generated-tree audit,
-which fails when any of the twelve files is missing; or pass a fail-on-no-tests switch where the runner
-supports it.
+**Recommendation**: Specify that one of the two subsumption pairs has a constructed generic base
+(`Derived : Base<Command>`), covering the reduction at no extra cost, or restore the acknowledgement that
+the branch is uncovered.
 
 ---
 
-### 11. Two term slips left by round 4's vocabulary change (Score: 40)
+### 7. References attributes a "placement rule" to ADR 0064 that the re-derived CI-placement section no longer invokes (Score: 50)
 
-"an empty result would pass identically over twelve sound subscriptions and over zero candidates" (:226) — a
-single gateway assembly has *one* subject, not twelve; the comparison is per-assembly. And :250 says "A
-surviving candidate that is an open generic definition", where the paragraph above has just named that a
-*subject*.
+The old Key Components justified the `build`-job placement partly by analogy to the generator audit. The
+re-derived `#### CI placement` section argues entirely from three concrete CI facts and never cites 0064.
+References still describes 0064 as "source of the placement rule and of 'rules must not catch'". 0064's
+placement rule is its C-8, about *which rule class a rule is declared in* — something this ADR explicitly
+does not do ("this guard adds no rule").
 
-**Evidence**: ADR:224-230, ADR:250.
+**Evidence**: ADR:695; the CI placement section, which contains no mention of 0064; `0064:242`, C-8.
 
-**Recommendation**: "over a sound assembly and over zero candidates"; "A subject that is an open generic
-definition".
+**Recommendation**: Trim to "source of 'rules must not catch', from which this ADR's sweep deliberately
+differs, for stated reasons".
+
+---
+
+### 8. The distinctness rebuttal in Alternatives still reasons in terms of closed constructions (Score: 45)
+
+D10 fixed `Subject` as the open definition. The relocated withdrawn-assertion passage argues distinctness
+"holds by construction" because "no two open definitions close to the same type" — a closing-based argument
+left over from when `Subject` was the closed construction. Under D10 the argument is simply that
+`Assembly.GetTypes()` yields distinct types and subsumption only removes.
+
+**Evidence**: ADR:656-658.
+
+**Recommendation**: Drop the closing clause.
 
 ---
 
@@ -293,66 +209,67 @@ definition".
 | Score Range | Count |
 |-------------|-------|
 | 90-100 (Critical) | 0 |
-| 70-89 (High) | 4 |
+| 70-89 (High) | 1 |
 | 50-69 (Medium) | 6 |
 | 0-49 (Low) | 1 |
 
-**Total findings**: 11
-**Findings at or above threshold (60)**: 8
+**Total findings**: 8
+**Findings at or above threshold (60)**: 5
 
-## Convergence assessment
+## Round-5 fixes verified
 
-**Threshold counts: 7 → 4 → 7 → 8 → 8.** Five rounds, 50 findings, none rejected. But the *character* has
-changed, and that is the signal worth acting on:
+1. **(78) `Subject`'s identity unspecified** — **complete**. D10 stated once in the `Sweep` contract and
+   consistent at all six sites: subsumption before closing on open definitions; step 3's closed type
+   "exists only to be instantiated and read"; `AdditionalExpectedSubjects` rendering; the `Core.Tests`
+   generic assertion; ordering by `Subject.FullName` (an open definition's is `` Ns.Foo`1 ``, non-null);
+   the reason message. Both supporting claims verified — `typeof(Foo<>)` is valid C#, and a closed
+   construction's assembly-qualified `FullName` is unusable in a message. Residue: finding 3.
+2. **(72) The false wrong-assembly claim** — **complete in substance**. The ADR says plainly the exact set
+   cannot catch a misaim, names the three mechanisms that do, and `requirements.md:521` matches. The
+   `{Subscription}` example inside it holds under only one reading of step 1 — finding 4, a new problem
+   surfaced by the fix rather than a failure of it.
+3. **(72) Fifth stale copy, "one entry per candidate"** — **complete**. The diagram reads "one entry per
+   subject", and the two terms are used consistently at all seventeen sites.
+4. **(70) Four of six reason paths untested** — **partial, and it introduced a new problem**. Two are now
+   covered and the remaining two explicitly declared unasserted, which is what was asked — but the
+   justification is unsound (finding 1), and neither new case is scheduled (finding 2).
+5. **(68) `AdditionalExpectedSubjects` under-specified** — **substantially complete**. Property table with
+   type and default, union semantics, the audit's `SubscriptionType`-only counting stated and justified,
+   the table's silence made explicit, and the survives-subsumption invariant written down. Only the generic
+   string form remains open (finding 3).
+6. **(65) The five-red ordering constraint** — **partial**. Content and arithmetic correct, filed in the
+   wrong step (finding 5).
+7. **(62) C-9's throw-rule misapplied; helper types unnamed** — **complete**. The three subscription
+   doubles are explicitly exempted with the reason, both helper types named, and C-9's rule attached only
+   to the channel-factory double with its three members enumerated.
+8. **(62) Truncated FR-12 quote** — **complete**. Step 2 quotes the amended clause with its condition
+   inside the quotation marks, matching `requirements.md:193` verbatim.
 
-- **Rounds 1-4 found the design wrong** — a failures-only contract, a justification that collapsed, an
-  assertion that could not fail, an assertion that failed correct behaviour.
-- **Round 5 finds almost nothing wrong with the design.** Of eight at-threshold findings, one is a false
-  claim (2), one is stale duplication (3), one is a real specification gap that matters (4), and the rest are
-  under-specification (1, 5), a missing scheduling note (6), and quotation/description accuracy (7, 8).
+Grounding sampled and correct: `Subscription.cs:35`/`:172`/`:213`/`:258`, `InMemorySubscription.cs:26`/`:78`,
+`RocketMqSubscription.cs:10`/`:50`/`:117`, `Command.cs:42`, `TestConfiguration.cs:38`,
+`When_constructing_a_channel_with_combined_factory.cs:85`, `ci.yml:228`/`:361`/`:708`, `0072:457`,
+`0064:165`. **No grounding errors — a third consecutive clean round.**
 
-That is the profile of a document whose *decisions* have settled and whose *prose* has not. The remedy 0072
-used at the same point is on record: round 4 of that ADR diagnosed that Key Components drew 18 of 24 findings
-from 46% of the document, and the `8d03b94c6` tidy re-derived that section wholesale (424 → 278 lines),
-after which findings fell 5 → 2 → 2 → 0. **The same diagnosis fits here**, and patching site-by-site has now
-produced a stale copy in five consecutive rounds.
+## Did the re-derivation work?
 
-## Round-4 fixes verified
+**Partly, and more than the raw count suggests.**
 
-1. **Finding 1 (80) — ancestry assertion rejects a correct result.** *Complete.* The assertion is gone,
-   replaced by an exact-set assertion with no reflection, and the reason it was wrong is recorded against the
-   Risks bullet it contradicted. The requirements amendment fixes the imprecise half in FR-12 Scope and AC-27,
-   and the *Amendments* entry accurately describes what changed ("No other criterion is altered" — verified:
-   `grep -n "at most once"` returns only :193, :519 and the amendment prose). Cosmetic: the fourth-amendment
-   paragraph is inserted *before* the third's, so the section reads first, second, fourth, third.
-2. **Finding 2 (75) — assertion never exercised; inverted subsumption missed.** *Complete, with one wrong
-   claim introduced.* Exactly-one-subject is a real assertion over the twelve, and inverted subsumption now
-   genuinely fails. But the misaimed-`SubscriptionType` failure mode does not hold (finding 2).
-3. **Finding 3 (68) — fourth stale copy in the grounded references.** *Complete.* The
-   `CombinedChannelFactory` line now matches Context. A **fifth** stale copy stands in the diagram (finding 3).
-4. **Finding 4 (66) — `Sweep`'s contract stated two ways.** *Partial.* The prose fix is good and the
-   non-emptiness claim is now proved (the proof is sound: ancestry is finite and acyclic, so a non-empty
-   candidate set has a root, and a root is never dropped). The diagram retains the old wording (finding 3) and
-   two term slips remain (finding 11).
-5. **Finding 5 (65) — template's generic reduction under-specified.** *Dissolved, and it took the pinning with
-   it.* With no reflection in the template there is no reduction to specify — but round-4 finding 5 was the
-   only place stating that a generic `Subject` is the closed construction, and its deletion leaves that
-   unspecified (finding 1).
-6. **Finding 6 (62) — necessity principle unreconciled.** *Complete.* Context concedes the type is not
-   necessary on the principle's own terms and states FR-12 as the overriding authority; References matches.
-7. **Finding 7 (62) — `Core.Tests` enumeration incomplete.** *Complete.* All four of C-9's subscription
-   doubles are named and the expression-bodied-`typeof` requirement is stated as a constraint. Verified:
-   `MockSubscription` at `:85-87` is still the only `Subscription` subclass in `Core.Tests`, and is
-   `public override Type ChannelFactoryType { get; }` assigned in the constructor. The surrounding paragraph's
-   misapplication of C-9's throw-rule is pre-existing and untouched (finding 7).
-8. **Finding 8 (60) — subsumption rule expressed twice.** *Complete, by dissolution.* Both the Positive bullet
-   and the Risks mitigation are corrected to match, with an honest note that an earlier draft had put the rule
-   in the template.
+The count fell 8 → 5, the first fall in three rounds. More important is what the findings are made of. The
+five previous rounds were dominated by one mechanical failure: a decision settled, the passage stating it
+rewritten, and a second passage restating it left behind — five times running. This round it happened
+**once**, on the narrowest possible surface: a case added by the rewrite itself, in the diagram and the step
+list, both outside the re-derived section. Key Components' internal consistency is clean.
 
-## Grounding sampled and correct
+The three relocated passages survived intact, each stated once, each still connected to what depends on it.
+The only reasoning genuinely lost is the `GetGenericTypeDefinition()` coverage claim (finding 6) and one
+paragraph of CI-placement rationale (finding 7) — both below threshold.
 
-`Subscription.cs:172`/`:213`; `Command.cs:42`; `CombinedChannelFactory.cs:34`/`:46`/`:59`; `ci.yml:228`,
-`:361`, `:708`; twelve `src/Paramore.Brighter.MessagingGateway.*` directories, no thirteenth; 24 non-abstract
-gateway `Subscription` subclasses in twelve base/derived pairs; fourteen existing `test-configuration.json`
-files with AzureServiceBus, MQTT and RMQ.Sync absent; the amended FR-12 Scope and AC-27 quoted correctly.
-**No grounding errors found this round.**
+What changed is where the defects live. Four of the five at-threshold findings are in material the
+re-derivation newly **specified** rather than restated: an argument that does not survive its own worked
+case, a rendering rule with no input format, a discovery rule with two readings, a scheduling note in the
+wrong step. That is the normal residue of newly written specification, and a better class of defect than
+the fifth copy of a superseded sentence. None is a contradiction; none makes the design unimplementable.
+
+**Round 7 should be small — if the fixes are applied without reopening the re-derived section for another
+patch.** Finding 2 is the warning: the passages that *describe* Key Components (diagram, steps, References)
+are now the weakest part of the document, and they were not re-derived.
