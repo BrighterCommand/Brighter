@@ -1,206 +1,108 @@
-# Review: design — 0037-validate-subscription-channel-factory (ADR 0073, round 6)
+# Review: design — 0037-validate-subscription-channel-factory (ADR 0073, round 7)
 
 **Date**: 2026-09-22
 **Threshold**: 60
 **Verdict**: NEEDS WORK
 
-5 findings at or above threshold 60. Address these before approving.
+2 findings at or above threshold 60. Address these before approving.
 
-> **Verification note.** All eight findings re-checked against the working tree; **all eight hold, none
-> rejected, and no grounding error for the third consecutive round.**
+> **Verification note.** All four findings re-checked against the working tree; **all four hold, none
+> rejected, and no grounding error for the fourth consecutive round.** Both at-threshold findings are
+> wrong *statements about* the design rather than design defects — exactly where round 6 predicted the
+> remaining risk lay. **Threshold trend: 7 → 4 → 7 → 8 → 8 → 5 → 2.**
 >
-> **Threshold trend: 7 → 4 → 7 → 8 → 8 → 5 — the first fall in three rounds**, and the composition
-> changed more than the count. The duplication-drift defect that recurred in five consecutive rounds
-> happened **once** here (finding 2), on material the re-derivation itself added, in the diagram and the
-> step list — both *outside* the section that was re-derived. Key Components' internal consistency is
-> clean: D10 checked at six sites, the candidate/subject vocabulary at all seventeen occurrences, the
-> branch names across the table, Risks, Alternatives and `Core.Tests`. Four of the five at-threshold
-> findings are in material the re-derivation newly **specified** rather than restated. See *Did the
-> re-derivation work?* below.
+> Round 7 also confirmed, against the codebase, that round 6's two new synthetics are not vacuous — the
+> check this document's history most demands. `Command : ICommand` (`Command.cs:42`), and `IEvent` and
+> `ICommand` are *siblings* under `IRequest`, so `where T : IEvent` is unsatisfiable by the representative
+> argument and `MakeGenericType` genuinely throws. **D11 verified complete** across `Paramore.Brighter`,
+> the twelve gateways and `Core.Tests`.
 
 ## Findings
 
-### 1. The reason-path coverage argument's backstop is false in the one case the guard exists for — an unconfigured second subject that is silently skipped leaves the exact set matching (Score: 70)
+### 1. The constructed generic base is attached to the one pair that cannot exercise the `GetGenericTypeDefinition()` reduction — round 6's fix does not cover the branch it claims to (Score: 82)
 
-Key Components leaves two of the six reason paths unasserted and justifies it with a two-part claim: the
-paths are unreachable, and *if* one were reached, a silent skip would be caught by the exact subject set.
-The second half does not hold generally.
+Round 6's finding 6 asked that one subsumption pair carry a constructed generic base so the reduction is
+tested. Implementation Approach step 2 attached it to the pair **whose derived type declares its own
+override**. That pair cannot detect a broken reduction.
 
-Walk the case. The exact-set assertion compares `Sweep`'s reported subjects against `SubscriptionType` ∪
-`AdditionalExpectedSubjects`. The ADR states the purpose of that union two paragraphs earlier: "An
-assembly that grows a second declaring subscription fails its sweep until that list is updated — which is
-the point: a new gateway subscription type is exactly the event this guard exists to notice."
+Walk it with the design's own rule: "A candidate is dropped when it does **not** itself declare
+`ChannelFactoryType` … **and** an ancestor in its base chain is also a candidate in the same assembly." For
+`Derived : Base<Command>` where `Derived` **declares its own** override, the first conjunct is false, so the
+ancestry comparison — the only place the reduction is applied — is never load-bearing. Candidates are
+`Base<>` and `Derived`; both are reported whether or not `Base<Command>` is reduced to `Base<>`. The
+asserted outcome ("both are reported") is identical under a correct and a broken reduction, so the assertion
+cannot fail on the fault it was added for.
 
-Now suppose a thirteenth gateway, or growth of an existing one, adds a second declaring subscription that
-is generic with a constraint `typeof(Paramore.Brighter.Command)` does not satisfy — `where T : IEvent`, or
-arity 2. That is precisely the "unsatisfiable arity or constraints" path. The type is **not** in
-`AdditionalExpectedSubjects`; nobody has added it, and its absence is the event being guarded. If the
-implementation silently skips it instead of emitting a reason, the reported set is unchanged, it equals
-the configured expectation exactly, every `Reason` is null, and the test is **green**. The exact-set
-assertion catches nothing, because the skipped subject was never expected.
+The ADR states the correct condition two hundred lines earlier and then contradicts it: the reduction
+matters for a derived type **declaring no override**. On that pair a broken reduction would leave the
+derived type unsubsumed, both would be reported, and the assertion "the derived is subsumed" would fail —
+which is what covering the branch requires.
 
-The claim is true only for a subject *already configured* — skipping such a subject shrinks the set and
-fails. It is false for exactly the class of subject the guard was built to notice. The `Core.Tests` cases
-cannot cover it either, being subject-scoped (`result.Single(e => e.Subject == typeof(X))`), so they too
-only detect the disappearance of a subject the test already names. The parallel claim for the "instance
-cannot be produced" path fails for the same reason.
+**Evidence**: ADR:251-253 — "Without that reduction a `FooBar : Foo<Bar>` **declaring no override** would
+never match its own base". Against ADR:517-519 — "a pair whose derived type declares **its own**, asserting
+both are reported, **with a constructed generic base** (`Derived : Base<Command>`) so that subsumption's
+`GetGenericTypeDefinition()` reduction is exercised". Key Components ADR:257-259 said only "One of the two
+… pairs below therefore has a **constructed generic base**" without naming which, so step 2 was the sole
+binding statement — and named the wrong pair. Round 6's recommendation did not name a pair, so the error is
+new in `0c2125bf8`.
 
-**Evidence**: ADR:420-427 "The remaining two … are **not** asserted, and that is accepted: both are
-unreachable for any shipped or synthetic type this design declares, and a *silent skip* in either is
-caught by the exact subject set." Against ADR:309-311 "An assembly that grows a second declaring
-subscription fails its sweep until that list is updated — which is the point". And ADR:429-432, the
-subject-scoped `Core.Tests` convention.
-
-**Recommendation**: Either state the claim accurately — a silent skip is caught only for a subject the
-configuration already expects, and an *unconfigured* subject silently skipped is a genuine vacuous pass
-this design does not detect — or close the hole. The cheapest close is one `Core.Tests` synthetic whose
-constraints `Command` does not satisfy (`where T : IEvent`, one line), asserted to carry a non-null
-reason, making "never a silent skip" tested on the path where a skip is invisible.
+**Recommendation**: Move the constructed generic base to the pair whose **derived type declares no
+override**, asserting the reported set is `{Base<>}` and not `{Base<>, Derived}`, and say so in Key
+Components' "Two subsumption pairs" paragraph rather than only in step 2.
 
 ---
 
-### 2. Sixth stale copy: the throwing double and the null-branch `Check` case — both introduced by the re-derivation — appear in no Implementation Approach step, and the diagram's `Core.Tests` box omits the throwing double (Score: 68)
+### 2. Seventh stale copy: "no shipped assembly has any of these subsumption shapes" is false — all twelve gateways contain the first shape, as step 2 itself says five lines later (Score: 78)
 
-The re-derivation added two test obligations, both the substance of round 5's finding 4: a `Core.Tests`
-double whose `ChannelFactoryType` getter throws on an uninitialised instance, and an explicit assertion of
-`Check`'s **null** branch with literal arguments. Key Components specifies both. Neither reaches the
-passages that *describe* Key Components.
+Three passages assert that neither `Core.Tests` subsumption shape occurs in a shipped assembly. The first
+shape — a base/derived pair whose derived type declares no `ChannelFactoryType` — occurs in **all twelve**,
+and the exact-subject-set assertion depends on it: it is the only reason each gateway resolves to exactly
+one subject. The claim "so neither is reachable from the generated tests" is the opposite of the truth, and
+it undermines the "discharged in two places" argument it is offered to support — the generated sweeps *do*
+test the first shape's outcome; only the second is unreachable from them.
 
-**Step 1** covers `Check` and names only "AC-28's two synthetic subscriptions and their doubles" — the null
-branch is this ADR's own addition, not an AC-28 shape, so it is not there by implication either. **Step 2**
-enumerates its additions exhaustively — "Three further synthetics are added here" — and the three named are
-the generic subscription and the two subsumption pairs. The throwing double is a fourth, and the count says
-three. An implementer working the steps builds neither new case, so round-5 finding 4's fix is documented
-but never scheduled. The **diagram**'s `Core.Tests` box lists the generic and the subsumption pairs but not
-the throwing double — the same class of defect for the sixth consecutive round, this time on a case whose
-whole purpose is to be visible.
+Verified: every gateway is `XSubscription<T> : XSubscription` with the generic derived type declaring no
+override, and all nine existing overrides sit on the non-generic base (e.g.
+`AWSSQS/SqsSubscription.cs:161`, `MQTT/MqttSubscription.cs:99` — and MQTT's file contains exactly one
+`override Type ChannelFactoryType`). The ADR's own correct statement of the fact is in step 2, in the same
+sentence-block as one of the wrong ones.
 
-**Evidence**: ADR:416-418 the throwing double; ADR:420-423 the null-branch requirement; against ADR:480-481
-(step 1), ADR:484-487 (step 2, "**Three** further synthetics"), and ADR:163-171 (the diagram's box).
+**Evidence**: ADR:309-310 "neither subsumption shape exists in any shipped assembly, so neither is
+reachable from the generated tests"; ADR:426 "No shipped assembly has any of these three shapes."; ADR:515
+"because no shipped assembly has any of these shapes". Against ADR:522-523 "the generated sweeps test its
+outcome on real assemblies, which contain only the first shape." Both wrong statements predate this round
+(`git log -S` → `f5ad8419a` and `906b7e396`).
 
-**Recommendation**: Add the null-branch assertion to step 1 and the throwing double to step 2, and add a
-line to the diagram's `Core.Tests` box.
-
----
-
-### 3. `AdditionalExpectedSubjects` is not implementable for a generic entry: the ADR fixes what must be rendered (`typeof(Foo<>)`) but not what the configuration string looks like or how arity is recovered (Score: 65)
-
-The property table types the key as `List<string>` and fixes the rendering: "A generic entry renders as
-`typeof(Foo<>)`". The other twelve configured values are "Fully-qualified name of the subscription type",
-which for an open generic definition is ``Ns.Foo`1``.
-
-The template must turn one into the other and nothing says how. A backtick is not legal in a C# type name
-in source, so the string cannot be emitted verbatim. To produce `typeof(Ns.Foo<>)` the generator must strip
-the `` `n `` suffix and emit *n*−1 commas inside the brackets. Alternatively the author writes `Ns.Foo<>`
-directly in JSON, in which case the value is no longer a name `Type.FullName` could produce and the audit's
-namespace comparison must account for it. Two developers implement this two ways and one produces a file
-that does not compile.
-
-`SubscriptionType` escapes the problem only because the table separately forbids a generic value there.
-`AdditionalExpectedSubjects` has no such restriction — it exists precisely for a second declaring type,
-which *can* be generic, and the ADR anticipates that case.
-
-**Evidence**: ADR:305-306, the two property rows.
-
-**Recommendation**: One sentence stating the JSON form and the rendering rule — the arity backtick as
-`Type.FullName` reports it, rendered by replacing the suffix with brackets carrying *n*−1 commas — or
-restrict the key to non-generic subjects and say a generic second subject is a future change.
+**Recommendation**: Restate the fact once, correctly, and let the other sites point at it.
 
 ---
 
-### 4. Step 1's candidate rule does not settle whether `Subscription` itself is a candidate, and the `{Subscription}` worked example only holds under one of the two readings (Score: 62)
+### 3. The justification for the bad-constraints synthetic rules out the very form the synthetic takes (Score: 55)
 
-Step 1: "Non-abstract classes whose base chain reaches `Paramore.Brighter.Subscription`." Read strictly, a
-type's base chain is its *ancestors*, so `Subscription` is not a candidate in its own assembly. Read
-inclusively, it is.
+The paragraph closing the reason-path gap argues that neither the exact set nor the `Core.Tests` cases can
+cover an unconfigured skipped subject, giving "being subject-scoped" as the disqualifier — then concludes
+"Hence the synthetic", where the synthetic *is* a `Core.Tests` case asserted subject-scoped. Read
+charitably the point is that no `Core.Tests` case can reproduce the generated sweeps' blind spot, so the
+path must be closed directly instead; as written the stated reason excludes the remedy.
 
-Invisible in the twelve gateway assemblies, but the ADR depends on it in the misaim division-of-labour
-argument. `Paramore.Brighter` contains four non-abstract types in the family, only `Subscription` defining
-`ChannelFactoryType`: `Subscription` (`Subscription.cs:35`), `Subscription<T>` (`:258`),
-`InMemorySubscription` (`InMemorySubscription.cs:26`), `InMemorySubscription<T>` (`:78`).
+**Evidence**: ADR:449-450 "The `Core.Tests` cases cannot cover this either, being subject-scoped. Hence the
+synthetic." Against ADR:456-459, the subject-scoped convention.
 
-Under the **inclusive** reading `Subscription` is the root candidate, the other three declare no override
-and have a candidate ancestor, so all three are subsumed and the sweep reports `{Subscription}` — the ADR's
-claim. Under the **strict** reading `Subscription` is not a candidate, so `Subscription<>` and
-`InMemorySubscription` are both roots and neither is subsumed; the sweep reports
-`{Subscription<>, InMemorySubscription}`, which does not match a configuration naming
-`Paramore.Brighter.Subscription`, so the misaim fails on the **set** check rather than the **reason** check
-the ADR names. The References entry hints the inclusive reading is intended — it notes "`Subscription` is
-non-abstract (`:35`)", load-bearing only if `Subscription` can itself be a candidate — but Key Components
-never says so.
-
-**Evidence**: ADR:233-235 step 1; ADR:288-290 the misaim example; ADR:702 the References note. Working
-tree: the four types above; `InMemorySubscription.cs` contains no `ChannelFactoryType`.
-
-**Recommendation**: Change step 1 to "Non-abstract classes that **are** `Paramore.Brighter.Subscription`
-or whose base chain reaches it" — the reading the rest of the document assumes, and the one FR-12's
-"assignable to `Subscription`" implies — or state the strict reading and correct the example.
+**Recommendation**: Replace "being subject-scoped" with what is meant — the blind spot belongs to the
+*generated* sweeps, whose expectation comes from configuration, so the remedy is to make the sweep's
+behaviour on that path a tested property.
 
 ---
 
-### 5. The ADR-0072 ordering constraint is recorded inside step 2, not in steps 4 and 6 that it governs (Score: 62)
+### 4. Round 6's step-4 merge joined the ⚠️ ordering warning and the `SharedGenerator` paragraph into one run-on block (Score: 35)
 
-Round 5's finding 6 asked for the constraint where an implementer sequencing the work would meet it — "a
-clause to step 4 or a Negative bullet". The fix put the paragraph at the end of **step 2**, where it is a
-non-sequitur: step 2 is `Sweep` plus its synthetics, which have no dependency on FR-7 to FR-11 at all. The
-paragraph's own first sentence announces it is about other steps. Steps 4 and 6 contain no reference
-either way, so a developer executing step 6 — the step that turns the `build` job red if 0072 has slipped
-— reads nothing about it. The re-derivation's commit message claims "steps 4 and 6 now record that they
-sequence after 0072's FR-7 to FR-11"; they do not.
+The 0072 ordering constraint moved into step 4 correctly, but was spliced mid-line onto the
+`SharedGenerator` material, so a CI-sequencing warning and an unrelated note about twelve unused helper
+files now read as one paragraph.
 
-The arithmetic is correct: nine overrides today, 0072 adds three (FR-9, FR-10, FR-11) and corrects two
-(FR-7, FR-8), so five of the twelve report a non-null reason until those land — matching
-`requirements.md:521`.
+**Evidence**: ADR:538.
 
-**Evidence**: ADR:491-497, the closing paragraph of step 2; against ADR:502-513, steps 4 and 6.
-
-**Recommendation**: Move the paragraph to step 4 and add a clause to step 6.
-
----
-
-### 6. The `GetGenericTypeDefinition()` reduction lost its coverage statement in the rewrite (Score: 58)
-
-Step 2 specifies that an ancestor which is a constructed generic is reduced before comparison. All twelve
-shipped pairs are `XSubscription<T> : XSubscription` with a **non-generic** base, so no shipped assembly
-exercises the reduction. The old section said so and claimed coverage — "No shipped assembly has that shape
-today, so step 2's synthetic types cover it." The re-derivation kept the specification and dropped both the
-acknowledgement and the coverage claim, and neither new subsumption pair is specified to have a constructed
-generic base. The replacement sentence, "In every shipped assembly this reduces the pair to its non-generic
-base", is also slightly off: in a non-generic-base pair no reduction happens at all.
-
-**Evidence**: ADR:240-246 against the removed text in `git show f5ad8419a`.
-
-**Recommendation**: Specify that one of the two subsumption pairs has a constructed generic base
-(`Derived : Base<Command>`), covering the reduction at no extra cost, or restore the acknowledgement that
-the branch is uncovered.
-
----
-
-### 7. References attributes a "placement rule" to ADR 0064 that the re-derived CI-placement section no longer invokes (Score: 50)
-
-The old Key Components justified the `build`-job placement partly by analogy to the generator audit. The
-re-derived `#### CI placement` section argues entirely from three concrete CI facts and never cites 0064.
-References still describes 0064 as "source of the placement rule and of 'rules must not catch'". 0064's
-placement rule is its C-8, about *which rule class a rule is declared in* — something this ADR explicitly
-does not do ("this guard adds no rule").
-
-**Evidence**: ADR:695; the CI placement section, which contains no mention of 0064; `0064:242`, C-8.
-
-**Recommendation**: Trim to "source of 'rules must not catch', from which this ADR's sweep deliberately
-differs, for stated reasons".
-
----
-
-### 8. The distinctness rebuttal in Alternatives still reasons in terms of closed constructions (Score: 45)
-
-D10 fixed `Subject` as the open definition. The relocated withdrawn-assertion passage argues distinctness
-"holds by construction" because "no two open definitions close to the same type" — a closing-based argument
-left over from when `Subject` was the closed construction. Under D10 the argument is simply that
-`Assembly.GetTypes()` yields distinct types and subsumption only removes.
-
-**Evidence**: ADR:656-658.
-
-**Recommendation**: Drop the closing clause.
+**Recommendation**: Break the paragraph after "red on every pull request."
 
 ---
 
@@ -209,67 +111,62 @@ left over from when `Subject` was the closed construction. Under D10 the argumen
 | Score Range | Count |
 |-------------|-------|
 | 90-100 (Critical) | 0 |
-| 70-89 (High) | 1 |
-| 50-69 (Medium) | 6 |
+| 70-89 (High) | 2 |
+| 50-69 (Medium) | 1 |
 | 0-49 (Low) | 1 |
 
-**Total findings**: 8
-**Findings at or above threshold (60)**: 5
+**Total findings**: 4
+**Findings at or above threshold (60)**: 2
 
-## Round-5 fixes verified
+## Round-6 fixes verified
 
-1. **(78) `Subject`'s identity unspecified** — **complete**. D10 stated once in the `Sweep` contract and
-   consistent at all six sites: subsumption before closing on open definitions; step 3's closed type
-   "exists only to be instantiated and read"; `AdditionalExpectedSubjects` rendering; the `Core.Tests`
-   generic assertion; ordering by `Subject.FullName` (an open definition's is `` Ns.Foo`1 ``, non-null);
-   the reason message. Both supporting claims verified — `typeof(Foo<>)` is valid C#, and a closed
-   construction's assembly-qualified `FullName` is unusable in a message. Residue: finding 3.
-2. **(72) The false wrong-assembly claim** — **complete in substance**. The ADR says plainly the exact set
-   cannot catch a misaim, names the three mechanisms that do, and `requirements.md:521` matches. The
-   `{Subscription}` example inside it holds under only one reading of step 1 — finding 4, a new problem
-   surfaced by the fix rather than a failure of it.
-3. **(72) Fifth stale copy, "one entry per candidate"** — **complete**. The diagram reads "one entry per
-   subject", and the two terms are used consistently at all seventeen sites.
-4. **(70) Four of six reason paths untested** — **partial, and it introduced a new problem**. Two are now
-   covered and the remaining two explicitly declared unasserted, which is what was asked — but the
-   justification is unsound (finding 1), and neither new case is scheduled (finding 2).
-5. **(68) `AdditionalExpectedSubjects` under-specified** — **substantially complete**. Property table with
-   type and default, union semantics, the audit's `SubscriptionType`-only counting stated and justified,
-   the table's silence made explicit, and the survives-subsumption invariant written down. Only the generic
-   string form remains open (finding 3).
-6. **(65) The five-red ordering constraint** — **partial**. Content and arithmetic correct, filed in the
-   wrong step (finding 5).
-7. **(62) C-9's throw-rule misapplied; helper types unnamed** — **complete**. The three subscription
-   doubles are explicitly exempted with the reason, both helper types named, and C-9's rule attached only
-   to the channel-factory double with its three members enumerated.
-8. **(62) Truncated FR-12 quote** — **complete**. Step 2 quotes the amended clause with its condition
-   inside the quotation marks, matching `requirements.md:193` verbatim.
+1. **(70) Reason-path backstop false for an unconfigured subject** — **complete on substance**. The new
+   synthetic can genuinely fail. `Command : ICommand` (`Command.cs:42`), `ICommand : IRequest`,
+   `IEvent : IRequest` — `IEvent` and `ICommand` are siblings and `Command` implements neither `IEvent` nor
+   `Event`. So `class Bad<T> : Subscription where T : IEvent` compiles, is a candidate, is not subsumed
+   (its only candidate-eligible ancestor `Subscription` lives in `Paramore.Brighter`, not `Core.Tests`),
+   and step 3's `MakeGenericType(typeof(Command))` throws `ArgumentException` — a reason, and a `Single(...)`
+   that fails if the type is skipped. **Not vacuous.** Supporting prose muddled (finding 3).
+2. **(68) Sixth stale copy** — **complete**. Step 1 schedules all three `Check` branches, step 2 names five
+   synthetics, the diagram box gained the new cases, and the counts ("three branches", "six reason paths",
+   "five further synthetics") are internally consistent.
+3. **(65) `AdditionalExpectedSubjects` generic entry** — **complete**. The JSON form, the backtick→brackets
+   rendering, and the prohibition on writing `Ns.Foo<>` in JSON make it implementable and keep the audit's
+   namespace comparison working.
+4. **(62) Inclusive candidacy (D11)** — **complete and verified**. `InMemorySubscription` (`:26`),
+   `InMemorySubscription<T>` (`:78`) and `Subscription<T>` (`Subscription.cs:258`) declare no override, so
+   the inclusive rule yields `{Subscription}` in `Paramore.Brighter` and the misaim example holds; the
+   strict rule would leave two roots. No gateway assembly contains `Subscription`, so the twelve are
+   unaffected, and `Core.Tests` likewise. The survives-subsumption invariant is unaffected: each gateway's
+   non-generic base is both a root candidate and the declaring type.
+5. **(62) 0072 ordering constraint relocated to step 4** — **complete**, with the step-6 back-reference;
+   cosmetic run-on introduced (finding 4).
+6. **(58, below threshold) `GetGenericTypeDefinition()` coverage** — **introduced a new problem** (finding
+   1): attached to the pair that cannot exercise the reduction.
+7. **(50) ADR 0064 attribution** — **complete and correctly grounded**. 0064's C-8 *is* "Placement"
+   (`0064:54`, `:242`), and its no-catch rationale at `:165` matches the ADR's quotation.
+8. **(45) Distinctness rebuttal** — **complete**; rests on `GetTypes()` distinctness plus "subsumption only
+   removes", no longer on closing.
 
-Grounding sampled and correct: `Subscription.cs:35`/`:172`/`:213`/`:258`, `InMemorySubscription.cs:26`/`:78`,
-`RocketMqSubscription.cs:10`/`:50`/`:117`, `Command.cs:42`, `TestConfiguration.cs:38`,
-`When_constructing_a_channel_with_combined_factory.cs:85`, `ci.yml:228`/`:361`/`:708`, `0072:457`,
-`0064:165`. **No grounding errors — a third consecutive clean round.**
+Other grounding sampled and accurate: `Subscription.cs:172`/`:213`; `CombinedChannelFactory.cs:34`/`:46`/
+`:59`; `TestConfiguration.cs:38`; `ci.yml:228`/`:361`/`:708`; all nine override line numbers, all constant
+`typeof(...)` on non-generic bases, two of them consumer factories as claimed; the 9/3 constraint split;
+all twelve configuration-table type names and the namespace-equals-directory-name premise; fourteen
+`test-configuration.json` files with AzureServiceBus, MQTT and RMQ.Sync absent.
 
-## Did the re-derivation work?
+**Requirements fidelity, checked end to end**: every normative MUST in FR-12 is satisfied —
+construction-free read via `GetUninitializedObject`, a pure `(Type, Type)` predicate returning a reason, no
+broker access, generic closing honouring each constraint form, the conditional at-most-once obligation, and
+one sweep per gateway project. AC-28's "naming the offending subscription type and the type it declared" is
+met by both failure reasons. **Nothing in the ADR is beyond what the requirements ask.**
 
-**Partly, and more than the raw count suggests.**
+## Approval readiness
 
-The count fell 8 → 5, the first fall in three rounds. More important is what the findings are made of. The
-five previous rounds were dominated by one mechanical failure: a decision settled, the passage stating it
-rewritten, and a second passage restating it left behind — five times running. This round it happened
-**once**, on the narrowest possible surface: a case added by the rewrite itself, in the diagram and the step
-list, both outside the re-derived section. Key Components' internal consistency is clean.
+**Not ready — but narrowly.** The design is sound and the requirements are fully met; both blocking
+findings are wrong statements about the design.
 
-The three relocated passages survived intact, each stated once, each still connected to what depends on it.
-The only reasoning genuinely lost is the `GetGenericTypeDefinition()` coverage claim (finding 6) and one
-paragraph of CI-placement rationale (finding 7) — both below threshold.
-
-What changed is where the defects live. Four of the five at-threshold findings are in material the
-re-derivation newly **specified** rather than restated: an argument that does not survive its own worked
-case, a rendering rule with no input format, a discovery rule with two readings, a scheduling note in the
-wrong step. That is the normal residue of newly written specification, and a better class of defect than
-the fifth copy of a superseded sentence. None is a contradiction; none makes the design unimplementable.
-
-**Round 7 should be small — if the fixes are applied without reopening the re-derived section for another
-patch.** Finding 2 is the warning: the passages that *describe* Key Components (diagram, steps, References)
-are now the weakest part of the document, and they were not re-derived.
+The single most important item is **finding 1**: the constructed generic base must move to the no-override
+pair. As specified, the reduction is claimed to be covered by a test that cannot fail if the reduction is
+broken — the same class of defect this document has already produced twice. Finding 2 is a one-sentence
+factual correction in three places. **Neither requires touching the Key Components specification, so a
+targeted fix followed by `/spec:approve design` is the right next move.**
