@@ -254,8 +254,12 @@ Four steps:
    reduction**: all twelve pairs are `XSubscription<T> : XSubscription` with a *non-generic* base
    (`RocketMqSubscription<T>` to `RocketSubscription`, `…/RocketMQ/RocketMqSubscription.cs:117` and `:10`;
    `SqsSubscription<T>` to `SqsSubscription`; and so for all twelve), so no reduction happens in any of
-   them. One of the two `Core.Tests` subsumption pairs below therefore has a **constructed generic base**,
-   which covers the branch at no extra cost.
+   them. The **no-override** pair among the two `Core.Tests` subsumption pairs below therefore has a
+   **constructed generic base** (`Derived : Base<Command>`, `Derived` declaring nothing), which covers the
+   branch at no extra cost. It has to be that pair: the ancestry comparison — the only place the reduction
+   is applied — runs only when the derived type declares no override of its own, so on the *declares-its-own*
+   pair both types are reported whether the reduction works or not, and an assertion there could not fail
+   on a broken reduction.
 3. **Generic closing.** A subject that is an open generic definition is closed with `MakeGenericType`
    before it can be read, using one representative argument, `typeof(Paramore.Brighter.Command)` — a
    public concrete class implementing `IRequest`, satisfying both constraint forms the gateways use:
@@ -306,8 +310,11 @@ configured twice fails the **thirteenth-gateway audit**. What the exact set adds
 
 **AC-27's at-most-once clause is discharged in two places, deliberately.** Over the twelve real
 assemblies, by the exact set: exactly-one-subject is strictly stronger than at-most-once. Over the
-*mechanism*, by the `Core.Tests` pairs below — neither subsumption shape exists in any shipped assembly,
-so neither is reachable from the generated tests.
+*mechanism*, by the `Core.Tests` pairs below. The two are complementary rather than redundant: the
+**no-override** shape is in all twelve shipped assemblies — it is precisely why each resolves to one
+subject — so the generated sweeps test its *outcome* on real input, while the `Core.Tests` pair tests the
+step that produces it. The **declares-its-own** shape has no shipped instance at all, so `Core.Tests` is
+the only place it can be tested.
 
 **The configuration** — `Configuration/GatewayConformanceConfiguration.cs`, and a `GatewayConformance`
 section on `TestConfiguration`:
@@ -420,10 +427,13 @@ for the third to declare. C-9's throw-rule **does** apply to the latter — ever
 `CreateAsyncChannel` and `CreateAsyncChannelAsync` on it throws.
 
 **Two subsumption pairs**, for the mechanism AC-27's clause describes: a base/derived pair whose derived
-type declares **no** override, asserting the derived is subsumed; and one whose derived type declares
-**its own**, asserting both are reported. Plus **one generic subscription declaring its own override**,
-for the closing path, asserted against the open-definition literal `typeof(X<>)` per `Subject`'s identity
-above. No shipped assembly has any of these three shapes.
+type declares **no** override, asserting the derived is subsumed — this is the pair with the **constructed
+generic base** (`Derived : Base<Command>`), for the reason given under subsumption above; and one whose
+derived type declares **its own**, asserting both are reported. Plus **one generic subscription declaring
+its own override**, for the closing path, asserted against the open-definition literal `typeof(X<>)` per
+`Subject`'s identity above. The no-override shape itself is universal among the twelve — what no shipped
+assembly has is its constructed-generic-base variant, the declares-its-own pair, or a generic type
+declaring its own override.
 
 **One double whose getter throws** on an uninitialised instance, asserting its entry carries a non-null
 reason naming the exception type. This is what makes the read-fault behaviour a tested property rather
@@ -446,8 +456,10 @@ subject shrinks the reported set and fails the comparison. It is *not* caught fo
 subject, and that is exactly the case this guard exists to notice: a gateway that grows a second declaring
 subscription which happens to be generic with constraints `Command` cannot satisfy. Nobody has added it to
 `AdditionalExpectedSubjects` — its absence is the event being guarded — so if the sweep skips it silently
-the reported set still equals the expectation, every `Reason` is null, and the test is green. The
-`Core.Tests` cases cannot cover this either, being subject-scoped. Hence the synthetic.
+the reported set still equals the expectation, every `Reason` is null, and the test is green. No `Core.Tests`
+case can reproduce that blind spot — the blind spot belongs to the *generated* sweeps, whose expectation
+comes from configuration — so the path is closed the other way: make the sweep's behaviour on it a tested
+property, with a synthetic asserted to carry a reason.
 
 The one remaining path — an instance that cannot be produced — is **not** asserted. It is unreachable for
 any type this design declares, and it carries the same blind spot just described, so it is a known and
@@ -512,15 +524,20 @@ Structural changes precede behavioural ones, and each step is independently test
 2. **`SubscriptionChannelFactoryDeclaration.Sweep`** — candidates, subsumption, closing, the
    uninitialised read — with AC-29's constructor-cannot-succeed double in `Core.Tests`, and the
    sweep-over-the-AC-28-doubles case that gives the reading path its only negative assertion. **Five**
-   further synthetics are added here, because no shipped assembly has any of these shapes: a generic
+   further synthetics are added here, because no shipped assembly instantiates any of these shapes — the
+   *no-override* subsumption shape is universal among the twelve, but its constructed-generic-base variant,
+   and every other shape below, has no shipped instance: a generic
    subscription that declares its own override, for the closing path (see Risks); a base/derived pair
    whose derived type declares **no** override, asserting the derived is subsumed; a pair whose derived
-   type declares **its own**, asserting both are reported, **with a constructed generic base**
-   (`Derived : Base<Command>`) so that subsumption's `GetGenericTypeDefinition()` reduction is exercised;
-   a double whose `ChannelFactoryType` getter **throws** on an uninitialised instance; and a generic
+   type declares **its own**, asserting both are reported. **The no-override pair** carries a
+   **constructed generic base** (`Derived : Base<Command>`), so subsumption's `GetGenericTypeDefinition()`
+   reduction is exercised — a broken reduction leaves `Derived` unsubsumed and the asserted set becomes
+   `{Base<>, Derived}` instead of `{Base<>}`. On the declares-its-own pair the reduction is not
+   load-bearing, so it could not be covered there. Then: a double whose `ChannelFactoryType` getter
+   **throws** on an uninitialised instance; and a generic
    subscription whose constraints `Command` cannot satisfy (`where T : IEvent`). The two pairs are where
    AC-27's at-most-once clause is tested as a mechanism — the generated sweeps test its outcome on real
-   assemblies, which contain only the first shape. The last two make "a reason, never a silent skip" a
+   assemblies, which contain the no-override shape but never the declares-its-own one. The last two make "a reason, never a silent skip" a
    tested property on the two paths where a skip would otherwise be invisible.
 3. **Generator additions** — configuration section, `GatewayConformanceGenerator` with its
    `Suites` / `SuitesFor` / `Plan` trio, and the template. `Program.cs` invokes the new generator;
@@ -535,7 +552,9 @@ Structural changes precede behavioural ones, and each step is independently test
    **not-a-channel-factory**; AWSSQS (FR-9), AWSSQS.V4 (FR-10) and Postgres (FR-11) declare no override at
    all, so their non-generic base is a root candidate reporting **inherited-default**. If 0072's
    corrections slip, the generated files may still be committed — the generated-tree audit wants them —
-   but the CI step of step 6 must not be enabled, or the `build` job is red on every pull request. `SharedGenerator` is left alone: it will render its four
+   but the CI step of step 6 must not be enabled, or the `build` job is red on every pull request.
+
+   `SharedGenerator` is left alone: it will render its four
    helper files into the three new conformance-only projects as well. Those files reference only
    `Paramore.Brighter` (which contains the `Observability` namespace — it is not a separate package)
    and xunit, the latter through fully-qualified `Xunit.Assert` calls rather than a `using`, so a
