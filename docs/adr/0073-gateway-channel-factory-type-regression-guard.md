@@ -5,7 +5,7 @@ status: Proposed
 author:
   - "Ian Cooper"
 created: 2026-09-21
-summary: "Implements FR-12's regression guard as one new public static type in Paramore.Brighter, SubscriptionChannelFactoryDeclaration, exposing a pure (subscriptionType, declaredFactoryType) predicate that returns the reason a declaration is unsound (null when sound) and an assembly sweep that reads ChannelFactoryType from uninitialised instances via GetUninitializedObject, so no constructor runs, de-duplicating base/derived pairs by subsumption; the twelve per-gateway sweep tests are generated from a single new Liquid template through a new GatewayConformance configuration section and run in CI's infrastructure-free build job."
+summary: "Implements FR-12's regression guard as one new public static type in Paramore.Brighter, SubscriptionChannelFactoryDeclaration, exposing a pure (subscriptionType, declaredFactoryType) predicate that returns the reason a declaration is unsound (null when sound) and an assembly sweep that reads ChannelFactoryType from uninitialised instances via GetUninitializedObject, so no constructor runs, de-duplicating a base/derived pair only where the derived type declares no override of its own; the twelve per-gateway tests are generated from one new Liquid template through a new GatewayConformance configuration section, assert the reported subject set exactly plus all reasons null, carry no reflection logic of their own, and run in CI's infrastructure-free build job."
 tags:
   - "testing"
   - "test-generation"
@@ -150,7 +150,7 @@ job.
   │                                                              │
   │   Sweep(Assembly gatewayAssembly)                            │
   │     -> IReadOnlyList<(Type Subject, string? Reason)>         │
-  │        one entry per candidate; Reason null = sound          │
+  │        one entry per subject; Reason null = sound            │
   │                                                              │
   │   candidates -> subsume -> close generics -> read -> Check   │
   │                                     │                        │
@@ -181,180 +181,159 @@ job.
 
 ### Key Components
 
-**`SubscriptionChannelFactoryDeclaration`** — a new `public static class` in namespace
-`Paramore.Brighter`, in `src/Paramore.Brighter`. In Responsibility-Driven Design terms it is a
-**service provider**: it answers a question on request and holds no state. It has exactly two public
-members. It is the one new public type FR-12 permits; the trade-off it carries is recorded under
-Negative, and the options it was chosen over are in Alternatives Considered.
+This section specifies the components. The reasoning for choices made against live alternatives is in
+*Alternatives Considered*; the things that could go wrong with them are in *Risks and Mitigations*. Each
+decision is stated here once.
 
-**`public static string? Check(Type subscriptionType, Type? declaredFactoryType)`** — the pure
-predicate FR-12 requires. It returns `null` when the declaration is sound, and otherwise the single
-reason it is not. It evaluates three named branches in order and returns the first that fails. They
-are **named, not numbered**, because FR-12 numbers its own two conditions differently and the two
-schemes would otherwise be read for each other:
+#### `SubscriptionChannelFactoryDeclaration`
 
-- **null** — `declaredFactoryType is null` → *"… declares no channel factory type
-  (`ChannelFactoryType` returned null)."*
-- **not-a-channel-factory** (FR-12's condition 1) —
-  `!typeof(IAmAChannelFactory).IsAssignableFrom(declaredFactoryType)` → *"… declares `{full name}`,
-  which does not implement `Paramore.Brighter.IAmAChannelFactory`."*
-- **inherited-default** (FR-12's condition 2) — `declaredFactoryType == typeof(InMemoryChannelFactory)` → *"… declares
-   `Paramore.Brighter.InMemoryChannelFactory`. A shipped gateway subscription must declare its own
-  transport's channel factory; a type that does not override `ChannelFactoryType` inherits this
-  default."*
+A new `public static class` in namespace `Paramore.Brighter`, in `src/Paramore.Brighter`. In
+Responsibility-Driven Design terms a **service provider**: it answers a question on request and holds no
+state. It has exactly **two public members**, and is the one new public type FR-12 permits.
 
-`subscriptionType` is used only to name the subject; a null argument throws
-`ArgumentNullException`. Every type in a reason is rendered with `Type.FullName`, because eight
-transports name their channel factory class `ChannelFactory` and a message built from `Type.Name`
-would read "expected `ChannelFactory`, got `ChannelFactory`" — the same reasoning FR-5 applies to
-the rule's messages. The reason is a `string?` rather than a result record; see Alternatives
-Considered.
+#### `public static string? Check(Type subscriptionType, Type? declaredFactoryType)`
 
-**`public static IReadOnlyList<(Type Subject, string? Reason)> Sweep(Assembly gatewayAssembly)`** —
-the sweep. Two terms, used precisely from here on: **candidates** are the types step 1 finds, and
-**subjects** are the candidates that survive step 2's subsumption. `Sweep` returns **one entry per
-subject**, carrying that type and its `Reason` — `null` when the declaration is sound. A subsumed
-candidate gets no entry because it has nothing of its own to report: it declares no
-`ChannelFactoryType`, so its value *is* its base's, and its base is a subject. The result is therefore
-empty only when the assembly contains no candidates at all — a root candidate can never have a
-candidate ancestor in the same assembly, so at least one candidate always survives. Entries are ordered by `Subject.FullName` using ordinal comparison;
-`Assembly.GetTypes()` order is not specified, so the sort is what makes repeated runs
-byte-identical.
+The pure predicate FR-12 requires. Returns `null` when the declaration is sound, otherwise the single
+reason it is not. Three branches, evaluated in order, first failure wins. They are **named, not
+numbered**, because FR-12 numbers its own two conditions differently:
 
-**It reports what it examined, not only what failed, and that is deliberate.** A sweep returning
-failures alone cannot distinguish a sound assembly from one it never looked at: an empty result
-would pass identically over a sound assembly and over zero candidates, so a refactor that moved the
-subscription types out of the swept assembly would leave the guard green while guarding nothing. That is the vacuous pass this design exists to prevent, and a
-contract that cannot express "I examined these and they were sound" cannot rule it out. It is also
-what makes AC-29 assertable — see the synthetic types below. A `ValueTuple` carries the pair, so
-this costs no new public type. Four steps:
+| Branch | Condition | Reason |
+|---|---|---|
+| **null** | `declaredFactoryType is null` | *"… declares no channel factory type (`ChannelFactoryType` returned null)."* |
+| **not-a-channel-factory** (FR-12 condition 1) | `!typeof(IAmAChannelFactory).IsAssignableFrom(declaredFactoryType)` | *"… declares `{full name}`, which does not implement `Paramore.Brighter.IAmAChannelFactory`."* |
+| **inherited-default** (FR-12 condition 2) | `declaredFactoryType == typeof(InMemoryChannelFactory)` | *"… declares `Paramore.Brighter.InMemoryChannelFactory`. A shipped gateway subscription must declare its own transport's channel factory; a type that does not override `ChannelFactoryType` inherits this default."* |
 
-- **Candidates.** Non-abstract classes whose base chain reaches `Paramore.Brighter.Subscription`.
-  The base chain is walked explicitly rather than tested with `IsAssignableFrom`, because
-  `IsAssignableFrom` behaves surprisingly for open generic type definitions and each gateway
-  assembly contains one.
-- **Subsumption.** A candidate is dropped when it does not itself declare `ChannelFactoryType`
-  (looked up with `BindingFlags.DeclaredOnly`) and an ancestor in its base chain is also a candidate
-  in the same assembly. **Ancestry is matched on the generic type *definition*.** Subsumption runs
-  before closing, so the candidate set holds open definitions (`Foo<>`) while a base chain yields
-  closed constructions (`Foo<Bar>`); an ancestor that is a constructed generic is therefore reduced
-  with `GetGenericTypeDefinition()` before the comparison. Without that reduction a
-  `FooBar : Foo<Bar>` declaring no override would never match its own base and would be reported
-  twice — or, read the other way, silently dropped. No shipped assembly has that shape today, so
-  step 2's synthetic types cover it. This is FR-12's "a base/derived pair … MUST be reported at most once": a
-  derived type that adds no override cannot disagree with its base. In every shipped assembly this
-  reduces the pair to its non-generic base — `RocketMqSubscription<T>` to `RocketSubscription`
-  (`src/Paramore.Brighter.MessagingGateway.RocketMQ/RocketMqSubscription.cs:117` and `:10`),
-  `SqsSubscription<T>` to `SqsSubscription`, and so on for all twelve.
-- **Generic closing.** A surviving candidate that is an open generic definition is closed with
-  `MakeGenericType` before it can be read. One representative argument is used,
-  `typeof(Paramore.Brighter.Command)`, a public concrete class implementing `IRequest`, which
-  satisfies both constraint forms the gateways use: `where T : IRequest` (AWSSQS, AWSSQS.V4,
-  AzureServiceBus, Kafka, MQTT, MsSql, Redis, RMQ.Async, RMQ.Sync) and `where T : class, IRequest`
-  (GcpPubSub, Postgres, RocketMQ). A definition of any other arity, or one whose constraints the
-  representative does not satisfy, yields a reason — never a silent skip, because a silently skipped
-  type is a vacuous pass, which is the very failure mode condition 2 exists to prevent.
-- **Read and check.** `GetUninitializedObject` produces an instance, which is cast to `Subscription`
-  and its `ChannelFactoryType` read through the virtual property. The value and the type are passed
-  to `Check`. No member-level reflection is needed for the read.
+The **null** branch is this ADR's addition — FR-12 states two conditions, and a `ChannelFactoryType`
+override may return `null` (C-13). `subscriptionType` names the subject only; a null argument throws
+`ArgumentNullException`. Every type in a reason is rendered with `Type.FullName`, because eight transports
+name their channel factory class `ChannelFactory` and `Type.Name` would produce "expected
+`ChannelFactory`, got `ChannelFactory`" — the same reasoning FR-5 applies to the rule's messages.
 
-Three reasons belong to `Sweep` rather than `Check`: a generic definition whose arity or constraints
-the representative argument does not satisfy (above), a type for which an uninitialised instance
-cannot be produced, and a read that throws. A throw is converted into a reason naming the
-type, the exception type and its message, so that one run reports every offending type rather than
-stopping at the first. This does not contradict ADR 0064's "rules must not catch", once that rule's
-reason is stated correctly. 0064 forbids a rule catching because the `Specification<T>` framework
-**already** wraps rule evaluation in a `try`/`catch` and converts any rule-body exception into a
-`ValidationSeverity.Error` finding (ADR 0064:165) — a rule that caught would be duplicating a
-service it is already given. A static sweep has no such surrounding framework, so catching per type
-is how it obtains the **equivalent** behaviour: one fault becomes one reported reason instead of
-terminating the run. Nothing is swallowed — the sweep still fails, with more information. A `ReflectionTypeLoadException` from `GetTypes()` is allowed to propagate: it means the
-test project's references are broken, not that a declaration is wrong.
+#### `public static IReadOnlyList<(Type Subject, string? Reason)> Sweep(Assembly gatewayAssembly)`
 
-**The twelve sweep tests are generator-owned**, following ADR 0037's precedent for
-messaging-gateway tests and ADR 0070's decision that conformance tests are generator-owned by
-default. Three new files in `tools/Paramore.Brighter.Test.Generator` — a template, a configuration
-class and a generator — plus edits to `TestConfiguration`, `Program.cs` and `GeneratedTreeAudit`:
+Two terms, used precisely throughout: **candidates** are the types step 1 finds; **subjects** are the
+candidates that survive step 2. `Sweep` returns **one entry per subject**, carrying that type and its
+`Reason` — `null` when the declaration is sound.
 
-- `Templates/GatewayConformance/When_sweeping_the_gateway_assembly_should_find_no_invalid_channel_factory_declaration.cs.liquid`
-  — one template, rendering one `[Fact]` in a class named `GatewayChannelFactoryDeclarationTests`.
-  The test asserts **the reported subject set, exactly**: that `Sweep`'s result is precisely the
-  subjects the configuration expects — one entry today in every one of the twelve, the non-generic base
-  the `SubscriptionType` already names — and that every `Reason` is `null`. **It contains no reflection
-  logic at all**: a set comparison against rendered `typeof(...)` literals, and a null check.
+- **`Subject` is the candidate as discovered, not as read.** For a generic subject it is the **open
+  definition** (`Foo<>`), not the closed construction step 3 builds. The closed type exists only to be
+  instantiated and read. This is the reported identity, so it is what an expected-subject configuration
+  names (`typeof(Foo<>)` is valid C#) and what a reason message renders — a closed construction's
+  `FullName` is ``Foo`1[[Paramore.Brighter.Command, …, Version=…]]``, which is unusable in a message and
+  unrenderable from a configuration string.
+- A subsumed candidate gets **no** entry: it declares no `ChannelFactoryType`, so its value *is* its
+  base's, and its base is a subject.
+- The result is **empty only when the assembly has no candidates**. Base chains are finite and acyclic,
+  so a non-empty candidate set has a root, and a root has no candidate ancestor and is never subsumed.
+- Entries are ordered by `Subject.FullName`, ordinal. `Assembly.GetTypes()` order is unspecified, so the
+  sort is what makes repeated runs byte-identical.
 
-  An exact set is what makes this a guard rather than a restatement. Ask what fails it. Subsumption
-  over-reporting, keeping a derived type it should have dropped, yields an extra subject — **fails**.
-  Subsumption inverted, dropping the base and keeping the derived, yields the wrong subject — **fails**,
-  where a non-emptiness check would not, because the derived type inherits its base's value and reports
-  a `null` `Reason`. Candidate discovery that finds nothing yields an empty set against a non-empty
-  expectation — **fails**.
+Four steps:
 
-  **One thing it cannot catch, and the division of labour that covers it.** A `SubscriptionType` aimed at
-  the wrong assembly is *not* caught by this assertion: the same value locates the sweep and supplies the
-  expectation, so a misaim moves both together and the comparison stays self-consistent. Three other
-  mechanisms cover it, and it is worth being explicit about which does what. A cross-gateway misaim
-  usually **does not compile**, because no gateway test project references a second gateway (C-9). A
-  misaim to `Paramore.Brighter` itself — the one assembly all twelve reference — sweeps that assembly and
-  reports `{Subscription}`, matching the configuration exactly, and fails on the **reason** check, because
-  `Subscription.ChannelFactoryType` is `typeof(InMemoryChannelFactory)`. A gateway left unconfigured or
-  configured twice fails the **thirteenth-gateway audit**, which maps directories to configurations
-  exactly once. What the exact set adds over all three is the *wrong subject within the right assembly* —
-  a configuration naming `MqttSubscription<T>` rather than `MqttSubscription`, which the audit's namespace
-  comparison cannot see.
+1. **Candidates.** Non-abstract classes whose base chain reaches `Paramore.Brighter.Subscription`. The
+   chain is walked explicitly rather than tested with `IsAssignableFrom`, which behaves surprisingly for
+   open generic definitions — and every gateway assembly contains one.
+2. **Subsumption.** A candidate is dropped when it does **not** itself declare `ChannelFactoryType`
+   (`BindingFlags.DeclaredOnly`) **and** an ancestor in its base chain is also a candidate in the same
+   assembly. This is FR-12's "a base/derived pair … MUST be reported at most once **when the derived type
+   declares no `ChannelFactoryType` of its own**": such a derived type cannot disagree with its base. A
+   derived type that **does** declare its own override is never dropped, because it can. **Ancestry is
+   matched on the generic type definition**: subsumption runs before closing, so candidates are open
+   definitions (`Foo<>`) while a base chain yields closed constructions (`Foo<Bar>`), and an ancestor that
+   is a constructed generic is reduced with `GetGenericTypeDefinition()` before comparison. In every
+   shipped assembly this reduces the pair to its non-generic base — `RocketMqSubscription<T>` to
+   `RocketSubscription` (`…/RocketMQ/RocketMqSubscription.cs:117` and `:10`), `SqsSubscription<T>` to
+   `SqsSubscription`, and so for all twelve.
+3. **Generic closing.** A subject that is an open generic definition is closed with `MakeGenericType`
+   before it can be read, using one representative argument, `typeof(Paramore.Brighter.Command)` — a
+   public concrete class implementing `IRequest`, satisfying both constraint forms the gateways use:
+   `where T : IRequest` (AWSSQS, AWSSQS.V4, AzureServiceBus, Kafka, MQTT, MsSql, Redis, RMQ.Async,
+   RMQ.Sync) and `where T : class, IRequest` (GcpPubSub, Postgres, RocketMQ).
+4. **Read and check.** `GetUninitializedObject` produces an instance, cast to `Subscription`, and
+   `ChannelFactoryType` is read through the virtual property. The value and the subject are passed to
+   `Check`. No member-level reflection is needed for the read.
 
-  Two weaker assertions were tried first and are recorded because the reasoning matters. Asserting the
-  `Subject` values are **distinct** cannot fail: candidates come from `Assembly.GetTypes()` and no two
-  open definitions close to the same type, so distinctness holds by construction, and the base/derived
-  pair it appeared to catch is two distinct types. Asserting **no `Subject` has another in its base
-  chain** fails a *correct* result: subsumption drops a derived candidate only when that candidate
-  declares no `ChannelFactoryType` of its own (Risks: "A derived type that *does* declare an override is
-  never dropped"), so a sound result may legitimately hold both a base and a derived type, and an
-  unconditional ancestry check rejects it. FR-12's Scope and AC-27 now state the dedup obligation
-  conditionally for that reason.
+**Three reasons belong to `Sweep`, not `Check`**: a generic definition whose arity or constraints the
+representative argument does not satisfy; a type for which an uninitialised instance cannot be produced;
+and a read that throws. Each **yields a reason, never a silent skip** — a skipped type would vanish from
+the reported subject set, which is the vacuous pass this design exists to prevent. A throw becomes a
+reason naming the type, the exception type and its message, so one run reports every offending type
+instead of stopping at the first; see *Alternatives Considered* for why this does not contradict ADR
+0064. A `ReflectionTypeLoadException` from `GetTypes()` propagates: the test project's references are
+broken, which is not a declaration defect.
 
-  **AC-27's at-most-once clause is therefore discharged in two places, deliberately.** Over the twelve
-  real assemblies the exact-set assertion discharges it, and more: exactly-one-subject is strictly
-  stronger than at-most-once. Over the *mechanism*, step 2 adds `Core.Tests` cases for both directions —
-  a base/derived pair whose derived type declares no override, asserting the derived is dropped, and one
-  whose derived type declares its own, asserting both are reported. Neither shape exists in any shipped
-  assembly, so neither is reachable from the generated tests; that is why the mechanism is tested where
-  synthetic types can be declared.
+#### The twelve sweep tests are generator-owned
 
-  **A thirteenth gateway, or a second declaring type in an existing one, changes the expected set.**
-  `GatewayConformance` therefore carries the expected subjects, not merely an assembly locator:
-  `SubscriptionType` names the one subject expected today, and an optional `AdditionalExpectedSubjects`
-  admits an assembly that declares an override on more than one type. An assembly that grows a second
-  declaring subscription fails its sweep until that list is updated — which is the point, since a new
-  gateway subscription type is exactly the event this guard exists to notice.
-  The naming follows `.agent_instructions/testing.md`: the file is named for the test method, the
-  class for the behaviour.
-- `Configuration/GatewayConformanceConfiguration.cs` and a `GatewayConformance` section on
-  `TestConfiguration`, with `SubscriptionType` (the fully-qualified name of the subscription type
-  expected to be reported, which the template renders both as `typeof(X).Assembly` to locate the sweep
-  and as the expected subject), an optional `AdditionalExpectedSubjects` for an assembly that declares
-  an override on more than one type, and an optional `Category`.
-- `Generators/GatewayConformanceGenerator.cs`, mirroring `MessagingGatewayGenerator`'s
-  `Suites` / `SuitesFor` / `Plan` shape. Per `.agent_instructions/generated_tests.md`, the suite is
-  described in `SuitesFor(...)` so that the generate path and the plan path walk one description; a
-  suite only the generate path knows about is written and then reported as an orphan by the audit.
-- Output at `MessagingGateway/Generated/Conformance/`, namespace
-  `{{ Namespace }}.MessagingGateway.Generated.Conformance`. The path carries a `Generated` segment,
-  which is what brings the file inside the generated-tree audit's scope, and it cannot collide with
-  a per-variant folder (`MessagingGateway/Classic/Generated/…`).
+Following ADR 0037's precedent for messaging-gateway tests and ADR 0070's decision that conformance
+tests are generator-owned by default. Three new files in `tools/Paramore.Brighter.Test.Generator` — a
+template, a configuration class and a generator — plus edits to `TestConfiguration`, `Program.cs` and
+`GeneratedTreeAudit`.
 
-One sweep is emitted per **project**, not per gateway variant — AC-27 asks for one per assembly, and
-`Paramore.Brighter.AWS.Tests` has four variants over one assembly.
+**The template** —
+`Templates/GatewayConformance/When_sweeping_the_gateway_assembly_should_find_no_invalid_channel_factory_declaration.cs.liquid`
+— renders one `[Fact]` in a class named `GatewayChannelFactoryDeclarationTests`. File named for the test
+method, class for the behaviour, per `.agent_instructions/testing.md`. It asserts two things and
+**contains no reflection logic**: a set comparison against rendered `typeof(...)` literals, and a null
+check.
+
+1. `Sweep`'s reported subject set is **exactly** the expected set — one entry in all twelve today.
+2. Every `Reason` is `null`.
+
+**What the exact set catches, and what it does not.** Subsumption over-reporting yields an extra subject;
+subsumption inverted — base dropped, derived kept — yields the wrong subject, which a non-emptiness check
+would miss because the derived type inherits its base's value and reports a `null` reason; discovery
+finding nothing yields an empty set. All three fail. A `SubscriptionType` aimed at the **wrong assembly**
+is *not* caught here, because one value both locates the sweep and supplies the expectation, so a misaim
+moves both together. Three other mechanisms cover that: a cross-gateway misaim usually does not
+**compile** (no gateway test project references a second gateway, C-9); a misaim to `Paramore.Brighter`
+itself reports `{Subscription}`, matching the configuration, and fails the **reason** check because
+`Subscription.ChannelFactoryType` is `typeof(InMemoryChannelFactory)`; and a gateway left unconfigured or
+configured twice fails the **thirteenth-gateway audit**. What the exact set adds over all three is the
+*wrong subject within the right assembly* — a configuration naming `MqttSubscription<T>` rather than
+`MqttSubscription` — which the audit's namespace comparison cannot see.
+
+**AC-27's at-most-once clause is discharged in two places, deliberately.** Over the twelve real
+assemblies, by the exact set: exactly-one-subject is strictly stronger than at-most-once. Over the
+*mechanism*, by the `Core.Tests` pairs below — neither subsumption shape exists in any shipped assembly,
+so neither is reachable from the generated tests.
+
+**The configuration** — `Configuration/GatewayConformanceConfiguration.cs`, and a `GatewayConformance`
+section on `TestConfiguration`:
+
+| Property | Type | Meaning |
+|---|---|---|
+| `SubscriptionType` | `string`, required | Fully-qualified name of the subscription type expected to be reported. Rendered **both** as `typeof(X).Assembly`, to locate the sweep, and as an expected subject. **It MUST name a type that survives subsumption** — one declaring its own `ChannelFactoryType`, or a root candidate. Naming the generic derived type (`MqttSubscription<T>`) was a valid locator before and is now a red test. |
+| `AdditionalExpectedSubjects` | `List<string>`, optional, default empty | Further expected subjects, for an assembly declaring an override on more than one type. Absent in all twelve today. A generic entry renders as `typeof(Foo<>)`, matching `Subject`'s open-definition identity. |
+| `Category` | `string`, optional | Unused by the guard; present for symmetry with the other sections. |
+
+The expected set is `SubscriptionType` ∪ `AdditionalExpectedSubjects`. An assembly that grows a second
+declaring subscription fails its sweep until that list is updated — which is the point: a new gateway
+subscription type is exactly the event this guard exists to notice.
+
+**`Generators/GatewayConformanceGenerator.cs`** mirrors `MessagingGatewayGenerator`'s
+`Suites` / `SuitesFor` / `Plan` shape. Per `.agent_instructions/generated_tests.md` the suite is described
+in `SuitesFor(...)`, so the generate path and the plan path walk one description; a suite only the
+generate path knows about is written and then reported as an orphan by the audit.
+
+**Output** at `MessagingGateway/Generated/Conformance/`, namespace
+`{{ Namespace }}.MessagingGateway.Generated.Conformance`. The `Generated` segment is what brings the file
+inside the generated-tree audit's scope, and the path cannot collide with a per-variant folder
+(`MessagingGateway/Classic/Generated/…`). **One sweep per project, not per gateway variant** — AC-27 asks
+for one per assembly, and `Paramore.Brighter.AWS.Tests` has four variants over one assembly.
+
+#### The twelve configurations
 
 **Three gateway test projects need a `test-configuration.json` that does not exist today**:
 `Paramore.Brighter.AzureServiceBus.Tests`, `Paramore.Brighter.MQTT.Tests` and
-`Paramore.Brighter.RMQ.Sync.Tests`. Theirs carry `Namespace` and a `GatewayConformance` section, and
-nothing else. `Namespace` is required, not incidental: it is a top-level property defaulting to
-`string.Empty` (`Configuration/TestConfiguration.cs:38`), and the template renders
+`Paramore.Brighter.RMQ.Sync.Tests`. Theirs carry `Namespace` and a `GatewayConformance` section, nothing
+else. `Namespace` is required, not incidental: it is a top-level property defaulting to `string.Empty`
+(`Configuration/TestConfiguration.cs:38`), and the template renders
 `{{ Namespace }}.MessagingGateway.Generated.Conformance`, so omitting it yields
-`namespace .MessagingGateway.Generated.Conformance`, which fails to compile *after* generation
-rather than at configuration load. All fourteen existing configurations carry it.
-The other nine gain the section in the file they already have. The twelve values:
+`namespace .MessagingGateway.Generated.Conformance` — a failure *after* generation rather than at
+configuration load. All fourteen existing configurations carry it. The other nine gain the section in the
+file they already have.
+
+`AdditionalExpectedSubjects` is absent from all twelve rows below, not omitted from the table:
 
 | Test project | `GatewayConformance.SubscriptionType` |
 |---|---|
@@ -371,78 +350,112 @@ The other nine gain the section in the file they already have. The twelve values
 | `Paramore.Brighter.Redis.Tests` | `Paramore.Brighter.MessagingGateway.Redis.RedisSubscription` |
 | `Paramore.Brighter.RocketMQ.Tests` | `Paramore.Brighter.MessagingGateway.RocketMQ.RocketSubscription` |
 
-**The guard runs in CI's `build` job, not in the transport jobs.** The generated test carries no
-`Category` and no `Collection` attribute, and the `build` job gains one step running the twelve
-projects with
+#### CI placement
+
+**The guard runs in the `build` job, not the transport jobs.** The generated test carries no `Category`
+and no `Collection` attribute, and the `build` job gains one step running the twelve projects with
 `--configuration Release --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" --no-build`.
-The configuration is named explicitly because `--no-build` otherwise looks for a Debug build the
-`build` job never produced. That job already compiles the whole solution, so this costs seconds and
-needs no broker. It is
-placed there for the reason the generator audit is placed there — a guard that needs no
-infrastructure should not be gated on infrastructure. Three concrete facts make this load-bearing
-rather than tidiness: `.github/workflows/ci.yml:228` runs the MQTT project with
-`--filter "Category=MQTT&…"` and `:361` runs Kafka with `--filter "Category=Kafka&…"`, so an
+The configuration is named explicitly because `--no-build` otherwise looks for a Debug build the `build`
+job never produced. That job already compiles the whole solution, so this costs seconds and needs no
+broker.
+
+Three facts make the placement load-bearing rather than tidiness: `.github/workflows/ci.yml:228` runs
+MQTT with `--filter "Category=MQTT&…"` and `:361` runs Kafka with `--filter "Category=Kafka&…"`, so an
 untagged test in those projects would never be selected; and the RocketMQ job (`:708-769`) is entirely
 commented out, so a sweep living only there would never run at all.
 
-**A thirteenth gateway cannot be forgotten.** A new test in
-`tests/Paramore.Brighter.Test.Generator.Tests/GeneratedFileAudit/` asserts that every
+**The step's non-vacuity depends on a different step.** A `--filter` that matches nothing does not fail on
+most runners, so a missing generated file would leave this step green while guarding eleven assemblies.
+What catches that is the generated-tree audit in the same job, which fails when any of the twelve files
+is missing.
+
+#### A thirteenth gateway cannot be forgotten
+
+A new test in `tests/Paramore.Brighter.Test.Generator.Tests/GeneratedFileAudit/` asserts that every
 `src/Paramore.Brighter.MessagingGateway.*` project directory is named by exactly one
-`GatewayConformance.SubscriptionType` across `tests/*/test-configuration.json`, comparing the
-directory name with the namespace containing the configured type. All twelve shipped gateway
-assemblies use their assembly name as their root namespace, which is what makes the comparison
-exact. Adding a gateway to `src/` then fails this audit until a configuration names it.
+`GatewayConformance.**SubscriptionType**` across `tests/*/test-configuration.json`, comparing the
+directory name with the namespace containing the configured type. All twelve shipped gateway assemblies
+use their assembly name as their root namespace, which is what makes the comparison exact. Adding a
+gateway to `src/` fails this audit until a configuration names it.
 
-**AC-28's and AC-29's synthetic types are hand-written, in
-`tests/Paramore.Brighter.Core.Tests/MessagingGateway/ChannelFactoryDeclaration/`** — beside the
-existing `CombinedChannelFactory` and channel tests, one class per file, with the doubles under a
-`TestDoubles/` folder in that namespace. They are deliberately **not** placed in
-`Validation/TestDoubles/`, whose double set C-9 declares closed for the rule's own criteria. Three
-doubles, all identity-only in C-9's sense — every `IAmAChannelFactory` member throws:
+**The audit counts `SubscriptionType` only, deliberately.** If `AdditionalExpectedSubjects` also counted
+as naming a directory, the very case that key exists for — a second declaring type in an existing gateway
+— would make that directory "named by two" and fail.
 
-- a subscription with no `ChannelFactoryType` override, so it inherits the default — AC-28's
-  **inherited-default** shape (FR-12's condition 2);
-- a subscription overriding it with a type that is not an `IAmAChannelFactory` — AC-28's
-  **not-a-channel-factory** shape (FR-12's condition 1);
-- a subscription whose constructor cannot succeed — it calls `base(...)` with
-  `MessagePumpType.Unknown`, so `Subscription.cs:213` throws — but which declares a sound factory
-  type. It appears among `Sweep(itsOwnAssembly)`'s subjects with a `null` `Reason`, and can only do
-  so because no constructor ran — a constructed instance would have thrown. That is AC-29, and it is
-  assertable only because `Sweep` reports what it examined.
+#### Hand-written cases in `Core.Tests`
 
-**The `Core.Tests` cases sweep the whole assembly and assert subject-scoped.** `Sweep` takes an
-`Assembly` and nothing narrower, so every case here is a `Sweep(typeof(<a double>).Assembly)` over all
-of `Paramore.Brighter.Core.Tests`, and each assertion selects the entry it is about —
-`result.Single(e => e.Subject == typeof(X))`. It must, because that assembly contains `Subscription`
-subclasses these cases do not own and which are *not* sound: `MockSubscription`
-(`MessagingGateway/When_constructing_a_channel_with_combined_factory.cs:85`) overrides
-`ChannelFactoryType` as an auto-property assigned in its constructor, so on an uninitialised instance
-it returns `null` and the sweep reports it under the **null** branch; and ADR 0072 adds **four** more
-in `Validation/TestDoubles/` — C-9's closed set has `DeclaringSubscription`, `NonMatchingSubscription`,
-`NullDeclaringSubscription` and `AlphaBus.AlphaSubscription`. `NullDeclaringSubscription` is reported
-under the **null** branch by design. **The other three are sound only if their overrides are
-expression-bodied `typeof(...)`**, and that is a real constraint this design places on 0072's doubles,
-not an assumption: C-9 pins them as "identity-only … it overrides `ChannelFactoryType` and nothing
-else", which is exactly what `MockSubscription` is, and `MockSubscription` is an auto-property that
-reads `null` uninitialised. Written as `=> typeof(X)` they are sound; written as `{ get; }` assigned in
-a constructor they are reported under the null branch. Asserting
-over the whole result would therefore fail today and would break again whenever a `Subscription`
-subclass is added to `Core.Tests`. No type-scoped overload is introduced for this: FR-12 authorises
-one new type, not a member added to it purely so a test can avoid a `Single(...)`, and subject-scoped
-assertions cost nothing.
+In `tests/Paramore.Brighter.Core.Tests/MessagingGateway/ChannelFactoryDeclaration/`, beside the existing
+`CombinedChannelFactory` and channel tests, one class per file, with doubles under a `TestDoubles/` folder
+in that namespace. They are deliberately **not** in `Validation/TestDoubles/`, whose double set C-9
+declares closed for the rule's own criteria.
 
-AC-28 calls `Check` with both arguments written literally, which is the Evident Data the assertion
-is about and is exactly the `(subscriptionType, declaredFactoryType)` shape FR-12 specifies. That
-leaves the *reading* path — candidate discovery, subsumption, closing, the uninitialised read, and
-the hand-off of the value read into `Check` — exercised only over declarations that are sound: the
-twelve sweeps assert every `Reason` is `null`, and all three doubles above are sound by
-construction. A `Sweep` that read the wrong property, passed `null` to `Check`, or discarded the
-read value entirely would leave every one of those green. **A fourth case closes that seam**: a
-sweep over the two AC-28 doubles, asserting their entries carry the expected non-null `Reason`. It
-is the only assertion in the design that the reading path can produce a failure at all, and it
-reuses the doubles AC-28 already declares. AC-29's double is a *positive* case — it demonstrates
-that a type whose constructor cannot succeed is nonetheless examined — and is not a negative
-exercise of the reading path.
+**Three subscription doubles.** C-9's "every `IAmAChannelFactory` member throws" rule does **not** apply
+to these: a `Subscription` subclass has no such members. They are identity-only in the sense that each
+exists to be a distinct type with one declaration.
+
+- one with **no** `ChannelFactoryType` override, inheriting the default — AC-28's **inherited-default**
+  shape;
+- one overriding it with a type that is **not** an `IAmAChannelFactory` — AC-28's
+  **not-a-channel-factory** shape;
+- one whose **constructor cannot succeed** — it calls `base(...)` with `MessagePumpType.Unknown`, so
+  `Subscription.cs:213` throws — but which declares a sound factory type. It appears among its own
+  assembly's subjects with a `null` `Reason`, and can only do so because no constructor ran. That is
+  AC-29.
+
+**Two helper types they declare**, named here because the design depends on both: a non-factory marker
+type, implementing nothing, for the second double to declare; and one sound `IAmAChannelFactory` double
+for the third to declare. C-9's throw-rule **does** apply to the latter — every `CreateSyncChannel`,
+`CreateAsyncChannel` and `CreateAsyncChannelAsync` on it throws.
+
+**Two subsumption pairs**, for the mechanism AC-27's clause describes: a base/derived pair whose derived
+type declares **no** override, asserting the derived is subsumed; and one whose derived type declares
+**its own**, asserting both are reported. Plus **one generic subscription declaring its own override**,
+for the closing path, asserted against the open-definition literal `typeof(X<>)` per `Subject`'s identity
+above. No shipped assembly has any of these three shapes.
+
+**One double whose getter throws** on an uninitialised instance, asserting its entry carries a non-null
+reason naming the exception type. This is what makes the read-fault behaviour a tested property rather
+than an argument, and no other double exercises it: `MockSubscription` reads `null` rather than throwing.
+
+**Reason-path coverage, stated so the gaps are visible.** Six reason paths exist. `Check`'s three branches
+are each asserted with literal arguments, the **null** branch included — it is this ADR's addition and
+load-bearing three times over, so a `Check` whose null branch returned "sound" must not pass. Of
+`Sweep`'s three, the read-throws path is asserted by the throwing double above. The remaining two —
+unsatisfiable arity or constraints, and an instance that cannot be produced — are **not** asserted, and
+that is accepted: both are unreachable for any shipped or synthetic type this design declares, and a
+*silent skip* in either is caught by the exact subject set. What would escape is a fault *swallowed into
+a null reason*, which is why the one path that can actually be provoked is tested.
+
+**The `Core.Tests` cases sweep the whole assembly and assert subject-scoped.** `Sweep` takes an `Assembly`
+and nothing narrower, so each case is a `Sweep(typeof(<double>).Assembly)` over all of
+`Paramore.Brighter.Core.Tests`, and each assertion selects the entry it is about —
+`result.Single(e => e.Subject == typeof(X))`. It must, because that assembly holds `Subscription`
+subclasses these cases do not own and which are not sound:
+
+- `MockSubscription` (`MessagingGateway/When_constructing_a_channel_with_combined_factory.cs:85`)
+  overrides `ChannelFactoryType` as an **auto-property assigned in its constructor**, so an uninitialised
+  instance reads `null` and it is reported under the **null** branch.
+- ADR 0072 adds **four** more in `Validation/TestDoubles/` — C-9's set has `DeclaringSubscription`,
+  `NonMatchingSubscription`, `NullDeclaringSubscription` and `AlphaBus.AlphaSubscription`.
+  `NullDeclaringSubscription` is reported under the **null** branch by design.
+
+**A constraint this design places on 0072's doubles**, not an assumption about them: the other three must
+declare `ChannelFactoryType` as an **expression-bodied `typeof(...)`**. C-9 pins them only as
+"identity-only … it overrides `ChannelFactoryType` and nothing else", which is exactly what
+`MockSubscription` is — and `MockSubscription` reads `null` uninitialised. Written `=> typeof(X)` they are
+sound; written `{ get; }` assigned in a constructor they are reported under the null branch.
+
+No type-scoped `Sweep` overload is introduced for any of this: FR-12 authorises one new type, not a member
+added to it so a test can avoid a `Single(...)`.
+
+**The reading path's negative case.** AC-28 calls `Check` with both arguments written literally, which is
+the Evident Data those assertions are about. That leaves the reading path — discovery, subsumption,
+closing, the uninitialised read, and the hand-off into `Check` — exercised only over sound declarations,
+since the twelve sweeps assert every `Reason` is `null`. A `Sweep` that read the wrong property, passed
+`null` to `Check`, or discarded the read value would leave all of those green. A **sweep over the two
+AC-28 doubles**, asserting their entries carry the expected non-null `Reason`, closes that seam and reuses
+doubles already declared. AC-29's double is a *positive* case — it shows that a type whose constructor
+cannot succeed is nonetheless examined — not a negative exercise of the reading path.
 
 ### Technology Choices
 
@@ -475,6 +488,13 @@ Structural changes precede behavioural ones, and each step is independently test
    derived type declares **its own**, asserting both are reported. The last two are where AC-27's
    at-most-once clause is tested as a mechanism — the generated sweeps test its outcome on real
    assemblies, which contain only the first shape.
+   **Steps 4 and 6 sequence after ADR 0072's FR-7 to FR-11 corrections.** The generated test asserts
+   every `Reason` is `null`, and that is false today in **five** of the twelve assemblies: GcpPubSub
+   (FR-7) and MQTT (FR-8) declare an `IAmAMessageConsumerFactory`, so their subject reports
+   **not-a-channel-factory**; AWSSQS (FR-9), AWSSQS.V4 (FR-10) and Postgres (FR-11) declare no override
+   at all, so their non-generic base is a root candidate reporting **inherited-default**. If 0072's
+   corrections slip, the generated files may still be committed — the generated-tree audit wants them —
+   but **the CI step of step 6 must not be enabled**, or the `build` job is red on every pull request.
 3. **Generator additions** — configuration section, `GatewayConformanceGenerator` with its
    `Suites` / `SuitesFor` / `Plan` trio, and the template. `Program.cs` invokes the new generator;
    `GeneratedTreeAudit.ExpectedFilesUnder` adds its `Plan` alongside `OutboxGenerator.Plan` and
@@ -564,9 +584,10 @@ Structural changes precede behavioural ones, and each step is independently test
 - **A `ChannelFactoryType` getter that reads instance state would throw on an uninitialised
   instance**, producing a reason that looks like a declaration defect. No *shipped gateway* override
   does: all nine today, and all twelve once 0072 adds its three, are constant `typeof(...)`
-  expressions on non-generic base classes. `Core.Tests` is the exception, and deliberately so —
-  `MockSubscription`'s auto-property reads `null` rather than throwing, which is why the cases there
-  assert subject-scoped. *Mitigation*: the
+  expressions on non-generic base classes. `Core.Tests` is where the exceptions live, deliberately:
+  `MockSubscription`'s auto-property reads `null` rather than throwing, and this design adds one double
+  whose getter **does** throw — which is why the cases there assert subject-scoped, and why the
+  throw-to-reason behaviour is a tested property rather than a promise. *Mitigation*: the
   reason names the type and the exception, so it is actionable rather than mysterious; and a
   `ChannelFactoryType` computed from constructor state would itself be a defect, since
   `CombinedChannelFactory` treats the value as a fixed identity.
@@ -624,6 +645,32 @@ Structural changes precede behavioural ones, and each step is independently test
   held to; one that exists only in this repository's test tree is a private convention. And it cannot
   reach C-10's out-of-repo gateway authors, who face the identical defect — a benefit that separates
   the two designs, though not one the requirements demand of either.
+- **A failures-only `Sweep` contract** — return just the reasons, with an empty result meaning sound.
+  Rejected, and this was decided in review rather than at first draft. An empty result cannot
+  distinguish a sound assembly from one never looked at: it would pass identically over a sound gateway
+  and over zero candidates, so a refactor that moved the subscription types out of the swept assembly
+  would leave the guard green while guarding nothing. It also makes AC-29 unassertable, since AC-29 is a
+  claim about a type having been *examined*. Reporting every subject costs no new public type — a
+  `ValueTuple` carries the pair — and is what the exact-set assertion is built on.
+- **Two weaker forms of the at-most-once assertion**, both tried and both withdrawn. Recorded because the
+  reasoning is easy to lose and the weaker forms look reasonable. Asserting the `Subject` values are
+  **distinct** cannot fail at all: candidates come from `Assembly.GetTypes()` and no two open definitions
+  close to the same type, so distinctness holds by construction, and the base/derived pair it appeared to
+  catch is two distinct types. Asserting **no `Subject` has another in its base chain** is worse — it
+  fails a *correct* result, because subsumption drops a derived candidate only when that candidate
+  declares no override of its own, so a sound result may legitimately hold both a base and a derived type.
+  Fixing the second would also have put a `DeclaredOnly` lookup and a base-chain walk into the generated
+  test, expressing the subsumption rule in two places. The exact-subject-set assertion needs no reflection
+  and fails in all the right places.
+- **Letting a read fault terminate the sweep**, rather than converting it to a reason. Rejected, and it
+  does not contradict ADR 0064's "rules must not catch" once that rule's reason is stated correctly. 0064
+  forbids a *rule* catching because the `Specification<T>` framework **already** wraps rule evaluation in
+  a `try`/`catch` and turns any rule-body exception into a `ValidationSeverity.Error` finding (ADR
+  0064:165) — a rule that caught would duplicate a service it is given. A static sweep has no such
+  surrounding framework, so catching per type is how it obtains the **equivalent** behaviour: one fault
+  becomes one reported reason instead of terminating the run, and one run reports every offending type.
+  Nothing is swallowed; the sweep still fails, with more information. The throwing double in `Core.Tests`
+  makes that a tested property rather than an assertion.
 - **Hand-write the sweep in each of the twelve projects.** Rejected for the reason FR-12 gives:
   twelve copies drift, and the thirteenth gateway then depends on someone remembering. ADR 0070
   already settled that conformance tests are generator-owned by default.
