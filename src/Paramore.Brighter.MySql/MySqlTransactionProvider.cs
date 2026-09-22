@@ -56,9 +56,9 @@ namespace Paramore.Brighter.MySql
         /// <returns>An awaitable Task</returns>
         public override async Task CommitAsync(CancellationToken cancellationToken)
         {
-            if (HasOpenTransaction)
+            if (Transaction is MySqlTransaction transaction)
             {
-                await ((MySqlTransaction)Transaction!).CommitAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
                 Transaction = null;
             }
         }

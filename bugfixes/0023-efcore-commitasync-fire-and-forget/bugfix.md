@@ -125,3 +125,22 @@ Minimal change in all five providers: read `CurrentTransaction`/`Transaction` in
 - `src/Paramore.Brighter.MySql/MySqlTransactionProvider.cs` (non-EF, folded into scope per Confirm-gate decision) — `CommitAsync` now awaits the underlying `MySqlTransaction.CommitAsync` before nulling `Transaction` (previously nulled it while the commit was still in flight). No automated regression test for this one — untestable without live infra (sealed `MySqlTransaction`); fixed via code-trace justification only (`test after`).
 
 **Verification**: all four EF Core regression tests pass on net9.0 (4/4) and net10.0 (3/4 — MySql EF Core correctly excluded by its `#if NET9_0` guard). `Paramore.Brighter.MySql` (non-EF) builds clean on net8.0/net9.0/net10.0.
+
+### PR review follow-up (Ian Cooper, PR #4401)
+
+**Comment 1** — inline on `MySqlEntityFrameworkTransactionProvider.cs:45`: *"In some cases, we are now using HasOpenTransaction; in some, we are not. We ought to reconcile these and just use one approach."*
+
+The 4 EF Core providers read `_context.Database.CurrentTransaction` into a local once (deliberately, to avoid the TOCTOU double-read the Confirm phase flagged), while `MySqlTransactionProvider` (non-EF) still guarded with `if (HasOpenTransaction)` then re-read `Transaction` in the body. Reconciled by making the non-EF provider match the same "read once, guard on non-null" idiom via pattern matching:
+
+```csharp
+public override async Task CommitAsync(CancellationToken cancellationToken)
+{
+    if (Transaction is MySqlTransaction transaction)
+    {
+        await transaction.CommitAsync(cancellationToken);
+        Transaction = null;
+    }
+}
+```
+
+This also drops the hard-cast + null-forgiving `(MySqlTransaction)Transaction!`. No behaviour change for real usage (this provider only ever assigns `Transaction` from its own `BeginTransaction`/`BeginTransactionAsync`, always a `MySqlTransaction`); verified by rebuilding `Paramore.Brighter.MySql` clean on net8.0/net9.0/net10.0 and re-running the full `Extensions.Tests` suite (174/174 net9.0, no regressions). No new automated test — same untestable-sealed-type constraint as the original fix to this file.
