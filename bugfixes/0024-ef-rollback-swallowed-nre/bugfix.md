@@ -1,6 +1,6 @@
 # Bugfix: Rollback/RollbackAsync on the EF Core relational transaction providers never reach EF's transaction — sync `Rollback()` silently no-ops on all four
 
-**Linked Issue**: none (folded into PR #4401 at maintainer's request; free-text description, no GitHub issue filed)
+**Linked Issue**: none (originally intended to fold into PR #4401 at maintainer's request, but #4401 merged before this commit landed — PR #4405 opened instead; free-text description, no GitHub issue filed)
 **Status**: Verified
 
 ## Symptom
