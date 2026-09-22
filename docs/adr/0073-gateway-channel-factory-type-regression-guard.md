@@ -1,7 +1,7 @@
 ---
 id: 0073-gateway-channel-factory-type-regression-guard
 title: "Gateway ChannelFactoryType Regression Guard"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-09-21
@@ -19,7 +19,7 @@ Date: 2026-09-21
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
