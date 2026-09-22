@@ -37,9 +37,12 @@ namespace Greetings.Ports.Mappers
     {
         public IRequestContext Context { get; set; }
         
-        //Although SNS allows 256K, we have to use UTF8 strings, which is not the format of a compressed message
-        //so we have to convert the bytes to base64 and then use that as the message body
-        //this inflates the byte count, see https://stackoverflow.com/questions/54224029/aws-sns-publising-compressed-payload
+        //An SNS topic accepts 256 KiB by default; set SnsAttributes.MaximumMessageSize (up to 1 MiB) on the publication
+        //and subscription to raise it, and scale this threshold to match.
+        //Whatever the limit, SNS wants UTF8 strings, which is not the format of a compressed message, so we convert the
+        //bytes to base64 and use that as the message body. This inflates the byte count by about a third, and the
+        //message attributes (headers) count against the same limit, so leave headroom below the topic's maximum.
+        //See https://stackoverflow.com/questions/54224029/aws-sns-publising-compressed-payload
         [Compress(0, CompressionMethod.GZip, CompressionLevel.Optimal, 150)]
         public Message MapToMessage(GreetingEvent request, Publication publication)
         {

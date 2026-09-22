@@ -24,7 +24,7 @@ public class SqsAttributes
     /// <param name="contentBasedDeduplication">Enables or disable content-based deduplication</param>
     /// <param name="deduplicationScope">Specifies whether message deduplication occurs at the message group or queue level</param>
     /// <param name="fifoThroughputLimit">Specifies whether the FIFO queue throughput quota applies to the entire queue or per message group</param>
-   
+    /// <param name="maximumMessageSize">The maximum size, in bytes, of a message the queue accepts. Default is null, which leaves the SQS default of 262,144 bytes (256 KiB).</param>
     public SqsAttributes(
         TimeSpan? lockTimeout = null,
         TimeSpan? delaySeconds = null,
@@ -37,9 +37,11 @@ public class SqsAttributes
         SqsType type = SqsType.Standard,
         bool contentBasedDeduplication = true,
         DeduplicationScope? deduplicationScope = null,
-        FifoThroughputLimit? fifoThroughputLimit = null
+        FifoThroughputLimit? fifoThroughputLimit = null,
+        int? maximumMessageSize = null
         )
     {
+        MaximumMessageSize = maximumMessageSize;
         TimeOut = ValidateTimeSpan(timeOut, 0, 20, 0);
         LockTimeout = ValidateTimeSpan(lockTimeout, Convert.ToInt32(TimeOut.Value.TotalSeconds), 43200, 30); // Default: 30 seconds
         DelaySeconds = ValidateTimeSpan(delaySeconds, 0, 900, 0); // Default: 0 seconds
@@ -64,6 +66,16 @@ public class SqsAttributes
     /// The length of time, in seconds, for which Amazon SQS retains a message
     /// </summary>
     public TimeSpan MessageRetentionPeriod { get; }
+
+    /// <summary>
+    /// The maximum size, in bytes, of a message the queue accepts.
+    /// Valid range is 1,024 to 1,048,576 (1 MiB). Null leaves the SQS default of 262,144 bytes (256 KiB).
+    /// </summary>
+    /// <remarks>
+    /// Applies to messages sent directly to the queue. Messages delivered by an SNS subscription are limited by the
+    /// topic's <see cref="SnsAttributes.MaximumMessageSize"/> instead, not by this value.
+    /// </remarks>
+    public int? MaximumMessageSize { get; }
     
     /// <summary>
     /// Enables or disable content-based deduplication, for Fifo queues.

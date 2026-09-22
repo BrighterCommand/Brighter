@@ -2,6 +2,25 @@
 
 ## Master
 
+### AWS: configurable `MaximumMessageSize` for SNS topics and SQS queues
+
+Amazon SNS now accepts message payloads up to 1 MiB when a topic's `MaximumMessageSize` attribute is raised above the 256 KiB default; SQS queues have the same 1 MiB ceiling. Brighter's send path never assumed a fixed limit, but the provisioning path had no way to set the attribute, so topics and queues Brighter created with `OnMissingChannel.Create` were always capped at 256 KiB.
+
+`SnsAttributes` and `SqsAttributes` (both the V3 and V4 packages) gain an optional `maximumMessageSize` constructor parameter, in bytes:
+
+```csharp
+new SnsPublication
+{
+    Topic = new RoutingKey("my-topic"),
+    MakeChannels = OnMissingChannel.Create,
+    TopicAttributes = new SnsAttributes(maximumMessageSize: 1_048_576)
+};
+```
+
+For SNS the value is applied with a `SetTopicAttributes` call after `CreateTopic`, because SNS rejects `CreateTopic` when a supplied attribute differs from the existing topic's. That means the setting also raises the limit of a topic Brighter created earlier at the default size. For SQS the attribute joins the `CreateQueue` request, which already re-applies attributes to an existing queue.
+
+Note the AWS constraints: a topic above 256 KiB only supports SQS, Lambda and Data Firehose subscriptions and at most 100 subscriptions. The `[Compress]` and `[ClaimCheck]` thresholds compare the uncompressed body only; compressed bodies are base64-encoded on the wire and message attributes count against the same limit, so keep headroom below the topic's maximum.
+
 ### Azure Service Bus: dead-letter reason and description (#4196)
 
 When a handler rejects a message consumed from Azure Service Bus, `AzureServiceBusConsumer` now records the rejection reason and description in the broker's native `DeadLetterReason` and `DeadLetterErrorDescription` fields rather than dead-lettering with blank values — so the reason is visible to operators triaging the dead-letter queue instead of living only in logs. Values are truncated to the 4096-character limit Azure Service Bus enforces. A `DeadLetterAsync(lockToken, reason, description)` overload is added to the public `IServiceBusReceiverWrapper`.
