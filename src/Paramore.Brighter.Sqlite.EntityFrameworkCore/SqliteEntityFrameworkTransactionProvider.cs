@@ -39,13 +39,14 @@ namespace Paramore.Brighter.Sqlite.EntityFrameworkCore
         /// Commit the transaction
         /// </summary>
         /// <returns>An awaitable Task</returns>
-        public override async Task CommitAsync(CancellationToken cancellationToken)
+        public override Task CommitAsync(CancellationToken cancellationToken)
         {
-            var currentTransaction = _context.Database.CurrentTransaction;
-            if (currentTransaction is not null)
+            if (HasOpenTransaction)
             {
-                await currentTransaction.CommitAsync(cancellationToken);
+                _context.Database.CurrentTransaction?.CommitAsync(cancellationToken);
             }
+            
+            return Task.CompletedTask;
         }
 
         /// <summary>
