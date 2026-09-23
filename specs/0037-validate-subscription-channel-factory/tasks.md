@@ -153,7 +153,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - Never interpolate an instance, an identity hash, or anything that distinguishes a back-filled `subscription.ChannelFactory` from a resolved default into the message
   - Depends on: 6.
 
-- [ ] **8. TEST + IMPLEMENT: A correct multi-bus configuration produces no false positives (AC-6, FR-3 combined arm)**
+- [x] **8. TEST + IMPLEMENT: A correct multi-bus configuration produces no false positives (AC-6, FR-3 combined arm)**
   - **USE COMMAND**: `/test-first when every subscription matches an inner factory of a combined channel factory the rule should report no findings`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_a_combined_channel_factory_can_serve_every_subscription_should_report_no_findings.cs`
