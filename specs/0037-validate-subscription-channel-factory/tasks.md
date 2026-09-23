@@ -125,7 +125,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - `ResolveCandidates` applies `subscription.ChannelFactory ?? defaultChannelFactory` — step 1 wins outright, mirroring `DispatchBuilder.cs:146-148`
   - Depends on: 4.
 
-- [ ] **6. CHARACTERISE: A subscription falling back to a mismatched default is detected (AC-4, FR-2 step 2)**
+- [x] **6. CHARACTERISE: A subscription falling back to a mismatched default is detected (AC-4, FR-2 step 2)**
   - **USE COMMAND**: `/test-first when a subscription has no channel factory of its own the rule should validate it against the configured default`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_a_subscription_falls_back_to_a_mismatched_default_should_report_one_error.cs`
