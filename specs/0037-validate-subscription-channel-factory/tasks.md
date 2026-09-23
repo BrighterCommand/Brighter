@@ -138,7 +138,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - `ResolveCandidates` falls through to the captured default when `subscription.ChannelFactory` is null
   - Depends on: 5.
 
-- [ ] **7. CHARACTERISE: The verdict is invariant to `DispatchBuilder`'s back-fill (AC-5, FR-2a)**
+- [x] **7. CHARACTERISE: The verdict is invariant to `DispatchBuilder`'s back-fill (AC-5, FR-2a)**
   - **USE COMMAND**: `/test-first when the dispatch builder has back-filled the default channel factory into a subscription the rule should produce byte-identical findings`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_the_default_channel_factory_has_been_back_filled_should_report_identical_findings.cs`
