@@ -151,11 +151,21 @@ For each task, follow this strict workflow:
 5. **Run the Test**: Use Bash to run: `dotnet test [test-project] --filter "FullyQualifiedName~When_[test_name]"`
    - Verify the test FAILS (Red)
    - The failure should be for the expected reason (behavior doesn't exist yet)
+   - **`CHARACTERISE` task, test passes on first run**: an earlier task already delivers the
+     behaviour — that is expected, not a reason to rewrite the test. Apply the task's **named RED
+     mutation** (a temporary change to *production* code, never to the test), confirm the test fails
+     **on the assertion the task names**, **revert the mutation**, and confirm green again. That is
+     RED observed. No named mutation, or a mutation that fails some other way, is a stop-and-ask.
+     A `CHARACTERISE` test that fails on first run is simply RED — continue as normal.
+   - **`GENERATE` task**: do not write the test with Write/Edit. Run the generator exactly as the
+     task says, build, and run the generated tests and any audit the task names. The approval gate
+     below is on the **generated files**, before they are committed.
 
 6. **Show Test to User**:
    - Display the test code
    - Explain what behavior it tests
-   - Show the test failure output
+   - Show the test failure output — for a characterisation test, the green-on-arrival run **and**
+     the failure observed under the mutation, with the mutation named and confirmed reverted
    - Explain why this is the next logical step
 
 #### ✅ USER APPROVAL: Get Approval for Test
@@ -166,6 +176,9 @@ do not rely on a value resolved several tasks ago.
 **CRITICAL**: Before writing any implementation code, you MUST:
 
 1. Use AskUserQuestion tool to ask: "I've written a failing test for [behavior]. The test verifies that [expected behavior]. Should I proceed to make this test pass?"
+   For a characterisation test (green on arrival, RED observed via mutation) there is nothing to
+   implement: ask instead "I've written a characterisation test for [behavior]; it went red under
+   [mutation] and the mutation is reverted. Should I commit it?", then go straight to Step 5.
 
 2. Wait for user approval
 
@@ -180,8 +193,9 @@ do not rely on a value resolved several tasks ago.
 
 Skip the pause — and **only** the pause:
 
-1. Confirm RED is already proved: the test ran and failed **for the right reason**. If it has not,
-   go back and prove it. `review-after` never licenses writing implementation first.
+1. Confirm RED is already proved: the test ran and failed **for the right reason** — on arrival,
+   or, for a `CHARACTERISE` task, under its named mutation (reverted). If it has not, go back and
+   prove it. `review-after` never licenses writing implementation first.
 2. Print one line recording that the pause was skipped and why, e.g.
    `➖ review-after (Phase 5) — proceeding to GREEN without pausing`.
 3. Proceed to GREEN.
@@ -269,7 +283,10 @@ history should see the behaviour commit without a task-list tick mixed into it.
 
    Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
    ```
-   Use `test:` instead of `feat:` when the task added only a test, and `fix:` for a bug fix.
+   Use `test:` instead of `feat:` when the task added only a test — including a characterisation
+   test and generated test files — and `fix:` for a bug fix. For a characterisation test, add a
+   `- Characterisation — RED observed via: [mutation]` line. **Before staging, run
+   `git status --porcelain`** and confirm no production file is still modified by a mutation.
 
 2. **Commit two — the bookkeeping.** Use Edit to check off the completed task in
    `specs/{current-spec}/tasks.md`, then commit that **alone**:

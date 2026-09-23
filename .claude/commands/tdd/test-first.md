@@ -71,7 +71,14 @@ both gears:
 2. Determine which public class/method will provide this behavior
 3. Write the test following the xUnit BDD-style naming
 4. Run the test to verify it fails for the right reason
-5. Show the test code and failure message to the user
+   - **If it passes on first run**, the behaviour already exists. Do not weaken or rewrite the test
+     to force a failure. If the caller (a spec task labelled `CHARACTERISE`) names a **RED
+     mutation**, apply that temporary change to *production* code, confirm the test fails on the
+     assertion it is about, **revert the mutation**, and confirm green — that is RED observed
+     ([ADR 0071](../../../docs/adr/0071-tdd-review-gear.md), *Characterisation amendment*). With no
+     named mutation, stop and report the green test to the user.
+5. Show the test code and failure message to the user (for a characterisation test, the mutation
+   and the failure it produced)
 
 **After writing the test, proceed to the Approval Gate.**
 

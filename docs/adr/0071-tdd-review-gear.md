@@ -233,6 +233,26 @@ disarm it, that the disarm is scoped to one spec (and optionally one section of 
 disciplines in §5 hold in either gear. The documented behaviour and the actual behaviour agree
 again, which the `PROMPT.md` waiver never achieved.
 
+### Characterisation amendment (2026-09-23)
+
+The first real exercise of the gear (spec 0037) surfaced two task shapes the consuming commands
+could not execute, and one of them `/spec:ralph-implement` actively mishandled.
+
+- **`CHARACTERISE`** — a test for behaviour an earlier task already delivers. One task per
+  acceptance criterion makes these unavoidable. §5's RED-first still holds, but RED is observed by a
+  **named, temporary mutation to production code**. You confirm the test fails on the assertion it
+  is about, then revert the mutation and never commit it. A characterisation test is committed as
+  `test:`, is never rewritten, and is never `ALREADY_COMPLETE`. Before this amendment, ralph treated a
+  green-on-arrival test as `ALREADY_COMPLETE` and committed only the tick, so the test was silently
+  lost. In `review-before` the gate fires after RED has been observed and asks to commit, because
+  there is nothing to implement.
+- **`GENERATE`** — tests rendered by the test generator, which must never be hand-written. The
+  generated files pass on first run by design and must still be committed. This shape is also never
+  `ALREADY_COMPLETE`.
+
+Both shapes are defined in `spec/implement.md`, `spec/ralph-implement.md` and `tdd/test-first.md`.
+The gear does not change for either shape: `review-after` still removes only the pause.
+
 ## Consequences
 
 ### Positive
