@@ -1540,3 +1540,232 @@ edit: no numbering gap, no `R-n`/`NFR-n`/`AC-n` mentioned without being defined.
 **For round 6's spot-check**, following round 5's process lesson: finding 1's fix is an AC and
 finding 2's is a guard over ACs. Read R-24 alongside AC-27, and R-13/R-14 alongside the new guard
 paragraph, not only the edited lines.
+
+---
+
+# Review: requirements (round 6) — 0037-delivery-count-and-rejection-routing
+
+**Date**: 2026-09-23
+**Threshold**: 60
+**Verdict**: NEEDS WORK
+
+4 findings at or above threshold 60. Address these before approving.
+
+## Findings
+
+### 1. R-13's second branch is still keyed on A-2, so the requirement defines no "done" for a good measurement with no satisfying mechanism — and the new guard's "R-13(a)-(c)" lives only under that A-2-keyed bullet (Score: 74)
+
+Round 4's finding 4 named this gap ("There is no 'bound but unimplemented' route out of a good
+measurement"). The round-4 fix re-keyed only R-13's **first** bullet onto the ADR's conclusion; round
+5 re-keyed only its header at :357. The **second** bullet still opens on the measurement:
+
+> "- **If A-2 is refuted** — R-13's obligation is unchanged … If no such mechanism satisfies R-1 to
+> R-5 within NFR-1 to NFR-3, GCP is *bound but unimplemented* … and 'done' = (a) … (b) … (c) …"
+> (:367-373)
+
+So the case "A-2 holds, but the ADR records that no mechanism satisfies R-1 to R-5" (e.g. a counter
+that advances but where R-2's exact `0` cannot be reached) falls between the bullets: the first needs
+a satisfying mechanism, the second needs A-2 refuted. AC-40 covers the case in terms ("a satisfying
+mechanism can also fail to exist after a *good* measurement", :1239-1241), so the AC defines an
+outcome its requirement does not. Round 5's new guard (:1039-1040) sends that branch to
+"R-13(a)-(c)", which are defined only inside the A-2-refuted bullet. A-2's own text (:918-921, "If
+it is refuted, R-13's second branch applies") repeats the A-2-keyed framing.
+
+This is the half-landed-remediation pattern again: header and one bullet re-keyed, not the bullet
+that carries the fallback's definition.
+
+**Evidence**: requirements.md:362-373, :1037-1040, :1236-1254; this file's round 4 finding 4 and log row 4.
+
+**Recommendation**: Restate the second bullet as "**If the ADR records that no GCP mechanism
+satisfies R-1 to R-5 within NFR-1 to NFR-3** (whether A-2 was refuted, or held but no mechanism
+reaches R-2/R-28) — GCP is bound but unimplemented, and 'done' = (a)-(c)". Keep "if A-2 is refuted,
+the ADR must select a `delivery_attempt`-independent mechanism" as guidance on the route. Align A-2's
+"If it is refuted" sentence.
+
+---
+
+### 2. AC-41's "specifically `3`", and R-5's and R-28's "the count reads `R`", are false for approximate counters — R-3's own example yields `4` (Score: 72)
+
+For a delivery presenting count `c`, the pump sets the header to `c + 1` and rejects when
+`c + 1 >= R` (Reactor.cs:494-498, Message.cs:161-164). The final header equals `R` only when the
+rejecting delivery presented exactly `R - 1`. An approximate counter may jump; R-3 promises only "at
+least `n - 1`". With R-3's own approximate example `0`, `1`, `3` (:167) at `requeueCount: 3`, the
+third delivery presents `3`, the pump writes `4`, `4 >= 3` rejects, and Brighter sends
+`HandledCount == 4`.
+
+The document says `R`, or exactly `3`, in four places: R-5's blockquote (:202-203), R-28's first
+bullet (:244), R-28's example on `AWS / SqsStandard` — approximate by A-4 — "presents
+`HandledCount == 3`" (:272-273), and AC-41 "specifically `3` for `requeueCount: 3` on the
+Brighter-managed route" (:1113). AC-41 applies to each transport in scope, including SQS. A correct
+R-3-compliant implementation can fail AC-41's equality. R-5's `>= R - 1` bound is unaffected.
+
+**Evidence**: :167, :202-203, :244, :272-273, :1109-1115; Reactor.cs:494-498; Message.cs:163; A-4 :927-929.
+
+**Recommendation**: R-5 and R-28: "at least `R` (exactly `R` where the counter is exact)". AC-41:
+restrict "specifically `3`" to transports the ADR's R-3 table classifies exact (as AC-34's second
+clause does), or use `>= 3`. Fix R-28's SQS example the same way.
+
+---
+
+### 3. AC-5 does not exclude a native redrive policy, and in this repo's harness the native redrive target *is* the Brighter DLQ (Score: 64)
+
+AC-5: "**Given**, on each transport in scope and in both variants, `requeueCount: -1` and a handler
+that always defers, **When** the pump runs for 60 s, **Then** … reading the dead-letter destination
+returns `MessageType.MT_NONE`" (:1070-1072). It says nothing about a native policy. With one, SQS
+redrives on its `maxReceiveCount`th receive, and Pub/Sub dead-letters after `MaxDeliveryAttempts`
+(≥ 5, C-6); GCP requeue is `ModifyAckDeadline(…, 0)`, so five deliveries fit in 60 s. The harness
+points the native policy at the destination the test reads (`SqsStandardMessageGatewayProvider.cs:95-108`,
+`RedrivePolicy(deadLetterChannelName, 3)`; `GcpPullMessageGatewayProvider.cs:151-156`,
+`new DeadLetterPolicy(deadLetterRoutingKey, …)`). A developer copying the harness shape, or AC-3's
+newly pinned GCP shape, sees AC-5 fail; one without a policy sees it pass. R-6's "requeued
+indefinitely" (:211) is likewise true only with no native limit (under R-8 the effective limit at
+`R = -1` is `M`). R-27(c)(5) says AC-5 uses bespoke subscriptions (:784-786) but not their shape.
+
+**Evidence**: :208-212, :1070-1072, :1055-1058; the two harness providers above.
+
+**Recommendation**: Add to AC-5's Given "and no native redrive policy (SQS: no `RedrivePolicy`; GCP:
+no `DeadLetterPolicy`)". Qualify R-6's "indefinitely" with "absent a native redrive limit (R-8)".
+
+---
+
+### 4. AC-1 keeps both ambiguities AC-3 and AC-34 were fixed for — the GCP `DeadLetterPolicy` axis, and a budget that can end the run before the third delivery (Score: 64)
+
+AC-1: "**Given** a subscription on any transport in scope with `requeueCount: 3` and a handler that
+defers on every delivery, **When** the message is delivered three times, **Then** … strictly
+greater…" (:1045-1048).
+
+(a) GCP's `DeadLetterPolicy` is not pinned. Round 5's finding 3 pinned it for AC-3 only. Under the
+broker-counter mechanism a no-policy GCP subscription presents `0, 0, 0` (A-1, :908-913) and AC-1
+fails; with `MaxDeliveryAttempts: 5` it passes. Same disease one AC over, and AC-1 is R-1's only AC.
+
+(b) The "When" may never occur. At `requeueCount: 3` on an approximate counter, R-4's own example
+ends the run at delivery 2 ("For an approximate counter that jumped `0`, `2`, the rejection occurs on
+delivery 2", :188-189). "Delivered three times" then never happens on SQS, and the test either passes
+vacuously or times out. AC-34 avoids this with `requeueCount: 4` (:1098).
+
+**Evidence**: :1045-1048, :1055-1058, :188-189, :908-913, :1098.
+
+**Recommendation**: Give AC-1 `requeueCount: -1` (or at least `4`) and a native-policy-free
+SQS/RocketMQ subscription; on GCP add AC-3's pin, with `MaxDeliveryAttempts` above the number of
+deliveries observed.
+
+---
+
+### 5. AC-3's new parenthetical states unconditionally what AC-11 states only for a counter-based mechanism (Score: 56)
+
+AC-3 now says "a GCP subscription with no `DeadLetterPolicy` is AC-11's R-11 case, not AC-3's"
+(:1057-1058). AC-11 scopes that shape as "at minimum, **if the ADR selects a counter-based GCP
+mechanism**" (:1146-1147), and A-1's consequence is likewise conditional (:912-913). Under a
+`delivery_attempt`-independent mechanism, which R-13 allows, a no-policy GCP subscription does not
+trip R-11. It is then bound by R-4 on "every channel" (R-1, :128), but neither AC-3 nor AC-11 tests
+it.
+
+**Recommendation**: "(where the ADR's GCP mechanism needs the policy, a subscription without one is
+AC-11's R-11 case)" — or add a no-policy GCP instantiation of AC-3 for when it does not.
+
+---
+
+### 6. AC-27 does not check two of R-24's own prohibitions (Score: 48)
+
+R-24 forbids `#pragma warning disable` in the samples (:605-606) and forbids creating a new project
+(:609). AC-27 checks neither. A sample wrapped in `#pragma warning disable CS0618` would satisfy
+AC-27 while hiding exactly the obsoletion R-24 exists to surface. The table mirror itself is now
+correct: all five projects exist and reference the stated assemblies.
+
+**Recommendation**: Add to AC-27's Given "no sample containing `#pragma warning disable`, and no new project".
+
+---
+
+### 7. The guard's stated reason for leaving AC-5 unguarded is wrong for `-1` (Score: 42)
+
+"a budget of `-1`, `0`, `1` or below `-1` needs no count to advance, because `HandledCountReached`
+is reached on the first deferral" (:1041-1043). At `-1`, `DiscardRequeuedMessagesEnabled()` is false
+(MessagePump.cs:171-174), so `HandledCountReached` is never evaluated (Reactor.cs:496-498). The
+conclusion is right; the reason is wrong for one value.
+
+**Recommendation**: "…because at `-1` the budget is never consulted, and at `0`, `1` or below `-1`
+`HandledCountReached` is true on the first deferral."
+
+---
+
+### 8. The guard drops AC-2 on the *bound but unimplemented* branch, although AC-2 also carries R-23 (Score: 38)
+
+AC-2 maps to R-2 and R-23 (:1050, map :1460). The guard lifts AC-1 to AC-4 for GCP and RocketMQ on
+the unimplemented branch (:1037-1041). But AC-38 says that branch "still touches
+`RocketMessageConsumer`'s receive path if the ADR normalises counts there" (:1385-1387) — exactly
+where AC-2's first-delivery `0` guards against regression. AC-38 partly covers RocketMQ through FR-16
+and FR-22; GCP has no such cover.
+
+**Recommendation**: Exclude AC-2 from the guard — a first delivery presenting `0` is true today and
+must stay true on both branches — or say why it is not needed.
+
+---
+
+## Round-5 remediation spot-check
+
+| # | Score | Applied text checked | Result |
+|---|---|---|---|
+| 1 | 84 | AC-27 "the five compile-only V10 compatibility samples R-24 requires, each committed in the project R-24's table names" | PRESENT :1335-1343; read against R-24 :601-621, row for row; csproj references verified. Residual: finding 6. |
+| 2 | 72 | "**Which transports these ACs bind.**" | PRESENT :1037-1043. Labels match R-13 :370-373 / R-14 :396-402. Read with R-13/R-14: findings 1, 7, 8. |
+| 3 | 68 | AC-3 "on GCP, a `DeadLetterPolicy` with `MaxDeliveryAttempts: 5`" | PRESENT :1057-1058. Consistent with AC-19, C-6, R-27(a), R-10/AC-10. Residual: findings 4, 5. |
+| 4 | 66 | NFR-7 / AC-30 summary / R-13 header re-keyed onto the ADR's recorded conclusion | PRESENT :870-871, :1403-1405, :357-358; old wording returns 0 matches. R-13's second bullet still A-2-keyed: finding 1. |
+| 5 | 55 | Terms "Where a rule reads the count on a message taken from a rejection destination" | PRESENT :101. Residual: finding 2. |
+| 6 | 35 | README counts 28/8/41, round-4/5 rows, "round 6" pointer | PRESENT README.md:115, :119-120. |
+
+## Integrity checks
+
+- `R-1..R-28` (28), `NFR-1..NFR-8` (8), `C-1..C-12` (12), `A-1..A-5` (5), `AC-1..AC-41` (41), each
+  defined once, no gaps. (A naive grep double-counts AC-19, AC-30 and AC-33 from bold references at
+  line start, :1475/:1500/:1502 — not second definitions.)
+- Every `R-n`/`NFR-n`/`AC-n`/`C-n`/`A-n` referenced is defined. Map: 36 rows, every cited AC
+  defined; only AC-30 and AC-31 unmapped, by settled decision.
+- Citations re-verified: Reactor.cs:494-498, Proactor.cs:500-504, Message.cs:161-164,
+  MessagePump.cs:171-174, SqsStandardMessageGatewayProvider.cs:104,108,
+  GcpPullMessageGatewayProvider.cs:151,155.
+
+## Summary
+
+| Score Range | Count |
+|-------------|-------|
+| 90-100 (Critical) | 0 |
+| 70-89 (High) | 2 |
+| 50-69 (Medium) | 3 |
+| 0-49 (Low) | 3 |
+
+**Total findings**: 8
+**Findings at or above threshold (60)**: 4
+
+## Main-agent validation of this round
+
+- Summary counted against the list: 74, 72, 64, 64 (≥60); 56, 48, 42, 38 (<60) — 0/2/3/3, total 8,
+  four at or above threshold. Table, verdict and list agree.
+- Findings 1 and 2 re-verified against the file and source before writing: R-13's second bullet at
+  :367 still reads "If A-2 is refuted"; R-5 :202-203, R-28 :244 and :272-273, and AC-41 :1113 read as
+  quoted; `HandledCountReached` is `>=` (Message.cs:163) after `UpdateHandledCount()`
+  (Reactor.cs:494); A-4 (:927-929) classifies SQS and Pub/Sub as approximate.
+- No finding re-opens a settled decision.
+
+---
+
+# Remediation log — round 6
+
+**Date**: 2026-09-23. **Applied to**: `requirements.md` and `README.md`. Every edit verified by
+grepping the file on disk for its applied text after the last write; this log written from that
+read-back. **Outcome**: all 4 findings at or above threshold remediated, plus all 4 below. Counts
+unchanged at **28 `R-n`, 8 `NFR-n`, 41 `AC-n`**, C-1..C-12; integrity re-checked programmatically —
+no gaps, no undefined references.
+
+| # | Score | Remediation | Verified at |
+|---|---|---|---|
+| 1 | 74 | R-13's second bullet re-keyed: "**If the ADR records that no GCP mechanism satisfies R-1 to R-5 within NFR-1 to NFR-3** — whether because A-2 was refuted …, or because A-2 held but no mechanism reaches R-2's exact `0` or R-28's rule". The route guidance moved to a new paragraph, "**A-2 shapes the route, not the branch.**" A-2's "If it is refuted" sentence rewritten to match, adding that A-2 holding does not by itself select the first branch. Remaining "refuted" mentions (AC-19 :1236, AC-40's note :1259) were read and are consistent. | `:370`, `:378`, `:926` |
+| 2 | 72 | R-5's blockquote: "reads at least `R` — exactly `R` where the counter is exact, more where an approximate counter jumped past `R - 1`". R-28's first bullet: "at least `R` and exactly `R` where the counter is exact". R-28's SQS example: "`HandledCount >= 3` — `3` unless the approximate `ApproximateReceiveCount` jumped (A-4)". AC-41: "on the Brighter-managed route `>= 3` … specifically `3` on a transport the ADR's R-3 table classifies **exact** (AC-34)". | `:203`, `:245`, `:275`, `:1131` |
+| 3 | 64 | AC-5's Given now requires no native redrive policy (SQS: no `RedrivePolicy`; GCP: no `DeadLetterPolicy`; RocketMQ: no broker-side max-retry dead-lettering within the run). R-6's "requeued indefinitely" qualified with "absent a native redrive limit (R-8)". | `:1087`, `:212` |
+| 4 | 64 | AC-1 moved to `requeueCount: -1`, with the reason stated (an approximate counter may end a `requeueCount: 3` run before the third delivery), no native redrive limit at or below 3, and on GCP a `DeadLetterPolicy` with `MaxDeliveryAttempts: 5` where the ADR's mechanism needs it (A-1). R-6 confirms the count still advances at `-1`, so R-1/R-3 remain testable. | `:1057` |
+| 5 | 56 | AC-3's GCP parenthetical made conditional: where the ADR's mechanism needs the policy, a no-policy subscription is AC-11's case; where it does not, AC-3 also applies to a no-policy GCP subscription. | `:1073` |
+| 6 | 48 | AC-27's Given adds "no sample containing `#pragma warning disable`, no new project created". | `:1358` |
+| 7 | 42 | Guard's reason corrected: "at `-1` the budget is never consulted (`MessagePump.cs:171`), and at `0`, `1` or below `-1` `HandledCountReached` is true on the first deferral". | `:1054` |
+| 8 | 38 | AC-2 removed from the guard. The guard now lists AC-1, AC-3, AC-4, AC-34's second clause and AC-41; AC-2 is named as unguarded, because a first delivery presenting `0` must hold on both branches (AC-38) and AC-2 is R-23's criterion. | `:1046`, `:1050` |
+
+**For round 7's spot-check**: finding 1 edited R-13 and A-2, so read AC-19, AC-22, AC-39 and AC-40
+with them. Finding 2 edited R-5 and R-28, so read AC-4 and AC-41 with them. Finding 4 moved AC-1 to
+`-1`, so read R-1, R-3 and R-6 with it.

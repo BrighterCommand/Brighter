@@ -200,7 +200,8 @@ rejection-metadata keys of the transport, and a delivery count of at least `R - 
 >
 > The `>= R - 1` bound (not `== R`) is the bound spec 0036's FR-23 template already asserts, and it
 > is the strongest bound true of both routes to the DLQ: where Brighter sends the message it sends
-> the final in-memory header and the count reads `R`; where the broker moves its own stored copy the
+> the final in-memory header and the count reads at least `R` — exactly `R` where the counter is
+> exact, more where an approximate counter jumped past `R - 1` on the rejecting delivery; where the broker moves its own stored copy the
 > copy was written by the last requeue and reads one less. **R-28 is what makes this bound survive
 > the mechanism**: it forbids a read of the dead-letter destination from reporting that
 > destination's own delivery count instead.
@@ -208,7 +209,7 @@ rejection-metadata keys of the transport, and a delivery count of at least `R - 
 **R-6. A delivery budget of `-1` disables budget enforcement, and this behaviour does not change.**
 With `RequeueCount == -1` (the `Subscription` default, `Subscription.cs:203`), no delivery count is
 ever compared against a budget, no `DeliveryError` rejection is raised by the pump, and a deferring
-handler's message is requeued indefinitely. R-1, R-2 and R-3 still hold — the count still advances —
+handler's message is requeued indefinitely, absent a native redrive limit (R-8). R-1, R-2 and R-3 still hold — the count still advances —
 but nothing acts on it.
 
 > *Example.* `requeueCount` left at its default on `RocketMQ / RocketMQMessagingGateway`, handler
@@ -241,7 +242,8 @@ of a message read back from a dead-letter or invalid-message destination: that c
 what happened on the *source* channel, and R-5, AC-4 and spec 0036's FR-23 template all read it as
 such. A message read from a rejection destination therefore presents:
 
-- the count the rejecting consumer sent — `R`, the final in-memory header — where Brighter published
+- the count the rejecting consumer sent — the final in-memory header, at least `R` and exactly `R`
+  where the counter is exact — where Brighter published
   it there (Brighter-managed dead-lettering);
 - the count the last requeue wrote — `R - 1` — where the broker moved its own stored copy on
   Brighter's reject (broker-routed rejection);
@@ -270,7 +272,8 @@ from a source-channel delivery, the ADR MUST name the discriminator. Silence on 
 available outcome.
 
 > *Example.* `requeueCount: 3` on `AWS / SqsStandard`, budget exhausted, Brighter sends the message
-> to its dead-letter queue. A read of that queue presents `HandledCount == 3` — not the `0` that the
+> to its dead-letter queue. A read of that queue presents `HandledCount >= 3` — `3` unless the
+> approximate `ApproximateReceiveCount` jumped (A-4), and never the `0` that the
 > dead-letter queue's own `ApproximateReceiveCount` of `1` would normalise to.
 > *Example (R-9's case).* `requeueCount: 10`, `maxReceiveCount: 3`. SQS redrives its own stored copy
 > with no Brighter call, so the redrive target presents the count that copy was published with and no
@@ -364,13 +367,17 @@ bar.
   mechanism can also supply — "done" = the four `GCP / *` FR-23 cells move to `Fixed`, both variants,
   on emulator evidence. A-2 holding is what makes the counter *available*; it is the ADR's recorded
   conclusion, not the measurement alone, that selects this branch (see the note under AC-40).
-- **If A-2 is refuted** — R-13's obligation is unchanged, but the route to it is not. The ADR must
-  then select a GCP mechanism that does not depend on the broker's `delivery_attempt`. If no such
-  mechanism satisfies R-1 to R-5 within NFR-1 to NFR-3, GCP is *bound but unimplemented* on R-1 to
-  R-5, and "done" = (a) R-11's Warning fires for any `GcpPubSubSubscription` with
+- **If the ADR records that no GCP mechanism satisfies R-1 to R-5 within NFR-1 to NFR-3** — whether
+  because A-2 was refuted and no `delivery_attempt`-independent mechanism fits, or because A-2 held
+  but no mechanism reaches R-2's exact `0` or R-28's rule — GCP is *bound but unimplemented* on R-1
+  to R-5, and "done" = (a) R-11's Warning fires for any `GcpPubSubSubscription` with
   `RequeueCount != -1`; (b) the four `GCP / *` FR-23 cells stay `Deferred`, re-pointed at the
   emulator limitation rather than at #4240; (c) the measurement that settled it is written into
   `conformance-status.md`'s GCP paragraph.
+
+**A-2 shapes the route, not the branch.** If A-2 is refuted, R-13's obligation is unchanged but the
+broker counter is unavailable, so the ADR must look for a GCP mechanism that does not depend on
+`delivery_attempt` before it may record the second branch.
 
 **R-15 to R-19 (rejection routing) do not depend on A-2 and are unaffected by either branch.** They
 depend on R-20 alone, which is why the twenty GCP rejection-routing cells in AC-30 are unconditional
@@ -916,9 +923,11 @@ an instruction to implement one of these.
   never advances (`1, 1, 1`) fails R-1 exactly as an absent one does, and AC-39 measures the
   sequence, not merely its presence.
   *Not verified.* It cannot be verified until R-20 makes DLQ-backed channel creation possible on the
-  emulator. **If it is refuted, R-13's second branch applies** — the ADR selects a GCP mechanism that
-  does not read `delivery_attempt`, or GCP becomes *bound but unimplemented* on R-1 to R-5 with the
-  four `GCP / *` FR-23 cells re-pointed and the measurement recorded. Falling back to a `gcp-ci`-only
+  emulator. **If it is refuted, the ADR must find a GCP mechanism that does not read
+  `delivery_attempt`**; if none satisfies R-1 to R-5, R-13's second branch applies and GCP becomes
+  *bound but unimplemented* with the four `GCP / *` FR-23 cells re-pointed and the measurement
+  recorded. A-2 holding does not by itself select R-13's first branch: the ADR's recorded conclusion
+  does (R-13). Falling back to a `gcp-ci`-only
   proof is not one of the available outcomes (R-21). The twenty GCP rejection-routing cells (R-15 to
   R-19) do not depend on A-2.
 - **A-3. The RocketMQ broker increments `DeliveryAttempt` on a lease-lapse redelivery, with no
@@ -1034,15 +1043,21 @@ per NFR-8; where an AC names one variant in an example, the obligation covers bo
 
 ### Delivery-count contract
 
-**Which transports these ACs bind.** AC-1 to AC-4, AC-34's second clause and AC-41 are
+**Which transports these ACs bind.** AC-1, AC-3, AC-4, AC-34's second clause and AC-41 are
 unconditional for `AWSSQS` and `AWSSQS.V4` (R-12). For `GcpPubSub` and `RocketMQ` they apply only on
 the branch R-13 / R-14 selects as *implemented*; on the *bound but unimplemented* branch, R-13(a)-(c)
 and R-14(a)-(d) define "done" instead, and AC-40 (GCP) and AC-25 (RocketMQ) are the criteria that
-apply. "Any / each transport in scope" below is read under this guard. AC-5, AC-6 and AC-35 are not
-guarded: a budget of `-1`, `0`, `1` or below `-1` needs no count to advance, because
-`HandledCountReached` is reached on the first deferral whatever the transport presents.
+apply. "Any / each transport in scope" below is read under this guard. AC-2, AC-5, AC-6 and AC-35
+are not guarded. AC-2 because a first delivery presenting `0` is true today and must stay true on
+both branches — the *bound but unimplemented* branch may still touch the receive path (AC-38), and
+AC-2 is also R-23's criterion. AC-5, AC-6 and AC-35 because they need no count to advance: at `-1`
+the budget is never consulted (`MessagePump.cs:171`), and at `0`, `1` or below `-1`
+`HandledCountReached` is true on the first deferral whatever the transport presents.
 
-**AC-1** (R-1, R-3) — **Given** a subscription on any transport in scope with `requeueCount: 3` and a
+**AC-1** (R-1, R-3) — **Given** a subscription on any transport in scope with `requeueCount: -1` — so
+the budget cannot end the run before the third delivery, which at `requeueCount: 3` an approximate
+counter may (R-4's example) — no native redrive limit at or below 3, on GCP a `DeadLetterPolicy`
+with `MaxDeliveryAttempts: 5` where the ADR's GCP mechanism needs the policy (A-1), and a
 handler that defers on every delivery, **When** the message is delivered three times, **Then** the
 delivery count presented on each delivery is strictly greater than the count presented on the
 previous delivery.
@@ -1054,8 +1069,9 @@ in scope, **When** it is delivered for the first time, **Then** the consumer pre
 
 **AC-3** (R-4) — **Given**, on each transport in scope and in both variants, `requeueCount: 3`, a
 `deadLetterRoutingKey`, a handler that always defers, and no native redrive limit at or below 3 —
-on GCP, a `DeadLetterPolicy` with `MaxDeliveryAttempts: 5` (C-6's floor; a GCP subscription with no
-`DeadLetterPolicy` is AC-11's R-11 case, not AC-3's) —
+on GCP, a `DeadLetterPolicy` with `MaxDeliveryAttempts: 5` (C-6's floor; where the ADR's GCP
+mechanism needs the policy, a subscription without one is AC-11's R-11 case, not AC-3's; where it
+does not, AC-3 also applies to a GCP subscription with no `DeadLetterPolicy`) —
 **When** the pump runs, **Then** the handler is invoked at
 most 3 times, a rejection with `RejectionReason.DeliveryError` is issued exactly once, and the
 handler invocation count for that message still stands at 3 or fewer when the FR-23 observation
@@ -1067,8 +1083,9 @@ message is present, its `Header.HandledCount` is `>= 2`, and its bag carries `re
 "DeliveryError"`, a non-empty `rejectionMessage`, a parseable ISO-8601 `rejectionTimestamp`, an
 `originalTopic` equal to the source topic, and an `originalMessageType`.
 
-**AC-5** (R-6) — **Given**, on each transport in scope and in both variants, `requeueCount: -1` and a
-handler that always defers, **When** the pump runs for 60 s, **Then** the handler is invoked more than 3 times, no `DeliveryError` rejection is issued,
+**AC-5** (R-6) — **Given**, on each transport in scope and in both variants, `requeueCount: -1`, no
+native redrive policy (SQS: no `RedrivePolicy`; GCP: no `DeadLetterPolicy`; RocketMQ: no broker-side
+max-retry dead-lettering within the run), and a handler that always defers, **When** the pump runs for 60 s, **Then** the handler is invoked more than 3 times, no `DeliveryError` rejection is issued,
 and reading the dead-letter destination returns `MessageType.MT_NONE`.
 
 **AC-6** (R-7) — **Given**, on each transport in scope and in both variants, `requeueCount: 1` and a
@@ -1110,8 +1127,8 @@ the only value that disables the budget.
 budget is exhausted and Brighter routes the message to its dead-letter destination, **When** that
 destination is read through the ordinary consumer path the conformance providers use — a real channel
 from `ChannelFactory`, not a bespoke reader — **Then** the message presents
-`Header.HandledCount >= R - 1`, and specifically `3` for `requeueCount: 3` on the Brighter-managed
-route; **And** it does **not** present the value the rejection destination's own delivery counter
+`Header.HandledCount >= R - 1`, and on the Brighter-managed route `>= 3` for `requeueCount: 3` —
+specifically `3` on a transport the ADR's R-3 table classifies **exact** (AC-34); **And** it does **not** present the value the rejection destination's own delivery counter
 would yield after R-2's normalisation, which for a first read of that destination is `0`.
 **And Given** the same read on a message a *native* redrive policy moved with no Brighter call (AC-9's
 run), **Then** no count is asserted — R-28 does not bound that case.
@@ -1338,7 +1355,8 @@ committed in the project R-24's table names — `tests/Paramore.Brighter.Core.Te
 `tests/Paramore.Brighter.AWS.V4.Tests/`, `tests/Paramore.Brighter.Gcp.Tests/` and
 `tests/Paramore.Brighter.RocketMQ.Tests/` for `SqsSubscription`, `SqsSubscription` (v4),
 `GcpPubSubSubscription` and `RocketMqSubscription` respectively — each exercising its types with the
-argument shapes a V10 application uses today, and no test project having gained a reference, **When** the solution is built against the post-change
+argument shapes a V10 application uses today, no sample containing `#pragma warning disable`, no
+new project created, and no test project having gained a reference, **When** the solution is built against the post-change
 assemblies, **Then** it compiles with no new errors and no new obsoletion warnings — and a breaking
 change fails the build rather than awaiting review.
 
