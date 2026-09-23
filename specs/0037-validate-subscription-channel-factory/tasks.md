@@ -99,7 +99,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - No `try`/`catch` anywhere in the rule body — ADR 0064's "rules must not catch" stands
   - Depends on: 1.
 
-- [ ] **4. TEST + IMPLEMENT: A subscription whose declared type matches the effective factory passes (AC-2)**
+- [x] **4. TEST + IMPLEMENT: A subscription whose declared type matches the effective factory passes (AC-2)**
   - **USE COMMAND**: `/test-first when a subscription declares the type of the default channel factory the rule should report no findings`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_a_subscription_declares_the_default_channel_factory_type_should_report_no_findings.cs`
