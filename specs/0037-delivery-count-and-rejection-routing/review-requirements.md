@@ -1923,3 +1923,142 @@ receive / lapse / receive test per transport) was judged not significant overall
 **For round 8's spot-check**: AC-42 is new. Read it with R-1, R-2 (a first receive must present
 `0`), R-14/AC-23 (RocketMQ), A-1 (GCP policy), NFR-8 (variants without a pump) and the guard.
 R-27(c)(6)'s decorator now has two jobs; read it with C-10.
+
+---
+
+# Review: requirements (round 8) — 0037-delivery-count-and-rejection-routing
+
+**Date**: 2026-09-23
+**Threshold**: 60
+**Verdict**: NEEDS WORK
+
+1 finding at or above threshold 60. Address this before approving.
+
+## Findings
+
+### 1. AC-42 cannot be driven on `GcpPubSubStreamMessageConsumer` as written — the client library keeps renewing a held message's ack deadline for up to 60 minutes (Score: 70)
+
+AC-42 relies on "a subscription whose … ack deadline (GCP) … is short enough to lapse within the
+test", and has the test receive, "neither acknowledges, rejects nor requeues it, waits for that
+timeout to lapse, and receives it again" (:1074-1081). That works for the pull consumer, which does a
+raw `Pull` and leaves the deadline alone (`GcpPullMessageConsumer.cs:229-238`). It does not work for
+the stream consumer, which R-13 also binds (:357-358):
+
+- `GcpPubSubStreamMessageConsumer.ReceiveAsync` reads a channel filled by
+  `BrighterStreamHandler.HandleMessage`, which then awaits `streamMessage.WaitForCompleteAsync()`
+  until `Accepted()`/`Reject()` (`GcpStreamConsumer.cs:71-84`, `:115-136`). While that task is
+  pending, `SubscriberClient`'s lease management extends the deadline — defaults
+  `DefaultAckExtensionWindow` "15 seconds" and `DefaultMaxTotalAckExtension` "60 minutes"
+  (Google.Cloud.PubSub.V1 3.36.0 XML docs).
+- On the stream path the lease is governed by `SubscriberClient.Settings.AckDeadline` /
+  `MaxTotalAckExtension`, not the subscription's `AckDeadlineSeconds` (`GcpPubSubMessageGateway.cs:337`).
+- Brighter changes none of these: `GcpPubSubConsumerFactory.CreateSubscriberClient` sets only
+  `FlowControlSettings` (`GcpPubSubConsumerFactory.cs:110-121`), after an optional `configure` hook.
+
+A literal AC-42 on `GCP / Stream` or `GCP / StreamOrdering` waits up to an hour or times out, and
+teardown also stalls because `StopAsync` uses `ShutdownMode.WaitForProcessing` (`GcpStreamConsumer.cs:49`).
+One developer overrides `MaxTotalAckExtension` via `GcpPubSubSubscription.StreamingConfiguration`
+(:97, :128), which the spec never mentions; another reads "each transport in scope" as satisfied by
+the pull consumer alone, leaving the stream consumer's expiry path unevidenced.
+
+**Evidence**: requirements.md:1074-1083, :357-358, :126-129; `GcpStreamConsumer.cs:49`, `:71-84`;
+`GcpPubSubConsumerFactory.cs:106-121`; Google.Cloud.PubSub.V1.xml:11446-11459.
+
+**Recommendation**: Name the knob per consumer class — GCP pull: the subscription's
+`AckDeadlineSeconds`; GCP stream: `SubscriberClient.Settings.MaxTotalAckExtension` (and
+`AckDeadline`) via `StreamingConfiguration`. State that AC-42 binds both GCP consumer classes, and
+that the stream test must release the held first delivery, or bound disposal, before teardown. Or
+record the lease extension as an ADR input under §Candidate mechanisms / R-13.
+
+---
+
+### 2. AC-42 sits outside the Terms' definitions of "Delivery", "Delivery count" and "Variant" (Score: 45)
+
+The Terms define a **Delivery** as returned from `Receive`/`ReceiveAsync` "**and dispatched by a
+pump**", **Delivery count** as the value "as it is handed to the pump" (:100-101), and **Variant** as
+"`Reactor` or `Proactor`" (:116); NFR-8 requires both variants (:890-891). AC-42 has "No pump"
+(:1081-1082) and meets NFR-8 with `Receive`/`ReceiveAsync` (:1080). AC-15 set the precedent (:1227-1229),
+but the glossary claims "exactly these meanings throughout" (:95). Also, R-27(c)(5) says AC-42 uses "the
+same counter and the same key" (:792-796), but obligation 1's counter is the pump's dispatch count,
+which a pump-less test never advances.
+
+**Recommendation**: In Terms, say that where an AC drives a consumer directly (AC-15, AC-42) a
+delivery is one message returned from `Receive`/`ReceiveAsync` and "both variants" means both calls.
+Drop AC-42 from R-27(c)(5)'s "same counter" sentence, or say it uses only the obligation-6 record.
+
+---
+
+### 3. R-27(c)(6)'s per-delivery record must capture the value at return time, because the pump mutates the same header (Score: 38)
+
+Obligation 6 "records the `Header.HandledCount` of each message its `Receive`/`ReceiveAsync` returns"
+(:804-807); the pump then increments the same object (`MessageHeader.cs:572-575`). A decorator that
+stores references and reads after quit (obligation 3) records every value one high — AC-1 still
+passes, AC-34's exact `0, 1, 2` fails. AC-1's stop condition (:1069-1070) also needs a live read
+of the dispatch count, while obligation 3 specifies reading only after quit and await (:786-788).
+
+**Recommendation**: "records the integer value of `Header.HandledCount` at the moment
+`Receive`/`ReceiveAsync` returns, before the pump sees the message"; in obligation 3 allow a live
+read as AC-1's stop trigger, with the asserted read still after quit and await.
+
+---
+
+## Round-7 remediation spot-check
+
+| # | Score | Applied text checked | Result |
+|---|---|---|---|
+| 1 | 66 | AC-42; guard list; map `R-1 \| AC-1, AC-42` | PRESENT :1074-1083, :1054, :1478. Consistent with R-1, R-2, R-14/AC-23/A-3, A-1, the guard, C-10. Residual: findings 1, 2. |
+| 2 | 62 | AC-13 conditional equality | PRESENT :1210-1213; consistent with R-4, AC-34, A-4. |
+| 3 | 52 | AC-1 stop condition; R-27(c)(5) list; (c)(6) second job; closing sentence | PRESENT :1069-1072, :792-796, :804-807, :814-815; consistent with C-10. Residual: findings 2, 3. |
+| 4 | 50 | Worked example re-anchored; examples qualified | PRESENT :822-824, :289-290, :349-350, :387-388, :819-820. Only unqualified exact example left is R-22 :588-590 (Kafka, exact) — correct. |
+| 5 | 35 | AC-39(b) "or that none fits" | PRESENT :1260-1261. |
+
+## Integrity checks
+
+- `R-1..R-28`, `NFR-1..NFR-8`, `AC-1..AC-42`, `C-1..C-12`, `A-1..A-5` each defined once, no gaps.
+- Every referenced identifier defined. Map: 36 rows; all cited ACs defined; AC-42 mapped from R-1;
+  only AC-30/AC-31 unmapped, as settled.
+- Citations re-verified: `GcpStreamConsumer.cs:49`, `:71-84`; `GcpPubSubConsumerFactory.cs:106-121`;
+  `GcpPullMessageConsumer.cs:229-238`, `:349`, `:384-388`; `RocketMessageConsumer.cs:68`, `:85`,
+  `:186-187`; `MessageHeader.cs:572-575`; `GcpPubSubMessageGateway.cs:229`, `:337`.
+
+## Summary
+
+| Score Range | Count |
+|-------------|-------|
+| 90-100 (Critical) | 0 |
+| 70-89 (High) | 1 |
+| 50-69 (Medium) | 0 |
+| 0-49 (Low) | 2 |
+
+**Total findings**: 3
+**Findings at or above threshold (60)**: 1
+
+## Main-agent validation of this round
+
+- Counted: 70 (≥60); 45, 38 (<60) — 0/1/0/2, total 3, one at or above threshold. Agrees.
+- Finding 1 re-verified in source: `HandleMessage` awaits `WaitForCompleteAsync()`
+  (`GcpStreamConsumer.cs:71-84`); `StopAsync` uses `WaitForProcessing` (:49); `CreateSubscriberClient`
+  sets only `FlowControlSettings` after the optional `configure` hook; the 3.36.0 XML docs give
+  15 s / 60 min defaults.
+- Finding 1 is a defect introduced by round 7's own remediation (AC-42), found on its first review.
+- Convergence: 13 → 6 → 8 → 5 → 3, with one High, and it is confined to one consumer class.
+
+---
+
+# Remediation log — round 8
+
+**Date**: 2026-09-23. **Applied to**: `requirements.md` and `README.md`. Each applied text grepped
+back from the file on disk; this log written from that read-back. **Outcome**: the one finding at or
+above threshold remediated, plus both below. Counts unchanged at **28 `R-n`, 8 `NFR-n`, 42 `AC-n`**;
+integrity re-checked programmatically, no gaps and no undefined references.
+
+| # | Score | Remediation | Verified at |
+|---|---|---|---|
+| 1 | 70 | AC-42 now binds **both** GCP consumer classes and names the knob that governs the lapse per consumer: SQS visibility timeout; GCP pull, the subscription's `AckDeadlineSeconds`; GCP stream, `SubscriberClient.Settings.MaxTotalAckExtension` (with `AckDeadline`) via `GcpPubSubSubscription.StreamingConfiguration`, with the reason (lease extension up to 60 min by default; `AckDeadlineSeconds` does not govern it); RocketMQ invisible duration. It adds that the stream test must complete the held first delivery before teardown, because of `ShutdownMode.WaitForProcessing`. **Workability checked in source**: `GcpPubSubConsumerFactory.CreateSubscriberClient` invokes the `configure` hook *before* `builder.Settings ??= new …` and then overwrites only `FlowControlSettings`, so a `MaxTotalAckExtension` set through `StreamingConfiguration` survives. | `:1080-1089`, `:1097` |
+| 2 | 45 | Terms row *Variant* extended: where an AC drives a consumer directly with no pump (AC-15, AC-42), a delivery is one message returned from `Receive`/`ReceiveAsync`, its delivery count is that message's `HandledCount` as returned, and "both variants" means both calls. R-27(c)(5) now says only the pump-driven ACs share obligation 1's counter; AC-42 uses obligation 6's per-receive record or reads the returned message directly. | `:116`, `:799` |
+| 3 | 38 | R-27(c)(6) now records "the integer value of `Header.HandledCount` at the moment … `Receive`/`ReceiveAsync` returns each message, before the pump sees it — a value copied, not a reference", citing `MessageHeader.cs:572-575`. R-27(c)(3) now allows a live read of the dispatch count as a stop trigger (AC-1), with the asserted value still read after quit and await. | `:808`, `:789` |
+
+**For round 9's spot-check**: AC-42's new GCP-stream clause, read with R-13 (both consumer classes),
+C-10 (configuring `StreamingConfiguration` is real client configuration, not a mock), NFR-7 and
+AC-19. The Terms *Variant* extension, read with NFR-8 and AC-15. R-27(c)(3)'s live-read allowance,
+read with R-4's window definition.

@@ -113,7 +113,7 @@ element is cited so there is no second reading.
 | **Approximate counter** | A delivery count the source documents as approximate or best-effort, and which may therefore advance by more than 1. SQS `ApproximateReceiveCount` and Pub/Sub `delivery_attempt` are both documented as such. |
 | **Transport in scope** | One of: `AWSSQS`, `AWSSQS.V4`, `GcpPubSub`, `RocketMQ`. |
 | **Configuration** | A row of spec 0036's Conformance Matrix, e.g. `AWS / SqsFifo` or `GCP / StreamOrdering`. |
-| **Variant** | `Reactor` or `Proactor`. Spec 0036's FR-14 rule: a behaviour proven in one variant only does not count. |
+| **Variant** | `Reactor` or `Proactor`. Spec 0036's FR-14 rule: a behaviour proven in one variant only does not count. Where an AC drives a consumer directly with no pump (AC-15, AC-42), a *delivery* is one message returned from `Receive`/`ReceiveAsync`, its *delivery count* is that message's `HandledCount` as returned, and "both variants" means both of those calls. |
 
 Throughout, **`R`** denotes a subscription's `RequeueCount` and **`M`** its native redrive limit.
 
@@ -786,14 +786,18 @@ requires:
 3. **Read after the pump has been quit and awaited** — the instant R-4 defines as the close of the
    observation window. That is strictly later than the dead-letter poll's break, so a dispatch that
    happened between the message reaching the destination and the pump stopping is still counted.
+   A test may also read the dispatch count **live** as a stop trigger — AC-1 quits the pump when it
+   reaches 3 — but the value it asserts is the one read after quit and await.
 4. **An assertion in both FR-23 templates** (`…/Reactor/When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue.cs.liquid`
    and its Proactor twin) that the count is **`<= RequeueCount`**, and regeneration of the generated
    FR-23 tests for every configuration.
 5. **Availability to the ACs outside FR-23 that also assert a count** — AC-1, AC-5, AC-6, AC-34's
    second clause, AC-35 and AC-42 — which run against bespoke subscriptions rather than a conformance
    provider (R-27(a) fixes all twelve providers at `R = 3`, so none supplies `-1`, `4`, `1`, `0`,
-   `-3` or a short visibility timeout / ack deadline / invisible duration). Those ACs use the same counter and
-   the same key; obligation 6 specifies the requeue observation they also make.
+   `-3` or a short visibility timeout / ack deadline / invisible duration). The pump-driven ACs among
+   them (all but AC-42) use the same counter and the same key; obligation 6 specifies the requeue
+   observation they also make. AC-42 runs no pump, so it has no dispatch count: it uses only
+   obligation 6's per-receive record, or reads the count directly from the returned message.
 6. **A requeue observation, specified to the same degree.** AC-6's and AC-35's "`Requeue` is never
    called" is counted, not inferred: a recording consumer the test **composes around** the real
    consumer — a decorator implementing the same consumer interface, forwarding every call and
@@ -801,8 +805,10 @@ requires:
    3 require. "Never called" is then `count == 0` for that message id. It is **not** a mock standing
    in for a transport (C-10 forbids that), **not** a counter added to production code, and **not**
    an inference from the absence of a redelivery inside some unstated interval.
-   The same recording consumer also **records the `Header.HandledCount` of each message its
-   `Receive`/`ReceiveAsync` returns**, in delivery order and by the key of obligation 1. That record
+   The same recording consumer also **records the integer value of `Header.HandledCount` at the
+   moment its `Receive`/`ReceiveAsync` returns each message, before the pump sees it** — a value
+   copied, not a reference to the message, because the pump then increments that same header
+   (`MessageHeader.cs:572-575`) — in delivery order and by the key of obligation 1. That record
    is the per-delivery count AC-1, AC-34's second clause and AC-42 assert on; it is read as
    obligations 2 and 3 require.
 
@@ -1071,16 +1077,26 @@ quitting and awaiting the pump once the dispatch count (R-27(c)(1)) for that mes
 **Then** the delivery count presented on each delivery, as recorded by R-27(c)(6)'s recording
 consumer, is strictly greater than the count presented on the previous delivery.
 
-**AC-42** (R-1) — the expiry path. **Given**, on each transport in scope, a subscription whose
-visibility timeout (SQS), ack deadline (GCP) or invisible duration (RocketMQ) is short enough to
-lapse within the test, no native redrive limit at or below 2, on GCP a `DeadLetterPolicy` with
+**AC-42** (R-1) — the expiry path. **Given**, on each transport in scope — and on GCP, for **both**
+consumer classes, `GcpPullMessageConsumer` and `GcpPubSubStreamMessageConsumer` (R-13) — a
+subscription whose lease is short enough to lapse within the test, set through the knob that
+actually governs it for that consumer: SQS, the queue's visibility timeout; GCP pull, the
+subscription's `AckDeadlineSeconds` (`GcpPullMessageConsumer` does a raw `Pull` and never extends
+the deadline); GCP stream, `SubscriberClient.Settings.MaxTotalAckExtension` (with `AckDeadline`)
+set through `GcpPubSubSubscription.StreamingConfiguration`, because while a received message is
+unanswered `SubscriberClient` keeps extending its lease — by default for up to 60 minutes — and the
+subscription's `AckDeadlineSeconds` does not govern that (`GcpStreamConsumer.cs:71-84`,
+`GcpPubSubConsumerFactory.cs:110-121` sets only flow control); RocketMQ, the invisible duration, no native redrive limit at or below 2, on GCP a `DeadLetterPolicy` with
 `MaxDeliveryAttempts: 5` where the ADR's GCP mechanism needs the policy (A-1), and a message
 published with `HandledCount = 0`, **When** the test receives the message through the transport's
 consumer, neither acknowledges, rejects nor requeues it, waits for that timeout to lapse, and
 receives it again — through `Receive` and, separately, `ReceiveAsync` (NFR-8) — **Then** the second
 delivery presents a delivery count strictly greater than the first. No pump and no `Requeue` call
 is involved, so a count advanced only inside `Requeue` fails this criterion. On RocketMQ this is the
-lease-lapse redelivery AC-23 measures; AC-42 asserts what AC-23 records.
+lease-lapse redelivery AC-23 measures; AC-42 asserts what AC-23 records. On the GCP stream consumer
+the test must complete the held first delivery (acknowledge or reject it after the second receive)
+before teardown, because disposal stops the `SubscriberClient` with `ShutdownMode.WaitForProcessing`
+(`GcpStreamConsumer.cs:49`) and would otherwise wait on it.
 
 **AC-2** (R-2, R-23; see C-7) — **Given** a message published with `HandledCount = 0` to any transport
 in scope, **When** it is delivered for the first time, **Then** the consumer presents
