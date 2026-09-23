@@ -43,6 +43,34 @@ implementation.
     recorded, scoped gear shift the user makes with `/spec:gear` — never by assumption, never by a
     prose instruction in a scratch file, and never because the tasks look repetitive
 
+### When a new test passes on first run — characterisation
+
+Sometimes the test you write for a behaviour passes before you have written any code, because
+earlier work already delivers it. This is common when a spec takes one task per acceptance
+criterion. A green test has not yet shown that it can fail, so it has not yet shown that it guards
+anything. **Do not weaken, rewrite or delete it to get a failure, and do not treat the task as
+"already complete".**
+
+Instead, observe RED through a **named mutation** ([ADR 0071](../docs/adr/0071-tdd-review-gear.md),
+*Characterisation amendment*):
+
+1. Apply a temporary change to **production code, never to the test**. It should be the realistic
+   defect the test exists to catch, for example exact equality where the code uses assignability.
+2. Run the test. It must fail **on the assertion it is about**. A compile error, or an unrelated
+   exception thrown before the assertion is reached, does not count; pick a better mutation.
+3. **Revert the mutation** and confirm green. `git status` must show no production file still
+   modified.
+4. Commit the test alone, as `test:`, noting the mutation in the message. The mutation is never
+   committed.
+
+In a spec, such tasks are labelled `CHARACTERISE` in `tasks.md` and name their mutation. If you meet
+an unexpected green with no named mutation, stop and ask. Choosing the mutation is part of
+reviewing the test, so do not improvise it.
+
+The same move applies to a guard test that is RED on arrival only because the code under test does
+not exist yet (a compile error). Once it is GREEN, apply the mutation that reintroduces the defect
+the test guards against, and confirm it fails for that reason.
+
 ### The review gear
 
 Whether the approval pause fires is a **gear** ([ADR 0071](../docs/adr/0071-tdd-review-gear.md)),
@@ -65,7 +93,8 @@ value on a run of near-identical tasks whose shape has already been reviewed rep
 **What `review-after` does NOT remove.** Only the human pause. All of these hold in both gears:
 
 - **RED first** — the test is written and observed to fail *for the right reason* before any
-  production code exists. Ungated is not test-after.
+  production code exists, or, for a characterisation test, under its named mutation (see above).
+  Ungated is not test-after.
 - **The full regression suite**, not just the new test's own `--filter`.
 - **The two-commit shape** — a `feat:`/`test:` commit for the behaviour, then a separate `docs:`
   commit ticking the task off in `tasks.md`.
