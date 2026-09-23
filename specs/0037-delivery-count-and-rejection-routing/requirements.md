@@ -113,7 +113,7 @@ element is cited so there is no second reading.
 | **Approximate counter** | A delivery count the source documents as approximate or best-effort, and which may therefore advance by more than 1. SQS `ApproximateReceiveCount` and Pub/Sub `delivery_attempt` are both documented as such. |
 | **Transport in scope** | One of: `AWSSQS`, `AWSSQS.V4`, `GcpPubSub`, `RocketMQ`. |
 | **Configuration** | A row of spec 0036's Conformance Matrix, e.g. `AWS / SqsFifo` or `GCP / StreamOrdering`. |
-| **Variant** | `Reactor` or `Proactor`. Spec 0036's FR-14 rule: a behaviour proven in one variant only does not count. Where an AC drives a consumer directly with no pump (AC-15, AC-42), a *delivery* is one message returned from `Receive`/`ReceiveAsync`, its *delivery count* is that message's `HandledCount` as returned, and "both variants" means both of those calls. |
+| **Variant** | `Reactor` or `Proactor`. Spec 0036's FR-14 rule: a behaviour proven in one variant only does not count. Where an AC drives a consumer directly with no pump (e.g. AC-15 to AC-18, AC-42), a *delivery* is one message returned from `Receive`/`ReceiveAsync`, its *delivery count* is that message's `HandledCount` as returned, and "both variants" means the synchronous **and** asynchronous form of every consumer call the AC makes — `Receive`/`ReceiveAsync`, `Reject`/`RejectAsync`, `Acknowledge`/`AcknowledgeAsync`, and so on. |
 
 Throughout, **`R`** denotes a subscription's `RequeueCount` and **`M`** its native redrive limit.
 
@@ -378,6 +378,33 @@ bar.
 **A-2 shapes the route, not the branch.** If A-2 is refuted, R-13's obligation is unchanged but the
 broker counter is unavailable, so the ADR must look for a GCP mechanism that does not depend on
 `delivery_attempt` before it may record the second branch.
+
+**The GCP stream consumer's expiry redelivery is an ADR input, not a requirements decision.** R-1
+binds `GcpPubSubStreamMessageConsumer`'s expiry path as it binds every other, and AC-42 asserts it;
+*how* a test drives a lease lapse through that consumer is left to the ADR, because it turns on
+client-library behaviour this document should not fix. Facts verified in source, which the ADR
+starts from:
+
+- While a received message is unanswered, `BrighterStreamHandler.HandleMessage` awaits
+  `WaitForCompleteAsync()` (`GcpStreamConsumer.cs:71-84`) and `SubscriberClient` keeps extending
+  its lease — by default for up to 60 minutes (`DefaultMaxTotalAckExtension`, Google.Cloud.PubSub.V1
+  3.36.0). The subscription's `AckDeadlineSeconds` does not govern that. A
+  `MaxTotalAckExtension` set through `GcpPubSubSubscription.StreamingConfiguration` survives the
+  factory, because the hook runs before `builder.Settings ??= …` (`GcpPubSubConsumerFactory.cs:110-121`).
+- The client's concurrent-processing limit is `BufferSize × NoOfPerformers`
+  (`GcpPubSubConsumerFactory.cs:88-91`), `1` by default (`Subscription.cs:200-201`), applied
+  client-wide, and `StreamingConfiguration` cannot raise it because the factory overwrites
+  `FlowControlSettings` after the hook. A held, unanswered delivery occupies that slot, so at the
+  default a redelivery is never dispatched while the first is held.
+- On `GCP / StreamOrdering` the redelivery shares the held message's ordering key, and ordered
+  delivery may dispatch same-key messages only sequentially — *not verified*.
+- Shutdown uses `ShutdownMode.WaitForProcessing` with no `Timeout` (`GcpStreamConsumer.cs:49`),
+  which the library bounds by a default derived from the maximum extension duration.
+
+The ADR MUST record, for each of `GCP / Stream` and `GCP / StreamOrdering`, the subscription and
+client configuration and the receive / complete sequence by which AC-42 is driven — **or**, where a
+configuration cannot be driven that way, what evidences R-1's expiry clause for it instead and why.
+It may not leave either configuration unevidenced.
 
 **R-15 to R-19 (rejection routing) do not depend on A-2 and are unaffected by either branch.** They
 depend on R-20 alone, which is why the twenty GCP rejection-routing cells in AC-30 are unconditional
@@ -810,7 +837,7 @@ requires:
    copied, not a reference to the message, because the pump then increments that same header
    (`MessageHeader.cs:572-575`) — in delivery order and by the key of obligation 1. That record
    is the per-delivery count AC-1, AC-34's second clause and AC-42 assert on; it is read as
-   obligations 2 and 3 require.
+   obligations 2 and 3 require (for a pump-less AC such as AC-42, after its last receive).
 
 **"Dispatch count", "delivery count presented to the pump" and "handler invocation count" are used
 interchangeably for this counter**: it advances once per dispatch of a message to a handler. It is
@@ -1082,21 +1109,19 @@ consumer classes, `GcpPullMessageConsumer` and `GcpPubSubStreamMessageConsumer` 
 subscription whose lease is short enough to lapse within the test, set through the knob that
 actually governs it for that consumer: SQS, the queue's visibility timeout; GCP pull, the
 subscription's `AckDeadlineSeconds` (`GcpPullMessageConsumer` does a raw `Pull` and never extends
-the deadline); GCP stream, `SubscriberClient.Settings.MaxTotalAckExtension` (with `AckDeadline`)
-set through `GcpPubSubSubscription.StreamingConfiguration`, because while a received message is
-unanswered `SubscriberClient` keeps extending its lease — by default for up to 60 minutes — and the
-subscription's `AckDeadlineSeconds` does not govern that (`GcpStreamConsumer.cs:71-84`,
-`GcpPubSubConsumerFactory.cs:110-121` sets only flow control); RocketMQ, the invisible duration, no native redrive limit at or below 2, on GCP a `DeadLetterPolicy` with
+the deadline); GCP stream, the configuration the ADR records under R-13's stream-consumer input (see
+"The GCP stream consumer's expiry redelivery is an ADR input" under R-13); RocketMQ, the invisible
+duration — no native redrive limit at or below 2, on GCP a `DeadLetterPolicy` with
 `MaxDeliveryAttempts: 5` where the ADR's GCP mechanism needs the policy (A-1), and a message
 published with `HandledCount = 0`, **When** the test receives the message through the transport's
 consumer, neither acknowledges, rejects nor requeues it, waits for that timeout to lapse, and
 receives it again — through `Receive` and, separately, `ReceiveAsync` (NFR-8) — **Then** the second
 delivery presents a delivery count strictly greater than the first. No pump and no `Requeue` call
 is involved, so a count advanced only inside `Requeue` fails this criterion. On RocketMQ this is the
-lease-lapse redelivery AC-23 measures; AC-42 asserts what AC-23 records. On the GCP stream consumer
-the test must complete the held first delivery (acknowledge or reject it after the second receive)
-before teardown, because disposal stops the `SubscriberClient` with `ShutdownMode.WaitForProcessing`
-(`GcpStreamConsumer.cs:49`) and would otherwise wait on it.
+lease-lapse redelivery AC-23 measures; AC-42 asserts what AC-23 records. On `GCP / Stream` and
+`GCP / StreamOrdering` the procedure that drives the lapse and the second receive — and completes
+the deliveries the test holds — is the one the ADR records under R-13, not one this criterion
+prescribes; the obligation (a strictly greater count on the expiry redelivery) is unchanged.
 
 **AC-2** (R-2, R-23; see C-7) — **Given** a message published with `HandledCount = 0` to any transport
 in scope, **When** it is delivered for the first time, **Then** the consumer presents
@@ -1553,8 +1578,9 @@ Every other clause of every other AC is an assertion a test can make.
 **Assertable, but not writable until the ADR exists** — these read a decision the ADR must first
 record, so the test can be written only after design: **AC-11**'s Given (the subscription shapes that
 trip R-11), **AC-21**'s client-construction clause (the exception type the ADR names, NFR-5),
-**AC-33**'s first clause (the normalisation the ADR specifies), and **AC-34**'s second
-clause (the transports the ADR's table classifies exact).
+**AC-33**'s first clause (the normalisation the ADR specifies), **AC-34**'s second
+clause (the transports the ADR's table classifies exact), and **AC-42** on `GCP / Stream` and
+`GCP / StreamOrdering` (the procedure the ADR records under R-13's stream-consumer input).
 **AC-19** and **AC-40** are a third kind: both are writable now, but *which one is claimed* is
 selected by the ADR's recorded conclusion rather than by a measurement (see the note under AC-40).
 

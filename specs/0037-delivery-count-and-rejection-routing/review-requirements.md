@@ -2062,3 +2062,157 @@ integrity re-checked programmatically, no gaps and no undefined references.
 C-10 (configuring `StreamingConfiguration` is real client configuration, not a mock), NFR-7 and
 AC-19. The Terms *Variant* extension, read with NFR-8 and AC-15. R-27(c)(3)'s live-read allowance,
 read with R-4's window definition.
+
+---
+
+# Review: requirements (round 9) — 0037-delivery-count-and-rejection-routing
+
+**Date**: 2026-09-23
+**Threshold**: 60
+**Verdict**: NEEDS WORK
+
+2 findings at or above threshold 60. Address these before approving.
+
+## Findings
+
+### 1. AC-42's GCP-stream clause deadlocks by default — Brighter caps the `SubscriberClient` at one in-flight handler, and the held first delivery occupies it (Score: 72)
+
+AC-42 has the stream test hold the first delivery unanswered, wait for the lease to lapse, receive
+again, and only then complete the first ("acknowledge or reject it after the second receive",
+:1096-1099). With the default subscription shape that order cannot complete:
+
+- `GcpPubSubConsumerFactory` builds the client with `maxInFlightMessages = sub.BufferSize *
+  sub.NoOfPerformers` (`GcpPubSubConsumerFactory.cs:89-92`) and sets
+  `FlowControlSettings.MaxOutstandingElementCount` from it (`:118-121`). `Subscription` defaults are
+  `bufferSize = 1`, `noOfPerformers = 1` (`Subscription.cs:200-201`), so the cap is **1**.
+- Google.Cloud.PubSub.V1 3.36.0: "the number of messages being processed concurrently is limited by
+  these settings, at the level of the whole SubscriberClient" (XML :11606-11613).
+- The held delivery is still being processed: `BrighterStreamHandler.HandleMessage` awaits
+  `WaitForCompleteAsync()` (`GcpStreamConsumer.cs:78-79`) until `Accepted()`/`Reject()`/cancel.
+- After `MaxTotalAckExtension` lapses the server redelivers, but the client will not invoke
+  `HandleMessage` for it while the only slot is taken. The second `Receive` times out, and the first
+  is never completed because AC-42 completes it only after the second receive. Circular.
+- `StreamingConfiguration` cannot fix it: it runs before Brighter overwrites `FlowControlSettings`
+  (`:116-121`). The only lever is the subscription's `bufferSize`/`noOfPerformers`, which AC-42 does
+  not mention.
+- `GCP / StreamOrdering` has a probable second blocker: the redelivery shares the held message's
+  ordering key, and the client dispatches same-key messages sequentially. Not confirmed from the XML
+  docs.
+
+Round 8's workability check verified that `MaxTotalAckExtension` survives the factory, not flow
+control.
+
+**Evidence**: requirements.md:1080-1099; `GcpPubSubConsumerFactory.cs:89-92`, `:116-121`;
+`Subscription.cs:200-201`; `GcpStreamConsumer.cs:71-84`; Google.Cloud.PubSub.V1.xml:11590-11614.
+
+**Recommendation**: Require `bufferSize` × `noOfPerformers` ≥ 2 in AC-42's GCP-stream Given; say
+`StreamingConfiguration` cannot raise flow control; say whether `GCP / StreamOrdering` is covered and
+how. Or record the stream consumer's expiry path as an ADR input under §Candidate mechanisms / R-13,
+and state what evidences R-1's expiry clause for `GcpPubSubStreamMessageConsumer`.
+
+---
+
+### 2. The extended "Variant" term redefines "both variants" for AC-15 as `Receive`/`ReceiveAsync`, so `RejectAsync`, which R-16 binds, need not be exercised (Score: 62)
+
+The Terms row says that for pump-less ACs "(AC-15, AC-42) … 'both variants' means both of those
+calls" — `Receive`/`ReceiveAsync` (:116) — under a glossary claiming "exactly these meanings
+throughout" (:95). AC-15's When is "`Reject` is called with each of …" (:1243-1246), so AC-15 is met
+by rejecting only synchronously. R-16 binds `Reject`/`RejectAsync` on both consumer classes
+(:439-440), and on the pull consumer they are separate paths (`GcpPullMessageConsumer.cs:276`,
+`:306`). AC-16, AC-17 and AC-18 are also pump-less but not listed; AC-18's "delivered again" (:1266)
+falls outside both definitions. Round 8's remediation fixed AC-42's reading and introduced a second
+reading of AC-15.
+
+**Evidence**: requirements.md:95, :100, :116, :439-440, :1243-1252, :1254-1266.
+
+**Recommendation**: Define pump-less "both variants" as "the synchronous and asynchronous form of
+every consumer call the AC makes (`Receive`/`ReceiveAsync`, `Reject`/`RejectAsync`, …)", and list
+all pump-less ACs (AC-15 to AC-18, AC-42) or make the list open.
+
+---
+
+### 3. AC-42's teardown rationale overstates the stall and completes only one held delivery (Score: 32)
+
+`StopAsync` passes no `Timeout` (`GcpStreamConsumer.cs:49`), and the library documents "If null, a
+default timeout based on the maximum extension duration is used" (XML :11711-11716). With AC-42's
+short `MaxTotalAckExtension`, shutdown is bounded, not hung. The second delivery (and any unread
+redelivery) is equally pending but unnamed.
+
+**Recommendation**: "complete every delivery the test received, or accept a shutdown bounded by the
+configured `MaxTotalAckExtension`".
+
+---
+
+### 4. R-27(c)(6)'s record is read "as obligation 3 requires" (after the pump is quit), but AC-42 runs no pump (Score: 30)
+
+:812-813 against :786, :799-800 and :1094. Harmless in practice.
+
+**Recommendation**: Add "(for a pump-less AC, after its last receive)".
+
+---
+
+## Round-8 remediation spot-check
+
+| # | Score | Applied text checked | Result |
+|---|---|---|---|
+| 1 | 70 | AC-42 binds both GCP consumer classes; per-consumer knob; complete held delivery before teardown | PRESENT :1080-1099. Citations verified. Consistent with R-13, C-10, NFR-7, AC-19. **Residual: findings 1, 3** — flow control blocks the redelivery. |
+| 2 | 45 | Terms *Variant* extension; R-27(c)(5) split | PRESENT :116, :798-800. Consistent with NFR-8 and AC-42. **Residual: finding 2.** |
+| 3 | 38 | R-27(c)(6) value copy; R-27(c)(3) live-read stop trigger | PRESENT :808-811, :789-790. Consistent with R-4, AC-1, AC-3. **Residual: finding 4.** |
+
+## Integrity checks
+
+- `R-1..R-28`, `NFR-1..NFR-8`, `AC-1..AC-42`, `C-1..C-12`, `A-1..A-5` defined, no gaps; grep
+  doubles are line-start bold references.
+- No undefined references. Map: 36 rows; all cited ACs defined; only AC-30/AC-31 unmapped.
+- Citations re-verified: `GcpStreamConsumer.cs:49`, `:71-84`, `:115-136`;
+  `GcpPubSubConsumerFactory.cs:89-92`, `:106-124`; `GcpPubSubStreamMessageConsumer.cs:84`,
+  `:170-205`, `:217`; `Subscription.cs:200-201`; `RocketMqMessageGatewayProvider.cs:137`; 3.36.0 XML.
+
+## Summary
+
+| Score Range | Count |
+|-------------|-------|
+| 90-100 (Critical) | 0 |
+| 70-89 (High) | 1 |
+| 50-69 (Medium) | 1 |
+| 0-49 (Low) | 2 |
+
+**Total findings**: 4
+**Findings at or above threshold (60)**: 2
+
+## Main-agent validation of this round
+
+- Counted: 72, 62 (≥60); 32, 30 (<60) — 0/1/1/2, total 4, two at or above threshold. Agrees.
+- Finding 1 re-verified in source: `GcpPubSubConsumerFactory.cs:88-91` passes
+  `sub.BufferSize * sub.NoOfPerformers`; `Subscription.cs:200-201` defaults both to `1`; the 3.36.0
+  XML (:11607-11613) states the client-wide concurrent-processing limit; `ShutdownOptions.Timeout`
+  null → bounded default (:11711-11716), which supports finding 3.
+- Findings 1 and 2 are both defects introduced by round 8's remediation, each caught on first review.
+  AC-42's GCP-stream clause has now needed three rounds. That is a signal the stream consumer's
+  expiry path is an implementation-design question, not a requirements one.
+
+---
+
+# Remediation log — round 9
+
+**Date**: 2026-09-23. **Applied to**: `requirements.md` and `README.md`. Each applied text grepped
+back from the file on disk; this log written from that read-back. **Outcome**: both findings at or
+above threshold remediated, plus both below. Counts unchanged at **28 `R-n`, 8 `NFR-n`, 42 `AC-n`**;
+integrity re-checked programmatically, no gaps and no undefined references.
+
+**The decision this round took (the user's, 2026-09-23): Option A.** AC-42's GCP-stream clause had
+needed three rounds. Each fix exposed another layer of client-library behaviour: lease extension,
+then flow control, then ordering. The user agreed that *how* to drive a lease lapse through
+`GcpPubSubStreamMessageConsumer` is not a requirements call. The obligation stays in AC-42; the
+mechanics move to a named ADR input under R-13.
+
+| # | Score | Remediation | Verified at |
+|---|---|---|---|
+| 1 | 72 | **Option A.** AC-42's GCP-stream knob now points to "the configuration the ADR records under R-13's stream-consumer input". Its closing sentence says the procedure for `GCP / Stream` and `GCP / StreamOrdering` (lapse, second receive, completing held deliveries) is the ADR's, and the obligation is unchanged. The prescriptive teardown sentence was removed. New paragraph under R-13, "**The GCP stream consumer's expiry redelivery is an ADR input, not a requirements decision.**", records the four source-verified facts (lease extension up to 60 min and the surviving `StreamingConfiguration` hook; the client-wide `BufferSize × NoOfPerformers` cap, default 1, which the hook cannot raise; possible same-key sequential dispatch on `StreamOrdering`, marked *not verified*; bounded shutdown). It adds an obligation: "The ADR MUST record, for each of `GCP / Stream` and `GCP / StreamOrdering`, the … configuration and the receive / complete sequence by which AC-42 is driven — **or** … what evidences R-1's expiry clause for it instead and why. It may not leave either configuration unevidenced." AC-42's stream clause is added to §"Assertable, but not writable until the ADR exists". | `:382-407`, `:1112`, `:1122`, `:1582` |
+| 2 | 62 | Terms *Variant*: pump-less "both variants" now means "the synchronous **and** asynchronous form of every consumer call the AC makes — `Receive`/`ReceiveAsync`, `Reject`/`RejectAsync`, `Acknowledge`/`AcknowledgeAsync`, and so on"; the AC list is open ("e.g. AC-15 to AC-18, AC-42"). | `:116` |
+| 3 | 32 | Dissolved by finding 1's fix: the prescriptive "would otherwise wait on it" sentence is gone. The bounded-shutdown fact is recorded in the ADR input instead. `grep "would otherwise wait on it"` → 0 matches. | `:401` |
+| 4 | 30 | R-27(c)(6)'s read clause adds "(for a pump-less AC such as AC-42, after its last receive)". | `:840` |
+
+**For round 10's spot-check**: the new R-13 ADR-input paragraph, read with AC-42, R-1, NFR-7, AC-19,
+C-10 and §Candidate mechanisms. Does the "MUST … or …" obligation leave any way for the stream
+consumer to go unevidenced? The Terms *Variant* row, read with AC-15 to AC-18 and R-16.
