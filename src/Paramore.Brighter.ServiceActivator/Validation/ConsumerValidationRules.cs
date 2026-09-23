@@ -212,6 +212,9 @@ public static class ConsumerValidationRules
         Subscription subscription, IAmAChannelFactory? defaultChannelFactory)
     {
         var effective = subscription.ChannelFactory ?? defaultChannelFactory;
+        if (effective is CombinedChannelFactory combined)
+            return (Arm.Combined, combined.FactoryTypes);
+
         return (Arm.Direct, effective is null ? [] : [effective.GetType()]);
     }
 
@@ -222,6 +225,7 @@ public static class ConsumerValidationRules
         => arm switch
         {
             Arm.Direct => declared is not null && declared.IsAssignableFrom(candidates[0]),
+            Arm.Combined => declared is not null && candidates.Any(t => t == declared),
             _ => false
         };
 
