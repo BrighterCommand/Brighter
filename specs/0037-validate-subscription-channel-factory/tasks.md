@@ -13,15 +13,15 @@
 
 **Standing obligations on every task below**: no broker, database or network access in any test (NFR-3, AC-31); British spelling in all new documentation and XML comments (NFR-7); one class per file and one behaviour per test (`.agent_instructions/testing.md`); generated files are **never** edited directly — a change is a template edit followed by `./generate-test.sh` (`.agent_instructions/generated_tests.md`).
 
-**Characterisation tasks (maintainer ruling).** One task per acceptance criterion (D12) means some `/test-first` tasks assert behaviour an earlier task's implementation already delivers, so the new test is **green on first run**. That is accepted. RED-first still holds, and is observed this way:
+**Characterisation tasks (maintainer ruling D14; ADR 0071 *Characterisation amendment*).** One task per acceptance criterion (D12) means some `/test-first` tasks assert behaviour an earlier task's implementation already delivers, so the new test is **green on first run**. That is accepted. These tasks are labelled **`CHARACTERISE`** — the label `/spec:implement` and `/spec:ralph-implement` dispatch on — and carry a **🔁** bullet naming the mutation. RED-first still holds, per test file:
 
-1. Write the test and run it — it passes.
-2. Apply the task's **named RED mutation** — a temporary change to *production* code, never to the test.
-3. Run the test and confirm it fails **for the right reason** (the assertion the task is about, not a compile error or an unrelated exception).
-4. **Revert the mutation**, run the test green again, then run the regression suite.
-5. Mark the task done. The mutation is never committed — the `test:` commit contains the test only.
+1. Write the test and run it. If it **fails**, that is RED — continue as a normal test-then-implement task.
+2. If it **passes**, apply the task's **named RED mutation** — a temporary change to *production* code, never to the test.
+3. Run the test and confirm it fails **for the right reason** (the assertion the task names, not a compile error or an unrelated exception).
+4. **Revert the mutation**, run the test green again, then run the regression suite. `git status` must show no production file left modified.
+5. The ⛔ gate fires here in `review-before` — after RED is observed, before committing. The `test:` commit contains the test only; the mutation is never committed. A characterisation test is never rewritten and never "already complete".
 
-Each such task is marked **🔁 Characterisation** and names its mutation. Its ⛔ gate still fires in `review-before`, after step 1 and before step 2.
+**Task labels** are those the gear commands dispatch on: `TEST + IMPLEMENT`, `CHARACTERISE`, `GENERATE`, `STRUCTURAL` (fixtures only — `refactor:`), `SETUP` (configuration and generator scaffolding — `chore:`), `DOC`, `VERIFY`. `GENERATE` (task 53) renders tests with the generator; they are never hand-written.
 
 **Scoping the review gear.** Phase headings are plain ASCII, `## Phase N: <name>`, so a `/spec:gear` scope can be typed exactly — the scope is the heading text without the `#`s, e.g. `Phase 5: Transport corrections`. ADR references and ordering warnings sit in the line under each heading, not in it. Tasks are numbered 1-59 continuously, so a range scope such as `tasks 31-35` works equally well.
 
@@ -54,7 +54,7 @@ Each such task is marked **🔁 Characterisation** and names its mutation. Its �
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessagingGateway"
   - Test file: `When_a_combined_channel_factory_is_built_from_a_single_pass_sequence_should_report_its_factory_types.cs`
   - Test should verify:
-    - a `CombinedChannelFactory` constructed from a **single-pass** `IEnumerable<IAmAChannelFactory>` — a one-shot iterator yielding a `DeclaredChannelFactory` then a `NonMatchingChannelFactory` (task 1's doubles), which **throws on a second `GetEnumerator()`**
+    - a `CombinedChannelFactory` constructed from a **single-pass** `IEnumerable<IAmAChannelFactory>` yielding a `DeclaredChannelFactory` then a `NonMatchingChannelFactory` (task 1's doubles), which **throws on a second `GetEnumerator()`**. It is a **hand-written class**, `SinglePassChannelFactorySequence`, in `tests/Paramore.Brighter.Core.Tests/MessagingGateway/TestDoubles/` (one class per file) — **not** a C# `yield` iterator method, whose enumerable restarts on a second `GetEnumerator()` instead of throwing
     - `FactoryTypes` equals `[typeof(DeclaredChannelFactory), typeof(NonMatchingChannelFactory)]`, in that order
     - **What makes this fail**: a `FactoryTypes` built from the primary-constructor `factories` parameter re-enumerates the sequence `_factories = factories.ToList()` has already consumed, and the one-shot iterator throws. A collection expression or array would **not** expose the defect — it re-enumerates successfully — which is why no rule-level criterion (AC-6 included) can stand in for this test
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
@@ -67,6 +67,7 @@ Each such task is marked **🔁 Characterisation** and names its mutation. Its �
     - **It MUST be derived from the `_factories` field, not from the primary-constructor `factories` parameter.** `_factories = factories.ToList()` has already consumed the `IEnumerable`, so a property built from the parameter re-enumerates a spent sequence — empty, or a throw, depending on the source — and the rule would then flag *every* subscription in *every* multi-bus application whose factories arrive as a single-pass sequence. Note the trap: the compiler rejects a get-only auto-property initialised from `_factories` (CS0236) and *accepts* the one initialised from `factories`, so the error message itself nudges toward the defect (ADR 0072, Risks).
     - Do **not** convert the class to an explicit constructor; do **not** write a plain `=> _factories.Select(…).ToList()` (re-allocates on every read).
     - XML documentation must state the routing contract ("it can serve a subscription exactly when that subscription's `ChannelFactoryType` is one of them") and the `<remarks>` must state that the property is **not** thread-safe: concurrent first reads may each build a list, so every read yields an *equal* list, not necessarily the same instance. The only caller is the single-threaded startup validation path.
+  - **Guard check, after GREEN (D14 mechanism)**: temporarily build `FactoryTypes` from the primary-constructor `factories` parameter, confirm this test fails because the sequence throws on re-enumeration, then revert. RED on arrival is only a compile error (`FactoryTypes` does not exist); this check is what shows the guard catches the defect it exists for.
   - This test is the **named regression guard for the re-enumeration defect**. The order it pins is also relied on by tasks 9, 21 and 22 (AC-7, AC-13b, AC-13c).
   - References: `src/Paramore.Brighter/CombinedChannelFactory.cs:14`, `:34`, `:46`, `:59`; NFR-5; C-4; ADR 0072 *Risks and Mitigations* (the `FactoryTypes` re-enumeration trap).
   - Depends on: 1.
@@ -124,26 +125,28 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - `ResolveCandidates` applies `subscription.ChannelFactory ?? defaultChannelFactory` — step 1 wins outright, mirroring `DispatchBuilder.cs:146-148`
   - Depends on: 4.
 
-- [ ] **6. TEST + IMPLEMENT: A subscription falling back to a mismatched default is detected (AC-4, FR-2 step 2)**
+- [ ] **6. CHARACTERISE: A subscription falling back to a mismatched default is detected (AC-4, FR-2 step 2)**
   - **USE COMMAND**: `/test-first when a subscription has no channel factory of its own the rule should validate it against the configured default`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_a_subscription_falls_back_to_a_mismatched_default_should_report_one_error.cs`
   - Test should verify:
     - the AC-3 configuration with `sub-a.ChannelFactory` left null
     - exactly one `Error` is produced for `sub-a`
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - **🔁 Characterisation** — green on first run: task 5 already implements `subscription.ChannelFactory ?? defaultChannelFactory`, so the fallback exists. **RED mutation**: make the predicate return `true` (no finding) whenever `subscription.ChannelFactory` is null — the realistic defect of validating only subscriptions that carry their own factory, so the default is never checked. The test fails on its one-Error assertion.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed** — before committing if the test was green on arrival, before implementing if it was not *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - `ResolveCandidates` falls through to the captured default when `subscription.ChannelFactory` is null
   - Depends on: 5.
 
-- [ ] **7. TEST + IMPLEMENT: The verdict is invariant to `DispatchBuilder`'s back-fill (AC-5, FR-2a)**
+- [ ] **7. CHARACTERISE: The verdict is invariant to `DispatchBuilder`'s back-fill (AC-5, FR-2a)**
   - **USE COMMAND**: `/test-first when the dispatch builder has back-filled the default channel factory into a subscription the rule should produce byte-identical findings`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_the_default_channel_factory_has_been_back_filled_should_report_identical_findings.cs`
   - Test should verify:
     - a configuration from AC-2/AC-3/AC-4 is evaluated **before** `subscription.ChannelFactory` is back-filled with the default, and **again after** it has been (simulating `DispatchBuilder.Subscriptions()`'s write at `DispatchBuilder.cs:146-148`)
     - both evaluations produce the same **count**, the same `Source`, and a **byte-identical** `Message`
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - **🔁 Characterisation** — green on first run: after task 6 the effective factory is already reduced to a `Type` before comparison or rendering. **RED mutation**: interpolate `RuntimeHelpers.GetHashCode(effectiveFactory)` into the message; the back-filled and resolved-default runs are separate instances, so the test fails on its byte-identical assertion.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed** — before committing if the test was green on arrival, before implementing if it was not *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Confirm the effective factory is reduced to a `Type` (or ordered list of `Type`s) **before any comparison or rendering happens** — this is what makes invariance hold by construction rather than by coincidence (ADR 0072, Architecture Overview)
     - Never interpolate an instance, an identity hash, or anything that distinguishes a back-filled `subscription.ChannelFactory` from a resolved default into the message
@@ -180,7 +183,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - Define the `{F-list}` separator `", "` **once** and share it between the body and the remedy so the two cannot disagree
   - Depends on: 8.
 
-- [ ] **10. TEST + IMPLEMENT: A user subclass of a channel factory is accepted in the direct arm (AC-8, FR-3)**
+- [ ] **10. CHARACTERISE: A user subclass of a channel factory is accepted in the direct arm (AC-8, FR-3)**
   - **USE COMMAND**: `/test-first when the default channel factory is a subclass of the declared type the rule should report no findings`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_the_channel_factory_is_a_subclass_of_the_declared_type_should_report_no_findings.cs`
@@ -188,12 +191,12 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - default factory is a `DerivedChannelFactory` (deriving from `DeclaredChannelFactory`), subscription is a `DeclaringSubscription` with `ChannelFactory` null
     - no findings are produced
   - **🔁 Characterisation** — green on first run: task 4 already implements the direct arm as `declared.IsAssignableFrom(candidates[0])`. **RED mutation**: change the direct arm to exact equality, `declared == candidates[0]`; the subclass is then flagged and the test fails on its no-findings assertion.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed** — before committing if the test was green on arrival, before implementing if it was not *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Confirm the direct arm uses assignability deliberately: at runtime such a subclass still satisfies the gateway's downcast of the *subscription*, so flagging it would be a false positive
   - Depends on: 9.
 
-- [ ] **11. TEST + IMPLEMENT: The same subclass inside a `CombinedChannelFactory` is flagged, mirroring runtime (AC-9)**
+- [ ] **11. CHARACTERISE: The same subclass inside a `CombinedChannelFactory` is flagged, mirroring runtime (AC-9)**
   - **USE COMMAND**: `/test-first when a subclass of the declared factory sits inside a combined channel factory the rule should report an Error and the composite should throw`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_a_subclass_of_the_declared_type_is_inside_a_combined_factory_should_report_one_error.cs`
@@ -201,13 +204,14 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - default factory is `new CombinedChannelFactory([new DerivedChannelFactory()])`, subscription a `DeclaringSubscription` with `ChannelFactory` null
     - exactly one `Error` is produced
     - **companion assertion**: calling `CreateSyncChannel` on that same `CombinedChannelFactory` with the same subscription throws `ConfigurationException` (it throws at `CombinedChannelFactory.cs:35-38`, before dispatching to any inner factory, so no channel is created and no double's throwing member is reached)
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - **🔁 Characterisation** — green on first run: task 8 already implements the combined arm as exact equality. **RED mutation**: change the combined arm to `candidates.Any(t => declared.IsAssignableFrom(t))`; the subclass is then accepted and the test fails on its one-Error assertion (the companion `ConfigurationException` assertion stays green — it exercises unchanged `CombinedChannelFactory.cs:34-38`).
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed** — before committing if the test was green on arrival, before implementing if it was not *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Keep the two arms deliberately asymmetric — exact equality in the combined arm, assignability in the direct arm — because the runtime behaviours they predict differ (OOS-5 forbids "fixing" this by changing `CombinedChannelFactory`)
     - **This companion assertion is the only guard against the rule's combined arm drifting from the composite's routing** (ADR 0072, Risks), and is the price of rejecting a `CanRoute` design
   - Depends on: 10.
 
-- [ ] **12. TEST + IMPLEMENT: Nested combined factories are not unwrapped (AC-10, FR-3)**
+- [ ] **12. CHARACTERISE: Nested combined factories are not unwrapped (AC-10, FR-3)**
   - **USE COMMAND**: `/test-first when a combined channel factory is nested inside another the rule should not recurse into it`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_a_combined_channel_factory_is_nested_should_not_unwrap_it.cs`
@@ -216,7 +220,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - exactly one `Error` is produced, matching the runtime behaviour of `CombinedChannelFactory`, which also fails to route this subscription
     - the criterion asserts the **verdict**, not the wording: per **D5**, the message may name `Paramore.Brighter.CombinedChannelFactory` among the candidate types even though that type does not route — do not add an assertion forbidding it here
   - **🔁 Characterisation** — green on first run: task 8 already implements the combined arm as exact equality over `FactoryTypes` with no recursion. **RED mutation**: make `ResolveCandidates` flatten a nested `CombinedChannelFactory` into its own `FactoryTypes`; `DeclaredChannelFactory` then matches and the test fails on its one-Error assertion.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed** — before committing if the test was green on arrival, before implementing if it was not *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Unwrap **exactly one level**; `FactoryTypes` reports an inner composite by its own concrete type, which is what `{F-list}` then renders (D5)
   - Depends on: 11.
@@ -283,7 +287,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - FR-2 step 3 must be `typeof(InMemoryChannelFactory)` — a **`typeof`, not a `new`**; it must never construct an `InMemoryChannelFactory` or an `InternalBus`
   - Depends on: 15.
 
-- [ ] **17. TEST + IMPLEMENT: A subscription with a null `RequestType` is still checked (AC-19, C-7)**
+- [ ] **17. CHARACTERISE: A subscription with a null `RequestType` is still checked (AC-19, C-7)**
   - **USE COMMAND**: `/test-first when a subscription has a null RequestType the channel factory rule should still evaluate it`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_a_subscription_has_a_null_request_type_should_still_check_the_channel_factory.cs`
@@ -292,7 +296,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - handed a `NonMatchingChannelFactory`
     - exactly one `Error` is produced — the rule does **not** vacuously skip datatype-channel subscriptions, unlike `PumpHandlerMatch`, `HandlerRegistered` and `UnwrapTransformResolvable`
   - **🔁 Characterisation** — green on first run: the rule reads no `RequestType`. **RED mutation**: add `if (s.RequestType is null) return true;` at the head of the predicate; the finding disappears and the test fails on its one-Error assertion.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed** — before committing if the test was green on arrival, before implementing if it was not *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Confirm the rule body touches `RequestType` nowhere at all; there is no guard to add, only a guard to *not* add
   - Depends on: 16.
@@ -333,7 +337,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - The remedy is **asymmetric** by design: `{D}` on the "change the configuration" side, `{F}` on the "change the subscription" side
   - Depends on: 18.
 
-- [ ] **20. TEST + IMPLEMENT: The in-memory case offers only the direction that fixes the defect (AC-13a, template T3a)**
+- [ ] **20. CHARACTERISE: The in-memory case offers only the direction that fixes the defect (AC-13a, template T3a)**
   - **USE COMMAND**: `/test-first when the declared type is the in-memory channel factory the message should offer only the subscription-side remedy`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_the_declared_type_is_the_in_memory_factory_should_offer_only_the_subscription_remedy.cs`
@@ -341,7 +345,8 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - the AC-1 configuration — a plain `Subscription<FakeChannelFactoryRequest>` (so `D == typeof(InMemoryChannelFactory)`) handed a `DeclaredChannelFactory`
     - the `Message` **ends with** `— use a subscription type whose ChannelFactoryType is {F}`, naming `DeclaredChannelFactory`
     - the `Message` contains **no** occurrence of the substring `configure a channel factory of type` — the prohibition is on the whole message, so the body must not paraphrase the suppressed half in other words either
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - **🔁 Characterisation (conditional)** — if tasks 13 and 19 already route `D == typeof(InMemoryChannelFactory)` to T3a (task 19's T1 condition excludes it), this test is green on first run. **RED mutation**: drop the `D != typeof(InMemoryChannelFactory)` conjunct from T1's condition and order T1 before T3a; the message then offers `configure a channel factory of type` and the test fails on its no-occurrence assertion. If the test fails on first run, it is simply RED.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed** — before committing if the test was green on arrival, before implementing if it was not *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - T3a's condition: direct arm and (`D == typeof(InMemoryChannelFactory)` **or** `D is null`) — evaluated **before** T1 in FR-5's ordered table
     - The suppression is architectural, not cosmetic: "configure a channel factory of type `Paramore.Brighter.InMemoryChannelFactory`" is the cheaper of the two remedies in the case this feature fires most often, and following it produces the silent-wrong-bus consumer C-2 exists to prevent
@@ -360,7 +365,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - "is one of" rather than "is" is deliberate — a subscription declares exactly one type, a combined factory offers several
   - Depends on: 20.
 
-- [ ] **22. TEST + IMPLEMENT: The combined arm also suppresses the in-memory half (AC-13c, template T3b)**
+- [ ] **22. CHARACTERISE: The combined arm also suppresses the in-memory half (AC-13c, template T3b)**
   - **USE COMMAND**: `/test-first when the combined arm sees a subscription declaring the in-memory factory the message should suppress the configuration-side remedy`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_the_combined_arm_declares_the_in_memory_factory_should_suppress_the_configuration_remedy.cs`
@@ -368,13 +373,14 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - the AC-7 configuration — the AC-6 `CombinedChannelFactory` with a plain `Subscription<FakeChannelFactoryRequest>`
     - the `Message` **ends with** `— use a subscription type whose ChannelFactoryType is one of: {F-list}`, listing both inner factories' display names in constructor order
     - the `Message` contains **no** occurrence of the substring `configure a channel factory of type`
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - **🔁 Characterisation (conditional)** — if tasks 14 and 21 already route the in-memory combined case to T3b, this test is green on first run. **RED mutation**: drop the `D != typeof(InMemoryChannelFactory)` conjunct from T2's condition and order T2 before T3b; the test fails on its no-occurrence assertion. If the test fails on first run, it is simply RED.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed** — before committing if the test was green on arrival, before implementing if it was not *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - T3b's condition: combined arm, **non-empty** candidate set, and (`D == typeof(InMemoryChannelFactory)` or `D is null`) — evaluated after T4 and before T2
     - With tasks 13, 15, 19, 20, 21 this completes all **five** literals and confirms the selection conditions are **ordered and total** over the input space
   - Depends on: 21.
 
-- [ ] **23. TEST + IMPLEMENT: Display names carry no assembly identity (AC-14, FR-5 display format)**
+- [ ] **23. CHARACTERISE: Display names carry no assembly identity (AC-14, FR-5 display format)**
   - **USE COMMAND**: `/test-first when rendering a closed generic subscription type the message should carry no assembly identity or arity suffix`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_rendering_a_closed_generic_subscription_type_should_carry_no_assembly_identity.cs`
@@ -382,12 +388,13 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - any finding produced for a closed generic subscription
     - the `Message` contains no occurrence of `Version=`, `Culture=` or `PublicKeyToken=`
     - the `Message` contains no backtick-arity suffix such as `` `1 ``
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - **🔁 Characterisation** — green on first run: task 18 already implements generic stripping in `DisplayName`. **RED mutation**: make `DisplayName` return `t.FullName ?? t.Name` for generic types too; the closed generic's `FullName` carries `` `1 `` and `Version=…`, and the test fails on both no-occurrence assertions.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed** — before committing if the test was green on arrival, before implementing if it was not *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Confirm `DisplayName` strips at the `` ` `` of the **generic type definition's** `FullName` and recurses into type arguments, rather than using the closed type's `FullName` directly
   - Depends on: 22.
 
-- [ ] **24. TEST + IMPLEMENT: Same-named factory types in different namespaces are distinguishable (AC-15, FR-5 items 2-3)**
+- [ ] **24. CHARACTERISE: Same-named factory types in different namespaces are distinguishable (AC-15, FR-5 items 2-3)**
   - **USE COMMAND**: `/test-first when two channel factories share a simple name the message should render both namespace-qualified and use no bare ChannelFactory token`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_two_channel_factories_share_a_simple_name_should_render_namespace_qualified_names.cs`
@@ -396,13 +403,14 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - the `Message` contains **both** namespace-qualified display names in full
     - **the assertion is normative as a regex**: `Regex.Matches(message, @"(?<![.\w])ChannelFactory(?!Type)")` MUST find **no match**. Writing it any other way — for example `Message.Contains("ChannelFactory")` — is a defect in the test, not in the message
     - this regex is asserted in **`Core.Tests` only**; no AC-25/AC-26 gateway criterion renders a `Message` for it to run against
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - **🔁 Characterisation (conditional)** — whether this is green on first run depends only on the body wording tasks 3-23 produced. **RED mutation**: render the handed type with `Type.Name` instead of `DisplayName`; the bare `ChannelFactory` token appears and the test fails on its regex assertion. If the test fails on first run, it is simply RED.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed** — before committing if the test was green on arrival, before implementing if it was not *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - "Token" is a word-boundary match: a composite identifier merely *ending* in the word — `InMemoryChannelFactory`, `CombinedChannelFactory`, `DeclaredChannelFactory` — is a different token and the body may render any of them freely
     - The `(?!Type)` carve-out is required because FR-5's remedy clause contains `ChannelFactoryType` preceded by a space; without it AC-13 and AC-15 could not both pass
   - Depends on: 23.
 
-- [ ] **25. TEST + IMPLEMENT: Findings are one-per-subscription, ordered and deterministic (AC-30, FR-13)**
+- [ ] **25. CHARACTERISE: Findings are one-per-subscription, ordered and deterministic (AC-30, FR-13)**
   - **USE COMMAND**: `/test-first when the same configuration is evaluated twice the rule should produce identical ordered findings`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_evaluating_the_same_configuration_twice_should_produce_identical_ordered_findings.cs`
@@ -413,7 +421,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - each run produces exactly **two** findings — one per subscription — in the order `sub-a`, `sub-b`
     - the messages are **byte-identical** across the two runs
   - **🔁 Characterisation** — expected green on first run: tasks 3-24 already emit at most one finding with no instance-derived content, and `PipelineValidator.EvaluateSpecs` already iterates subscriptions outermost. **RED mutations**, applied and reverted one at a time: (a) iterate `entities.Reverse()` in `EvaluateSpecs` — the test fails on its `sub-a`, `sub-b` ordering assertion; (b) append `Guid.NewGuid()` to the rule's message — the test fails on its byte-identical assertion.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed** — before committing if the test was green on arrival, before implementing if it was not *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Emit **at most one** finding per subscription regardless of how many candidates were inspected
     - Subscription ordering is supplied by the framework's subscription-outer/spec-inner loop in `PipelineValidator.EvaluateSpecs`; inner-factory ordering by `FactoryTypes`'s constructor order. Neither is the rule's own responsibility to impose, but both must be preserved
@@ -452,7 +460,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - Change nothing about the four existing registrations
   - Depends on: 25, 26.
 
-- [ ] **28. TEST + IMPLEMENT: The same configuration does not block under `throwOnError: false` (AC-17, FR-6)**
+- [ ] **28. CHARACTERISE: The same configuration does not block under `throwOnError: false` (AC-17, FR-6)**
   - **USE COMMAND**: `/test-first when a channel factory mismatch is validated with throwOnError false the host should start and still report the mismatch`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_channel_factory_mismatch_is_validated_without_throw_on_error_should_start_and_report.cs`
@@ -461,27 +469,27 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - the host starts successfully
     - the mismatch `Error` is present in the validation results
   - **🔁 Characterisation** — green on first run: task 27's registration already makes the finding visible and the non-blocking semantics already exist. **RED mutation**: comment out the fifth `ISpecification<Subscription>` registration task 27 added; the host still starts but the mismatch `Error` is absent, so the test fails on its reported-finding assertion.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed** — before committing if the test was green on arrival, before implementing if it was not *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Require no production change beyond task 27 — the blocking semantics belong to `BrighterValidationHostedService`, unchanged. If a change is needed here, the rule has taken on a responsibility that is not its own
     - This is the workaround the C-10, C-11 and C-13 release notes point at (task 36) — and the one C-12 explicitly does **not** rescue
   - Depends on: 27.
 
-- [ ] **29. TEST + IMPLEMENT: A disabled validation run evaluates nothing (AC-17a, FR-6, NFR-4)**
+- [ ] **29. CHARACTERISE: A disabled validation run evaluates nothing (AC-17a, FR-6, NFR-4)**
   - **USE COMMAND**: `/test-first when pipeline validation is disabled the host should start and produce no validation results at all`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_pipeline_validation_is_disabled_should_evaluate_no_rules.cs`
   - Test should verify:
-    - the mismatched configuration of AC-16 with `ValidatePipelines(enabled: false)`
+    - the mismatched configuration of AC-16 with `ValidatePipelines(enabled: false, throwOnError: false)` — `throwOnError: false` so that, under the RED mutation, the validator runs and the test fails on its no-results assertion rather than at host start
     - the host starts successfully
     - **no** validation results are produced by any rule
   - **🔁 Characterisation** — green on first run: disabled validation already registers nothing. **RED mutation**: remove the `enabled == false` early return in `BrighterPipelineValidationExtensions.cs:58-60`; the validator then runs, results are produced, and the test fails on its no-results assertion.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed** — before committing if the test was green on arrival, before implementing if it was not *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Require **no guard inside the rule**. `BrighterPipelineValidationExtensions.cs:58-60` returns the builder untouched when `enabled` is false, so the `IAmAPipelineValidator` factory is never registered, `sp.GetServices<ISpecification<Subscription>>()` is never called, and the spec factory lambda never runs — the rule is never even constructed. Zero cost by construction, not by a flag check
   - Depends on: 28.
 
-- [ ] **30. TEST + IMPLEMENT: The four existing consumer rules are unaffected (AC-18, FR-6)**
+- [ ] **30. CHARACTERISE: The four existing consumer rules are unaffected (AC-18, FR-6)**
   - **USE COMMAND**: `/test-first when a handler is missing and the channel factory matches only the handler rule should report a finding`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_handler_is_missing_and_the_channel_factory_matches_should_report_only_the_handler_error.cs`
@@ -490,7 +498,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - under `ValidatePipelines(throwOnError: true)` the `HandlerRegistered` rule still produces **exactly one** `Error` with its existing message
     - this feature contributes **no additional finding**
   - **🔁 Characterisation** — green on first run: the rule is already silent on a matched factory. **RED mutation**: make `ChannelFactoryCompatible`'s predicate return `false` unconditionally; a second finding appears and the test fails on its exactly-one-finding assertion.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed** — before committing if the test was green on arrival, before implementing if it was not *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Confirm the addition is purely additive: no change to the severity, `Source`, `Message` or blocking behaviour of `PumpHandlerMatch`, `HandlerRegistered`, `RequestTypeSubtype` or `UnwrapTransformResolvable`, and no change to `ValidatePipelines(enabled = true, throwOnError = true)`'s defaults
   - Depends on: 29.
@@ -598,7 +606,7 @@ One task per transport. Each bundles that transport's one-line `ChannelFactoryTy
 
 *ADR 0072 step 6.*
 
-- [ ] **36. DOCS: Release notes for C-8's obligations — four separate breaking-change notes**
+- [ ] **36. DOC: Release notes for C-8's obligations — four separate breaking-change notes**
   - File: `release_notes.md`, under `## Master`
   - Write, in British spelling (NFR-7):
     - A summary entry for the feature: the fifth consumer validation rule, its `Error` severity, and the fact that FR-7 to FR-11 make AWS SQS, AWS SQS V4 and Postgres subscriptions routable by `CombinedChannelFactory` for the first time. Reference [ADR 0072], [ADR 0073] and this spec.
@@ -674,7 +682,7 @@ New public static class `SubscriptionChannelFactoryDeclaration` in namespace `Pa
     - **This branch is ADR 0073's own addition — FR-12 states only two conditions — and it is scheduled explicitly here because if it is not, it will not be built.** It is load-bearing three times over: `MockSubscription` and `NullDeclaringSubscription` are both reported under it, and an out-of-repo override may return null (C-13). A `Check` whose null branch returned "sound" must not pass
   - Depends on: 39.
 
-- [ ] **41. TEST + IMPLEMENT: `Check` accepts a sound declaration and rejects a missing subject (ADR 0073 `Check` contract)**
+- [ ] **41. CHARACTERISE: `Check` accepts a sound declaration and rejects a missing subject (ADR 0073 `Check` contract)**
   - **USE COMMAND**: `/test-first when a subscription declares a real channel factory the declaration check should report no reason`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessagingGateway/ChannelFactoryDeclaration"
   - Test files:
@@ -684,7 +692,7 @@ New public static class `SubscriptionChannelFactoryDeclaration` in namespace `Pa
     - `Check(typeof(<double>), typeof(<the sound IAmAChannelFactory double from task 37>))` returns **null**
     - `Check(null!, typeof(<sound factory>))` throws `ArgumentNullException`
   - **🔁 Characterisation (sound case only)** — `When_a_subscription_declares_a_real_channel_factory_should_report_no_reason.cs` is green on first run: after tasks 38-40 a sound declaration falls through all three branches. **RED mutation**: change `Check`'s final `return null` to return a placeholder reason; the test fails on its null assertion. The `ArgumentNullException` case needs no mutation — no earlier task adds the guard, so it is RED on arrival.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed** — before committing if the test was green on arrival, before implementing if it was not *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Complete the null-means-sound convention, which is what keeps the addition to the shipped package at **one type** — a `ChannelFactoryDeclarationResult` record would be a second public type carrying a boolean and a message with no behaviour and no invariant
     - `subscriptionType` names the subject only; a null argument throws `ArgumentNullException`
@@ -720,17 +728,17 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
     - Let a `ReflectionTypeLoadException` from `GetTypes()` **propagate**: broken project references are not a declaration defect
   - Depends on: 41, 1 (the phase-1 doubles must be expression-bodied or this sweep reports them under the null branch and the subject-scoped assertions are written against a moving target).
 
-- [ ] **43. TEST + IMPLEMENT: A subscription whose constructor cannot succeed is still examined (AC-29)**
+- [ ] **43. CHARACTERISE: A subscription whose constructor cannot succeed is still examined (AC-29)**
   - **USE COMMAND**: `/test-first when a subscription's constructor cannot succeed the sweep should still report its declaration as sound`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessagingGateway/ChannelFactoryDeclaration"
   - Test file: `When_a_subscription_constructor_cannot_succeed_should_still_report_its_declaration.cs`
   - Test should verify:
-    - a third synthetic double whose **constructor cannot succeed** — it calls `base(...)` with `MessagePumpType.Unknown`, which `Subscription.cs:213` rejects with `ConfigurationException` — but which declares the **sound** `IAmAChannelFactory` double from task 37
+    - a third synthetic double whose **parameterless constructor cannot succeed** — it calls `base(...)` with `MessagePumpType.Unknown`, which `Subscription.cs:213` rejects with `ConfigurationException` — but which declares the **sound** `IAmAChannelFactory` double from task 37
     - it appears among its assembly's subjects with a **null** `Reason`
     - it can only do so because **no constructor ran** — that is the assertion AC-29 is about
     - no broker, database or network is contacted
-  - **🔁 Characterisation** — green on first run: task 42 already reads through `GetUninitializedObject`. **RED mutation**: replace the uninitialised read with `Activator.CreateInstance(type, nonPublic: true)`; the double's constructor is invoked (or cannot be found) and throws, and the test fails because the sweep does not complete (no per-type catch exists yet — task 47).
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - **🔁 Characterisation** — green on first run: task 42 already reads through `GetUninitializedObject`. **RED mutation**: before the uninitialised read, try `Activator.CreateInstance(type, nonPublic: true)` and fall back to `GetUninitializedObject` only on `MissingMethodException`. Doubles without a parameterless constructor are unaffected; the AC-29 double's constructor runs and throws `ConfigurationException` (`Subscription.cs:213`), and the test fails because a constructor was invoked — the thing AC-29 is about. The test double therefore needs a **parameterless** constructor that calls `base(...)` with `MessagePumpType.Unknown`.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed** — before committing if the test was green on arrival, before implementing if it was not *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Confirm `Sweep` uses `GetUninitializedObject` and never `Activator.CreateInstance` — **none** of the twenty-four shipped gateway subscription types declares a parameterless constructor (all-optional parameters do not produce one), so `Activator.CreateInstance(Type)` throws `MissingMethodException` on every one of them
     - This is a **positive** case — it shows a type that cannot be constructed is nonetheless examined — not a negative exercise of the reading path; that is task 42's job
@@ -769,7 +777,7 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
     - **The constructed generic base belongs on this pair specifically.** No shipped assembly exercises the reduction — all twelve pairs are `XSubscription<T> : XSubscription` with a *non-generic* base. And the reduction is load-bearing only where the derived type declares no override: on the declares-its-own pair (task 46) the drop condition's first conjunct is already false, so both types are reported whether the reduction works or not and an assertion there could not fail on a broken reduction
   - Depends on: 44 (`Base<T>` must be closable before it can be read).
 
-- [ ] **46. TEST + IMPLEMENT: A derived subscription declaring its own override is reported in its own right**
+- [ ] **46. CHARACTERISE: A derived subscription declaring its own override is reported in its own right**
   - **USE COMMAND**: `/test-first when a derived subscription declares its own channel factory override the sweep should report both it and its base`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessagingGateway/ChannelFactoryDeclaration"
   - Test file: `When_a_derived_subscription_declares_its_own_override_should_be_reported_in_its_own_right.cs`
@@ -777,7 +785,7 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
     - a second base/derived pair in `TestDoubles/` where the **derived type declares its own** `ChannelFactoryType`
     - **both** types are reported as subjects
   - **🔁 Characterisation** — green on first run: task 45's drop condition already carries the `BindingFlags.DeclaredOnly` conjunct. **RED mutation**: remove that conjunct, so a candidate is dropped whenever an ancestor is a candidate; the declaring derived type disappears and the test fails on its both-reported assertion.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed** — before committing if the test was green on arrival, before implementing if it was not *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Confirm subsumption never drops a declaring derived type: it can disagree with its base, and a guard that hid it would be blind to exactly the declaration the author wrote. An unconditional "at most once" would invert the guard's purpose (FR-12 *Scope*, AC-27's Then clause)
     - **This shape has no shipped instance at all**, so `Core.Tests` is the only place it can be tested — the generated sweeps test the *outcome* of the no-override shape on real assemblies, these two pairs test the *mechanism*
@@ -792,22 +800,24 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
     - its entry carries a **non-null** reason naming the type, the exception type and its message
     - the rest of the sweep still completes — other subjects are still reported in the same run
     - **no other double exercises this**: `MockSubscription` reads `null` rather than throwing
+    - at RED, this double makes tasks 42-46 fail too — the sweep terminates on it until the per-type catch exists. Expected, and restored by this task
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Catch **per type** inside `Sweep` and convert the fault to a reason. This does **not** contradict ADR 0064's "rules must not catch": that rule forbids a *rule* catching because the `Specification<T>` framework already wraps rule evaluation and turns any body exception into an `Error` finding. A static sweep has no such surrounding framework, so catching per type is how it obtains the **equivalent** behaviour — one fault becomes one reported reason instead of terminating the run, and one run reports every offending type. Nothing is swallowed; the sweep still fails, with more information
     - **A reason, never a silent skip** — a skipped type vanishes from the reported subject set, which is the vacuous pass this design exists to prevent
   - Depends on: 46.
 
-- [ ] **48. TEST + IMPLEMENT: A generic subscription the representative argument cannot satisfy yields a reason, not a skip**
+- [ ] **48. CHARACTERISE: A generic subscription the representative argument cannot satisfy yields a reason, not a skip**
   - **USE COMMAND**: `/test-first when a generic subscription's constraints cannot be satisfied the sweep should report a reason rather than skip it`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessagingGateway/ChannelFactoryDeclaration"
   - Test file: `When_a_generic_subscription_cannot_be_closed_should_report_a_reason_rather_than_skip.cs`
   - Test should verify:
     - a synthetic generic subscription in `TestDoubles/` constrained `where T : IEvent` — enough, since `Paramore.Brighter.Command` implements `ICommand`
+    - if the test is RED on arrival, this double makes tasks 42-47 fail too — the sweep terminates on it. Expected, and restored by this task
     - its entry is **present** and carries a **non-null** reason
     - the reason **identifies the closing failure** — it names the representative argument `Paramore.Brighter.Command` and the `ArgumentException` `MakeGenericType` raised for the violated constraint — so it cannot be satisfied by task 47's getter-throws reason alone
   - **🔁 Characterisation (conditional)** — if task 47's per-type catch already encloses step 3 and its reason already names the exception, this test is green on first run. **RED mutation**: move the `MakeGenericType` call outside the per-type catch; the constraint violation then terminates the sweep and the test fails on its entry-present assertion. If task 47's catch does not enclose step 3, the test is RED on arrival and no mutation is needed.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed** — before committing if the test was green on arrival, before implementing if it was not *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Convert an arity-or-constraints failure in step 3 into a reason belonging to `Sweep`, not to `Check`
     - **Why this needs its own test when the exact subject set appears to cover it**: a silent skip is caught by the exact set only for a subject the configuration **already expects** — dropping such a subject shrinks the reported set and fails the comparison. It is **not** caught for an **unconfigured** subject, and that is exactly the event this guard exists to notice: a gateway growing a second declaring subscription which happens to be generic with constraints `Command` cannot satisfy. Nobody has added it to `AdditionalExpectedSubjects` — its absence *is* the event being guarded — so a silent skip leaves the generated test green. No `Core.Tests` case can reproduce that blind spot, because it belongs to the *generated* sweeps whose expectation comes from configuration; the path is closed the other way, by making the sweep's behaviour on it a tested property
@@ -820,12 +830,13 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
 
 *ADR 0073 step 3.*
 
-- [ ] **49. STRUCTURAL: the `GatewayConformance` configuration section**
+- [ ] **49. SETUP: the `GatewayConformance` configuration section**
   - Files: `tools/Paramore.Brighter.Test.Generator/Configuration/GatewayConformanceConfiguration.cs` (new), `tools/Paramore.Brighter.Test.Generator/Configuration/TestConfiguration.cs` (add the section, alongside the existing `MessagingGateway` and `Outbox` sections)
   - Properties:
     - `SubscriptionType` — `string`, **required**. The fully-qualified name of the subscription type expected to be reported. Rendered **both** as `typeof(X).Assembly`, to locate the sweep, **and** as an expected subject. **It MUST name a type that survives subsumption** — one declaring its own `ChannelFactoryType`, or a root candidate. Naming the generic derived type (`MqttSubscription<T>`) was a valid locator before and is now a red test.
     - `AdditionalExpectedSubjects` — `List<string>`, optional, default empty. Absent in all twelve today. A **generic** entry is written in JSON with its arity backtick exactly as `Type.FullName` reports it (`` Ns.Foo`1 ``); writing `Ns.Foo<>` is invalid, because the value must stay a name `Type.FullName` could have produced so the audit's namespace comparison keeps working.
     - `Category` — `string`, optional, unused by the guard; present for symmetry with the other sections.
+    - `Namespace` — `string?`, merged from the top-level `TestConfiguration.Namespace` when empty, exactly as `MessagingGatewayConfiguration.cs:41, :170-172` and `OutboxConfiguration.cs:51, :120-122` do. **The section, with `Namespace` merged, is the render model** task 50 renders with and task 51 passes.
   - The expected set is `SubscriptionType` ∪ `AdditionalExpectedSubjects`. An assembly that grows a second declaring subscription fails its sweep until that list is updated — which is the point.
   - **Why no test of its own**: it is a data-carrying configuration class. It is exercised by task 50's render test, end-to-end by task 53's generated tests and by task 54's audit, and a mis-shaped section fails configuration load or generation immediately.
   - Depends on: nothing (may run in parallel with phases 7-8).
@@ -853,7 +864,7 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
     - **Every declaration judgement stays in `SubscriptionChannelFactoryDeclaration`**, driven test-first in tasks 38-48. The template owns only rendering — the literal conversion and the union — which is what this test pins. An earlier draft put the subsumption rule in the template, which would have expressed one rule in two places and made a regeneration something to review rather than to trust
   - Depends on: 49.
 
-- [ ] **51. STRUCTURAL: `GatewayConformanceGenerator` and its wiring into generation, planning and the audit**
+- [ ] **51. SETUP: `GatewayConformanceGenerator` and its wiring into generation, planning and the audit**
   - Files: `tools/Paramore.Brighter.Test.Generator/Generators/GatewayConformanceGenerator.cs` (new); `tools/Paramore.Brighter.Test.Generator/Program.cs`; `tests/Paramore.Brighter.Test.Generator.Tests/GeneratedFileAudit/GeneratedTreeAudit.cs`
   - Mirror `MessagingGatewayGenerator`'s `Suites` / `SuitesFor` / `Plan` shape. Per `.agent_instructions/generated_tests.md` the suite **must** be described in `SuitesFor(...)`, so the generate path and the plan path walk one description — a suite only the generate path knows about is written and then reported as an **orphan** by the audit.
   - `Program.cs` invokes the new generator alongside the existing ones.
@@ -867,7 +878,7 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
 
 *ADR 0073 step 4; AC-27.* **Sequences after phase 5.**
 
-- [ ] **52. STRUCTURAL: the twelve `test-configuration.json` entries — nine edits, three new files**
+- [ ] **52. SETUP: the twelve `test-configuration.json` entries — nine edits, three new files**
   - **Three gateway test projects have no `test-configuration.json` today and need one**: `tests/Paramore.Brighter.AzureServiceBus.Tests`, `tests/Paramore.Brighter.MQTT.Tests`, `tests/Paramore.Brighter.RMQ.Sync.Tests`. Theirs carry `Namespace` and a `GatewayConformance` section, nothing else.
   - **`Namespace` is required, not incidental**: it is a top-level property defaulting to `string.Empty` (`Configuration/TestConfiguration.cs:38`), and the template renders `{{ Namespace }}.MessagingGateway.Generated.Conformance`, so omitting it yields `namespace .MessagingGateway.Generated.Conformance` — a failure *after* generation rather than at configuration load. All fourteen existing configurations carry it.
   - The other nine gain the section in the file they already have. `AdditionalExpectedSubjects` is **absent from all twelve**, not omitted here by accident.
@@ -891,7 +902,7 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
   - **Why no test of its own**: configuration data. It is validated by task 53's generated tests and by task 54's audit.
   - Depends on: 51.
 
-- [ ] **53. TEST + IMPLEMENT (generated): The sweep finds no invalid channel factory declaration in any of the twelve gateway assemblies (AC-27)**
+- [ ] **53. GENERATE: The sweep finds no invalid channel factory declaration in any of the twelve gateway assemblies (AC-27)**
   - **GENERATED TEST — do NOT use `/test-first` and do NOT hand-write the file.** The twelve test files are rendered by `./generate-test.sh` from task 50's template and must **never** be edited directly (`.agent_instructions/generated_tests.md`; ADR 0073 *Technology Choices*). A change to what they assert is a template edit followed by a regeneration. The behaviour they exercise — `Check` and `Sweep` — was driven test-first in tasks 38-48; this task makes it fire over the twelve **real** assemblies.
   - Test location: `tests/<each of the twelve>/MessagingGateway/Generated/Conformance/`
   - Generated test file (×12): `When_sweeping_the_gateway_assembly_should_find_no_invalid_channel_factory_declaration.cs`
@@ -900,6 +911,7 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
     - every `Reason` is `null`
   - What the exact set catches: subsumption over-reporting (an extra subject), subsumption inverted — base dropped, derived kept — which a non-emptiness check would miss because the derived type inherits its base's value and reports a null reason, and discovery finding nothing (an empty set). What it does **not** catch is a `SubscriptionType` aimed at the **wrong assembly**, since one value both locates the sweep and supplies the expectation; that is covered by the absent project reference (a cross-gateway misaim usually does not compile), by the reason check (a misaim to `Paramore.Brighter` itself reports `{Subscription}` and fails on `typeof(InMemoryChannelFactory)`), and by task 54's audit.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before committing the generated files** *(fires in the `review-before` gear, which is the default)*
+  - Run the generated tests with `dotnet test tests/<project> --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests"` for each of the twelve, then the generated-tree audit (`tests/Paramore.Brighter.Test.Generator.Tests`, `GeneratedFileAudit`). Commit the twelve generated files as `test:` — passing on first run is the expected case here, **never** "already complete".
   - Implementation should:
     - Build the generator, then run `./generate-test.sh` **from each of the twelve test project directories** (per `.agent_instructions/generated_tests.md` step 3 — running it from the repository root generates into the wrong place), and commit the twelve generated files
     - **Expect `SharedGenerator` to render its four helper files into the three new conformance-only projects as well.** This is deliberate and is **not** to be "fixed": those files reference only `Paramore.Brighter` (which contains the `Observability` namespace — it is not a separate package) and xunit, via fully-qualified `Xunit.Assert` calls rather than a `using`; both are already present in every gateway test project, so they compile. They land in the project root, outside the audit's `Generated/` scope, so no CI job depends on them. Twelve unused files is the accepted cost of not making a behavioural change to a shared generator FR-12 does not ask for
@@ -933,7 +945,7 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
 
 *ADR 0073 steps 6-7.* **Must follow phase 5.**
 
-- [ ] **55. STRUCTURAL: the `build` job runs the twelve sweeps**
+- [ ] **55. SETUP: the `build` job runs the twelve sweeps**
   - File: `.github/workflows/ci.yml`, the `build` job (declared at `:36`, which already runs `dotnet build --configuration Release` at `:60`)
   - Add one step running the twelve gateway test projects with
     `--configuration Release --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" --no-build`.
@@ -945,7 +957,7 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
   - **⚠️ Sequencing**: this step **must not be enabled until tasks 31-35 have merged.** The generated test asserts every `Reason` is `null`, which is false today in five of the twelve assemblies — GcpPubSub and MQTT report **not-a-channel-factory**; AWSSQS, AWSSQS.V4 and Postgres report **inherited-default**.
   - Depends on: 53, 54, and **35**.
 
-- [ ] **56. DOCS: `.agent_instructions/generated_tests.md` gains the `GatewayConformance` section**
+- [ ] **56. DOC: `.agent_instructions/generated_tests.md` gains the `GatewayConformance` section**
   - File: `.agent_instructions/generated_tests.md`
   - Add:
     - the new template folder `Templates/GatewayConformance/` to the **Architecture** listing (§ *Architecture*, alongside `Templates/MessagingGateway/{Reactor,Proactor}` and `Templates/Outbox/{Sync,Async,Causation}`)
@@ -973,7 +985,7 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
   - **Why no `/test-first`**: AC-31 is a property of the whole set of tests the feature introduces, discharged per-task by every task above and confirmed once here. There is no single test file that expresses it.
   - Depends on: 56.
 
-- [ ] **58. VERIFY (risk mitigation): the rule agrees with `CombinedChannelFactory`'s runtime routing, and `FactoryTypes` is not built from the consumed parameter**
+- [ ] **58. VERIFY: Risk mitigation — the rule agrees with `CombinedChannelFactory`'s runtime routing, and `FactoryTypes` is not built from the consumed parameter**
   - Re-read `src/Paramore.Brighter/CombinedChannelFactory.cs` and confirm `FactoryTypes` is derived from the `_factories` **field**, not from the primary-constructor `factories` parameter. The CS0236 compiler behaviour *raises* this risk rather than lowering it: the compiler rejects the correct-looking auto-property and accepts the wrong one. Confirm task 2's single-pass test is present and passing — it is the behavioural guard; this re-read is the second line.
   - Confirm the two companion assertions are present and passing — task 11 (AC-9) and task 14 (AC-10b) — which are the only things tying the rule's combined-arm verdict to the composite's actual routing.
   - **Record the residual risk honestly rather than claiming it away**: the companion assertions can only fire *negatively*. C-9's doubles throw on every member, so the mirror-image assertion — a correct multi-bus configuration where the rule is silent *and* the composite successfully routes — cannot be written as a successful-routing assertion. AC-6 (task 8) is therefore rule-only, with no runtime counterpart for the dispatch half, and AC-10's nested agreement is likewise unpinned at runtime. If a later change introduces a non-throwing double, the positive direction should be pinned then.
@@ -982,7 +994,7 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
   - References: ADR 0072 *Risks and Mitigations* (drift, and the `FactoryTypes` re-enumeration trap); NFR-6.
   - Depends on: 57.
 
-- [ ] **59. VERIFY (risk mitigation): no regression in the existing rules, the generated tree, or any target framework**
+- [ ] **59. VERIFY: Risk mitigation — no regression in the existing rules, the generated tree, or any target framework**
   - Run the full `dotnet build --configuration Release` across the solution and confirm it is clean under `TreatWarningsAsErrors` (`src/Directory.Build.props`). In particular confirm the `#if NETSTANDARD2_0` branch of the uninitialised read compiles on `netstandard2.0` **and** that the `net8.0`/`net9.0`/`net10.0` builds use `RuntimeHelpers.GetUninitializedObject` — `FormatterServices.GetUninitializedObject` is obsoleted as **SYSLIB0050** there and would fail the build. Note that test projects target `net9.0;net10.0` (`tests/Directory.Build.props`), so the netstandard2.0 branch is compiled but never executed in this repository.
   - Run the existing generated-tree audit (`…should_find_no_missing_files.cs`, `…should_find_no_orphans.cs`) and confirm the twelve new conformance files are expected, not orphaned.
   - Run the existing `Validation/` suite in `Core.Tests` and confirm the four pre-existing consumer rules are untouched in severity, `Source`, `Message` and blocking behaviour (task 30 asserts this at host level; this is the unit-level sweep).
@@ -1075,7 +1087,7 @@ Two notes on format rather than coverage:
 | CI placement — the `build` job, explicit `--configuration Release`, non-vacuity via the generated-tree audit | 55 |
 | The thirteenth-gateway audit — `SubscriptionType` only | 54 |
 | `Core.Tests` cases — three subscription doubles, two helper types, two subsumption pairs (the no-override one carrying a constructed generic base), a generic declaring its own override, the throwing getter, the bad-constraints generic, the sweep over the AC-28 doubles, and `Check`'s null branch | 37 (helpers), 38 + 39 + 43 (the three subscription doubles), 40 (null branch), 42 (sweep over the AC-28 doubles), 44 (generic declaring its own — scheduled before the pairs because the no-override pair's base is generic), 45 + 46 (the two subsumption pairs), 47 (throwing getter), 48 (bad constraints) |
-| The cross-ADR constraint on 0072's doubles (expression-bodied `typeof(...)`) | 2 (stated), 42 (where a violation would show) |
+| The cross-ADR constraint on 0072's doubles (expression-bodied `typeof(...)`) | 1 (stated), 42 (where a violation would show) |
 | Accepted gaps recorded rather than closed — the instance-cannot-be-produced path, the twelve unused `SharedGenerator` helper files, the CI project list, the RocketMQ job | 48, 53, 55 |
 
 **ADR 0073 — Implementation Approach**: step 1 → tasks 37-41; step 2 → tasks 42-48; step 3 → tasks 49-51; step 4 → tasks 52-53; step 5 → task 54; step 6 → task 55; step 7 → task 56.
@@ -1089,7 +1101,7 @@ Every task traces to a requirement or an ADR decision. Two are worth flagging as
 - **Task 41** (`Check` returns null for a sound declaration; `ArgumentNullException` for a null subject) — from ADR 0073's `Check` **Contract**, not from AC-28. Without it the null-means-sound convention has no positive assertion.
 - **Task 40** (`Check`'s **null** branch) — explicitly ADR 0073's own addition beyond FR-12's two conditions, and scheduled as its own task precisely because, as the ADR says, it will otherwise not be built.
 
-Tasks 2, 26 and 37 are fixture-only, traceable to C-9 and to ADR 0073's *Hand-written cases in `Core.Tests`*. Tasks 57-59 are verification and risk-mitigation tasks traceable to AC-31, NFR-3, NFR-6 and the two ADRs' *Risks and Mitigations* sections. Nothing else is proposed.
+Tasks 1, 26 and 37 are fixture-only, traceable to C-9 and to ADR 0073's *Hand-written cases in `Core.Tests`*. Tasks 57-59 are verification and risk-mitigation tasks traceable to AC-31, NFR-3, NFR-6 and the two ADRs' *Risks and Mitigations* sections. Nothing else is proposed.
 
 ## Where the 0072-before-0073 ordering is enforced by task order
 
