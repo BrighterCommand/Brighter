@@ -215,7 +215,12 @@ public static class ConsumerValidationRules
     /// <summary>
     /// Decides whether a subscription's declared type is compatible with the resolved candidates.
     /// </summary>
-    private static bool IsCompatible(Type? declared, Arm arm, IReadOnlyList<Type> candidates) => false;
+    private static bool IsCompatible(Type? declared, Arm arm, IReadOnlyList<Type> candidates)
+        => arm switch
+        {
+            Arm.Direct => declared is not null && declared.IsAssignableFrom(candidates[0]),
+            _ => false
+        };
 
     /// <summary>
     /// Renders a type for a validation message: its full name, namespace-qualified rather than
