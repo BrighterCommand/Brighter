@@ -2,6 +2,35 @@
 
 ## Master
 
+### AWS: configurable `MaximumMessageSize` for SNS topics and SQS queues
+
+Amazon SNS now accepts message payloads up to 1 MiB, but only if you raise the topic's `MaximumMessageSize` attribute — the default is still 256 KiB. Brighter's send path never assumed a fixed limit, but the provisioning path had no way to set the attribute, so a topic Brighter created with `OnMissingChannel.Create` was stuck at 256 KiB.
+
+SQS is the other way round. A queue created today already defaults to the full 1 MiB, so `SqsAttributes.MaximumMessageSize` is there for when you want a queue to *reject* anything over a size you pick, not to unlock headroom you'd otherwise be missing.
+
+`SnsAttributes` and `SqsAttributes` (both the V3 and V4 packages) gain an optional `maximumMessageSize` constructor parameter, in bytes:
+
+```csharp
+new SnsPublication
+{
+    Topic = new RoutingKey("my-topic"),
+    MakeChannels = OnMissingChannel.Create,
+    TopicAttributes = new SnsAttributes(maximumMessageSize: 1_048_576)
+};
+```
+
+For SNS the value is applied with a `SetTopicAttributes` call after `CreateTopic`, because SNS rejects `CreateTopic` when a supplied attribute differs from the existing topic's. That means the setting also raises the limit of a topic Brighter created earlier at the default size. For SQS the attribute joins the `CreateQueue` request, which already re-applies attributes to an existing queue.
+
+#### Before you raise a topic
+
+AWS puts some sharp edges around a topic above 256 KiB, and they are worth reading before you turn this on:
+
+* It only supports Amazon SQS, AWS Lambda and Amazon Data Firehose subscriptions. HTTP/S, email, SMS and mobile push are not, so raising the limit on a topic that has those subscribers will cost you them.
+* It is capped at 100 subscriptions, rather than the usual 12.5 million.
+* SNS measures the message body and its message attributes together, so your headers count against the limit.
+* The subscribed queue does **not** need raising to match. A message delivered through an SNS subscription is bounded by the topic's limit, not by the queue's `MaximumMessageSize` — a 500 KiB message on a 1 MiB topic arrives intact on a queue still sitting at 256 KiB. A direct `SqsMessageProducer` send is bounded by the queue's limit as normal.
+* The `[Compress]` and `[ClaimCheck]` thresholds compare the uncompressed body only. A compressed body goes out base64-encoded, which inflates it by roughly a third, so leave yourself headroom under the topic's maximum.
+
 ### Replay Outbox Messages on Inbox Duplicate (spec 0027)
 
 When an inbox detects a duplicate request, Brighter can now optionally **replay** the outbox messages that were produced under that request's causation, rather than silently dropping the duplicate. The feature is opt-in (`OnceOnlyAction.Replay` on the inbox attribute) and non-breaking: it requires a causation-tracking inbox and outbox (`IAmACausationTrackingInbox` / `IAmACausationTrackingOutbox`), and the relational stores gate the causation-aware write on a memoized column probe so un-migrated schemas keep depositing unchanged. Startup pipeline validation fails fast if a `Replay` pipeline is configured without causation tracking. See [ADR 0057](docs/adr/0057-replay-outbox-on-inbox-duplicate.md) and [spec 0027](specs/0027-replay-matching-outbox-events-when-inbox-has-already-seen/) for full details.

@@ -47,6 +47,10 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
     /// <summary>
     /// Maps an Azure Service Bus message to a Brighter <see cref="Message"/>.
     /// </summary>
+    /// <remarks>
+    /// The CloudEvents subject application property takes precedence over the native subject.
+    /// When it is absent, wrappers implementing <see cref="IBrokeredMessageWithSubject"/> supply the native subject.
+    /// </remarks>
     /// <param name="azureServiceBusMessage">The Azure Service Bus Message to map to a Brighter <see cref="Message"/></param>
     /// <returns></returns>
     public Message MapToBrighterMessage(IBrokeredMessageWrapper? azureServiceBusMessage)
@@ -184,11 +188,15 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
             )
         )
         {
+            if (azureServiceBusMessage is IBrokeredMessageWithSubject messageWithSubject
+                && !string.IsNullOrEmpty(messageWithSubject.Subject))
+                return messageWithSubject.Subject;
+
             Log.NoCloudEventsSubject(s_logger, _topic, subscription.Name);
             return string.Empty;
         }
 
-        var subject = property.ToString() ?? string.Empty;
+        var subject = property?.ToString() ?? string.Empty;
 
         return subject;
     }
