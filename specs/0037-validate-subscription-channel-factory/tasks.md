@@ -31,7 +31,7 @@
 
 *ADR 0072 step 1, and the C-9 test doubles every later phase uses.*
 
-- [ ] **1. STRUCTURAL: the closed test-double set for the rule's criteria (C-9)**
+- [x] **1. STRUCTURAL: the closed test-double set for the rule's criteria (C-9)**
   - Test location: `tests/Paramore.Brighter.Core.Tests/Validation/TestDoubles/`
   - One class per file. The set is **closed** — no acceptance criterion in phases 2-4 may use a double not listed here, and no double here may acquire transport behaviour:
     - `DeclaredChannelFactory : IAmAChannelFactory`
