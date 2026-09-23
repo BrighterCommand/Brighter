@@ -210,7 +210,10 @@ public static class ConsumerValidationRules
     /// </summary>
     private static (Arm arm, IReadOnlyList<Type> candidates) ResolveCandidates(
         Subscription subscription, IAmAChannelFactory? defaultChannelFactory)
-        => (Arm.Direct, defaultChannelFactory is null ? [] : [defaultChannelFactory.GetType()]);
+    {
+        var effective = subscription.ChannelFactory ?? defaultChannelFactory;
+        return (Arm.Direct, effective is null ? [] : [effective.GetType()]);
+    }
 
     /// <summary>
     /// Decides whether a subscription's declared type is compatible with the resolved candidates.
