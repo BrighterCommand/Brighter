@@ -47,8 +47,9 @@ read, with no recorded factors, no comparable level, and no artefact anyone else
 
 A new slash command, `/spec:show-me [spec-id]`, that sits alongside the existing `/spec:*` family
 and runs **after** a spec's implementation is finished. It reads the spec's own artefacts (ADRs,
-`requirements.md`, `tasks.md`), its git history, and — when it exists — its pull request's diff, and
-writes one markdown file, `specs/NNNN-name/show-me.md`, containing:
+`requirements.md`, `tasks.md`, and — whenever one exists for the spec — its `release_notes.md`
+section), its git history, and — when one exists — its pull request's identity, and writes one
+deliverable markdown file, `specs/NNNN-name/show-me.md`, containing:
 
 1. **What changed and why** — a plain-language narrative a teammate can read cold, carrying a
    diagram when the change has a shape worth drawing.
@@ -67,6 +68,15 @@ The risk assessment is **advisory only, never a gate**: it produces a level and 
 so in its own output, and nothing about the command's behaviour changes with the level. A human
 still decides whether to merge.
 
+**What this spec delivers, and what a run writes.** Three artefacts: the command file
+`.claude/commands/spec/show-me.md`; a *measurement script* beside it that computes every mechanically
+countable value (FR-21); and that script's sibling test script (NFR-9). A run writes two files, both
+in the spec directory: the deliverable `show-me.md`, and the gitignored *fact ledger*
+`.show-me-ledger.json` through which the script hands its measurements to the command (FR-4). Two
+single-line configuration changes support them: one path-scoped `.claude/settings.json` allow-list
+entry, so the script runs without a permission prompt (FR-18, C-10), and one exact-match `.gitignore`
+line, so the ledger never appears in `git status` (FR-4). Nothing is added under `src/` or `tests/`.
+
 The file is a spec deliverable like any other: it lives in the spec directory, is tracked in git,
 and is regenerated (overwriting in place) whenever the picture changes — for example after more
 commits land on the spec branch.
@@ -81,12 +91,13 @@ These terms are used with exactly these meanings throughout this document.
 |------|------------|
 | **Spec directory** | A directory (not a file) directly under `specs/`, named `NNNN-name`, where `NNNN` is a four-digit id. Note that ids are **not unique** in this repository (e.g. `specs/0002-backstop-error-handler/`, `specs/0002-sqs-cleanup/` and `specs/0002-universal_scheduler_delay/` all exist on `master`). Non-directory entries under `specs/` (`specs/README.md`, `specs/dlq-review-findings.md`, `specs/.current-spec`) are never spec directories. |
 | **Target spec** | The spec directory the command resolves from its argument (FR-1) or from `specs/.current-spec` (FR-2). |
-| **Task checkbox** | A line in `tasks.md` matching `^\s*-\s\[[ xX]\]`. Checked = `[x]` or `[X]`; unchecked = `[ ]`. |
+| **Task checkbox** | A line in `tasks.md` matching the *task checkbox pattern*, stated in full below this table rather than in this cell (a pattern carried in a table cell acquires the cell's escaping). Checked = `[x]` or `[X]`; unchecked = `[ ]`. |
 | **Complete spec** | A target spec whose `tasks.md` exists, contains ≥ 1 task checkbox, and contains **zero** unchecked task checkboxes. |
 | **Spec branch** | The git ref resolved by FR-10's ordered rules (e.g. spec 0036 → `refs/remotes/origin/spec/scoped-lifetime-per-pipeline`, preferred over the local `spec/scoped-lifetime-per-pipeline` when both exist). |
 | **Base ref** | `origin/master` if it resolves, otherwise `master`. The chosen ref and its sha are always named in the output (FR-10). |
-| **Merge base** | `git merge-base <base ref> <spec branch tip>`. |
-| **Spec diff** | The single diff selected by FR-20's precedence rule: the PR diff (`gh pr diff {n}`) when a PR is discovered and the command succeeds, otherwise `git diff <merge base>..<spec branch tip>`. Exactly one source is used and named; the two are never mixed or averaged. |
+| **Measured head** | The commit the spec diff is measured to: the discovered PR's head commit (`headRefOid`, from FR-20's `gh pr list` query) when a PR is discovered **and** that commit is present in the local repository; otherwise the spec branch tip. Resolved once per run, by the measurement script, and recorded in the *fact ledger* (FR-20, FR-21). |
+| **Merge base** | `git merge-base <base ref> <measured head>`, computed by the measurement script and recorded in the *fact ledger*. The command never issues `git merge-base` itself (FR-18). |
+| **Spec diff** | `git diff <merge base>..<measured head>` (FR-20). There is exactly one spec diff per run, identified by those two shas, and every read of diff content or diff statistics in the run — by the measurement script or by the command — is a pathspec-scoped or summary-only `git diff` over exactly that pair (NFR-3), so no two reads can describe different changes. `gh pr diff` is never used (FR-18, FR-20). |
 | **Blast radius** | Four measured numbers over the spec diff: (a) changed files under `src/`, (b) changed files total, (c) net lines added/removed total, (d) changed **public API declaration lines** — see the row below. |
 | **Public API declaration line** | A line of the spec diff, in a file under `src/`, that begins with `+` or `-` and declares a `public` or `protected` member. The exact pattern, its regex dialect and its counting rule are stated in full immediately below this table — they are given outside it because the pattern contains a `|` that a table cell cannot carry literally. |
 | **Immediate subdirectory of `src/`** | For a changed path of the form `src/{X}/…` — that is, with at least one path segment after `{X}` — the contributed subdirectory is `{X}`. A changed path of the form `src/{F}` with **no** further segment (a file sitting directly under `src/`) contributes **nothing** to the subdirectory count, while still counting toward "changed files under `src/`". The repository has exactly one such file, `src/Directory.Build.props`, so this is a real case and not a hypothetical: a diff touching `src/Directory.Build.props` plus four files in one project directory changes 5 files under `src/` but spans **1** subdirectory, and FR-6's D1 test therefore does **not** fire. The count is of distinct `{X}` values, so two changed files in the same `{X}` contribute 1. |
@@ -108,8 +119,7 @@ file under `src/`, begins with `+` or `-`, and matches this **POSIX extended** p
 
 The dialect is named because the pattern is not portable otherwise. Written for a *basic*-regex
 `grep`, the parentheses and an escaped `\|` are read as literal characters and the pattern matches
-neither declaration; and `\s`/`\b` are GNU extensions absent from the BSD `grep` that macOS ships.
-Implementations must use the extended form above verbatim, inside a fenced block rather than a table
+neither declaration. Implementations must use the extended form above verbatim, inside a fenced block rather than a table
 cell, because the alternation `|` cannot appear literally in a markdown table. The pattern is
 implemented in exactly one place — FR-21's measurement script — and never transcribed into the
 command file, a task, an ADR or a table cell, because a pattern carried in markdown prose acquires
@@ -122,6 +132,52 @@ much public-surface text the diff moves, not how many distinct members changed �
 FR-6's D2 threshold is expressed as 10 *lines* rather than 10 members. Every consumer of this number
 (F1's sibling metric, D2's trigger, FR-10's mandatory report) reads this one definition, so the three
 can never disagree.
+
+**The other three stated patterns — the exact rules.** Each is **POSIX extended**, evaluated as
+`grep -E`, case-sensitive and matched line by line, and each is bound by every rule stated above for
+the public-API pattern: it is given here in a fenced block, never transcribed into a table cell, and
+implemented exactly once, in FR-21's measurement script. All three use `[[:space:]]` rather than
+`\s`: some `grep` builds accept `\s` under `-E`, but POSIX does not define it, and a pattern whose
+meaning depends on the build is not one pattern.
+
+*Task checkbox pattern.* A line of `tasks.md` matching this is a *task checkbox*:
+
+```
+^[[:space:]]*-[[:space:]]\[[ xX]\]
+```
+
+A task's title — as FR-3's "first three unchecked task titles" uses it — is the remainder of the line
+after the match, with leading and trailing whitespace trimmed.
+
+*Task-type tag pattern.* A task checkbox carries a task-type tag only when it matches this, and the
+tag is the parenthesised alternative it matched:
+
+```
+^[[:space:]]*-[[:space:]]\[[ xX]\][[:space:]]*\*\*(TEST [+] IMPLEMENT|STRUCTURAL|PROJECT|DOC):
+```
+
+That is: the tag must open the task's bold lead-in and be followed immediately by a colon, exactly as
+C-2's established style writes it. Every task checkbox that does not match is **`untagged`** —
+including one whose lead-in opens with some other word (`**REGRESSION FIX:`, `**DOC TIDY:`) and one
+that mentions a tag word anywhere else in its text — so the four tag counts and `untagged` always sum
+to the checkbox total. The `+` is written as the bracket expression `[+]` because a bare `+` is an
+ERE quantifier: `TEST + IMPLEMENT` written literally matches `TEST  IMPLEMENT` (two spaces) and never
+the tag itself — the same class of silent escaping defect FR-21's exactly-once rule exists to catch.
+
+*Declared-id pattern.* An id is *declared* in a `requirements.md` only where a line matches this, and
+the id is the `(FR|NFR)-[0-9]+` part of the match:
+
+```
+^[[:space:]]*(-[[:space:]]+)?\*\*(FR|NFR)-[0-9]+
+```
+
+The anchor is the rule. An id counts only where it opens a bold lead-in at the start of a line,
+optionally as a list item (`**FR-7 — …**`, `- **FR-1 — …**`); an id cross-referenced inside prose is
+never at a line start and never matches. A sub-numbered lead-in (`**FR-27.3 — …**`) matches as
+`FR-27`, which is FR-8's folding rule. The *declared ids* are the distinct ids matched. Measured on
+2026-09-23 with both GNU `grep` and the BSD `grep` macOS ships, the pattern yields 3, 8, 0 and 37
+declared ids for NFR-9's four fixtures and 30 for this document; the unanchored `(FR|NFR)-[0-9]+`
+finds **540** occurrences in this document, which is the gap the anchor exists to close.
 
 ### Functional Requirements
 
@@ -180,14 +236,16 @@ This precondition check is the only circumstance in which the command declines t
 **because of the spec it was pointed at**. It is a precondition on the *input*, not a judgement about
 the change (contrast FR-13). There is exactly one other stop, and it is a precondition on the
 *command's own tooling* rather than on the input: FR-21's measurement-script stop, which fires when
-the script is absent, unreadable, exits non-zero, or emits output the command cannot parse. No third
-stop exists, and no absent or degraded **input** ever stops the command (FR-16).
+the script is absent, is unreadable, exits with a status FR-21 does not assign to a defined outcome,
+or leaves output the command cannot parse. No third stop exists, and no absent or degraded **input** ever stops the command (FR-16).
 
 **Ordering — the gate runs above both writes.** The measurement script supplies the task-checkbox
 counts this gate reads, so the script necessarily runs before the gate is evaluated. That is not a
-write: on a spec that fails this gate the script writes **no** ledger at all, reporting the gate
-facts on its standard error stream instead (FR-21), so the *fact ledger* comes into existence only
-once the gate has passed. A run that stops here therefore leaves the repository byte-for-byte unchanged (NFR-8), with
+write: on a spec that fails this gate the script writes **no** ledger at all, reports the gate
+facts on its standard error stream instead, and exits with status **`2`** (FR-21), so the *fact
+ledger* comes into existence only once the gate has passed. **Exit status `2` is how the command
+tells this stop from a tooling fault**: on `2` it prints this requirement's stop message, built from
+those gate facts, and never FR-21's tooling-fault message. A run that stops here therefore leaves the repository byte-for-byte unchanged (NFR-8), with
 no ledger created and no pre-existing ledger touched (AC-7, AC-71).
 
 #### Output file
@@ -203,10 +261,13 @@ does not manage them. The command does not `git add` or commit the file.
 
 *The fact ledger.* The path is `specs/{target spec directory}/.show-me-ledger.json` (Definitions). It
 holds the JSON the measurement script emitted for this run (FR-21) and exists so that one run
-resolves and fetches each remote input at most once rather than invoking `gh pr diff` a second time.
-It is replaced wholly on re-run under exactly the same rules as the deliverable — no append, no
-numbered variant, no backup — and is never staged, committed or pushed. It holds the measured JSON
-only: it never caches fetched diff text, so its size stays bounded by FR-21's cap.
+resolves its one remote input — FR-20's PR discovery query — at most once, and so that every later
+read in the run measures against the same pinned merge base and measured head (FR-20). It is replaced
+wholly on re-run under exactly the same rules as the deliverable — no append, no numbered variant, no
+backup — and is never staged, committed or pushed. It holds measured values only and never carries
+diff text: the command reads the diff content it needs itself, as a pathspec-scoped or summary-only
+`git diff` over the ledger's pinned shas (FR-14, NFR-3), so the ledger's size stays bounded by
+FR-21's cap.
 
 *Why two files do not make a third state in git.* `.gitignore` gains the **exact-match** entry
 `.show-me-ledger.json` — an exact filename, deliberately not a glob, because this repository already
@@ -221,8 +282,8 @@ Exactly these two paths are written. No third file, no marker, no temporary file
 **FR-5 — `show-me.md` has a fixed header and a fixed section set, in a fixed order.**
 The file begins with an H1 `# Show me — {spec directory name}` followed by a metadata block stating,
 each on its own line: generation date (ISO-8601), spec directory path, linked issue (from
-`.issue-number`, or `none`), spec branch (the **full ref** actually used, per FR-10), head commit sha
-(short), base ref and merge-base sha (short), and PR reference (number and URL, or `none found`).
+`.issue-number`, or `none`), spec branch (the **full ref** actually used, per FR-10), measured head
+sha (short — the commit the spec diff is measured to, FR-20), base ref and merge-base sha (short), and PR reference (number and URL, or `none found`).
 The body then contains these H2 sections, in this order, with these exact headings, all of them
 always present:
 
@@ -387,8 +448,10 @@ breaking-change items: 0`.
 it is never required (see FR-17 and Out of Scope). But **when a section for this spec does exist, the
 command must read it** — the read is not optional. Presence and reading are therefore the same
 state, which is what lets FR-16 row 5, FR-15 and the tie-break below each be written against a single
-condition instead of two, and what makes F2 deterministic between runs (NFR-1): two runs over the
-same tree cannot reach different item counts by one of them declining to read. Having read it, the
+condition instead of two. It also removes one source of variance from F2 — two runs over the same
+tree cannot differ merely because one of them declined to read the catalogue — but it does not make F2
+deterministic: F2 remains judgement-derived (NFR-1), and what is fixed is only the *decision to read*.
+Having read it, the
 command corroborates the list and — if the counts disagree — must say so in one line
 (`release_notes.md records {m} items; this summary identifies {n}`).
 
@@ -426,10 +489,11 @@ The section is prose and bullets, not a per-requirement audit table: a reader wa
 not twenty-eight rows confirming that the ordinary happened. It has exactly four parts, in this
 order.
 
-*Which ids are in scope (the counting rule, unchanged)*: a numbered requirement is an id matching
-`\b(FR|NFR)-(\d+)\b` that is **declared** in the spec's `requirements.md` — i.e. it appears at the
-start of a requirement's heading or bold lead-in (`**FR-7 — …**`), not merely cross-referenced in
-another requirement's prose. Call the resulting set the *declared ids* and its size `{total}`.
+*Which ids are in scope (the counting rule)*: a numbered requirement is an id **declared** in the
+spec's `requirements.md` — one matched by the *declared-id pattern* (Definitions, stated in full
+below the table), which recognises an id only where it opens a bold lead-in at the start of a line
+(`**FR-7 — …**`, `- **FR-1 — …**`), never where it is merely cross-referenced in another
+requirement's prose. Call the resulting set the *declared ids* and its size `{total}`.
 
 *Sub-numbered requirements*: a sub-numbered clause (`FR-27.3`, `NFR-1.2`) is not in scope on its own.
 It is folded into its top-level number (`FR-27`, `NFR-1`). When sub-clauses of one requirement have
@@ -492,8 +556,10 @@ number of deviation entries, and the six terms sum to `{total}`.
 
 **FR-9 — `## How it was built` states the task shape and the commit shape.**
 It states two things and nothing else: total tasks and the count per task-type tag found in
-`tasks.md` (`TEST + IMPLEMENT`, `STRUCTURAL`, `PROJECT`, `DOC`, plus `untagged`); and the number of
-commits on the spec branch since the merge base. Both are mechanically counted (NFR-1). They are
+`tasks.md` (`TEST + IMPLEMENT`, `STRUCTURAL`, `PROJECT`, `DOC`, plus `untagged`) — a tag recognised
+only by the *task-type tag pattern* (Definitions) and every other task checkbox counted `untagged`, so
+the five counts sum to the total; and the number of commits in `{merge base}..{measured head}`, the
+same range the spec diff covers (FR-20). Both are mechanically counted (NFR-1). They are
 here as churn context — how much work, in how many pieces — not as an assessment of it.
 
 When the spec branch is not determinable (FR-16 row 12) there is no merge base to count from: the
@@ -539,8 +605,11 @@ does not duplicate it.
 It also states, on one line each, exactly what was measured, so two runs that disagree can be
 diagnosed:
 
-- `Measured from {gh pr diff #N (head {sha}) | git diff {merge-base sha}..{head sha}}` (one source
-  only, per FR-20).
+- `Measured from git diff {merge-base sha}..{measured head sha} ({PR #N head | spec branch tip})`
+  (one source only, per FR-20).
+- When a PR was discovered and its head commit differs from the resolved spec branch's tip:
+  `Spec branch tip {sha} differs from PR #{n} head {sha}; measured the PR head.`
+- When a PR was discovered but its head commit is not present locally: FR-16 row 16's line.
 - `Ref used: {full ref, e.g. refs/remotes/origin/spec/scoped-lifetime-per-pipeline} at {sha}; base
   ref {origin/master|master} at {sha}; merge base {sha}.`
 - When rule 1 selected a remote-tracking branch and a local branch of the same name exists at a
@@ -583,7 +652,7 @@ the factor takes the *highest* matching column** (High beats Medium beats Low). 
 over its full body of evidence, not just against a single entry considered on its own.
 
 Each row must cite the value it measured (e.g. `76 files under src/`, `14 items`, `2 deviation
-entries of 28 requirements: 1 Shipped with deviation, 1 Withdrawn with a superseding requirement`),
+entries of 37 requirements: 1 Shipped with deviation, 1 Withdrawn with a superseding requirement`),
 not merely the level.
 
 **FR-12 — The overall level is the highest factor level, and may be raised but never lowered.**
@@ -605,14 +674,16 @@ The `## Risk assessment (advisory)` section must contain this sentence verbatim:
 reviewer.`
 The command's behaviour must be identical regardless of the level: once the FR-3 precondition passes
 it always writes the file, always completes its run and reports per FR-19 (path written, created or
-replaced, level, advisory reminder) with **no error message and no refusal**, and never blocks,
+replaced, level, advisory reminder, word count) with **no error message and no refusal**, and never blocks,
 warns-and-stops, sets a marker file, applies a label, posts a comment, requests changes, or alters
 any approval state. A `High` result and a `Low` result differ only in the text written.
 
 **FR-14 — `## Where to look first` names the files a reviewer should open.**
 When a spec diff was measured: three to seven paths from the spec diff, ordered most-important first,
 each with a one-line reason (≤ 25 words) for why it matters. Every path listed must exist in the spec
-diff. If the spec diff touches no files under `src/`, the list is drawn from whatever the diff does
+diff. The paths come from the spec diff exactly as FR-20 pins it: from the `src/`-scoped diff the
+command reads over the ledger's merge base and measured head (NFR-3) and — only when the spec diff
+touches no file under `src/` — from `git diff --name-only` over that same pair of shas. If the spec diff touches no files under `src/`, the list is drawn from whatever the diff does
 touch and says so. When **no** diff was measured (spec branch not determinable, FR-10), the section
 takes FR-16's fallback text instead of a path list.
 
@@ -649,7 +720,7 @@ chosen and named.** *(Numbered FR-20 to keep the existing FR-1…FR-19 ids stabl
 logically with FR-10.)*
 
 *PR discovery*: the command runs `gh pr list --head {spec branch name with any remote prefix
-stripped} --state all --json number,url,headRefName,createdAt` and keeps only results whose
+stripped} --state all --json number,url,headRefName,headRefOid,createdAt` and keeps only results whose
 `headRefName` equals that branch name exactly.
 
 - Exactly one result → that is the spec's PR.
@@ -662,14 +733,24 @@ stripped} --state all --json number,url,headRefName,createdAt` and keeps only re
 (spec 0036's `.issue-number` is 4256 while its PR is #4282). It feeds only the metadata block's
 linked-issue line (FR-5).
 
-*Diff source precedence*: when a PR is discovered **and** `gh pr diff {n}` succeeds, the PR diff is
-the spec diff. Otherwise the spec diff is `git diff {merge base}..{head sha}`. The PR diff wins
-because it is stable while local `master` advances, and it is the diff a reviewer is actually
-looking at. Exactly one source is used; the command never reports two sets of numbers, and
-`## Blast radius` must name the chosen source and its parameters per FR-10.
+*The measured head.* When a PR is discovered, its `headRefOid` is the *measured head*
+(Definitions), provided that commit is present in the local repository: the PR's head is the state a
+reviewer is actually looking at, and it does not move when local branches do. When no PR is
+discovered, the measured head is the spec branch tip resolved by FR-10. When a PR is discovered but
+its head commit is not present locally, the measured head falls back to the spec branch tip and
+FR-16 row 16 applies; the command never fetches, because a fetch writes refs (FR-18).
 
-The PR is used for two things only: its number and URL in the metadata block, and its diff. Nothing
-else on the PR — comments, reviews, labels, checks — is read (FR-18).
+*One source.* Whatever the measured head, the spec diff is `git diff {merge base}..{measured head}`,
+the merge base is computed against that same head, and every diff read in the run — the measurement
+script's and the command's — is scoped to that one pair of shas, which the *fact ledger* pins
+(FR-21). The command therefore never reports two sets of numbers, and never mixes a PR-sourced diff
+with a branch-sourced one, because there is no PR-sourced diff text at all: `gh pr diff` is not used.
+It accepts no pathspec, so its only form NFR-3 permits is `--name-only`, which carries no `+`/`-`
+lines from which the public-API count and net lines could be measured. `## Blast radius` names the
+source and its parameters per FR-10.
+
+The PR is used for two things only: its number and URL in the metadata block, and its head sha as
+the measured head. Nothing else on the PR — comments, reviews, labels, checks — is read (FR-18).
 
 #### Measurement
 
@@ -696,25 +777,33 @@ pattern is implemented in it exactly once** (below), and **how narrowly it may b
 
 *What the script owns.* Exactly the fields NFR-1 lists as mechanically countable, plus the inputs
 those fields depend on: spec-branch and base-ref resolution and their shas including FR-10's
-local-versus-remote-tracking divergence line; PR discovery under FR-20 and the chosen diff source;
+local-versus-remote-tracking divergence line; PR discovery under FR-20, the *measured head*, and the
+*merge base* computed against it — the two shas that pin every diff read in the run;
 `## Blast radius`'s six bucket file counts and net lines and their total; the distinct-immediate-
 subdirectory-of-`src/` count; the changed public API declaration line count; the commit count since
 the merge base; `tasks.md`'s checkbox total, checked count, unchecked count, first three unchecked
 titles and per-tag counts; FR-8's *declared id* set and `{total}`; `.adr-list` entry resolution; and
 whether a `release_notes.md` section for the spec exists.
 
-*One implementation of every stated pattern.* The **Public API declaration line** rule's POSIX
-extended pattern (Definitions) and FR-8's declared-id regex are each implemented **once**, in this
-script, and nowhere else in the delivered artefacts. This is the whole point of the requirement: a
+*One implementation of every stated pattern.* The four stated patterns — the **Public API
+declaration line** pattern, the *task checkbox* pattern, the *task-type tag* pattern and the
+*declared-id* pattern, all four stated in full as POSIX extended expressions under Definitions — are
+each implemented **once**, in this script, and nowhere else in the delivered artefacts. This is the whole point of the requirement: a
 pattern written into markdown prose acquires the prose's escaping, and a pattern written more than
 once drifts. Neither failure is detectable by reading the command file.
 
 *The contract is the ledger file, not a stream.* Every measured value reaches the command by exactly
 one route: the script writes **one JSON object** to the *fact ledger* (FR-4), carrying at minimum a
 `schema_version` integer and one named field per value above, with a null (never a zero, never an
-omission) for any value that is not determinable. It exits `0` when it wrote a complete, parseable
-ledger and non-zero otherwise, so the exit code — not any parsing of the script's output — is what
-tells the command whether to proceed.
+omission) for any value that is not determinable. Its exit status has exactly three meanings, and
+the status — not any parsing of the script's output — is what tells the command what happened:
+
+- **`0`** — the FR-3 precondition passed and a complete, parseable ledger was written;
+- **`2`** — the script ran correctly and the FR-3 precondition did **not** pass: no ledger was
+  written, and the gate facts — which of FR-3's three cases applies and, for the unchecked case,
+  `{n}`, `{total}` and the first three unchecked task titles — are on standard error. This is **not**
+  a tooling fault: the command prints FR-3's stop message built from those facts;
+- **any other status** — a tooling fault, handled by the failure mode below.
 
 **Data the command must parse never travels on standard output.** A script's standard output is not
 wholly its own: the toolchain that runs it may write compiler, restore or runtime diagnostics there,
@@ -732,8 +821,8 @@ magnitude above the expected low-single-digit-KB object precisely so that it bin
 than on normal output.
 
 *When the ledger is written.* **Only once the FR-3 precondition has passed.** Writing it is what lets
-one run resolve and fetch each remote input at most once (FR-18): `gh pr list` and `gh pr diff` are
-each invoked at most once per run. The ledger holds measured values only and never caches fetched
+one run resolve its one remote input at most once (FR-18): `gh pr list` is invoked at most once per
+run, and `gh pr diff` never (FR-20). The ledger holds measured values only and never caches fetched
 diff text. A stop under FR-1, FR-2 or FR-3 writes no ledger and modifies no existing one.
 
 *The write is atomic.* A partially-written ledger must never be observable, and a script that fails
@@ -748,15 +837,24 @@ the generated `show-me.md` and report — on standard error, per the contract ab
 total, the number of excluded fenced-block lines, and whether the total is inside the 400–2,000
 range. The second invocation writes no file at all and does not touch the ledger.
 
+The command does **not** revise `show-me.md` in response to that result and does not invoke the
+script a third time. It passes the result to the caller in FR-19's report, and the run completes
+either way (FR-13). NFR-2's range is met by construction — by the per-section caps its arithmetic
+rests on — and the word-count mode is the check that a run actually respected them, reported so that a
+non-conforming run is visible rather than silent. If the second invocation itself exits non-zero, the
+deliverable already written stays in place and FR-19's report reads `word count unavailable:
+measurement script exited {code}`.
+
 *Offline.* With no network and no `gh` the script still exits `0` and still writes a complete ledger,
 with the PR fields null and a stated reason, so NFR-4's guarantee is unaffected.
 
-*The one failure mode, with defined text.* If the script is absent, is unreadable, exits non-zero, or
-exits `0` having written a ledger the command cannot parse as a single JSON object, the command
+*The one failure mode, with defined text.* If the script is absent, is unreadable, exits with any
+status other than `0` or `2`, exits `2` with gate facts the command cannot parse, or exits `0` having
+written a ledger the command cannot parse as a single JSON object, the command
 **stops without writing or modifying any file** — no `show-me.md`, and no ledger beyond whatever the
 atomicity rule above already guarantees, which is none where none existed and the previous one
 untouched where one did — and prints exactly:
-`/spec:show-me could not run its measurement script ({path}): {absent|unreadable|exited {code}|ledger was not a single JSON object}. No file was written. This is a tooling fault, not a fault in spec {dir} — re-run after restoring the script.`
+`/spec:show-me could not run its measurement script ({path}): {absent|unreadable|exited {code}|gate facts were not parseable|ledger was not a single JSON object}. No file was written. This is a tooling fault, not a fault in spec {dir} — re-run after restoring the script.`
 The command **must not** fall back to computing these values inline, and **must not** write a
 partial, guessed or zero-filled `show-me.md`. A missing measurer is not a missing input: FR-16's
 "no absence fails the command" governs the spec's inputs, and the script is part of the command, so
@@ -770,8 +868,8 @@ exactly as follows (each row has a matching acceptance criterion):
 
 | # | Absent input | Behaviour |
 |---|---|---|
-| 1 | No PR found for the spec branch (FR-20) | The metadata block's PR reference reads `none found`; `Inputs used` marks the pull-request row `not available: no PR found for branch {branch}`; blast radius is measured from `git diff` (FR-10, FR-20). No factor consequence. |
-| 2 | `gh` unavailable, unauthenticated, or offline | Same as row 1, with the reason recorded in `Inputs used` as `not available: gh unavailable`. Blast radius still measured from git. No factor consequence. |
+| 1 | No PR found for the spec branch (FR-20) | The metadata block's PR reference reads `none found`; `Inputs used` marks the pull-request row `not available: no PR found for branch {branch}`; the measured head is the spec branch tip (FR-10, FR-20). No factor consequence. |
+| 2 | `gh` unavailable, unauthenticated, or offline | Same as row 1, with the reason recorded in `Inputs used` as `not available: gh unavailable`. The measured head is the spec branch tip; blast radius is measured normally. No factor consequence. |
 | 5 | No `release_notes.md` section for the spec — the section is **absent**, not merely unread (FR-7) | `Breaking changes` is derived from ADRs and the diff, and adds the line `No release_notes.md section found for this spec; this list is derived from the ADRs and the diff.` No failure, no modification of `release_notes.md`. |
 | 5a | A `release_notes.md` section for the spec **exists** but NFR-3's read budget was exhausted before it could be read (FR-7 — the only case in which a present section goes unread) | `Breaking changes` is derived from ADRs and the diff, and adds the line `A release_notes.md section exists for this spec but was not read: the read budget was exhausted. This list is derived from the ADRs and the diff.` Row 5's "not found" line is **not** emitted. `Inputs used` marks the `release_notes.md` row `not available: read budget exhausted before release_notes.md section could be read`. FR-7's tie-break falls back to its no-catalogue rule. No failure, no modification of `release_notes.md`. |
 | 6 | `.adr-list` missing or empty | `What changed and why` states `No ADRs recorded for this spec.` and is synthesised from `requirements.md`, `tasks.md` and the commits. D3 (FR-6) cannot fire; D1 and D2 are evaluated normally. No factor consequence. |
@@ -784,6 +882,7 @@ exactly as follows (each row has a matching acceptance criterion):
 | 13 | Spec branch not determinable — effect on `Where to look first` (FR-14) | The section contains exactly: `No diff measured — spec branch not determinable, so no files can be ranked. Start from specs/{spec dir}/tasks.md and the ADRs listed in specs/{spec dir}/.adr-list.` It lists no paths and no diagram, and FR-14's 3–7-path rule does not apply. |
 | 14 | Spec branch not determinable — effect on `Breaking changes` (FR-7) | The item list is derived from the ADRs' *Consequences* sections and `requirements.md` only, and the section adds the line `No diff measured — this list is derived from the ADRs and requirements.md only; public-API declaration lines could not be inspected.` The count line is still present, and F2 is computed from the items found. |
 | 15 | Spec branch not determinable — effect on the metadata block (FR-5) | The metadata block's spec-branch, head-sha and merge-base-sha lines are each replaced with the single word `undetermined`. The base ref (FR-10's `origin/master`-or-`master` rule) does **not** depend on the spec branch and is still resolved and named normally. The PR reference reads `none found` — FR-20's PR discovery needs the spec branch's name to query `gh pr list --head`, which is unavailable in this state. Generation date, spec directory and issue are populated normally; the metadata block is still present in full. |
+| 16 | A PR is discovered but its head commit is not present in the local repository (FR-20) | The metadata block still names the PR's number and URL, and `Inputs used` marks the pull-request row `used`. The measured head falls back to the spec branch tip, and `## Blast radius` adds the line `PR #{n} head {sha} is not present locally; measured the spec branch tip {sha} instead. Fetch the branch and re-run to measure the PR head.` The command does not fetch (FR-18). No factor consequence. |
 
 **Rows 3 and 4 are retired.** They defined the absence behaviour for "PR exists but no implementation
 review round ran" and "no CI checks for the head commit". Both left the document when review history
@@ -815,7 +914,7 @@ ADR and issue reference written into `show-me.md` must resolve for a reader who 
 repository.
 
 **FR-18 — The command performs no writes other than its own two files, and reads nothing on GitHub
-but the PR's identity and its diff.**
+but the PR's identity.**
 Its only writes are the two FR-4 names: `specs/{spec}/show-me.md` and the gitignored *fact ledger*
 `specs/{spec}/.show-me-ledger.json`. It must not modify `release_notes.md`, `requirements.md`,
 `tasks.md`, any ADR, any approval marker (`.requirements-approved`, `.design-approved`,
@@ -824,15 +923,15 @@ commit, push, branch, checkout, stash or rebase. It must not post, edit or resol
 comment, apply or remove a label, or change PR state. Both writes are made by the command or by
 FR-21's measurement script acting as part of it; no other process is invoked that writes anything.
 
-Its GitHub access is read-only and confined to **`gh pr list`** (FR-20's discovery query) and
-**`gh pr diff`** (the spec diff), both already present in the repository's `.claude/settings.json`
-allow-list (`Bash(gh pr list:*)`, `Bash(gh pr diff:*)`). `gh pr view` remains permitted by that
-allow-list but is **not required** by this command: PR number and URL come from the `gh pr list`
-query. No `gh run`, `gh api` or `gh checks` invocation is permitted, and **no query that retrieves PR
+Its GitHub access is read-only and confined to **`gh pr list`** (FR-20's discovery query, which
+also yields the PR's head sha), already present in the repository's `.claude/settings.json`
+allow-list (`Bash(gh pr list:*)`). `gh pr diff` and `gh pr view` remain permitted by that allow-list
+but **neither is used** by this command: PR number, URL and head sha come from the `gh pr list`
+query, and the spec diff is read with `git` (FR-20). No `gh run`, `gh api` or `gh checks` invocation is permitted, and **no query that retrieves PR
 comments, reviews or `statusCheckRollup` is permitted** — review history and CI state are out of
-scope (FR-9, Out of Scope), so the command must not fetch them even incidentally. Each of those two
-`gh` commands is invoked **at most once per run**, which is what the fact ledger exists to make
-possible (FR-4, FR-21).
+scope (FR-9, Out of Scope), so the command must not fetch them even incidentally. `gh pr list` is
+invoked **at most once per run** and `gh pr diff` **never**, which is what the fact ledger's pinned
+shas make possible (FR-4, FR-20, FR-21).
 
 **One new allow-list entry is required, and exactly one — and it must be path-scoped.** FR-21
 delivers a measurement script, and the allow-list carries no entry that would permit invoking it in
@@ -853,14 +952,23 @@ confers neither, while permitting exactly the run this command needs.
 
 Two things this entry is **not** needed for, both verified against the current allow-list: `wc -c` —
 the affordability probe NFR-3 requires before every read — is already covered by the existing
-`Bash(wc:*)` entry, and every `git` command this document names is already covered by the existing
-`git status`/`log`/`diff`/`show`/`branch`/`rev-parse`/`ls-files` entries. No other addition, removal
-or widening of the allow-list is in scope.
+`Bash(wc:*)` entry, and every `git` command **the command itself** issues — `git diff` with a
+pathspec or a summary-only flag over the ledger's pinned shas (FR-14, NFR-3), and the
+`git status`/`log`/`show`/`branch`/`rev-parse`/`ls-files` reads — is already covered by the existing
+entries. The allow-list governs only the commands the command issues through its own shell tool; the
+`git` and `gh` processes the measurement script starts are that program's own children and need no
+entry. That is why the *merge base* is computed by the script and reaches the command only as a sha in
+the ledger: `git merge-base` has **no** allow-list entry, and the command must not issue it. Likewise
+`git check-ignore`, which AC-30 and AC-74 use, is a verification step run by whoever checks those
+criteria, not a command this command issues. No other addition, removal or widening of the
+allow-list is in scope.
 
 **FR-19 — The command reports a short summary to the caller.**
 On success it prints, in the session: the path written — `specs/{spec}/show-me.md` only; the *fact
 ledger* is working state and is never reported — whether it created or replaced that file, the
-overall risk level, and the one-line reminder that the level is advisory. On any FR-1/FR-2/FR-3 stop,
+overall risk level, the one-line reminder that the level is advisory, and NFR-2's word-count result:
+the counted total and whether it is inside 400–2,000, or `word count unavailable` with its reason
+(FR-21 *Modes*). An out-of-range total is reported, not refused. On any FR-1/FR-2/FR-3 stop,
 or on FR-21's measurement-script stop, it prints only that stop message.
 
 ### Non-functional Requirements
@@ -873,8 +981,8 @@ For unchanged inputs (same measured ref and head sha, same PR state), two runs m
 - every number in `## Blast radius` (per-bucket file counts, net lines, public-API declaration-line
   count, distinct `src/` subdirectory count) and the named source/refs/shas;
 - the task total and per-tag counts, and the commit count (both `## How it was built`, FR-9);
-- the *declared id* set and `{total}` in FR-8 — the ids are extracted by FR-8's stated regex over
-  `requirements.md`, which is a match, not a judgement;
+- the *declared id* set and `{total}` in FR-8 — the ids are extracted by the anchored
+  *declared-id pattern* (Definitions) over `requirements.md`, which is a match, not a judgement;
 - FR-6's trigger measurements and their outcome: the values behind D1, D2 and D3, and which of the
   three fired;
 - factor level F1, which derives purely from those counts.
@@ -906,7 +1014,8 @@ document can assert about prose that describes a shell pipeline.
 The counted body of `show-me.md` must be between **400 and 2,000 words**. The count is defined
 mechanically so it can be checked by a script, and **FR-21's measurement script is that script** — it
 applies this rule to the generated file in its word-count mode and reports the total, so the check is
-executed rather than merely defined. The rule: count whitespace-delimited tokens containing at least
+executed rather than merely defined. The result is reported to the caller (FR-19) and does not change
+the run's outcome (FR-21 *Modes*); the range is met by the per-section caps below. The rule: count whitespace-delimited tokens containing at least
 one alphanumeric character, over every line of the file **except** (a) the H1 and the metadata block
 above the first H2, (b) any line that begins with `|` after trimming (pipe-table rows, including
 separator rows — this now includes `## Blast radius`'s bucket table, FR-10), (c) every line from the
@@ -925,7 +1034,7 @@ calibration case, at each item's own stated cap: up to 600 narrative words (FR-6
 diagram:`/stand-down line when applicable (≤ 40); 14 breaking-change bullets at ≤ 40 words each
 (FR-7's cap, added by this revision precisely so this arithmetic holds) = ≤ 560, plus the count line
 (≤ 10); FR-8's shipped-as-planned line (≤ 40) and its deviation entries (uncapped in count but, for
-28 declared ids with at most a handful of deviations in practice, ≤ 150), Part 3 (≤ 5 entries × ≤ 20
+37 declared ids with at most a handful of deviations in practice, ≤ 150), Part 3 (≤ 5 entries × ≤ 20
 words = ≤ 100, per FR-8's stated cap) and the count line (≤ 15); `## How it was built`'s two lines
 (≤ 30); `## Blast radius`'s non-table prose lines (the public-API count, the subdirectory count, and
 the three "measured from/ref used" lines — ≤ 70, with the six-bucket table itself excluded by (b));
@@ -986,12 +1095,18 @@ capability fail silently on the very change it was designed for.
 
 **What is affordable, measured on spec 0036 at merge base `6145913a0..spec/scoped-lifetime-per-pipeline`.**
 `tasks.md` may be read **in full** — 229,159 B, 22% of the budget; the "229 KB scare case" was never
-the problem. The **`src/`-scoped diff is permitted** — 303,715 B, 29%. Summary statistics for the
+the problem. The **`src/`-scoped diff is permitted** — `git diff {merge base}..{measured head} --
+src/` over the shas the ledger pins (FR-20) — 303,715 B, 29%. Summary statistics for the
 whole diff (`--numstat`/`--name-only`/`--stat`) are permitted — `git diff --stat` alone is 31,929 B,
 3%.
 
-**The full diff is banned, and not as a policy choice.** No `git diff` or `gh pr diff` may be issued
-without either a pathspec restricting it or a summary-only flag. Spec 0036's full 517-file diff is
+**The full diff is banned, and not as a policy choice.** No `git diff` may be issued — by the command
+or by the measurement script — without either a pathspec restricting it or a summary-only flag
+(`--numstat`, `--name-only`, `--stat`), and `gh pr diff`, which accepts no pathspec, is not issued at
+all (FR-18, FR-20). The ban binds the script too, even though the script's unemitted reads are charged
+nothing: one rule for every diff in a run is simpler to verify than two, and the script needs nothing
+it forbids — its net-line counts come from `--numstat` and its public-API count from the `src/`-scoped
+diff. Spec 0036's full 517-file diff is
 **4,081,673 B ≈ 1.24 M tokens** — it **exceeds the context window outright**. This is a hard wall: a
 run that attempted it would not degrade, it would fail. The ban is stated here rather than left
 implicit because the previous revision banned the full diff without ever saying why, and a reader who
@@ -1087,18 +1202,32 @@ fails**. The fixtures and the facts asserted are, at minimum:
 
 | Fixture | Asserted |
 |---|---|
-| `specs/9999-show-me-fixture/` | 3 declared ids; 2 task checkboxes, 0 unchecked |
-| `specs/0033-pg-advisory-lock-sha256/` | 8 declared ids; 5 task checkboxes, 0 unchecked |
-| `specs/0002-sqs-cleanup/` | **0** declared ids — the FR-16 row 9 case — with 6 checkboxes, 0 unchecked; the run must report zero, not fail |
-| `specs/0036-scoped-lifetime-per-pipeline/` *(C-8)* | 37 declared ids; 82 task checkboxes, 0 unchecked |
+| `specs/9999-show-me-fixture/` | 3 declared ids; 2 task checkboxes, 0 unchecked; per tag: 2 `untagged` |
+| `specs/0033-pg-advisory-lock-sha256/` | 8 declared ids; 5 task checkboxes, 0 unchecked; per tag: 3 `TEST + IMPLEMENT`, 2 `untagged` |
+| `specs/0002-sqs-cleanup/` | **0** declared ids — the FR-16 row 9 case — with 6 checkboxes, 0 unchecked; the run must report zero, not fail; per tag: 5 `TEST + IMPLEMENT`, 1 `untagged` |
+| `specs/0036-scoped-lifetime-per-pipeline/` *(C-8)* | 37 declared ids; 82 task checkboxes, 0 unchecked; per tag: 62 `TEST + IMPLEMENT`, 12 `STRUCTURAL`, 2 `PROJECT`, 6 `DOC`, 0 `untagged` |
+| A tracked word-count fixture file beside the test script, whose counted body holds exactly **8** tokens, whose single fenced block holds **8** more, and which also carries an H1 and metadata block, a `\|`-leading line and an `## Inputs used` tail, each holding tokens NFR-2 excludes | word-count mode reports **8** (AC-80) |
+| A second tracked word-count fixture file beside the test script, whose counted body is between 400 and 2,000 tokens | word-count mode reports a total inside 400–2,000 and says so (AC-80) |
+| A literal line held in the test script itself, containing `git diff` and `gh pr diff` and no conditional | the FR-13 invariant check reports zero matches over it (AC-81) |
 
-Every figure in that table was measured against the real fixture directories on 2026-09-21, not
-estimated.
+The declared-id and checkbox figures were measured against the real fixture directories on
+2026-09-21 and re-measured on 2026-09-23 with the stated patterns; the per-tag figures were measured
+on 2026-09-23. None is estimated. Neither word-count fixture is named `show-me.md` or placed in a spec
+directory, so no fixture can be mistaken for a generated deliverable. The per-tag figures deliberately
+include lead-ins that are **not** tags — 0033's `**REGRESSION FIX:` and `**DOC TIDY:`, 0002's
+`**IMPLEMENT:` — so the test pins the `untagged` rule, not just the happy path.
+
+*What it does not test.* FR-21's atomicity rule is verified by inspecting the write mechanism
+(AC-83), not by this script: provoking a failure partway through a write would need a fault hook
+inside the measurement script, and a test hook in the one program every measured value flows through
+is a larger risk than the one it would test. This script does assert that no temporary or partial
+artefact remains in any fixture's spec directory after it has run.
 
 *Two regressions it must specifically pin,* because both were observed live and both are the reason
 FR-21 exists: the declared-id count must be non-zero for every fixture that declares ids (the pattern
-once returned **0** where the answer was **28**, an escaped `\|` having leaked in from a markdown
-table cell); and the NFR-2 word-count mode must exclude fenced blocks (it once returned **16** where
+once returned **0** where the answer was **28** — measured over this document,
+`specs/0037-show-me/requirements.md`, when it declared 28 ids; it declares 30 now — an escaped `\|`
+having leaked in from a markdown table cell); and the NFR-2 word-count mode must exclude fenced blocks (it once returned **16** where
 the answer was **8**, over-counting roughly 2x by counting inside fences).
 
 *One invariant it checks over the command file itself*: the delivered
@@ -1138,12 +1267,11 @@ running `/spec:show-me`. It is a script a person or a task runs.
   merged into**. They are not on `master`. (At the time this document was written, that branch was
   already merged into the branch this command is itself being built on, so the fixtures are present
   there too — this is a fact about *this* branch's history, not a guarantee for every future branch
-  this spec's tests might run on.) Every acceptance criterion marked *(C-8)* in its citation (AC-1,
-  AC-2, AC-4, AC-12, AC-17, AC-18, AC-20, AC-47, AC-51, AC-56) therefore carries a **test
-  precondition**: that branch must be checked out, or merged into the branch under test, at the time
-  the criterion is exercised — the inline *(C-8)* marker on each such AC is the single source of
-  truth for which criteria this covers, not this prose list, which exists only to explain why the
-  marker is there. This is a documented fact about where the fixture data lives, not a defect to
+  this spec's tests might run on.) Every acceptance criterion marked *(C-8)* in its citation
+  therefore carries a **test precondition**: that branch must be checked out, or merged into the
+  branch under test, at the time the criterion is exercised. The inline *(C-8)* marker on each such
+  AC is the single source of truth for which criteria this covers; this constraint deliberately does
+  not enumerate them, because an enumeration here went stale once already. This is a documented fact about where the fixture data lives, not a defect to
   design around: spec 0036 is the intended real-world calibration case for this command, and it is
   retained deliberately. **A fixture cited by any criterion must resolve under FR-10 on the branch the
   criterion is run on** — spec 0036 does, which is why every worked example in this document uses it
@@ -1172,10 +1300,11 @@ running `/spec:show-me`. It is a script a person or a task runs.
 - **C-10** The repository's `.claude/settings.json` **`gh`** allow-list is exactly `gh pr view`,
   `gh pr list`, `gh pr diff`, `gh issue view`, `gh issue list` — there is **no** run-query and **no**
   `gh api` entry, and this spec adds neither. FR-18 confines the command's GitHub access to
-  `gh pr list` and `gh pr diff`, both already inside that list, so **no `gh` entry changes**.
+  `gh pr list` alone, already inside that list, so **no `gh` entry changes**.
   The wider allow-list is a different matter. It permits `Read`, `Glob`, `Grep` and a fixed set of
   `Bash(…)` prefixes — among them `Bash(wc:*)`, which already covers NFR-3's affordability probe, and
-  the `git` read commands this document names — but it contains **no entry for any script
+  the `git` read commands the command itself issues (the measurement script's own `git` children,
+  `git merge-base` among them, need no entry — FR-18) — but it contains **no entry for any script
   interpreter** (`bash`, `sh`, `awk`, `python3`, `dotnet run`) **and no path-scoped script entry**.
   FR-21's measurement script therefore cannot be invoked under the allow-list as it stands in any
   language, and **this spec adds exactly one entry**, naming the script's own path so that it permits
@@ -1222,7 +1351,7 @@ running `/spec:show-me`. It is a script a person or a task runs.
   Everything else about the file is out of scope: no `gh` entry is added, removed or widened; **no
   interpreter grant** (`bash`, `sh`, `awk`, `python3`, `dotnet run`) is requested, whatever the
   language turns out to be; the `deny` list is untouched; and the command's GitHub access stays
-  inside the `gh pr list` / `gh pr diff` entries that already exist (FR-18).
+  inside the `gh pr list` entry that already exists (FR-18).
 - **Any change to `.gitignore` beyond the single exact-match entry `.show-me-ledger.json`.** That one
   line is added so the *fact ledger* leaves `git status --porcelain` clean (FR-4, NFR-8, AC-30). No
   existing pattern is edited, and no wildcard form is used.
@@ -1347,7 +1476,8 @@ no CI check tally.
 14, `.github/` 0, `other` 10 — which sum to the reported total of **517**; reports net lines; reports
 the changed public-API declaration-line count; reports that the `src/` changes span **6** distinct
 immediate subdirectories of `src/`; and names exactly one measurement source with its refs and shas
-(`gh pr diff #4282 (head {sha})` or `git diff {merge-base sha}..{head sha}`).
+— `git diff {merge-base sha}..{measured head sha} (PR #4282 head)`, the measured head being PR #4282's
+`headRefOid`.
 
 **AC-19** *(FR-10, FR-16 rows 12 and 15)* **Given** a spec whose branch cannot be resolved by any of
 FR-10's three rules, **when** the command runs, **then** the run still succeeds, `## Blast radius`
@@ -1375,7 +1505,7 @@ an explicit sentence giving the reason for raising it.
 
 **AC-24** *(FR-13)* **Given** a run whose overall level is `High`, **when** the command finishes,
 **then** `show-me.md` was still written, the session output contains the FR-19 report (path written,
-created-or-replaced, level, advisory reminder) and **no error message and no refusal**, no marker
+created-or-replaced, level, advisory reminder, word count) and **no error message and no refusal**, no marker
 file, label or comment was produced, and `## Risk assessment (advisory)` contains verbatim:
 `This assessment is advisory only. It is not a merge gate; the merge decision stays with a human
 reviewer.`
@@ -1409,12 +1539,14 @@ before and after, **then** the only difference is `specs/{spec}/show-me.md` — 
 the same run wrote to `specs/{spec}/.show-me-ledger.json` does **not** appear, because `.gitignore`
 carries the exact-match entry for it, which `git check-ignore -v specs/{spec}/.show-me-ledger.json`
 confirms — and no commit, push, branch, label, comment or PR state change occurred; **and when** the
-commands the run issued are inspected, **then** every `gh` invocation is one of `gh pr list` or
-`gh pr diff`, none is `gh run`, `gh api` or `gh checks`, none requests PR comments, reviews or
-`statusCheckRollup`, and `gh pr diff` was invoked **at most once**.
+commands the run issued are inspected, **then** every `gh` invocation is `gh pr list`, invoked at
+most once; none is `gh pr diff`, `gh run`, `gh api` or `gh checks`; none requests PR comments,
+reviews or `statusCheckRollup`; and no command the run issued through its own shell tool is
+`git merge-base` (FR-18).
 
 **AC-31** *(FR-19)* **Given** a successful run, **when** the session output is read, **then** it
-states the written path, created-vs-replaced, the overall level, and that the level is advisory.
+states the written path, created-vs-replaced, the overall level, that the level is advisory, and
+NFR-2's counted word total with whether it is inside 400–2,000.
 
 **AC-32** *(NFR-1)* **Given** two runs against an unchanged measured ref, head sha and PR state,
 **when** the two `show-me.md` files are compared, **then** every number in `## Blast radius`
@@ -1426,10 +1558,13 @@ raise was exercised, and all prose are **not** required to be identical; the tes
 that each run's F2 and F5 values are consistent with the evidence cited in that same run's own FR-7
 bullets and FR-8 deviation entries respectively.
 
-**AC-33** *(NFR-2)* **Given** any successful run, **when** the body of `show-me.md` is word-counted by
-NFR-2's mechanical rule (excluding the H1/metadata block, all lines beginning with `|`, everything
-from `## Inputs used` onward, and every line inside a fenced code block; including headings and
-bullet lists), **then** the count is between 400 and 2,000.
+**AC-33** *(NFR-2, FR-19, FR-21)* **Given** any successful run, **when** the FR-19 report is read,
+**then** it states a counted word total and whether that total is inside 400–2,000, and the total
+equals the count NFR-2's mechanical rule gives over the written `show-me.md` (excluding the
+H1/metadata block, all lines beginning with `|`, everything from `## Inputs used` onward, and every
+line inside a fenced code block; including headings and bullet lists); **and given** a run in which
+every section stayed within the caps NFR-2's arithmetic rests on, **then** that count is between 400
+and 2,000.
 
 **AC-34** *(NFR-7)* **Given** any successful run, **when** each count, status and diagram node in
 `show-me.md` is checked, **then** each is attributable to an input listed in `## Inputs used` and
@@ -1501,11 +1636,12 @@ reconciliation (not `High`) because that entry states a superseding requirement 
 `no follow-up recorded`.
 
 **AC-46** *(FR-20)* **Given** two pull requests whose `headRefName` equals the spec branch name
-(numbers #4200 and #4282) and both `gh pr diff` and a local `git diff` are available, **when** the
+(numbers #4200 and #4282) and the head commit of #4282 present in the local repository, **when** the
 command runs, **then** PR **#4282** is used (highest number wins), `## Blast radius` records
-`2 pull requests found for branch {branch}; using #4282 (highest number).`, the measurement source
-line names `gh pr diff #4282` and not a `git diff`, and only one set of blast-radius numbers is
-reported.
+`2 pull requests found for branch {branch}; using #4282 (highest number).`, the measured head is
+#4282's `headRefOid`, the measurement source line reads
+`Measured from git diff {merge-base sha}..{that sha} (PR #4282 head)`, `gh pr diff` was not invoked,
+and only one set of blast-radius numbers is reported.
 
 **AC-47** *(FR-10, C-8)* **Given** the calibration branch `spec/scoped-lifetime-per-pipeline` is
 checked out or merged (C-8) and its **local** branch tip is deliberately moved one commit behind
@@ -1679,26 +1815,29 @@ is inspected, **then** the command parsed nothing from it — the run's outcome 
 exit code and the ledger alone, so any diagnostic the toolchain writes there is harmless.
 
 **AC-71** *(FR-21, FR-3, NFR-8)* **Given** a target spec with an unchecked task and no pre-existing
-`specs/{spec}/.show-me-ledger.json`, **when** the command is run, **then** it prints the FR-3 stop
-message, `specs/{spec}/show-me.md` is not created, `specs/{spec}/.show-me-ledger.json` **does not
+`specs/{spec}/.show-me-ledger.json`, **when** the command is run, **then** the measurement script
+exits with status `2`, the command prints the FR-3 stop message built from the script's gate facts
+and **not** FR-21's tooling-fault message, `specs/{spec}/show-me.md` is not created, `specs/{spec}/.show-me-ledger.json` **does not
 exist afterwards**, and `git status --porcelain` is byte-identical before and after; **and given**
 the same spec with a pre-existing ledger, **when** the command is run, **then** that ledger is
 byte-for-byte unchanged.
 
-**AC-72** *(FR-21)* **Given** each of four states of the measurement script in turn — absent, present
-but unreadable, present and readable but exiting non-zero, and present and exiting `0` having written
-a ledger that is not a single JSON object — **when** the command is run against an otherwise complete
+**AC-72** *(FR-21)* **Given** each of five states of the measurement script in turn — absent, present
+but unreadable, present and readable but exiting with a status other than `0` or `2`, exiting `2`
+with gate facts the command cannot parse, and exiting `0` having written a ledger that is not a
+single JSON object — **when** the command is run against an otherwise complete
 spec, **then** in every case it prints FR-21's measurement-script stop message naming which of the
-four applies, writes no `show-me.md`, leaves `git status --porcelain` byte-identical to its
+five applies, writes no `show-me.md`, leaves `git status --porcelain` byte-identical to its
 before-state, and **does not** compute any measured value inline or emit a partial, guessed or
-zero-filled `show-me.md`; **and** in the first three states no ledger is created where none existed
+zero-filled `show-me.md`; **and** in the first four states no ledger is created where none existed
 and any pre-existing ledger is byte-for-byte unchanged, per FR-21's atomicity rule.
 
 **AC-73** *(FR-21, FR-18, FR-4)* **Given** a successful run against a spec whose PR is discovered,
 **when** the commands the run issued are inspected in order, **then** `gh pr list` was invoked at most
-once and `gh pr diff` was invoked **at most once**, and `specs/{spec}/.show-me-ledger.json` afterwards
-parses as JSON, contains the same PR number, diff source, bucket counts and public-API declaration
-line count that `show-me.md` reports, and contains **no** raw diff text.
+once and `gh pr diff` **not at all**; every `git diff` the command itself issued names exactly the
+merge base and measured head the ledger records; and `specs/{spec}/.show-me-ledger.json` afterwards
+parses as JSON, contains the same PR number, merge base, measured head, bucket counts and public-API
+declaration line count that `show-me.md` reports, and contains **no** raw diff text.
 
 **AC-74** *(FR-4, NFR-8)* **Given** a successful run, **when** the repository is inspected afterwards,
 **then** `specs/{spec}/.show-me-ledger.json` exists, `git check-ignore -v` reports it ignored by the
@@ -1717,9 +1856,10 @@ order, **then** every full-content read of a file was preceded by a `wc -c` of t
 read was issued whose `wc -c`-measured size exceeded the bytes then remaining; the `wc -c` probes
 themselves are charged nothing; and the run's total *charged bytes* are ≤ 1,048,576.
 
-**AC-77** *(NFR-3, FR-10, FR-20)* **Given** a spec whose diff touches 517 files and whose full diff is
-4,081,673 bytes, **when** the command runs, **then** no `git diff` or `gh pr diff` was issued without
-either a pathspec restricting it or a summary-only flag (`--numstat`, `--name-only`, `--stat`); the
+**AC-77** *(NFR-3, FR-10, FR-20, C-8)* **Given** a spec whose diff touches 517 files and whose full
+diff is 4,081,673 bytes, **when** the command runs, **then** no `git diff` was issued without either a
+pathspec restricting it or a summary-only flag (`--numstat`, `--name-only`, `--stat`); no
+`gh pr diff` was issued at all; the
 `src/`-scoped diff (303,715 bytes) **was** read; the run completed; and its total charged bytes are
 ≤ 1,048,576.
 
@@ -1730,27 +1870,28 @@ source reads begin, at least **100,000 bytes** remain available to them; `## Wha
 carries a diagram and **not** FR-6 (e)'s budget line; and the run's total charged bytes are
 ≤ 1,048,576.
 
-**AC-79** *(NFR-9)* **Given** the delivered test script, **when** it is run from
+**AC-79** *(NFR-9, C-8)* **Given** the delivered test script, **when** it is run from
 the repository root with the calibration branch present (C-8), **then** it invokes the measurement
 script against `specs/9999-show-me-fixture/`, `specs/0033-pg-advisory-lock-sha256/`,
 `specs/0002-sqs-cleanup/` and `specs/0036-scoped-lifetime-per-pipeline/`; asserts the declared-id
-totals **3, 8, 0 and 37** and the checkbox totals **2, 5, 6 and 82** with zero unchecked in each;
+totals **3, 8, 0 and 37**, the checkbox totals **2, 5, 6 and 82** with zero unchecked in each, and
+the per-tag counts NFR-9's table states for each;
 exits `0` when every assertion holds; and, **when** any single asserted value is perturbed, prints
 which assertion failed and exits **non-zero**; **and when** the script is inspected, **then** it
 invokes no test framework and reads or runs no file under `src/` or `tests/`.
 
-**AC-80** *(NFR-9, NFR-2, FR-21)* **Given** a `show-me.md` whose counted body holds exactly **8**
-tokens outside its fenced blocks and whose single fenced block holds **8** further tokens, **when**
-the measurement script's word-count mode is run over it, **then** it reports **8**, not 16 — fenced
-lines, `|`-leading lines, the H1/metadata block and everything from `## Inputs used` onward all
-excluded per NFR-2; **and when** the same file is grown to a conforming body, **then** the script
-reports a total inside 400–2,000 and says so.
+**AC-80** *(NFR-9, NFR-2, FR-21)* **Given** NFR-9's first word-count fixture, whose counted body
+holds exactly **8** tokens outside its fenced block and whose single fenced block holds **8** further
+tokens, **when** the measurement script's word-count mode is run over it, **then** it reports **8**,
+not 16 — fenced lines, `|`-leading lines, the H1/metadata block and everything from `## Inputs used`
+onward all excluded per NFR-2; **and when** it is run over NFR-9's second, conforming word-count
+fixture, **then** the script reports a total inside 400–2,000 and says so.
 
 **AC-81** *(NFR-9, FR-13)* **Given** the delivered command file, **when** the test script's FR-13
 invariant check runs over it, **then** the check reports **no** branch on the risk level, and it does
-so without matching the letters `if` inside an unrelated word — demonstrated by a fixture line
-containing `git diff` and `gh pr diff` and no conditional, over which the check must report zero
-matches.
+so without matching the letters `if` inside an unrelated word — demonstrated by NFR-9's FR-13
+fixture line, held in the test script and containing `git diff` and `gh pr diff` and no conditional,
+over which the check must report zero matches.
 
 **AC-82** *(FR-18, C-10, Out of Scope)* **Given** `.claude/settings.json` after this spec has shipped,
 **when** it is inspected, **then** its `allow` array contains **exactly one** entry that was not
@@ -1763,13 +1904,20 @@ and no `gh api` entry; its `deny` array is unchanged; **and given** `.gitignore`
 exactly one added line, the exact-match `.show-me-ledger.json`, with no wildcard form and no existing
 pattern edited.
 
-**AC-83** *(FR-21, FR-4)* **Given** a measurement script that fails partway through writing its
-ledger, **when** the command is run against a spec that has **no** pre-existing ledger, **then** no
-`specs/{spec}/.show-me-ledger.json` exists afterwards and no temporary or partial artefact is left
-beside it; **and given** the same failure against a spec whose ledger already exists, **then** that
-ledger is byte-for-byte identical to its before-state; **and when** a successful run is interrupted
-and repeated, **then** at no point does a reader of the ledger observe a truncated or
-half-written object.
+**AC-83** *(FR-21, FR-4, NFR-9)* **Given** the delivered measurement script, **when** the code that
+writes the ledger is inspected, **then** a ledger becomes visible at
+`specs/{spec}/.show-me-ledger.json` only by a single atomic replacement with a complete file — never
+by writing, appending to or truncating that path in place — so that a failure at any point before
+the replacement leaves no ledger where none existed and a pre-existing ledger byte-for-byte
+unchanged, and no reader can observe a truncated or half-written object; **and when** the test script
+has run, **then** no temporary or partial artefact remains in any fixture's spec directory. (Verified
+by inspection plus that residue check rather than by injecting a failure — NFR-9 says why.)
+
+**AC-84** *(FR-20, FR-16 row 16, FR-18)* **Given** a spec whose PR is discovered but whose
+`headRefOid` names a commit that is not present in the local repository, **when** the command runs,
+**then** the run succeeds, the metadata block names the PR's number and URL, the measured head is the
+spec branch tip, `## Blast radius` carries FR-16 row 16's line naming both shas, no fetch or other
+ref-writing command was issued, and no factor level changes because of it.
 
 ## Additional Context
 
@@ -1897,6 +2045,6 @@ continuity):
   added to; sub-agent and model policy.
 - `docs/adr/0072-show-me-command-resolution-and-output.md` — the Measurer/Synthesiser split and the
   Step 5 extraction budget that FR-6's diagram reads have to fit inside.
-- `.claude/settings.json` — the read-only `gh pr list`/`gh pr diff` entries the command must stay
+- `.claude/settings.json` — the read-only `gh pr list` entry the command must stay
   within, the existing `Bash(wc:*)` entry that already covers NFR-3's affordability probe, and the
   **one new path-scoped entry this spec adds** for FR-21's measurement script (FR-18, C-10).
