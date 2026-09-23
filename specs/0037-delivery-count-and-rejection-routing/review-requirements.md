@@ -1769,3 +1769,157 @@ no gaps, no undefined references.
 **For round 7's spot-check**: finding 1 edited R-13 and A-2, so read AC-19, AC-22, AC-39 and AC-40
 with them. Finding 2 edited R-5 and R-28, so read AC-4 and AC-41 with them. Finding 4 moved AC-1 to
 `-1`, so read R-1, R-3 and R-6 with it.
+
+---
+
+# Review: requirements (round 7) — 0037-delivery-count-and-rejection-routing
+
+**Date**: 2026-09-23
+**Threshold**: 60
+**Verdict**: NEEDS WORK
+
+2 findings at or above threshold 60. Address these before approving.
+
+## Findings
+
+### 1. R-1's lease/visibility/ack-deadline-expiry redelivery has no acceptance criterion, and it is where the candidate mechanisms diverge (Score: 66)
+
+R-1 binds two redelivery paths: "whether the redelivery follows an explicit `Requeue` or a
+lease/visibility/ack-deadline expiry" (:128-129). Its only AC is AC-1 (map :1456), which covers only
+the explicit path — "a handler that defers on every delivery" (:1061) drives `RequeueMessage` →
+`Channel.Requeue` (Reactor.cs:492-514). Nothing tests a redelivery following expiry with no `Requeue`
+call (a message received and never acked or requeued, or a handler that outlives the visibility
+timeout or ack deadline). §Candidate mechanisms keeps "Track the count consumer-side" open (:911); a
+consumer-side count advanced inside `Requeue` satisfies AC-1 and fails R-1 on every expiry
+redelivery. AC-23 measures lease-lapse on RocketMQ only, and is a measurement, not an assertion.
+
+**Evidence**: requirements.md:126-129, :1057-1063, :1456, :911; Reactor.cs:492-514.
+
+**Recommendation**: Add an AC (or a second clause to AC-1): **Given** a transport in scope on its
+implemented branch and a message received but neither acked nor requeued, **When** its visibility
+timeout / ack deadline lapses and it is received again, **Then** the second delivery presents a
+strictly greater count. Or narrow R-1 to explicit requeue and say why expiry is excluded.
+
+---
+
+### 2. AC-13 requires the v3 and v4 FR-23 runs to show the same number of deliveries, which R-4 lets vary on an approximate counter (Score: 62)
+
+AC-13: "these are identical: the number of deliveries, …" (:1189-1193). SQS's
+`ApproximateReceiveCount` is approximate (A-4, :936-938), so R-4 promises only "at most `R`" and its
+own example allows rejection on delivery 2 for a `0`, `2` jump (:188-189). The v3 and v4 runs use
+separately provisioned queues, so one may reject on delivery 2 and the other on 3 — both satisfying
+R-4 and AC-3, while AC-13 fails. Round 6 fixed this class of defect at R-5, R-28 and AC-41; AC-13
+was not touched.
+
+**Evidence**: :1189-1193, :188-189, :936-938, :1076.
+
+**Recommendation**: Compare delivery counts for equality only where the ADR's R-3 table classifies
+SQS exact (as AC-34 and AC-41 do); otherwise require both `<= R` and drop the count from the
+identity set.
+
+---
+
+### 3. AC-1 at `-1` names no instrument for recording the per-delivery count and no stop condition, and R-27(c)(5) omits it (Score: 52)
+
+With AC-1 at `requeueCount: -1` (:1057) nothing ends the run, so the test must recognise the third
+delivery and quit the pump, and must record each delivery's `HandledCount`. R-27(c)'s dispatch
+counter "has no relationship to `MessageHeader.HandledCount`" (:803-806), and handlers are created
+fresh per dispatch (:762-764). R-27(c)(5) lists bespoke-subscription ACs as "AC-5, AC-6 and AC-35"
+(:791-794); AC-1 (and AC-34's `requeueCount: 4`, :1115) also need bespoke subscriptions because
+R-27(a) fixes providers at `R = 3`. Below threshold because every observation point sees the same
+pre-increment value.
+
+**Recommendation**: Add AC-1 and AC-34 to R-27(c)(5); have obligation 6's recording decorator also
+record the `HandledCount` returned on each delivery; quit the pump when the dispatch count reaches 3.
+
+---
+
+### 4. R-27's worked example still closes the window at the DLQ poll and states an exact count of 3 (Score: 50)
+
+"the dispatch count for that message id stands at 3 when the DLQ poll closes" (:815-816) contradicts
+R-4 ("The poll itself … is *not* the close", :178-181), R-27(c)(3) (:785-787), and R-4's
+approximate allowance on `AWS / SqsStandard` (:188-189). Similar exact-count wording at :290,
+:349-350, :387, :812-813. The spec's own trap note (:1594-1596) is that Examples get implemented.
+
+**Recommendation**: "stands at 3 or fewer (3 on an exact counter) when the pump has been quit and
+awaited"; qualify the other examples "(or earlier on an approximate counter, R-4)".
+
+---
+
+### 5. AC-39(b) presupposes a mechanism exists after a refuted A-2 (Score: 35)
+
+"if it did not, which `delivery_attempt`-independent mechanism it selected in consequence"
+(:1238-1239), while R-13's second branch (:370-372) permits none. Clause (c) covers the case; the
+defect is wording only.
+
+**Recommendation**: "…which `delivery_attempt`-independent mechanism it selected, or that none fits".
+
+---
+
+## Round-6 remediation spot-check
+
+| # | Score | Applied text checked | Result |
+|---|---|---|---|
+| 1 | 74 | R-13 second bullet re-keyed; "A-2 shapes the route, not the branch"; A-2 "does not by itself select R-13's first branch" | PRESENT :370-376, :378-380, :926-930. Read with AC-19, AC-22, AC-39, AC-40, NFR-7: all key on the ADR's conclusion. Residual: finding 5. |
+| 2 | 72 | R-5 / R-28 / R-28 example / AC-41 "at least `R`, exactly `R` where exact" | PRESENT :203-204, :245-246, :275-276, :1130-1131. Consistent with the FR-23 template's `>= RequeueCount - 1` and AC-4 `>= 2`; broker-routed `R - 1` holds (RMQ only, republishes, exact). Residual: findings 2, 4. |
+| 3 | 64 | AC-5 "no native redrive policy"; R-6 "absent a native redrive limit (R-8)" | PRESENT :1086-1088, :212. |
+| 4 | 64 | AC-1 at `-1`, reason, GCP policy clause | PRESENT :1057-1063. `UpdateHandledCount()` runs before the `DiscardRequeuedMessagesEnabled()` check (Reactor.cs:494-496), so R-6 holds. Residual: findings 1, 3. |
+| 5 | 56 | AC-3 conditional GCP parenthetical | PRESENT :1072-1074; matches AC-11 :1163-1164. |
+| 6 | 48 | AC-27 `#pragma` / no new project | PRESENT :1358-1359; matches R-24. |
+| 7 | 42 | Guard's `-1` reason | PRESENT :1053-1055; MessagePump.cs:171-174. |
+| 8 | 38 | AC-2 out of the guard | PRESENT :1046-1053; consistent with AC-38 and map row R-23. |
+
+## Integrity checks
+
+- `R-1..R-28`, `NFR-1..NFR-8`, `AC-1..AC-41`, `C-1..C-12`, `A-1..A-5` each defined once, no gaps
+  (naive-grep doubles are bold references at line start, not definitions).
+- Every referenced identifier is defined. Map: 36 rows; every cited AC defined; only AC-30/AC-31
+  unmapped, by settled decision.
+- Citations re-verified: Reactor.cs:492-514, MessagePump.cs:171-174, Message.cs:161-164,
+  `DefaultMessageAssertion.cs.liquid:59`, the FR-23 template's `RequeueCount - 1` assertion.
+
+## Summary
+
+| Score Range | Count |
+|-------------|-------|
+| 90-100 (Critical) | 0 |
+| 70-89 (High) | 0 |
+| 50-69 (Medium) | 4 |
+| 0-49 (Low) | 1 |
+
+**Total findings**: 5
+**Findings at or above threshold (60)**: 2
+
+## Main-agent validation of this round
+
+- Counted: 66, 62 (≥60); 52, 50, 35 (<60) — 0/0/4/1, total 5, two at or above threshold. Agrees.
+- Findings 1 and 2 re-verified against the file: R-1 :128-129 names the expiry path; the map row
+  `| R-1 | AC-1 |` is at :1456; AC-13 :1189-1193 lists "the number of deliveries" as identical.
+- Convergence: 13 → 6 → 8 → 5 findings, with no High or Critical this round. Every round-6
+  remediation was present.
+
+---
+
+# Remediation log — round 7
+
+**Date**: 2026-09-23. **Applied to**: `requirements.md` and `README.md`. Every applied text grepped
+back from the file on disk after the write; this log written from that read-back. **Outcome**: both
+findings at or above threshold remediated, plus all three below. Document now holds **28 `R-n`,
+8 `NFR-n`, 42 `AC-n`** (was 41), C-1..C-12. Integrity re-checked programmatically: no gaps, no
+undefined references, map row `| R-1 | AC-1, AC-42 |`.
+
+**The decision this round took (the user's, 2026-09-23):** finding 1 was resolved by **adding an
+acceptance criterion** for R-1's expiry path, not by narrowing R-1. The cost (one extra
+receive / lapse / receive test per transport) was judged not significant overall.
+
+| # | Score | Remediation | Verified at |
+|---|---|---|---|
+| 1 | 66 | New **AC-42** (R-1), "the expiry path": on each transport in scope, a short visibility timeout / ack deadline / invisible duration, the message received and neither acked, rejected nor requeued, the timeout lapses, received again through `Receive` and separately `ReceiveAsync` (NFR-8); **Then** the second delivery presents a strictly greater count. It states that a count advanced only inside `Requeue` fails it, and that on RocketMQ it asserts what AC-23 measures. AC-42 added to the guard paragraph's list and to the R→AC map. | `:1074-1083`, `:1054`, `:1478` |
+| 2 | 62 | AC-13: "the number of deliveries **only if** the ADR's R-3 table (AC-34) classifies SQS **exact** — otherwise each package's count is `<= R` and the two are not compared for equality". | `:1211` |
+| 3 | 52 | AC-1's When now says the test quits and awaits the pump once the dispatch count reaches 3, and its Then reads counts "as recorded by R-27(c)(6)'s recording consumer". R-27(c)(5) now lists AC-1, AC-5, AC-6, AC-34's second clause, AC-35 and AC-42. R-27(c)(6)'s recording consumer now also records each received message's `Header.HandledCount`, in delivery order, by obligation 1's key. The closing "unassertable" sentence names the per-delivery counts of AC-1, AC-34 and AC-42. | `:1070`, `:792`, `:804`, `:815` |
+| 4 | 50 | R-27's worked example now reads "3 or fewer … when the pump has been quit and awaited (R-27(c)(3)), not when the DLQ poll breaks". The exact-count examples at R-8 (Brighter wins), R-12, R-13 and R-27(a) qualified "(or earlier / fewer on an approximate counter, R-4)". | `:824`, `:290`, `:349`, `:387`, `:820` |
+| 5 | 35 | AC-39(b): "…which `delivery_attempt`-independent mechanism it selected in consequence, or that none fits". | `:1261` |
+
+**For round 8's spot-check**: AC-42 is new. Read it with R-1, R-2 (a first receive must present
+`0`), R-14/AC-23 (RocketMQ), A-1 (GCP policy), NFR-8 (variants without a pump) and the guard.
+R-27(c)(6)'s decorator now has two jobs; read it with C-10.

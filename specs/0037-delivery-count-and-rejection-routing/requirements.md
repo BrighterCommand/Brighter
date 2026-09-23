@@ -287,7 +287,7 @@ Brighter does not suppress, reconfigure or work around a native policy. Whicheve
 reached first determines the route the message takes, and R-9 makes the two routes distinguishable.
 
 > *Example (Brighter wins).* SQS `requeueCount: 3`, `RedrivePolicy.maxReceiveCount: 5`. The budget
-> is exhausted on delivery 3, Brighter rejects, and the message reaches the Brighter-managed DLQ
+> is exhausted on delivery 3 (or earlier on an approximate counter, R-4), Brighter rejects, and the message reaches the Brighter-managed DLQ
 > with rejection metadata. SQS's own counter never reaches 5.
 > *Example (native wins).* SQS `requeueCount: 10`, `maxReceiveCount: 3`. SQS redrives its stored
 > copy on the 3rd receive. The budget, which needed 10, is never spent.
@@ -346,8 +346,8 @@ the same routing, the same metadata keys, the same log messages. The eight confi
 `AWS / SnsStandard`, `AWS / SnsFifo`, `AWS / SqsStandard`, `AWS / SqsFifo` and the four `AWS.V4`
 twins. FIFO queues are included: nothing in R-1 to R-5 permits a FIFO channel to be exempted.
 
-> *Example.* `requeueCount: 3` on `AWS.V4 / SnsFifo`, handler always defers. Three deliveries
-> presenting counts `0`, `1`, `2` (or an approximate sequence satisfying R-3), a `DeliveryError`
+> *Example.* `requeueCount: 3` on `AWS.V4 / SnsFifo`, handler always defers. Three deliveries (or
+> fewer on an approximate counter, R-4) presenting counts `0`, `1`, `2` (or an approximate sequence satisfying R-3), a `DeliveryError`
 > rejection, and a dead-lettered message with `rejectionReason = "DeliveryError"` — observed in
 > both the `Reactor` and `Proactor` variants.
 
@@ -384,7 +384,8 @@ depend on R-20 alone, which is why the twenty GCP rejection-routing cells in AC-
 while the four GCP FR-23 cells are not.
 
 > *Example.* `requeueCount: 3` and a `DeadLetterPolicy` with `MaxDeliveryAttempts: 5` on
-> `GCP / StreamOrdering`, handler always defers. The budget is exhausted on delivery 3 — ahead of
+> `GCP / StreamOrdering`, handler always defers. The budget is exhausted on delivery 3 (or earlier on
+> an approximate counter, R-4) — ahead of
 > Pub/Sub's own threshold of 5 — and the message reaches the Brighter dead-letter destination with
 > `rejectionReason = "DeliveryError"`.
 
@@ -788,9 +789,10 @@ requires:
 4. **An assertion in both FR-23 templates** (`…/Reactor/When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue.cs.liquid`
    and its Proactor twin) that the count is **`<= RequeueCount`**, and regeneration of the generated
    FR-23 tests for every configuration.
-5. **Availability to the ACs outside FR-23 that also assert a count** — AC-5, AC-6 and AC-35 — which
-   run against bespoke subscriptions rather than a conformance provider (R-27(a) fixes all twelve
-   providers at `R = 3`, so none supplies `-1`, `1`, `0` or `-3`). Those ACs use the same counter and
+5. **Availability to the ACs outside FR-23 that also assert a count** — AC-1, AC-5, AC-6, AC-34's
+   second clause, AC-35 and AC-42 — which run against bespoke subscriptions rather than a conformance
+   provider (R-27(a) fixes all twelve providers at `R = 3`, so none supplies `-1`, `4`, `1`, `0`,
+   `-3` or a short visibility timeout / ack deadline / invisible duration). Those ACs use the same counter and
    the same key; obligation 6 specifies the requeue observation they also make.
 6. **A requeue observation, specified to the same degree.** AC-6's and AC-35's "`Requeue` is never
    called" is counted, not inferred: a recording consumer the test **composes around** the real
@@ -799,21 +801,27 @@ requires:
    3 require. "Never called" is then `count == 0` for that message id. It is **not** a mock standing
    in for a transport (C-10 forbids that), **not** a counter added to production code, and **not**
    an inference from the absence of a redelivery inside some unstated interval.
+   The same recording consumer also **records the `Header.HandledCount` of each message its
+   `Receive`/`ReceiveAsync` returns**, in delivery order and by the key of obligation 1. That record
+   is the per-delivery count AC-1, AC-34's second clause and AC-42 assert on; it is read as
+   obligations 2 and 3 require.
 
 **"Dispatch count", "delivery count presented to the pump" and "handler invocation count" are used
 interchangeably for this counter**: it advances once per dispatch of a message to a handler. It is
 test-harness state and has no relationship to `MessageHeader.HandledCount`, which is the
 delivery count of Group A.
 
-Without (c) the invocation-count clauses of R-4, AC-3, AC-5, AC-6 and AC-35 are unassertable, and the
+Without (c) the invocation-count clauses of R-4, AC-3, AC-5, AC-6 and AC-35, and the per-delivery
+counts of AC-1, AC-34 and AC-42, are unassertable, and the
 FR-23 behaviour can only show that a message *reached* the DLQ, not that it stopped being
 delivered.
 
 > *Example.* After R-27(a), `AWS / SqsStandard` with a deferring handler exhausts its budget of 3 on
-> the third delivery and reaches the Brighter-managed DLQ; SQS's own counter reaches 3 of 5 and never
+> the third delivery (or earlier on an approximate counter, R-4) and reaches the Brighter-managed DLQ; SQS's own counter reaches 3 of 5 and never
 > redrives. Before R-27(a) the same run is R-8's tie and either route may fire.
 > *Example.* After R-27(c), the same run asserts that the dispatch count for that message id stands
-> at 3 when the DLQ poll closes. Before R-27(c) the run cannot tell 3 deliveries from 30.
+> at 3 or fewer — 3 on an exact counter, possibly fewer on SQS's approximate one (R-4) — when the pump
+> has been quit and awaited (R-27(c)(3)), not when the DLQ poll breaks. Before R-27(c) the run cannot tell 3 deliveries from 30.
 
 ---
 
@@ -1043,7 +1051,7 @@ per NFR-8; where an AC names one variant in an example, the obligation covers bo
 
 ### Delivery-count contract
 
-**Which transports these ACs bind.** AC-1, AC-3, AC-4, AC-34's second clause and AC-41 are
+**Which transports these ACs bind.** AC-1, AC-42, AC-3, AC-4, AC-34's second clause and AC-41 are
 unconditional for `AWSSQS` and `AWSSQS.V4` (R-12). For `GcpPubSub` and `RocketMQ` they apply only on
 the branch R-13 / R-14 selects as *implemented*; on the *bound but unimplemented* branch, R-13(a)-(c)
 and R-14(a)-(d) define "done" instead, and AC-40 (GCP) and AC-25 (RocketMQ) are the criteria that
@@ -1058,9 +1066,21 @@ the budget is never consulted (`MessagePump.cs:171`), and at `0`, `1` or below `
 the budget cannot end the run before the third delivery, which at `requeueCount: 3` an approximate
 counter may (R-4's example) — no native redrive limit at or below 3, on GCP a `DeadLetterPolicy`
 with `MaxDeliveryAttempts: 5` where the ADR's GCP mechanism needs the policy (A-1), and a
-handler that defers on every delivery, **When** the message is delivered three times, **Then** the
-delivery count presented on each delivery is strictly greater than the count presented on the
-previous delivery.
+handler that defers on every delivery, **When** the message is delivered three times — the test
+quitting and awaiting the pump once the dispatch count (R-27(c)(1)) for that message reaches 3 —
+**Then** the delivery count presented on each delivery, as recorded by R-27(c)(6)'s recording
+consumer, is strictly greater than the count presented on the previous delivery.
+
+**AC-42** (R-1) — the expiry path. **Given**, on each transport in scope, a subscription whose
+visibility timeout (SQS), ack deadline (GCP) or invisible duration (RocketMQ) is short enough to
+lapse within the test, no native redrive limit at or below 2, on GCP a `DeadLetterPolicy` with
+`MaxDeliveryAttempts: 5` where the ADR's GCP mechanism needs the policy (A-1), and a message
+published with `HandledCount = 0`, **When** the test receives the message through the transport's
+consumer, neither acknowledges, rejects nor requeues it, waits for that timeout to lapse, and
+receives it again — through `Receive` and, separately, `ReceiveAsync` (NFR-8) — **Then** the second
+delivery presents a delivery count strictly greater than the first. No pump and no `Requeue` call
+is involved, so a count advanced only inside `Requeue` fails this criterion. On RocketMQ this is the
+lease-lapse redelivery AC-23 measures; AC-42 asserts what AC-23 records.
 
 **AC-2** (R-2, R-23; see C-7) — **Given** a message published with `HandledCount = 0` to any transport
 in scope, **When** it is delivered for the first time, **Then** the consumer presents
@@ -1188,7 +1208,9 @@ that read `Pass` or `Fixed` before this spec still does.
 
 **AC-13** (R-12, NFR-6) — **Given** the FR-23 run of AC-12, **When** the observable outcomes of the
 v3 and v4 packages are compared for the same configuration, **Then** these are identical: the number
-of deliveries, the rejection reason, the destination kind (Brighter-managed dead-letter versus native
+of deliveries **only if** the ADR's R-3 table (AC-34) classifies SQS **exact** — otherwise each
+package's count is `<= R` and the two are not compared for equality, because an approximate counter
+may reject on different deliveries in separately provisioned queues (R-4) — the rejection reason, the destination kind (Brighter-managed dead-letter versus native
 redrive target), the **set** of rejection-metadata keys present, the values of `rejectionReason`,
 `rejectionMessage` and `originalMessageType`, and the Warning messages.
 **And** these are instance-specific and compared for presence and shape only, never for equality:
@@ -1236,7 +1258,7 @@ mechanisms the ADR can reach for. It does **not** by itself select between AC-19
 recorded conclusion does (see the note under AC-40). Its own exit criteria are assertable and all
 four are required: (a) the observed values are written into `conformance-status.md`'s GCP paragraph;
 (b) the ADR records whether A-2 held and, if it did not, which `delivery_attempt`-independent
-mechanism it selected in consequence; (c) the ADR records either a GCP mechanism that satisfies R-1
+mechanism it selected in consequence, or that none fits; (c) the ADR records either a GCP mechanism that satisfies R-1
 to R-5 within NFR-1 to NFR-3, or that none does; (d) exactly one of AC-19 and AC-40 is then claimed,
 selected by (c), and the other is recorded as not applicable with (c) and this measurement as the
 reason.
@@ -1453,7 +1475,7 @@ Every requirement maps to at least one acceptance criterion.
 
 | Requirement | Acceptance Criteria |
 |---|---|
-| R-1 | AC-1 |
+| R-1 | AC-1, AC-42 |
 | R-2 | AC-2, AC-33 |
 | R-3 | AC-33, AC-34 |
 | R-4 | AC-3 |
