@@ -2364,3 +2364,236 @@ ack deadline lapses" to prompt, so the two consumer classes stay consistent.
 §Out of Scope's SQS divergence item, and R-4 (does prompt redelivery after a failed publish still
 end at the budget?). R-13's bounded obligation, read with AC-42, the guard, AC-19/AC-40 and the
 §"Assertable, but not writable" list. NFR-8, read with the Terms *Variant* row.
+
+---
+
+# Review: requirements (round 11) — 0037-delivery-count-and-rejection-routing
+
+**Date**: 2026-09-23
+**Threshold**: 60
+**Verdict**: NEEDS WORK
+
+3 findings at or above threshold 60. Address these before approving.
+
+## Findings
+
+### 1. R-19 says the delivery budget bounds the loop, but R-4 ends the loop with a `Reject`, which is the call that is failing. Since round 10 the loop runs hot and breaks R-4 (Score: 85)
+
+R-19 answers the infinite-loop risk this way: "a message that cannot be routed is redelivered, its
+count advances under R-1, and R-4 terminates the loop" (:526-528). That argument does not hold.
+
+- **The budget path goes round in a circle.** R-4 ends a message's life with
+  `RejectMessage(..., DeliveryError)` (`Reactor.cs:494-507`, via `RequeueMessage`). That `Reject`
+  makes the routing publish that is failing. On the redelivery the count is already `>= R`, the
+  deferring handler runs again, `HandledCountReached` is true again, and `Reject` is called again;
+  the publish fails again and R-19 releases the message again. Under R-4's own conditions (budget
+  `R`, a handler that always defers) plus a failed routing publish, the handler is invoked more than
+  `R` times, which breaks R-4's "the handler is not invoked again for that message" (:172-175).
+  R-4 and R-19 contradict each other.
+- **The `Unacceptable` path never reaches the budget.** The pump rejects `Unacceptable` straight
+  away, without going through `RequeueMessage` (`Reactor.cs:173-174`, `:286-287`, `:343-344`,
+  `:353`). A failed publish to the invalid-message destination loops with no budget involved.
+- **Round 10 made the loop hot.** Before round 10 each turn waited for an ack deadline to lapse; now
+  R-19 requires prompt redelivery. At the defaults nothing slows it: `requeueDelay` defaults to
+  `TimeSpan.Zero` (`Subscription.cs:229`), so no Pub/Sub `RetryPolicy` is configured
+  (`GcpPubSubMessageGateway.cs:369-377`); `unacceptableMessageLimit` defaults to `0`, which is off
+  (`Subscription.cs:205`, `Reactor.cs:588`). Each turn logs R-19's Error, so a deterministic failure
+  (missing topic, IAM denial — R-20 territory) floods the log.
+- **The only real bound is not stated.** Pub/Sub's native `DeadLetterPolicy.MaxDeliveryAttempts`
+  counts Nack/deadline redeliveries and would cap the loop at `M`. It exists only on DLQ-backed
+  subscriptions, and R-19 does not mention it.
+- **The SQS contrast rests on this false claim** (§Out of Scope :1079-1084, R-19 :530-534).
+- **No AC tests the claim.** AC-18 drives `Reject` directly, with no pump; it never checks that the
+  count advanced on the release, or that anything terminates.
+
+**Evidence**: requirements.md:170-175, :509-534, :1079-1084, :1313-1318; `Reactor.cs:173-174`,
+`:286-287`, `:343-344`, `:353`, `:494-507`, `:588`; `Subscription.cs:205`, `:229`;
+`GcpPubSubMessageGateway.cs:369-377`; `SqsMessageConsumer.cs` (catch block: "delete the original to
+prevent infinite reprocessing").
+
+**Recommendation**: Replace the "R-4 terminates the loop" sentence with the bound that actually
+holds, and decide what happens where no bound exists: (a) bound natively at
+`DeadLetterPolicy.MaxDeliveryAttempts`, accepting an unbounded loop explicitly where none is
+configured; (b) a rule — a failed routing publish on a message already at or over budget, or
+rejected as `Unacceptable`, falls back to SQS's ack-and-log; (c) require a non-zero back-off. Then
+carve the failed-routing case out of R-4 or reconcile the two; correct the SQS contrast; add a
+pump-driven AC asserting the chosen bound.
+
+---
+
+### 2. "Prompt redelivery" is not defined, and AC-18's "before its ack deadline would have lapsed" can be falsified by the subscription's retry policy (Score: 66)
+
+- When `RequeueDelay != 0`, Brighter configures an exponential-backoff `RetryPolicy` (min
+  `RequeueDelay`, max `MaxRequeueDelay`, default 600 s) (`GcpPubSubMessageGateway.cs:369-377`;
+  `GcpPubSubSubscription.cs:135`). That policy governs when a Nacked or `ModifyAckDeadline(…,0)`
+  message returns, so R-19's "released for prompt redelivery" (:513) and its example (:539) are false
+  whenever `requeueDelay` is at least the ack deadline.
+- AC-18's Given does not pin `requeueDelay`; it says only "ack deadline is longer than the test's
+  redelivery wait" (:1314-1315), and the wait is unquantified.
+- "Ack deadline" has no defined meaning on the stream consumer: R-13's own facts say
+  `AckDeadlineSeconds` does not govern its lease (:390-391). What distinguishes release from holding
+  there is "redelivered within W at all".
+
+**Evidence**: requirements.md:513-514, :536-540, :1313-1318, :388-391;
+`GcpPubSubMessageGateway.cs:369-377`; `GcpPubSubSubscription.cs:79-81`, `:135`; `Subscription.cs:229`.
+
+**Recommendation**: Define "prompt" as redelivery governed only by the subscription's retry policy
+(immediate at the default `requeueDelay: 0`). AC-18's Given: `requeueDelay` zero, an explicit wait
+W, and on pull `AckDeadlineSeconds > W`. Then: "delivered again within W".
+
+---
+
+### 3. AC-18's "configured dead-letter topic does not exist" does not reliably make the routing publish fail (Score: 62)
+
+- `GcpPubSubSubscription` defaults `makeChannels` to `OnMissingChannel.Create`
+  (`GcpPubSubSubscription.cs:119`, `:170`).
+- In `SqsMessageConsumer`, the reference implementation, the dead-letter producer inherits the
+  subscription's `makeChannels` (`SqsMessageConsumer.cs:455-460`). A GCP implementation following it
+  would create the missing topic on first publish, and AC-18's failure path would never run.
+- If the test reuses the native `DeadLetterPolicy` topic name as `deadLetterRoutingKey`,
+  `EnsureSubscriptionExistsAsync` has already created it (:1395-1397).
+
+The same premise appears in R-19's example (:536).
+
+**Evidence**: requirements.md:536, :1313-1318, :1395-1397; `GcpPubSubSubscription.cs:119`;
+`SqsMessageConsumer.cs:455-460`.
+
+**Recommendation**: Pin the failure injection in AC-18's Given (e.g. `makeChannels:
+OnMissingChannel.Validate`/`Assume` with a `deadLetterRoutingKey` naming an absent topic distinct
+from any `DeadLetterPolicy` topic), or have the ADR fix it and list AC-18 under §"Assertable, but not
+writable until the ADR exists".
+
+---
+
+### 4. R-13's alternative test bounds only "a redelivery not preceded by a `Requeue` call". A Nack-driven redelivery meets that, but it is not an expiry (Score: 55)
+
+The only bound on the alternative test's redelivery (:406-410) is "not preceded by a `Requeue`
+call". R-19's failed-routing release Nacks through `GcpStreamMessage.Reject()` inside `Reject`, not
+`Requeue` (:513-516), and a test could Nack directly. Either passes without a lease lapse.
+
+**Evidence**: requirements.md:404-414, :513-516; `GcpPubSubStreamMessageConsumer.cs:217-224`;
+`GcpStreamConsumer.cs:133-135`.
+
+**Recommendation**: Require that the redelivery follows a lease lapse with no Nack or
+`ModifyAckDeadline` issued for that delivery — no `Requeue`, no `Reject`, no direct reply.
+
+---
+
+### 5. R-19 leaves undefined what happens when the release call itself fails, and what `Reject` returns (Score: 40)
+
+On pull, `Requeue` catches every exception and returns `false` (`GcpPullMessageConsumer.cs:360-364`),
+so a failed release leaves the message outstanding until its deadline — the state R-19 says it "does
+not mean". `Reject`'s return value on the failure path is unspecified. The NFR-3 aside (:521-522) is
+beside the point: NFR-3 governs the requeue path.
+
+**Recommendation**: One sentence on release failure (fallback to deadline lapse, logged); state the
+return value; drop or retarget the NFR-3 aside.
+
+---
+
+### 6. The Terms *Variant* row and NFR-8 disagree on whether sync and async calls must be paired (Score: 35)
+
+NFR-8 requires "paired … sync with sync, async with async" (:943-945); the Terms row, which claims
+"exactly these meanings throughout" (:95), says only "the synchronous **and** asynchronous form of
+every consumer call" (:116).
+
+**Recommendation**: Add the pairing to the Terms row, or have NFR-8 defer to it.
+
+---
+
+## Round-10 remediation spot-check
+
+| # | Score | Applied text checked | Result |
+|---|---|---|---|
+| 1 | 72 | R-19's definition (:513-522); example (:536-540); AC-16/17/18 name four configurations and both consumers (:1302, :1307, :1313-1318) | **PRESENT**; call sites correct. Consumer-binding gap closed. **Regression: finding 1** (prompt release makes the loop hot; "R-4 terminates" is circular). **Residual: findings 2, 3, 5.** |
+| 2 | 66 | R-13 obligation limited to first branch; alternative test executed on emulator, both variants; "an argument is not evidence" (:404-414); AC-42 clause (:1145-1147); "Assertable, but not writable" entry (:1609-1611) | **PRESENT**, consistent with the guard and AC-19/AC-40. **Residual: finding 4.** |
+| 3 | 38 | NFR-8 wording (:942-945) | **PRESENT**. **Residual: finding 6.** |
+
+## Integrity checks
+
+- `R-1..R-28`, `NFR-1..NFR-8`, `AC-1..AC-42`, `C-1..C-12`, `A-1..A-5` each defined once, no gaps; no
+  undefined references.
+- R→AC map: 36 rows, every cited AC defined; AC-30 and AC-31 deliberately unmapped.
+- **Coverage gap**: no AC tests R-19's termination claim (finding 1), and none asserts that the count
+  advances on a redelivery after a failed-routing release.
+
+## Summary
+
+| Score Range | Count |
+|-------------|-------|
+| 90-100 (Critical) | 0 |
+| 70-89 (High) | 1 |
+| 50-69 (Medium) | 3 |
+| 0-49 (Low) | 2 |
+
+**Total findings**: 6
+**Findings at or above threshold (60)**: 3
+
+## Main-agent validation of this round
+
+- Counted: 85 (High); 66, 62, 55 (Medium); 40, 35 (Low) — 0/1/3/2, total 6, three at or above
+  threshold. Agrees.
+- Finding 1 re-verified: R-4 (:170-175) and R-19 (:509-534) read as quoted. `Reactor.RequeueMessage`
+  calls `UpdateHandledCount()` then, on `HandledCountReached`, `RejectMessage(…DeliveryError…)`; the
+  `Unacceptable` rejects at `:173-174`, `:286-287`, `:343-344`, `:353` bypass `RequeueMessage`;
+  `UnacceptableMessageLimitReached` returns false at `<= 0`. The gateway sets `RetryPolicy` only
+  when `RequeueDelay != TimeSpan.Zero`, and `DeadLetterPolicy.MaxDeliveryAttempts` only when
+  `DeadLetter != null` (`GcpPubSubMessageGateway.cs:360-377`). All read directly.
+- Finding 1 adds a point the reviewer did not: per A-1, `delivery_attempt` is `0` without a
+  `DeadLetterPolicy`, so on the broker-counter route the subscriptions where R-1's count advances at
+  all are exactly those that carry the native `MaxDeliveryAttempts` cap.
+- Finding 2 re-verified: `MaxRequeueDelay` defaults to 600 s (`GcpPubSubSubscription.cs:135`);
+  `requeueDelay ??= TimeSpan.Zero` in `Subscription`.
+- Finding 3 re-verified: `makeChannels = OnMissingChannel.Create` default
+  (`GcpPubSubSubscription.cs:119`, `:170`); `SqsMessageConsumer` builds its DLQ `SqsPublication` with
+  `makeChannels: _makeChannels` (`:450-453`).
+- Finding 1 is a **regression from round 10's remediation** (prompt release), exposing a circular
+  argument that was already there. Findings 2, 3 and 4 are also residue of round 10's edits.
+
+---
+
+# Remediation log — round 11
+
+**Date**: 2026-09-23. **Applied to**: `requirements.md` and `README.md`. Each applied text grepped
+back from the file on disk; this log written from that read-back. **Outcome**: all six findings
+remediated (the user chose to take the three below threshold as well). Counts move to **28 `R-n`,
+8 `NFR-n`, 43 `AC-n`, C-1..C-12, A-1..A-6**; integrity re-checked programmatically — each defined
+once (the AC-19/AC-30/AC-33 line-start matches are bold references), no gaps, no undefined
+references; map 36 rows, only AC-30/AC-31 unmapped.
+
+*Process note*: the first run of the batch script failed its anchor assertion on the §Out of Scope
+edit (the list item is indented two spaces) and wrote nothing. `git diff` confirmed the file
+untouched; the anchor was corrected and the whole batch re-run.
+
+**The decision this round took (the user's, 2026-09-23): the native cap.** Round 10's decision
+stands: a failed routing publish releases the message. What bounds the resulting loop is Pub/Sub's
+`DeadLetterPolicy.MaxDeliveryAttempts`, not the Brighter budget. Where a subscription has no
+`DeadLetterPolicy`, the loop is **accepted as unbounded, explicitly**, as the price of never
+discarding a message whose destination is configured. Rejected alternatives: SQS-style
+ack-on-failure once over budget (partly reverses R-19), and a mandatory back-off (it slows the loop
+without bounding it).
+
+**Added in validation (main agent, not the reviewer):** the pump acknowledges a message whose
+`Reject` returned `false` — `RequeueMessage` returns `Reject`'s result, and `false` falls through
+to `AcknowledgeMessage` (`Reactor.cs:320` → `:367`; `Proactor.cs:354` → `:402`, read directly). A
+release-path `Reject` returning `false` would therefore discard the message R-19 keeps. That raised
+finding 5's return-value clause from a nicety to a requirement.
+
+| # | Score | Remediation | Verified at |
+|---|---|---|---|
+| 1 | 85 | R-4 gains "**One exception, owned by R-19**": on a failed routing publish the handler is invoked again, and the native cap bounds it, not the budget; AC-3 is unaffected (working DLQ). R-19's "R-4 terminates the loop" is replaced by "**the delivery budget does not bound it**" (the circular `Reject`, the `Unacceptable` bypass, and the defaults that leave it hot) and "**What bounds it is Pub/Sub's own `DeadLetterPolicy.MaxDeliveryAttempts`**", with the no-policy case accepted as unbounded. The SQS contrast in R-19 and §Out of Scope is corrected. New **A-6** (emulator enforces `MaxDeliveryAttempts`, not verified). New **AC-43** (pump-driven: `requeueCount: 3`, `MaxDeliveryAttempts: 5`, failing routing publish → read from the policy topic without metadata, not redelivered from source, handler invoked more than 3 times; both R-13 branches; records instead of passing if A-6 is refuted). Map: R-4 and R-19 → AC-43. Manual-gate list: AC-43's refutation case. | `:184`, `:552-563`, `:571`, `:1051`, `:1133`, `:1378`, `:1619`, `:1634`, `:1663` |
+| 2 | 66 | R-19 defines "**Prompt**" (the release makes the message eligible; the retry policy governs when — immediate at `requeueDelay: 0`, back-off otherwise). AC-18's Given pins `requeueDelay` zero, `W` = 10 s, pull `AckDeadlineSeconds: 60`; its Then is "delivered again **within `W`**", with the stream case explained (a held message would have its lease extended). | `:531`, `:1368` |
+| 3 | 62 | AC-18's Given: a `deadLetterRoutingKey` naming an absent topic distinct from any `DeadLetterPolicy` topic, and a dead-letter producer that does not create it (`makeChannels` left to the ADR). Then adds "the topic still does not exist afterwards", so the fixture proves its own premise. AC-18's and AC-43's Givens added to §"Assertable, but not writable". R-19's example matches. | `:577`, `:1368`, `:1678` |
+| 4 | 55 | R-13's alternative test must use "a redelivery that follows a lease lapse", with no Nack, `ModifyAckDeadline` or ack issued by `Requeue`, by `Reject` (R-19's release is a Nack) or directly. | `:416` |
+| 5 | 40 | R-19: "**`Reject` returns `true` on this path**" (with the pump fall-through reason above). "**If the release itself fails**": logged at Error, still `true`, message left to its ack deadline, pull only (the stream release is a local `TrySetResult`). The NFR-3 aside is replaced by "it adds no broker call to the path". | `:529`, `:537`, `:543` |
+| 6 | 35 | Terms *Variant*: "the AC is run twice, paired — … sync with sync and async with async", which now matches NFR-8. | `:116` |
+
+**For round 12's spot-check**, the seams round 11 introduced:
+- **The R-4 exception with R-4's own statement and AC-3.** Is "never redelivered a further time" still a clean, testable claim?
+- **AC-43.**
+  - Is "more than 3 times" robust under A-4's approximate counter?
+  - Does "not delivered again from the source" have a defined observation window?
+  - Is the claim "holds on both of R-13's branches" true on the AC-40 branch?
+- **A-6**, read with R-21 (the emulator bar) and AC-31.
+- **The "`Reject` returns `true`" rule**, read with R-16/R-17 and with the existing stream `Reject`, which calls `Accepted()`.
+- **AC-18's `W` and the 60 s ack deadline**, read with C-6 and the Pub/Sub ack-deadline range.
