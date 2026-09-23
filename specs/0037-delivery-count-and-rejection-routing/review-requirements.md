@@ -2216,3 +2216,151 @@ mechanics move to a named ADR input under R-13.
 **For round 10's spot-check**: the new R-13 ADR-input paragraph, read with AC-42, R-1, NFR-7, AC-19,
 C-10 and §Candidate mechanisms. Does the "MUST … or …" obligation leave any way for the stream
 consumer to go unevidenced? The Terms *Variant* row, read with AC-15 to AC-18 and R-16.
+
+---
+
+# Review: requirements (round 10) — 0037-delivery-count-and-rejection-routing
+
+**Date**: 2026-09-23
+**Threshold**: 60
+**Verdict**: NEEDS WORK
+
+2 findings at or above threshold 60. Address these before approving.
+
+## Findings
+
+### 1. R-19's "not acknowledged" is two different behaviours on the stream consumer, and AC-16 to AC-18 do not say which consumer they bind (Score: 72)
+
+R-16 binds `Reject`/`RejectAsync` on both `GcpPullMessageConsumer` and `GcpPubSubStreamMessageConsumer`
+(:466-467); R-19 inherits that scope. Its example — "returns without acknowledging, and the message
+is redelivered when its ack deadline lapses" (:518-521) — and AC-18 — "the original is **not**
+acknowledged, and the message is delivered again after its ack deadline lapses" (:1288-1291) —
+describe the pull consumer. On the stream consumer, "not acknowledged" reads two ways:
+
+- **(a) Leave the `GcpStreamMessage` uncompleted.** Per the facts R-13's new paragraph records
+  (:388-398): `HandleMessage` keeps awaiting (`GcpStreamConsumer.cs:71-84`), `SubscriberClient`
+  extends the lease up to 60 minutes, and the held message occupies the client-wide flow-control
+  slot (default 1). No deadline lapses; under defaults a failed DLQ publish **stalls the whole
+  subscription for up to an hour** — a production hazard, not only a test problem. AC-18's "delivered
+  again after its ack deadline lapses" is unobservable.
+- **(b) Nack it with `GcpStreamMessage.Reject()`**, which is what the stream `Requeue` already does
+  (`GcpPubSubStreamMessageConsumer.cs:217-224`). Redelivery is prompt, not "after its ack deadline
+  lapses".
+
+The choice decides whether R-19's "bounded by the delivery budget" argument (:507-510) holds on the
+stream consumer at all. Separately, AC-16, AC-17 and AC-18 each say only "a GCP subscription",
+unlike AC-15's "each of the four GCP configurations, both consumers" (:1268), so the stream
+consumer's R-16 fallback, R-17 and R-19 behaviour can go unexercised. Round 9 moved the stream-lease
+facts into an ADR input scoped to AC-42 alone (:404-407), but R-19/AC-18 rest on the same mechanics.
+
+**Evidence**: requirements.md :466-467, :502-521, :1279-1291, :1268, :388-398, :404-407;
+`GcpPubSubStreamMessageConsumer.cs:84-91` (`Reject` → `Accepted()`), `:217-224` (`Requeue` →
+`gcpStreamMessage.Reject()`, a Nack); `GcpStreamConsumer.cs:71-84`.
+
+**Recommendation**: State what "not acknowledged" means on the stream consumer (Nack — prompt
+redelivery — or an ADR input under R-13); reword R-19's example and AC-18's Then so they do not claim
+a deadline lapse there; make AC-16 to AC-18 name both consumers (or the four configurations), as
+AC-15 does.
+
+---
+
+### 2. The "or what evidences R-1's expiry clause instead" escape is undefined, and AC-42 has no matching branch (Score: 66)
+
+R-13: "The ADR MUST record … the receive / complete sequence by which AC-42 is driven — **or** …
+what evidences R-1's expiry clause for it instead and why. It may not leave either configuration
+unevidenced" (:404-407).
+
+- "Evidence" has no bound. Nothing requires an executed test, the emulator (R-21, :592-596) or both
+  variants (NFR-8). An argument from shared code ("the stream consumer shares
+  `Parser.ToBrighterMessage` with pull, so AC-42 on `GCP / Pull` evidences it") meets the letter.
+- AC-42 still binds the stream consumer unconditionally (:1107-1108) and defers only the procedure
+  (:1121-1124); §"Assertable, but not writable" lists its stream clause as assertable (:1582-1583).
+  On the "or" route there is no procedure and nothing to assert, so readers diverge. Compare AC-11
+  (:1232-1240), which defines "done" on its ADR's "none" route.
+- No AC or gate reads the obligation; it is not in the manual-gates list (:1560-1576).
+- It ignores R-13's branches: the AC preamble (:1087-1091) switches AC-42 off for GCP on the AC-40
+  branch, yet the ADR is still told to record a sequence for it.
+
+**Evidence**: requirements.md :404-407, :1107-1124, :1087-1091, :1231-1240, :1560-1583, :1531.
+
+**Recommendation**: Bound the alternative to an executed, assertable test on the emulator in both
+variants, and exclude argument from shared code. Give AC-42 a matching clause ("or, where the ADR
+records an alternative under R-13, that alternative's test passes") and have the §"Assertable, but
+not writable" entry cover both routes. Make the obligation conditional on the AC-19 branch.
+
+---
+
+### 3. NFR-8 still names `Reactor` and `Proactor` literally, which pump-less ACs cannot satisfy (Score: 38)
+
+The *Variant* row defines pump-less "both variants" (:116), but NFR-8 says "demonstrated in both
+`Reactor` and `Proactor`" (:923-924). Read literally, AC-15 to AC-18 and AC-42 can never meet it.
+The row also leaves open whether sync/async calls are paired.
+
+**Recommendation**: NFR-8 → "in both variants (see Terms, *Variant*)"; optionally "paired: sync with
+sync, async with async".
+
+---
+
+## Round-9 remediation spot-check
+
+| # | Score | Applied text checked | Result |
+|---|---|---|---|
+| 1 | 72 | R-13 ADR-input paragraph (:382-407); AC-42 stream pointers (:1112-1113, :1121-1124); §"Assertable, but not writable" entry (:1582-1583) | PRESENT. All four facts verified in source; the `:88-91` cite is off by one (expression at 89-92), harmless; ordering honestly marked *not verified*. **Residual: findings 1, 2.** |
+| 2 | 62 | Terms *Variant* — sync and async form of every consumer call, open list (:116) | PRESENT. AC-15 now needs `RejectAsync`, consistent with R-16. **Residual: finding 3.** |
+| 3 | 32 | "would otherwise wait on it" removed | PRESENT (0 matches); bounded-shutdown fact at :401-402. |
+| 4 | 30 | R-27(c)(6) "(for a pump-less AC such as AC-42, after its last receive)" | PRESENT :840. |
+
+## Integrity checks
+
+- `R-1..R-28`, `NFR-1..NFR-8`, `AC-1..AC-42`, `C-1..C-12`, `A-1..A-5` defined once each, no gaps.
+- No undefined references. Map: 36 rows; all cited ACs defined; only AC-30/AC-31 unmapped.
+- Coverage gap (findings 1, 2): no AC among AC-16 to AC-18 explicitly binds the stream consumer; the
+  R-13 stream ADR-input obligation is read by no AC or gate.
+
+## Summary
+
+| Score Range | Count |
+|-------------|-------|
+| 90-100 (Critical) | 0 |
+| 70-89 (High) | 1 |
+| 50-69 (Medium) | 1 |
+| 0-49 (Low) | 1 |
+
+**Total findings**: 3
+**Findings at or above threshold (60)**: 2
+
+## Main-agent validation of this round
+
+- Counted: 72, 66 (≥60); 38 (<60) — 0/1/1/1, total 3, two at or above threshold. Agrees.
+- Finding 1 re-verified: R-19's example (:518-521) and AC-18 (:1288-1291) read as quoted; the stream
+  `Reject` calls `gcpStreamMessage.Accepted()` and the stream `Requeue` calls
+  `gcpStreamMessage.Reject()` (`GcpPubSubStreamMessageConsumer.cs`, read directly).
+- Finding 1 is a **pre-existing** defect that round 9's facts made visible, not a remediation
+  regression. Finding 2 is a regression in round 9's new escape clause.
+
+---
+
+# Remediation log — round 10
+
+**Date**: 2026-09-23. **Applied to**: `requirements.md` and `README.md`. Each applied text grepped
+back from the file on disk; this log written from that read-back. **Outcome**: both findings at or
+above threshold remediated, plus the one below. Counts unchanged at **28 `R-n`, 8 `NFR-n`,
+42 `AC-n`**; integrity re-checked programmatically, no gaps and no undefined references. Every other
+R-19 reference (:416, :994, :1076-1081, :1352, :1564, :1658) was re-read and is consistent.
+
+**The decision this round took (the user's, 2026-09-23): Option A.** Unlike round 9, this was judged
+a requirements call, because it is behaviour a user observes in production. On a failed routing
+publish, **both** GCP consumers release the message for prompt redelivery by the same call their
+`Requeue` makes. The pull consumer's specified behaviour changes with it, from "redelivered when its
+ack deadline lapses" to prompt, so the two consumer classes stay consistent.
+
+| # | Score | Remediation | Verified at |
+|---|---|---|---|
+| 1 | 72 | R-19 gains a definition: "**'Not acknowledged' means released for prompt redelivery, by the same call that consumer's `Requeue` already makes**" — pull `ModifyAckDeadline(…, 0)` (`GcpPullMessageConsumer.cs:349`, `:384`, verified), stream Nack via `GcpStreamMessage.Reject()` (`GcpPubSubStreamMessageConsumer.cs:217-224`). It explicitly excludes leaving the message outstanding, giving the subscription-stall hazard as the reason, and records that releasing *replaces* the ack, so NFR-3 is unaffected. R-19's example rewritten to match. AC-18 now binds all four GCP configurations and both consumers, requires an ack deadline longer than the redelivery wait, and asserts redelivery "**before its ack deadline would have lapsed**", which observably distinguishes release from leaving the message outstanding. AC-16 and AC-17 now name all four configurations and both consumers. | `:513-521`, `:538-540`, `:1302`, `:1307`, `:1313-1318` |
+| 2 | 66 | R-13's ADR-input obligation now applies only "**On R-13's first branch** (… AC-19 claimed)" and lapses on the AC-40 branch. The "or" route is now an "**alternative test**" that must be executed and assertable on the emulator (R-21), in both variants (NFR-8), through `GcpPubSubStreamMessageConsumer`, asserting a strictly greater count on a redelivery not preceded by `Requeue`. "**An argument is not evidence**", and shared code with pull is named as not evidencing the stream consumer. AC-42 gains a matching clause: where the ADR records an alternative test, AC-42 is met for that configuration when it passes. The §"Assertable, but not writable" entry now covers both routes. | `:404-414`, `:1146`, `:1611` |
+| 3 | 38 | NFR-8: "both variants (see Terms, *Variant*): `Reactor` and `Proactor` where a pump runs, and the paired synchronous and asynchronous consumer calls — sync with sync, async with async — where an AC drives a consumer directly". | `:944` |
+
+**For round 11's spot-check**: R-19's new definition, read with AC-18, R-16/R-17 and AC-16/AC-17, NFR-3,
+§Out of Scope's SQS divergence item, and R-4 (does prompt redelivery after a failed publish still
+end at the budget?). R-13's bounded obligation, read with AC-42, the guard, AC-19/AC-40 and the
+§"Assertable, but not writable" list. NFR-8, read with the Terms *Variant* row.

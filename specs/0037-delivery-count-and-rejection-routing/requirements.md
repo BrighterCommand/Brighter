@@ -401,10 +401,17 @@ starts from:
 - Shutdown uses `ShutdownMode.WaitForProcessing` with no `Timeout` (`GcpStreamConsumer.cs:49`),
   which the library bounds by a default derived from the maximum extension duration.
 
-The ADR MUST record, for each of `GCP / Stream` and `GCP / StreamOrdering`, the subscription and
-client configuration and the receive / complete sequence by which AC-42 is driven — **or**, where a
-configuration cannot be driven that way, what evidences R-1's expiry clause for it instead and why.
-It may not leave either configuration unevidenced.
+**On R-13's first branch** (the ADR records a satisfying GCP mechanism; AC-19 claimed), the ADR MUST
+record, for each of `GCP / Stream` and `GCP / StreamOrdering`, the subscription and client
+configuration and the receive / complete sequence by which AC-42 is driven — **or**, where a
+configuration cannot be driven that way, an **alternative test** of R-1's expiry clause for it, and
+why. An alternative test must itself be executed and assertable: it runs against the Pub/Sub
+emulator (R-21), in both variants (NFR-8), through `GcpPubSubStreamMessageConsumer`, and asserts that
+a redelivery not preceded by a `Requeue` call presents a strictly greater count. **An argument is not
+evidence** — in particular, that the stream consumer shares code with the pull consumer does not
+evidence the stream consumer. Neither configuration may be left without one of the two. On R-13's
+second branch (AC-40) AC-42 does not apply to GCP (see the guard at the head of §Delivery-count
+contract), and this obligation lapses with it.
 
 **R-15 to R-19 (rejection routing) do not depend on A-2 and are unaffected by either branch.** They
 depend on R-20 alone, which is why the twenty GCP rejection-routing cells in AC-30 are unconditional
@@ -503,6 +510,17 @@ id. Key names match the transport's existing casing convention.
 logged at Error.**
 The message therefore becomes eligible for redelivery rather than being destroyed.
 
+**"Not acknowledged" means released for prompt redelivery, by the same call that consumer's
+`Requeue` already makes** — on `GcpPullMessageConsumer`, `ModifyAckDeadline(…, 0)`
+(`GcpPullMessageConsumer.cs:349`, async `:384`); on `GcpPubSubStreamMessageConsumer`, a Nack via
+`GcpStreamMessage.Reject()` (`GcpPubSubStreamMessageConsumer.cs:217-224`). It does **not** mean
+leaving the message outstanding. On the stream consumer that would be a production hazard:
+`SubscriberClient` keeps extending an uncompleted message's lease for up to 60 minutes, and the held
+message occupies the client-wide flow-control slot (`1` by default), so one failed routing publish
+would stall the whole subscription (the facts are recorded under R-13). Releasing the message
+*replaces* the acknowledgement the success path makes. It is not an additional broker call, so
+NFR-3 is unaffected.
+
 GCP has no incumbent behaviour on this path — today it acks and discards unconditionally — so the
 choice here is a greenfield one, and it is made in favour of preserving the message. The competing
 risk, an undeliverable message looping indefinitely, is bounded by the delivery budget this spec
@@ -517,8 +535,9 @@ path until that question is answered, and the difference is recorded rather than
 
 > *Example.* The dead-letter topic does not exist. `Reject(message, new
 > MessageRejectionReason(RejectionReason.DeliveryError, "budget spent"))` logs an Error naming the
-> message id and the reason, returns without acknowledging, and the message is redelivered when its
-> ack deadline lapses.
+> message id and the reason, releases the message with the consumer's requeue call instead of
+> acknowledging it, and the message is redelivered promptly — not after its ack deadline lapses, and
+> on the stream consumer without holding the subscription's flow-control slot.
 
 #### Group E — GCP DLQ channel creation without project IAM admin (#4354)
 
@@ -921,7 +940,9 @@ corresponding configurations are not moved by this spec at all, so NFR-7 has not
 them — it constrains only the configurations a branch actually moves.
 
 **NFR-8. Both variants, always.** Every behavioural requirement in Groups A–D is demonstrated in
-both `Reactor` and `Proactor`. Spec 0036's FR-14 rule: one variant is not evidence.
+both variants (see Terms, *Variant*): `Reactor` and `Proactor` where a pump runs, and the paired
+synchronous and asynchronous consumer calls — sync with sync, async with async — where an AC drives a
+consumer directly. Spec 0036's FR-14 rule: one variant is not evidence.
 
 ---
 
@@ -1121,7 +1142,9 @@ is involved, so a count advanced only inside `Requeue` fails this criterion. On 
 lease-lapse redelivery AC-23 measures; AC-42 asserts what AC-23 records. On `GCP / Stream` and
 `GCP / StreamOrdering` the procedure that drives the lapse and the second receive — and completes
 the deliveries the test holds — is the one the ADR records under R-13, not one this criterion
-prescribes; the obligation (a strictly greater count on the expiry redelivery) is unchanged.
+prescribes; the obligation (a strictly greater count on the expiry redelivery) is unchanged. Where
+the ADR records an alternative test for a stream configuration instead (R-13), AC-42 is met for that
+configuration when that alternative test passes.
 
 **AC-2** (R-2, R-23; see C-7) — **Given** a message published with `HandledCount = 0` to any transport
 in scope, **When** it is delivered for the first time, **Then** the consumer presents
@@ -1276,19 +1299,23 @@ description in R-16's example carries four keys, not five; in every case it carr
 `ReceiptHandle` key; and in every case a subsequent read of the source subscription returns
 `MessageType.MT_NONE`.
 
-**AC-16** (R-16) — **Given** a GCP subscription with a `deadLetterRoutingKey` and **no**
+**AC-16** (R-16) — **Given**, on each of the four GCP configurations and both consumers, a
+subscription with a `deadLetterRoutingKey` and **no**
 `invalidMessageRoutingKey`, **When** `Reject` is called with `RejectionReason.Unacceptable`,
 **Then** the message appears on the dead-letter destination.
 
-**AC-17** (R-17) — **Given** a GCP subscription with neither routing key, **When** `Reject` is called
+**AC-17** (R-17) — **Given**, on each of the four GCP configurations and both consumers, a
+subscription with neither routing key, **When** `Reject` is called
 with `new MessageRejectionReason(RejectionReason.Unacceptable, "bad payload")`, **Then** a Warning is
 logged containing the message id and `"Unacceptable"`, and a subsequent read of the source
 subscription returns `MessageType.MT_NONE`.
 
-**AC-18** (R-19) — **Given** a GCP subscription whose configured dead-letter topic does not exist,
-**When** `Reject` is called with `RejectionReason.DeliveryError`, **Then** an Error is logged naming
-the message id and `"DeliveryError"`, the original is **not** acknowledged, and the message is
-delivered again after its ack deadline lapses.
+**AC-18** (R-19) — **Given**, on each of the four GCP configurations and both consumers, a
+subscription whose configured dead-letter topic does not exist and whose ack deadline is longer than
+the test's redelivery wait, **When** `Reject` is called with `RejectionReason.DeliveryError`,
+**Then** an Error is logged naming the message id and `"DeliveryError"`, the original is **not**
+acknowledged, and the message is delivered again **before its ack deadline would have lapsed** —
+evidence that it was released by the consumer's requeue call (R-19), not left outstanding.
 
 **AC-39** (R-13, A-2 — measurement) — ⚠️ **Given** a DLQ-backed GCP subscription on the Pub/Sub
 emulator, made creatable by R-20, and a handler that always defers, **When** the message is delivered
@@ -1580,7 +1607,8 @@ record, so the test can be written only after design: **AC-11**'s Given (the sub
 trip R-11), **AC-21**'s client-construction clause (the exception type the ADR names, NFR-5),
 **AC-33**'s first clause (the normalisation the ADR specifies), **AC-34**'s second
 clause (the transports the ADR's table classifies exact), and **AC-42** on `GCP / Stream` and
-`GCP / StreamOrdering` (the procedure the ADR records under R-13's stream-consumer input).
+`GCP / StreamOrdering` (the procedure the ADR records under R-13's stream-consumer input, or the
+alternative test it records there instead).
 **AC-19** and **AC-40** are a third kind: both are writable now, but *which one is claimed* is
 selected by the ADR's recorded conclusion rather than by a measurement (see the note under AC-40).
 
