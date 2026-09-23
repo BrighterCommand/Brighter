@@ -49,7 +49,7 @@
   - References: requirements C-9 (the doubles table and the request-type rule); ADR 0072 *Testing Strategy*; ADR 0073 *Hand-written cases in `Core.Tests`* (the expression-bodied constraint).
   - Depends on: nothing.
 
-- [ ] **2. TEST + IMPLEMENT: `CombinedChannelFactory.FactoryTypes` — the composite's routing identities, read from a single-pass sequence**
+- [x] **2. TEST + IMPLEMENT: `CombinedChannelFactory.FactoryTypes` — the composite's routing identities, read from a single-pass sequence**
   - **USE COMMAND**: `/test-first when a combined channel factory is built from a single-pass sequence its factory types should list the inner factory types in constructor order`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessagingGateway"
   - Test file: `When_a_combined_channel_factory_is_built_from_a_single_pass_sequence_should_report_its_factory_types.cs`
