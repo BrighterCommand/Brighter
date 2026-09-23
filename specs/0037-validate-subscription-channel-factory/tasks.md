@@ -112,7 +112,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - Use `Type.IsAssignableFrom`, **not** the `IsAssignableTo` polyfill — the latter is `internal` to core and unavailable across the assembly boundary
   - Depends on: 3.
 
-- [ ] **5. TEST + IMPLEMENT: A subscription's own channel factory takes precedence over the default (AC-3, FR-2 step 1)**
+- [x] **5. TEST + IMPLEMENT: A subscription's own channel factory takes precedence over the default (AC-3, FR-2 step 1)**
   - **USE COMMAND**: `/test-first when a subscription carries its own channel factory the rule should ignore the configured default`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_a_subscription_carries_its_own_channel_factory_should_ignore_the_default.cs`
