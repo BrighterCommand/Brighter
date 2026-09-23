@@ -808,3 +808,735 @@ AC-36; R-20's obligation text now that the tolerance rule lives there, against i
 AC-20, AC-21 and NFR-5; and the AC-19/AC-40 guards against AC-39, AC-30 and NFR-7. A round-4 reviewer
 should also spot-check that this round's remediations are present in the document rather than only in
 this log.
+
+---
+
+# Review: requirements (round 4) — 0037-delivery-count-and-rejection-routing
+
+**Date**: 2026-09-22
+**Threshold**: 60
+**Verdict**: NEEDS WORK
+
+10 findings at or above threshold 60. Address these before approving.
+
+## Findings
+
+### 1. R-2's normalisation and R-5/AC-4's `>= R - 1` bound cannot both hold under the broker-counter mechanism, because the dead-letter destination is read through the same consumer seam (Score: 84)
+
+R-2 places the normalisation in the consumer: "the consumer normalises it to `0` before handing the message to the pump" (line 133). §Candidate mechanisms names the exact seams that would change — `SqsMessageCreator.ReadHandledCount` (`:323`), `SqsInlineMessageCreator.ReadHandledCount` (`:350`), `GcpPubSub/Parser…ReadHandleCount`, `RocketMessageConsumer.ReadHandledCount` (`:422`). All four exist and are the only places `MessageHeader.HandledCount` is populated on receive for those transports.
+
+Those seams serve **every** receive on the transport, including the conformance harness's read of the dead-letter destination, which goes through a real `ChannelFactory`/consumer — verified at `tests/Paramore.Brighter.AWS.Tests/MessagingGateway/SqsStandardMessageGatewayProvider.cs:281-311` (`new ChannelFactory(_awsConnection).CreateAsyncChannelAsync(dlqSubscription, …)` then `dlqChannel.ReceiveAsync(...)`).
+
+So if the ADR picks "read the broker's own delivery counter on receive" — the candidate the document's own evidence favours (NFR-1's baseline says SQS system attributes are already on the wire at no extra cost; NFR-3 penalises the republish route; R-2 mandates a normalisation that is only meaningful under it; AC-33 tests the normalisation function) — then the DLQ read returns the **DLQ's own** receive count, normalised by R-2 to `0`, not the `handled-count` attribute the Brighter-managed send wrote. That falsifies, simultaneously:
+
+- R-5: "a delivery count of at least `R - 1`" (line 181);
+- AC-4: "its `Header.HandledCount` is `>= 2`" (line 934);
+- the FR-23 template's **existing** assertion `Assert.True(dlqMessage.Header.HandledCount >= deliveriesExpected)` where `deliveriesExpected = _subscription.RequeueCount - 1` (`…/MessagingGateway/Reactor/When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue.cs.liquid`, and its Proactor twin) — i.e. it turns the eight AWS FR-23 cells red against R-23 and AC-12.
+
+The naive escape ("prefer the `handled-count` attribute when present, else the broker counter") is closed off too: on SQS the stored copy's `handled-count` attribute is never rewritten — that *is* defect #4341 — so a preference for the attribute defeats R-1.
+
+The document was written against exactly this class of trap for the *identity* assertion — R-2's "Why this is an obligation" paragraph and C-7 exist for it — but the same reasoning was not carried to the DLQ read that R-5 and AC-4 depend on. Nothing in the requirements states the constraint (e.g. "a normalising read applies only to the channel the pump consumes, and must not rewrite `HandledCount` on a message read from a dead-letter or invalid-message destination").
+
+**Evidence**: requirements.md:133 ("the consumer normalises it to `0` before handing the message to the pump") against :181 ("a delivery count of at least `R - 1`") and :934 ("its `Header.HandledCount` is `>= 2`"); `SqsStandardMessageGatewayProvider.cs:294-299`; the FR-23 template's `deliveriesExpected` assertion.
+
+**Recommendation**: Add an obligation to Group A stating which reads the normalisation applies to and that the delivery count of a message read back from a rejection destination must be the count the rejecting consumer stamped, not the destination's own receive count — or, if that cannot be guaranteed, restate R-5/AC-4 and the template assertion in terms of a metadata key that survives. Name the conformance cells at risk, as R-2 already does for the identity assertion.
+
+---
+
+### 2. R-27(c)(1) mandates a dispatch-count key that is provably wrong on three of the configurations R-27(c)(4) applies it to, making the new assertion silently vacuous there (Score: 82)
+
+R-27(c)(1) is categorical about the key:
+
+> "**A dispatch count exposed by the shared pump**, keyed on the **originating message's `MessageId`** — reachable from a handler as `Context.OriginatingMessage.Header.MessageId`" (line 694)
+
+and R-27(c)(4) applies the resulting assertion to "both FR-23 templates … and regeneration of the generated FR-23 tests for **every configuration**".
+
+On the three RabbitMQ configurations the originating message's `MessageId` **changes on every redelivery**. Verified in source: `RmqMessagePublisher.RequeueMessageAsync` mints `var messageId = Uuid.NewAsString();` (`src/Paramore.Brighter.MessagingGateway.RMQ.Async/RmqMessagePublisher.cs:131`) and records the first id in `x-original-message-id` via `AddOriginalMessageIdOnRepublish` (`:142`). The harness file R-27(c) itself cites says so in its own documentation:
+
+> "Others - RabbitMQ, for one - republish under a fresh id and record the first one in the `x-original-message-id` header"
+
+(`Templates/MessagingGateway/Shared/ConformanceDeferredPump.cs.liquid`), and the companion assertion `AssertIsTheMessageSent` already handles it by checking `deadLetteredId == sentId || republishedFrom == sentId`.
+
+Consequence: on `RMQ.Async / Classic`, `RMQ.Async / Quorum` and `RMQ.Sync / RmqSyncMessagingGateway` the counter records `1` against each of three distinct keys, so `count <= RequeueCount` passes vacuously — the assertion R-27(c) exists to add is absent precisely where the harness knows the id moves. Worse, the same vacuity would hit the **in-scope** transports if the ADR selects "rewrite the stored message on requeue (republish)", which §Candidate mechanisms lists as a live option: the cells the spec exists to prove would then be proved by an assertion that cannot fail.
+
+R-27(c) goes out of its way to exclude the wrong key (`command.Id`) but does not mention `x-original-message-id` at all — `grep -in "original message id\|originalmessageid"` over `requirements.md` returns nothing.
+
+**Evidence**: requirements.md:694-697 versus `RmqMessagePublisher.cs:131,142` and `ConformanceDeferredPump.cs.liquid`'s identity remarks and `AssertIsTheMessageSent`.
+
+**Recommendation**: Restate R-27(c)(1)'s key as the originating message's `x-original-message-id` when present, falling back to `Header.MessageId` — the same identity rule `AssertIsTheMessageSent` already uses — and say explicitly that a transport which republishes under a fresh id must still be counted as one message.
+
+---
+
+### 3. AC-20 hard-asserts a status code that R-20 itself says may never be produced, and R-20's client-construction case has no AC and no defined exception type (Score: 70)
+
+R-20 admits two different failure shapes for the same call:
+
+> "`GetProjectAsync` returns `Unauthenticated` in both helpers" (the emulator example)
+> "A failure to *construct* the Resource Manager client — credential resolution failing before any RPC is issued, so there is no status code to inspect — is tolerated on the same terms and logged the same way." (line 453-456)
+
+AC-20 then asserts only the first, as a hard `Then`: "`GetProjectAsync`'s `Unauthenticated` is tolerated in **both** `UpdateIAmRoleForDeadLetterAsync` and `UpdateIAmRoleForSubscriptionAsync`" (line 1092-1095).
+
+Which shape occurs is decided by ambient credentials, not by the spec. `GcpMessagingGatewayConnection.CreateProjectsClientAsync` (`:173`) builds via `new ProjectsClientBuilder { Credential = Credential }` … `await builder.BuildAsync()`, which resolves Application Default Credentials when `Credential` is null. On a machine with no ADC — the ordinary state of a laptop or CI agent running the emulator, which is exactly R-21's mandated bar — construction throws and **no RPC is issued**, so AC-20's first branch cannot be observed. Spec 0036's measurement of `Unauthenticated` was evidently taken where ADC *was* present.
+
+Meanwhile the client-construction case is the only clause of R-20 with no acceptance criterion at all: AC-20 covers the two RPC branches, AC-21 covers the status filter over `RpcException`, and neither reaches a pre-RPC construction failure. NFR-5 specifies it only as "caught by the narrowest exception type that call site can throw" (line 760-762) — which is not a name, and two developers will pick two different types.
+
+**Evidence**: requirements.md:453-456, :760-762, :1088-1095; `GcpMessagingGatewayConnection.cs:173`ff.
+
+**Recommendation**: Loosen AC-20's first branch to "the tolerated outcome of the `GetProjectAsync` step — an `Unauthenticated`/`PermissionDenied` status *or* a client-construction failure — is tolerated in both helpers", and add an AC for the construction case naming the exception type (or state that the ADR must name it and mark it as an ADR-dependent clause the way AC-11 and AC-33 are marked).
+
+---
+
+### 4. AC-19's and AC-40's guards can still both hold, and there is an outcome neither covers; AC-30's conditional row states AC-19's condition but not AC-40's (Score: 65)
+
+Round 3's finding 6 was remediated on the *measurement* half only. The second halves of the two guards remain non-exclusive because they are about different things — a **selection** versus a **conclusion**:
+
+- AC-19: "…**or** the ADR selected a GCP mechanism that does not read `delivery_attempt`"
+- AC-40: "…**and** the ADR records that no mechanism satisfies R-1 to R-5 for GCP within NFR-1 to NFR-3"
+
+Overlap: the counter is non-advancing; the ADR selects a `delivery_attempt`-independent mechanism (consumer-side tracking, say) and then records that it does not survive NFR-2. AC-19's second disjunct is satisfied (a mechanism *was* selected) and AC-40's guard is satisfied in full. Both apply, so AC-39's exit criterion (c) — "exactly one of AC-19 and AC-40 is then claimed" — fails.
+
+Gap: the counter **is** populated and strictly advancing (A-2 holds), but the chosen mechanism nonetheless cannot satisfy R-1 to R-5 within NFR-1 to NFR-3 — e.g. it cannot reach R-2's exact `0` on a first delivery whose approximate counter is elevated, which R-2 explicitly contemplates as a possible outcome. AC-19's guard fires, so AC-19 must be claimed and will fail; AC-40's guard ("unpopulated, or populated but not strictly advancing") does not fire. R-13's branch text has the same shape: "**If A-2 holds** — 'done' = the four `GCP / *` FR-23 cells move to `Fixed`". There is no "bound but unimplemented" route out of a good measurement.
+
+AC-30's conditional GCP row states AC-19's condition verbatim ("**if** assumption A-2 holds or the ADR selects a GCP mechanism independent of `delivery_attempt`") and its "otherwise" therefore does **not** match AC-40's stricter guard, so the ledger row and the AC disagree about when a cell stays `Deferred`.
+
+**Evidence**: requirements.md AC-19, AC-40 and AC-39(c); AC-30's third table row.
+
+**Recommendation**: Key both guards on the same two-part fact — the measurement **and** whether the ADR records a mechanism that satisfies R-1 to R-5 within NFR-1 to NFR-3 — so they partition all four combinations, and restate AC-30's conditional row and R-13's branch headers in the same terms.
+
+---
+
+### 5. A-5 says R-27 names "the eight provider files"; R-27 and AC-36 name twelve (Score: 62)
+
+A-5's closing sentence: "**Owned by R-27**, which names the **eight** provider files and the required values." (line 843)
+
+R-27(a): "**`R < M` on all twelve providers** — four AWS, four AWS.V4, four GCP" (line 665), with a table naming four `AWS.Tests` files, four same-named `AWS.V4.Tests` files and four `Gcp.Tests` files. AC-36 agrees: "the **eight** AWS/AWS.V4 gateway providers **and the four GCP** gateway providers named in R-27".
+
+All twelve exist and hold the stated values: AWS/AWS.V4 `requeueCount: 3` with `RedrivePolicy(deadLetterChannelName, 3)` in all eight; GCP `requeueCount: 5` / `MaxDeliveryAttempts = 5` in all four (`GcpPullMessageGatewayProvider.cs:151,155`; `GcpPullOrdering…:161,165`; `GcpStream…:151,155`; `GcpStreamOrdering…:161,165`). So twelve is the correct figure and A-5 is the outlier. A reader working from A-5 reconfigures the AWS family and leaves the four GCP providers at `R == M == 5`, which is R-8's undetermined tie on exactly the configurations AC-19 depends on.
+
+**Evidence**: requirements.md:843 versus :665 and AC-36.
+
+**Recommendation**: Change A-5 to "twelve provider files".
+
+---
+
+### 6. R-27(c)(3) reads the counter at an instant the template proves is later than the one R-4 and AC-3 define as the window's close (Score: 62)
+
+R-4: "That window is the **single** poll the template already runs — every 500 ms, giving up at 60 s, **ending when the dead-lettered message is found**." (line 167-169)
+
+R-27(c)(3): "**Read after the pump has been quit and awaited**, **which is the instant R-4's "when the observation window closes" denotes**." (line 702)
+
+The template proves these are two different instants. The poll loop `break`s on finding the DLQ message; the pump is quit two statements *later*:
+
+```
+        _channel.Enqueue(MessageFactory.CreateQuitMessage(_subscription.RoutingKey));
+        await pumping;
+```
+
+(both FR-23 templates, immediately after the poll loop).
+
+Between the two instants the pump is still dispatching, which is precisely the interval in which a broken budget would keep redelivering. Reading after the quit is the better choice — but then R-4's and AC-3's definition of the window is wrong, and AC-3's parenthetical "(the template's existing single 60 s poll — no additional wait is introduced)" describes a different measurement point from the one R-27(c)(3) mandates. As written, the document asserts an identity that its own cited artefact contradicts.
+
+**Evidence**: requirements.md:167-169, :702, AC-3; the FR-23 templates' poll loop and the quit/await that follows it.
+
+**Recommendation**: Redefine R-4's observation window (and AC-3's parenthetical) as closing when the pump has been quit and awaited, and delete the claim that this is the same instant as the poll's break.
+
+---
+
+### 7. AC-11 — R-11's only acceptance criterion — may have no instantiation at all, and no outcome is defined for that case (Score: 62)
+
+AC-11's Given is entirely dependent on the ADR producing a list: "**Given** a subscription carrying `requeueCount: 3` of one of the shapes the ADR names under R-25 as tripping R-11 — at minimum, **if** the ADR selects a counter-based GCP mechanism, a `GcpPubSubSubscription` with no `DeadLetterPolicy` (A-1)".
+
+R-25 explicitly permits that list to be empty:
+
+> "The ADR MUST also name, for each of the four transports in scope, at least one subscription shape that trips R-11 under its chosen mechanism — **or state that none does**" (line 634-635)
+
+If the ADR selects a `delivery_attempt`-independent GCP mechanism, R-14's condition holds, and no other shape trips R-11, then AC-11 has no Given, R-11 — the "anti-silence requirement", the one the document calls "the exact silence this defect family exists to close" (R-26) — is left with no exercised acceptance criterion, and R-25's rule and R-26's channel-creation log go unbuilt and unverified. Every other conditional requirement in this document (R-13, R-14) was given a defined "done" on **both** branches; R-11 was not.
+
+**Evidence**: requirements.md:634-635 and AC-11; R→AC map row "R-11 | AC-11".
+
+**Recommendation**: Give AC-11 a second branch for the "no shape trips R-11" outcome — at minimum, that the rule is still implemented and unit-tested against a synthetic subscription that answers the predicate negatively, and that the ADR's statement is recorded as the evidence.
+
+---
+
+### 8. What a tolerated-IAM Warning must contain is stated four different ways (Score: 62)
+
+Four places specify the content of the same log line, and no two agree:
+
+| Where | Required content |
+|---|---|
+| R-20 obligation paragraph (line 433-434) | "the RPC, the resource and the status code" |
+| R-20's `GetProjectAsync` bullet (line 443) | "the helper and the RPC" |
+| NFR-5 (line 757-759) | "the RPC, the resource name and the status code" |
+| AC-20 (line 1095) | "each naming **the helper**, the RPC, the resource and the status code" |
+
+A developer implementing to R-20's paragraph or to NFR-5 omits the helper name, and AC-20's assertion then fails. The helper name is the one element that actually distinguishes the two Warnings AC-20 counts, so it is not a decorative difference — it is what makes "exactly two Warnings, one per helper" checkable at all. Given the Warning *count* has now been the subject of findings in rounds 2 and 3, the Warning *content* deserves the same single statement.
+
+**Evidence**: requirements.md:433-434, :443, :757-759, :1095.
+
+**Recommendation**: State the four required elements once, in R-20's obligation paragraph, and have the bullets, NFR-5 and AC-20 all refer to that list rather than restating it.
+
+---
+
+### 9. "The three RMQ rows … need no Brighter-side budget to get there" is false in source, and contradicts R-5's own justification for the `>= R - 1` bound (Score: 62)
+
+The Problem Statement splits the nine conforming configurations into two causal groups:
+
+> "Six of the nine that work — Redis, Kafka ×3, MSSQL, Postgres — requeue by **republishing**, so the header travels; the three RMQ rows reach the dead-letter destination by the broker's own DLX instead **and need no Brighter-side budget to get there**."
+
+R-22 repeats it: "They requeue by republishing (or, for the three RMQ rows, dead-letter natively)".
+
+RabbitMQ also requeues by republishing, and the republished copy carries the count. Verified: `RmqMessageConsumer.RequeueAsync` → `rmqMessagePublisher.RequeueMessageAsync(...)` (`RmqMessageConsumer.cs:438`), which calls `AddCloudEventsHeaders(message)`, which writes `[HeaderNames.HANDLED_COUNT] = message.Header.HandledCount` (`RmqMessagePublisher.cs:174`), and `RmqMessageCreator.ReadHandledCount` reads it back (`:208-210`). The RMQ budget therefore *does* run down; the DLX is only how the message reaches the destination **after** Brighter's reject.
+
+This is not a free-standing inaccuracy: R-5's justification for choosing `>= R - 1` rather than `== R` depends on RMQ having republished —
+
+> "where the broker moves its own stored copy the copy was written by the last requeue and reads one less"
+
+— which is only true if a last requeue republished an incremented count. The Problem Statement's claim and R-5's rationale cannot both be right.
+
+**Evidence**: requirements.md Problem Statement (¶2) and R-22 versus :181-187 (R-5's bound rationale); `RmqMessageConsumer.cs:438`, `RmqMessagePublisher.cs:129-142, 160-174`, `RmqMessageCreator.cs:208-210`.
+
+**Recommendation**: Restate as "all nine requeue by republishing, so the header travels; the three RMQ rows differ only in that the rejected message reaches the destination via the broker's DLX rather than a Brighter-managed send" — which is also what the FR-23 template's own explanatory comment says.
+
+---
+
+### 10. NFR-4's "once per subscription" and AC-29's "at most one" contradict R-25's three independently-firing rules and R-26's double reporting (Score: 60)
+
+NFR-4: "A budget that will not behave as its author probably intended is visible at Warning, **once per subscription**."
+AC-29: "…the total count of budget-configuration Warnings **for that channel remains at most one**." (line 1169)
+
+R-25 registers three independent rules, and their conditions are not mutually exclusive. A `GcpPubSubSubscription` with `requeueCount: 0` and no `DeadLetterPolicy` (the very shape AC-11 names) trips R-7's rule *and* R-11's rule — two validation findings for one subscription. R-26 then adds a third Warning for R-11 at channel creation: "R-11 is therefore reported by **both** routes: the R-25 rule, and a single Warning at channel creation".
+
+AC-29 never says whether it counts validation findings, channel-creation logs, or both, so as written it is either unsatisfiable (if it counts everything) or trivially satisfiable (if it counts only channel-creation logs, where R-7 and R-10 contribute zero by R-26's own rule). Two developers will read it two ways, and the intended obligation — "nothing is raised per message" — is only one of its two clauses.
+
+**Evidence**: requirements.md NFR-4, AC-29 (:1167-1170), R-25's three-rule table, R-26.
+
+**Recommendation**: Rewrite NFR-4 as "at most one Warning per subscription **per rule**, never per message", and rewrite AC-29's second clause to bound the *channel-creation* log at one and say explicitly that validation findings are counted by AC-7/AC-10/AC-11 instead.
+
+---
+
+### 11. AC-3 — the acceptance criterion for the spec's central requirement — names neither a transport nor a variant, where its siblings now do (Score: 55)
+
+Round 1's finding 10 ("AC-5 and AC-6 name no transport") was remediated in AC-5 ("**Given**, on each transport in scope and in both variants…"), AC-6 (same) and AC-35 ("on a transport in scope in both variants"). AC-3, the sole AC for R-4, was not:
+
+> "**AC-3** (R-4) — **Given** `requeueCount: 3`, a `deadLetterRoutingKey`, a handler that always defers, and no native redrive limit at or below 3, **When** the pump runs, **Then** …"
+
+AC-1 says "any transport in scope"; AC-3 says nothing. One developer writes it once; another writes it four times across two variants.
+
+(Separately, AC-6's "on **each** transport in scope" and AC-35's "on **a** transport in scope" disagree about the same kind of obligation under the same requirement, R-7.)
+
+**Evidence**: requirements.md AC-1, AC-3, AC-5, AC-6, AC-35.
+
+**Recommendation**: Give AC-3 the same Given prefix as AC-5 and AC-6, and reconcile AC-6 and AC-35 on "each" versus "a".
+
+---
+
+### 12. AC-6's and AC-35's "`Requeue` is never called" is specified only by what it must not be (Score: 52)
+
+R-27(c)(5) closes round 3's finding 5 for the *count*, but for the second observation it says only:
+
+> "AC-6's and AC-35's "`Requeue` is never called" is observed on the consumer the test constructs, not by mocking one (C-10)."
+
+That names the prohibited technique, not the permitted one. "Observed on the consumer the test constructs" admits at least three readings: a recording decorator over a real consumer, a counter added to the production consumer, or inference from the absence of a redelivery within some unstated interval. The dispatch counter got five numbered obligations; this observation got half a sentence.
+
+**Evidence**: requirements.md R-27(c)(5).
+
+**Recommendation**: Add a sixth numbered obligation specifying how the requeue observation is made, in the same detail as the dispatch counter (key, reset, read point).
+
+---
+
+### 13. R-25's "or state that none does, which is itself the classification R-3 requires" cross-references the wrong requirement (Score: 45)
+
+R-3's classification is the exact-versus-approximate four-row table ("The ADR must record, for each of the four transports in scope, which of the two classifications applies and on what evidence, as a four-row table"), and AC-34 tests that table. A statement that no subscription shape trips R-11 is not that classification and does not satisfy it.
+
+**Evidence**: requirements.md:634-635 ("— or state that none does, which is itself the classification R-3 requires") against R-3's obligation paragraph and AC-34.
+
+**Recommendation**: Drop the trailing clause, or point it at AC-11 rather than R-3.
+
+---
+
+## Summary
+
+| Score Range | Count |
+|-------------|-------|
+| 90-100 (Critical) | 0 |
+| 70-89 (High) | 3 |
+| 50-69 (Medium) | 9 |
+| 0-49 (Low) | 1 |
+
+**Total findings**: 13
+**Findings at or above threshold (60)**: 10
+
+## Main-agent validation of this round
+
+Counts re-checked one by one and they match the findings listed (High: 84, 82, 70; Medium: 65, 62, 62, 62, 62, 62, 60, 55, 52; Low: 45).
+
+The findings that make factual claims about the codebase were verified in source before this file was
+written:
+
+- **Finding 1** — `SqsStandardMessageGatewayProvider.GetMessageFromDeadLetterQueueAsync:281-316`
+  builds a real `ChannelFactory` channel and calls `ReceiveAsync`, so the DLQ read does go through
+  the same consumer seam R-2 would normalise. The template's `deliveriesExpected =
+  _subscription.RequeueCount - 1` assertion confirmed in both FR-23 templates.
+- **Finding 2** — `RmqMessagePublisher.cs:131` mints `Uuid.NewAsString()` on requeue and `:142`
+  records the original via `AddOriginalMessageIdOnRepublish`; `ConformanceDeferredPump`'s own
+  remarks say RabbitMQ "republish[es] under a fresh id", and `AssertIsTheMessageSent` already
+  accepts either id. Confirmed.
+- **Finding 3** — `GcpMessagingGatewayConnection.CreateProjectsClientAsync:173` builds
+  `ProjectsClientBuilder { Credential = Credential }`, so a null credential resolves ADC and can
+  fail before any RPC. Confirmed.
+- **Finding 5** — `grep` confirms requirements.md:665 says "twelve providers" and :843 says "eight
+  provider files". Confirmed.
+- **Finding 6** — both FR-23 templates `break` out of the poll loop on finding the DLQ message and
+  only then `Enqueue(CreateQuitMessage(...))` / `await pumping`. The two instants are genuinely
+  different. Confirmed.
+- **Finding 9** — `RmqMessageConsumer.cs:438` requeues via `RmqMessagePublisher.RequeueMessageAsync`;
+  `RmqMessagePublisher.cs:174` writes `HeaderNames.HANDLED_COUNT`; `RmqMessageCreator.cs:208-210`
+  reads it back. RMQ does republish and does carry the count, so the Problem Statement's causal
+  split is wrong. Confirmed.
+
+Findings 4, 7, 8, 10, 11, 12 and 13 are internal-consistency findings; each was checked against the
+current text of `requirements.md` rather than against a remediation log.
+
+**Round 3's fourteen remediations were also spot-checked in `requirements.md` itself before this
+review was launched — all fourteen are present in the document.** The round-3 process trap (logged
+but not applied) did not recur.
+
+# Remediation log — round 4
+
+**Date**: 2026-09-22. **Applied to**: `requirements.md`. **Every edit verified by reading the file
+back from disk and grepping for the applied text, and this log written from the document rather than
+from any script's success output** — round 3's process rule.
+**Outcome**: all 10 findings at or above threshold remediated, plus all 3 below. Document now holds
+**28 `R-n`, 8 `NFR-n`, 41 `AC-n`** (was 27/8/40) and **C-1..C-12** (was C-1..C-11).
+Integrity re-checked programmatically after the last edit: no numbering gap in `R-n` or `AC-n`, every
+requirement and NFR has a map row (36 rows), no map row references an undefined AC, no `R-n` or
+`AC-n` is mentioned anywhere without being defined, AC-30 and AC-31 remain the only deliberate
+omissions from the map, and the constraint list reads C-1 through C-12 in order.
+
+## The decision this round turned on — NFR-3 kept, and what that settles
+
+Findings 1 and 9 were two faces of one gap, and probing it surfaced something neither the reviewer
+nor the three prior rounds had named: **the document claimed not to choose a mechanism while NFR-3
+had already excluded one.** Republish adds a net broker call per requeue on all three transports in
+scope (SQS `ChangeMessageVisibility` → `SendMessage` + `DeleteMessage`; Pub/Sub `ModifyAckDeadline` →
+`Publish` + `Ack`; RocketMQ, whose requeue issues no broker call at all today), which is exactly what
+NFR-3 forbids — yet §Candidate mechanisms listed republish as a live candidate and even annotated its
+own cost as "adds a broker round trip on requeue (NFR-3)".
+
+**The user's decision: keep NFR-3.** Reasons, both recorded in the new C-12 — bypassing the broker's
+own redelivery is counter-intuitive for a user who configured a visibility timeout or ack deadline,
+and SQS FIFO would break silently, because content-based deduplication hashes the body while a
+requeue changes only a header attribute, so a republished copy is discarded as a duplicate unless
+Brighter mints a fresh `MessageDeduplicationId` per requeue, which it does not do today
+(`SqsMessageSender.cs:100-102`). C-12 also records the **cost** of the decision, so it is not
+rediscovered as a surprise: republish would have made the contract exact everywhere and dissolved
+both of this spec's conditionals, so keeping NFR-3 keeps R-14's branch and A-2's risk live and
+accepts that GCP FR-23 and RocketMQ FR-23 may both end at *bound but unimplemented*.
+
+Consequences applied to the document: §Candidate mechanisms' intro no longer claims neutrality it
+does not have ("does not choose between the mechanisms that remain open, but it does close one"), the
+republish row is marked ⛔ excluded rather than left as a candidate to re-weigh, and R-28 becomes
+load-bearing rather than defensive — with republish excluded, a count synthesised on read is the
+likely mechanism, which is the ordinary case R-28 governs.
+
+| # | Score | Remediation |
+|---|---|---|
+| 1 | 84 | **New R-28** at the end of Group A: a delivery count read from a rejection destination is the count stamped by whatever routed the message there, never that destination's own delivery count. It tabulates the three routes and their counts (`R` for a Brighter-managed send, `R - 1` for broker-routed rejection, unbounded for R-9's native case), states that R-5's `>= R - 1` bound is exactly the envelope of the first two, and records the evidence that made this necessary — all three in-scope providers read their rejection destination through the production consumer (`ChannelFactory` for AWS `:294` and GCP `:298`, a real `RocketMessageConsumer` for RocketMQ `:298`), so a mechanism that substituted the broker counter for the stamped header would report the destination's own count, `0` after R-2's normalisation, and falsify R-5, AC-4 and the FR-23 template's existing `HandledCount >= RequeueCount - 1` assertion on every cell this spec moves. The ADR MUST record per transport how its mechanism satisfies R-28 and name the discriminator where it uses one. **New AC-41** asserts it behaviourally and carries the ADR-table clause as a marked manual gate. R-5's rationale blockquote now points at R-28; the broker-counter row of §Candidate mechanisms carries the caveat; map rows added for R-28 → AC-41 and R-5 → AC-4, AC-41. |
+| 2 | 82 | R-27(c)(1)'s key restated: **`x-original-message-id` when the originating message carries one, `Header.MessageId` otherwise** — the identity rule `ConformanceDeferredPump.AssertIsTheMessageSent` already applies via `Message.OriginalMessageIdHeaderName`. The reason is recorded in the obligation: a transport that requeues by republishing mints a fresh id per redelivery and records the first in that header (`RmqMessagePublisher.cs:131`, `:142`), so a count keyed on `MessageId` alone records `1` against three distinct keys and `count <= RequeueCount` passes vacuously — which is the state of the three RMQ configurations that R-27(c)(4) regenerates, so the fallback is load-bearing today rather than hypothetical. A republishing transport is still one message for counting. `command.Id` remains explicitly excluded. |
+| 3 | 70 | AC-20's first branch no longer hard-asserts a status: it asserts the **`GetProjectAsync` step's tolerated outcome** — an `Unauthenticated`/`PermissionDenied` status *or* a client-construction failure, whichever the ambient credentials produce — and a blockquote records why the spec cannot fix which (`CreateProjectsClientAsync` `:173` builds `ProjectsClientBuilder { Credential = Credential }`, so with no ADC construction throws before any RPC, which is the ordinary state of the emulator-only machine R-21 makes the bar). NFR-5 now **requires the ADR to name the exception type** caught there, saying plainly that "the narrowest type that call site can throw" is not a specification. AC-21 gains a clause exercising the construction case directly, and its ADR-dependent half is listed among the clauses not writable until design. |
+| 4 | 65 | AC-19 and AC-40 re-keyed onto one binary fact — whether the ADR records a GCP mechanism that satisfies R-1 to R-5 within NFR-1 to NFR-3, or records that none does. A new blockquote under AC-40 states that they partition every outcome and that **the selector is the ADR's conclusion, not AC-39's measurement**, closing both the overlap (a mechanism selected and then found wanting) and the gap (a good measurement whose mechanism still cannot reach R-2's exact `0`). R-13's first branch header, AC-30's conditional GCP row and AC-39's exit criteria were all restated in the same terms; AC-39 now has four exit criteria, with (c) requiring the ADR's conclusion to be recorded and (d) selecting the AC from it. |
+| 5 | 62 | A-5 now reads "the twelve provider files", agreeing with R-27(a) and AC-36. |
+| 6 | 62 | R-4's observation window redefined as closing **when the pump has been quit and awaited**, with the template's own `_channel.Enqueue(CreateQuitMessage(...)); await pumping;` cited and the reason stated — the pump is still dispatching between the poll's break and the quit, so closing at the break would blind the observation to the failure it exists to catch. The false identity claim is gone from R-27(c)(3), which now says the read point is strictly later than the poll's break and why that matters. AC-3's parenthetical rewritten to match. |
+| 7 | 62 | AC-11 gains a second branch for the outcome R-25 permits — the ADR stating that no subscription shape trips R-11 — requiring the rule and R-26's channel-creation log to be built and exercised anyway, against a subscription answering the predicate negatively and one answering it positively, with the ADR's statement recorded as the evidence. It closes with why: R-11 is the anti-silence requirement, so "nothing trips it today" is not a licence to leave it unimplemented, because the predicate is what a future transport answers. |
+| 8 | 62 | The tolerated-IAM Warning's content is now stated **once**, in R-20's obligation paragraph, as four elements — the helper abandoned, the RPC, the resource, the status code — with the note that the helper name is what makes AC-20's "exactly two Warnings, one per helper" checkable. R-20's `GetProjectAsync` bullet, NFR-5 and AC-20 now all refer to that list instead of restating it. |
+| 9 | 62 | The Problem Statement's causal split corrected: **all nine** conforming configurations requeue by republishing and the header travels, the three RMQ rows included, which republish through `RmqMessagePublisher.RequeueMessageAsync` carrying `HANDLED_COUNT` (`:174`, read back at `RmqMessageCreator.cs:208-210`); they differ only in that a *rejected* message reaches its destination by the DLX rather than a Brighter-managed send, and the budget is as load-bearing there as anywhere — at `requeueCount: -1` an RMQ message is requeued for ever and nothing reaches the DLX. R-22's parenthetical corrected the same way. **R-5 was left untouched: its rationale was already correct, and it is what proves the Problem Statement wrong.** The Terms table was a third wrong site and is fixed: *Native dead-lettering* is now threshold-driven with **no Brighter call at all** (RabbitMQ DLX removed from its examples), and a new term **Broker-routed rejection** names the third case — Brighter calls `Reject`, the broker moves its own stored copy (`BasicRejectAsync(deliveryTag, requeue: false)`, `RmqMessageConsumer.cs:362`), the budget still has to run down to get there, and no metadata is stamped — noting that no transport in scope uses that route and R-22 protects the three that do. |
+| 10 | 60 | NFR-4 restated as "at most once per subscription **per rule**, and never per message", with a paragraph explaining that R-25's three rules are independent and non-exclusive, so two validation findings plus R-26's one log line for a single subscription is correct behaviour rather than a breach. AC-29 rewritten to count only the **channel-creation** route — exactly one where R-11's condition holds, zero otherwise — to re-take the count after a further 100 messages, and to say explicitly that validation findings are counted by AC-7, AC-10 and AC-11 instead. |
+| 11 | 55 | AC-3 gains "on each transport in scope and in both variants", matching AC-5 and AC-6; AC-35 changed from "on **a** transport" to "on **each** transport", so the two ACs under R-7 now state the same obligation. |
+| 12 | 52 | A **sixth numbered obligation** added to R-27(c) for the requeue observation, specified to the same degree as the dispatch counter: a recording consumer the test composes *around* the real consumer, forwarding every call and counting `Requeue`/`RequeueAsync` by obligation 1's key, reset and read per obligations 2 and 3, so "never called" is `count == 0` — explicitly not a mock standing in for a transport (C-10), not a counter in production code, and not an inference from an absent redelivery. Obligation 5's half-sentence now defers to it. |
+| 13 | 45 | R-25's trailing clause no longer claims that "state that none does" satisfies R-3's classification; it points at AC-11's second branch, which is what now defines "done" for that case. |
+
+## Verification performed
+
+- Each of the three edit batches asserted a unique anchor per edit and wrote nothing if any anchor
+  failed to match exactly once. All three reported success, **and were then verified from disk**: 28
+  applied strings each found exactly once, 8 superseded strings each found zero times.
+- The integrity check above was run against the file as written, not against an in-memory copy.
+- R-28, the AC-19/AC-40 partition note, NFR-4 and AC-39 were read back in full and reviewed as prose,
+  which caught two defects the presence-greps could not: NFR-4's inserted paragraph had run into the
+  original sentence and was restructured, and AC-39's exit criteria still said the *measurement*
+  selected the branch, which was realigned to the ADR's conclusion.
+
+## Carried forward, still needing the user's say-so
+
+Unchanged from round 3: raising the SQS failed-DLQ-send question as its own issue; commenting on
+#4341 / #4386 / #4353 / #4354; re-pointing the ledger cells. AC-30 and AC-31 still have no owning
+requirement, by the deliberate decision recorded in round 1.
+
+## Next step
+
+Round 5. The seams worth probing, given what this round changed:
+
+1. **R-28 against R-2, R-5, R-9, AC-4, AC-9 and AC-41** — R-28 is new and load-bearing, and it is the
+   first requirement in this document to constrain *which read* a rule applies to. Does it hold
+   against the FR-23 template's assertion as generated, and does AC-41's "not the value the
+   destination's own counter would yield" survive a transport whose rejection destination has no
+   counter at all (GCP without a `DeadLetterPolicy` on the DLQ subscription, A-1)?
+2. **C-12 against NFR-3, §Candidate mechanisms and R-13/R-14** — the exclusion is now explicit, so
+   check nothing elsewhere still reads as though republish were available, and that C-12's recorded
+   cost matches what R-13 and R-14 actually promise on their pessimistic branches.
+3. **R-27(c)'s six obligations against AC-3, AC-5, AC-6, AC-35, AC-36 and AC-41** — obligation 6 is
+   new and obligation 1's key changed; the ACs were not all re-read against them.
+4. **The AC-19/AC-40/AC-39 rewrite against AC-22 and AC-30** — AC-22's selector was found stale while
+   writing this log ("whenever AC-19 is the branch AC-39 selected") and was **fixed in the same pass**:
+   it now reads "whenever AC-19 is the branch that applies, which the ADR's recorded conclusion selects
+   rather than AC-39's measurement". Round 5 should check for any remaining site that still treats the
+   measurement as the selector.
+
+---
+
+# Review: requirements (round 5) — 0037-delivery-count-and-rejection-routing
+
+**Date**: 2026-09-22
+**Threshold**: 60
+**Verdict**: NEEDS WORK
+
+4 findings at or above threshold 60. Address these before approving.
+
+## Findings
+
+### 1. AC-27 still places all five compile-only samples in `Core.Tests`, contradicting R-24's own table and R-24's explicit prohibition — and is unsatisfiable as written (Score: 84)
+
+Round 3's finding 1 (90) was that R-24 and AC-27 both named `tests/Paramore.Brighter.Core.Tests/`
+for all six types, which cannot compile. Round 3's log row 1 records the fix as "R-24's five-row
+table placing each sample in a project that already references the assembly it exercises".
+**The R-24 half landed; the AC-27 half did not.** R-24 (`requirements.md:608-621`) now carries the
+five-row table and closes with:
+
+> `Paramore.Brighter.Core.Tests` references no messaging gateway and must not acquire one for this
+> purpose. *(line 621)*
+
+AC-27 (line 1325) still reads:
+
+> **AC-27** (R-24) — **Given** the compile-only V10 compatibility sample R-24 requires, committed
+> under `tests/Paramore.Brighter.Core.Tests/` and exercising `Subscription`, `SqsSubscription`,
+> `GcpPubSubSubscription`, `RocketMqSubscription`, `MessageHeader` and `Message` …
+
+AC-27 is R-24's **only** acceptance criterion, and it directly contradicts the requirement it tests:
+singular "sample", one location, and three gateway types that `Core.Tests` cannot name.
+
+**Evidence**: Verified in source. `tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj:7-13`
+has seven `ProjectReference` entries — `BoxProvisioning`, `Extensions.DependencyInjection`,
+`Mediator`, `Paramore.Brighter`, `Outbox.Hosting`, `ServiceActivator`, `Testing` — and **not one
+messaging gateway**. By contrast `Paramore.Brighter.AWS.Tests.csproj:31` and
+`Paramore.Brighter.Gcp.Tests.csproj:48` each reference exactly the gateway R-24's table assumes. A
+file under `Core.Tests` naming `SqsSubscription` does not compile, so AC-27's "**Then** it compiles
+with no new errors" is unsatisfiable, and the automated build gate R-24 exists to create does not
+exist.
+
+> **Main-agent note.** Independently re-verified before this file was written: AC-27's text at
+> `:1325-1331`, R-24's table at `:608-621`, and the seven `ProjectReference` lines. This is a
+> round-3 remediation that half-landed — the exact class of defect round 3's process rule exists to
+> catch, surviving because round 4 checked *round 4's* thirteen rows and round 3's check was scoped
+> to round 2's twelve. **The spot-check must cover the requirement's ACs, not just the requirement.**
+
+**Recommendation**: Rewrite AC-27's Given to mirror R-24's table — *"Given the five compile-only V10
+compatibility samples R-24 requires, each committed in the project R-24's table names (`Core.Tests`
+for `Subscription`, `MessageHeader` and `Message`; `AWS.Tests`, `AWS.V4.Tests`, `Gcp.Tests` and
+`RocketMQ.Tests` for their respective subscription types)"* — and keep the Then clause as it stands.
+
+---
+
+### 2. The delivery-count ACs are stated unconditionally across all four transports in scope, but R-13 and R-14 permit GCP and RocketMQ to finish at "bound but unimplemented" on R-1 to R-5 (Score: 72)
+
+R-13 and R-14 each define a branch on which the transport is **bound by the contract but not
+implemented here**, and on that branch R-1 to R-5 are *not* satisfied for that transport:
+
+> "GCP is *bound but unimplemented* on R-1 to R-5, and 'done' = (a) R-11's Warning fires … (b) the
+> four `GCP / *` FR-23 cells stay `Deferred` …" *(R-13, lines 362-372)*
+> "**If the condition does not hold** — RocketMQ is *bound but unimplemented*." *(R-14)*
+
+But the ACs that carry R-1 to R-5 are written with no branch guard at all:
+
+- **AC-1** (R-1): "Given a subscription on **any transport in scope**…" (line 1037)
+- **AC-2** (R-2): "…to **any transport in scope**…"
+- **AC-3** (R-4): "Given, **on each transport in scope** and in both variants…" (line 1047)
+- **AC-4** (R-5): "Given the run in AC-3…"
+- **AC-41** (R-28, R-5): "Given, **on each transport in scope** and in both variants, a run in which
+  **the budget is exhausted** and Brighter routes the message…" (line 1099)
+- **AC-34**'s second clause: "each transport the table classifies **exact** … three deliveries
+  present counts of exactly `0`, `1` and `2`"
+
+On R-13's or R-14's pessimistic branch the budget is never exhausted for that transport, so AC-3,
+AC-4 and AC-41 cannot pass and AC-1 cannot pass — yet nothing marks them conditional, and neither
+the §manual-gates list nor the "not writable until the ADR exists" list mentions them. Round 3's
+finding 8 fixed exactly this disease for **NFR-7**, which now says evidence "is unconditional for
+the eight AWS cells … and conditional for the rest"; the same treatment was never applied to the
+Group A ACs, which is where the contract's own acceptance lives.
+
+AC-5, AC-6 and AC-35 are genuinely unaffected — a budget of `-1`, `1`, `0` or `-3` needs no count to
+advance, because `HandledCountReached` is reached on the first deferral (verified at
+`Reactor.cs:494-508`, `Message.cs:161-164`) — so the gap is specific and fixable rather than
+pervasive.
+
+Two implementers will disagree at sign-off about whether a red AC-3 on RocketMQ blocks this spec or
+is the defined outcome of R-14's second branch. That is the definition of a High.
+
+**Evidence**: `requirements.md:1037, 1047, 1099` (unconditional "each/any transport in scope")
+against R-13's and R-14's branch definitions and against NFR-7's corrected wording at lines 869-874.
+
+**Recommendation**: Add one sentence at the head of §Delivery-count contract, parallel to NFR-7's:
+*"AC-1 to AC-4, AC-34's second clause and AC-41 are unconditional for `AWSSQS` and `AWSSQS.V4`
+(R-12). For `GcpPubSub` and `RocketMQ` they apply only on the branch R-13/R-14 selects as
+implemented; on the 'bound but unimplemented' branch, R-13(a)-(c) and R-14(a)-(d) define 'done'
+instead, and AC-40 / AC-25 are the criteria that apply."*
+
+---
+
+### 3. AC-3 does not say whether a GCP subscription under test carries a native `DeadLetterPolicy` — the one axis A-1 makes decisive (Score: 68)
+
+AC-3 is the acceptance criterion for R-4, this spec's central requirement. Its Given fixes
+everything except the one GCP-specific fact that determines whether the delivery counter exists at
+all:
+
+> "**Given**, on each transport in scope and in both variants, `requeueCount: 3`, a
+> `deadLetterRoutingKey`, a handler that always defers, and **no native redrive limit at or below
+> 3**…" *(lines 1047-1048)*
+
+"No native redrive limit at or below 3" is satisfied on GCP **both** by a subscription with
+`MaxDeliveryAttempts: 5` **and** by a subscription with no `DeadLetterPolicy` at all. A-1 is
+*verified* that the second shape yields `delivery_attempt == 0`/`null`:
+
+> "**A-1.** Pub/Sub populates `delivery_attempt` only when the subscription carries a
+> `DeadLetterPolicy`… **Consequence**: if the ADR chooses the broker-counter mechanism for GCP,
+> R-11's Warning is load-bearing for subscriptions without a `DeadLetterPolicy`."
+
+And AC-11 names that same shape as the canonical **R-11-tripping** subscription — the one whose
+budget *cannot* run down. So under the broker-counter mechanism, which C-12 makes the likely one,
+one developer's AC-3 GCP instantiation passes and the other's is the very configuration AC-11
+expects to warn is unenforceable. AC-19 does pin it (`requeueCount: 3` and a `DeadLetterPolicy` with
+`MaxDeliveryAttempts: 5`), but AC-19 is R-13's branch-selected AC, not R-4's, and nothing says
+AC-19 *is* AC-3's GCP instantiation.
+
+**Evidence**: `requirements.md:1047-1052` (AC-3) against A-1 and AC-11's Given. Verified in the
+harness that today's GCP DLQ read-back subscription itself carries no `DeadLetterPolicy`
+(`tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/GcpPullMessageGatewayProvider.cs:292-298`), so
+the "no policy" shape is not hypothetical in this repo.
+
+**Recommendation**: Add to AC-3: *"…and, on GCP, a `DeadLetterPolicy` with `MaxDeliveryAttempts: 5`
+(C-6's floor; a GCP subscription with no `DeadLetterPolicy` is AC-11's R-11 case, not AC-3's)."*
+
+---
+
+### 4. Two sites still name AC-39's measurement, not the ADR's conclusion, as the selector of the GCP branch (Score: 66)
+
+Round 4's finding 4 re-keyed AC-19/AC-40 onto the ADR's recorded conclusion, and AC-39 now says so
+in terms:
+
+> "**AC-39 is a measurement, not a pass/fail gate** … It does **not** by itself select between AC-19
+> and AC-40; the ADR's recorded conclusion does."
+
+Two summary sentences elsewhere were not brought into line and still read the old way:
+
+1. **NFR-7**, line 870: *"two of the three ACs are branch-guarded: AC-19 (the four GCP cells)
+   applies only on **the branch AC-39 selects**, and AC-24 (RocketMQ) only when R-14's condition
+   holds."* — AC-39 selects no branch. The RocketMQ half is correct (AC-23's measurement genuinely
+   *is* R-14's selector), which makes the parallel construction actively misleading rather than
+   merely stale.
+2. **AC-30's summary**, lines 1389-1391: *"**5 conditional**: the 4 GCP FR-23 cells **on assumption
+   A-2** (R-13), and the 1 RocketMQ FR-23 cell on R-14's condition."* — the table row two lines
+   above states the correct condition ("**if** the ADR records a GCP mechanism that satisfies R-1 to
+   R-5 within NFR-1 to NFR-3"), so the same table contradicts itself.
+
+This is the precise failure mode AC-40's blockquote exists to prevent: someone moving the four GCP
+FR-23 cells to `Fixed` on a good A-2 measurement alone, before the ADR has concluded that a
+mechanism reaches R-2's exact `0`.
+
+> **Main-agent addendum — a third, weaker site.** `requirements.md:357` heads R-13's branch
+> discussion with "**R-13 is conditional in the same shape R-14 is, on assumption A-2**". Its own
+> first bullet corrects this in place ("A-2 holding is what makes the counter *available*; it is the
+> ADR's recorded conclusion, not the measurement alone, that selects this branch"), so it misleads
+> far less than the two sites above and is **not** separately scored. Fix it in the same pass for
+> consistency: the conditionality is on the ADR's conclusion, which A-2 supplies one route to.
+
+**Evidence**: `requirements.md:870`, `requirements.md:1389-1391` (both re-verified by the main agent
+against the file on disk), against AC-39's own text and AC-40's blockquote.
+
+**Recommendation**: NFR-7 → "AC-19 (the four GCP cells) applies only on the branch the ADR's
+recorded conclusion selects (see the note under AC-40)". AC-30's summary → "the 4 GCP FR-23 cells on
+the ADR's recorded conclusion about a satisfying GCP mechanism (R-13; A-2's measurement chooses
+which mechanisms it can reach for)". R-13's header sentence at :357 → same substitution.
+
+---
+
+### 5. The Terms table defines "delivery count" only for the pump hand-off, but R-5, R-28, AC-4 and AC-41 use the term for a message read from a rejection destination (Score: 55)
+
+> | **Delivery count** | The value of `MessageHeader.HandledCount` (`MessageHeader.cs:226`) on a
+> message as it is handed to the pump by the consumer, **before** the pump calls
+> `UpdateHandledCount()`. |
+
+Round 4 edited two rows of this table (*Native dead-lettering*, and the new *Broker-routed
+rejection*) but not this one. R-5 ("The message arriving there carries … a delivery count of at
+least `R - 1`"), R-28 ("A delivery count read from a rejection destination…"), AC-4 and AC-41 all
+apply the term to a message a **test or DLQ consumer** reads, never one handed to a pump. R-28
+resolves the substance ("R-2's normalisation is a property of the delivery a **pump** consumes"), so
+nothing would be built wrong — but the defined term does not cover its two most load-bearing uses,
+and the reconciliation sits three hundred lines from the definition.
+
+**Evidence**: Terms row at `requirements.md:101`; R-5 at `:194`; R-28 at `:237-242`; AC-41 at
+`:1099-1106`.
+
+**Recommendation**: Extend the row: *"…before the pump calls `UpdateHandledCount()`. Where a rule
+reads the count on a message taken from a rejection destination rather than a source channel — R-5,
+R-28, AC-4, AC-41 — it means the `HandledCount` that message presents on that read; R-28 governs
+what that value must be."*
+
+---
+
+### 6. The spec README's status block is stale by a full round (Score: 35)
+
+`README.md:115-118` still reads "Now **27 `R-n`, 8 `NFR-n`, 40 `AC-n`**" and its checklist ends at
+round 3 with "**Re-run `/spec:review requirements` (round 4) before approving.**" The document holds
+28/8/41 and round 4 is complete with its log in this file.
+
+**Evidence**: `README.md:115`, `:118`; counted programmatically in `requirements.md` — 28 `R-n`,
+8 `NFR-n`, 41 `AC-n`.
+
+**Recommendation**: Update the counts and add the round-4 row. Round 5's row follows when this round
+is remediated.
+
+---
+
+## Round-4 remediation spot-check
+
+Each of round 4's thirteen remediations grepped against `requirements.md` as it stands on disk.
+**All thirteen are PRESENT.** The round-3 process rule held.
+
+| # | Score | Applied text checked | Result |
+|---|---|---|---|
+| 1 | 84 | `R-28. A delivery count read from a rejection destination` | PRESENT, line 237. Also `**AC-41** (R-28, R-5)` line 1099; map rows `\| R-28 \| AC-41 \|` line 1451 and `\| R-5 \| AC-4, AC-41 \|` line 1428; R-5's blockquote pointing at R-28 line 204; §Candidate mechanisms broker-counter caveat line ~901 |
+| 2 | 82 | `x-original-message-id` when it carries one | PRESENT, line 764 (R-27(c)(1)), with the `RmqMessagePublisher.cs:131, :142` rationale |
+| 3 | 70 | `GetProjectAsync` step's tolerated outcome | PRESENT, line 1249 (AC-20); NFR-5's "ADR MUST name the exception type" PRESENT line 854; AC-21's construction clause PRESENT line ~1275 |
+| 4 | 65 | `the selector is the ADR's conclusion rather than` | PRESENT, line 1238 (AC-40 blockquote); AC-39's four exit criteria PRESENT lines ~1216-1222 |
+| 5 | 62 | `names the twelve provider files` | PRESENT, line 936 (A-5) |
+| 6 | 62 | `That window closes when the pump has been quit and awaited` | PRESENT, line 175 (R-4); R-27(c)(3)'s "strictly later than the dead-letter poll's break" PRESENT line ~782; AC-3 parenthetical PRESENT line ~1052 |
+| 7 | 62 | `no** subscription shape trips R-11` | PRESENT, line 1144 (AC-11's second branch) |
+| 8 | 62 | `names four things: the helper it abandoned, the RPC, the resource, and the` | PRESENT, line 495 (R-20 obligation paragraph; wraps to "status code" on 496) |
+| 9 | 62 | `All nine** that work requeue by **republishing` | PRESENT, line 28; `Broker-routed rejection` term PRESENT line 107; R-22's corrected parenthetical PRESENT line 574 |
+| 10 | 60 | `per subscription per rule` | PRESENT, line 834 (NFR-4); AC-29's channel-creation-only count PRESENT lines 1339-1345 |
+| 11 | 55 | `**AC-3** (R-4) — **Given**, on each transport in scope and in both variants` | PRESENT, line 1047; `**AC-35** (R-7) — **Given**, on each transport in scope` PRESENT line 1091 |
+| 12 | 52 | `A requeue observation, specified to the same degree` | PRESENT, line 788 (R-27(c) obligation 6) |
+| 13 | 45 | `its second branch defines what "done" means for R-11` | PRESENT, line 702 (R-25); the wrong "R-3 classification" cross-reference is gone |
+
+No round-4 remediation is recorded-but-absent. Round-3 remediations were also sampled and are
+present, with the **one exception** that is finding 1 above: round 3 row 1's R-24 table landed but
+its AC-27 counterpart did not.
+
+> ⚠️ **Process lesson for round 6's spot-check.** Round 4 verified round 4's own thirteen rows;
+> round 3 verified round 2's twelve. Nobody re-verified round 3's fourteen *against their ACs*, and
+> that is exactly where finding 1 survived four rounds. **When a remediation edits a requirement,
+> the spot-check must also read that requirement's ACs** — a half-applied fix leaves the document
+> internally contradictory, which is worse than leaving it wholly unfixed.
+
+## Integrity checks
+
+All mechanical checks **pass**:
+
+- **Every `R-n` and `NFR-n` has a map row** — 36 rows for 28 `R-n` + 8 `NFR-n`; none missing.
+- **No map row references an undefined `AC-n`** — all map ACs resolve to definitions.
+- **Nothing referenced without being defined** — every `R-n` (1-28), `NFR-n` (1-8), `AC-n` (1-41),
+  `C-n` (1-12) and `A-n` (1-5) mentioned anywhere in the document is defined.
+- **No numbering gaps or duplicates** — `R-1..R-28` (28, each defined once), `NFR-1..NFR-8` (8),
+  `AC-1..AC-41` (41), `C-1..C-12` **in document order**, `A-1..A-5`. R-28 sits after R-7 in Group A
+  and several ACs are defined out of numeric order; both are deliberate placements, not gaps.
+- **AC-30 and AC-31 are the only omissions from the map** — confirmed programmatically, and the
+  document says so explicitly.
+
+## Source-citation verification
+
+A broad sample was verified, plus every citation load-bearing to a finding. **All checked citations
+are accurate**, including: `Reactor.cs:494/:498/:416`, `Proactor.cs:500/:504/:483`,
+`MessageHeader.cs:226`, `Subscription.cs:109/:203`, `Message.cs:161-164`, `MessagePump.cs:171`,
+`DefaultMessageAssertion.cs.liquid:59`, `ConformanceDeferredPump.cs.liquid:128/:152/:112-115` and
+its `AssertIsTheMessageSent` / `OriginalMessageIdHeaderName` route,
+`RmqMessagePublisher.cs:131/:142/:174`, `RmqMessageCreator.cs:208-210`, `RmqMessageConsumer.cs:362`,
+`SqsMessageConsumer.cs:193/:307-316/:384/:496/:541`, V4 `:276/:377`, `SqsMessageSender.cs:100-102/:130`,
+`SqsMessageCreator.cs:323`, `SqsInlineMessageCreator.cs:350`,
+`SqsStandardMessageGatewayProvider.cs:104/:108/:294`, `GcpPullMessageGatewayProvider.cs:151/:155/:298`,
+`RocketMqMessageGatewayProvider.cs:298`,
+`GcpPubSubMessageGateway.cs:220-236/:235/:251/:477/:482-491/:506-511/:527/:534-543`,
+`GcpMessagingGatewayConnection.cs:173`, `GcpPullMessageConsumer.cs:276/:306/:335/:369`,
+`GcpPubSubStreamMessageConsumer.cs:84/:217`, `RocketMessageConsumer.cs:179/:422/:433`,
+`SqsAttributes.cs:110`, `DeadLetterPolicy.cs:27/:47`, `GcpPubSubSubscription.cs:102`,
+`PipelineBuilder.cs:280/:323`, `BrighterPipelineValidationExtensions.cs:78-84`.
+`grep -rn "ApproximateReceiveCount" src/` returns nothing, as NFR-1 states.
+
+Two seams round 4 flagged were probed and found **correct** — recorded so round 6 does not re-probe
+them:
+
+- **R-27(b)'s `??=`-on-empty-string argument is right.** `publishMember ??= …`
+  (`GcpPubSubMessageGateway.cs:491`) does not fire for `""`, so `""` trips the `IsNullOrEmpty` guard
+  *and* derives nothing — exactly as the document says.
+- **R-27(c)(1)'s fallback key is right and necessary.** The FR-23 template's quit/await really is
+  two statements after the poll's break (`…too_many_times….cs.liquid:104-105`), before the
+  assertions; and the "republish mints a fresh id" claim holds for RMQ (`RmqMessagePublisher.cs:223`,
+  guarded so the *first* id sticks) and for Postgres/MsSql (`PostgresMessageConsumer.cs:338-340`,
+  `MsSqlMessageConsumer.cs:278-280`), while Kafka and Redis resend the same `Message` object and
+  keep `MessageId` stable — so obligation 1's key is correct for all nine non-regression
+  configurations, not only the three RMQ rows it names.
+
+Ledger claims were checked against
+`specs/0036-universal-transport-conformance-tests/conformance-status.md`'s Conformance Matrix: 24
+configurations, 9 FR-23 `Pass`/`Fixed`, 15 failing, 13 in scope; R-23's eleven `Pass` columns for
+`AWS / SqsStandard`; AC-38's nine `Fixed` RocketMQ cells; and AC-31's "could not move" list is
+**complete** — every currently-`Deferred` cell outside AC-30 appears in it.
+
+## Summary
+
+| Score Range | Count |
+|-------------|-------|
+| 90-100 (Critical) | 0 |
+| 70-89 (High) | 2 |
+| 50-69 (Medium) | 3 |
+| 0-49 (Low) | 1 |
+
+**Total findings**: 6
+**Findings at or above threshold (60)**: 4
+
+## Main-agent validation of this round
+
+- Summary table counted against the findings list: 84, 72, 68, 66 (≥60) and 55, 35 (<60) — 0/2/3/1,
+  total 6, four at or above threshold. Table, verdict line and finding list agree.
+- Findings 1 and 4 were **independently re-verified against the file and the source tree** before
+  this file was written, because finding 1 alleges a half-landed remediation (the round-3 trap) and
+  finding 4 alleges stale cross-references. Both confirmed: AC-27 `:1325-1331` versus R-24's table
+  `:608-621`; `Core.Tests.csproj:7-13` carries no gateway reference; NFR-7 `:870` and AC-30's
+  summary `:1389-1391` read as quoted.
+- The main agent's own grep for the finding-4 pattern surfaced a **third** site at `:357` that the
+  sub-agent did not name. It is materially weaker — R-13's own bullet corrects it in place — so it
+  was folded into finding 4 as an addendum rather than scored separately, to keep the count honest.
+- No finding re-opens a settled decision (one spec; #4354 folded in; RocketMQ conditional;
+  `ValidatePipelines`; NFR-3 kept and republish excluded; AC-30/AC-31 unmapped by choice).
+
+---
+
+# Remediation log — round 5
+
+**Date**: 2026-09-23. **Applied to**: `requirements.md` and `README.md`. Each edit was applied
+separately (no batch script) and checked by reading the file back and grepping for the applied text.
+This log was written from the document, never from a tool's success output (round 3's rule).
+**Outcome**: all 4 findings at or above threshold remediated, plus both below. Counts unchanged at
+**28 `R-n`, 8 `NFR-n`, 41 `AC-n`**, C-1..C-12. Integrity re-checked programmatically after the last
+edit: no numbering gap, no `R-n`/`NFR-n`/`AC-n` mentioned without being defined.
+
+| # | Score | Remediation | Verified at |
+|---|---|---|---|
+| 1 | 84 | AC-27's Given now reads "the **five** compile-only V10 compatibility samples R-24 requires, each committed in the project R-24's table names" and lists all five projects against their types, adding "no test project having gained a reference" to match R-24's prohibition. Then clause unchanged. | `requirements.md:1335` |
+| 2 | 72 | New paragraph "**Which transports these ACs bind.**" at the head of §Delivery-count contract. It says AC-1 to AC-4, AC-34's second clause and AC-41 are unconditional for `AWSSQS`/`AWSSQS.V4` and branch-guarded for GCP/RocketMQ, with R-13(a)-(c)/R-14(a)-(d) and AC-40/AC-25 applying on the *bound but unimplemented* branch. AC-5, AC-6 and AC-35 are stated as unguarded, with the reason. The labels (a)-(c) and (a)-(d) were checked against R-13 and R-14 as written. | `requirements.md:1037` |
+| 3 | 68 | AC-3's Given now pins the GCP shape: "on GCP, a `DeadLetterPolicy` with `MaxDeliveryAttempts: 5` (C-6's floor; a GCP subscription with no `DeadLetterPolicy` is AC-11's R-11 case, not AC-3's)". | `requirements.md:1057` |
+| 4 | 66 | All three sites re-keyed from AC-39/A-2 onto the ADR's recorded conclusion: NFR-7 ("the branch the ADR's recorded conclusion selects … AC-39 is a measurement, not a selector"), AC-30's summary ("on the ADR's recorded conclusion about a satisfying GCP mechanism (R-13; A-2's measurement chooses which mechanisms it can reach for)"), and R-13's header ("on the ADR's recorded conclusion — to which assumption A-2 supplies one route"). A grep for `branch AC-39 selects` and `on assumption A-2 (R-13)` now returns 0 matches. | `:871`, `:1404`, `:357` |
+| 5 | 55 | Terms row *Delivery count* extended: a read from a rejection destination (R-5, R-28, AC-4, AC-41) means the `HandledCount` that message presents on that read, with R-28 governing its value. | `requirements.md:101` |
+| 6 | 35 | `README.md` counts corrected to 28/8/41; round-4 and round-5 checklist rows added; the "re-run" pointer now names round 6. | `README.md:115, :119-120` |
+
+**For round 6's spot-check**, following round 5's process lesson: finding 1's fix is an AC and
+finding 2's is a guard over ACs. Read R-24 alongside AC-27, and R-13/R-14 alongside the new guard
+paragraph, not only the edited lines.

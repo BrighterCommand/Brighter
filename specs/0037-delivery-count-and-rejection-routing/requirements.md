@@ -25,10 +25,15 @@ Bus — fail for different root causes and are named in §Out of Scope. On the t
 `requeueCount` is accepted, configured, and has no effect. The pump enforces the budget by calling
 `message.Header.UpdateHandledCount()` and then `message.HandledCountReached(RequeueCount)`
 (`Reactor.cs:494`, `:498`; `Proactor.cs:500`, `:504`), which only runs down if the **redelivered**
-message presents the incremented count. Six of the nine that work — Redis, Kafka ×3, MSSQL,
-Postgres — requeue by **republishing**, so the header travels; the three RMQ rows reach the
-dead-letter destination by the broker's own DLX instead and need no Brighter-side budget to get
-there. The thirteen that fail ask the broker to re-serve its **own stored copy**, which was never
+message presents the incremented count. **All nine** that work requeue by **republishing**, so the
+header travels and the budget runs down — the three RMQ rows included, which republish through
+`RmqMessagePublisher.RequeueMessageAsync` and carry `HANDLED_COUNT` on the republished copy
+(`RmqMessagePublisher.cs:174`, read back at `RmqMessageCreator.cs:208-210`). The RMQ rows differ
+only in how the **rejected** message reaches its destination: Brighter's `Reject` is a
+`BasicRejectAsync(..., requeue: false)` and RabbitMQ's DLX moves the broker's own stored copy,
+rather than Brighter publishing to a destination it owns. The budget is exactly as load-bearing
+there as on the other six — at `requeueCount: -1` an RMQ message is requeued for ever and nothing
+reaches the DLX. The thirteen that fail ask the broker to re-serve its **own stored copy**, which was never
 rewritten — so every redelivery reads the count it was first published with, the pump bumps it to
 1, and the test is never true.
 
@@ -76,10 +81,12 @@ The users are Brighter application developers and the operators of their consume
 configuration API needs to change: the same `requeueCount`, `DeadLetterRoutingKey` and
 `InvalidMessageRoutingKey` they already set start having the effect they already expect.
 
-**This document does not choose the mechanism.** "Rewrite the stored message on requeue", "read the
-broker's own delivery counter on receive", and "track the count consumer-side" are all capable of
-satisfying the contract below, at different costs on each transport. Choosing between them is the
-ADR's job; §Constraints records them as inputs the ADR must weigh.
+**This document does not choose between the mechanisms that remain open, but it does close one.**
+"Read the broker's own delivery counter on receive" and "track the count consumer-side" are both
+capable of satisfying the contract below, at different costs on each transport, and choosing
+between them is the ADR's job. "Rewrite the stored message on requeue (republish)" is **excluded**,
+by NFR-3 and for the reasons C-12 records. §Constraints tabulates all three, the excluded one
+included, so the ADR starts from a complete set and the exclusion is visible rather than inferred.
 
 ## Requirements
 
@@ -91,12 +98,13 @@ element is cited so there is no second reading.
 | Term | Meaning |
 |---|---|
 | **Delivery** | One presentation of a message to a Brighter consumer on a channel — i.e. one message returned from `IAmAMessageConsumer.Receive`/`ReceiveAsync` and dispatched by a pump. |
-| **Delivery count** | The value of `MessageHeader.HandledCount` (`MessageHeader.cs:226`) on a message as it is handed to the pump by the consumer, **before** the pump calls `UpdateHandledCount()`. |
+| **Delivery count** | The value of `MessageHeader.HandledCount` (`MessageHeader.cs:226`) on a message as it is handed to the pump by the consumer, **before** the pump calls `UpdateHandledCount()`. Where a rule reads the count on a message taken from a rejection destination rather than a source channel — R-5, R-28, AC-4, AC-41 — it means the `HandledCount` that message presents on that read; R-28 governs what that value must be. |
 | **Delivery budget** | The `Subscription.RequeueCount` value. The maximum number of deliveries Brighter will make before rejecting with `RejectionReason.DeliveryError`. `-1` (the default) means "no budget". |
 | **Budget exhaustion** | The pump path at `Reactor.cs:494-498` / `Proactor.cs:500-504`: `UpdateHandledCount()`, then `HandledCountReached(RequeueCount)` true, then `RejectMessage(..., RejectionReason.DeliveryError)`. |
 | **Requeue** | `IAmAMessageConsumer.Requeue`/`RequeueAsync` — returning a message to its channel for later redelivery. |
 | **Redelivery** | Any delivery of a message after its first. |
-| **Native dead-lettering** | The broker moves the message to a dead-letter destination by its own policy, with no Brighter call: SQS `RedrivePolicy.maxReceiveCount`, Pub/Sub `DeadLetterPolicy.MaxDeliveryAttempts`, RabbitMQ DLX, Azure Service Bus `$DeadLetterQueue`. |
+| **Native dead-lettering** | The broker moves the message to a dead-letter destination by its own policy once a delivery threshold is crossed, with **no Brighter call at all**: SQS `RedrivePolicy.maxReceiveCount`, Pub/Sub `DeadLetterPolicy.MaxDeliveryAttempts`, Azure Service Bus `$DeadLetterQueue`. |
+| **Broker-routed rejection** | Brighter calls `Reject` and the **broker** then moves its own stored copy to a destination Brighter never publishes to: RabbitMQ's DLX, reached by `BasicRejectAsync(deliveryTag, requeue: false)` (`RmqMessageConsumer.cs:362`). Distinct from native dead-lettering — Brighter's budget still has to run down to reach it — and distinct from Brighter-managed dead-lettering, because no Brighter-managed send occurs and therefore no rejection metadata is stamped. **No transport in scope uses this route**; it is defined because the three RMQ rows do, and R-22 protects them. |
 | **Native redrive limit** | The delivery threshold of a native dead-letter policy. Written `M` below. |
 | **Brighter-managed dead-lettering** | Brighter publishes the message to a destination it owns (`IUseBrighterDeadLetterSupport.DeadLetterRoutingKey` / `IUseBrighterInvalidMessageSupport.InvalidMessageRoutingKey`) and then removes the original. ADRs `0038-aws-sqs-dlq-direct-send`, `0039-redis-dlq-brighter-managed`, `0041-postgres-dlq-brighter-managed`. |
 | **Rejection routing** | Selecting the destination for a rejected message from its `RejectionReason`: `Unacceptable` → invalid-message destination, falling back to dead-letter when none is configured; `DeliveryError` and `None` → dead-letter. Reference implementation: `SqsMessageConsumer.DetermineRejectionRoute` (`:541`). |
@@ -164,9 +172,14 @@ delivery to be rejected with `RejectionReason.DeliveryError` after at most `R` d
 to be redelivered a further time.**
 "Never redelivered a further time" means: the handler is not invoked again for that message, and
 the count of handler invocations for it stands at `R` or fewer when the FR-23 observation window
-closes. That window is the **single** poll the template already runs — every 500 ms, giving up at
-60 s, ending when the dead-lettered message is found. No second observation window is opened and no
-additional wait is introduced, so the behaviour's runtime is unchanged by this spec.
+closes. **That window closes when the pump has been quit and awaited** — which the FR-23 template
+already does, two statements after its dead-letter poll breaks
+(`_channel.Enqueue(MessageFactory.CreateQuitMessage(...)); await pumping;`). The poll itself — every
+500 ms, giving up at 60 s — is *not* the close: between the poll's break and the quit the pump is
+still dispatching, which is precisely the interval in which a budget that did not hold would keep
+redelivering, so closing the window at the break would blind the observation to the failure it
+exists to catch. No second observation window is opened and no additional wait is introduced — the
+quit and await are already there — so the behaviour's runtime is unchanged by this spec.
 
 > *Example.* `requeueCount: 3` on `AWS / SqsStandard`, handler always defers, no native redrive
 > policy in force ahead of it. Delivery 1 presents `0`, pump increments to `1`, `1 >= 3` false,
@@ -188,7 +201,9 @@ rejection-metadata keys of the transport, and a delivery count of at least `R - 
 > The `>= R - 1` bound (not `== R`) is the bound spec 0036's FR-23 template already asserts, and it
 > is the strongest bound true of both routes to the DLQ: where Brighter sends the message it sends
 > the final in-memory header and the count reads `R`; where the broker moves its own stored copy the
-> copy was written by the last requeue and reads one less.
+> copy was written by the last requeue and reads one less. **R-28 is what makes this bound survive
+> the mechanism**: it forbids a read of the dead-letter destination from reporting that
+> destination's own delivery count instead.
 
 **R-6. A delivery budget of `-1` disables budget enforcement, and this behaviour does not change.**
 With `RequeueCount == -1` (the `Subscription` default, `Subscription.cs:203`), no delivery count is
@@ -218,6 +233,48 @@ error, none throws, and a Warning never blocks startup.
 
 > *Example.* `requeueCount: 1` on `AWS.V4 / SqsFifo`, handler defers once. One delivery, zero
 > requeues, one `DeliveryError` rejection, message on the DLQ with `HandledCount >= 0`.
+
+**R-28. A delivery count read from a rejection destination is the count stamped by whatever routed
+the message there, never that destination's own delivery count.**
+R-2's normalisation is a property of the delivery a **pump** consumes. It must not restate the count
+of a message read back from a dead-letter or invalid-message destination: that count is evidence of
+what happened on the *source* channel, and R-5, AC-4 and spec 0036's FR-23 template all read it as
+such. A message read from a rejection destination therefore presents:
+
+- the count the rejecting consumer sent — `R`, the final in-memory header — where Brighter published
+  it there (Brighter-managed dead-lettering);
+- the count the last requeue wrote — `R - 1` — where the broker moved its own stored copy on
+  Brighter's reject (broker-routed rejection);
+- whatever the last write left it, where a native policy moved it with no Brighter call (native
+  dead-lettering: R-9's case, which carries no rejection metadata and which R-28 does not bound).
+
+R-5's `>= R - 1` bound is exactly the envelope of the first two, which is why R-28 is what keeps R-5
+assertable.
+
+> *Why this is an obligation and not an implementation nicety*: every conformance read of a rejection
+> destination goes through the production consumer, so a mechanism that synthesises the count on
+> receive synthesises it there too.
+> `SqsStandardMessageGatewayProvider.GetMessageFromDeadLetterQueueAsync` builds a real channel
+> through `ChannelFactory` (`:294`), the GCP provider does the same
+> (`GcpPullMessageGatewayProvider.cs:298`), and the RocketMQ provider wraps its `SimpleConsumer` in a
+> real `RocketMessageConsumer` (`:298`). A mechanism that simply substituted the broker's counter for
+> the stamped header would report the **rejection destination's** delivery count — `0` after R-2's
+> normalisation — falsifying R-5, AC-4 and the FR-23 template's existing
+> `HandledCount >= RequeueCount - 1` assertion on every cell this spec moves. A user inspecting their
+> own DLQ with a Brighter consumer would lose the same evidence. C-12 makes this the ordinary case
+> rather than a corner: with republish excluded, a synthesised count is the likely mechanism.
+
+The ADR MUST record, for each of the four transports in scope, how its chosen mechanism satisfies
+R-28, as a four-row table alongside R-3's. Where it satisfies R-28 by telling a routed message apart
+from a source-channel delivery, the ADR MUST name the discriminator. Silence on this point is not an
+available outcome.
+
+> *Example.* `requeueCount: 3` on `AWS / SqsStandard`, budget exhausted, Brighter sends the message
+> to its dead-letter queue. A read of that queue presents `HandledCount == 3` — not the `0` that the
+> dead-letter queue's own `ApproximateReceiveCount` of `1` would normalise to.
+> *Example (R-9's case).* `requeueCount: 10`, `maxReceiveCount: 3`. SQS redrives its own stored copy
+> with no Brighter call, so the redrive target presents the count that copy was published with and no
+> rejection metadata. R-28 does not require that to be `>= R - 1`, and AC-9 asserts no count.
 
 #### Group B — Interaction with native dead-lettering
 
@@ -297,13 +354,16 @@ The four configurations are `GCP / Pull`, `GCP / PullOrdering`, `GCP / Stream`,
 `GCP / StreamOrdering`. Both consumer classes are bound: `GcpPullMessageConsumer` and
 `GcpPubSubStreamMessageConsumer`. An ordering-key subscription is not exempted.
 
-**R-13 is conditional in the same shape R-14 is, on assumption A-2, and both sides have a defined
-"done".** A-2 — that the Pub/Sub emulator populates the delivery counter on a DLQ-backed
+**R-13 is conditional in the same shape R-14 is, on the ADR's recorded conclusion — to which
+assumption A-2 supplies one route — and both sides have a defined "done".** A-2 — that the Pub/Sub emulator populates the delivery counter on a DLQ-backed
 subscription — cannot be measured until R-20 lands, and R-21 makes the emulator the verification
 bar.
 
-- **If A-2 holds** — "done" = the four `GCP / *` FR-23 cells move to `Fixed`, both variants, on
-  emulator evidence.
+- **If the ADR records a GCP mechanism that satisfies R-1 to R-5 within NFR-1 to NFR-3** — which
+  A-2 holding makes available through the broker counter, and which a `delivery_attempt`-independent
+  mechanism can also supply — "done" = the four `GCP / *` FR-23 cells move to `Fixed`, both variants,
+  on emulator evidence. A-2 holding is what makes the counter *available*; it is the ADR's recorded
+  conclusion, not the measurement alone, that selects this branch (see the note under AC-40).
 - **If A-2 is refuted** — R-13's obligation is unchanged, but the route to it is not. The ADR must
   then select a GCP mechanism that does not depend on the broker's `delivery_attempt`. If no such
   mechanism satisfies R-1 to R-5 within NFR-1 to NFR-3, GCP is *bound but unimplemented* on R-1 to
@@ -430,8 +490,12 @@ path until that question is answered, and the difference is recorded rather than
 **R-20. Creating a DLQ-backed GCP channel succeeds when the calling principal cannot read or write
 project-level IAM, and when no Cloud Resource Manager surface is reachable at all.**
 `Unimplemented`, `PermissionDenied` and `Unauthenticated` from the IAM-related calls made during
-subscription creation are tolerated: each is logged at Warning naming the RPC, the resource and the
-status code, and channel creation continues.
+subscription creation are tolerated: each is logged at Warning, and channel creation continues.
+
+**A tolerated-call Warning names four things: the helper it abandoned, the RPC, the resource, and the
+status code.** That list is fixed here and every other statement of it in this document — the bullets
+below, NFR-5, AC-20 — refers to it rather than restating it. The **helper** name is not decorative:
+it is what makes AC-20's "exactly two Warnings, one per helper" checkable at all.
 
 **The unit of tolerance is the helper, not the RPC**, because the calls are not independent:
 `GetProjectAsync` exists only to derive the member that the `GetIamPolicy`/`SetIamPolicy` calls then
@@ -440,7 +504,7 @@ consume (`GcpPubSubMessageGateway.cs:482-491`, `:534-543`), so continuing past a
 Therefore:
 
 - a tolerated status from `GetProjectAsync` **abandons that whole IAM helper** — no binding is
-  attempted, and one Warning is logged naming the helper and the RPC;
+  attempted, and one Warning is logged carrying the four elements above;
 - a tolerated status from `GetIamPolicyAsync` **abandons the remainder of that helper**, so
   `SetIamPolicyAsync` is not called, with one Warning; a tolerated status from `SetIamPolicyAsync`
   ends that helper with one Warning;
@@ -506,8 +570,10 @@ rather than deferred to #4354: it is the only route to a local proof.
 unchanged.**
 Those are `Redis / RedisMessagingGateway`, `Kafka / Classic`, `Kafka / Consumer`,
 `Kafka / PartitionKey`, `MSSQL / MSSQLMessagingGateway`, `PostgresSQL / PostgresMessagingGateway`,
-`RMQ.Async / Classic`, `RMQ.Async / Quorum`, `RMQ.Sync / RmqSyncMessagingGateway`. They requeue by
-republishing (or, for the three RMQ rows, dead-letter natively), they already satisfy R-1 to R-5,
+`RMQ.Async / Classic`, `RMQ.Async / Quorum`, `RMQ.Sync / RmqSyncMessagingGateway`. **All nine**
+requeue by republishing, so the header travels; the three RMQ rows differ only in that a rejected
+message reaches its destination by broker-routed rejection (the DLX) rather than a Brighter-managed
+send. They already satisfy R-1 to R-5,
 and nothing in this spec alters their consumers, their subscriptions, their producers, or the
 pump code they share.
 
@@ -632,8 +698,8 @@ The ADR MUST therefore do one of two things for R-11, and record which:
   record the #4282 sequencing dependency that follows.
 
 The ADR MUST also name, for each of the four transports in scope, at least one subscription shape
-that trips R-11 under its chosen mechanism — or state that none does, which is itself the
-classification R-3 requires. AC-11 reads that list.
+that trips R-11 under its chosen mechanism — or state that none does. AC-11 reads that list, and
+its second branch defines what "done" means for R-11 when the list is empty.
 
 **The requirements therefore constrain the ADR as follows, without choosing for it:** the ADR MUST
 adopt one of the two rungs above for each of the three rules and MUST record which and why. Introducing a *third* mechanism for
@@ -691,24 +757,41 @@ today: `ConformanceDeferredPump` constructs a **fresh handler instance per dispa
 `DeferMessageAction` (`:45-49`, async `:52-57`), so no count accumulates anywhere. R-27(c) therefore
 requires:
 
-1. **A dispatch count exposed by the shared pump**, keyed on the **originating message's
-   `MessageId`** — reachable from a handler as `Context.OriginatingMessage.Header.MessageId`, which
-   both pumps set before dispatch (`Reactor.cs:416`, `Proactor.cs:483`) and `PipelineBuilder`
-   supplies to the handler (`:280`, `:323`). It is **not** keyed on the command's own id, which
-   `CommandBody()` mints at serialise time (`ConformanceDeferredPump.cs.liquid:112-115`) and which is
-   a different value from the one the message carries.
+1. **A dispatch count exposed by the shared pump**, keyed on the identity of the originating
+   message, reached from a handler through `Context.OriginatingMessage`, which both pumps set before
+   dispatch (`Reactor.cs:416`, `Proactor.cs:483`) and `PipelineBuilder` supplies to the handler
+   (`:280`, `:323`).
+   **The key is the originating message's `x-original-message-id` when it carries one, and its
+   `Header.MessageId` otherwise** — the identity rule `ConformanceDeferredPump.AssertIsTheMessageSent`
+   already applies, via `Message.OriginalMessageIdHeaderName`. `Header.MessageId` alone is **not**
+   sufficient: a transport that requeues by republishing mints a fresh id per redelivery and records
+   the first in `x-original-message-id` (`RmqMessagePublisher.cs:131`, `:142`), so a count keyed on
+   `MessageId` alone would record `1` against each of three distinct keys and `count <= RequeueCount`
+   would pass vacuously. That is the state of the three RMQ configurations, which R-27(c)(4)
+   regenerates, so the fallback is load-bearing today and not a hypothetical.
+   A transport that republishes under a fresh id is still **one** message for counting purposes.
+   The key is also **not** the command's own id, which `CommandBody()` mints at serialise time
+   (`ConformanceDeferredPump.cs.liquid:112-115`) and which is a different value from the one the
+   message carries.
 2. **Reset between tests**, so a count never leaks from one test to the next through a pump shared
    within a project.
-3. **Read after the pump has been quit and awaited**, which is the instant R-4's "when the
-   observation window closes" denotes.
+3. **Read after the pump has been quit and awaited** — the instant R-4 defines as the close of the
+   observation window. That is strictly later than the dead-letter poll's break, so a dispatch that
+   happened between the message reaching the destination and the pump stopping is still counted.
 4. **An assertion in both FR-23 templates** (`…/Reactor/When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue.cs.liquid`
    and its Proactor twin) that the count is **`<= RequeueCount`**, and regeneration of the generated
    FR-23 tests for every configuration.
 5. **Availability to the ACs outside FR-23 that also assert a count** — AC-5, AC-6 and AC-35 — which
    run against bespoke subscriptions rather than a conformance provider (R-27(a) fixes all twelve
    providers at `R = 3`, so none supplies `-1`, `1`, `0` or `-3`). Those ACs use the same counter and
-   the same key; AC-6's and AC-35's "`Requeue` is never called" is observed on the consumer the test
-   constructs, not by mocking one (C-10).
+   the same key; obligation 6 specifies the requeue observation they also make.
+6. **A requeue observation, specified to the same degree.** AC-6's and AC-35's "`Requeue` is never
+   called" is counted, not inferred: a recording consumer the test **composes around** the real
+   consumer — a decorator implementing the same consumer interface, forwarding every call and
+   counting `Requeue`/`RequeueAsync` by the key of obligation 1 — reset and read as obligations 2 and
+   3 require. "Never called" is then `count == 0` for that message id. It is **not** a mock standing
+   in for a transport (C-10 forbids that), **not** a counter added to production code, and **not**
+   an inference from the absence of a redelivery inside some unstated interval.
 
 **"Dispatch count", "delivery count presented to the pump" and "handler invocation count" are used
 interchangeably for this counter**: it advances once per dispatch of a message to a handler. It is
@@ -747,19 +830,29 @@ compared against the pre-change baseline) and the budget (no increase).
 **NFR-3. No additional broker round trip per requeue.** A mechanism that satisfies R-1 by adding a
 broker call on every requeue is permitted only if it replaces an existing call, not if it adds one.
 
-**NFR-4. A budget that will not behave as its author probably intended is visible at Warning, once
-per subscription.** R-7 (a budget that rejects on the first delivery), R-10 (a budget outranked by a
-native redrive limit) and R-11 (a budget that cannot run down at all) are the three instances, surfaced through startup pipeline validation (R-25) and, for
-R-11 only, additionally at channel creation (R-26). Nothing is raised per message, so a
-high-throughput consumer cannot be flooded by it. Budget exhaustion itself continues to log through
-the existing `Log.DroppingMessage` path.
+**NFR-4. A budget that will not behave as its author probably intended is visible at Warning, at
+most once per subscription per rule, and never per message.**
+R-7 (a budget that rejects on the first delivery), R-10 (a budget outranked by a native redrive
+limit) and R-11 (a budget that cannot run down at all) are the three instances, surfaced through
+startup pipeline validation (R-25) and, for R-11 only, additionally at channel creation (R-26).
+Budget exhaustion itself continues to log through the existing `Log.DroppingMessage` path.
+
+**"Per rule", not "per subscription", because R-25's three rules are independent and their conditions
+are not mutually exclusive.** A subscription with `requeueCount: 0` on a transport that cannot
+satisfy R-1 trips R-7's rule *and* R-11's, and R-26 then adds R-11's channel-creation Warning on top.
+Two validation findings plus one log line, for one subscription, is correct behaviour rather than a
+breach of this NFR. What this NFR forbids is repetition **per message**: nothing on the receive path
+raises a budget Warning, so a high-throughput consumer cannot be flooded by one. AC-29 counts the
+channel-creation route; AC-7, AC-10 and AC-11 each count their own rule's finding.
 
 **NFR-5. Tolerated IAM failures are visible and narrow.** Each tolerated `Unimplemented`,
-`PermissionDenied` or `Unauthenticated` logs one Warning naming the RPC, the resource name and the
-status code. No `catch (Exception)` may be used to implement R-20 — the tolerance is by status code,
+`PermissionDenied` or `Unauthenticated` logs one Warning carrying the four elements R-20 fixes — the
+helper abandoned, the RPC, the resource, and the status code. No `catch (Exception)` may be used to implement R-20 — the tolerance is by status code,
 so an unrelated failure is never hidden. R-20's client-construction case, which carries no status
-code, is caught by the narrowest exception type that call site can throw and is scoped to the
-Resource Manager client construction alone; it logs a Warning naming the operation it abandoned. A
+code, is scoped to the Resource Manager client construction alone and logs a Warning carrying the
+same four elements, with the RPC element reading as the operation abandoned rather than a call made.
+**The ADR MUST name the exception type caught there**: "the narrowest type that call site can throw"
+is not a specification, and two implementers would choose two different types. A
 tolerated failure never widens: the subscription is still created, and no other call is affected.
 
 **NFR-6. The AWS v3 and v4 packages remain behaviourally indistinguishable.** Any divergence
@@ -774,8 +867,8 @@ would not. A configuration that cannot fit the window is a **harness defect to b
 R-27**, not evidence about the transport and not grounds for leaving a cell `Deferred`.
 
 Evidence is unconditional for the eight AWS cells (AC-12) and conditional for the rest, because two
-of the three ACs are branch-guarded: AC-19 (the four GCP cells) applies only on the branch AC-39
-selects, and AC-24 (RocketMQ) only when R-14's condition holds. On the AC-40 or AC-25 branch the
+of the three ACs are branch-guarded: AC-19 (the four GCP cells) applies only on the branch the ADR's
+recorded conclusion selects (see the note under AC-40; AC-39 is a measurement, not a selector), and AC-24 (RocketMQ) only when R-14's condition holds. On the AC-40 or AC-25 branch the
 corresponding configurations are not moved by this spec at all, so NFR-7 has nothing to evidence for
 them — it constrains only the configurations a branch actually moves.
 
@@ -806,8 +899,8 @@ an instruction to implement one of these.
 
 | Mechanism | What is already true | What the ADR must weigh |
 |---|---|---|
-| **Read the broker's own delivery counter on receive** | SQS `ApproximateReceiveCount` is already on the wire (NFR-1). Pub/Sub exposes `ReceivedMessage.DeliveryAttempt` and `PubsubExtensions.GetDeliveryAttempt(PubsubMessage)` (Google.Cloud.PubSub.V1 3.36.0). RocketMQ exposes `MessageView.DeliveryAttempt` as a public property, set from `systemProperties.DeliveryAttempt` on receive (RocketMQ.Client 5.2.1). | All three counters are documented approximate/best-effort (R-3). The seams are `SqsMessageCreator.ReadHandledCount` (`:323`), `SqsInlineMessageCreator.ReadHandledCount` (`:350`), `GcpPubSub/Parser.ToBrighterMessage` (`:84`) and `ReadHandleCount` (`~:169`), `RocketMessageConsumer.ReadHandledCount` (`:422`). Note the origin offset: all three counters read `1` on first delivery, while R-2 requires `0`. |
-| **Rewrite the stored message on requeue (republish)** | This is what the nine conforming transports do. | Changes receipt handles, message identity on some brokers, and FIFO/ordering-key semantics; adds a broker round trip on requeue (NFR-3). ADR `0038-aws-sqs-dlq-direct-send` already rejected a related idea for SQS. |
+| **Read the broker's own delivery counter on receive** | SQS `ApproximateReceiveCount` is already on the wire (NFR-1). Pub/Sub exposes `ReceivedMessage.DeliveryAttempt` and `PubsubExtensions.GetDeliveryAttempt(PubsubMessage)` (Google.Cloud.PubSub.V1 3.36.0). RocketMQ exposes `MessageView.DeliveryAttempt` as a public property, set from `systemProperties.DeliveryAttempt` on receive (RocketMQ.Client 5.2.1). | All three counters are documented approximate/best-effort (R-3). The seams are `SqsMessageCreator.ReadHandledCount` (`:323`), `SqsInlineMessageCreator.ReadHandledCount` (`:350`), `GcpPubSub/Parser.ToBrighterMessage` (`:84`) and `ReadHandleCount` (`~:169`), `RocketMessageConsumer.ReadHandledCount` (`:422`). Note the origin offset: all three counters read `1` on first delivery, while R-2 requires `0`. **And note R-28**: the same counter is present on the *rejection destination's* own queue, so substituting it for the stamped header there would report that queue's count and destroy R-5's evidence — a mechanism on this row must discriminate a routed message from a source-channel delivery, and name how. |
+| **Rewrite the stored message on requeue (republish)** — ⛔ **excluded by NFR-3, see C-12** | This is what the nine conforming transports do. | Nothing left to weigh: C-12 records the exclusion and its two reasons. Listed so the ADR does not re-open it, and so a future spec that revisits NFR-3 finds the argument rather than re-deriving it. |
 | **Track the count consumer-side** | No broker dependency at all. | Does not survive a process restart or competing consumers; an unbounded in-memory map is an allocation and leak risk (NFR-2). |
 
 #### Assumptions — each must be confirmed or refuted by the ADR or by measurement
@@ -840,7 +933,7 @@ an instruction to implement one of these.
   `requeueCount: 5` / `MaxDeliveryAttempts: 5` (`GcpPullMessageGatewayProvider.cs:151,155` and its
   three siblings). Once the contract works these race (R-8's tie case), so the harness must be
   re-configured to `R < M` for the FR-23 behaviour to exercise the Brighter route deterministically.
-  **Owned by R-27**, which names the eight provider files and the required values.
+  **Owned by R-27**, which names the twelve provider files and the required values.
 
 #### Platform and repository constraints
 
@@ -870,6 +963,33 @@ an instruction to implement one of these.
   therefore removes the Resource Manager dependency entirely. This is existing behaviour, not work:
   R-27(b) uses it in the harness, and R-20 covers the default case in which a user has set neither.
   *Verified in source 2026-09-21.*
+- **C-12. NFR-3 stands, and it excludes the republish mechanism.** *Decided 2026-09-22.* No
+  transport in scope has an in-place update API — not SQS, not Pub/Sub, not RocketMQ — so
+  "rewrite the stored message on requeue" necessarily means delete-and-republish. That adds a net
+  broker call per requeue on all three (SQS `ChangeMessageVisibility` → `SendMessage` +
+  `DeleteMessage`; Pub/Sub `ModifyAckDeadline` → `Publish` + `Ack`; RocketMQ's requeue issues no
+  broker call at all today), which is what NFR-3 forbids. Two reasons to keep NFR-3 rather than
+  reword it:
+  1. **Bypassing the broker's own redelivery is counter-intuitive for users.** A user who
+     configured a visibility timeout or an ack deadline expects Brighter to use it. Republishing
+     changes message ids, queue position and the broker's own receive metrics, none of which a
+     requeue is expected to disturb.
+  2. **SQS FIFO would break silently.** Content-based deduplication hashes the body, and a requeue
+     changes only a header attribute, so a republished copy is discarded as a duplicate inside the
+     dedup window unless Brighter mints a fresh `MessageDeduplicationId` per requeue — which it
+     does not do today (`SqsMessageSender.cs:100-102` sets one only when the bag carries it). R-12
+     puts all four FIFO configurations in scope, so this is not an edge case.
+
+  **The cost of this decision, recorded so it is not rediscovered as a surprise:** the republish
+  mechanism would have made the contract exact on every transport and dissolved both of this
+  spec's conditionals — RocketMQ would satisfy R-1 to R-5 without waiting on the upstream
+  `ChangeInvisibleDuration` fix, and GCP would not depend on the emulator populating
+  `delivery_attempt`. Keeping NFR-3 keeps R-14's branch and A-2's risk live, and accepts that GCP
+  FR-23 and RocketMQ FR-23 may both end at *bound but unimplemented*. R-13 and R-14 already define
+  a "done" on both branches, which is what makes that acceptable.
+
+  It also makes R-28 load-bearing: with republish excluded, a delivery count that is synthesised on
+  read is the likely mechanism, and R-28 is what stops that synthesis destroying R-5's evidence.
 
 ---
 
@@ -914,6 +1034,14 @@ per NFR-8; where an AC names one variant in an example, the obligation covers bo
 
 ### Delivery-count contract
 
+**Which transports these ACs bind.** AC-1 to AC-4, AC-34's second clause and AC-41 are
+unconditional for `AWSSQS` and `AWSSQS.V4` (R-12). For `GcpPubSub` and `RocketMQ` they apply only on
+the branch R-13 / R-14 selects as *implemented*; on the *bound but unimplemented* branch, R-13(a)-(c)
+and R-14(a)-(d) define "done" instead, and AC-40 (GCP) and AC-25 (RocketMQ) are the criteria that
+apply. "Any / each transport in scope" below is read under this guard. AC-5, AC-6 and AC-35 are not
+guarded: a budget of `-1`, `0`, `1` or below `-1` needs no count to advance, because
+`HandledCountReached` is reached on the first deferral whatever the transport presents.
+
 **AC-1** (R-1, R-3) — **Given** a subscription on any transport in scope with `requeueCount: 3` and a
 handler that defers on every delivery, **When** the message is delivered three times, **Then** the
 delivery count presented on each delivery is strictly greater than the count presented on the
@@ -924,11 +1052,15 @@ in scope, **When** it is delivered for the first time, **Then** the consumer pre
 `Header.HandledCount == 0`, and the conformance identity assertion comparing sent and received
 `HandledCount` passes.
 
-**AC-3** (R-4) — **Given** `requeueCount: 3`, a `deadLetterRoutingKey`, a handler that always defers,
-and no native redrive limit at or below 3, **When** the pump runs, **Then** the handler is invoked at
+**AC-3** (R-4) — **Given**, on each transport in scope and in both variants, `requeueCount: 3`, a
+`deadLetterRoutingKey`, a handler that always defers, and no native redrive limit at or below 3 —
+on GCP, a `DeadLetterPolicy` with `MaxDeliveryAttempts: 5` (C-6's floor; a GCP subscription with no
+`DeadLetterPolicy` is AC-11's R-11 case, not AC-3's) —
+**When** the pump runs, **Then** the handler is invoked at
 most 3 times, a rejection with `RejectionReason.DeliveryError` is issued exactly once, and the
 handler invocation count for that message still stands at 3 or fewer when the FR-23 observation
-window closes (the template's existing single 60 s poll — no additional wait is introduced).
+window closes — the instant the pump has been quit and awaited, which the template already reaches
+immediately after its 60 s poll, so no additional wait is introduced (R-4, R-27(c)(3)).
 
 **AC-4** (R-5) — **Given** the run in AC-3, **When** the dead-letter destination is read, **Then** the
 message is present, its `Header.HandledCount` is `>= 2`, and its bag carries `rejectionReason ==
@@ -966,13 +1098,26 @@ evidence, and no transport in scope is unclassified. **This clause is a manual g
 review, not an assertion. **And Given** each transport the table classifies **exact**, `requeueCount: 4` and a handler that defers on every delivery, **When** three
 deliveries occur, **Then** they present counts of exactly `0`, `1` and `2`.
 
-**AC-35** (R-7) — **Given**, on a transport in scope in both variants, `requeueCount: 0` and a handler
+**AC-35** (R-7) — **Given**, on each transport in scope and in both variants, `requeueCount: 0` and a handler
 that defers on its first invocation, **When** the pump runs, **Then** the handler is invoked exactly
 once, `Requeue` is never called for that message, a `DeliveryError` rejection is issued, and the
 message is on the dead-letter destination. **And Given** `requeueCount: -3`, **When** the pump runs,
 **Then** the same outcome holds — enforcement is enabled and the first deferral rejects. **And Given**
 `requeueCount: -1`, **When** the pump runs, **Then** no rejection is issued (AC-5), confirming `-1` is
 the only value that disables the budget.
+
+**AC-41** (R-28, R-5) — **Given**, on each transport in scope and in both variants, a run in which the
+budget is exhausted and Brighter routes the message to its dead-letter destination, **When** that
+destination is read through the ordinary consumer path the conformance providers use — a real channel
+from `ChannelFactory`, not a bespoke reader — **Then** the message presents
+`Header.HandledCount >= R - 1`, and specifically `3` for `requeueCount: 3` on the Brighter-managed
+route; **And** it does **not** present the value the rejection destination's own delivery counter
+would yield after R-2's normalisation, which for a first read of that destination is `0`.
+**And Given** the same read on a message a *native* redrive policy moved with no Brighter call (AC-9's
+run), **Then** no count is asserted — R-28 does not bound that case.
+⚠️ **And Given** the ADR, **When** it is read, **Then** it contains a four-row table recording, for
+each transport in scope, how its mechanism satisfies R-28, naming the discriminator wherever one is
+used. **This clause is a manual gate** — a document review, not an assertion.
 
 ### Native redrive interaction
 
@@ -1006,6 +1151,15 @@ host starts with `.ValidatePipelines()`, **Then** the validation result contains
 **When** the channel is created, **Then** exactly one Warning is logged naming the subscription, the
 value `3`, and the reason, and no further such Warning is logged for that channel however many
 messages are received.
+**And Given** instead that the ADR states under R-25 that **no** subscription shape trips R-11 — which
+R-25 explicitly permits — **When** R-11's rule and R-26's channel-creation log are nonetheless
+implemented, **Then** each is exercised against a subscription that answers R-11's predicate
+negatively and one that answers it positively, the negative producing no finding and no log line and
+the positive producing exactly one of each; **And** the ADR's statement is recorded as the evidence
+that no in-scope transport supplies a positive case in a real configuration.
+R-11 is the anti-silence requirement (R-26), so it is built and verified on **both** branches: "no
+shape trips it today" is not a licence to leave it unimplemented, because the predicate is what a
+future transport answers.
 
 ### AWS
 
@@ -1060,39 +1214,61 @@ delivered again after its ack deadline lapses.
 emulator, made creatable by R-20, and a handler that always defers, **When** the message is delivered
 three times, **Then** the value the emulator supplies for the broker delivery counter on each
 delivery is recorded.
-**AC-39 is a measurement, not a pass/fail gate** — it settles assumption A-2 and selects which of
-AC-19 and AC-40 applies. Its own exit criteria are assertable and all three are required: (a) the
-observed values are written into `conformance-status.md`'s GCP paragraph; (b) the ADR records
-whether A-2 held and, if it did not, which `delivery_attempt`-independent mechanism it selected in
-consequence; (c) exactly one of AC-19 and AC-40 is then claimed, and the other is recorded as not
-applicable with AC-39's measurement as the reason.
+**AC-39 is a measurement, not a pass/fail gate** — it settles assumption A-2 and so determines which
+mechanisms the ADR can reach for. It does **not** by itself select between AC-19 and AC-40; the ADR's
+recorded conclusion does (see the note under AC-40). Its own exit criteria are assertable and all
+four are required: (a) the observed values are written into `conformance-status.md`'s GCP paragraph;
+(b) the ADR records whether A-2 held and, if it did not, which `delivery_attempt`-independent
+mechanism it selected in consequence; (c) the ADR records either a GCP mechanism that satisfies R-1
+to R-5 within NFR-1 to NFR-3, or that none does; (d) exactly one of AC-19 and AC-40 is then claimed,
+selected by (c), and the other is recorded as not applicable with (c) and this measurement as the
+reason.
 
-**AC-19** (R-13, A-2 holds *or* a counter-independent mechanism was selected) — **Given** AC-39
-recorded a counter that is populated **and strictly advancing across redeliveries**, or the ADR
-selected a GCP mechanism that does not read
-`delivery_attempt`, **And Given** each of `GCP / Pull`, `GCP / PullOrdering`, `GCP / Stream`,
+**AC-19** (R-13 — the ADR records a satisfying GCP mechanism) — **Given** the ADR records a GCP
+mechanism that **satisfies R-1 to R-5 within NFR-1 to NFR-3** — whether that is the broker counter,
+because AC-39 recorded it populated and strictly advancing, or a `delivery_attempt`-independent
+mechanism selected because AC-39 refuted A-2 — **And Given** each of `GCP / Pull`, `GCP / PullOrdering`, `GCP / Stream`,
 `GCP / StreamOrdering` with `requeueCount: 3` and a `DeadLetterPolicy` with
 `MaxDeliveryAttempts: 5`, in both variants, **When** a handler that always defers is driven by a
 real pump, **Then** the handler is invoked at most 3 times and the message reaches the
 Brighter-managed dead-letter destination carrying `rejectionReason == "DeliveryError"`.
 
-**AC-40** (R-13, A-2 refuted and no counter-independent mechanism satisfies R-1 to R-5) — **Given**
-AC-39 recorded a counter that is unpopulated, or populated but **not** strictly advancing across
-redeliveries (e.g. the sequence `1, 1, 1`), **and** the ADR records that no mechanism
-satisfies R-1 to R-5 for GCP within NFR-1 to NFR-3, **When** a GCP channel is created with
+**AC-40** (R-13 — the ADR records that no GCP mechanism satisfies) — **Given** the ADR records that
+**no** mechanism satisfies R-1 to R-5 for GCP within NFR-1 to NFR-3, whatever AC-39 measured — the
+ordinary route to which is AC-39 recording a counter that is unpopulated, or populated but **not**
+strictly advancing across redeliveries (e.g. the sequence `1, 1, 1`), but a satisfying mechanism can
+also fail to exist after a *good* measurement, e.g. where the counter advances but R-2's exact `0`
+cannot be reached on an elevated first delivery — **When** a GCP channel is created with
 `requeueCount: 3`, **Then** R-11's Warning is logged naming the subscription and the blocker;
 **And** the four `GCP / *` FR-23 cells read `Deferred` re-pointed at the emulator limitation rather
 than at #4240; **And** AC-39's measurement is recorded in `conformance-status.md`'s GCP paragraph;
 **And** `GcpPubSubSubscription` still implements both support interfaces, so R-15 to R-19 are
 unaffected and their twenty cells still move.
 
+> **AC-19 and AC-40 partition every outcome, and the selector is the ADR's conclusion rather than
+> AC-39's measurement.** The ADR either records a mechanism that satisfies R-1 to R-5 within NFR-1 to
+> NFR-3 (AC-19) or records that none does (AC-40); AC-39(b) already requires it to say which, so
+> exactly one applies and neither can be claimed alongside the other. The measurement chooses which
+> *mechanism* the ADR can reach for, not which AC governs — which is why a counter that is populated
+> and advancing does not by itself entitle the four cells to move, and why a refuted A-2 does not by
+> itself condemn them.
+
 **AC-20** (R-20, NFR-5) — **Given** the Pub/Sub emulator with `PUBSUB_EMULATOR_HOST` set and a
 subscription carrying a `DeadLetterPolicy` with **neither** `DeadLetter.PublisherMember` nor
 `SubscriberMember` configured, **When** a channel is created, **Then** channel creation succeeds and
-returns a usable channel; `GetProjectAsync`'s `Unauthenticated` is tolerated in **both**
+returns a usable channel; the **`GetProjectAsync` step's tolerated outcome** — an `Unauthenticated`
+or `PermissionDenied` status, **or** a failure to construct the Resource Manager client, whichever
+the ambient credentials produce — is tolerated in **both**
 `UpdateIAmRoleForDeadLetterAsync` and `UpdateIAmRoleForSubscriptionAsync`; each abandons its binding
 at that point so `GetIamPolicyAsync` is not reached; and **exactly two** Warnings are logged, one per
-helper, each naming the helper, the RPC, the resource and the status code.
+helper, each carrying R-20's four elements.
+> Which of the two shapes occurs is decided by ambient credentials, not by this spec, so AC-20 must
+> not hard-assert the status. `GcpMessagingGatewayConnection.CreateProjectsClientAsync` (`:173`)
+> builds `new ProjectsClientBuilder { Credential = Credential }`, which resolves Application Default
+> Credentials when `Credential` is null: where ADC resolve, `GetProjectAsync` leaves and is refused
+> with a status (spec 0036 measured `Unauthenticated`); where they do not — an ordinary laptop or CI
+> agent running only the emulator, which is R-21's bar — construction throws and **no RPC is issued
+> at all**. R-20 tolerates both on the same terms, and both must reach the same observable outcome.
 **And Given** the same subscription with both members configured (C-11), **When** a channel is
 created, **Then** no Resource Manager call is issued; `GetIamPolicyAsync`'s `Unimplemented` is
 tolerated once per helper; **exactly two** Warnings are logged; and channel creation succeeds.
@@ -1103,6 +1279,11 @@ unit test rather than through a broker, **When** it is presented with an `RpcExc
 rethrown unchanged and nothing is logged as tolerated; **And When** it is presented with
 `Unimplemented`, `PermissionDenied` or `Unauthenticated`, **Then** it is tolerated and one Warning is
 logged.
+**And Given** R-20's client-construction case — a Resource Manager client that cannot be constructed
+because credentials do not resolve, so there is no `RpcException` to inspect — **When** it is
+exercised directly, **Then** it is tolerated, one Warning carrying R-20's four elements is logged,
+the type caught is the one the ADR names (NFR-5), and nothing wider is caught. ⚠️ The
+"type the ADR names" clause is not writable until the ADR exists.
 > A broker-level negative case is not available and must not be written: when `DeadLetter != null`,
 > `EnsureSubscriptionExistsAsync` creates the dead-letter topic and subscription with
 > `OnMissingChannel.Create` before the IAM helpers run (`GcpPubSubMessageGateway.cs:220-236`), so
@@ -1114,7 +1295,8 @@ logged.
 then `up -d`), **When** the GCP conformance behaviours **FR-4, FR-5, FR-6, FR-8 and FR-17** (the
 rejection-routing behaviours AC-15 exercises) are run twice across all four GCP configurations and
 both variants with a clean store between runs — together with **FR-23** (AC-19) whenever AC-19 is the
-branch AC-39 selected — **Then** both runs produce the same result, with no `gcp-ci` involvement.
+branch that applies, which the ADR's recorded conclusion selects rather than AC-39's measurement (see
+the note under AC-40) — **Then** both runs produce the same result, with no `gcp-ci` involvement.
 These are the same behaviours AC-30's GCP rows move.
 
 ### RocketMQ
@@ -1150,10 +1332,13 @@ subscription and the blocker; **And** the `RocketMQ / RocketMQMessagingGateway` 
 variants against their compose files, **Then** FR-23 passes on all nine and no other cell that read
 `Pass` or `Fixed` regresses.
 
-**AC-27** (R-24) — **Given** the compile-only V10 compatibility sample R-24 requires, committed under
-`tests/Paramore.Brighter.Core.Tests/` and exercising `Subscription`, `SqsSubscription`,
-`GcpPubSubSubscription`, `RocketMqSubscription`, `MessageHeader` and `Message` with the argument
-shapes a V10 application uses today, **When** the solution is built against the post-change
+**AC-27** (R-24) — **Given** the five compile-only V10 compatibility samples R-24 requires, each
+committed in the project R-24's table names — `tests/Paramore.Brighter.Core.Tests/` for
+`Subscription`, `MessageHeader` and `Message`; `tests/Paramore.Brighter.AWS.Tests/`,
+`tests/Paramore.Brighter.AWS.V4.Tests/`, `tests/Paramore.Brighter.Gcp.Tests/` and
+`tests/Paramore.Brighter.RocketMQ.Tests/` for `SqsSubscription`, `SqsSubscription` (v4),
+`GcpPubSubSubscription` and `RocketMqSubscription` respectively — each exercising its types with the
+argument shapes a V10 application uses today, and no test project having gained a reference, **When** the solution is built against the post-change
 assemblies, **Then** it compiles with no new errors and no new obsoletion warnings — and a breaking
 change fails the build rather than awaiting review.
 
@@ -1165,9 +1350,14 @@ and the enumeration for each of the four transports is recorded in the ADR.
 NFR-2 is *not* covered by this AC — it is covered by AC-37.
 
 **AC-29** (NFR-4) — **Given** a channel whose budget will not behave as its author probably intended
-(the conditions of R-7, R-10 or R-11), **When** 100 messages are received on it, **Then** no per-message Warning about the
-budget is logged, and the total count of budget-configuration Warnings for that channel remains at
-most one.
+(the conditions of R-7, R-10 or R-11), **When** 100 messages are received on it, **Then** no Warning
+about the budget is logged on the receive path at all, and the count of **channel-creation**
+budget Warnings for that channel stands at exactly one if R-11's condition holds and zero
+otherwise — R-26 gives the channel-creation route to R-11 alone.
+**And Given** the same channel, **When** the count is taken again after a further 100 messages,
+**Then** it is unchanged.
+Validation findings are **not** counted here: AC-7, AC-10 and AC-11 each assert their own rule's
+single finding, and a subscription that trips two rules is expected to produce two findings.
 
 **AC-36** (R-27) — **Given** the eight AWS/AWS.V4 gateway providers and the four GCP gateway
 providers named in R-27, **When** their configured values are read, **Then** every one satisfies
@@ -1206,12 +1396,13 @@ following cells have moved, each on recorded evidence:
 |---|---|---|---|
 | FR-23 × 8: `AWS / SnsStandard`, `AWS / SnsFifo`, `AWS / SqsStandard`, `AWS / SqsFifo`, and the four `AWS.V4` twins | `Deferred -> #4341` | `Fixed (#4341)` | LocalStack, both variants |
 | FR-4, FR-5, FR-6, FR-8, FR-17 × `GCP / Pull`, `GCP / PullOrdering`, `GCP / Stream`, `GCP / StreamOrdering` — **20 cells** | `Deferred -> #4240` | `Fixed (#4386)` | Pub/Sub emulator, both variants |
-| FR-23 × the four GCP configurations — **4 cells** | `Deferred -> #4240` | `Fixed (#4386)` **if** assumption A-2 holds or the ADR selects a GCP mechanism independent of `delivery_attempt`; otherwise `Deferred` re-pointed at the emulator limitation (R-13) | Pub/Sub emulator, both variants |
+| FR-23 × the four GCP configurations — **4 cells** | `Deferred -> #4240` | `Fixed (#4386)` **if** the ADR records a GCP mechanism that satisfies R-1 to R-5 within NFR-1 to NFR-3 (AC-19); otherwise `Deferred` re-pointed at the emulator limitation (AC-40, R-13) | Pub/Sub emulator, both variants |
 | FR-23 × `RocketMQ / RocketMQMessagingGateway` — **1 cell** | `Deferred -> #4353` | `Fixed (#4353)` **if** R-14's condition holds; otherwise `Deferred` re-pointed at the upstream blocker | Local RocketMQ, both variants |
 
 **33 cells** in total: **28 unconditional** — the 8 AWS/AWS.V4 FR-23 cells and the 20 GCP
 rejection-routing cells, which depend on R-20 and not on A-2 — and **5 conditional**: the 4 GCP
-FR-23 cells on assumption A-2 (R-13), and the 1 RocketMQ FR-23 cell on R-14's condition. Each
+FR-23 cells on the ADR's recorded conclusion about a satisfying GCP mechanism (R-13; A-2's
+measurement chooses which mechanisms it can reach for), and the 1 RocketMQ FR-23 cell on R-14's condition. Each
 conditional cell has a defined outcome on both branches, so "conditional" never means "unresolved".
 
 ⚠️ **Manual gate.** AC-30 and AC-31 are ledger edits; no automated suite proves them. Their evidence
@@ -1248,7 +1439,7 @@ Every requirement maps to at least one acceptance criterion.
 | R-2 | AC-2, AC-33 |
 | R-3 | AC-33, AC-34 |
 | R-4 | AC-3 |
-| R-5 | AC-4 |
+| R-5 | AC-4, AC-41 |
 | R-6 | AC-5 |
 | R-7 | AC-6, AC-7, AC-35 |
 | R-8 | AC-8, AC-9, AC-10 |
@@ -1271,6 +1462,7 @@ Every requirement maps to at least one acceptance criterion.
 | R-25 | AC-7, AC-10, AC-11, AC-32 |
 | R-26 | AC-11, AC-32 |
 | R-27 | AC-36 |
+| R-28 | AC-41 |
 | NFR-1 | AC-28 |
 | NFR-2 | AC-37 |
 | NFR-3 | AC-28 |
@@ -1295,15 +1487,20 @@ appears:
   `Deferred` pointing at the upstream blocker", "the four `GCP / *` FR-23 cells read `Deferred`
   re-pointed …" and "AC-39's measurement is recorded in `conformance-status.md`". The *behavioural*
   clauses of those three ACs are ordinary assertions; only their ledger clauses are gates.
-- **AC-33's ADR-review clause** and **AC-34's first clause** — document reviews of the ADR's
-  first-delivery statement and its classification table.
+- **AC-33's ADR-review clause**, **AC-34's first clause** and **AC-41's final clause** — document
+  reviews of the ADR's first-delivery statement, its exact/approximate classification table, and its
+  R-28 table. Every behavioural clause of AC-41 is an ordinary assertion; only that last clause is a
+  gate.
 
 Every other clause of every other AC is an assertion a test can make.
 
 **Assertable, but not writable until the ADR exists** — these read a decision the ADR must first
 record, so the test can be written only after design: **AC-11**'s Given (the subscription shapes that
-trip R-11), **AC-33**'s first clause (the normalisation the ADR specifies), and **AC-34**'s second
+trip R-11), **AC-21**'s client-construction clause (the exception type the ADR names, NFR-5),
+**AC-33**'s first clause (the normalisation the ADR specifies), and **AC-34**'s second
 clause (the transports the ADR's table classifies exact).
+**AC-19** and **AC-40** are a third kind: both are writable now, but *which one is claimed* is
+selected by the ADR's recorded conclusion rather than by a measurement (see the note under AC-40).
 
 ---
 
