@@ -2772,3 +2772,242 @@ on the AC-40 branch.
 - **R-21's accepted exception**, read with AC-22 and NFR-7.
 - **R-16's ack-failure duplicate**, read with AC-15's "a subsequent read of the source returns
   `MT_NONE`", and with R-18.
+
+---
+
+# Review: requirements (round 13) — 0037-delivery-count-and-rejection-routing
+
+**Date**: 2026-09-23
+**Threshold**: 60
+**Verdict**: NEEDS WORK
+
+2 findings at or above threshold 60.
+
+## Findings
+
+### 1. R-19's native-cap bound also needs the forwarding IAM bindings that R-20 makes best-effort, so the loop is unbounded on a configuration this spec newly makes creatable (Score: 64)
+
+- R-19 says Pub/Sub's `MaxDeliveryAttempts` is "the only bound this spec relies on". It names exactly one unbounded case: "A subscription with no `DeadLetterPolicy`".
+- Pub/Sub can forward to the policy topic only when its service agent holds `roles/pubsub.publisher` on that topic and `roles/pubsub.subscriber` on the source subscription. Those are exactly the bindings the two IAM helpers create (`GcpPubSubMessageGateway.cs:477-523`, `:527-…`).
+- R-20 now lets channel creation succeed when those helpers are abandoned (PermissionDenied, Unauthenticated, Unimplemented, or a client-construction failure). The only signal is a Warning naming the helper, RPC, resource and status. That Warning does not say native dead-lettering is inactive.
+- Today such a channel hard-fails at creation. After this spec it starts, carries a `DeadLetterPolicy`, and has no working native cap unless the bindings were provisioned some other way.
+- On that channel, a routing publish that fails deterministically loops for ever, logging R-19's Error on every turn. This is the case R-19 claims is bounded.
+- R-20's own example is exactly this principal: "a service account holding `pubsub.subscriber` and `pubsub.publisher` but not `resourcemanager.projects.get` … channel creation succeeds".
+- R-8 and R-9's native route are silently affected in the same way.
+- Not raised in rounds 1–12.
+
+**Evidence**:
+- requirements.md:571: "**What bounds it is Pub/Sub's own `DeadLetterPolicy.MaxDeliveryAttempts` (`M`)** … That is the only bound this spec relies on".
+- requirements.md:574-575: "**A subscription with no `DeadLetterPolicy` has no bound**".
+- requirements.md:599-602, :661-664 (R-20: tolerated statuses; restricted-principal example).
+- Source: `GcpPubSubMessageGateway.cs:234-235` has the comment "Set up the necessary IAM role for the main subscription to publish to the DLQ topic". `:503-521` grants `roles/pubsub.publisher` on the dead-letter topic to the Pub/Sub service agent. `:555-557` grants `roles/pubsub.subscriber` on the subscription.
+
+**Recommendation**:
+- Amend R-19's bound: the cap applies only where the Pub/Sub service agent holds the two forwarding bindings. Where R-20 tolerated their absence and nothing else provisioned them, the loop is unbounded exactly as with no policy. Accept that explicitly or mitigate it.
+- Have R-20's Warning (NFR-5's element list) state that native dead-lettering, and with it R-8/R-9's native route and R-19's bound, may be inactive until the binding exists.
+
+---
+
+### 2. AC-18's release-failure clause is an escape hatch: nothing obliges the ADR to define the seam, and its Then asserts `Reject`'s return value while its When exercises only "the step that follows a release" (Score: 62)
+
+- **No obligation.** Every other item on the "not writable until the ADR exists" list reads a decision the ADR must make:
+  - AC-11: R-25's "The ADR MUST also name".
+  - AC-21: NFR-5's "The ADR MUST name the exception type".
+  - AC-33: R-2's MUST.
+  - AC-34: R-3's must.
+  - AC-42: R-13's "the ADR MUST record".
+  - The `makeChannels` choice has to be made for the code to exist at all.
+
+  The release-failure seam is different. Nothing in R-19 or elsewhere requires the ADR to define it, and an implementation can inline the catch with no seam at all. The clause would then never become writable. It is also not on the manual-gate list, so it silently falls out of both lists. "Every other clause of every other AC is an assertion a test can make" (:1717) would then be false for it. This is the same shape as round 10's finding 2, which the round-12 log asked this round to check.
+- **Wrong unit under test.** When: "the step that follows a release, presented with the release's failure". Then: "`Reject` returns `true`; it does not return the release's `false`". A unit test of a helper step cannot observe `Reject`'s return value unless `Reject` returns that step's result verbatim, and nothing requires that. The trap R-19 describes (`Requeue` catches and returns `false`, `GcpPullMessageConsumer.cs:354-358`/`:394-398`, verified) sits in `Reject`'s own composition. That composition is what the clause fails to exercise.
+- C-10 forbids mocking the transport, so the only admissible seam is a pure step. That makes the composition gap unavoidable unless the ADR is told to close it.
+
+**Evidence**:
+- requirements.md:1395-1400: "exercised directly as a unit test in the manner of AC-21 — the step that follows a release, presented with the release's failure … **Then** an Error is logged naming the message id and `Reject` returns `true` … this clause needs the seam the ADR defines for that step; it is not writable until the ADR exists."
+- requirements.md:1722-1723: "**AC-18**'s release-failure clause (the seam the ADR defines for the step after a release)".
+- R-19 (:549-557) contains no ADR MUST.
+
+**Recommendation**:
+- Add to R-19: "The ADR MUST define how the release-failure branch is exercised without mocking the transport (C-10). The shape is a step that takes the release outcome and yields `Reject`'s result, and `Reject` returns that result unaltered on this path. Otherwise the ADR records why no such seam exists, and the clause moves to the manual-gate list as a code review."
+- Reword AC-18's Then to assert the step's result, together with the composition requirement.
+
+---
+
+### 3. R-16's accepted duplicate assumes the pump survives an ack failure, but the rethrow R-16 leaves open ends the pump (Score: 50)
+
+- R-16: "the original is redelivered and, when rejected again, routed again … how the ack failure surfaces to the pump (its log and `Reject`'s return value) is the ADR's to fix. Today the pull consumer logs and rethrows it".
+- The pump calls `Channel.Reject` from inside catch blocks: `RequeueMessage` from `catch (DeferMessageAction)` (Reactor.cs:316-321) and `RejectMessage` from `catch (RejectMessageAction)` (:333-339). An exception thrown there is not caught by the sibling catches.
+- `Run` has only `try`/`finally` around the loop (Reactor.cs:98, :373). A rethrown ack failure therefore exits `Run` and stops that performer. The Proactor has the same structure.
+- "Redelivered and routed again" then happens only if something restarts the consumer. If the ADR keeps today's rethrow, which R-16 permits, the consumer stops instead.
+- Nothing asserts the chosen outcome, and it is not on either unasserted list.
+- No conflict with AC-15's "subsequent read of the source returns `MT_NONE`", which does not induce an ack failure.
+- R-18 is unaffected: each routed copy is stamped independently.
+
+**Evidence**: requirements.md:484-488; `GcpPullMessageConsumer.cs:290-293` (log then `throw`, verified); Reactor.cs:98, :316-321, :333-339, :373.
+
+**Recommendation**: Either require that an ack failure after a successful routing publish does not escape `Reject` (it is logged, and `Reject` returns `true`), or state explicitly that a rethrow stops the performer and that this is accepted. Also list the clause as asserted or as unasserted.
+
+---
+
+### 4. R-18's "receipt handle is removed on the way out" collides with R-19's release, and R-19 wrongly says the stream release "has no failure of its own" (Score: 48)
+
+- The reference implementation strips the handle from the **in-memory** message before the send: `SqsMessageConsumer.RefreshMetadata` does `message.Header.Bag.Remove("ReceiptHandle")` (:504), called at :279 inside the try. SQS survives this only because it copied the handle first (:257).
+- A GCP port that follows that pattern, and then releases through the consumer's `Requeue` as R-19 prescribes, finds no handle:
+  - Pull `Requeue` returns `false` with no exception and no log (`GcpPullMessageConsumer.cs:337-340`), so R-19's "release fails → Error" is never triggered.
+  - Stream `Requeue` returns `true` and does **nothing** (`GcpPubSubStreamMessageConsumer.cs:219-222`). The message is left outstanding with its lease extended, holding the flow-control slot. That is precisely the hazard R-19 exists to prevent.
+- R-19 (:555-557) says the stream release "completes a local reply … and has no failure of its own". The missing-handle no-op is exactly that failure.
+- AC-18's "delivered again within `W`" would catch this. That is why the score is below threshold.
+
+**Evidence**: requirements.md:513-515 (R-18), :527-530, :555-557 (R-19); source lines as cited above, all verified.
+
+**Recommendation**: In R-18, say the handle is removed from the **routed copy** and kept for the release. In R-19, drop "has no failure of its own", or note the missing-handle no-op.
+
+---
+
+### 5. AC-43 asserts on a live-read count, which R-27(c)(3) forbids (Score: 40)
+
+- R-27(c)(3): "A test may also read the dispatch count **live** as a stop trigger … but the value it asserts is the one read after quit and await."
+- AC-43 reads the count on arrival and asserts equality with it ("the invocation count read after the quit and await equals the count read on arrival"). The arrival read is an asserted operand, not a stop trigger.
+- Also, "the handler was invoked more than 3 times" does not say which read it uses.
+
+**Evidence**: requirements.md:891-895; :1413-1420.
+
+**Recommendation**: Extend R-27(c)(3) to permit a live snapshot as a comparison baseline, and state that "more than 3" uses the post-quit read.
+
+---
+
+### 6. AC-43's refutation mode drops every assertion, and per-configuration refutation is undefined (Score: 38)
+
+- When A-6 is refuted, AC-43 "records that refutation … instead of passing". The R-19 Error, the absent routing topic and the redelivery are all still observable in that run, and the refutation condition itself ("count has passed `M`") evidences the loop. None of them is asserted.
+- On AC-19's branch this leaves R-4's exception with no automated evidence at all (AC-3 excludes it). R-21's accepted exception names only "R-19's bounding clause".
+- A-6 could hold on pull and fail on stream (ModifyAckDeadline versus a streaming Nack). R-21 and AC-31 treat A-6 as a single global outcome.
+
+**Evidence**: requirements.md:1424-1428, :670-674, :1641-1643, :1706.
+
+**Recommendation**: Keep the Error, topic-absent and count-past-`M` assertions in refutation mode, and let only the arrival clause become the ledger record. Say that refutation is recorded per configuration.
+
+---
+
+### 7. R-27(c)(5)'s rationale does not fit AC-43, which was added to its list (Score: 20)
+
+- (c)(5) justifies the bespoke subscriptions by saying the providers do not supply "`-1`, `4`, `1`, `0`, `-3` or a short visibility timeout". AC-43 uses `R = 3`, `M = 5`, the same as the providers. It is bespoke because of its failing `deadLetterRoutingKey`.
+- "obligation 6 specifies the requeue observation they also make": AC-43 makes none.
+
+**Evidence**: requirements.md:899-905.
+
+**Recommendation**: Add "or a failing routing destination (AC-43)", and qualify the obligation-6 sentence.
+
+---
+
+### 8. Citation nits (Score: 15)
+
+- "SQS's failure path (`SqsMessageConsumer.cs:313-314`)": the delete and `return true` are at `:312-313`; `:314` is a brace.
+- R-19's loop paragraph cites only Reactor lines. The Proactor twins are `:317`, `:331`, `:342`, `:371` (DeliveryError) and `:325`, `:379`, `:388` (Unacceptable), elsewhere in the document cited in pairs.
+
+**Recommendation**: Correct the SQS line numbers and add the Proactor twins.
+
+---
+
+## Round-12 remediation spot-check
+
+- **Row 1 (78)**: Landed. AC-43 now has one form per branch, the R-19 Error and absent-topic clauses, and today's-code rationale. Verified:
+  - A `RejectMessageAction` handler reaches `Reactor.cs:337` / `Proactor.cs:371` on every configuration, or `:279` / `:317` through the AggregateException path. Dispatch does not depend on the transport.
+  - That path never calls `RequeueMessage`, so the budget and the count play no part.
+  - `Reject`'s return value is ignored there (`continue`).
+  - Each delivery rejects once, and the native cap allows up to `M = 5` attempts, so "more than 3" holds.
+  - `IncrementUnacceptableMessageCount` is called, but `unacceptableMessageLimit` defaults to 0, which is off (`Reactor.cs:588`).
+
+  Residuals: findings 5 and 6.
+- **Row 2 (64)**: Landed: poll target, 500 ms interval, 60 s ceiling, `W`, and the refutation rule. Under R-3's model the counter can only over-count, so invocations stay at or below `M` when the policy holds, and "count past `M` with no arrival" is a sound refutation. Residual: finding 5 (conflict with R-27(c)(3)).
+- **Row 3 (60)**: Partially. R-19's text and citations landed and are correct (`:349`, `:384`, `:354-358`, `:394-398`). The AC-18 clause is an escape hatch (finding 2), and the R-18 interaction is unaddressed (finding 4).
+- **Row 4 (55)**: Landed at R-21, A-6 and AC-31. Consistent with AC-22 (FR-23 only on AC-19's branch; AC-43 is not a conformance behaviour) and with NFR-7. Residual: finding 6.
+- **Row 5 (50)**: Landed at `:900` and `:925`. Rationale nit: finding 7.
+- **Row 6 (48)**: Landed in both Givens (AC-3 and AC-15). No regression.
+- **Row 7 (40)**: Landed. The wording is incomplete, though: finding 1 shows another way the cap can be missing.
+- **Row 8 (40)**: Landed. The `:290-293` rethrow is verified. Regression: finding 3.
+- **Row 9 (30)**: Landed. `Reactor.cs:173-174`, `:279`, `:286-287`, `:293`, `:309`, `:337`, `:343-344`, `:353` all verified. The Proactor twins are uncited (finding 8).
+
+## Integrity checks
+
+- R-1..R-28, NFR-1..NFR-8, AC-1..AC-43, C-1..C-12 and A-1..A-6 are each defined exactly once, with no gaps.
+  - The apparent duplicates (R-11, R-13, R-15, R-20, AC-19, AC-23, AC-30, AC-33, AC-39) are bold in-text references at :367, :425, :641, :795, :1434, :1525, :1696, :1724 and :1728, not second definitions.
+  - No identifier beyond those ranges is referenced.
+- The R→AC map has 36 rows (28 R, 8 NFR). Every AC except AC-30 and AC-31 appears, and those two are unmapped by design.
+- Coverage gaps: finding 2 (AC-18's clause may never become writable), finding 3 (R-16's ack-failure outcome is unasserted), finding 6 (R-4's exception when A-6 is refuted).
+- Citation spot-checks, all correct:
+  - Reactor.cs: `:320` → `:367`, `:416`, `:494-507`
+  - Proactor.cs: `:354` → `:402`, `:483`, `:500-504`
+  - `MessagePump.cs:171`, `Message.cs:161-164`, `MessageHeader.cs:226`, `:572-575`
+  - GcpPullMessageConsumer.cs: `:276`, `:290-293`, `:306`, `:349`, `:354-358`, `:384`, `:394-398`
+  - GcpPubSubStreamMessageConsumer.cs: `:84`, `:217-224`
+  - GcpStreamConsumer.cs: `:49`, `:71-84`, `:133-135`
+  - GcpPubSubConsumerFactory.cs: `:88-91`, `:110-121`
+  - GcpPubSubMessageGateway.cs: `:220-236`, `:235`, `:251`, `:369-377`, `:482-491`, `:534-543`
+  - `GcpPubSubSubscription.cs:135`
+  - SqsMessageConsumer.cs: `:307-316`, `:496`, `:541`
+- Citation exceptions: `SqsMessageConsumer.cs:313-314` is off by one (finding 8).
+
+## Summary
+
+| Score Range | Count |
+|-------------|-------|
+| 90-100 (Critical) | 0 |
+| 70-89 (High) | 0 |
+| 50-69 (Medium) | 3 |
+| 0-49 (Low) | 5 |
+
+**Total findings**: 8
+**Findings at or above threshold (60)**: 2
+
+## Main-agent validation of this round
+
+- Counted: 64, 62, 50 (Medium); 48, 40, 38, 20, 15 (Low). That gives 0/0/3/5, 8 in total, and two at or above threshold. This agrees with the Summary.
+- Finding 1 re-verified. R-19 (`:571-575`) reads as quoted: the native cap is "the only bound this spec relies on", and the sole unbounded case named is a subscription with no `DeadLetterPolicy`. `GcpPubSubMessageGateway.cs:503-521` grants `roles/pubsub.publisher` on the dead-letter topic, and `:527-557` grants `roles/pubsub.subscriber` on the source subscription, both to the Pub/Sub service agent. These are the bindings Pub/Sub's forwarding needs. R-20 lets both helpers be abandoned, and its restricted-principal example (`:661-664`) is exactly that case. `grep -i "forward\|inactive"` finds no statement anywhere that a tolerated helper disables native forwarding. The local bar is unaffected, because the emulator does not enforce IAM (A-6 is about the cap, not the bindings). The gap is on real projects, which this spec newly makes creatable.
+- Finding 2 re-verified. AC-18's clause (`:1395-1400`) and its entry on the "not writable" list (`:1722-1723`) read as quoted. `grep "ADR MUST\|ADR must"` finds no obligation in R-19 (`:545-578`). Every other entry on that list is backed by one (`:143`, `:276`, `:803`, `:813`, `:980`, R-13 at `:411`).
+- **Finding 2 is a regression from round 12's remediation (row 3). The pattern holds for a seventh round.** Finding 1 is the second exception to the pattern (after round 10's finding 1). It is a pre-existing interaction between R-20 and round 11's bound.
+
+---
+
+# Remediation log — round 13
+
+**Date**: 2026-09-23. **Applied to**: `requirements.md` and `README.md`. Each applied text was
+grepped back from the file on disk, and this log was written from that read-back. **Outcome**: all
+eight findings remediated (the user took the six below threshold as well). The counts are unchanged:
+**28 `R-n`, 8 `NFR-n`, 43 `AC-n`, C-1..C-12, A-1..A-6**. Integrity was re-checked
+programmatically: each identifier is defined once (the second AC-30 line-start match is the bold
+reference at `:1734`, formerly `:1696`), with no gaps and no undefined references. The map has 36
+rows; only AC-30/AC-31 are unmapped. The batch asserted all 25 anchors before writing, and all 25
+applied. No superseded text survives (`grep` for "four elements", "four things",
+`SqsMessageConsumer.cs:313-314` and "has no failure of its own" returns nothing).
+
+**The decisions this round took (the user's, 2026-09-23):**
+- **Finding 1: accept and warn.** A `DeadLetterPolicy` whose forwarding bindings R-20 tolerated the
+  absence of is a second unbounded case, accepted explicitly, like round 11's no-policy case. R-20's
+  Warning gains a fifth element, the consequence. Rejected: accepting with no Warning change;
+  mitigating by omitting the policy or failing creation (which would partly undo #4354).
+- **Finding 2: an ADR MUST, with a code-review fallback.** Rejected: moving the clause to the
+  manual gates now, which would leave the trap R-19 describes untested.
+- **Finding 3's default, taken with the below-threshold fixes:** an ack failure after a successful
+  routing publish does not escape `Reject`.
+
+| # | Score | Remediation | Verified at |
+|---|---|---|---|
+| 1 | 64 | R-19: new paragraph "Nor is a `DeadLetterPolicy` a bound when its forwarding bindings are missing". It cites the two bindings (`GcpPubSubMessageGateway.cs:503-521`, `:555-557`, verified), accepts the loop as unbounded, explicitly, notes that R-8's and R-9's native route goes with it, and notes that the emulator implements no IAM, so A-6 and R-21's bar are unaffected. R-4's exception now reads "configured and able to forward". R-20's Warning now names **five** things, the fifth being the consequence; every restatement was updated (R-20 bullet, NFR-5 ×2, AC-20, AC-21), and NFR-5 now refers to R-20's list rather than restating it. | `:596`, `:188`, `:629`, `:643`, `:1005`, `:1008`, `:1519`, `:1539` |
+| 2 | 62 | R-19: "**The ADR MUST define how this branch is exercised without mocking the transport (C-10)**": a step taking the release's outcome and yielding `Reject`'s result, composed so that `Reject` returns it unaltered. If there is no seam, the ADR records why and the clause becomes a code review. AC-18's clause now asserts the **step's** result, and the composition is a code review. The manual-gate list gains "AC-18's release-failure composition". The "not writable" entry now names the seam R-19 obliges. | `:563`, `:1428`, `:1746`, `:1764` |
+| 3 | 50 | R-16: "**The ack failure does not escape `Reject`**": it is logged at Error, and `Reject` returns `true`. The reason: the pump calls `Reject` inside `catch (DeferMessageAction)`/`catch (RejectMessageAction)` (`Reactor.cs:316`, `:333`; `Proactor.cs:348`, `:367`), and the loop has only a `finally` (`Reactor.cs:373`, `Proactor.cs:408`), all verified. Today's rethrow "changes". AC-15 gains a code-review clause, and the manual-gate list names it. | `:486-494`, `:1400`, `:1748` |
+| 4 | 48 | R-18: the handle is removed from the **routed copy** and kept for R-19's release. The SQS strip-after-copy (`SqsMessageConsumer.cs:257`, `:279`, `:504`) and both GCP no-ops (`GcpPullMessageConsumer.cs:337-340`, `GcpPubSubStreamMessageConsumer.cs:219-222`) are cited, all verified. R-19's "has no failure of its own" is replaced by "throws nothing. Its one silent failure, a missing receipt handle, is excluded by R-18". | `:519`, `:571` |
+| 5 | 40 | R-27(c)(3) permits a live snapshot as a **comparison baseline**, with the asserted value still read after quit and await. AC-43's Then: "the invocation count read after the quit and await is more than 3, and equals the count read on arrival". | `:923`, `:1452` |
+| 6 | 38 | AC-43: refutation is "on that configuration", recorded "in place of its arrival clause", and the Error, absent topic and count past `M` are still asserted. Refutation is recorded **per configuration** (pull `ModifyAckDeadline` vs stream Nack). R-21, A-6, AC-31 and the manual-gate entry are made per-configuration to match. R-21 now cites "AC-43's remaining assertions". | `:1460-1466`, `:698-700`, `:1101`, `:1679`, `:1744` |
+| 7 | 20 | R-27(c)(5): "or a failing routing destination, which is what makes AC-43 bespoke"; the obligation-6 sentence is now limited to AC-6 and AC-35. | `:932-933` |
+| 8 | 15 | `SqsMessageConsumer.cs:313-314` → `:312-313` (verified). R-19's loop paragraph now cites the Proactor twins `:325`, `:379`, `:388` (Unacceptable) and `:317`, `:331`, `:342`, `:371` (DeliveryError), all verified. | `:557`, `:580-583` |
+
+**For round 14's spot-check**, the seams round 13 introduced:
+- **R-20's fifth Warning element.** Is "the consequence" specified precisely enough for AC-20 to
+  assert it? Does it read correctly for the `SetIamPolicyAsync` case and on the emulator, where
+  native forwarding does work?
+- **R-19's ADR MUST and its code-review fallback.** Does the fallback reopen the escape hatch
+  finding 2 closed?
+- **R-16's "ack failure does not escape `Reject`"**, read with R-19's return-`true` rule and the
+  stream consumer, whose ack is local.
+- **R-18's "kept for the original"**, read with AC-15's "no `ReceiptHandle` key".
+- **AC-43's per-configuration refutation**, read with AC-22 and AC-31.

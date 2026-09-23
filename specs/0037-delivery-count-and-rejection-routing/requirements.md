@@ -185,7 +185,7 @@ quit and await are already there — so the behaviour's runtime is unchanged by 
 its routing publish fails — R-19 releases the message instead of acknowledging it, so it is
 redelivered and the handler is invoked again. "Never redelivered a further time" does not hold on
 that path; what bounds it there is the native cap R-19 names where a `DeadLetterPolicy` is
-configured, and nothing where one is not (R-19) — never the budget. AC-3's run configures a working
+configured and able to forward, and nothing where it is not (R-19) — never the budget. AC-3's run configures a working
 dead-letter destination, so the exception does not arise inside it; AC-43 covers it.
 
 > *Example.* `requeueCount: 3` on `AWS / SqsStandard`, handler always defers, no native redrive
@@ -483,9 +483,14 @@ silently. Both `GcpPullMessageConsumer.Reject`/`RejectAsync` and
 `GcpPubSubStreamMessageConsumer.Reject`/`RejectAsync` are bound.
 **If the publish succeeds and the acknowledgement of the original then fails**, the original is
 redelivered and, when rejected again, routed again, so the destination may hold a duplicate. That
-duplicate is accepted — delivery to the destination is at-least-once — and how the ack failure
-surfaces to the pump (its log and `Reject`'s return value) is the ADR's to fix. Today the pull
-consumer logs and rethrows it (`GcpPullMessageConsumer.cs:290-293`).
+duplicate is accepted: delivery to the destination is at-least-once. **The ack failure does not
+escape `Reject`**. It is logged at Error naming the message id, and `Reject` returns `true`, as on
+R-19's path. A rethrow would stop the pump rather than produce the redelivery this paragraph relies
+on. The pump calls `Reject` from inside its `catch (DeferMessageAction)` and
+`catch (RejectMessageAction)` blocks (`Reactor.cs:316`, `:333`; `Proactor.cs:348`, `:367`), and
+the loop that contains them has only a `finally` (`Reactor.cs:373`, `Proactor.cs:408`), so an
+exception thrown there ends that performer. Today the pull consumer logs and rethrows it
+(`GcpPullMessageConsumer.cs:290-293`); that changes.
 
 > *Example (`Unacceptable`, both destinations configured).* `Reject(message, new
 > MessageRejectionReason(RejectionReason.Unacceptable, "could not deserialize"))` on `GCP / Pull`
@@ -511,8 +516,13 @@ This is the one case in which a rejected GCP message is still discarded, and it 
 `originalTopic` = the source topic; `originalMessageType` = the message type header as it was on
 receive; `rejectionReason` = the enum name; `rejectionMessage` = the description, when a non-empty
 description was supplied; `rejectionTimestamp` = an ISO-8601 round-trip (`"o"`) UTC timestamp. The
-GCP-specific receipt handle is removed on the way out, so the routed copy does not carry a stale ack
-id. Key names match the transport's existing casing convention.
+GCP-specific receipt handle is removed from the **routed copy**, so it does not carry a stale ack
+id, and is **kept** for the original, whose release under R-19 needs it. SQS's reference path strips
+the handle from the in-memory message (`SqsMessageConsumer.cs:504`, called at `:279`) and survives
+only because it copied the handle first (`:257`). A GCP port that strips it without copying would
+find nothing to release: the pull `Requeue` returns `false` without logging
+(`GcpPullMessageConsumer.cs:337-340`), and the stream `Requeue` returns `true` having done nothing
+(`GcpPubSubStreamMessageConsumer.cs:219-222`), leaving the message outstanding. Key names match the transport's existing casing convention.
 
 > *Example.* A message rejected with `new MessageRejectionReason(RejectionReason.DeliveryError,
 > "Handle count of messages reached; rejecting at limit")` from topic `orders` arrives on
@@ -544,17 +554,21 @@ exponential back-off between `RequeueDelay` and `MaxRequeueDelay` (default 600 s
 `false`: `RequeueMessage` returns `Reject`'s result, and `false` falls through to the
 acknowledgement (`Reactor.cs:320` → `:367`; `Proactor.cs:354` → `:402`). Returning `false` would have
 the pump acknowledge, and so discard, the message R-19 exists to keep. `true` means "settled by this
-call", as on SQS's failure path (`SqsMessageConsumer.cs:313-314`).
+call", as on SQS's failure path (`SqsMessageConsumer.cs:312-313`).
 
 **If the release itself fails**, that failure is also logged at Error, `Reject` still returns
 `true`, and the message is left to its ack deadline. The release's own result is **not**
 propagated as `Reject`'s return value: the consumer's `Requeue` catches every exception and returns
 `false` (`GcpPullMessageConsumer.cs:354-358`, async `:394-398`), so reusing it as-is and returning
-what it returns would be exactly the discard this requirement forbids. This arises only on
+what it returns would be exactly the discard this requirement forbids. **The ADR MUST define how this branch is
+exercised without mocking the transport (C-10)**: a step that takes the release's outcome and yields
+`Reject`'s result (`true`, with the Error logged), composed so that `Reject` returns that step's
+result unaltered on this path. If the ADR finds that no such seam exists, it records why, and
+AC-18's release-failure clause becomes a code review on the manual-gate list instead. This arises only on
 `GcpPullMessageConsumer`, whose `ModifyAckDeadline` can throw (`GcpPullMessageConsumer.cs:349`,
 async `:384`); the stream consumer's
 release completes a local reply (`GcpStreamMessage.Reject()`, `GcpStreamConsumer.cs:133-135`) and
-has no failure of its own. It is the one case in which R-19 leaves a message outstanding.
+throws nothing. Its one silent failure, a missing receipt handle, is excluded by R-18. It is the one case in which R-19 leaves a message outstanding.
 
 GCP has no incumbent behaviour on this path — today it acks and discards unconditionally — so the
 choice here is a greenfield one, and it is made in favour of preserving the message.
@@ -563,8 +577,9 @@ choice here is a greenfield one, and it is made in favour of preserving the mess
 message's life with a `Reject` (R-4; `Reactor.cs:494-507`) — the very call whose publish is failing —
 so every redelivery past `R` defers, spends the budget, rejects and is released again (R-4's
 exception). Every other rejection the pump issues never consults the budget at all: `Unacceptable`
-(`Reactor.cs:173-174`, `:286-287`, `:343-344`, `:353`), and `DeliveryError` for a handler's
-`RejectMessageAction` or a `ConfigurationException` (`:279`, `:293`, `:309`, `:337`). Any of them
+(`Reactor.cs:173-174`, `:286-287`, `:343-344`, `:353`; `Proactor.cs:325`, `:379`, `:388`), and
+`DeliveryError` for a handler's `RejectMessageAction` or a `ConfigurationException` (`Reactor.cs:279`,
+`:293`, `:309`, `:337`; `Proactor.cs:317`, `:331`, `:342`, `:371`). Any of them
 loops in the same way when its routing publish fails. At the defaults nothing slows the loop: `requeueDelay: 0` configures
 no `RetryPolicy`, and `unacceptableMessageLimit: 0` is off.
 
@@ -577,6 +592,16 @@ deterministically — a missing topic, a denied permission — keeps that messag
 as it fails, logging this requirement's Error on each turn. That is accepted, explicitly, as the
 price of never discarding a message whose destination is configured. A non-zero `requeueDelay`
 slows the loop through its `RetryPolicy` but does not bound it.
+
+**Nor is a `DeadLetterPolicy` a bound when its forwarding bindings are missing.** Pub/Sub can
+forward to the policy's topic only while its service agent holds `roles/pubsub.publisher` on that
+topic and `roles/pubsub.subscriber` on the source subscription, which are the bindings the two IAM
+helpers create (`GcpPubSubMessageGateway.cs:503-521`, `:555-557`). Where R-20 tolerated a helper's
+failure and nothing else provisioned the binding, the policy is configured but cannot forward. The
+loop is then unbounded exactly as with no policy, and so are R-8's and R-9's native route. That is
+also accepted, explicitly: R-20 exists so that such a channel can be created, and R-20's Warning
+says what is then inactive. The emulator implements no IAM (its `GetIamPolicy` is `Unimplemented`,
+R-20), so this case does not arise on R-21's local bar, and A-6 is unaffected by it.
 
 `SqsMessageConsumer.RejectAsync` takes the opposite branch — on a failed DLQ send it deletes the
 source (`:307-316`), which its own code comment records as deliberate infinite-loop avoidance: SQS
@@ -601,8 +626,10 @@ project-level IAM, and when no Cloud Resource Manager surface is reachable at al
 `Unimplemented`, `PermissionDenied` and `Unauthenticated` from the IAM-related calls made during
 subscription creation are tolerated: each is logged at Warning, and channel creation continues.
 
-**A tolerated-call Warning names four things: the helper it abandoned, the RPC, the resource, and the
-status code.** That list is fixed here and every other statement of it in this document — the bullets
+**A tolerated-call Warning names five things: the helper it abandoned, the RPC, the resource, the
+status code, and the consequence** — that native dead-lettering on this subscription (R-8's and
+R-9's route, and R-19's bound) may be inactive until the binding that helper would have made exists
+or is provisioned some other way (R-19). That list is fixed here and every other statement of it in this document — the bullets
 below, NFR-5, AC-20 — refers to it rather than restating it. The **helper** name is not decorative:
 it is what makes AC-20's "exactly two Warnings, one per helper" checkable at all.
 
@@ -613,7 +640,7 @@ consume (`GcpPubSubMessageGateway.cs:482-491`, `:534-543`), so continuing past a
 Therefore:
 
 - a tolerated status from `GetProjectAsync` **abandons that whole IAM helper** — no binding is
-  attempted, and one Warning is logged carrying the four elements above;
+  attempted, and one Warning is logged carrying the five elements above;
 - a tolerated status from `GetIamPolicyAsync` **abandons the remainder of that helper**, so
   `SetIamPolicyAsync` is not called, with one Warning; a tolerated status from `SetIamPolicyAsync`
   ends that helper with one Warning;
@@ -668,10 +695,10 @@ emulator.**
 `gcp-ci` against a real project is welcome as corroboration but is not the bar. A GCP requirement
 whose only evidence is a cloud-only run is not "done" under this spec. This is why R-20 is scoped in
 rather than deferred to #4354: it is the only route to a local proof. **One exception is accepted
-in advance**: if A-6 is refuted, R-19's bounding clause has no local evidence and rests on the
-service's documented behaviour, corroborated on `gcp-ci` where that runs but not required to be.
-R-19 is then "done" on the rest of its evidence (AC-18, AC-43's refutation record), and AC-31
-states the gap.
+in advance**: on a configuration where A-6 is refuted, R-19's bounding clause has no local evidence
+and rests on the service's documented behaviour, corroborated on `gcp-ci` where that runs but not
+required to be. R-19 is then "done" on the rest of its evidence (AC-18, and AC-43's remaining
+assertions beside its refutation record), and AC-31 states the gap.
 
 > *Example.* `docker-compose -f docker-compose-gcp.yaml up -d`, then the scoped GCP conformance
 > suite, then `docker-compose -f docker-compose-gcp.yaml down -v` and a repeat run, produce the same
@@ -892,16 +919,19 @@ requires:
    observation window. That is strictly later than the dead-letter poll's break, so a dispatch that
    happened between the message reaching the destination and the pump stopping is still counted.
    A test may also read the dispatch count **live** as a stop trigger — AC-1 quits the pump when it
-   reaches 3 — but the value it asserts is the one read after quit and await.
+   reaches 3 — but the value it asserts is the one read after quit and await. A test may likewise
+   take a live snapshot as a **comparison baseline**: AC-43 compares the count on arrival with the
+   count after quit and await. What it asserts is still the value read after quit and await.
 4. **An assertion in both FR-23 templates** (`…/Reactor/When_requeuing_a_message_too_many_times_should_move_to_dead_letter_queue.cs.liquid`
    and its Proactor twin) that the count is **`<= RequeueCount`**, and regeneration of the generated
    FR-23 tests for every configuration.
 5. **Availability to the ACs outside FR-23 that also assert a count** — AC-1, AC-5, AC-6, AC-34's
    second clause, AC-35, AC-42 and AC-43 — which run against bespoke subscriptions rather than a conformance
    provider (R-27(a) fixes all twelve providers at `R = 3`, so none supplies `-1`, `4`, `1`, `0`,
-   `-3` or a short visibility timeout / ack deadline / invisible duration). The pump-driven ACs among
-   them (all but AC-42) use the same counter and the same key; obligation 6 specifies the requeue
-   observation they also make. AC-42 runs no pump, so it has no dispatch count: it uses only
+   `-3`, a short visibility timeout / ack deadline / invisible duration, or a failing routing
+   destination, which is what makes AC-43 bespoke). The pump-driven ACs among them (all but AC-42)
+   use the same counter and the same key; obligation 6 specifies the requeue observation that AC-6
+   and AC-35 also make. AC-42 runs no pump, so it has no dispatch count: it uses only
    obligation 6's per-receive record, or reads the count directly from the returned message.
 6. **A requeue observation, specified to the same degree.** AC-6's and AC-35's "`Requeue` is never
    called" is counted, not inferred: a recording consumer the test **composes around** the real
@@ -972,11 +1002,10 @@ raises a budget Warning, so a high-throughput consumer cannot be flooded by one.
 channel-creation route; AC-7, AC-10 and AC-11 each count their own rule's finding.
 
 **NFR-5. Tolerated IAM failures are visible and narrow.** Each tolerated `Unimplemented`,
-`PermissionDenied` or `Unauthenticated` logs one Warning carrying the four elements R-20 fixes — the
-helper abandoned, the RPC, the resource, and the status code. No `catch (Exception)` may be used to implement R-20 — the tolerance is by status code,
+`PermissionDenied` or `Unauthenticated` logs one Warning carrying the five elements R-20 fixes. No `catch (Exception)` may be used to implement R-20 — the tolerance is by status code,
 so an unrelated failure is never hidden. R-20's client-construction case, which carries no status
 code, is scoped to the Resource Manager client construction alone and logs a Warning carrying the
-same four elements, with the RPC element reading as the operation abandoned rather than a call made.
+same five elements, with the RPC element reading as the operation abandoned rather than a call made.
 **The ADR MUST name the exception type caught there**: "the narrowest type that call site can throw"
 is not a specification, and two implementers would choose two different types. A
 tolerated failure never widens: the subscription is still created, and no other call is affected.
@@ -1069,8 +1098,8 @@ an instruction to implement one of these.
   Nacks and `ModifyAckDeadline(…, 0)` releases as attempts, as the production service documents.
   *Not verified*, and not measurable until R-20 makes a DLQ-backed channel creatable on the
   emulator. It is what bounds R-19's loop there, and AC-43 measures it. If it is refuted, R-19's
-  release is unbounded on the emulator: AC-43 records the refutation in `conformance-status.md`'s
-  GCP paragraph instead of passing, and R-19's production statement, which rests on the service's
+  release is unbounded on the emulator: AC-43 records the refutation, per configuration, in
+  `conformance-status.md`'s GCP paragraph in place of its arrival clause, and R-19's production statement, which rests on the service's
   documented behaviour, is unchanged. That is the one accepted exception to R-21's local bar, and
   AC-31 states it.
 
@@ -1368,6 +1397,9 @@ description was supplied with the rejection reason (R-18) — so the `None` call
 description in R-16's example carries four keys, not five; in every case it carries no
 `ReceiptHandle` key; and in every case a subsequent read of the source subscription returns
 `MessageType.MT_NONE`.
+**And**, by code review (⚠️ a broker cannot be made to fail the acknowledgement on demand, and C-10
+forbids mocking the transport): an acknowledgement failure after a successful routing publish is
+caught inside `Reject`, logged at Error naming the message id, and `Reject` returns `true` (R-16).
 
 **AC-16** (R-16) — **Given**, on each of the four GCP configurations and both consumers, a
 subscription with a `deadLetterRoutingKey` and **no**
@@ -1393,11 +1425,13 @@ message was released by the consumer's requeue call (R-19) rather than left outs
 outstanding pull message would not return before its 60 s deadline, and an outstanding stream
 message would have its lease extended rather than return at all.
 **And Given** R-19's release-failure branch on `GcpPullMessageConsumer`, exercised directly as a
-unit test in the manner of AC-21 — the step that follows a release, presented with the release's
-failure — **When** it runs in both variants, **Then** an Error is logged naming the message id and
-`Reject` returns `true`; it does not return the release's `false`. ⚠️ A broker cannot be made to
-fail `ModifyAckDeadline` on demand, and C-10 forbids mocking the transport, so this clause needs the
-seam the ADR defines for that step; it is not writable until the ADR exists.
+unit test in the manner of AC-21 through the step R-19 obliges the ADR to define, **When** that step
+is presented with a failed release in both variants, **Then** an Error is logged naming the message
+id and the step yields `true`, not the release's `false`. ⚠️ That `Reject` returns the step's
+result unaltered on this path is a code review of the composition (a manual gate). A broker cannot be
+made to fail `ModifyAckDeadline` on demand, and C-10 forbids mocking the transport, so the step's
+assertion is not writable until the ADR defines the seam. If the ADR records that none exists, the
+whole clause is a code review.
 
 **AC-43** (R-19, R-4, A-6) — **Given**, on each of the four GCP configurations and in both variants,
 a subscription with `requeueCount: 3`, `requeueDelay` zero, a `DeadLetterPolicy` with
@@ -1415,16 +1449,20 @@ R-13's branch:
 invocation count, waits a further `W` of 10 s (AC-18's `W`), then quits and awaits the pump;
 **Then** the message is read from the policy topic **without** rejection metadata (R-9); at least
 one R-19 Error naming the message id and `"DeliveryError"` was logged; the `deadLetterRoutingKey`
-topic still does not exist; the handler was invoked more than 3 times; and the invocation count read
-after the quit and await equals the count read on arrival, so the message was not delivered again
+topic still does not exist; the invocation count read after the quit and await is more than 3,
+and equals the count read on arrival, so the message was not delivered again
 from the source during `W`.
 The Error and the absent topic prove that the failed-routing path ran. Without them, today's code
 passes: its count is inert, the message is only ever requeued, and the native cap forwards it with
 no `Reject` ever made. "More than 3" proves that the loop outlived the rejection that failed. It
 relies on A-4's approximate counter jumping at most once before `M = 5`. ⚠️ If the message is not
 read from the policy topic within the 60 s ceiling **and** the invocation count has passed `M`, A-6
-is refuted. AC-43 then records that refutation in `conformance-status.md`'s GCP paragraph instead of
-passing (A-6). Not reading the message with the count at or below `M` is an ordinary failure, not a
+is refuted on that configuration. AC-43 then records the refutation in `conformance-status.md`'s GCP
+paragraph in place of its arrival clause (A-6). It still asserts the rest: the R-19 Error, the
+absent `deadLetterRoutingKey` topic, and the count past `M`, which is itself evidence that the loop
+ran. Refutation is recorded **per configuration**: the pull consumer releases with
+`ModifyAckDeadline` and the stream consumer with a streaming Nack, so A-6 may hold for one and not
+the other. Not reading the message with the count at or below `M` is an ordinary failure, not a
 refutation.
 
 **AC-39** (R-13, A-2 — measurement) — ⚠️ **Given** a DLQ-backed GCP subscription on the Pub/Sub
@@ -1478,7 +1516,7 @@ or `PermissionDenied` status, **or** a failure to construct the Resource Manager
 the ambient credentials produce — is tolerated in **both**
 `UpdateIAmRoleForDeadLetterAsync` and `UpdateIAmRoleForSubscriptionAsync`; each abandons its binding
 at that point so `GetIamPolicyAsync` is not reached; and **exactly two** Warnings are logged, one per
-helper, each carrying R-20's four elements.
+helper, each carrying R-20's five elements.
 > Which of the two shapes occurs is decided by ambient credentials, not by this spec, so AC-20 must
 > not hard-assert the status. `GcpMessagingGatewayConnection.CreateProjectsClientAsync` (`:173`)
 > builds `new ProjectsClientBuilder { Credential = Credential }`, which resolves Application Default
@@ -1498,7 +1536,7 @@ rethrown unchanged and nothing is logged as tolerated; **And When** it is presen
 logged.
 **And Given** R-20's client-construction case — a Resource Manager client that cannot be constructed
 because credentials do not resolve, so there is no `RpcException` to inspect — **When** it is
-exercised directly, **Then** it is tolerated, one Warning carrying R-20's four elements is logged,
+exercised directly, **Then** it is tolerated, one Warning carrying R-20's five elements is logged,
 the type caught is the one the ADR names (NFR-5), and nothing wider is caught. ⚠️ The
 "type the ADR names" clause is not writable until the ADR exists.
 > A broker-level negative case is not available and must not be written: when `DeadLetter != null`,
@@ -1638,7 +1676,7 @@ explicitly which cells this spec **could not** move and why:
 - `AWS / SqsFifo` and `AWS.V4 / SqsFifo` FR-9, `MSSQL` FR-16, `Redis` FR-16, `MQTT` FR-16,
   `RMQ.*` FR-5, `RocketMQ` FR-2 and FR-15 — unrelated to this family. (`MQTT / MqttMessagingGateway`
   therefore appears twice in this list: FR-16 here, FR-23 above.)
-- Where A-6 was refuted — R-19's native-cap bound, which is then unevidenced on the emulator and
+- On each configuration where A-6 was refuted — R-19's native-cap bound, which is then unevidenced on the emulator and
   rests on the service's documented behaviour (R-21's accepted exception). This is a requirement,
   not a cell, and is stated in the GCP paragraph beside AC-43's refutation record.
 
@@ -1703,7 +1741,11 @@ appears:
 - **AC-23** and **AC-39** — measurements that select a branch; both outcomes are legitimate, so
   neither can fail.
 - **AC-28** — a recorded enumeration of broker calls.
-- **AC-43**, only where A-6 is refuted — the refutation is then a ledger record, not an assertion.
+- **AC-43's arrival clause**, only on a configuration where A-6 is refuted: the refutation is then
+  a ledger record, not an assertion. AC-43's other clauses are still asserted.
+- **AC-18's release-failure composition**: a code review that `Reject` returns the ADR-defined
+  step's result unaltered. If the ADR records that no seam exists, the whole of that clause (R-19).
+- **AC-15's acknowledgement-failure clause**: a code review (R-16).
 - **AC-30** and **AC-31** — ledger edits.
 - **The ledger clauses of AC-24, AC-25 and AC-40** — "the cell reads `Fixed`", "the cell reads
   `Deferred` pointing at the upstream blocker", "the four `GCP / *` FR-23 cells read `Deferred`
@@ -1719,8 +1761,7 @@ Every other clause of every other AC is an assertion a test can make.
 **Assertable, but not writable until the ADR exists** — these read a decision the ADR must first
 record, so the test can be written only after design: **AC-11**'s Given (the subscription shapes that
 trip R-11), **AC-18**'s and **AC-43**'s Given (the `makeChannels` the GCP dead-letter producer is
-built with), **AC-18**'s release-failure clause (the seam the ADR defines for the step after a
-release), **AC-21**'s client-construction clause (the exception type the ADR names, NFR-5),
+built with), **AC-18**'s release-failure step (the seam R-19 obliges the ADR to define), **AC-21**'s client-construction clause (the exception type the ADR names, NFR-5),
 **AC-33**'s first clause (the normalisation the ADR specifies), **AC-34**'s second
 clause (the transports the ADR's table classifies exact), and **AC-42** on `GCP / Stream` and
 `GCP / StreamOrdering` (the procedure the ADR records under R-13's stream-consumer input, or the
