@@ -2,7 +2,6 @@
 using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
@@ -93,12 +92,24 @@ namespace Paramore.Brighter.MsSql.EntityFrameworkCore
         /// <summary>
         /// Rolls back a transaction
         /// </summary>
+        public override void Rollback()
+        {
+            var currentTransaction = _context.Database.CurrentTransaction;
+            if (currentTransaction is not null)
+            {
+                currentTransaction.Rollback();
+            }
+        }
+
+        /// <summary>
+        /// Rolls back a transaction
+        /// </summary>
         public override async Task RollbackAsync(CancellationToken cancellationToken = default)
         {
-            if (HasOpenTransaction)
+            var currentTransaction = _context.Database.CurrentTransaction;
+            if (currentTransaction is not null)
             {
-                try { await ((SqlTransaction)GetTransaction()).RollbackAsync(cancellationToken); } catch (Exception) { /* Ignore*/}
-                Transaction = null;
+                await currentTransaction.RollbackAsync(cancellationToken);
             }
         }
 
