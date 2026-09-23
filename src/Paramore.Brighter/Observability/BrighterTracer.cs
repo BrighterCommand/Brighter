@@ -187,7 +187,9 @@ public class BrighterTracer : IAmABrighterTracer
             tags.Add(BrighterSemanticConventions.MessagingDestination, message.Header.Topic);
             tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value);
             tags.Add(BrighterSemanticConventions.MessageId, message.Id.Value);
+#pragma warning disable CS0618 // Preserve the legacy message type in telemetry.
             tags.Add(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
+#pragma warning restore CS0618
             tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Memory.Length);
             //reuse the header the receive span already serialized; serialize here only when there was no receive span
             tags.Add(BrighterSemanticConventions.MessageHeaders,
@@ -298,7 +300,9 @@ public class BrighterTracer : IAmABrighterTracer
         {
             span.AddTag(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value);
             span.AddTag(BrighterSemanticConventions.MessageId, message.Id.Value);
+#pragma warning disable CS0618 // Preserve the legacy message type in telemetry.
             span.AddTag(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
+#pragma warning restore CS0618
             span.AddTag(BrighterSemanticConventions.MessageBodySize, message.Body.Memory.Length);
             //returned so the process span can reuse it instead of serializing the header again
             serializedHeader = JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options);
@@ -699,7 +703,9 @@ public class BrighterTracer : IAmABrighterTracer
             {
                 //OTel specification attributes
                 tags.Add(BrighterSemanticConventions.MessageId, message.Id.Value);
+#pragma warning disable CS0618 // Preserve the legacy message type in telemetry.
                 tags.Add(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
+#pragma warning restore CS0618
                 tags.Add(BrighterSemanticConventions.MessagingDestination, publication.Topic);
                 tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId,
                     message.Header.PartitionKey.Value);
@@ -975,7 +981,9 @@ public class BrighterTracer : IAmABrighterTracer
             tags.Add(BrighterSemanticConventions.MessageId, message.Id.Value);
             tags.Add(BrighterSemanticConventions.MessagingDestination, message.Header.Topic);
             tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Memory.Length);
+#pragma warning disable CS0618 // Preserve the legacy message type in telemetry.
             tags.Add(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
+#pragma warning restore CS0618
             tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey.Value);
             tags.Add(BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header));
         }
@@ -1047,7 +1055,9 @@ public class BrighterTracer : IAmABrighterTracer
             tags.Add(BrighterSemanticConventions.MessageId, message.Id.Value);
             tags.Add(BrighterSemanticConventions.MessageHeaders,
                 JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options));
+#pragma warning disable CS0618 // Preserve the legacy message type in telemetry.
             tags.Add(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
+#pragma warning restore CS0618
             tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Memory.Length);
             tags.Add(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId.Value);
         }

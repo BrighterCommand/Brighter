@@ -75,7 +75,9 @@ public class AzureServiceBusMessagePublisher
             azureServiceBusMessage.ApplicationProperties[header.Key] = header.Value;
         }
             
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
         azureServiceBusMessage.ApplicationProperties[ASBConstants.MessageTypeHeaderBagKey] = message.Header.MessageType.ToString();
+#pragma warning restore CS0618
         azureServiceBusMessage.ApplicationProperties[ASBConstants.HandledCountHeaderBagKey] = message.Header.HandledCount;
         azureServiceBusMessage.ApplicationProperties[ASBConstants.ReplyToHeaderBagKey] = message.Header.ReplyTo?.Value;
         

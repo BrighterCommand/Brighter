@@ -158,14 +158,18 @@ namespace Paramore.Brighter.ServiceActivator
                         }
 
                         // empty queue
+#pragma warning disable CS0618 // Message types still identify pump control signals.
                         if (message.Header.MessageType == MessageType.MT_NONE)
+#pragma warning restore CS0618
                         {
                             Thread.Sleep(EmptyChannelDelay); //-- pause pump; blocks consuming thread on empty queue;
                             continue;
                         }
 
                         // failed to parse a message from the incoming data
+#pragma warning disable CS0618 // Message types still identify pump control signals.
                         if (message.Header.MessageType == MessageType.MT_UNACCEPTABLE)
+#pragma warning restore CS0618
                         {
                             Log.FailedToParseMessage(s_logger, message.Id.Value, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
                             var description = $"MessagePump: Failed to parse a message from the incoming message with id {message.Id} from {Channel.Name} on thread # {Environment.CurrentManagedThreadId}";
@@ -177,7 +181,9 @@ namespace Paramore.Brighter.ServiceActivator
                         }
 
                         // QUIT command
+#pragma warning disable CS0618 // Message types still identify pump control signals.
                         if (message.Header.MessageType == MessageType.MT_QUIT)
+#pragma warning restore CS0618
                         {
                             Log.QuitReceivingMessages(s_logger, Channel.Name, Environment.CurrentManagedThreadId);
                             Channel.Dispose();
@@ -197,7 +203,7 @@ namespace Paramore.Brighter.ServiceActivator
 
                         var request = TranslateMessage(message, context);
 
-                        InvokeDispatchRequest(request, message, context);
+                        InvokeDispatchRequest(request, context);
 
                         processSpan?.SetStatus(ActivityStatusCode.Ok);
                     }
@@ -384,28 +390,25 @@ namespace Paramore.Brighter.ServiceActivator
             Channel.Acknowledge(message);
         }
         
-        private void DispatchRequest<TRequest>(MessageHeader messageHeader, TRequest request, RequestContext requestContext) where TRequest : class, IRequest
+        private void DispatchRequest<TRequest>(TRequest request, RequestContext requestContext) where TRequest : class, IRequest
         {
             Log.DispatchingMessage(s_logger, request.Id.Value, Thread.CurrentThread.ManagedThreadId, Channel.Name);
             requestContext.Span?.AddEvent(new ActivityEvent("Dispatch Message"));
 
-            var messageType = messageHeader.MessageType;
-
-            ValidateMessageType(messageType, request);
-
-            switch (messageType)
+            switch (request)
             {
-                case MessageType.MT_COMMAND:
+                case ICommand:
                 {
                     CommandProcessor.Send(request, requestContext);
                     break;
                 }
-                case MessageType.MT_DOCUMENT:
-                case MessageType.MT_EVENT:
+                case IEvent:
                 {
                     CommandProcessor.Publish(request, requestContext);
                     break;
                 }
+                default:
+                    throw new InvalidMessageAction($"Mapped request type '{request.GetType().FullName}' must implement ICommand or IEvent.");
             }
         }
 
@@ -428,7 +431,7 @@ namespace Paramore.Brighter.ServiceActivator
             return Channel.Reject(message, reason);
         }
         
-        private void InvokeDispatchRequest(IRequest request, Message message, RequestContext context)
+        private void InvokeDispatchRequest(IRequest request, RequestContext context)
         {
             // NOTE: DispatchRequest<TRequest> is a generic method constrained to TRequest : class, IRequest, but at runtime
             // we only have an IRequest reference due to the dynamic type lookup. To call the generic method with the actual
@@ -438,7 +441,7 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 MethodInfo dispatchMethod = MakeDispatchMethod(request);
 
-                dispatchMethod.Invoke(this, [message.Header, request, context]);
+                dispatchMethod.Invoke(this, [request, context]);
             }
             catch (TargetInvocationException tie)
             {
