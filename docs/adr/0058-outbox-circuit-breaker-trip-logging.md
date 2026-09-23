@@ -150,19 +150,40 @@ public record CircuitBreakerSpanInfo(
     int CooldownCount);
 ```
 
-New semantic convention constants in `BrighterSemanticConventions` (its own instrumentation
-domain, matching `MessagingInstrumentationDomain`/`DbInstrumentationDomain`; the existing generic
-`Operation` const is reused for the operation tag, matching every other `Create*Span` method):
+New semantic convention constants in `BrighterSemanticConventions`. The closest structural
+precedent for "a new domain with its own `InstrumentationDomain`, `SpanInfo` record, and
+`Operation` enum" is claim check, not the flat `paramore.brighter.*` handler/archive attributes —
+`ClaimCheckOperation`/`ClaimCheckProvider`/`ClaimCheckBucketName` are prefixed with the domain name
+itself (`claim_check.*`), not `paramore.brighter.claim_check.*`. Circuit breaker follows the same
+shape:
 
 ```csharp
 public const string CircuitBreakerInstrumentationDomain = "circuit_breaker";
-public const string CircuitBreakerTopic = "paramore.brighter.circuitbreaker.topic";
-public const string CircuitBreakerCooldownCount = "paramore.brighter.circuitbreaker.cooldown_count";
+public const string CircuitBreakerTopic = "circuit_breaker.topic";
+public const string CircuitBreakerCooldownCount = "circuit_breaker.cooldown_count";
+```
+
+New `InstrumentationOptions` flag. Every existing domain got its own bit when it was added
+(`Messaging = 8`, `DatabaseInformation = 16`, `ClamCheck = 32`, `Brighter = 64`); circuit breaker
+gets the next one rather than overloading an unrelated existing flag:
+
+```csharp
+public enum InstrumentationOptions
+{
+    // ...existing values unchanged...
+    CircuitBreaker = 128,   // (circuit_breaker) => circuit breaker trip/re-trip/reset detail
+    All = RequestInformation | RequestBody | RequestContext | Messaging | DatabaseInformation
+        | ClamCheck | Brighter | CircuitBreaker
+}
 ```
 
 New method on `IAmABrighterTracer`, implemented in `BrighterTracer` following the `CreateDbSpan`/
 `CreateClaimCheckSpan` pattern (an `ActivityKind.Internal` span, since a trip/reset is a Brighter-
-internal decision, not a call to an external system):
+internal decision, not a call to an external system). Tag gating follows the same two-tier
+convention every comparable span uses: `RequestInformation` gates the generic `Operation` tag
+(see `CreateArchiveSpan`, `CreateClearSpan`, `CreateBatchSpan`, `CreateClaimCheckSpan`), and the
+new domain-specific flag gates the richer detail (mirroring how `ClamCheck` gates claim check's
+provider/bucket/id tags):
 
 ```csharp
 Activity? CreateCircuitBreakerSpan(
@@ -179,9 +200,13 @@ public Activity? CreateCircuitBreakerSpan(CircuitBreakerSpanInfo info, Instrumen
 
     var tags = GetNewTagsCollection(options, BrighterSemanticConventions.CircuitBreakerInstrumentationDomain);
 
-    if (options.HasFlag(InstrumentationOptions.Messaging))
+    if (options.HasFlag(InstrumentationOptions.RequestInformation))
     {
         tags.Add(BrighterSemanticConventions.Operation, info.Operation.ToSpanName());
+    }
+
+    if (options.HasFlag(InstrumentationOptions.CircuitBreaker))
+    {
         tags.Add(BrighterSemanticConventions.CircuitBreakerTopic, info.Topic.Value);
         tags.Add(BrighterSemanticConventions.CircuitBreakerCooldownCount, info.CooldownCount);
     }
@@ -261,15 +286,25 @@ Extend `IAmABrighterMessagingMeter` / `MessagingMeter` (rather than adding a thi
 meter interface for one instrument) with a single `Counter<int>`, tagged by operation and topic —
 the same shape as the existing `_sentMessagesCounter`, which already tags by
 `MessagingDestination` (topic), so per-topic cardinality here is consistent with existing practice,
-not a new category of risk:
+not a new category of risk.
+
+The instrument name deliberately does **not** live under the bare `messaging.*` namespace. That
+class's own doc comment states it generates metrics "following OpenTelemetry Semantic Conventions
+1.29.0", and every existing instrument name (`messaging.client.sent.messages`,
+`messaging.client.operation.duration`) is an official name from that spec — circuit breaking is
+not part of it. Using the `paramore.brighter.*` prefix that every other Brighter-specific,
+non-standard attribute already uses keeps that distinction honest, at the cost of one instrument
+in this class not being a strict OTel-standard name like its four siblings — a conscious, narrow
+exception rather than a new dedicated meter, given it's currently a single instrument (see
+Alternative 5):
 
 ```csharp
 private readonly Counter<int> _circuitBreakerTripsCounter = meterFactory
     .Create(BrighterSemanticConventions.MeterName)
     .CreateCounter<int>(
-        name: "messaging.circuitbreaker.trips",
+        name: "paramore.brighter.circuit_breaker.trips",
         description: "Number of times a topic's outbox circuit breaker tripped, re-tripped, or reset.",
-        unit: "{event}");
+        unit: "{trip}");
 
 private static readonly FrozenSet<string> s_circuitBreakerTripsCounterAllowedTags = new[]
 {
@@ -281,7 +316,20 @@ public void AddCircuitBreakerEvent(Activity activity)
 {
     _circuitBreakerTripsCounter.Add(1, [..activity.TagObjects.Filter(s_circuitBreakerTripsCounterAllowedTags), .._serviceAttributes]);
 }
+
+public bool Enabled =>
+    _clientOperationDurationHistogram.Enabled ||
+    _sentMessagesCounter.Enabled ||
+    _consumedMessagesCounter.Enabled ||
+    _processedMessagesHistogram.Enabled ||
+    _circuitBreakerTripsCounter.Enabled;
 ```
+
+`Enabled` must fold in the new counter: `BrighterMetricsFromTracesProcessor.OnEnd` short-circuits
+entirely on `!Enabled` (`dbMeter.Enabled || messagingMeter.Enabled`) before it ever looks at the
+domain, so if `MessagingMeter.Enabled` didn't account for `_circuitBreakerTripsCounter`, a listener
+attached only to the new counter (none of the other four instruments) would have its events
+silently dropped at that top-level check.
 
 This is deliberately a `Counter<int>` only (no `UpDownCounter`/gauge for "currently tripped topic
 count"): a counter answers "how often is this happening" and is enough to alert on rate/increase
@@ -385,8 +433,11 @@ Full parity with the one-domain-per-meter pattern `MessagingMeter`/`DbMeter` est
 **Rejected because**: it's a new interface, a new class, and a new DI registration for what is
 currently a single instrument. Circuit breaking is a publish-health concern conceptually under
 "messaging" already (the same domain `_sentMessagesCounter` lives in), so extending
-`IAmABrighterMessagingMeter` was chosen as proportionate to the current scope. Nothing here
-precludes graduating to a dedicated meter later if circuit-breaker metrics grow.
+`IAmABrighterMessagingMeter` was chosen as proportionate to the current scope. This does mean
+`MessagingMeter` holds one instrument (`paramore.brighter.circuit_breaker.trips`) that isn't a
+strict OTel Semantic Conventions name like its four siblings — an accepted, narrow exception (see
+Metrics, above) rather than a reason to reverse this choice. Nothing here precludes graduating to
+a dedicated meter later if circuit-breaker metrics grow beyond one instrument.
 
 ### Alternative 6: Add an `UpDownCounter` for live tripped-topic count
 
