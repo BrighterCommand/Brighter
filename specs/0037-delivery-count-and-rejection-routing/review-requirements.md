@@ -2597,3 +2597,178 @@ finding 5's return-value clause from a nicety to a requirement.
 - **A-6**, read with R-21 (the emulator bar) and AC-31.
 - **The "`Reject` returns `true`" rule**, read with R-16/R-17 and with the existing stream `Reject`, which calls `Accepted()`.
 - **AC-18's `W` and the 60 s ack deadline**, read with C-6 and the Pub/Sub ack-deadline range.
+
+---
+
+# Review: requirements (round 12) — 0037-delivery-count-and-rejection-routing
+
+**Date**: 2026-09-23
+**Threshold**: 60
+**Verdict**: NEEDS WORK
+
+3 findings at or above threshold 60. Address these before approving.
+
+## Findings
+
+### 1. AC-43 passes on today's unfixed GCP code, and on the AC-40 branch its "R-4's exception was exercised" is false (Score: 78)
+
+AC-43 is round 11's pump-driven proof of R-19's bound and R-4's exception. Its Then has three clauses: the message is read from the `DeadLetterPolicy` topic without metadata, it is not delivered again from the source, and the handler ran more than 3 times. None of them requires the failed-routing path to have run.
+
+- **Today's code passes it.** On GCP today the count never advances. Every redelivery presents the stored count, the pump bumps it to 1, and `1 >= 3` is false. A deferring handler under AC-43's Given is therefore only ever *requeued* (`ModifyAckDeadline(…,0)` / Nack) and never rejected. The routing publish is never attempted. After `MaxDeliveryAttempts: 5` Pub/Sub forwards the message natively with no metadata, and the handler has run 5 times. All three Then clauses hold (given A-6). A criterion that the pre-change code satisfies cannot evidence R-19's release or R-4's exception.
+- **On the AC-40 branch the closing claim is false.** "This holds on both of R-13's branches … so R-4's exception was exercised, and what ended it was the native cap." On the AC-40 branch no GCP mechanism advances the count. The budget never fires, `Reject` is never called, and R-4's exception ("When the rejection that spends the budget cannot be routed") never occurs. The native cap ends a plain requeue loop, which is R-6/R-9 territory, not R-19.
+- **It cannot tell R-19's release apart from a broken budget on the first branch either.** AC-19 separately asserts that the budget fires. But AC-43 is the only criterion mapped to R-4's exception, and it would stay green if the budget-exhaustion `Reject` were never reached.
+
+**Evidence**: AC-43: "the message is read from the `DeadLetterPolicy` topic **without** rejection metadata (R-9), it is not delivered again from the source subscription, and the handler was invoked more than 3 times — so R-4's exception was exercised … This holds on both of R-13's branches, because the native cap counts attempts whether or not Brighter's budget runs down." `Reactor.cs:492-513`: `Reject` is reached only through `HandledCountReached`; otherwise the path is `Channel.Requeue`. `GcpPullMessageConsumer.cs:349` is the Requeue call (`ModifyAckDeadline(…,0)`).
+
+**Recommendation**: Make AC-43 assert that the path it is named for actually ran: at least one R-19 Error logged, and/or at least one `Reject(DeliveryError)` counted by the recording consumer; also require that the `deadLetterRoutingKey` topic is still absent afterwards, as AC-18 does. Then either confine AC-43 to R-13's first branch, or drive the failed-routing `Reject` on the AC-40 branch by a route that does not depend on the count. Correct "holds on both of R-13's branches".
+
+---
+
+### 2. AC-43 has no stop trigger, no ceiling and no observation interval for "not delivered again", so it cannot decide whether A-6 was refuted (Score: 64)
+
+- **Stop trigger.** "When a real pump runs until the quit and await that close R-4's observation window". R-4 defines that window only for the FR-23 template: quit two statements after the DLQ poll breaks, polling every 500 ms and giving up at 60 s. AC-43 is a bespoke test. It does not say which destination is polled, at what interval or with what ceiling, or what triggers the quit.
+- **"Not delivered again from the source subscription"**: when the quit is issued straight after the poll breaks, this is observed over an interval that is effectively zero. Two implementers would choose different waits, and one of them makes the clause vacuous.
+- **A-6's refutation branch** needs a defined ceiling. Without one, there is no point at which "never reached the policy topic" becomes a refutation rather than a slow run.
+- **Margin under A-4.** "More than 3" against `M = 5` tolerates one counter jump of 2, but not two. That is acceptable, but it is unstated.
+
+**Recommendation**: In AC-43's When, state the poll target (the policy topic's subscription), the interval and the ceiling (e.g. 500 ms / 60 s, NFR-7). State an explicit post-arrival wait for "not delivered again", and require that the dispatch count did not increase after the policy-topic arrival was observed. State that failing to arrive within the ceiling is what records A-6 as refuted.
+
+---
+
+### 3. R-19's release-failure rule ("`Reject` still returns `true`") is load-bearing but has no AC, and is not listed as untested; its citation is wrong (Score: 60)
+
+R-19 says that if the pull release throws, the failure is logged at Error, `Reject` still returns `true`, and the message is left to its ack deadline. `false` falls through to `AcknowledgeMessage` and discards the message.
+
+- **A trap for implementers.** The obvious implementation reuses the consumer's own `Requeue`. That call catches every exception and returns `false` (`GcpPullMessageConsumer.cs:354-358`, async `:394-398`). Propagating its result is exactly the discard R-19 forbids.
+- **No test pins it.** AC-18 covers only the successful release. Neither the manual-gate list nor the "not writable" list mentions this clause. It is therefore neither asserted nor recorded as unassertable, contrary to "Every other clause of every other AC is an assertion a test can make".
+- **Citation.** "`GcpPullMessageConsumer.cs:360-364`" points at the doc-comment block of `RequeueAsync`. The catch blocks are at `:354-358` and `:394-398`.
+
+**Recommendation**: Add an AC clause, or list it explicitly as unasserted with the reason. State that the release result must not be propagated as `Reject`'s return value. Fix the citation.
+
+---
+
+### 4. A refuted A-6 leaves R-19's bound with no local evidence, which R-21 forbids, and nothing says R-19 is still "done" (Score: 55)
+
+R-21: "A GCP requirement whose only evidence is a cloud-only run is not 'done' under this spec." If A-6 is refuted, R-19's bound and R-4's exception have no run anywhere, only vendor documentation. That is weaker than the cloud-only evidence R-21 already rejects. AC-31's honesty list does not mention the case.
+
+**Recommendation**: State explicitly that R-19's bounding clause is an accepted exception to R-21 when A-6 is refuted, and name what "done" then means. Alternatively, add the case to AC-31's list.
+
+---
+
+### 5. R-27(c)(5) and the "Without (c)" list omit AC-43, although AC-43 asserts a handler-invocation count (Score: 50)
+
+R-27(c)(5) lists "AC-1, AC-5, AC-6, AC-34's second clause, AC-35 and AC-42". The "Without (c)" sentence lists R-4, AC-3, AC-5, AC-6 and AC-35. Neither list was updated when AC-43 was added.
+
+**Recommendation**: Add AC-43 to both lists.
+
+---
+
+### 6. R-4 says AC-3 "configures a working dead-letter destination", but AC-3's Given does not say so, and AC-18 leaves GCP DLQ topic creation to the ADR (Score: 48)
+
+If the ADR chooses a dead-letter producer that does not create topics, then AC-3, AC-4, AC-15, AC-16 and AC-19 on GCP need a pre-provisioned DLQ topic, and nothing requires one. Without it they would silently run R-4's exception path.
+
+**Recommendation**: Add "whose topic exists (or is created by the producer)" to AC-3's and AC-15's Givens.
+
+---
+
+### 7. R-4's exception says the native cap bounds the loop; R-19 says there is no bound without a `DeadLetterPolicy` (Score: 40)
+
+**Recommendation**: Change R-4 to "the native cap R-19 names, where one is configured; otherwise it is unbounded (R-19)".
+
+---
+
+### 8. R-16 does not say what happens when the routing publish succeeds but the acknowledgement of the original fails (Score: 40)
+
+Today the pull `Reject` rethrows when the ack fails (`GcpPullMessageConsumer.cs:290-293`). Under R-16 the publish has already succeeded by then, so the redelivered message is routed again and appears twice on the destination.
+
+**Recommendation**: Specify the outcome in one sentence, or explicitly defer it to the ADR.
+
+---
+
+### 9. R-19's loop paragraph lists only the budget and `Unacceptable` routes to `Reject`; handler-raised `RejectMessageAction` and `ConfigurationException` also reject outside the budget (Score: 30)
+
+`Reactor.cs:279`, `:293`, `:309` and `:337`. The conclusion is unaffected.
+
+**Recommendation**: Say "any rejection", or add these routes to the list.
+
+---
+
+## Round-11 remediation spot-check
+
+- **Row 1 (85)**: Landed. Regressions: findings 1, 2, 4 and 5 (AC-43), and 6 and 7 (the R-4 seam).
+- **Row 2 (66)**: Landed. 60 s is inside Pub/Sub's 10–600 s range and above `W`. C-6 constrains `MaxDeliveryAttempts`, not the ack deadline. No regression.
+- **Row 3 (62)**: Landed. Side effect: finding 6.
+- **Row 4 (55)**: Landed. Consistent.
+- **Row 5 (40)**: Landed. It is consistent with the existing stream `Reject`, which returns `true` unconditionally after `Accepted()` (`GcpPubSubStreamMessageConsumer.cs:84-94`). Residual: finding 3.
+- **Row 6 (35)**: Landed. No regression.
+
+## Integrity checks
+
+- R-1..R-28, NFR-1..NFR-8, AC-1..AC-43, C-1..C-12 and A-1..A-6 are each defined once, with no gaps and no undefined references.
+- R→AC map: 36 rows. AC-30 and AC-31 are deliberately unmapped.
+- Coverage gaps: findings 1, 3 and 5.
+- Citation spot-checks are all correct except `GcpPullMessageConsumer.cs:360-364` (finding 3).
+
+## Summary
+
+| Score Range | Count |
+|-------------|-------|
+| 90-100 (Critical) | 0 |
+| 70-89 (High) | 1 |
+| 50-69 (Medium) | 4 |
+| 0-49 (Low) | 4 |
+
+**Total findings**: 9
+**Findings at or above threshold (60)**: 3
+
+## Main-agent validation of this round
+
+- Counted: 78 (High); 64, 60, 55, 50 (Medium); 48, 40, 40, 30 (Low). That gives 0/1/4/4, 9 in total, and three at or above threshold. This agrees with the Summary.
+- Finding 1 re-verified. `Reactor.cs:488-515` reaches `RejectMessage(…DeliveryError…)` only when `HandledCountReached`; otherwise it takes the `Channel.Requeue` path. AC-43's text reads as quoted, including "This holds on both of R-13's branches". AC-40's Given is that no mechanism advances the count, so under it the budget cannot fire from a deferring handler. On today's code the count is inert (Problem Statement), so AC-43's three Then clauses are met by a plain requeue loop ended by the native cap.
+- Finding 2 re-verified. R-4's window is defined by the FR-23 template's quit/await after its DLQ poll. AC-43 names that window but is not an FR-23 test, and it names no poll target or ceiling.
+- Finding 3 re-verified. `GcpPullMessageConsumer.cs` `Requeue` catches and returns `false` (`:354-358`); the lines `:360-364` are the `RequeueAsync` doc comment. The manual-gate and "not writable" lists do not mention the release-failure clause.
+- Findings 1, 2 and 3 are all **regressions from round 11's remediation**. The pattern holds for a sixth round.
+
+---
+
+# Remediation log — round 12
+
+**Date**: 2026-09-23. **Applied to**: `requirements.md` and `README.md`. Each applied text was grepped
+back from the file on disk, and this log was written from that read-back. **Outcome**: all nine
+findings remediated (the user took the six below threshold as well). The counts are unchanged:
+**28 `R-n`, 8 `NFR-n`, 43 `AC-n`, C-1..C-12, A-1..A-6**. Integrity was re-checked programmatically:
+each identifier is defined once (the second AC-30 line-start match is the bold reference at `:1696`,
+unchanged from `HEAD`), with no gaps and no undefined references. The map has 36 rows; only
+AC-30/AC-31 are unmapped. The batch asserted every anchor before writing, and all 14 applied.
+
+**The decision this round took (the user's, 2026-09-23): AC-43 has one form per R-13 branch.** On
+AC-19's branch a deferring handler exercises R-4's exception. On AC-40's branch the budget cannot
+fire, so a handler that throws `RejectMessageAction` drives the failed-routing `Reject` without
+depending on the count, and exercises R-19's loop rather than R-4's exception. Both forms must prove
+the path ran: an R-19 Error is logged and the routing topic is still absent. The alternative,
+confining AC-43 to AC-19's branch, was rejected: it would leave R-19's bound with no local evidence
+on the AC-40 branch.
+
+| # | Score | Remediation | Verified at |
+|---|---|---|---|
+| 1 | 78 | AC-43 rewritten: handler chosen by R-13's branch (defer on AC-19's; `RejectMessageAction` on AC-40's, which "exercises R-19's loop, not R-4's exception"). Then adds "at least one R-19 Error naming the message id and `\"DeliveryError\"`" and "the `deadLetterRoutingKey` topic still does not exist", and explains why today's code no longer passes. "This holds on both of R-13's branches" removed. | `:1404-1430` |
+| 2 | 64 | AC-43's When: poll the policy topic's subscription every 500 ms, giving up at 60 s (NFR-7); on arrival read the invocation count, wait `W` = 10 s, then quit and await. Then: the count after quit equals the count on arrival. A-6's refutation is defined as no arrival within 60 s **and** a count past `M`; no arrival at a count of `M` or less is an ordinary failure. The single-jump reliance on A-4 is stated. | `:1413-1430` |
+| 3 | 60 | R-19: the release's own result is not propagated as `Reject`'s return value (the `Requeue` trap, `:354-358`/`:394-398`); the wrong `:360-364` citation replaced by `:349`/`:384`. AC-18 gains an "And Given" release-failure clause, exercised directly as a unit test in the manner of AC-21, asserting an Error and `true`, and marked not writable until the ADR defines the seam; added to the "not writable" list. | `:551-554`, `:1395-1400`, `:1722` |
+| 4 | 55 | R-21: "One exception is accepted in advance": a refuted A-6 leaves R-19's bound resting on documented service behaviour, and R-19 is still "done" on the rest of its evidence. A-6 cross-references it. AC-31 gains a bullet for it. | `:670`, `:1074`, `:1641` |
+| 5 | 50 | AC-43 added to R-27(c)(5) and to the "Without (c)" sentence. | `:900`, `:925` |
+| 6 | 48 | AC-3's Given: a `deadLetterRoutingKey` "whose destination exists or is created by the dead-letter producer". AC-15's Given: both keys "each of which exists or is created by the producer that routes to it". | `:1224`, `:1363` |
+| 7 | 40 | R-4's exception: the native cap bounds it "where a `DeadLetterPolicy` is configured, and nothing where one is not (R-19) — never the budget". | `:188` |
+| 8 | 40 | R-16: if the publish succeeds and the ack then fails, the redelivered message is routed again and a duplicate on the destination is accepted (at-least-once). How the ack failure surfaces is the ADR's to fix; today's rethrow (`:290-293`) is cited. | `:484` |
+| 9 | 30 | R-19's loop paragraph: "Every other rejection the pump issues never consults the budget", naming `Unacceptable` and `DeliveryError` for `RejectMessageAction`/`ConfigurationException` (`Reactor.cs:279`, `:293`, `:309`, `:337`, verified). | `:565` |
+
+**For round 13's spot-check**, the seams round 12 introduced:
+- **AC-43's AC-40 form.** Does a `RejectMessageAction` handler on GCP actually reach `Reactor.cs:337`
+  (and the Proactor twin) on every configuration? Does "more than 3 times" hold for it when each
+  delivery rejects once?
+- **AC-43's refutation rule** ("no arrival **and** count past `M`"). Is the invocation count a sound
+  proxy for Pub/Sub's delivery attempts under A-4?
+- **AC-18's release-failure clause.** Is "the seam the ADR defines" a real obligation on the ADR, or
+  an escape hatch like round 10's finding 2?
+- **R-21's accepted exception**, read with AC-22 and NFR-7.
+- **R-16's ack-failure duplicate**, read with AC-15's "a subsequent read of the source returns
+  `MT_NONE`", and with R-18.
