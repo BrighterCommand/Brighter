@@ -67,8 +67,9 @@ Running unattended changes *who reviews when*. It changes nothing else. Every ta
 - **Proves RED first** — the test is run and observed to fail *for the right reason* before any
   production code is written. A task whose test passes on first run is `ALREADY_COMPLETE`, never a
   licence to write the implementation anyway — **except** a `CHARACTERISE` task, whose RED is
-  observed through the task's named production mutation instead (see the dispatch table). A
-  characterisation test is never dropped and never rewritten.
+  observed through the task's named production mutation instead, and a `GENERATE` task, whose
+  generated tests pass on first run by design (see the dispatch table). Neither is ever
+  `ALREADY_COMPLETE`; a characterisation test is never dropped and never rewritten.
 - **Runs the full regression suite** for the affected project(s), not just the new test's own
   `--filter`.
 - **Produces two commits** — a `feat:`/`test:`/`fix:`/`refactor:` commit for the change, then a
@@ -207,6 +208,10 @@ Then STOP.
 
 ### Step 4: Delegate the Cycle to a Sub-Agent
 
+**First, record the baseline** for Step 5's leftover-mutation check:
+`git status --porcelain > {scratchpad}/ralph-baseline.txt`. Anything already modified or untracked
+before the task is the baseline, not a leftover.
+
 Launch an `Agent` with `subagent_type: "general-purpose"` and **`model: "sonnet"`**. The
 prompt MUST include:
 
@@ -218,10 +223,13 @@ prompt MUST include:
    - every ADR path from `.adr-list`
    - `.agent_instructions/testing.md` and `.agent_instructions/code_style.md`
    with an instruction to **read them before writing code**.
-3. The **verify command** to use. `tasks.md` tasks name a test location and test file but not a
-   filter command — derive it and state it explicitly in the prompt:
+3. The **verify command(s)** to use. If the task text states its own commands (a `GENERATE` task
+   does), pass those. Otherwise `tasks.md` tasks name a test location and test file(s) but not a
+   filter command — derive **one per test file the task names** and state them explicitly:
    `dotnet test {test project from the task's test location} --filter "FullyQualifiedName~{test method name}"`
-4. The cycle instructions, code-style rules, and hard constraints below.
+4. The cycle instructions, code-style rules, and hard constraints below — and, for a
+   `CHARACTERISE` or `GENERATE` task, the matching **shape cycle** below, which takes precedence
+   over the plain RED rules where they differ.
 5. The required return format below.
 
 The sub-agent runs unattended — it has full tool access (Read, Write, Edit, Glob, Grep,
@@ -247,11 +255,7 @@ from conversation.
   exist yet). **Do not skip this.** Running unattended does not make this test-after.
 - **If the test PASSES with no implementation change**: the behavior already exists. Either
   revise the test to verify something genuinely new, or RETURN status `ALREADY_COMPLETE`.
-  **Not for a `CHARACTERISE` task**: there, apply the task's named RED mutation to production
-  code, confirm the test fails on the named assertion, revert the mutation exactly, confirm green,
-  and RETURN `CHARACTERISED` with the mutation and the observed failure in `RED_EVIDENCE`. Do not
-  revise the test. The production tree must be byte-identical to its pre-mutation state when you
-  return.
+  **Not for a `CHARACTERISE` or `GENERATE` task** — follow its shape cycle below instead.
 
 🟢 **GREEN — Make the Test Pass**
 - Write the MINIMUM code to pass — no speculative code. Follow the task's implementation notes.
@@ -268,12 +272,42 @@ from conversation.
   reduce complexity; remove duplication; reveal intent.
 - Re-run tests after refactoring to confirm no behavioral change.
 
+#### Characterisation cycle for the sub-agent (include for a `CHARACTERISE` task)
+
+Work **per test file** the task names:
+
+1. Write the test and run its verify command.
+2. **Fails** → the behaviour is missing. Continue as the normal RED → GREEN → REFACTOR cycle for
+   that file, using the task's implementation notes. Record `"<file>: failed on arrival: <assertion>"`.
+3. **Passes** → apply the task's **named RED mutation** (the 🔁 bullet) to production code, never to
+   the test. Run the verify command: it must fail with the failure the task names. Revert the
+   mutation exactly, run the verify command again and confirm green. Record
+   `"<file>: mutation <what> → failed on <failure>; reverted; re-run green"`.
+4. No named mutation, or the mutation does not produce the named failure → RETURN `FAILED`. Never
+   revise the test to make it fail, and never return `ALREADY_COMPLETE`.
+5. Run the **full suite** for the affected project(s).
+6. RETURN `CHARACTERISED` if no production code was kept (`IMPL_FILES` empty), `GREEN` if any file
+   needed an implementation (the mixed case), and in both cases fill `RED_EVIDENCE` for **every**
+   test file.
+
+#### Generated cycle for the sub-agent (include for a `GENERATE` task)
+
+1. Never write or edit a generated file by hand. Build the generator and run it exactly as the task
+   says.
+2. Build, then run the verify commands and any audit the task names. Passing on first run is the
+   expected case.
+3. RETURN `GREEN` with **every** file the generator wrote or changed under `TEST_FILES`, including
+   helper files the task says the generator also renders, and nothing under `IMPL_FILES`. Never
+   `ALREADY_COMPLETE`. If a generated test or the audit fails → `FAILED`.
+
 #### Hard constraints for the sub-agent (include in the prompt)
 
 - **NEVER** run `git commit`, `git add`, or `git push`.
 - **NEVER** edit `tasks.md` or `.current-gear`.
-- Only create/modify the test file(s) and implementation source file(s).
-- Do not ask the user anything — this is unattended.
+- Only create/modify the test file(s) and implementation source file(s) — plus, for a `GENERATE`
+  task, the files the generator renders. A RED mutation is reverted before you return.
+- Do not ask the user anything — this is unattended. Where `testing.md` or the task says
+  "stop and ask", RETURN `FAILED` with the question as the reason.
 - If the task cannot be done as written (it contradicts an ADR, depends on something absent, or
   needs a design decision), RETURN `FAILED` with the reason. Do not improvise a different task.
 
@@ -310,11 +344,14 @@ space-separated line.
 Read the sub-agent's returned result and act on its `STATUS`. **Every outcome produces the
 two-commit shape**: the change, then the bookkeeping.
 
-**Before any outcome's commits — leftover-mutation check.** Run `git status --porcelain`. Any
-modified or new file outside `TEST_FILES` ∪ `IMPL_FILES` (other than `tasks.md` and untracked files
-that were already present before the task) means a mutation or scratch edit was not reverted: do
-**not** commit; restore it with `git checkout -- <path>` only if it is a tracked production file the
-sub-agent reported mutating in `RED_EVIDENCE`, otherwise mark the task `- [!]` with the reason.
+**Before any outcome's commits — leftover-mutation check.** Run `git status --porcelain` and
+compare it with the Step 4 baseline. Any entry that is new since the baseline and lies outside
+`TEST_FILES` ∪ `IMPL_FILES` (and is not `tasks.md`) means a mutation or scratch edit was not
+reverted: do **not** commit; restore it with `git checkout -- <path>` only if it is a tracked
+production file the sub-agent reported mutating in `RED_EVIDENCE`, otherwise mark the task `- [!]`
+with the reason. The check cannot see a mutation left in a file that is *also* in `IMPL_FILES`;
+there, rely on `RED_EVIDENCE`'s "reverted; re-run green" and the full-suite run, and treat
+`RED_EVIDENCE` missing either as a contract violation.
 
 **CHARACTERISED:**
 1. `IMPL_FILES` must be empty and `TEST_FILES` non-empty; otherwise treat as a contract violation
@@ -346,6 +383,7 @@ sub-agent reported mutating in `RED_EVIDENCE`, otherwise mark the task `- [!]` w
 
    - Test: When_[condition]_should_[expected_behavior]
    - Implementation: [brief description]
+   - Characterisation — RED observed via: [RED_EVIDENCE]   (only when RED_EVIDENCE names a mutation)
    - Task: [task number]/[total] ([section heading])
 
    Co-Authored-By: Claude Opus <noreply@anthropic.com>

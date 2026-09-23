@@ -250,7 +250,9 @@ could not execute, and one of them `/spec:ralph-implement` actively mishandled.
   generated files pass on first run by design and must still be committed. This shape is also never
   `ALREADY_COMPLETE`.
 
-Both shapes are defined in `spec/implement.md`, `spec/ralph-implement.md` and `tdd/test-first.md`.
+Both shapes are defined in `spec/implement.md` and `spec/ralph-implement.md`. `tdd/test-first.md`
+defines the characterisation path only, because generated tests are never written through
+`/test-first`.
 The gear does not change for either shape: `review-after` still removes only the pause.
 
 ## Consequences

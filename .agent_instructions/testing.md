@@ -60,7 +60,8 @@ Instead, observe RED through a **named mutation** ([ADR 0071](../docs/adr/0071-t
    exception thrown before the assertion is reached, does not count; pick a better mutation.
 3. **Revert the mutation** and confirm green. `git status` must show no production file still
    modified.
-4. Commit the test alone, as `test:`, noting the mutation in the message. The mutation is never
+4. Run the **full test suite** for the affected project(s), as for any other test.
+5. Commit the test alone, as `test:`, noting the mutation in the message. The mutation is never
    committed.
 
 In a spec, such tasks are labelled `CHARACTERISE` in `tasks.md` and name their mutation. If you meet

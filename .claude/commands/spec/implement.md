@@ -178,7 +178,10 @@ do not rely on a value resolved several tasks ago.
 1. Use AskUserQuestion tool to ask: "I've written a failing test for [behavior]. The test verifies that [expected behavior]. Should I proceed to make this test pass?"
    For a characterisation test (green on arrival, RED observed via mutation) there is nothing to
    implement: ask instead "I've written a characterisation test for [behavior]; it went red under
-   [mutation] and the mutation is reverted. Should I commit it?", then go straight to Step 5.
+   [mutation] and the mutation is reverted. Should I commit it?". On approval, run the **full test
+   suite** for the affected project(s), then go to Step 5.
+   For a `GENERATE` task ask: "I've generated [files]; the generated tests and [audit] pass. Should I
+   commit them?". On approval, go to Step 5.
 
 2. Wait for user approval
 
@@ -195,10 +198,13 @@ Skip the pause — and **only** the pause:
 
 1. Confirm RED is already proved: the test ran and failed **for the right reason** — on arrival,
    or, for a `CHARACTERISE` task, under its named mutation (reverted). If it has not, go back and
-   prove it. `review-after` never licenses writing implementation first.
+   prove it. `review-after` never licenses writing implementation first. A `GENERATE` task has no
+   RED of its own: instead confirm the generated tests and any audit the task names are green, run
+   the full suite for the affected project(s), and go to Step 5.
 2. Print one line recording that the pause was skipped and why, e.g.
    `➖ review-after (Phase 5) — proceeding to GREEN without pausing`.
-3. Proceed to GREEN.
+3. Proceed to GREEN — or, for a characterisation test with nothing to implement, run the full
+   suite for the affected project(s) and go to Step 5.
 
 **Stop and ask anyway** if the test asserts something the task did not ask for, needs a design
 decision you cannot make from the ADRs, or duplicates an existing test. `review-after` is a default
