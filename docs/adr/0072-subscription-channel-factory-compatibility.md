@@ -730,8 +730,10 @@ These are real, and five of them are accepted breakage.
   very wrong failure. This risk is *raised*, not lowered, by the CS0236 rule described above: the
   compiler rejects the correct-looking auto-property and accepts the wrong one, so the error message
   itself nudges an implementer toward the defect. *Mitigation*: the lazy-backing-field shape is
-  normative and spelled out in full; and AC-6 (no false positives in a correct multi-bus
-  configuration) catches a regression.
+  normative and spelled out in full; and a dedicated test builds a `CombinedChannelFactory` from a
+  single-pass sequence and asserts `FactoryTypes`. AC-6 (no false positives in a correct multi-bus
+  configuration) does **not** catch this regression: its configuration passes an array-backed
+  collection, which re-enumerates successfully, so the defect only shows on a single-pass source.
 - **Risk: C-12 surprises an operator at deployment rather than at build.** It is the only case with no
   validation-time warning. *Mitigation*: its own release note, named symptom, and the explicit
   statement that `throwOnError: false` does not avoid it.
