@@ -39,14 +39,13 @@ namespace Paramore.Brighter.Sqlite.EntityFrameworkCore
         /// Commit the transaction
         /// </summary>
         /// <returns>An awaitable Task</returns>
-        public override Task CommitAsync(CancellationToken cancellationToken)
+        public override async Task CommitAsync(CancellationToken cancellationToken)
         {
-            if (HasOpenTransaction)
+            var currentTransaction = _context.Database.CurrentTransaction;
+            if (currentTransaction is not null)
             {
-                _context.Database.CurrentTransaction?.CommitAsync(cancellationToken);
+                await currentTransaction.CommitAsync(cancellationToken);
             }
-            
-            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -81,6 +80,30 @@ namespace Paramore.Brighter.Sqlite.EntityFrameworkCore
             // If there is no current transaction, we create a new one
             var currentTransaction = _context.Database.CurrentTransaction ?? _context.Database.BeginTransaction();
             return currentTransaction.GetDbTransaction();
+        }
+
+        /// <summary>
+        /// Rolls back a transaction
+        /// </summary>
+        public override void Rollback()
+        {
+            var currentTransaction = _context.Database.CurrentTransaction;
+            if (currentTransaction is not null)
+            {
+                currentTransaction.Rollback();
+            }
+        }
+
+        /// <summary>
+        /// Rolls back a transaction
+        /// </summary>
+        public override async Task RollbackAsync(CancellationToken cancellationToken = default)
+        {
+            var currentTransaction = _context.Database.CurrentTransaction;
+            if (currentTransaction is not null)
+            {
+                await currentTransaction.RollbackAsync(cancellationToken);
+            }
         }
 
         /// <summary>
