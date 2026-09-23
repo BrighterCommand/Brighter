@@ -482,9 +482,11 @@ precedes the acknowledgement of the original, so a failed publish cannot lose th
 silently. Both `GcpPullMessageConsumer.Reject`/`RejectAsync` and
 `GcpPubSubStreamMessageConsumer.Reject`/`RejectAsync` are bound.
 **If the publish succeeds and the acknowledgement of the original then fails**, the message is not
-lost and the consumer keeps consuming. The failure is logged at Error naming the message id,
-`Reject` returns `true` without throwing, and the original is redelivered and, when rejected again,
-routed again. The destination may then hold a duplicate. That is accepted: delivery to the
+lost and the consumer keeps consuming. The failure is logged at Error naming the message id, and
+`Reject` returns `true` without throwing. The original stays leased until its ack deadline lapses. It
+is then redelivered and, when rejected again, routed again. This is the second accepted case in which
+a message is left outstanding, beside R-19's failed release. Like that case, it can arise only on
+`GcpPullMessageConsumer`, because the stream consumer's acknowledgement is local and cannot fail. The destination may then hold a duplicate. That is accepted: delivery to the
 destination is at-least-once. How `Reject` achieves this is part of R-19's ADR input.
 
 > *Example (`Unacceptable`, both destinations configured).* `Reject(message, new
@@ -512,7 +514,8 @@ This is the one case in which a rejected GCP message is still discarded, and it 
 receive; `rejectionReason` = the enum name; `rejectionMessage` = the description, when a non-empty
 description was supplied; `rejectionTimestamp` = an ISO-8601 round-trip (`"o"`) UTC timestamp. The
 GCP-specific receipt handle is removed from the **routed copy**, so it does not carry a stale ack
-id. Removing it must not prevent the original's release under R-19 (see R-19's ADR input). Key names match the transport's existing casing convention.
+id. Removing it must not prevent the original's acknowledgement under R-16 or its release under R-19
+(see R-19's ADR input). Key names match the transport's existing casing convention.
 
 > *Example.* A message rejected with `new MessageRejectionReason(RejectionReason.DeliveryError,
 > "Handle count of messages reached; rejecting at limit")` from topic `orders` arrives on
@@ -538,7 +541,8 @@ a greenfield one, and it is made in favour of preserving the message. The observ
   acknowledge, and so discard, the message.
 - **If the release itself fails**, that is also logged at Error, `Reject` still returns `true`, and
   the message returns when its ack deadline lapses. It is the one case in which R-19 leaves a message
-  outstanding, and it can arise only on `GcpPullMessageConsumer`.
+  outstanding (R-16's failed acknowledgement is the other accepted case), and it can arise only on
+  `GcpPullMessageConsumer`.
 
 **The competing risk is a loop, and the delivery budget does not bound it.** The budget ends a
 message's life with a `Reject` (R-4), which is the very call whose publish is failing, and every
@@ -594,8 +598,15 @@ source, which the ADR starts from:
     (`SqsMessageConsumer.cs:504`, called at `:279`), and survives only because it copied the handle
     first (`:257`).
 
+  - The acknowledgements need the handle too. Without it, the stream `Acknowledge` returns silently
+    (`GcpPubSubStreamMessageConsumer.cs:34-37`), leaving the message outstanding, and the pull
+    `Reject` returns `false` before acking (`GcpPullMessageConsumer.cs:278-281`).
+
   A port that strips the handle without copying it, or that returns `Requeue`'s result, produces the
-  discard or the outstanding message R-19 forbids.
+  discard or the outstanding message R-16 and R-19 forbid.
+- **Only the pull acknowledgement can fail.** The pull `Reject` acknowledges with
+  `client.Acknowledge` (`GcpPullMessageConsumer.cs:288`), which can throw. The stream
+  `Acknowledge` completes a local `Accepted()` (`GcpPubSubStreamMessageConsumer.cs:32-40`).
 - **An exception out of `Reject` stops the performer.** The pump calls `Reject` from inside its
   `catch (DeferMessageAction)` and `catch (RejectMessageAction)` blocks (`Reactor.cs:316`, `:333`;
   `Proactor.cs:348`, `:367`). The loop that contains them has only a `finally` (`Reactor.cs:373`,
@@ -617,15 +628,14 @@ source, which the ADR starts from:
   (`GcpPubSubMessageGateway.cs:503-521`, `:555-557`).
 
 **The ADR MUST record, for each GCP consumer, how `Reject` is composed** so that no failure R-16 or
-R-19 names (a failed routing publish, a failed release, a failed acknowledgement) discards the
-message, leaves it outstanding beyond R-19's one exception, or escapes `Reject`.
+R-19 names (a failed routing publish, a failed release, a failed acknowledgement), and no missing
+receipt handle, discards the message or escapes `Reject`. Nor may any of them leave the message
+outstanding, except in the two accepted cases: R-19's failed release and R-16's failed
+acknowledgement.
 **It MUST also record how the two failures a broker cannot produce on demand are evidenced**: R-19's
-failed release and R-16's failed acknowledgement. The evidence is either:
-- a test through a seam the ADR defines, which exercises the step after the failed call without
-  mocking the transport (C-10), with `Reject` returning that step's result unaltered; or
-- where no such seam exists, a code review, with the reason.
-
-AC-15 and AC-18 read that record.
+failed release and R-16's failed acknowledgement. What form that evidence takes is the ADR's to
+decide. No AC asserts these two outcomes. They are verified at design review against the ADR's
+record (see the manual-gate list).
 
 #### Group E — GCP DLQ channel creation without project IAM admin (#4354)
 
@@ -635,10 +645,12 @@ project-level IAM, and when no Cloud Resource Manager surface is reachable at al
 subscription creation are tolerated: each is logged at Warning, and channel creation continues.
 
 **A tolerated-call Warning names five things: the helper it abandoned, the RPC, the resource, the
-status code, and the consequence** — that native dead-lettering on this subscription (R-8's and
-R-9's route, and R-19's bound) may be inactive until the binding that helper would have made exists
-or is provisioned some other way (R-19). That list is fixed here and every other statement of it in this document — the bullets
-below, NFR-5, AC-20 — refers to it rather than restating it. The **helper** name is not decorative:
+status code, and the consequence**. The consequence is the fixed text `native dead-lettering may be
+inactive`, which a test can match. It means that native dead-lettering on this subscription (R-8's
+and R-9's route, and R-19's bound) may be inactive until the binding that helper would have made
+exists or is provisioned some other way (R-19). That list is fixed here, and every other statement
+of it in this document (the bullets below, NFR-5, AC-20, AC-21) refers to it rather than restating
+it. The **helper** name is not decorative:
 it is what makes AC-20's "exactly two Warnings, one per helper" checkable at all.
 
 **The unit of tolerance is the helper, not the RPC**, because the calls are not independent:
@@ -1405,10 +1417,6 @@ description was supplied with the rejection reason (R-18) — so the `None` call
 description in R-16's example carries four keys, not five; in every case it carries no
 `ReceiptHandle` key; and in every case a subsequent read of the source subscription returns
 `MessageType.MT_NONE`.
-**And**, evidenced as the ADR records under R-19's ADR input (⚠️ a broker cannot be made to fail the
-acknowledgement on demand, and C-10 forbids mocking the transport): an acknowledgement failure after
-a successful routing publish is logged at Error naming the message id, and `Reject` returns `true`
-without throwing, in both variants (R-16).
 
 **AC-16** (R-16) — **Given**, on each of the four GCP configurations and both consumers, a
 subscription with a `deadLetterRoutingKey` and **no**
@@ -1433,11 +1441,6 @@ the failure path ran rather than a created topic succeeding. Redelivery within `
 message was released by the consumer's requeue call (R-19) rather than left outstanding: an
 outstanding pull message would not return before its 60 s deadline, and an outstanding stream
 message would have its lease extended rather than return at all.
-**And Given** R-19's release-failure branch on `GcpPullMessageConsumer`, evidenced as the ADR
-records under R-19's ADR input, **Then**, in both variants, an Error is logged naming the message id
-and `Reject`'s result is `true`, not the release's `false`. ⚠️ A broker cannot be made to fail
-`ModifyAckDeadline` on demand, and C-10 forbids mocking the transport, so this clause is a test
-through the seam the ADR defines or, where the ADR records that none exists, a code review.
 
 **AC-43** (R-19, R-4, A-6) — **Given**, on each of the four GCP configurations and in both variants,
 a subscription with `requeueCount: 3`, `requeueDelay` zero, a `DeadLetterPolicy` with
@@ -1749,9 +1752,9 @@ appears:
 - **AC-28** — a recorded enumeration of broker calls.
 - **AC-43's arrival clause**, only on a configuration where A-6 is refuted: the refutation is then
   a ledger record, not an assertion. AC-43's other clauses are still asserted.
-- **AC-15's acknowledgement-failure clause and AC-18's release-failure clause**, to the extent
-  the ADR records a code review for them under R-19's ADR input. That covers the whole clause where
-  no seam exists, and otherwise the composition that returns the seam's result unaltered.
+- **R-16's failed-acknowledgement outcome and R-19's failed-release outcome.** A broker cannot
+  produce either failure on demand, so no AC asserts them. Both are verified at design review
+  against the ADR's record under R-19's ADR input. These are requirement outcomes, not AC clauses.
 - **AC-30** and **AC-31** — ledger edits.
 - **The ledger clauses of AC-24, AC-25 and AC-40** — "the cell reads `Fixed`", "the cell reads
   `Deferred` pointing at the upstream blocker", "the four `GCP / *` FR-23 cells read `Deferred`
@@ -1767,8 +1770,7 @@ Every other clause of every other AC is an assertion a test can make.
 **Assertable, but not writable until the ADR exists** — these read a decision the ADR must first
 record, so the test can be written only after design: **AC-11**'s Given (the subscription shapes that
 trip R-11), **AC-18**'s and **AC-43**'s Given (the `makeChannels` the GCP dead-letter producer is
-built with), **AC-15**'s acknowledgement-failure and **AC-18**'s release-failure clauses (the seam, if any,
-the ADR records under R-19's ADR input), **AC-21**'s client-construction clause (the exception type the ADR names, NFR-5),
+built with), **AC-21**'s client-construction clause (the exception type the ADR names, NFR-5),
 **AC-33**'s first clause (the normalisation the ADR specifies), **AC-34**'s second
 clause (the transports the ADR's table classifies exact), and **AC-42** on `GCP / Stream` and
 `GCP / StreamOrdering` (the procedure the ADR records under R-13's stream-consumer input, or the

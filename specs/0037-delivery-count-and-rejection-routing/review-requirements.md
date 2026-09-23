@@ -3011,3 +3011,159 @@ applied. No superseded text survives (`grep` for "four elements", "four things",
   stream consumer, whose ack is local.
 - **R-18's "kept for the original"**, read with AC-15's "no `ReceiptHandle` key".
 - **AC-43's per-configuration refutation**, read with AC-22 and AC-31.
+
+---
+
+# Review: requirements (round 14) — 0037-delivery-count-and-rejection-routing
+
+**Date**: 2026-09-24
+**Threshold**: 60
+**Verdict**: NEEDS WORK
+
+2 findings at or above threshold 60. This is the first round run after the R-19 consolidation
+(`e20338bd0`). The reviewer was told that gaps in *how* R-16/R-18/R-19 are implemented are design
+findings, unless the ADR could satisfy every MUST and still violate a stated outcome.
+
+## Findings
+
+### 1. The consolidation lost round 13's rule that AC-18's composition is always a code review, so on the seam branch nothing evidences that `Reject` returns the step's result (Score: 62)
+
+- Round 13 (row 2): AC-18 asserted the *step's* result, and "That `Reject` returns the step's result unaltered on this path is a code review of the composition (a manual gate)". That rule was unconditional.
+- Now: AC-18's clause asserts "`Reject`'s result is `true`", and it is "a test through the seam the ADR defines or … a code review". A seam test sees only the step's result, so on the seam branch the Then asserts something its test cannot observe.
+- The ADR MUST's first option ("with `Reject` returning that step's result unaltered") is a design constraint, with no evidence attached.
+- The gate entry covers the composition only "to the extent the ADR records a code review". An ADR that picks the seam and records no review satisfies both MUSTs, and the composition is then evidenced nowhere.
+- The same applies to AC-15's acknowledgement-failure clause. AC-18's second clause has also lost its **When**.
+
+**Evidence**: requirements.md:1436-1440, :1408-1411, :622-627, :1752-1754. The diff `d9156b493..e20338bd0` removes "That `Reject` returns the step's result unaltered on this path is a code review of the composition (a manual gate)".
+
+**Recommendation**: The composition is a code review always. The seam branch asserts the step's result. Make the gate entry unconditional, and restore the **When**.
+
+---
+
+### 2. The ADR MUST forbids a failed acknowledgement from leaving the message outstanding, but R-16's own outcome is that it is left to its ack deadline (Score: 60)
+
+- The MUST says no failure R-16/R-19 names, "a failed acknowledgement" included, may leave the message "outstanding beyond R-19's one exception".
+- A failed pull `client.Acknowledge` throws (`GcpPullMessageConsumer.cs:288-293`), and the message stays leased until its ack deadline. That is "outstanding" in AC-18's sense, and it is how R-16's "the original is redelivered" happens.
+- The stream `Acknowledge` is a local `Accepted()` (`GcpPubSubStreamMessageConsumer.cs:32-40`) and cannot fail.
+- The MUST is therefore either unsatisfiable or adds an unstated outcome (a prompt release after a failed ack). This is new text from the consolidation.
+
+**Evidence**: requirements.md:619-621, :484-488, :550-552, :1432-1435; source as cited.
+
+**Recommendation**: Scope the "outstanding" limb to the publish and release failures, and name a failed pull acknowledgement as a second accepted outstanding case. Alternatively, make a prompt release after a failed ack an R-16 outcome.
+
+---
+
+### 3. R-18 protects the receipt handle only for R-19's release, not for R-16's acknowledgement, and AC-15 cannot detect a skipped acknowledgement (Score: 50)
+
+- R-18 says "Removing it must not prevent the original's release under R-19". R-16's acknowledgement needs the handle as much.
+- Without the handle, the stream `Acknowledge` returns silently (`GcpPubSubStreamMessageConsumer.cs:34-37`), leaving the message outstanding. The pull `Reject` returns `false` before acking (`GcpPullMessageConsumer.cs:278-281`).
+- AC-15's `MT_NONE` read is inside the 30 s default deadline, so a leased, unacknowledged message also reads `MT_NONE`.
+- It is pre-existing, and the ADR-input bullet on copy-first makes the error unlikely.
+
+**Evidence**: requirements.md:513-515, :599-604, :1405-1407.
+
+**Recommendation**: R-18: "must not prevent the original's acknowledgement under R-16 or its release under R-19". Extend the MUST's list with "a missing receipt handle".
+
+---
+
+### 4. R-20's fifth Warning element has no fixed token for AC-20/AC-21 to assert (Score: 35)
+
+- "The consequence" is prose, while the other four elements are concrete values. The wording itself is correct for `SetIamPolicyAsync`, for the emulator and for client construction.
+- R-20's restatement list names "the bullets below, NFR-5, AC-20" and omits AC-21.
+
+**Evidence**: requirements.md:637-641, :1530-1531, :1549.
+
+**Recommendation**: Fix a stable text for the consequence. Add AC-21 to the restatement list.
+
+---
+
+### 5. AC-15's acknowledgement-failure clause is vacuous on the stream consumer (Score: 25)
+
+The stream acknowledgement cannot fail. AC-18 names `GcpPullMessageConsumer` for the same kind of clause; AC-15 does not.
+
+**Evidence**: requirements.md:1398, :1408-1411; `GcpPubSubStreamMessageConsumer.cs:32-40`.
+
+**Recommendation**: Scope the clause to `GcpPullMessageConsumer`, and add a facts bullet stating that the stream acknowledgement is local.
+
+---
+
+## Round-13 remediation and consolidation spot-check
+
+- **Row 1 (64)**: Landed. Residual: finding 4.
+- **Row 2 (62)**: Partially. The obligation survives as the ADR MUST, but the unconditional composition review was lost in the consolidation (finding 1).
+- **Row 3 (50)**: Landed as an R-16 outcome. Regression: the MUST's "outstanding" limb (finding 2).
+- **Row 4 (48)**: Landed. Residual: finding 3.
+- **Rows 5–8**: Landed. AC-43, A-6, AC-31 and the gate entry are consistently per configuration, and AC-22 does not include AC-43.
+- **R-19 consolidation**: Mostly landed. All seven "R-19's ADR input" references resolve to the paragraph. Every round 10–13 decision survives as an outcome. The exceptions are findings 1 and 2. "Nacks and releases included" became "releases included"; this is harmless, because A-6 still names both.
+
+## Integrity checks
+
+- R-1..R-28, NFR-1..NFR-8, AC-1..AC-43, C-1..C-12 and A-1..A-6 are each defined once, with no gaps and no undefined references. The apparent duplicates are bold in-text references.
+- The R→AC map has 36 rows. Only AC-30 and AC-31 are unmapped, by design.
+- Citation spot-checks are all correct. No stale text survives the consolidation.
+
+## Summary
+
+| Score Range | Count |
+|-------------|-------|
+| 90-100 (Critical) | 0 |
+| 70-89 (High) | 0 |
+| 50-69 (Medium) | 3 |
+| 0-49 (Low) | 2 |
+
+**Total findings**: 5
+**Findings at or above threshold (60)**: 2
+
+## Main-agent validation of this round
+
+- Counted: 62, 60, 50 (Medium); 35, 25 (Low). That gives 0/0/3/2, 5 in total, and two at or above threshold. This agrees with the Summary.
+- Finding 1 re-verified.
+  - The diff removes the quoted sentence.
+  - AC-18's clause (`:1436-1440`) asserts "`Reject`'s result is `true`" and has no **When**.
+  - The gate entry (`:1752-1754`) is conditional: "to the extent the ADR records a code review".
+  - The ADR MUST (`:622-627`) attaches no evidence to the composition.
+- Finding 2 re-verified.
+  - The MUST (`:619-621`) reads as quoted.
+  - The pull `Reject` calls `client.Acknowledge` and rethrows on failure (`GcpPullMessageConsumer.cs:286-293`), and a thrown ack leaves the lease in place until its deadline.
+  - The stream `Acknowledge` is `gcpStreamMessage.Accepted()` (`GcpPubSubStreamMessageConsumer.cs:32-40`).
+- **Both findings are regressions from the consolidation itself**: the main agent's own rewrite. R-19's *outcomes* drew no finding at or above threshold, and every other finding sits in the ADR-input paragraph or its links to the ACs. The consolidation moved the risk; it did not add any.
+
+---
+
+# Remediation log — round 14
+
+**Date**: 2026-09-24. **Applied to**: `requirements.md` and `README.md`. Each applied text was
+grepped back from the file on disk, and this log was written from that read-back. **Outcome**: all
+five findings remediated. The counts are unchanged: **28 `R-n`, 8 `NFR-n`, 43 `AC-n`, C-1..C-12,
+A-1..A-6**. Integrity was re-checked programmatically: each identifier is defined once (the second
+AC-30 match is the bold reference, now at `:1743`), with no gaps and no undefined references. The map
+has 36 rows; only AC-30/AC-31 are unmapped. Every batch asserted its anchors before writing.
+
+**The decisions this round took (the user's, 2026-09-24):**
+- **Finding 2: leave a failed pull acknowledgement to its ack deadline.** It is named as the second
+  accepted "outstanding" case, beside R-19's failed release. Rejected: a prompt release after a
+  failed ack, which would add a broker call and a third unforceable failure.
+- **Finding 1, and the three-round churn behind it: stop specifying, in the requirements, how
+  unforceable failures are tested.** After a first remediation that restored the composition review,
+  the user was shown that the AC-15/AC-18 unforceable-failure clauses had drawn findings in rounds 12,
+  13 and 14. Each fix had added more seam, step and composition text; this was R-19's pattern at a
+  smaller scale. **Both AC clauses were removed.** The outcomes stay in R-16 and R-19, the ADR MUST
+  keeps "record how they are evidenced" and leaves the form to the ADR, and one manual gate verifies
+  them at design review. "No sense in litigating that problem in the requirements."
+
+| # | Score | Remediation | Verified at |
+|---|---|---|---|
+| 1 | 62 | AC-18's release-failure clause and AC-15's acknowledgement-failure clause are **removed**, along with their entry on the "not writable" list. The ADR MUST no longer prescribes a seam: "What form that evidence takes is the ADR's to decide. No AC asserts these two outcomes. They are verified at design review against the ADR's record". A new manual-gate entry: "R-16's failed-acknowledgement outcome and R-19's failed-release outcome … These are requirement outcomes, not AC clauses." `grep` for "seam", "step's result" and "composition" finds nothing left in R-16/R-19/AC-15/AC-18. | `:636`, `:1755` |
+| 2 | 60 | R-16: the original "stays leased until its ack deadline lapses", which is "the second accepted case in which a message is left outstanding", pull only. The ADR MUST's "outstanding" limb now says "except in the two accepted cases". R-19's own exception sentence cross-refers to R-16's. New facts bullet: "Only the pull acknowledgement can fail" (`GcpPullMessageConsumer.cs:288`; stream `Accepted()`, `GcpPubSubStreamMessageConsumer.cs:32-40`, both verified). | `:487`, `:544`, `:607`, `:633` |
+| 3 | 50 | R-18: "must not prevent the original's acknowledgement under R-16 or its release under R-19". Facts: "The acknowledgements need the handle too" (stream `:34-37`, pull `:278-281`, verified). The ADR MUST adds "and no missing receipt handle". | `:517`, `:601`, `:630-631` |
+| 4 | 35 | R-20's fifth element is "the fixed text `native dead-lettering may be inactive`, which a test can match". The restatement list now includes AC-21. | `:648`, `:652` |
+| 5 | 25 | Resolved by finding 1's removal: AC-15 no longer carries an acknowledgement clause. R-16 states the pull-only scope, and the facts list records that the stream acknowledgement is local. | `:487`, `:607` |
+
+**For round 15's spot-check:**
+- Is the new manual-gate entry, which covers requirement outcomes rather than AC clauses,
+  consistent with the list's framing and with "Every other clause of every other AC is an assertion
+  a test can make"?
+- R-16's second accepted outstanding case, read with R-19, AC-18 and the ADR MUST.
+- R-20's fixed text, read with AC-20 and AC-21.
+- **Tell the reviewer**: how unforceable failures are *evidenced* is settled as a design-review
+  matter. Do not re-raise it as a requirements finding.
