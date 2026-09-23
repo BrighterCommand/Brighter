@@ -80,7 +80,7 @@
 
 All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`, are written against the phase-1 doubles, and need no container, host or broker. The rule itself is `ConsumerValidationRules.ChannelFactoryCompatible(IAmAChannelFactory? defaultChannelFactory)` in `src/Paramore.Brighter.ServiceActivator/Validation/ConsumerValidationRules.cs`, built with the `Specification<Subscription>(predicate, errorFactory)` shape that `PumpHandlerMatch` uses (NFR-1). Task 3 brings it into existence; each subsequent task extends it.
 
-- [ ] **3. TEST + IMPLEMENT: A subscription handed an incompatible channel factory yields exactly one correctly-sourced Error (AC-1)**
+- [x] **3. TEST + IMPLEMENT: A subscription handed an incompatible channel factory yields exactly one correctly-sourced Error (AC-1)**
   - **USE COMMAND**: `/test-first when a plain subscription is handed a transport channel factory the rule should report exactly one Error sourced to the subscription name`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_a_plain_subscription_is_handed_a_different_channel_factory_should_report_one_error.cs`
