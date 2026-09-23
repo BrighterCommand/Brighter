@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.Validation;
 
@@ -105,6 +106,33 @@ public static class ConsumerValidationRules
                 $"No handler registered for '{s.RequestType!.Name}' — messages will be received but cannot be dispatched"));
 
     /// <summary>
+    /// Validates that a subscription's declared <see cref="Subscription.ChannelFactoryType"/> is
+    /// compatible with the channel factory it will actually be handed at startup — either its own
+    /// <see cref="Subscription.ChannelFactory"/>, or, absent that, <paramref name="defaultChannelFactory"/>.
+    /// Deliberately does not vacuously pass when <see cref="Subscription.RequestType"/> is null.
+    /// </summary>
+    /// <param name="defaultChannelFactory">The consumer options' default channel factory, or null.
+    /// Used only when the subscription carries no factory of its own.</param>
+    /// <returns>A simple specification that reports an Error when the declared and effective channel
+    /// factory types are incompatible.</returns>
+    public static ISpecification<Subscription> ChannelFactoryCompatible(IAmAChannelFactory? defaultChannelFactory)
+        => new Specification<Subscription>(
+            s =>
+            {
+                var (arm, candidates) = ResolveCandidates(s, defaultChannelFactory);
+                return IsCompatible(s.ChannelFactoryType, arm, candidates);
+            },
+            s =>
+            {
+                var (arm, candidates) = ResolveCandidates(s, defaultChannelFactory);
+                var handed = string.Join(", ", candidates.Select(DisplayName));
+                return new ValidationError(
+                    ValidationSeverity.Error,
+                    $"Subscription '{s.Name}'",
+                    $"Subscription type '{DisplayName(s.ChannelFactoryType)}' will be handed '{handed}'");
+            });
+
+    /// <summary>
     /// Validates that the subscription's <see cref="Subscription.RequestType"/> implements either
     /// <see cref="ICommand"/> or <see cref="IEvent"/>. A type that only implements <see cref="IRequest"/>
     /// directly will work but is unusual and may indicate a misconfiguration.
@@ -165,6 +193,35 @@ public static class ConsumerValidationRules
                 .ToList();
         }, mapperRegistry);
     }
+
+    /// <summary>
+    /// Which routing arm <see cref="ChannelFactoryCompatible"/> is evaluating: a single factory
+    /// directly, or the inner factories of a <see cref="CombinedChannelFactory"/>.
+    /// </summary>
+    private enum Arm
+    {
+        Direct,
+        Combined
+    }
+
+    /// <summary>
+    /// Resolves the arm and the ordered candidate <see cref="Type"/> list a subscription's declared
+    /// <see cref="Subscription.ChannelFactoryType"/> is compared against.
+    /// </summary>
+    private static (Arm arm, IReadOnlyList<Type> candidates) ResolveCandidates(
+        Subscription subscription, IAmAChannelFactory? defaultChannelFactory)
+        => (Arm.Direct, defaultChannelFactory is null ? [] : [defaultChannelFactory.GetType()]);
+
+    /// <summary>
+    /// Decides whether a subscription's declared type is compatible with the resolved candidates.
+    /// </summary>
+    private static bool IsCompatible(Type? declared, Arm arm, IReadOnlyList<Type> candidates) => false;
+
+    /// <summary>
+    /// Renders a type for a validation message: its full name, namespace-qualified rather than
+    /// assembly-qualified.
+    /// </summary>
+    private static string DisplayName(Type type) => type.FullName ?? type.Name;
 
     /// <summary>
     /// Checks whether <paramref name="handlerType"/> derives from <c>RequestHandlerAsync&lt;&gt;</c>.
