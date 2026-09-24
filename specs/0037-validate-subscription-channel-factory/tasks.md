@@ -197,7 +197,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - Confirm the direct arm uses assignability deliberately: at runtime such a subclass still satisfies the gateway's downcast of the *subscription*, so flagging it would be a false positive
   - Depends on: 9.
 
-- [ ] **11. CHARACTERISE: The same subclass inside a `CombinedChannelFactory` is flagged, mirroring runtime (AC-9)**
+- [x] **11. CHARACTERISE: The same subclass inside a `CombinedChannelFactory` is flagged, mirroring runtime (AC-9)**
   - **USE COMMAND**: `/test-first when a subclass of the declared factory sits inside a combined channel factory the rule should report an Error and the composite should throw`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_a_subclass_of_the_declared_type_is_inside_a_combined_factory_should_report_one_error.cs`
