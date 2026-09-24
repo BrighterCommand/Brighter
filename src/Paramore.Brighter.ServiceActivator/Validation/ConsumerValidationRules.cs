@@ -129,12 +129,14 @@ public static class ConsumerValidationRules
                 var declaredClause = declared is null
                     ? "declares no ChannelFactoryType"
                     : $"declares ChannelFactoryType '{DisplayName(declared)}'";
-                var handed = string.Join(", ", candidates.Select(DisplayName));
+                var handedClause = candidates.Count == 0
+                    ? "no channel factory at all"
+                    : $"'{string.Join(", ", candidates.Select(DisplayName))}'";
                 var remedy = RemedyClause(declared, arm, candidates);
                 return new ValidationError(
                     ValidationSeverity.Error,
                     $"Subscription '{s.Name}'",
-                    $"Subscription type '{DisplayName(s.GetType())}' {declaredClause} but will be handed '{handed}' {remedy}");
+                    $"Subscription type '{DisplayName(s.GetType())}' {declaredClause} but will be handed {handedClause} {remedy}");
             });
 
     /// <summary>
@@ -239,6 +241,9 @@ public static class ConsumerValidationRules
     /// </summary>
     private static string RemedyClause(Type? declared, Arm arm, IReadOnlyList<Type> candidates)
     {
+        if (arm == Arm.Combined && candidates.Count == 0)
+            return "— add a channel factory to the combined channel factory";
+
         var suppressed = declared is null || declared == typeof(InMemoryChannelFactory);
         var handed = string.Join(", ", candidates.Select(DisplayName));
 
