@@ -752,6 +752,11 @@ Broader than R-22: the delivery-count contract touches the receive path of the t
 and that path serves all twelve conformance behaviours, not only FR-23. R-2 exists precisely because
 this could otherwise break the identity assertions of FR-2, FR-15, FR-16 and FR-22 on eight AWS
 cells.
+**R-2 protects only the first-delivery arm of those assertions.** The same four behaviours also
+assert identity on the *redelivered* message, where R-1 requires a count of at least `1`; that arm's
+`HandledCount` comparison is relaxed to `>=` by ADR `0077-delivery-count-contract` (a conformance
+oracle change under ADR `0067-conformance-rollout-and-deferral-governance`), which is what keeps
+those cells `Pass`. *(Amended at design, 2026-09-24.)*
 
 > *Example.* `AWS / SqsStandard` currently reads `Pass` on FR-2, FR-4, FR-5, FR-6, FR-7, FR-8,
 > FR-9, FR-15, FR-16, FR-17 and FR-22. After this spec all eleven still read `Pass`, and FR-23 moves
@@ -1135,6 +1140,8 @@ an instruction to implement one of these.
   to be reachable ahead of native redrive under R-8.
 - **C-7. `DefaultMessageAssertion` asserts `HandledCount` equality**
   (`tools/Paramore.Brighter.Test.Generator/Templates/DefaultMessageAssertion.cs.liquid:59`), which is what makes R-2 non-negotiable.
+  It applies to redelivered messages too, where R-1 makes equality unattainable; ADR
+  `0077-delivery-count-contract` relaxes that arm to `>=` (see R-23). *(Amended at design, 2026-09-24.)*
 - **C-8. `RocketMqSubscription` already implements both support interfaces**, so R-14's
   "bound but unimplemented" outcome requires no new binding work — only the Warning and the ledger
   entry.
