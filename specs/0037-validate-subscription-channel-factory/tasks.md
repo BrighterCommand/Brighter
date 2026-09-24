@@ -212,7 +212,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - **This companion assertion is the only guard against the rule's combined arm drifting from the composite's routing** (ADR 0072, Risks), and is the price of rejecting a `CanRoute` design
   - Depends on: 10.
 
-- [ ] **12. CHARACTERISE: Nested combined factories are not unwrapped (AC-10, FR-3)**
+- [x] **12. CHARACTERISE: Nested combined factories are not unwrapped (AC-10, FR-3)**
   - **USE COMMAND**: `/test-first when a combined channel factory is nested inside another the rule should not recurse into it`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_a_combined_channel_factory_is_nested_should_not_unwrap_it.cs`
