@@ -4,6 +4,8 @@
     <Description>PostgreSQL provider for Paramore.Brighter Command Processor. Provides common components for connecting to PostgreSQL, including connection and transaction management for inbox, outbox, and messaging gateway implementations.</Description>
     <Authors>Sam Rumley</Authors>
     <TargetFrameworks>$(BrighterCoreTargetFrameworks)</TargetFrameworks>
+    <!-- Remove these XML documentation suppressions as the existing comments are corrected. -->
+    <NoWarn>$(NoWarn);CS1574</NoWarn>
     <PackageTags>PostgreSQL;Postgres;Database;Connection Provider;Transaction;Command;Event;Command Processor;Brighter</PackageTags>
     <Nullable>enable</Nullable>
   </PropertyGroup>

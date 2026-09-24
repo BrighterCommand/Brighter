@@ -3,6 +3,8 @@
     <Description>Azure Service Bus messaging gateway implementation for Paramore.Brighter Command Processor. Provides decoupled message transport using Azure Service Bus with support for topics, subscriptions, and Azure identity integration.</Description>
     <Authors>Yiannis Triantafyllopoulos</Authors>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <!-- Remove these XML documentation suppressions as the existing comments are corrected. -->
+    <NoWarn>$(NoWarn);CS1572;CS1573;CS1723</NoWarn>
     <PackageTags>Azure;Service Bus;Message Gateway;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability;Brighter</PackageTags>
     <Nullable>enable</Nullable>
   </PropertyGroup>
