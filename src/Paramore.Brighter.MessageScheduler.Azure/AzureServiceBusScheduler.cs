@@ -126,7 +126,9 @@ public class AzureServiceBusScheduler(
     {
         var azureServiceBusMessage = new ServiceBusMessage(message.Body.Memory);
         azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.MessageTypeHeaderBagKey,
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
             message.Header.MessageType.ToString());
+#pragma warning restore CS0618
         azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.HandledCountHeaderBagKey,
             message.Header.HandledCount);
         azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.ReplyToHeaderBagKey, message.Header.ReplyTo);

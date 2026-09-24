@@ -660,9 +660,9 @@ namespace Paramore.Brighter
         /// Posts the specified request. The message is placed on a task queue and into a outbox for reposting in the event of failure.
         /// You will need to configure a service that reads from the task queue to process the message
         /// Paramore.Brighter.ServiceActivator provides an endpoint for use in a windows service that reads from a queue
-        /// and then Sends or Publishes the message to a <see cref="CommandProcessor"/> within that service. The decision to <see cref="Send{T}"/> or <see cref="Publish{T}"/> is based on the
-        /// mapper. Your mapper can map to a <see cref="Message"/> with either a <see cref="T:MessageType.MT_COMMAND"/> , which results in a <see cref="Send{T}"/> or a
-        /// <see cref="T:MessageType.MT_EVENT"/> which results in a <see cref="Publish{T}"/>
+        /// and then Sends or Publishes the mapped request to a <see cref="CommandProcessor"/> within that service.
+        /// A mapped <see cref="ICommand"/> is sent to a single handler; a mapped <see cref="IEvent"/> is published
+        /// to its subscribers. The transport message type header does not determine application routing.
         /// Please note that this call will not participate in any ambient Transactions, if you wish to have the outbox participate in a Transaction please Use Deposit,
         /// and then after you have committed your transaction use ClearOutstandingFromOutbox
         /// </summary>
@@ -715,9 +715,9 @@ namespace Paramore.Brighter
         /// Posts the specified request. The message is placed on a task queue and into a outbox for reposting in the event of failure.
         /// You will need to configure a service that reads from the task queue to process the message
         /// Paramore.Brighter.ServiceActivator provides an endpoint for use in a windows service that reads from a queue
-        /// and then Sends or Publishes the message to a <see cref="CommandProcessor"/> within that service. The decision to <see cref="Send{T}"/> or <see cref="Publish{T}"/> is based on the
-        /// mapper. Your mapper can map to a <see cref="Message"/> with either a <see cref="T:MessageType.MT_COMMAND"/> , which results in a <see cref="Send{T}"/> or a
-        /// <see cref="T:MessageType.MT_EVENT"/> which results in a <see cref="Publish{T}"/>
+        /// and then Sends or Publishes the mapped request to a <see cref="CommandProcessor"/> within that service.
+        /// A mapped <see cref="ICommand"/> is sent to a single handler; a mapped <see cref="IEvent"/> is published
+        /// to its subscribers. The transport message type header does not determine application routing.
         /// Please note that this call will not participate in any ambient Transactions, if you wish to have the outbox participate in a Transaction please Use DepositAsync,
         /// and then after you have committed your transaction use ClearOutboxAsync
         /// </summary>
@@ -1465,7 +1465,9 @@ namespace Paramore.Brighter
             Log.AwaitingResponseOn(s_logger, channelName);
             ExecuteWithResiliencePipeline(() => responseMessage = responseChannel.Receive(timeOut));
 
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
                 if (responseMessage is not null && responseMessage.Header.MessageType != MessageType.MT_NONE)
+#pragma warning restore CS0618
                 {
                     Log.ReplyReceivedFrom(s_logger, channelName);
                     //map to request is map to a response, but it is a request from consumer point of view. Confusing, but...
