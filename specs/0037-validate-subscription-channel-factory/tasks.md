@@ -275,7 +275,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - `will be handed no channel factory at all` is lower-case prose, not the `ChannelFactory` token — it must continue to satisfy AC-15 (task 24)
   - Depends on: 14.
 
-- [ ] **16. TEST + IMPLEMENT: The default in-memory configuration is silent (AC-11, FR-4)**
+- [x] **16. TEST + IMPLEMENT: The default in-memory configuration is silent (AC-11, FR-4)**
   - **USE COMMAND**: `/test-first when the configuration resolves to the in-memory channel factory a plain subscription should report no findings`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_the_configuration_resolves_to_the_in_memory_channel_factory_should_report_no_findings.cs`
