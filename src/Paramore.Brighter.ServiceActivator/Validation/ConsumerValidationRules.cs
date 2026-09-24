@@ -222,7 +222,7 @@ public static class ConsumerValidationRules
         if (effective is CombinedChannelFactory combined)
             return (Arm.Combined, combined.FactoryTypes);
 
-        return (Arm.Direct, effective is null ? [] : [effective.GetType()]);
+        return (Arm.Direct, effective is null ? [typeof(InMemoryChannelFactory)] : [effective.GetType()]);
     }
 
     /// <summary>
