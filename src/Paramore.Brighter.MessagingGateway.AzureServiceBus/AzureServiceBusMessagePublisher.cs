@@ -37,6 +37,9 @@ public class AzureServiceBusMessagePublisher
     /// <summary>
     /// Map a Brighter <see cref="Message"/> to an Azure Service Bus <see cref="ServiceBusMessage"/>.
     /// </summary>
+    /// <remarks>
+    /// A non-empty subject is written to both the native subject and the CloudEvents subject application property.
+    /// </remarks>
     /// <param name="message">The Azure Service Bus <see cref="ServiceBusMessage"/> to map to a  Brighter <see cref="Message"/></param>
     /// <returns></returns>
     public static ServiceBusMessage ConvertToServiceBusMessage(Message message)
@@ -59,6 +62,8 @@ public class AzureServiceBusMessagePublisher
             azureServiceBusMessage.CorrelationId = message.Header.CorrelationId;
         if (!string.IsNullOrEmpty(message.Header.ReplyTo!))
             azureServiceBusMessage.ReplyTo = message.Header.ReplyTo?.Value;
+        if (!string.IsNullOrEmpty(message.Header.Subject))
+            azureServiceBusMessage.Subject = message.Header.Subject;
         //Brighter's Outbox serializes bag keys with the configured JsonNamingPolicy, so a key written as
         //"SessionId" returns transformed (e.g. "sessionId" or "session_id") after a round-trip. Resolve the
         //SessionId using the same policy so we stay correct whatever policy is configured (see ASBConstants.IsBagKey).
