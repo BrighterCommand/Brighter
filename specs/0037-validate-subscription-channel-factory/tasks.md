@@ -184,7 +184,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - Define the `{F-list}` separator `", "` **once** and share it between the body and the remedy so the two cannot disagree
   - Depends on: 8.
 
-- [ ] **10. CHARACTERISE: A user subclass of a channel factory is accepted in the direct arm (AC-8, FR-3)**
+- [x] **10. CHARACTERISE: A user subclass of a channel factory is accepted in the direct arm (AC-8, FR-3)**
   - **USE COMMAND**: `/test-first when the default channel factory is a subclass of the declared type the rule should report no findings`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_the_channel_factory_is_a_subclass_of_the_declared_type_should_report_no_findings.cs`
