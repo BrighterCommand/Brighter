@@ -3,6 +3,8 @@
     <Description>SQLite inbox provider for Paramore.Brighter Command Processor. Enables inbox pattern implementation for idempotent command and event handling using SQLite as the persistence layer.</Description>
     <Authors>Ian Cooper</Authors>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <!-- Remove these XML documentation suppressions as the existing comments are corrected. -->
+    <NoWarn>$(NoWarn);CS1573</NoWarn>
     <PackageTags>SQLite;Database;Inbox;Idempotent;Command;Event;Command Processor;Embedded Database;Brighter</PackageTags>
     <Nullable>enable</Nullable>
   </PropertyGroup>

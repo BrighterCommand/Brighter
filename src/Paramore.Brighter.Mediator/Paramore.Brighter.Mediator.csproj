@@ -3,6 +3,8 @@
     <Description>Mediator pattern implementation for Paramore.Brighter Command Processor. Provides in-memory command and query dispatching using the Mediator pattern, including support for task scheduling, state management, and specification-based queries.</Description>
     <Authors>Ian Cooper</Authors>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <!-- Remove these XML documentation suppressions as the existing comments are corrected. -->
+    <NoWarn>$(NoWarn);CS1573;CS1711</NoWarn>
     <PackageTags>Mediator;Command;Event;Query;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability;Brighter</PackageTags>
     <Nullable>enable</Nullable>
   </PropertyGroup>
