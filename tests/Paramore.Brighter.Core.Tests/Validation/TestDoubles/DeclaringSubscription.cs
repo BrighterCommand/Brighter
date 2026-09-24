@@ -31,10 +31,21 @@ namespace Paramore.Brighter.Core.Tests.Validation.TestDoubles;
 /// <see cref="ChannelFactoryType"/>. Identity-only, in the same sense as the channel factory doubles:
 /// it contributes nothing beyond that declaration.
 /// </summary>
-public class DeclaringSubscription : Subscription<FakeChannelFactoryRequest>
+public class DeclaringSubscription : Subscription
 {
-    public DeclaringSubscription(SubscriptionName? subscriptionName = null, IAmAChannelFactory? channelFactory = null)
-        : base(subscriptionName, channelFactory: channelFactory)
+    public DeclaringSubscription(
+        SubscriptionName? subscriptionName = null,
+        IAmAChannelFactory? channelFactory = null,
+        Func<Message, Type>? getRequestType = null,
+        MessagePumpType messagePumpType = MessagePumpType.Proactor)
+        : base(
+            subscriptionName ?? new SubscriptionName(typeof(FakeChannelFactoryRequest).FullName!),
+            new ChannelName(typeof(FakeChannelFactoryRequest).FullName!),
+            new RoutingKey(typeof(FakeChannelFactoryRequest).FullName!),
+            requestType: getRequestType is null ? typeof(FakeChannelFactoryRequest) : null,
+            getRequestType: getRequestType,
+            messagePumpType: messagePumpType,
+            channelFactory: channelFactory)
     {
     }
 
