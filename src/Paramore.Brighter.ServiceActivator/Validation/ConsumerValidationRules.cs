@@ -240,10 +240,14 @@ public static class ConsumerValidationRules
     private static string RemedyClause(Type? declared, Arm arm, IReadOnlyList<Type> candidates)
     {
         var suppressed = declared is null || declared == typeof(InMemoryChannelFactory);
+        var handed = string.Join(", ", candidates.Select(DisplayName));
+
         if (arm == Arm.Direct && suppressed)
             return $"— use a subscription type whose ChannelFactoryType is {DisplayName(candidates[0])}";
 
-        var handed = string.Join(", ", candidates.Select(DisplayName));
+        if (arm == Arm.Combined && suppressed)
+            return $"— use a subscription type whose ChannelFactoryType is one of: {handed}";
+
         return $"— either configure a channel factory of type {DisplayName(declared!)}, " +
                $"or use a subscription type whose ChannelFactoryType is {handed}";
     }
