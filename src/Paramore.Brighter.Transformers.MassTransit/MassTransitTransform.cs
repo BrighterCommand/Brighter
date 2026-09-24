@@ -224,7 +224,9 @@ public class MassTransitTransform : IAmAMessageTransform, IAmAMessageTransformAs
                 new MessageHeader(
                     messageId,
                     message.Header.Topic,
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
                     message.Header.MessageType,
+#pragma warning restore CS0618
                     source: message.Header.Source,
                     type: message.Header.Type,
                     timeStamp: timestamp!,

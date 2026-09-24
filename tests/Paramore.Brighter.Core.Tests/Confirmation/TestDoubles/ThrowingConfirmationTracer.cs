@@ -91,6 +91,9 @@ namespace Paramore.Brighter.Core.Tests.Confirmation.TestDoubles
         public Activity? CreateProducerSpan(Publication publication, Message? message, Activity? parentActivity,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All) => null;
 
+        public Activity? CreateCircuitBreakerSpan(CircuitBreakerSpanInfo info,
+            InstrumentationOptions options = InstrumentationOptions.All) => null;
+
         public void EndSpan(Activity? span)
         {
             if (throwOnEndSpan)
