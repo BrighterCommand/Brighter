@@ -240,7 +240,9 @@ public class MessageItem
         DeliveryTime = null;
         HeaderBag = JsonSerializer.Serialize(message.Header.Bag);
         MessageId = message.Id.ToString();
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
         MessageType = message.Header.MessageType.ToString();
+#pragma warning restore CS0618
         PartitionKey = message.Header.PartitionKey;
         ReplyTo = message.Header.ReplyTo?.Value;
         Topic = message.Header.Topic;

@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Core.Tests.Validation;
 public class SubscriptionRequestTypeNotCommandOrEventValidationTests
 {
     [Fact]
-    public void When_subscription_request_type_not_command_or_event_should_report_warning()
+    public void When_subscription_request_type_not_command_or_event_should_report_error()
     {
         // Arrange — subscription with a RequestType that implements IRequest but not ICommand or IEvent
         var subscription = new Subscription(
@@ -51,10 +51,10 @@ public class SubscriptionRequestTypeNotCommandOrEventValidationTests
         var collector = new ValidationResultCollector<Subscription>();
         var results = spec.Accept(collector).ToList();
 
-        // Assert — Warning, not Error, because it may still work but is unusual
+        // Assert
         Assert.False(satisfied);
         Assert.Single(results);
-        Assert.Equal(ValidationSeverity.Warning, results[0].Error!.Severity);
+        Assert.Equal(ValidationSeverity.Error, results[0].Error!.Severity);
         Assert.Contains("ICommand", results[0].Error!.Message);
         Assert.Contains("IEvent", results[0].Error!.Message);
     }

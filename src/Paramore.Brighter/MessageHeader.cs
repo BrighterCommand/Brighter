@@ -36,7 +36,7 @@ namespace Paramore.Brighter
 {
     /// <summary>
     /// Enum MessageType
-    /// The type of a message, used on the receiving side of a Task Queue to handle the message appropriately
+    /// The legacy transport classification and control signal for a message.
     /// </summary>
     public enum MessageType
     {
@@ -247,10 +247,16 @@ namespace Paramore.Brighter
         public Id MessageId { get; init; } = new("");
 
         /// <summary>
-        /// REQUIRED
-        /// Gets the type of the message (command, event). Internal usage, Used when routing the message to a handler
+        /// Gets or sets the legacy transport classification and pump control signal.
         /// </summary>
-        /// <value>The type of the message.</value>
+        /// <value>The transport message type.</value>
+        /// <remarks>
+        /// The command/event distinction in this header is obsolete for application routing. The message pump
+        /// routes the mapped request using <see cref="ICommand"/> or <see cref="IEvent"/> instead.
+        /// This property is retained for wire compatibility and the <see cref="MessageType.MT_NONE"/>,
+        /// <see cref="MessageType.MT_UNACCEPTABLE"/> and <see cref="MessageType.MT_QUIT"/> control signals.
+        /// </remarks>
+        [Obsolete("Message type headers no longer determine request routing. Use ICommand or IEvent on the mapped request. Retained for wire compatibility and pump control signals.")]
         public MessageType MessageType { get; set; }
 
         /// <summary>
@@ -423,7 +429,9 @@ namespace Paramore.Brighter
         {
             MessageId = messageId;
             Topic = topic;
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
             MessageType = messageType;
+#pragma warning restore CS0618
             if (source != null) Source = source;
             Type = type ?? CloudEventsType.Empty;
             TimeStamp = timeStamp ?? DateTimeOffset.UtcNow;
@@ -450,7 +458,9 @@ namespace Paramore.Brighter
         {
             var newHeader = new MessageHeader(MessageId,
                 new RoutingKey($"{Topic}"),
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
                 MessageType,
+#pragma warning restore CS0618
                 timeStamp : TimeStamp,
                 handledCount : 0,
                 delayed : TimeSpan.Zero,
@@ -495,7 +505,9 @@ namespace Paramore.Brighter
             //We choose to break these into individual comparisons to make it easier to debug
             bool messageIdEquals = MessageId == other.MessageId;
             bool topicEquals = Topic == other.Topic;
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
             bool messageTypeEquals = MessageType == other.MessageType;
+#pragma warning restore CS0618
             bool sourceEquals = Source == other.Source;
             bool typeEquals = Type == other.Type;
             bool correlationIdEquals = CorrelationId == other.CorrelationId;
@@ -539,7 +551,9 @@ namespace Paramore.Brighter
             {
                 var hashCode = MessageId.GetHashCode();
                 hashCode = (hashCode * 397) ^ Topic.GetHashCode();
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
                 hashCode = (hashCode * 397) ^ (int)MessageType;
+#pragma warning restore CS0618
                 return hashCode;
             }
         }

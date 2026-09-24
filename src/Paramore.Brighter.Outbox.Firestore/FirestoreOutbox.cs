@@ -1278,7 +1278,9 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
                 [IsDispatched] = new Value { BooleanValue = false },
                 [nameof(MessageHeader.HandledCount)] = new Value { IntegerValue = message.Header.HandledCount }, 
                 [nameof(MessageHeader.MessageId)] = new Value { StringValue = message.Header.MessageId.ToString() },
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
                 [nameof(MessageHeader.MessageType)] = new Value { StringValue = message.Header.MessageType.ToString() },
+#pragma warning restore CS0618
                 [nameof(MessageHeader.SpecVersion)] = new Value { StringValue = message.Header.SpecVersion },
                 [nameof(MessageHeader.Source)] = new Value { StringValue = message.Header.Source.ToString() },
                 [nameof(MessageHeader.Topic)] = new Value { StringValue = message.Header.Topic.Value },
@@ -1367,9 +1369,13 @@ public class FirestoreOutbox : IAmAnOutboxSync<Message, FirestoreTransaction>, I
     {
         var messageId = Id.Create(document.Fields[nameof(MessageHeader.MessageId)].StringValue);
 #if NETSTANDARD
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
         var messageType = (MessageType)Enum.Parse(typeof(MessageType), document.Fields[nameof(MessageHeader.MessageType)].StringValue);
+#pragma warning restore CS0618
 #else
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
         var messageType = Enum.Parse<MessageType>(document.Fields[nameof(MessageHeader.MessageType)].StringValue);
+#pragma warning restore CS0618
 #endif 
         var specVersion = document.Fields[nameof(MessageHeader.SpecVersion)].StringValue;
         var topic = new RoutingKey(document.Fields[nameof(MessageHeader.Topic)].StringValue);

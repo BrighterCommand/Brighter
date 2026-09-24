@@ -51,7 +51,9 @@ public class AzureBlobArchiveProviderOptions(
     {
         { "topic", message.Header.Topic },
         { "correlationId", message.Header.CorrelationId?.ToString() },
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
         { "message_type", message.Header.MessageType.ToString() },
+#pragma warning restore CS0618
         { "timestamp", message.Header.TimeStamp.ToString(CultureInfo.InvariantCulture) },
         { "content_type", message.Header.ContentType is not null ? message.Header.ContentType.ToString() : MediaTypeNames.Text.Plain }
     };

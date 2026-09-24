@@ -106,30 +106,27 @@ namespace Paramore.Brighter.ServiceActivator
             await Channel.AcknowledgeAsync(message);
         }
         
-        private async Task DispatchRequest<TRequest>(MessageHeader messageHeader, TRequest request, RequestContext requestContext) where TRequest : class, IRequest
+        private async Task DispatchRequest<TRequest>(TRequest request, RequestContext requestContext) where TRequest : class, IRequest
         {
             Log.DispatchingMessage(s_logger, request.Id.Value, Thread.CurrentThread.ManagedThreadId, Channel.Name);
             requestContext.Span?.AddEvent(new ActivityEvent("Dispatch Message"));
 
-            var messageType = messageHeader.MessageType;
-            
-            ValidateMessageType(messageType, request);
-
-            switch (messageType)
+            switch (request)
             {
-                case MessageType.MT_COMMAND:
+                case ICommand:
                 {
                     await CommandProcessor
                         .SendAsync(request,requestContext, continueOnCapturedContext: true, default);
                     break;
                 }
-                case MessageType.MT_DOCUMENT:
-                case MessageType.MT_EVENT:
+                case IEvent:
                 {
                     await CommandProcessor
                         .PublishAsync(request, requestContext, continueOnCapturedContext: true, default);
                     break;
                 }
+                default:
+                    throw new InvalidMessageAction($"Mapped request type '{request.GetType().FullName}' must implement ICommand or IEvent.");
             }
         }
 
@@ -199,14 +196,18 @@ namespace Paramore.Brighter.ServiceActivator
                         }
 
                         // empty queue
+#pragma warning disable CS0618 // Message types still identify pump control signals.
                         if (message.Header.MessageType == MessageType.MT_NONE)
+#pragma warning restore CS0618
                         {
                             await Task.Delay(EmptyChannelDelay);
                             continue;
                         }
 
                         // failed to parse a message from the incoming data
+#pragma warning disable CS0618 // Message types still identify pump control signals.
                         if (message.Header.MessageType == MessageType.MT_UNACCEPTABLE)
+#pragma warning restore CS0618
                         {
                             Log.FailedToParseMessage(s_logger, message.Id.Value, Channel.Name, Channel.RoutingKey.Value, Environment.CurrentManagedThreadId);
                             var description = $"MessagePump: Failed to parse a message from the incoming message with id {message.Id} from {Channel.Name} on thread # {Environment.CurrentManagedThreadId}";
@@ -218,7 +219,9 @@ namespace Paramore.Brighter.ServiceActivator
                         }
 
                         // QUIT command
+#pragma warning disable CS0618 // Message types still identify pump control signals.
                         if (message.Header.MessageType == MessageType.MT_QUIT)
+#pragma warning restore CS0618
                         {
                             Log.QuitReceivingMessages(s_logger, Channel.Name, Environment.CurrentManagedThreadId);
                             await Channel.DisposeAsync();
@@ -238,7 +241,7 @@ namespace Paramore.Brighter.ServiceActivator
 
                         var request = await TranslateMessage(message, context);
 
-                        await InvokeDispatchRequest(request, message, context);
+                        await InvokeDispatchRequest(request, context);
 
                         processSpan?.SetStatus(ActivityStatusCode.Ok);
                     }
@@ -411,7 +414,7 @@ namespace Paramore.Brighter.ServiceActivator
             }
         }
 
-        private async Task InvokeDispatchRequest(IRequest request, Message message, RequestContext context)
+        private async Task InvokeDispatchRequest(IRequest request, RequestContext context)
         {
             // NOTE: DispatchRequest<TRequest> is a generic method constrained to TRequest : class, IRequest, but at runtime
             // we only have an IRequest reference due to the dynamic type lookup. To call the generic method with the actual
@@ -421,7 +424,7 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 MethodInfo? dispatchMethod = MakeDispatchMethod(request);
 
-                await (Task)dispatchMethod.Invoke(this, [message.Header, request, context])!;
+                await (Task)dispatchMethod.Invoke(this, [request, context])!;
             }
             catch (TargetInvocationException tie)
             {

@@ -333,7 +333,9 @@ public class AwsScheduler(
             [HeaderNames.Topic] = new { StringValue = topicArn, DataType = "String" },
             [HeaderNames.ContentType] = new { StringValue = message.Header.ContentType.ToString(), DataType = "String" },
             [HeaderNames.HandledCount] = new { StringValue = Convert.ToString(message.Header.HandledCount), DataType = "String" },
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
             [HeaderNames.MessageType] = new { StringValue = message.Header.MessageType.ToString(), DataType = "String" },
+#pragma warning restore CS0618
             [HeaderNames.Timestamp] = new { StringValue = Convert.ToString(message.Header.TimeStamp), DataType = "String" },
             [HeaderNames.CorrelationId] = new { StringValue = Convert.ToString(message.Header.CorrelationId), DataType = "String" }
         };
@@ -375,7 +377,9 @@ public class AwsScheduler(
             [HeaderNames.Topic] = new { StringValue = queueUrl, DataType = "String" },
             [HeaderNames.ContentType] = new { StringValue = message.Header.ContentType.ToString(), DataType = "String" },
             [HeaderNames.HandledCount] = new { StringValue = Convert.ToString(message.Header.HandledCount), DataType = "String" },
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
             [HeaderNames.MessageType] = new { StringValue = message.Header.MessageType.ToString(), DataType = "String" },
+#pragma warning restore CS0618
             [HeaderNames.Timestamp] = new { StringValue = Convert.ToString(message.Header.TimeStamp), DataType = "String" }
         };
 

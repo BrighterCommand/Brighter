@@ -38,7 +38,9 @@ public class OutboxMessage : IMongoDbCollectionTTL
         CorrelationId = message.Header.CorrelationId.Value;
         HeaderBag = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
         MessageId = message.Id.Value;
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
         MessageType = message.Header.MessageType.ToString();
+#pragma warning restore CS0618
         PartitionKey = message.Header.PartitionKey.Value;
         ReplyTo = message.Header.ReplyTo?.Value;
         Topic = message.Header.Topic.Value;
