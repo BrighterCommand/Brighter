@@ -125,11 +125,16 @@ public static class ConsumerValidationRules
             s =>
             {
                 var (arm, candidates) = ResolveCandidates(s, defaultChannelFactory);
+                var declared = s.ChannelFactoryType;
+                var declaredClause = declared is null
+                    ? "declares no ChannelFactoryType"
+                    : $"declares ChannelFactoryType '{DisplayName(declared)}'";
                 var handed = string.Join(", ", candidates.Select(DisplayName));
+                var remedy = RemedyClause(declared, arm, candidates);
                 return new ValidationError(
                     ValidationSeverity.Error,
                     $"Subscription '{s.Name}'",
-                    $"Subscription type '{DisplayName(s.ChannelFactoryType)}' will be handed '{handed}'");
+                    $"Subscription type '{DisplayName(s.GetType())}' {declaredClause} but will be handed '{handed}' {remedy}");
             });
 
     /// <summary>
@@ -228,6 +233,20 @@ public static class ConsumerValidationRules
             Arm.Combined => declared is not null && candidates.Any(t => t == declared),
             _ => false
         };
+
+    /// <summary>
+    /// Renders the finding message's remedy clause, per FR-5's ordered template table.
+    /// </summary>
+    private static string RemedyClause(Type? declared, Arm arm, IReadOnlyList<Type> candidates)
+    {
+        var suppressed = declared is null || declared == typeof(InMemoryChannelFactory);
+        if (arm == Arm.Direct && suppressed)
+            return $"— use a subscription type whose ChannelFactoryType is {DisplayName(candidates[0])}";
+
+        var handed = string.Join(", ", candidates.Select(DisplayName));
+        return $"— either configure a channel factory of type {DisplayName(declared!)}, " +
+               $"or use a subscription type whose ChannelFactoryType is {handed}";
+    }
 
     /// <summary>
     /// Renders a type for a validation message: its full name, namespace-qualified rather than
