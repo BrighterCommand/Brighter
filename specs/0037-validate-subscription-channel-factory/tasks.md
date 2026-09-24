@@ -169,7 +169,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - This test is **not** a guard for task 2's re-enumeration trap: its collection expression is array-backed and re-enumerates successfully, so a `FactoryTypes` built from the `factories` parameter would still pass here. Task 2's single-pass test is that guard
   - Depends on: 2, 7.
 
-- [ ] **9. TEST + IMPLEMENT: A subscription no inner factory can serve is an Error naming the inner factories (AC-7, FR-5 item 3)**
+- [x] **9. TEST + IMPLEMENT: A subscription no inner factory can serve is an Error naming the inner factories (AC-7, FR-5 item 3)**
   - **USE COMMAND**: `/test-first when no inner factory of a combined channel factory can serve a subscription the rule should name the inner factories in constructor order`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_no_inner_factory_can_serve_a_subscription_should_name_the_inner_factories.cs`
