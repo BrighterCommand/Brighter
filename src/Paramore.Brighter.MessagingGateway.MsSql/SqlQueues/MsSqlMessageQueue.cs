@@ -94,7 +94,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         ///    Sync over Async
         /// </summary>
         /// <param name="topic">The topic name</param>
-        /// <param name="timeOut">Timeout for reading a message of the queue; -1 or null for default timeout</param>
+        /// <param name="timeout">Timeout for reading a message of the queue; -1 or null for default timeout</param>
         /// <returns>The message received -or- ReceivedResult&lt;T&gt;.Empty when no message arrives within the timeout period</returns>
         public ReceivedResult<T> TryReceive(string topic, TimeSpan? timeout = null)
         {

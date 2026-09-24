@@ -3,6 +3,8 @@
     <Description>Service Activator for Paramore.Brighter Command Processor. Enables background message processing and task queue consumption for event-driven architectures. The Service Activator pattern decouples message reception from business logic execution.</Description>
     <Authors>Ian Cooper</Authors>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <!-- Remove these XML documentation suppressions as the existing comments are corrected. -->
+    <NoWarn>$(NoWarn);CS0419;CS1572;CS1573;CS1574</NoWarn>
     <PackageTags>Service Activator;Message Consumer;Command;Event;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability;Brighter</PackageTags>
     <Nullable>enable</Nullable>
   </PropertyGroup>

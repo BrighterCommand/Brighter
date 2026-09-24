@@ -4,6 +4,8 @@
     <Description>Firestore outbox implementation for Paramore.Brighter Command Processor. Provides reliable message publishing with outbox pattern using Google Cloud Firestore for transactional consistency and guaranteed delivery.</Description>
     <Authors>Rafael Andrade</Authors>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <!-- Remove these XML documentation suppressions as the existing comments are corrected. -->
+    <NoWarn>$(NoWarn);CS1573</NoWarn>
     <PackageTags>Firestore;Google Cloud;GCP;Outbox;Transactional;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability;Brighter</PackageTags>
     <Nullable>enable</Nullable>
   </PropertyGroup>
