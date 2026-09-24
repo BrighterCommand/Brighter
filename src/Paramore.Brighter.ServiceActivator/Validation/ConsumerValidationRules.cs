@@ -107,20 +107,20 @@ public static class ConsumerValidationRules
     /// <summary>
     /// Validates that the subscription's <see cref="Subscription.RequestType"/> implements either
     /// <see cref="ICommand"/> or <see cref="IEvent"/>. A type that only implements <see cref="IRequest"/>
-    /// directly will work but is unusual and may indicate a misconfiguration.
+    /// directly cannot be routed to Send or Publish by the message pump.
     /// Vacuously passes when RequestType is null.
     /// </summary>
-    /// <returns>A simple specification that reports a Warning when RequestType implements neither ICommand nor IEvent.</returns>
+    /// <returns>A simple specification that reports an Error when RequestType implements neither ICommand nor IEvent.</returns>
     public static ISpecification<Subscription> RequestTypeSubtype()
         => new Specification<Subscription>(
             s => s.RequestType == null
                  || typeof(ICommand).IsAssignableFrom(s.RequestType)
                  || typeof(IEvent).IsAssignableFrom(s.RequestType),
             s => new ValidationError(
-                ValidationSeverity.Warning,
+                ValidationSeverity.Error,
                 $"Subscription '{s.Name}'",
                 $"RequestType '{s.RequestType!.Name}' implements neither ICommand nor IEvent " +
-                "— consider implementing one of these marker interfaces"));
+                "— implement one of these marker interfaces so the message pump can route the request"));
 
     /// <summary>
     /// Validates that every unwrap transform the subscription's resolved mapper declares can be resolved.
