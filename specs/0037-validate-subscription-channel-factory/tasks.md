@@ -310,7 +310,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
 
 `DisplayName` is a **private static on `ConsumerValidationRules`** (ADR 0072 §3): a formatter with one caller does not earn permanent public surface, and `TypeExtensions`/`ReflectionExtensions` are both `internal` to core. Only the five remedy literals are normative; the body wording is ADR 0072's, revisable only while AC-5, AC-7, AC-10a, AC-10b, AC-10c, AC-12, AC-13a, AC-13c, AC-14, AC-15 and AC-30 all continue to hold.
 
-- [ ] **18. TEST + IMPLEMENT: The message names the offending subscription's own type (AC-12, FR-5 item 1)**
+- [x] **18. TEST + IMPLEMENT: The message names the offending subscription's own type (AC-12, FR-5 item 1)**
   - **USE COMMAND**: `/test-first when reporting a channel factory mismatch the message should name the subscription's own runtime type as a display name`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_reporting_a_channel_factory_mismatch_should_name_the_subscription_type.cs`
