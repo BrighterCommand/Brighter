@@ -101,7 +101,9 @@ public static class RocketMqMessagePublisher
         builder.AddProperty(HeaderNames.MessageId, messageId)
             .AddProperty(HeaderNames.Topic, header.Topic.Value)
             .AddProperty(HeaderNames.HandledCount, header.HandledCount.ToString())
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
             .AddProperty(HeaderNames.MessageType, header.MessageType.ToString())
+#pragma warning restore CS0618
             .AddProperty(HeaderNames.TimeStamp, header.TimeStamp.ToRfc3339())
             .AddProperty(HeaderNames.Source, header.Source.ToString())
             .AddProperty(HeaderNames.SpecVersion, header.SpecVersion);

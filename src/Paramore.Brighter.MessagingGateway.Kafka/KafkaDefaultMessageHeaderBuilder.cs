@@ -52,7 +52,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         private static void AddBrighterHeaders(Headers headers, Message message)
         {
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
             headers.Add(new Header(HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString().ToByteArray()));
+#pragma warning restore CS0618
             headers.Add(new Header(HeaderNames.TOPIC, message.Header.Topic.Value.ToByteArray()));
             headers.Add(new Header(HeaderNames.MESSAGE_ID, message.Header.MessageId.Value.ToByteArray()));
             

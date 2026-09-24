@@ -113,7 +113,9 @@ public partial class SqsMessageSender
             [HeaderNames.Id] = new() { StringValue = message.Header.MessageId, DataType = "String" },
             [HeaderNames.CloudEventHeaders] = new() { StringValue = cloudEventHeadersJson, DataType = "String" },
             [HeaderNames.Topic] = new() { StringValue = _queueUrl, DataType = "String" },
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
             [HeaderNames.MessageType] = new() { StringValue = message.Header.MessageType.ToString(), DataType = "String" },
+#pragma warning restore CS0618
             [HeaderNames.ContentType] = new() { StringValue = contentType.ToString(), DataType = "String" },
             [HeaderNames.Timestamp] = new() { StringValue = Convert.ToString(message.Header.TimeStamp.ToRfc3339()), DataType = "String" }
         };
