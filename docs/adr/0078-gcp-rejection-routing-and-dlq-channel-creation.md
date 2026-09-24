@@ -33,7 +33,7 @@ Proposed
 
 It does not re-decide the delivery-count contract. That belongs to sibling ADR `0077-delivery-count-contract`. The routing here honours 0077's constraints (0077 §"Deferred to ADR 0078"):
 
-- The routed copy stamps `RejectionMetadataKeys`, with `rejectionReason = "None"` for a null reason and no `rejectionMessage` in that case.
+- The routed copy stamps the keys named by 0077's core `RejectionMetadataKeyNames`, with `rejectionReason = "None"` for a null reason and no `rejectionMessage` in that case.
 - The routed copy carries `HandledCount` (`Parser.cs:307`).
 - The routed copy does not re-publish `googclient_deliveryattempt`, which 0077 adds to `Parser.s_ignoreHeaders` (`Parser.cs:12`).
 
@@ -89,7 +89,7 @@ flowchart TD
 |---|---|---|---|---|
 | Information holder | `GcpPubSubSubscription` / `<T>` (public, changed) | `DeadLetterRoutingKey`, `InvalidMessageRoutingKey` (via `IUseBrighterDeadLetterSupport` / `IUseBrighterInvalidMessageSupport`); `MakeChannels`; existing `DeadLetter` policy, unchanged | — | — |
 | Structurer | `GcpPubSubConsumerFactory.CreateAsync` (`GcpPubSubConsumerFactory.cs:69`) | the subscription | passes the routing keys and `MakeChannels` to both consumers (`:83`, `:99`) | — |
-| Service provider | `GcpRejectionRouter` (new, **internal**, one per consumer instance) | routing keys, `MakeChannels`, connection, project (from the consumer's `SubscriptionName`), `TimeProvider` | stamps metadata on the routed copy, strips `ReceiptHandle`, creates the destination producer lazily and publishes | the route (`Unacceptable` → invalid, falling back to DLQ; `DeliveryError`/`None`/null → DLQ); logs R-17's Warning and R-19's Error |
+| Service provider | `GcpRejectionRouter` (new, **internal**, one per consumer instance; not thread-safe, which is sound because each performer has its own consumer — `GcpPubSubConsumerFactory.cs:83`, `:97-99` — so `Reject` is never called concurrently on one instance) | routing keys, `MakeChannels`, connection, project (from the consumer's `SubscriptionName`), `TimeProvider` | stamps metadata on the routed copy, strips `ReceiptHandle`, creates the destination producer lazily and publishes | the route (`Unacceptable` → invalid, falling back to DLQ; `DeliveryError`/`None`/null → DLQ); logs R-17's Warning and R-19's Error |
 | Coordinator | `GcpPullMessageConsumer`, `GcpPubSubStreamMessageConsumer` (public, changed) | its receipt-handle type | copies the handle, calls the router, settles the original | ack or release, depending on the router's outcome |
 | Service provider | `GcpIamCallTolerance` (new, **public**) | the tolerated set `{Unimplemented, PermissionDenied, Unauthenticated}` | runs one IAM step; logs R-20's five-element Warning | tolerate (abandon the helper) or let the exception propagate |
 
@@ -131,8 +131,8 @@ internal sealed class GcpRejectionRouter : IDisposable, IAsyncDisposable
   - `EnableMessageOrdering = true`
 
   It then calls `GcpPubSubMessageProducerFactory.Create`/`CreateAsync` (`GcpPubSubMessageProducerFactory.cs:50`, `EnsureTopicExistAsync` at `:69`), so it reuses existing topic handling rather than duplicating it.
-  - **Ordering is always enabled.** A copy that carries a partition key is published with an `OrderingKey` (`Parser.cs:292-295`), and Pub/Sub refuses that unless the publisher enables ordering (the harness records this at `GcpPullMessageGatewayProvider.cs:98-102`). Messages without a key are unaffected.
-  - **Only success is cached.** SQS uses `Lazy<T>` and caches a `null` from a failed creation (`SqsMessageConsumer.cs:104`, `:455-475`). GCP does not: after a `Failed` outcome the router disposes and discards its cached producer, and the next `Reject` builds it again. Two reasons:
+  - **Ordering is always enabled.** A copy that carries a partition key is published with an `OrderingKey` (`Parser.cs:296`), and Pub/Sub refuses that unless the publisher enables ordering (the harness records this at `GcpPullMessageGatewayProvider.cs:98-102`). Messages without a key are unaffected.
+  - **Only success is cached.** SQS uses `Lazy<T>` and caches a `null` from a failed creation (`SqsMessageConsumer.cs:104`, `:455-475`). GCP does not: after a `Failed` outcome the router disposes and discards its cached producer — the disposal is inside the same guarded region, so a throw is logged and the reference dropped — and the next `Reject` builds it again. Two reasons:
     - A released message comes back, so a later attempt should be able to succeed once the topic exists.
     - An ordering-enabled `PublisherClient` pauses an ordering key after a failed publish. A fresh client clears that pause.
   - **Divergence from SQS:** a failed producer creation is `Failed`, not "no destination". SQS turns a creation failure into a `null` producer, which then leads to "no channels configured" and a delete. On GCP a configured destination is never treated as absent.
@@ -168,7 +168,7 @@ Both settle calls are `TaskCompletionSource.TrySetResult` (`GcpStreamConsumer.cs
 
 **Missing receipt handle (both consumers).** The router still runs, so a configured destination still receives the message and nothing is discarded. The consumer then logs an Error that the original cannot be settled, and returns `true`.
 
-A message without a handle holds no lease that this consumer can act on. Whatever broker copy exists returns at its own deadline, and no call `Reject` could make would change that. The path is defensive only: both parsers always set the handle (`Parser.cs:78`, `:130`).
+This case is unreachable by construction: both parsers always set the handle (`Parser.cs:78`, `:130`). The path is defensive only, so that a message which somehow lacks one neither discards a configured destination nor escapes `Reject`.
 
 **NFR-3.** The requeue path is untouched. On `Reject`, the settle call (ack, or a release that **replaces** the ack) is the one call the path already made. The only addition is the routing publish, which R-16 requires and which is not a requeue round trip. After that, a producer is created once per consumer, plus `EnsureTopicExistAsync` once per process under `Validate`/`Create`.
 
@@ -182,7 +182,7 @@ A message without a handle holds no lease that this consumer can act on. Whateve
 
 The conformance subscriptions use `OnMissingChannel.Create` (for example `When_rejecting_message_should_include_metadata.cs` passes it to `CreateSubscription`). Under inheritance, a Create-configured subscription would create AC-18's missing topic, so **AC-18's Given is set up with two subscription objects**:
 
-1. A **provisioning** subscription, with the same names and `makeChannels: Create`. It creates the source topic and subscription and, for AC-43, the `DeadLetterPolicy` topic and its subscription (`:220-236`). It **does not** create the `deadLetterRoutingKey` topic, because the destination producer is lazy and nothing creates it at channel creation.
+1. A **provisioning** subscription, with the same names, `makeChannels: Create` and `SubscriptionMode.Pull` on every configuration, so that on the Stream configurations it starts no competing streaming pull (`GcpPubSubConsumerFactory.cs:89-95`); subscription creation does not depend on the mode. It creates the source topic and subscription and, for AC-43, the `DeadLetterPolicy` topic and its subscription (`:220-236`). It **does not** create the `deadLetterRoutingKey` topic, because the destination producer is lazy and nothing creates it at channel creation.
 2. The **subscription under test**, identical but with `makeChannels: OnMissingChannel.Assume`. `EnsureSubscriptionExistsAsync` returns immediately (`:188-192`). The inherited `Assume` producer publishes to the missing topic, the publish fails, and the topic still does not exist afterwards.
 
 AC-43 uses the same two-object Given.
@@ -218,7 +218,7 @@ These are R-19's failed release and the failed acknowledgement under R-16/R-17. 
 
 ### IAM tolerance (R-20, NFR-5)
 
-**`GcpIamCallTolerance` is public** because the harness has no `InternalsVisibleTo` (none exists under `src/` for GcpPubSub), and AC-21 must exercise it directly. Its contract:
+**`GcpIamCallTolerance` is public** because it is used by production code (both IAM helpers), AC-21 must exercise it directly, and the project does not use `InternalsVisibleTo` (`.agent_instructions/testing.md:109-111`). Alternative 6 rejects a public type used *only* by tests; this one is not. Its contract:
 
 ```csharp
 public sealed class GcpIamCallTolerance(ILogger? logger = null)   // defaults to ApplicationLogging
@@ -254,11 +254,11 @@ For the construction case, `{Rpc}` reads `construct ProjectsClient` and `{Status
 **NFR-5: the exception caught on Resource Manager client construction is `System.InvalidOperationException`.**
 
 - **Where verified.** `CreateProjectsClientAsync` (`GcpMessagingGatewayConnection.cs:173-192`) builds `new ProjectsClientBuilder { Credential = Credential }` and calls `BuildAsync()`. When `Credential` is null, that resolves Application Default Credentials through `DefaultCredentialProvider` in Google.Apis.Auth 1.73.0, the version resolved for this project. In that assembly's IL, `CreateDefaultCredentialAsync` throws `newobj System.InvalidOperationException::.ctor(string)` with "Your default credentials were not found…". A bad `GOOGLE_APPLICATION_CREDENTIALS` file also throws `InvalidOperationException(string, Exception)` ("Error reading credential file from location…").
-- **Known widening.** Gax's `ClientBuilderBase.Validate` also throws `InvalidOperationException` for an inconsistent builder (4.13.1 XML doc), so a misconfigured `ProjectsClientConfiguration` would be tolerated too. That is accepted under Risks. The catch is scoped to the one construction call, and the Warning carries the exception message.
+- **Known widening.** Gax's `ClientBuilderBase.Validate` also throws `InvalidOperationException` for an inconsistent builder (4.13.1 XML doc), so a misconfigured `ProjectsClientConfiguration` would be tolerated too. That is accepted under Risks. The catch is scoped to the one construction call, and the Warning carries the exception message. NFR-5's "a tolerated failure never widens" is met in its stated sense — the subscription is still created and no other call is affected; the catch type is the narrowest one the construction call can be named to throw.
 
 **R-21.** With this tolerance, a DLQ-backed channel is creatable on the emulator:
 
-- Members unset: `GetProjectAsync` reaches real GCP with the harness's `"mock"` access token (`Helper/GatewayFactory.cs:13-22`) and is refused with `Unauthenticated`, as spec 0036 measured. Where ADC does not resolve and `Credential` is null, construction throws `InvalidOperationException`. Both are tolerated.
+- Members unset: `GetProjectAsync` reaches real GCP with the harness's `"mock"` access token (`Helper/GatewayFactory.cs:13-22`) and is refused with `Unauthenticated`, as spec 0036 measured. This case therefore needs outbound network: offline, `GetProjectAsync` fails with `Unavailable`, which is not tolerated, and the members-set mitigation below cannot apply because AC-20's first Given requires members unset. Where ADC does not resolve and `Credential` is null, construction throws `InvalidOperationException`. Both are tolerated.
 - Members set (C-11): `GetIamPolicyAsync` on the emulator returns `Unimplemented`, which is tolerated.
 
 That unblocks A-6/AC-43 and 0077's AC-39. All GCP verification runs locally against `docker-compose-gcp.yaml`.
@@ -278,10 +278,10 @@ The order follows Tidy First: structural changes before behavioural ones.
 3. Add `GcpRejectionRouter` and the consumer constructor parameters, and wire them in `GcpPubSubConsumerFactory.CreateAsync`. Consumers dispose the router.
 4. Compose `Reject`/`RejectAsync` on both consumers (AC-15, AC-16, AC-17, AC-18; NFR-8).
 5. **Harness:**
-   - the providers pass the routing keys instead of mapping `deadLetterRoutingKey` onto `DeadLetterPolicy` (`GcpPullMessageGatewayProvider.cs:143-164` today);
+   - the providers pass the routing keys to the Brighter route instead of mapping `deadLetterRoutingKey` onto `DeadLetterPolicy` (`GcpPullMessageGatewayProvider.cs:136-164` today). Wherever a routing key is passed they **also** keep a `DeadLetterPolicy { MaxDeliveryAttempts = 5 }` (0077 step 7), on a separately named native topic `{deadLetterRoutingKey}.native`, so FR-23 keeps its delivery counter (A-1) and AC-18's two topics stay distinct. A subscription given no routing key is unchanged;
    - they pre-provision each destination topic **with a reading subscription** before `Reject`;
    - they implement `GetMessageFromInvalidChannelAsync`;
-   - they fill `RejectionMetadataKeys` (empty today, `:363-370`);
+   - they fill the generated harness record `RejectionMetadataKeys` (empty today, `:363-370`) — a test type, distinct from 0077's core `RejectionMetadataKeyNames`;
    - they add the two-subscription Given for AC-18 and AC-43.
 6. **R-20 (AC-20, AC-21):** add `GcpIamCallTolerance` and apply it in both helpers.
 7. **AC-43:** after R-20, and after 0077's GCP parser work.
@@ -318,7 +318,7 @@ The order follows Tidy First: structural changes before behavioural ones.
 | An ordering key paused after a failed publish blocks later routing | The cached producer is discarded after every `Failed` outcome. |
 | `EnsureTopicExistAsync` adds to its static "seen" cache before `Validate` passes (`GcpPubSubMessageGateway.cs:45-48`), so a second attempt skips validation | This is existing behaviour, and the outcome is unchanged: the publish then fails and the message is released. |
 | Under `EmulatorOrProduction`, the injected invoker is silently dropped and the evidence test passes vacuously | The test asserts that the armed fault fired, using a counter on the interceptor. |
-| Unverified at design, to be confirmed at implementation: an emulator publish to a missing topic fails promptly with an `RpcException`; an ordering-enabled `PublisherClient` pauses a key after a failed publish; the `GrpcChannel.ForAddress(...).Intercept(...)` wiring passes `Validate` at runtime; the Gax path from `ProjectsClientBuilder.BuildAsync` to `DefaultCredentialProvider` (the throw site and type were checked in Auth 1.73.0 IL) | Each is exercised by AC-18, the evidence tests or AC-21; a refutation amends this ADR with a dated note. |
+| Unverified at design, to be confirmed at implementation: an emulator publish to a missing topic fails promptly with an `RpcException`; an ordering-enabled `PublisherClient` pauses a key after a failed publish; disposing a producer after a failed publish (`GcpMessageProducer.Dispose`, sync-over-async, `GcpMessageProducer.cs:141-143`) completes promptly; the `GrpcChannel.ForAddress(...).Intercept(...)` wiring passes `Validate` at runtime; the Gax path from `ProjectsClientBuilder.BuildAsync` to `DefaultCredentialProvider` (the throw site and type were checked in Auth 1.73.0 IL) | Each is exercised by AC-18, the evidence tests or AC-21; a refutation amends this ADR with a dated note. |
 
 ## Alternatives Considered
 
