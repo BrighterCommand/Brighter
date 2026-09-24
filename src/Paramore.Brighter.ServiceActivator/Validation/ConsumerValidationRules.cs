@@ -259,9 +259,22 @@ public static class ConsumerValidationRules
 
     /// <summary>
     /// Renders a type for a validation message: its full name, namespace-qualified rather than
-    /// assembly-qualified.
+    /// assembly-qualified. A generic type renders as <c>Namespace.Type&lt;Arg1, Arg2&gt;</c>, with
+    /// each type argument itself rendered through <see cref="DisplayName"/>.
     /// </summary>
-    private static string DisplayName(Type type) => type.FullName ?? type.Name;
+    private static string DisplayName(Type type)
+    {
+        if (!type.IsGenericType)
+            return type.FullName ?? type.Name;
+
+        var definitionName = type.GetGenericTypeDefinition().FullName ?? type.Name;
+        var backtickIndex = definitionName.IndexOf('`');
+        if (backtickIndex >= 0)
+            definitionName = definitionName[..backtickIndex];
+
+        var args = string.Join(", ", type.GetGenericArguments().Select(DisplayName));
+        return $"{definitionName}<{args}>";
+    }
 
     /// <summary>
     /// Checks whether <paramref name="handlerType"/> derives from <c>RequestHandlerAsync&lt;&gt;</c>.
