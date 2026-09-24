@@ -80,4 +80,15 @@ public static class BrighterSpanExtensions
        ClaimCheckOperation.HasClaim => "has_claim.message",
        _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null)
    };
+
+   ///<summary>
+   /// Provide a string representation of the circuit breaker operation
+   /// </summary>
+   public static string ToSpanName(this CircuitBreakerSpanOperation operation) => operation switch
+   {
+       CircuitBreakerSpanOperation.Trip => "trip",
+       CircuitBreakerSpanOperation.ReTrip => "re_trip",
+       CircuitBreakerSpanOperation.Reset => "reset",
+       _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null)
+   };
 }
