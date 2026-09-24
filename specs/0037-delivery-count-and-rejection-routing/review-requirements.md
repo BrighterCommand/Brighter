@@ -3167,3 +3167,117 @@ has 36 rows; only AC-30/AC-31 are unmapped. Every batch asserted its anchors bef
 - R-20's fixed text, read with AC-20 and AC-21.
 - **Tell the reviewer**: how unforceable failures are *evidenced* is settled as a design-review
   matter. Do not re-raise it as a requirements finding.
+
+---
+
+# Review: requirements (round 15) — 0037-delivery-count-and-rejection-routing
+
+**Date**: 2026-09-24
+**Threshold**: 60
+**Verdict**: PASS
+
+0 findings at or above threshold 60. Run on `c42f5dbf1` under the user's two scope rules:
+- How unforceable failures are evidenced is a design-review matter.
+- Gaps in how R-16/R-18/R-19 are implemented are design findings, unless the ADR could satisfy every MUST and still violate an outcome.
+
+## Findings
+
+### 1. R-17's path lets a failed acknowledgement escape `Reject`, the hazard round 13 closed for R-16 (Score: 40)
+
+- The ADR MUST covers only failures "R-16 or R-19 names".
+- R-17 (no destination configured) also acknowledges, and today's pull `Reject` rethrows a failed ack (`GcpPullMessageConsumer.cs:283-294`), which stops the performer (facts bullet, `:610-614`).
+- This is today's behaviour and outside R-16/R-18/R-19, so it is below threshold.
+
+**Recommendation**: Extend the MUST to "a failed acknowledgement on R-16's or R-17's path". Alternatively, state that R-17 deliberately keeps today's rethrow.
+
+---
+
+### 2. The gate entry verifies the ADR's *record* at design review, but nothing says the recorded evidence is produced once code exists (Score: 40)
+
+**Evidence**: `:635-638`, `:1755-1757`.
+
+**Recommendation**: Optionally, add "and the evidence the ADR records is produced at implementation".
+
+---
+
+### 3. AC-21's status-code clause asserts "one Warning" without R-20's five elements, yet R-20 lists AC-21 as restating the list (Score: 35)
+
+**Evidence**: `:651-653`, `:1543-1545`, `:1548`, `:1024-1025`.
+
+**Recommendation**: "one Warning carrying R-20's five elements is logged".
+
+---
+
+### 4. The manual-gate list's framing does not fit its new entry (Score: 30)
+
+The list is headed "Which criteria a green suite does not prove", with "each marked ⚠️ where it appears". The new entry covers requirement outcomes, and there is no ⚠️ at R-16, R-19 or the MUST. There is no contradiction with "Every other clause of every other AC is an assertion a test can make".
+
+**Recommendation**: Reword to "Which criteria and outcomes a green suite does not prove", and add a ⚠️ at the MUST.
+
+---
+
+### 5. The facts bullet about acknowledgements needing the handle is nested under "Reusing `Requeue` as-is is a trap"; R-16 has an unwrapped line (Score: 15)
+
+**Recommendation**: Promote the bullet or retitle its parent, and re-wrap `:489`.
+
+---
+
+### 6. R-16's "It is then redelivered" overclaims after an ambiguous acknowledgement failure (Score: 20)
+
+An ack that throws (e.g. `DeadlineExceeded`) may have been applied on the server. No message is lost either way.
+
+**Recommendation**: "It may then be redelivered".
+
+---
+
+## Round-14 remediation spot-check
+- **Row 1 (62)**: Landed. The clauses and the "not writable" entry are gone, the MUST leaves the form to the ADR, and the gate entry is present. No stale seam/composition text remains. AC-18 stays on the "not writable" list for `makeChannels` only, and R-21's citation of AC-18 is still valid.
+- **Row 2 (60)**: Landed. R-16, R-19 and the MUST are consistent. AC-18's "rather than left outstanding" concerns the release path only. Citations verified.
+- **Row 3 (50)**: Landed. Citations verified. Placement nit: finding 5.
+- **Row 4 (35)**: Landed. Residual: finding 3.
+- **Row 5 (25)**: Landed via row 1.
+
+## Integrity checks
+- All identifiers are defined once, with no gaps and no undefined references. The second matches for AC-19, AC-30 and AC-33 are bold references.
+- The R→AC map has 36 rows. Only AC-30 and AC-31 are unmapped, by design. R-16 → AC-15/AC-16 and R-19 → AC-18/AC-43 still hold.
+- There are no dangling references. Citations were spot-checked and are correct.
+
+## Summary
+
+| Score Range | Count |
+|-------------|-------|
+| 90-100 (Critical) | 0 |
+| 70-89 (High) | 0 |
+| 50-69 (Medium) | 0 |
+| 0-49 (Low) | 6 |
+
+**Total findings**: 6
+**Findings at or above threshold (60)**: 0
+
+## Main-agent validation of this round
+
+- Counted: 40, 40, 35, 30, 20, 15, all Low. This agrees with the Summary; there is nothing at or above threshold to re-verify. The reviewer listed finding 6 (20) after finding 5 (15), which is out of score order.
+- Spot-checked finding 1, the most substantive: R-17 (`:502-506`) acknowledges on the no-destination path, and the MUST's scope is R-16/R-19. The finding is accurate as stated.
+- Spot-checked finding 3: AC-21's status-code clause (`:1543-1545`) says "one Warning is logged" without the element set. Accurate.
+- **First PASS in 15 rounds.** The R-19 consolidation and the round-14 decision to move evidencing to design review ended the regression pattern. Round 15's findings are all Low, and none is a regression from round 14's edits except the framing nits (findings 3–5).
+
+---
+
+# Remediation log — round 15
+
+**Date**: 2026-09-24. **Applied to**: `requirements.md`. Round 15 was a PASS. On the user's call, all
+six Low findings were applied in one batch, **with no further review round**, and the requirements
+were then approved. Each applied text was grepped back from the file on disk. The counts are
+unchanged (**28 `R-n`, 8 `NFR-n`, 43 `AC-n`, C-1..C-12, A-1..A-6**), and integrity was re-checked
+programmatically: no gaps, no undefined references, 36 map rows, and only AC-30/AC-31 unmapped.
+
+| # | Score | Remediation | Verified at |
+|---|---|---|---|
+| 1 | 40 | R-17 gains "**If that acknowledgement fails**, the outcome is R-16's": Error, no escape from `Reject`, and the message is left to its ack deadline (pull only). The ADR MUST now covers failures "R-16, R-17 or R-19 names", and the accepted outstanding cases read "R-19's failed release, and a failed acknowledgement under R-16 or R-17". R-19's cross-reference, the evidence MUST and the gate entry were updated to match. | `:509`, `:549`, `:634`, `:1760` |
+| 2 | 40 | The MUST and the gate entry: "the evidence it records is produced at implementation, before the spec is done". | `:642`, `:1762` |
+| 3 | 35 | AC-21's status-code clause: "one Warning carrying R-20's five elements is logged". | `:1550` |
+| 4 | 30 | Gate heading: "Which criteria and outcomes a green suite does not prove". ⚠️ added at the evidence MUST. | `:1752`, `:638` |
+| 5 | 15 | "The acknowledgements need the handle too" promoted to a top-level facts bullet. R-16 and R-19 re-wrapped. | `:608`, `:487-493`, `:549` |
+| 6 | 20 | R-16: "It may then be redelivered (a failed acknowledgement may still have been applied on the server)". | `:487` |
+
+**Requirements approved 2026-09-24 after 15 rounds.**
