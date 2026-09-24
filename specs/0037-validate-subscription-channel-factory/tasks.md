@@ -259,7 +259,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - Note the asymmetry for the release note (task 36): the combined arm is **not** new breakage (it already throws on every start today); only the direct arm is (C-13)
   - Depends on: 13.
 
-- [ ] **15. TEST + IMPLEMENT: An empty combined factory yields an actionable remedy (AC-10c, FR-5 template T4)**
+- [x] **15. TEST + IMPLEMENT: An empty combined factory yields an actionable remedy (AC-10c, FR-5 template T4)**
   - **USE COMMAND**: `/test-first when a combined channel factory has no inner factories the rule should tell the developer to add one`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_a_combined_channel_factory_has_no_inner_factories_should_advise_adding_one.cs`
