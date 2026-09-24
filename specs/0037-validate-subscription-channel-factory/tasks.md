@@ -226,7 +226,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - Unwrap **exactly one level**; `FactoryTypes` reports an inner composite by its own concrete type, which is what `{F-list}` then renders (D5)
   - Depends on: 11.
 
-- [ ] **13. TEST + IMPLEMENT: A null declared type is a mismatch in the direct arm (AC-10a, FR-3, C-13)**
+- [x] **13. TEST + IMPLEMENT: A null declared type is a mismatch in the direct arm (AC-10a, FR-3, C-13)**
   - **USE COMMAND**: `/test-first when a subscription overrides ChannelFactoryType to null and the effective factory is not combined the rule should report one Error saying it declares no ChannelFactoryType`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_a_subscription_declares_a_null_channel_factory_type_in_the_direct_arm_should_report_one_error.cs`
