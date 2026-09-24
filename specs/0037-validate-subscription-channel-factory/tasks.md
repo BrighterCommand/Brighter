@@ -288,7 +288,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - FR-2 step 3 must be `typeof(InMemoryChannelFactory)` — a **`typeof`, not a `new`**; it must never construct an `InMemoryChannelFactory` or an `InternalBus`
   - Depends on: 15.
 
-- [ ] **17. CHARACTERISE: A subscription with a null `RequestType` is still checked (AC-19, C-7)**
+- [x] **17. CHARACTERISE: A subscription with a null `RequestType` is still checked (AC-19, C-7)**
   - **USE COMMAND**: `/test-first when a subscription has a null RequestType the channel factory rule should still evaluate it`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_a_subscription_has_a_null_request_type_should_still_check_the_channel_factory.cs`
