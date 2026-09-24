@@ -19,5 +19,9 @@ public class SpyMessagingMeter : IAmABrighterMessagingMeter
 
     public void RecordProcess(Activity activity) { }
 
+    public int AddCircuitBreakerEventCallCount { get; private set; }
+
+    public void AddCircuitBreakerEvent(Activity activity) => AddCircuitBreakerEventCallCount++;
+
     public bool Enabled => true;
 }

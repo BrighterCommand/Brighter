@@ -464,8 +464,39 @@ public class BrighterTracer : IAmABrighterTracer
         return activity;
     }
 
+    /// <inheritdoc />
+    public Activity? CreateCircuitBreakerSpan(CircuitBreakerSpanInfo info, InstrumentationOptions options = InstrumentationOptions.All)
+    {
+        var spanName = $"{info.Topic} {info.Operation.ToSpanName()}";
+
+        const ActivityKind kind = ActivityKind.Internal;
+        var now = _timeProvider.GetUtcNow();
+
+        var tags = GetNewTagsCollection(options, BrighterSemanticConventions.CircuitBreakerInstrumentationDomain);
+
+        if (options.HasFlag(InstrumentationOptions.RequestInformation))
+        {
+            tags.Add(BrighterSemanticConventions.Operation, info.Operation.ToSpanName());
+        }
+
+        if (options.HasFlag(InstrumentationOptions.CircuitBreaker))
+        {
+            tags.Add(BrighterSemanticConventions.CircuitBreakerTopic, info.Topic.Value);
+            tags.Add(BrighterSemanticConventions.CircuitBreakerCooldownCount, info.CooldownCount);
+        }
+
+        var activity = ActivitySource.StartActivity(
+            name: spanName,
+            kind: kind,
+            tags: tags,
+            startTime: now);
+
+        Activity.Current = activity;
+        return activity;
+    }
+
     /// <summary>
-    /// Create a span for a batch of messages to be cleared  
+    /// Create a span for a batch of messages to be cleared
     /// </summary>
     /// <param name="operation">The <see cref="CommandProcessorSpanOperation"/> being performed as part of the Clear Span</param>
     /// <param name="parentActivity">What is the parent <see cref="Activity"/></param>

@@ -80,7 +80,7 @@ public class ConfirmationSpanEndIsolationTests
         // Assert
         var confirmationWarnings = TestCorrelator.GetLogEventsFromCurrentContext()
             .Where(logEvent => logEvent.Level == LogEventLevel.Warning)
-            .Where(logEvent => logEvent.RenderMessage().Contains(topic.Value))
+            .Where(logEvent => logEvent.MessageTemplate.Text == "Publish confirmation failed for message Id:{Id} on topic {Topic}")
             .ToList();
         Assert.Equal(messageCount, confirmationWarnings.Count);
         Assert.Contains(topic, circuitBreaker.TrippedTopics);
