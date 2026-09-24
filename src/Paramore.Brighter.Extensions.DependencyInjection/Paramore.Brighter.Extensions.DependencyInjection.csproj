@@ -3,6 +3,8 @@
     <Description>Microsoft.Extensions.DependencyInjection integration for Paramore.Brighter Command Processor. Provides dependency injection container support for registering handlers, policies, and framework components.</Description>
     <Authors>Daniel Stockhammer, Toby Henderson</Authors>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <!-- Remove these XML documentation suppressions as the existing comments are corrected. -->
+    <NoWarn>$(NoWarn);CS1574</NoWarn>
     <PackageTags>Dependency Injection;DI;Container;Command;Event;Command Processor;Microsoft Extensions;Brighter</PackageTags>
     <Nullable>enable</Nullable>
   </PropertyGroup>
