@@ -243,7 +243,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - Select **T3a**, not T1 — T1 names `{D}` on its "change the configuration" side, which is unrenderable when there is no declared type (FR-5's ordered, total selection table)
   - Depends on: 12.
 
-- [ ] **14. TEST + IMPLEMENT: A null declared type is a mismatch in the combined arm (AC-10b, FR-3, FR-1)**
+- [x] **14. TEST + IMPLEMENT: A null declared type is a mismatch in the combined arm (AC-10b, FR-3, FR-1)**
   - **USE COMMAND**: `/test-first when a subscription overrides ChannelFactoryType to null inside a combined factory configuration the rule should report one Error listing the inner factories`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_a_subscription_declares_a_null_channel_factory_type_in_the_combined_arm_should_report_one_error.cs`
