@@ -116,7 +116,7 @@
     - Make no copy of the bag. Use one `ContainsKey` (ordinal, case-sensitive, matching the `Dictionary` comparer).
   - Depends on: 1.2, 2.1
 
-- [ ] **2.3 TEST + IMPLEMENT: A delivery budget of 0 or below -1 reports one startup Warning naming the likely intents**
+- [x] **2.3 TEST + IMPLEMENT: A delivery budget of 0 or below -1 reports one startup Warning naming the likely intents**
   - **USE COMMAND**: `/test-first when subscription budget is zero or below minus one should report a warning naming minus one and one as likely intents`
   - Test locations (two tests; `Core.Tests` does not reference `Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection`, so `AddConsumers`/`RegisterConsumerValidationSpecs` are reachable only from `Extensions.Tests`):
     - (i) Specification: "tests/Paramore.Brighter.Core.Tests/Validation", file `When_subscription_budget_is_zero_or_below_minus_one_should_report_warning.cs`. Assert directly on the `ConsumerValidationRules` specification (`IsSatisfiedBy` + `Accept(new ValidationResultCollector<Subscription>())`), following `When_subscription_request_type_not_command_or_event_should_report_warning.cs`.
