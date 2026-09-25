@@ -253,8 +253,11 @@ public static class ConsumerValidationRules
         if (arm == Arm.Combined && suppressed)
             return $"— use a subscription type whose ChannelFactoryType is one of: {handed}";
 
+        var subscriptionSide = arm == Arm.Combined
+            ? $"one of: {handed}"
+            : handed;
         return $"— either configure a channel factory of type {DisplayName(declared!)}, " +
-               $"or use a subscription type whose ChannelFactoryType is {handed}";
+               $"or use a subscription type whose ChannelFactoryType is {subscriptionSide}";
     }
 
     /// <summary>
