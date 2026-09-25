@@ -328,3 +328,153 @@ The main agent applied the changes with exact-anchor replacements scoped to each
 | F8 | 6.1 | "Depends on: 2.5, 5.1" |
 
 Old text now has 0 occurrences: `Math.Min(RequeueCount, 2)`, "**inside** each helper's", "5.5b/5.8". The task count is unchanged at 79.
+
+---
+
+# Review: tasks — 0037-delivery-count-and-rejection-routing (round 3)
+
+**Date**: 2026-09-25
+**Threshold**: 60
+**Verdict**: NEEDS WORK
+
+2 findings at or above threshold 60. Address these before approving.
+
+## Findings
+
+### 1. No task covers ADR 0078's missing-receipt-handle decision for the pull consumer, and the stream version is implemented with no test (Score: 72)
+
+ADR 0078 decides the missing-handle case for **both** consumers: "The router still runs, so a configured destination still receives the message … The consumer then logs an Error that the original cannot be settled, and returns `true`." R-16 makes this an ADR MUST (requirements.md:634-638).
+
+- **Pull.** Today the pull `Reject` returns `false` before doing anything when the handle is missing (`GcpPullMessageConsumer.cs:278-281`). A `false` makes the pump fall through to its ack, which discards the message. 5.5a's composition ("copy the handle first → route → `AckByHandle` … → return `true`") never says to remove that early return, and no task tests or changes the case. The coverage row "Step 4: … always returns `true`" overstates coverage.
+- **Stream.** 5.6 puts the behaviour only under Implementation ("A missing handle still routes, logs an Error and returns `true`"). Its test ("The same clauses as 5.5a and 5.5b") never exercises it, so production code is written without a failing test.
+
+The case is reachable through the public API: call `Reject` on a `Message` built without a `ReceiptHandle` bag entry, with a destination configured. The ADR calls it "unreachable by construction" only for parsed messages.
+
+**Evidence**: ADR 0078 §"Missing receipt handle (both consumers)" (:169-171); `GcpPullMessageConsumer.cs:278-281`; tasks.md 5.5a, 5.6, Step 4 coverage row; requirements.md:634-638.
+
+**Fix type**: task rephrase
+
+**Recommendation**: Add a clause to 5.5a's test (no `ReceiptHandle`, DLQ key configured → destination receives the copy, an Error is logged, `Reject` returns `true`; RED today). Add to 5.5a's Implementation: replace the `:278-281` early return with route → log Error → `true`. Move 5.6's missing-handle bullet into its "Test should verify" list.
+
+---
+
+### 2. In 6.4's Given (b), the pull clause's named mutation cannot turn it RED, and there is no Given when neither 6.3 outcome holds (Score: 62)
+
+Round 2 wrote that under (b) "the pull clause then carries the attribute only if published, so it is characterised by the mutation 'remove the `s_ignoreHeaders` entry'". Under (b) nothing publishes the attribute, and the pull path has no `SubscriberClient` to inject it (`Parser.ToBrighterMessage(ReceivedMessage)`, `Parser.cs:84`; `DeliveryAttempt` is a field, not an attribute). Removing the ignore entry leaves the pull assertion green: the mutation is ineffective and the clause vacuous.
+
+There is also a third outcome with no Given: 6.3(i) finds no injection **and** the emulator refuses the published attribute. And 6.3's output never records whether the emulator *accepts* the publish, yet 6.4 branches on it.
+
+**Evidence**: tasks.md 6.3 (i)/(ii) and Output; 6.4 Given; `Parser.cs:10`, `:12`, `:84`, `:125`.
+
+**Fix type**: task rephrase
+
+**Recommendation**: Under (b), mark the pull clause not applicable (the stream clause and routed-copy clause evidence the single shared `s_ignoreHeaders` entry). Add a (c) outcome for "no injection and publish refused": record in ADR 0077 that the attribute cannot reach the bag on this emulator and keep the ignore entry as a defensive change. Make 6.3 record whether the emulator accepted the publish in (ii).
+
+---
+
+### 3. 6.15 does not say its policy-carrying reading subscription must exist before the rejection is published (Score: 40)
+
+Pub/Sub delivers only messages published after a subscription exists. 6.15's reading subscription is not the one 5.4 pre-provisions (5.4's has no policy). If created at DLQ-read time, after the pump, it never receives the copy — RED for a harness reason.
+
+**Evidence**: tasks.md 6.15; 5.4.
+
+**Fix type**: task rephrase
+
+**Recommendation**: "Create the policy-carrying reading subscription (and its policy topic) before publishing and pumping; channel creation logs the two tolerated IAM Warnings (5.3)."
+
+---
+
+### 4. ADR 0078's "a failed producer creation is `Failed`, not no-destination" is never exercised (Score: 38)
+
+Under `Validate`, a missing topic throws at producer creation, which must yield `Failed`, a release and `true`. 5.8's Given uses `Assume`, where creation succeeds and the publish fails, so the router's creation-failure catch is never tested.
+
+**Evidence**: ADR 0078 "Divergence from SQS" and the `Validate` bullet; tasks.md 5.8.
+
+**Fix type**: task rephrase
+
+**Recommendation**: Add a `makeChannels: Validate` row to 5.8's test (same assertions), or record in 5.8 why it is omitted.
+
+---
+
+### 5. 1.5's round-2 wording ("no try/catch of its own") contradicts ADR 0078's literal text (Score: 30)
+
+ADR 0078 says the client lookups "are called **inside** the helper's `try`". 1.5 now has helpers with no try, invoked inside the callers' existing `try`. The invariant holds, but the words disagree.
+
+**Evidence**: tasks.md 1.5; ADR 0078 §"Reject composition".
+
+**Fix type**: task rephrase
+
+**Recommendation**: One sentence in 1.5 saying this is deliberate and preserves ADR 0078's invariant (or a dated ADR note).
+
+---
+
+### 6. 5.6's title still promises "RejectAsync is genuinely async" (Score: 25)
+
+Round 2 moved the clause to Implementation as "not asserted"; the title still states it as tested behaviour.
+
+**Evidence**: tasks.md 5.6 title vs Implementation.
+
+**Fix type**: task rephrase
+
+**Recommendation**: Drop "; RejectAsync is genuinely async" from the title.
+
+---
+
+## Summary
+
+| Score Range | Count |
+|-------------|-------|
+| 90-100 (Critical) | 0 |
+| 70-89 (High) | 1 |
+| 50-69 (Medium) | 1 |
+| 0-49 (Low) | 4 |
+
+**Total findings**: 6
+**Findings at or above threshold (60)**: 2
+
+## Coverage check
+
+- Every R-n / NFR-n / AC-n maps to at least one task. Partial coverage: R-16's missing-handle MUST (#1); ADR 0078's creation-failure → `Failed` (#4).
+- ADR 0077 steps 1-7 and key decisions covered. ADR 0078 steps 1-8 covered except #1 and #4.
+- No scope creep. Counts verified: 79 tasks (36 TEST + IMPLEMENT, 17 CHARACTERISE, 4 TIDY, 17 GATE, 5 MEASURE).
+- All 17 CHARACTERISE mutations re-checked against source and effective; the only ineffective mutation is inside TEST + IMPLEMENT 6.4 (#2).
+
+## Regression check (round 3)
+
+| Round-2 edit | Result |
+|---|---|
+| 6.15 policy-carrying DLQ read; depends on 5.4, 6.10, 6.11 | OK — mutation (a) now bites (first-delivery attempt 1 → 0). Gap: creation ordering (#3) |
+| 6.4 Given chosen by 6.3 | **Defective** (#2) |
+| 5.6 async clause moved | OK; stale title (#6) |
+| 1.5 helpers without try/catch | Consistent with code; wording diverges from ADR (#5) |
+| 4.8 mutation `Resolve` ×5 | OK — fails on "native target holds the message" |
+| 6.30 mutation (b) | OK |
+| 5.5b RED note | OK |
+| 5.10 "5.5a/5.8" | OK |
+| 6.1 depends on 2.5 | OK |
+
+## Main-agent validation (round 3)
+
+Summary recounted: High 72; Medium 62; Low 40/38/30/25. That is 6 total, 2 ≥ 60. Correct.
+
+1. **Confirmed.** `GcpPullMessageConsumer.cs:278-281` returns `false` when `ReceiptHandle` is absent; ADR 0078:169-171 decides route → Error → `true`; 5.5a's Implementation does not touch the early return; 5.6 carries the bullet only under Implementation.
+2. **Confirmed.** The pull path parses `ReceivedMessage` (`Parser.cs:84`) and filters attributes at `:125`; no client-side injection exists on pull, so under Given (b) no attribute reaches the pull message and removing the `s_ignoreHeaders` entry cannot fail the pull clause. 6.3's Output records "both answers" but not whether the publish in (ii) was accepted.
+
+## Remediation (round 3): the user's decisions and what was applied
+
+Decisions (user, 2026-09-25): F2 takes the reviewer's fix (pull clause not applicable under (b); new outcome (c); 6.3 records whether the publish was accepted). Apply F1 and all Lows as recommended (F4 as a `Validate` row in 5.8; F5 as a sentence in 1.5, no ADR amendment). Then run round 4.
+
+Applied with exact-anchor replacements scoped to each task's block, all asserted before the single write. Every applied text grepped back (1 occurrence each):
+
+| # | Task | Applied text (grep anchor) |
+|---|---|---|
+| F1 | 5.5a | Test clause "**Missing receipt handle (ADR 0078 …)**" — RED today (`:278-281`, `RejectAsync` `:308-311`); Implementation "Replace the missing-handle early `return false` …" |
+| F1 | 5.6 | "including 5.5a's missing-handle clause"; Implementation "(asserted by the missing-handle clause above)" |
+| F2 | 6.3 | "record first whether the emulator **accepts** that publish"; Output "whether (ii)'s publish was accepted" |
+| F2 | 6.4 | "The pull clause does not apply under (b)"; "(c) if 6.3 shows neither injection nor an accepted publish …" |
+| F3 | 6.15 | "is created **before** the message is published and pumped" |
+| F4 | 5.8 | "**Creation failure (ADR 0078 \"Divergence from SQS\"):** a second row … `makeChannels: Validate`" |
+| F5 | 1.5 | "This deliberately moves ADR 0078's placement of the client lookup inside a `try` from the helper to its callers" |
+| F6 | 5.6 | Title ends "then accepts the original**" |
+
+Old text now has 0 occurrences: "RejectAsync is genuinely async", "carries the attribute only if published", "recording both answers". The task count is unchanged at 79.

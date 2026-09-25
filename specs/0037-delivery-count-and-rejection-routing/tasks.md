@@ -78,7 +78,7 @@
 
 - [ ] **1.5 TIDY: Extract private settle helpers from the GCP consumers' `Acknowledge`/`Requeue` (ADR 0078 Implementation step 1)**
   - **USE COMMAND**: `/tidy-first extract handle-taking ack and release helpers in GcpPullMessageConsumer and GcpPubSubStreamMessageConsumer`
-  - `GcpPullMessageConsumer`: add private `AckByHandle(string ackId)`/`AckByHandleAsync`, from the ack RPC call currently made in `Acknowledge` (`:29`, call `:39`), `AcknowledgeAsync` (`:55`, call `:65`), `Reject` (`:276`, call `:288`) and `RejectAsync` (`:306`, call `:317`), and `ReleaseByHandle(string ackId)`/`ReleaseByHandleAsync`, from `Requeue` (`:344/349`, `:379/384`). Each helper performs the client lookup (`GetOrCreateSubscriberServiceApiClient`/`CreateSubscriberServiceApiClientAsync`) and the RPC with **no try/catch of its own**; every caller invokes it inside its existing `try`, so a client-construction failure is handled like an RPC failure, as today.
+  - `GcpPullMessageConsumer`: add private `AckByHandle(string ackId)`/`AckByHandleAsync`, from the ack RPC call currently made in `Acknowledge` (`:29`, call `:39`), `AcknowledgeAsync` (`:55`, call `:65`), `Reject` (`:276`, call `:288`) and `RejectAsync` (`:306`, call `:317`), and `ReleaseByHandle(string ackId)`/`ReleaseByHandleAsync`, from `Requeue` (`:344/349`, `:379/384`). Each helper performs the client lookup (`GetOrCreateSubscriberServiceApiClient`/`CreateSubscriberServiceApiClientAsync`) and the RPC with **no try/catch of its own**; every caller invokes it inside its existing `try`, so a client-construction failure is handled like an RPC failure, as today. This deliberately moves ADR 0078's placement of the client lookup inside a `try` from the helper to its callers; the ADR's invariant (a client-construction failure is handled like an RPC failure) is preserved.
   - Helper contract: each helper wraps **only** the client lookup and the RPC, and throws exactly as today. Logging and the catch/return decision stay with the callers (whose log messages differ today).
   - `GcpPubSubStreamMessageConsumer`: add private `Accept(GcpStreamMessage)` and `Nack(GcpStreamMessage)` (used by 5.6's accept after routing and 5.8's Nack on failed routing).
   - The public methods keep their current contracts: pull `Requeue` swallows exceptions and returns `false` (`:354-358`); stream `Requeue` returns `true` with no handle (`:219-222`).
@@ -512,12 +512,14 @@
     - `rejectionMessage` is present only when a non-empty description was given, so the `None` copy has four keys
     - No copy has a `ReceiptHandle` key
     - A later source read returns `MT_NONE`, and `Reject` returns `true`
+    - **Missing receipt handle (ADR 0078 "Missing receipt handle (both consumers)"):** a `Message` built by the test with no `ReceiptHandle` bag entry, with a DLQ key configured: the `.DLQ` copy is still published, an Error naming the message id says the original cannot be settled, and `Reject` returns `true`. RED today: `Reject` returns `false` before routing (`:278-281`, `RejectAsync` `:308-311`)
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Add internal `GcpRejectionRouter` (`Route`/`RouteAsync` → `RoutingOutcome { NoDestination, Routed, Failed }`). It never throws, and it stamps metadata with `RejectionMetadataKeyNames` (0077's constraint on 0078), removes `ReceiptHandle`, and sets `Header.Topic` to the destination.
     - Create the producer lazily via `GcpPubSubMessageProducerFactory.Create/CreateAsync`, with `MakeChannels` = the subscription's, `ProjectId` = the subscription's, and `EnableMessageOrdering = true`
     - Add the routing-key and `makeChannels` ctor parameters to `GcpPullMessageConsumer`, and wire them in `GcpPubSubConsumerFactory.CreateAsync` (`:83`). The consumer builds and disposes the router (ADR 0078 step 3).
     - Compose `Reject` (`:276`) and `RejectAsync` (`:306`): copy the handle first → route → `AckByHandle` on `Routed`/`NoDestination` → return `true`. Sync calls sync and async calls async, with no `BrighterAsyncContext.Run` nesting.
+    - Replace the missing-handle early `return false` in `Reject` (`:278-281`) and `RejectAsync` (`:308-311`) with: route → log an Error that the original cannot be settled → return `true`
     - In this task, the router only needs the dead-letter destination; 5.5b adds selection by reason
   - Depends on: 1.5, 5.1, 5.4
 
@@ -535,17 +537,17 @@
     - RED comes from the `Unacceptable` → `.Invalid` clause; the DLQ-fallback and no-destination clauses may already be green, because 5.5a routes every reason to the DLQ key and already returns `NoDestination` when it is absent
   - Depends on: 5.5a
 
-- [ ] **5.6 TEST + IMPLEMENT: A GCP stream Reject routes by reason with rejection metadata, then accepts the original; RejectAsync is genuinely async**
+- [ ] **5.6 TEST + IMPLEMENT: A GCP stream Reject routes by reason with rejection metadata, then accepts the original**
   - **USE COMMAND**: `/test-first when a gcp stream consumer rejects a message should route by reason with rejection metadata and accept the original`
   - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream"
   - Test file: `When_a_gcp_stream_consumer_rejects_should_route_by_reason_with_metadata.cs` (async: `…_async.cs`)
   - Test should verify (R-16, R-18, AC-15, AC-16; NFR-8), on `GCP / Stream` and `GCP / StreamOrdering`:
-    - The same clauses as 5.5a and 5.5b
+    - The same clauses as 5.5a and 5.5b, including 5.5a's missing-handle clause: a message with no `GcpStreamMessage` handle still routes to the configured destination, logs an Error and returns `true`
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - `RejectAsync` routes through `RouteAsync` rather than `Task.FromResult(Reject(...))` (`GcpPubSubStreamMessageConsumer.cs:106` today). This is not observable through the public API — the router is internal and `InternalsVisibleTo` is forbidden — so it is checked at code review and by 8.2's broker-call review, not asserted
     - Add the ctor parameters to `GcpPubSubStreamMessageConsumer`, wired at `GcpPubSubConsumerFactory.cs:99`, and have it dispose the router
-    - Compose `Reject` (`:84`) and `RejectAsync` (`:104-106`): copy the `GcpStreamMessage` handle → route → `handle.Accepted()` on `Routed`/`NoDestination`. A missing handle still routes, logs an Error and returns `true`.
+    - Compose `Reject` (`:84`) and `RejectAsync` (`:104-106`): copy the `GcpStreamMessage` handle → route → `handle.Accepted()` on `Routed`/`NoDestination`. A missing handle still routes, logs an Error and returns `true` (asserted by the missing-handle clause above).
   - Depends on: 5.5b
 
 - [ ] **5.7 TEST + IMPLEMENT: A GCP Reject with no destination configured acknowledges the message and logs a Warning naming the message id and reason**
@@ -573,6 +575,7 @@
     - `Reject(DeliveryError)` logs an Error naming the message id and `"DeliveryError"`, and returns `true`
     - The message is redelivered **within W = 10 s** (so it was released, not left outstanding), and the topic still does not exist
     - **Risk check (ADR 0078 Risks):** the sync `Reject` returns within W. This verifies the emulator fails promptly on a missing topic and that `GcpMessageProducer.Dispose` (sync-over-async, `:141-143`) returns promptly after a failed publish. If it does not, amend ADR 0078 with a dated note.
+    - **Creation failure (ADR 0078 "Divergence from SQS"):** a second row with the subscription under test at `makeChannels: Validate`. The destination producer's creation throws on the missing topic, and the router reports `Failed`, not `NoDestination`, so the same assertions hold: an Error, redelivery within W, `true`, and the topic still absent
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - On `Failed`: pull → `ReleaseByHandle` (`ModifyAckDeadline(…, 0)`); stream → `handle.Reject()` (Nack)
@@ -663,9 +666,9 @@
 - [ ] **6.3 MEASURE: Does `SubscriberClient` inject or overwrite `googclient_deliveryattempt`? (ADR 0077 Risks, "unverified library behaviours")**
   - On the emulator with a DLQ-backed stream subscription:
     - (i) record whether a received `PubsubMessage` carries attribute `googclient_deliveryattempt`, and whether `GetDeliveryAttempt` matches it
-    - (ii) publish a message that already carries a stale `googclient_deliveryattempt` attribute (as a routed copy would) and record whether `SubscriberClient` overwrites it or keeps the stale value
+    - (ii) publish a message that already carries a stale `googclient_deliveryattempt` attribute (as a routed copy would) and record first whether the emulator **accepts** that publish and, if it does, whether `SubscriberClient` overwrites the attribute or keeps the stale value
   - Use a measurement fixture committed as `[Fact(Skip = "measurement — ADR 0077 risk")]` in `tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream`.
-  - **Output:** a dated amendment note in `docs/adr/0077-delivery-count-contract.md` (Risks) recording both answers. If (ii) shows a stale value would be read, flag it for 6.11.
+  - **Output:** a dated amendment note in `docs/adr/0077-delivery-count-contract.md` (Risks) recording (i), whether (ii)'s publish was accepted, and (ii)'s overwrite result. If (ii) shows a stale value would be read, flag it for 6.11.
   - Depends on: 5.3, 5.4
 
 - [ ] **6.4 TEST + IMPLEMENT: The GCP parser never admits `googclient_deliveryattempt` into `Header.Bag`, so a routed copy cannot re-publish it**
@@ -674,7 +677,7 @@
   - Test file: `When_a_gcp_message_carries_delivery_attempt_attribute_should_not_copy_it_into_bag.cs` (async: `…_async.cs`)
   - Test should verify (R-28; ADR 0077 "Where each transport reads its counter", GCP stream row):
     - A message received through the stream and the pull consumer has no `googclient_deliveryattempt` key in `Header.Bag`
-    - **Given, chosen by 6.3's outcome:** (a) if 6.3(ii) shows the emulator accepts a published `googclient_deliveryattempt` attribute, publish it explicitly and assert on both consumers — RED today on both; (b) otherwise use a DLQ-backed stream subscription and rely on `SubscriberClient`'s injection (6.3(i)) — RED on the stream clause; the pull clause then carries the attribute only if published, so it is characterised by the mutation "remove the `s_ignoreHeaders` entry" rather than observed RED. Record which Given was used in the test's comment
+    - **Given, chosen by 6.3's outcome:** (a) if 6.3(ii) shows the emulator accepts a published `googclient_deliveryattempt` attribute, publish it explicitly and assert on both consumers — RED today on both; (b) otherwise, if 6.3(i) shows `SubscriberClient` injects the attribute, use a DLQ-backed stream subscription and rely on that injection — RED on the stream clause. The pull clause does not apply under (b): the pull path has no `SubscriberClient` to inject the attribute and nothing publishes it, so the stream clause and the routed-copy clause evidence the single `s_ignoreHeaders` entry both parsers share; (c) if 6.3 shows neither injection nor an accepted publish, the attribute cannot reach `Header.Bag` on the emulator — record that in 0077's Risks note, drop the test clauses, and add the ignore entry as a defensive change justified by the real-service `SubscriberClient` behaviour; the gate then reviews the ADR note instead of a RED test. Record which Given was used in the test's comment (or the ADR note, under (c))
     - A copy routed by 5.5b/5.6's Reject carries no such attribute on the destination
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
@@ -794,6 +797,7 @@
   - Test should verify (R-5, R-28, AC-4, AC-41), for both consumers:
     - `requeueCount: 3` and `DeadLetterPolicy` M = 5 on `.native`
     - The Brighter DLQ is read via a `ChannelFactory` channel over a reading subscription that **carries its own `DeadLetterPolicy`** (to a further topic), so the DLQ's own delivery counter is populated (A-1) and the read genuinely exercises R-28's "not the destination's own counter" half, as SQS (4.6) and RocketMQ (7.12) do. Without that policy Pub/Sub leaves the counter unset and `Resolve` falls back to the header count, so no mutation of the discriminator could fail the test
+    - The policy-carrying reading subscription (and its further policy topic) is created **before** the message is published and pumped, because Pub/Sub delivers only messages published after a subscription exists; its channel creation logs the two tolerated IAM Warnings (5.3)
     - `HandledCount >= 3` and not `0`
     - The five AC-4 keys are present and valid
   - 🔁 **Characterisation — expected green on first run:** the publish-side `HandledCount` attribute (`Parser.cs:307`), 5.5a's router stamping and `Resolve`'s discriminator (2.2, applied by 6.10/6.11) already deliver it. **RED mutation(s)**, applied and reverted one at a time: (a) `DeliveryCount.Resolve` (2.2) ignores the `rejectionReason` discriminator and returns the normalised broker count whenever one is present — the DLQ copy presents `0`, failing on "`HandledCount >= 3` and not `0`"; (b) `GcpRejectionRouter` (5.5a) skips the `RejectionMetadataKeyNames` stamping — failing on "the five AC-4 keys are present and valid".
