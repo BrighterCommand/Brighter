@@ -151,8 +151,8 @@ Three invariants read off the ladder:
   all (Key Components 5).
 - **At most one section per spec is ever written.** Row 5 stops on two, row 8 replaces the one, and
   row 9 writes one only when none exists.
-- **The command never decides ownership.** A section is the target's only when its marker names the
-  target's full directory name. An unmarked heading that might be the target's stops the command
+- **The command never decides ownership.** A section is the target's only when its marker line,
+  trimmed, equals `<!-- spec: {target's full directory name} -->` exactly. An unmarked heading that might be the target's stops the command
   rather than being claimed or duplicated (row 7). A section marked for another directory — even one
   sharing the target's id — is not the target's, and is left unchanged like any other line.
 
@@ -293,11 +293,11 @@ long before a spec is finished.
 | 1 | Resolve the target (ladder row 1) |
 | 2 | Find `release_notes.md`'s `##` and `###` headings and its fence lines with one `Grep` that returns line numbers, and discard any heading between an opening and a closing fence (rows 2, 3) |
 | 3 | Check the target has something to derive items from (row 4) |
-| 4 | Find every section marked for the target, and every unmarked `###` heading under the first `##` that contains `(spec {NNNN}` (rows 5–7) |
+| 4 | Find every marker line with a second `Grep` for the literal `<!-- spec: `, which returns line numbers. A `###` heading is marked when a marker line is the line directly after it, and marked for the target when that line, trimmed, equals `<!-- spec: {target's full directory name} -->` exactly — a literal comparison, never a substring match. Then find every unmarked `###` heading under the first `##` whose text contains `(spec {NNNN}` (rows 5–7) |
 | 5 | Judge the breaking-change items and write the section in the form of Key Components 4 |
 | 6 | Replace the marked section (row 8), or insert the new one directly after the first `##` heading line (row 9) |
 
-`release_notes.md` is 118,145 bytes today, too large to read in one call. The command therefore
+`release_notes.md` is 118,145 bytes as of 2026-09-25, too large to read in one call. The command therefore
 reads it by line numbers: step 2's one `Grep` gives every heading and fence line, so fence tracking
 never has to survive a split read, and every section it then needs is read by `Read` with an offset
 and a limit. That read is also what the `Edit` below requires, because an edit is refused on a file
@@ -333,7 +333,7 @@ release process's job.
 change that breaks an existing behaviour or interface, it tells the user so and recommends running
 `/spec:write_release_notes`. It does not run the command itself (AC-91).
 
-#### Where each file is touched
+#### Where each artefact is touched
 
 | Path | Change |
 | --- | --- |
@@ -386,8 +386,9 @@ that holds the file's content. `/spec:status`, `/spec:gear` and `/spec:show-me` 
 
 ### Implementation Approach
 
-Numbered in commit order. Each amendment changes how a command behaves, so each is a behavioural
-commit of its own, checked by the acceptance criterion named on it.
+Numbered in commit order. Steps 1 to 5 each change how a command behaves, so each is a behavioural
+commit of its own, checked by the acceptance criterion named on it. Step 6 only catalogues the new
+command.
 
 1. **Behavioural.** `/spec:requirements`: the declaration form and examples (AC-86).
 2. **Behavioural.** `/spec:tasks`: the four template lines and the drifted form in the *DO NOT* block
@@ -397,8 +398,10 @@ commit of its own, checked by the acceptance criterion named on it.
    stop's message (AC-89, AC-90, AC-95).
 5. **Behavioural.** `/spec:design`: the breaking-change step. `/spec:review`: the design check
    (AC-91).
-6. **Documentation.** The README catalogue entry.
-7. **Documentation.** This spec's own `tasks.md`, re-tagged tag-first when it is next revised.
+6. **Structural.** The README catalogue entry.
+
+Re-tagging this spec's own `tasks.md` tag-first is not a step here: FR-22 applies the task form to
+that file when it is next revised, which is the tasks phase's work.
 
 ## Consequences
 
@@ -440,8 +443,8 @@ commit of its own, checked by the acceptance criterion named on it.
   write, not one of FR-23's stops, and it needs no ladder row.
 - **Risk: `/spec:write_release_notes` and the measurement script recognise headings and fences
   differently.** Both apply the *Marked release-notes section* definition's rules for headings and
-  fences — the script in C#, this command in its one `Grep` — so there are two implementations of
-  one rule. The four stated patterns are not among them, so FR-21's exactly-once rule is not broken,
+  fences, and for marker lines — the script in C#, this command in its two `Grep`s — so there are
+  two implementations of one rule. The four stated patterns are not among them, so FR-21's exactly-once rule is not broken,
   but the two can drift.
   *Mitigation*: the command's output is read back by the script on every `/spec:show-me` run, and
   `/spec:review`'s design check flags a spec whose breaking changes have no marked section the
