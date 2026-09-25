@@ -353,7 +353,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - The suppression is architectural, not cosmetic: "configure a channel factory of type `Paramore.Brighter.InMemoryChannelFactory`" is the cheaper of the two remedies in the case this feature fires most often, and following it produces the silent-wrong-bus consumer C-2 exists to prevent
   - Depends on: 19.
 
-- [ ] **21. TEST + IMPLEMENT: The combined arm lists the alternatives (AC-13b, template T2)**
+- [x] **21. TEST + IMPLEMENT: The combined arm lists the alternatives (AC-13b, template T2)**
   - **USE COMMAND**: `/test-first when the combined arm has a declared transport type the message should list the inner factories as alternatives`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_the_combined_arm_has_a_declared_transport_type_should_list_the_alternatives.cs`
