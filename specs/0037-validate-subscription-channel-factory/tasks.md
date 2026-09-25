@@ -583,7 +583,7 @@ One task per transport. Each bundles that transport's one-line `ChannelFactoryTy
     - **The two AWS packages MUST be corrected together** — correcting only one would leave the V3/V4 pair inconsistent (FR-10)
   - Depends on: 33.
 
-- [ ] **35. TEST + IMPLEMENT: `PostgresSubscription` declares its channel factory (FR-11 — AC-24, AC-25e, AC-26e)**
+- [x] **35. TEST + IMPLEMENT: `PostgresSubscription` declares its channel factory (FR-11 — AC-24, AC-25e, AC-26e)**
   - **USE COMMAND**: `/test-first when reading the channel factory type of a Postgres subscription it should be the Postgres channel factory and a combined factory should route it`
   - Test location: "tests/Paramore.Brighter.PostgresSQL.Tests/MessagingGateway"
   - Test files:
