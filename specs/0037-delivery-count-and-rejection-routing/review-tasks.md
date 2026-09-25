@@ -595,3 +595,90 @@ Applied in one script (all anchors asserted, single write); every applied text g
 | F4 | 1.5 | "Accepted log-order change" |
 
 No reference to 6.3 or 6.4 remains outside the move note; "5.5b/5.6's Reject" has 0 occurrences. The task count is unchanged at 79 (MEASURE still 5).
+
+---
+
+# Review: tasks — 0037-delivery-count-and-rejection-routing (round 5)
+
+**Date**: 2026-09-25
+**Threshold**: 60
+**Verdict**: PASS
+
+No findings at or above threshold 60. Consider addressing lower-scored items.
+
+## Findings
+
+### 1. 5.6's routed-copy clause does not say how the copy is read, and a read through a Brighter channel cannot catch the router reintroducing the attribute (Score: 55)
+
+The clause claims to guard 0077's constraint that "0078 must not reintroduce it" (0077:288, :325). The obvious destination read (`GetMessageFromDeadLetterQueue(Async)`, any `ChannelFactory` channel) goes through `Parser`, which after 5.5d strips the key on read (`Parser.cs:12-29`, `:71-75`, `:123-127`). A router that stamped the attribute would therefore leave the clause green. The clause catches only the removal of the ignore entry (5.5d's job). It is also vacuous under 5.5c outcome (a) without injection.
+
+**Evidence**: tasks.md 5.6 routed-copy clause; 5.5d Given (b); `GcpStreamMessageGatewayProvider.cs:280-342` (DLQ read via channel → `Parser`); `Parser.cs:71-75`, `:350-356`.
+
+**Fix type**: task rephrase
+
+**Recommendation**: Assert on the raw `PubsubMessage.Attributes` of the destination copy, fetched with a raw `SubscriberServiceApiClient.Pull` on the destination's reading subscription, not through `Parser`. Mark the clause not applicable under (c) and under (a) when 5.5c(i) recorded no injection.
+
+---
+
+### 2. 1.5's accepted log-order change contradicts its own "no behaviour change" wording, and one line citation is off (Score: 25)
+
+1.5 is a TIDY whose Verification says "no behaviour change", yet it now records an accepted log-order change. The `Requeue` citation `:349-354` should be `:344-349` (lookup `:344`, `RequeueStart` `:346`, RPC `:349`); the async twins (`RejectAsync` `:315-317`, `RequeueAsync` `:379-384`) are not named.
+
+**Evidence**: tasks.md 1.5; `GcpPullMessageConsumer.cs:285-288`, `:315-317`, `:344-349`, `:379-384`.
+
+**Fix type**: task rephrase
+
+**Recommendation**: Verification "no behaviour change apart from the accepted log-order change above; existing tests stay green"; cite `:344-349`, and add `:315-317` and `:379-384`.
+
+---
+
+## Summary
+
+| Score Range | Count |
+|-------------|-------|
+| 90-100 (Critical) | 0 |
+| 70-89 (High) | 0 |
+| 50-69 (Medium) | 1 |
+| 0-49 (Low) | 1 |
+
+**Total findings**: 2
+**Findings at or above threshold (60)**: 0
+
+## Coverage check
+
+- Every R-n (28), NFR-n (8) and AC-n (43) maps to at least one task; R-28 cites 5.5d.
+- ADR 0077 steps 1-7 and ADR 0078 steps 1-8 covered; the Step 3 row records 5.5d before 5.6, closing round 4's ordering gap. The only weak evidence is 0077:288's "must not reintroduce" (#1).
+- No scope creep. Cosmetic: the R-13 row "6.1–6.31" spans the retired ids 6.3/6.4, harmless given the move note.
+- Counts: 79 = 36 TEST + IMPLEMENT, 17 CHARACTERISE, 4 TIDY, 17 GATE, 5 MEASURE. The 17 CHARACTERISE mutations are unaffected by round 4.
+
+## Regression check (round 5)
+
+| Round-4 edit | Result |
+|---|---|
+| 5.5c placement and dependencies | OK |
+| 5.5d dependencies (5.4, 5.5c) | OK |
+| 5.5d RED under (a) | Yes, both consumers |
+| 5.5d RED under (b) | Yes, stream clause; pull n/a correctly |
+| No dangling 6.3/6.4 references | OK (move note and README history only) |
+| 5.6 routed-copy clause | Green on arrival, acceptable in a RED TEST + IMPLEMENT; cannot catch the router (#1) |
+| 5.6 depends on 5.5b, 5.5d | OK; 6.30's explicit 5.5d is redundant but harmless |
+| 5.8 `Validate` row | OK against `GcpPubSubMessageGateway.cs:45`, `:53-60` |
+| 1.5 log-order change | Consistent with the code; TIDY wording and citation (#2) |
+| Counts line | Still true |
+
+## Main-agent validation (round 5)
+
+Summary recounted: Medium 55; Low 25. That is 2 total, 0 ≥ 60. **PASS** confirmed. #2's citations verified in `GcpPullMessageConsumer.cs` (`:285/:287/:288`, `:315/:316/:317`, `:344/:346/:349`, `:379/:381/:384`).
+
+## Remediation (round 5): the user's decisions and what was applied
+
+Decision (user, 2026-09-25): apply both Lows, no further round, then approve the tasks.
+
+Applied with exact-anchor replacements scoped to each task's block; every applied text grepped back (1 occurrence each):
+
+| # | Task | Applied text (grep anchor) |
+|---|---|---|
+| F1 | 5.6 | "raw `SubscriberServiceApiClient.Pull` … **not** through `Parser` or a Brighter channel"; "nor under (a) when 5.5c(i) recorded no injection" |
+| F2 | 1.5 | "`Requeue` `:344-349`, `RequeueAsync` `:379-384`" (plus `RejectAsync` `:315-317`); Verification "apart from the accepted log-order change above" |
+
+Old text now has 0 occurrences: "guards against the router reintroducing it", "`:349-354`)". The task count is unchanged at 79.

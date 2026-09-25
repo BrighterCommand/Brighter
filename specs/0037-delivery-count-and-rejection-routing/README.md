@@ -141,7 +141,8 @@ those two rungs; a third mechanism is out of bounds.
 - [x] **Adversarial Review (tasks) — round 2**, 2026-09-25. NEEDS WORK, 8 findings, 1 at or above threshold 60. 6.15's GCP DLQ read had no `DeadLetterPolicy`, so its discriminator mutation could not fail the test. On the user's call, the read now uses a subscription that carries its own policy. All 8 applied and verified against the file.
 - [x] **Adversarial Review (tasks) — round 3**, 2026-09-25. NEEDS WORK, 6 findings, 2 at or above threshold 60. ADR 0078's missing-receipt-handle decision had no test (pull `Reject` still returns `false`), and round 2's 6.4 Given (b) left a pull clause with an ineffective mutation. On the user's call, 5.5a/5.6 gain a missing-handle clause, and 6.4 gains outcome (c) with the pull clause dropped under (b). All 6 applied and verified against the file.
 - [x] **Adversarial Review (tasks) — round 4**, 2026-09-25. NEEDS WORK, 4 findings, 1 at or above threshold 60. Phase 5's stream routing needed the `googclient_deliveryattempt` ignore entry that only landed in 6.4. The 6.3/6.4 area had drawn a finding three rounds running, so on the user's call they move into Phase 5 as 5.5c/5.5d ahead of 5.6. All 4 applied and verified against the file.
-- [ ] **Adversarial Review (tasks) — round 5** — `/spec:review tasks`
+- [x] **Adversarial Review (tasks) — round 5**, 2026-09-25. **PASS**: 2 findings, none at or above threshold 60 (Medium 55, Low 25). Both applied with no further round (user's call): 5.6's routed-copy clause reads the destination with a raw `Pull`, not through `Parser`; 1.5's citations and Verification wording corrected.
+- [x] **Tasks approved** 2026-09-25 (`.tasks-approved`) after 5 review rounds: 79 tasks — 36 TEST + IMPLEMENT, 17 CHARACTERISE, 4 TIDY, 17 GATE, 5 MEASURE.
 - [ ] **Implementation** — `/spec:implement` (not started — no code written)
 
 **TDD gear:** `review-before` (armed by default). No `.current-gear` file exists for this spec.

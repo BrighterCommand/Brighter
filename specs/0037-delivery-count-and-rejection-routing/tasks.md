@@ -79,10 +79,10 @@
 - [ ] **1.5 TIDY: Extract private settle helpers from the GCP consumers' `Acknowledge`/`Requeue` (ADR 0078 Implementation step 1)**
   - **USE COMMAND**: `/tidy-first extract handle-taking ack and release helpers in GcpPullMessageConsumer and GcpPubSubStreamMessageConsumer`
   - `GcpPullMessageConsumer`: add private `AckByHandle(string ackId)`/`AckByHandleAsync`, from the ack RPC call currently made in `Acknowledge` (`:29`, call `:39`), `AcknowledgeAsync` (`:55`, call `:65`), `Reject` (`:276`, call `:288`) and `RejectAsync` (`:306`, call `:317`), and `ReleaseByHandle(string ackId)`/`ReleaseByHandleAsync`, from `Requeue` (`:344/349`, `:379/384`). Each helper performs the client lookup (`GetOrCreateSubscriberServiceApiClient`/`CreateSubscriberServiceApiClientAsync`) and the RPC with **no try/catch of its own**; every caller invokes it inside its existing `try`, so a client-construction failure is handled like an RPC failure, as today. This deliberately moves ADR 0078's placement of the client lookup inside a `try` from the helper to its callers; the ADR's invariant (a client-construction failure is handled like an RPC failure) is preserved.
-  - Helper contract: each helper wraps **only** the client lookup and the RPC, and throws exactly as today. Logging and the catch/return decision stay with the callers (whose log messages differ today). Accepted log-order change: `Reject`'s `RejectMessage` and `Requeue`'s `RequeueStart` logs (today between the lookup and the RPC, `:285-288`, `:349-354`) move before the helper call, so a failed client lookup now emits the start log first.
+  - Helper contract: each helper wraps **only** the client lookup and the RPC, and throws exactly as today. Logging and the catch/return decision stay with the callers (whose log messages differ today). Accepted log-order change: `Reject`'s `RejectMessage` and `Requeue`'s `RequeueStart` logs (today between the lookup and the RPC: `Reject` `:285-288`, `RejectAsync` `:315-317`, `Requeue` `:344-349`, `RequeueAsync` `:379-384`) move before the helper call, so a failed client lookup now emits the start log first.
   - `GcpPubSubStreamMessageConsumer`: add private `Accept(GcpStreamMessage)` and `Nack(GcpStreamMessage)` (used by 5.6's accept after routing and 5.8's Nack on failed routing).
   - The public methods keep their current contracts: pull `Requeue` swallows exceptions and returns `false` (`:354-358`); stream `Requeue` returns `true` with no handle (`:219-222`).
-  - Verification: no behaviour change; existing tests stay green.
+  - Verification: no behaviour change apart from the accepted log-order change above; existing tests stay green.
 
 ---
 
@@ -563,7 +563,7 @@
   - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream"
   - Test file: `When_a_gcp_stream_consumer_rejects_should_route_by_reason_with_metadata.cs` (async: `…_async.cs`)
   - Test should verify (R-16, R-18, AC-15, AC-16; NFR-8), on `GCP / Stream` and `GCP / StreamOrdering`:
-    - A copy routed from a DLQ-backed stream subscription carries no `googclient_deliveryattempt` on the destination (ADR 0078:38). The ignore entry lands in 5.5d, so this clause guards against the router reintroducing it; not applicable under 5.5c outcome (c)
+    - A copy routed from a DLQ-backed stream subscription carries no `googclient_deliveryattempt` on the destination (ADR 0078:38; 0077's "0078 must not reintroduce it"). Assert on the raw `PubsubMessage.Attributes` of the copy, fetched with a raw `SubscriberServiceApiClient.Pull` on the destination's reading subscription, **not** through `Parser` or a Brighter channel: after 5.5d, `Parser` strips the key on read, so a channel read could not catch the router stamping it (a raw pull does not inject it, because `delivery_attempt` is a separate field). Not applicable under 5.5c outcome (c), nor under (a) when 5.5c(i) recorded no injection
     - The same clauses as 5.5a and 5.5b, including 5.5a's missing-handle clause: a message with no `GcpStreamMessage` handle still routes to the configured destination, logs an Error and returns `true`
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
