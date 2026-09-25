@@ -514,7 +514,7 @@ One task per transport. Each bundles that transport's one-line `ChannelFactoryTy
 
 **AC-26 asserts the routing *decision*, never channel creation.** Construct the transport's channel factory and evaluate `f.GetType() == subscription.ChannelFactoryType`; do **not** call `CreateSyncChannel`/`CreateAsyncChannel`, which would open a real connection (MQTT connects in `MqttMessageConsumer`'s constructor; `GcpPubSubChannelFactory` calls `EnsureSubscriptionExistsAsync`) and breach NFR-3.
 
-- [ ] **31. TEST + IMPLEMENT: `GcpPubSubSubscription` declares the GCP Pub/Sub channel factory (FR-7 — AC-20, AC-25a, AC-26a)**
+- [x] **31. TEST + IMPLEMENT: `GcpPubSubSubscription` declares the GCP Pub/Sub channel factory (FR-7 — AC-20, AC-25a, AC-26a)**
   - **USE COMMAND**: `/test-first when reading the channel factory type of a GCP Pub/Sub subscription it should be the GCP Pub/Sub channel factory and a combined factory should route it`
   - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway"
   - Test files:
