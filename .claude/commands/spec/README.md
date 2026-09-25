@@ -301,6 +301,11 @@ Shows requirements.md with checklist.
 ```
 Shows only ADR 0043 with detailed checklist.
 
+**Working the findings:** fix *issues*, not lines. Name the concept each finding is about, edit
+every place the document (or the ADR set) states it, re-sweep the old wording, and run a quick
+contradiction-only sub-agent check of the diff before committing. See Step 8 of
+[`review.md`](review.md).
+
 ---
 
 ### `/spec:tasks`

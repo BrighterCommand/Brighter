@@ -441,7 +441,7 @@ After the sub-agent returns:
    - Count of findings by severity
    - List just the title and score of each finding at or above threshold
    - Path to the findings file for full details
-   - For `requirements`/`design`/`tasks`: remind the user to use `/spec:approve {phase}` when ready, or iterate and re-run `/spec:review {phase}`.
+   - For `requirements`/`design`/`tasks`: remind the user to use `/spec:approve {phase}` when ready, or to work the findings (Step 8) and re-run `/spec:review {phase}`.
    - For `code`: remind the user that `code` has no approval marker — fix findings, commit, and re-run `/spec:review code` until clean. When clean, the next step is commit/push/PR.
 
 ### Step 7: Spec Status
@@ -452,3 +452,42 @@ Display overall spec status:
 - Design: {X} ADRs ({Y} approved, {Z} proposed)
 - Tasks: Approved / In Progress / Not Started
 - Code: Reviewed at {commit sha} / Not reviewed (code is "reviewed" if `review-code.md` exists; include its verdict and the commit sha at the top of HEAD when the review was run)
+
+### Step 8: Working the Findings — Fix Issues, Not Lines
+
+This step is not part of the review. It applies whenever the findings of a `requirements`, `design`
+or `tasks` review are worked, in this session or a later one, and it runs only when the user asks
+for them to be addressed.
+
+**Why it exists.** A finding quotes one sentence, but the concept that sentence states is usually
+stated in several places: a definition, an FR, an NFR, a constraint, Out of Scope, one or more ACs,
+a worked example, and, for a design, sibling ADRs. Editing only the quoted sentence leaves the other
+places saying the old thing, so the fix becomes a new contradiction. The next pass then finds it,
+often scored *higher* than the original finding, because a contradiction outranks a vagueness.
+Fixing lines instead of issues is how a review loop stops converging.
+
+1. **Name the issue, not the sentence.** For each finding being worked, write down in a few words
+   the concept it is about: "who may add a release-notes marker", not "line 121". Findings that
+   turn out to be about the same concept are worked together.
+2. **Find every statement of the concept.** Grep the whole document with several search terms, not
+   only the words the finding quoted. For a design, grep every ADR in `.adr-list` and
+   `requirements.md` too. Check Definitions, FRs, NFRs, Constraints, Out of Scope, the ACs and any
+   worked examples. List the sites before editing any of them.
+3. **Edit every site together**, so the concept is stated one way everywhere. When a fix needs a
+   choice, prefer the option that does not contradict a rule stated elsewhere. If every option
+   does, or the choice is the owner's, ask the user before editing.
+4. **Re-sweep the old phrasings.** Grep for the wording you replaced and read every hit. Fix any
+   survivor that is now false.
+5. **Run a quick contradiction check before committing.** Launch a sub-agent
+   (`general-purpose`, `model: "opus"`, forbidden to ask the user anything or to write files). Give
+   it the diff of the edit, the findings file and the list of concepts touched. Its job is narrow
+   and is not a re-review of the document. For each concept it:
+   - greps every statement of the concept;
+   - reports any sentence, edited or untouched, that now disagrees with another;
+   - confirms which findings are resolved;
+   - flags new wording that two implementers would read differently.
+
+   Fix anything it scores **≥ 50** before committing, repeating steps 2–4 for that concept. You may
+   fix lower items in the same edit when they sit in a concept already touched.
+6. **Commit, then re-run `/spec:review {phase}`** as the next pass. The commit message names the
+   issues worked, not only the finding numbers.
