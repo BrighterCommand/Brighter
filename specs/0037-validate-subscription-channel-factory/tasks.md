@@ -490,7 +490,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - Require **no guard inside the rule**. `BrighterPipelineValidationExtensions.cs:58-60` returns the builder untouched when `enabled` is false, so the `IAmAPipelineValidator` factory is never registered, `sp.GetServices<ISpecification<Subscription>>()` is never called, and the spec factory lambda never runs — the rule is never even constructed. Zero cost by construction, not by a flag check
   - Depends on: 28.
 
-- [ ] **30. CHARACTERISE: The four existing consumer rules are unaffected (AC-18, FR-6)**
+- [x] **30. CHARACTERISE: The four existing consumer rules are unaffected (AC-18, FR-6)**
   - **USE COMMAND**: `/test-first when a handler is missing and the channel factory matches only the handler rule should report a finding`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_handler_is_missing_and_the_channel_factory_matches_should_report_only_the_handler_error.cs`
