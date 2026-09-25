@@ -66,8 +66,8 @@ qualifies it, and nothing in a box-and-arrow sketch shows which boxes the comman
 - The ledger, the byte budget's size, the reserve's size, the command's other reads, and the
   `## Inputs used` table itself —
   [0072-show-me-command-resolution-and-output](0072-show-me-command-resolution-and-output.md).
-- The risk level — [0073-show-me-advisory-risk-model](0073-show-me-advisory-risk-model.md). The risk step
-  and the Explainer exchange nothing: neither's output is an input to the other.
+- The risk level — [0073-show-me-advisory-risk-model](0073-show-me-advisory-risk-model.md). The risk
+  step and the Explainer exchange nothing: neither's output is an input to the other.
 - D1, D2 and D3's thresholds. FR-6 (a) states them and the measurement script implements them. This
   ADR re-decides neither.
 
@@ -224,9 +224,10 @@ flowchart LR
 Two arrows carry this ADR's argument. The command's reads and the Explainer's reads both charge one
 read log, which is why there is one budget. The Explainer renders its block only from the node list,
 which is why a node with no recorded source cannot be drawn. What the Synthesiser receives is the
-Explainer's output, as Key Components 1 states it. The node list stays in the run's transcript as the
-attribution record. This ADR adds one stage to the command file. The one front-matter entry it
-relies on, `grep`, is listed in 0072's `allowed-tools`; nothing is added to `.claude/settings.json`.
+Explainer's output, as Key Components 1 states it. The node list stays in the run's transcript as
+the attribution record. This ADR adds one stage to the command file. The front-matter entries it
+relies on — `grep`, `wc`, `tail`, `head` and `git ls-files` — are all in 0072's `allowed-tools`;
+nothing is added to `.claude/settings.json`.
 
 ### Key Components
 
@@ -246,9 +247,9 @@ under `src/`, or an extract of one. The diff and the ADR extracts are the comman
 every section, and the Explainer uses them without reading them again.
 
 Which relationship to draw is judged, and so is the format of a box-and-arrow sketch (NFR-1). There
-is no mechanical ranking of candidate files: the ledger carries no per-file counts, and a ranking the
-model computed would be a mechanically countable value, which 0072's seam leaves to the script. The Explainer chooses its anchor
-from the diff it has read, and names it in the node list.
+is no mechanical ranking of candidate files: the ledger carries no per-file counts, and a ranking
+the model computed would be a mechanically countable value, which 0072's seam leaves to the script.
+The Explainer chooses its anchor from the diff it has read, and names it in the node list.
 
 #### 2. Participants, and how each is paid for
 
@@ -335,8 +336,8 @@ and the Synthesiser then chooses FR-14's paths itself.
 
 After any other row, `## Where to look first` carries no second diagram. Rows 2 and 3 have just
 stated that the change has no relationship worth drawing, and a picture beside that line would
-contradict it. Row 4 has run out of budget. Row 5's tree already occupies the section, and row 1 has
-no diff to draw from.
+contradict it. Row 4 abandoned its relationship, for want of budget or, after a raise, because
+reading showed none. Row 5's tree already occupies the section, and row 1 has no diff to draw from.
 
 #### 6. The caps, checked before the `Write`
 
@@ -349,9 +350,9 @@ Over the assembled text, before the one `Write`, the command confirms that:
 
 These are checks on the command's own output, not measurements, so they sit on the command's side of
 0072's seam. They are a model-checked target, not a guarantee. 0072's defect table shows the model
-can miscount, and nothing mechanical backs these four checks. A rendered Mermaid block also follows `.agent_instructions/documentation.md`'s trap
-list: no `;` inside a `sequenceDiagram`, no `<` or `>` in a label, no HTML entities, and quoted
-labels where a label carries a comma, colon or parenthesis.
+can miscount, and nothing mechanical backs these four checks. A rendered Mermaid block also follows
+`.agent_instructions/documentation.md`'s trap list: no `;` inside a `sequenceDiagram`, no `<` or `>`
+in a label, no HTML entities, and quoted labels where a label carries a comma, colon or parenthesis.
 
 #### Where each artefact is touched
 
@@ -506,9 +507,9 @@ Rank changed `src/` files by their public API declaration lines, then by changed
 the relationship on the first.
 
 **Rejected.** The ledger carries no per-file counts, so the model would compute the ranking itself,
-and a count over the diff is mechanically countable, which 0072's seam leaves to the script. Moving it into the script would add a per-file
-list to a ledger designed to carry none. The ranking also made only the anchor stable, never the
-drawing, and the drawing is judged either way.
+and a count over the diff is mechanically countable, which 0072's seam leaves to the script. Moving
+it into the script would add a per-file list to a ledger designed to carry none. The ranking also
+made only the anchor stable, never the drawing, and the drawing is judged either way.
 
 ### Alternative 6: A separate budget for diagram reads
 

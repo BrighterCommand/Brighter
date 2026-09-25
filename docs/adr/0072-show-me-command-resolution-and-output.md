@@ -329,13 +329,13 @@ script implements that table and this ADR does not restate it. The rules the scr
 - **The script locates everything the command reads in parts.** For each marked section for the
   target, each declaration's paragraph, each ADR's front matter, `## Status` and `## Consequences`,
   and the whole of `tasks.md`, `requirements.md` and the `src/`-scoped diff, it emits the range and
-  the byte size, split into *windows* of whole lines of at most 25,000 bytes each. Within `/spec:show-me`,
-  recognition — headings, fences, extent — is therefore implemented once, in the script, and the
-  command reads by window without re-recognising anything. A declaration's paragraph runs from its line to the line
-  before the next declaration or the next heading of level three or higher (`###`, `##` or `#`),
-  whichever comes first, or to the end of the file, so a requirement with its own sub-headings, such
-  as FR-6's `##### Visual explanation`, is not cut short. A single line longer than 25,000 bytes
-  forms a window of its own, flagged `oversize`.
+  the byte size, split into *windows* of whole lines of at most 25,000 bytes each. Within
+  `/spec:show-me`, recognition — headings, fences, extent — is therefore implemented once, in the
+  script, and the command reads by window without re-recognising anything. A declaration's paragraph
+  runs from its line to the line before the next declaration or the next heading of level three or
+  higher (`###`, `##` or `#`), whichever comes first, or to the end of the file, so a requirement
+  with its own sub-headings, such as FR-6's `##### Visual explanation`, is not cut short. A single
+  line longer than 25,000 bytes forms a window of its own, flagged `oversize`.
 - **The locating fields are inputs, not statements.** FR-21 says the script owns exactly the NFR-1
   fields "plus the inputs those fields depend on", and that the ledger carries them "at minimum".
   The ranges and sizes are positions and sizes of the inputs the owned fields are counted from, so
@@ -344,17 +344,20 @@ script implements that table and this ADR does not restate it. The rules the scr
   not a verdict on what the release notes say. It emits the declared-id set, not a status for any id.
 
 The stderr records are one line each: `show-me-gate: ` or `show-me-wordcount: `, then a single-line
-JSON object. The gate record carries which of FR-3's three cases applies and, for the unchecked
-case, `{n}`, `{total}` and the first three unchecked titles. The word-count record carries the
-counted total, the excluded fenced-block line count, and whether the total is inside 400–2,000. The
-command reads only the last line with the right prefix.
+JSON object, built and encoded as the ledger is but without indentation (*Why the script is a C#
+file-based app*). The gate record
+carries which of FR-3's three cases applies and, for the unchecked case, `{n}`, `{total}` and the
+first three unchecked titles. The word-count record carries the counted total, the excluded
+fenced-block line count, and whether the total is inside 400–2,000. The command reads only the last
+line with the right prefix.
 
 #### 2. The fact ledger
 
-One JSON object at `{target directory}/.show-me-ledger.json`, serialised with `System.Text.Json` with
-indentation on, so that no line of it approaches the window limit. Its
-field names are the contract between the script, the command file and the test script, so they are
-fixed here. A *window list* is a list of `{first_line, last_line, bytes, oversize}`.
+One JSON object at `{target directory}/.show-me-ledger.json`, built as a `JsonObject` and written by
+`System.Text.Json` with the relaxed encoder and with indentation on, so that no line of it
+approaches the window limit (*Why the script is a C# file-based app*). Its field names are the
+contract between the script, the command file and the test script, so they are fixed here. A *window
+list* is a list of `{first_line, last_line, bytes, oversize}`.
 
 | Field | Group | Holds |
 | --- | --- | --- |
@@ -408,7 +411,7 @@ and 2 is the reason on `pr`. Row 16 is `pr` present with `head_present: false` a
 The ledger carries no diff text and no list of changed files. The script checks the serialised size
 before writing anything: an object over 65,536 bytes is a tooling fault, exit `1`, and no ledger is
 written. Most of the object is window lists, and they grow with the size of the inputs; spec 0036's
-is estimated at under 20 KB, which the first run will measure. The window lists narrow the margin
+is estimated at under 20 KB, a figure no run has yet measured. The window lists narrow the margin
 FR-21 describes, from an order of magnitude to a few times, and that is a stated negative.
 
 ##### The write is atomic
@@ -482,10 +485,10 @@ read, so when `show-me.md` already exists the command reads it (Key Components 5
 ##### What is read, and what it costs
 
 The table is in read order: `specs/.current-spec` at Step 1 when there is no argument, the ledger at
-Step 3, then Step 4's reads from the existing `show-me.md` down, then the Explainer's at Step 5. The marked release-notes section comes before `requirements.md`
-because FR-7 makes reading it an obligation, and `requirements.md`, whose paragraphs degrade
-gracefully, takes what is left. No full-content read of a file is issued before the command has run
-`wc -c` on its path. `wc -c` is a
+Step 3, then Step 4's reads from the existing `show-me.md` down, then the Explainer's at Step 5. The
+marked release-notes section comes before `requirements.md` because FR-7 makes reading it an
+obligation, and `requirements.md`, whose paragraphs degrade gracefully, takes what is left. No
+full-content read of a file is issued before the command has run `wc -c` on its path. `wc -c` is a
 size probe, not a read, and costs nothing (NFR-3, AC-76). A range the ledger locates — a
 declaration's paragraph, a section, an ADR extract, the diff — is priced by its `bytes` in the
 ledger. For the release-notes read the command also runs `wc -c` on the release-notes file, as FR-7
@@ -496,7 +499,7 @@ piping the same command into `wc -c`.
 | --- | --- | --- |
 | `specs/.current-spec`, when no argument is given | one unplanned window, at Step 1 (FR-2) | general allowance; negligible |
 | The ledger | unplanned windows | general allowance; at most 65,536 B |
-| The existing `show-me.md`, when there is one | `Read`, as the first of Step 4's reads; charged its `wc -c` plus Read's line-number prefix; never used as evidence | general allowance |
+| The existing `show-me.md`, when there is one | `Read`, as the first of Step 4's reads; priced before it is issued at its `wc -c` plus 8 bytes for each line `wc -l` counts and for one line more, which bounds Read's line-number prefix of a number and a tab below 10,000,000 lines and covers a final line with no newline; never used as evidence | general allowance |
 | `.issue-number`, `.adr-list` | one unplanned window each | general allowance; negligible |
 | `tasks.md` | its planned windows, in order, while bytes remain | general allowance |
 | The `src/`-scoped diff | its planned windows, in order | general allowance |
@@ -574,13 +577,14 @@ reading it as fact, and the next successful run replaces it (NFR-8's stated exce
 
 #### 5. The output document
 
-`show-me.md` is assembled in memory in FR-5's order and written with one `Write`, which replaces
-the whole file. Whether the file was created or replaced (FR-19) is the `test -f` the command runs
-at Step 4; when the file exists, the command also reads it then, because `Write` refuses to replace
-a file the session has not read. That read is charged and is never used as evidence. Before any repository path is written into it — a link, a path in `## Where to look
-first`, a node in a diagram — the command runs `git ls-files --error-unmatch` on that path, so an
-untracked path such as `PROMPT.md` cannot appear (FR-17, NFR-5). Every ADR reference carries the
-filename stem and a relative link, never a bare number (C-9).
+`show-me.md` is assembled in memory in FR-5's order and written with one `Write`, which replaces the
+whole file. Whether the file was created or replaced (FR-19) is the `test -f` the command runs at
+Step 4; when the file exists, the command also reads it then, because `Write` refuses to replace a
+file the session has not read. That read is charged and is never used as evidence. Before any
+repository path is written into it — a link, a path in `## Where to look first`, a node in a diagram
+— the command runs `git ls-files --error-unmatch` on that path, so an untracked path such as
+`PROMPT.md` cannot appear (FR-17, NFR-5). Every ADR reference carries the filename stem and a
+relative link, never a bare number (C-9).
 
 | Section | From the ledger (copied, never recomputed) | From the command's reads (judged) |
 | --- | --- | --- |
@@ -624,6 +628,9 @@ measurement script, it is committed at mode `100644` and carries no first-line m
   would appear in `/spec:status`.
 - **Ledgers are restored.** Before each run, the test script saves any ledger already in the target
   directory. Afterwards it deletes a ledger its run created, and restores a saved one byte-for-byte.
+- **The encoder is checked.** `JsonDocument` decodes escapes, so a field assertion cannot see them.
+  The calibration row therefore also asserts that the ledger's raw text contains the key
+  `"TEST + IMPLEMENT"` literally, which fails if the script falls back to the default encoder.
 - **Residue is checked.** After all runs, the test script asserts that no temporary file remains in
   any fixture directory (AC-83).
 - **Arguments are checked.** One row runs `… show_me_facts.cs -- specs/x --file {probe}.cs` and
@@ -668,8 +675,25 @@ the `deny` list in `.claude/settings.json`, and `release_notes.md`. The amendmen
   the 10.0 SDK, and no `global.json` pins a lower one, so file-based apps add nothing to anyone's
   machine. Python is not comparable: the repository has no `.py` files, and it ships both `.sh` and
   `.ps1` scripts because `CONTRIBUTING.md` documents Linux, macOS and Windows paths.
-- **It has a real JSON serialiser.** The defect class this seam removes is hand-made escaping.
-  `System.Text.Json` escapes quotes, backslashes and non-ASCII text without being asked.
+- **It has a real JSON writer.** The defect class this seam removes is hand-made escaping.
+  `System.Text.Json` escapes quotes, backslashes and control characters without being asked.
+- **Two of the writer's defaults are overridden, and neither is left to chance.** Measured with SDK
+  10.0.401 on 2026-09-25:
+  - *Reflection-based serialisation is disabled.* A file-based app defaults to AOT-compatible
+    settings. `JsonSerializer.Serialize` of a plain class compiles with warnings IL2026 and IL3050,
+    then fails with `InvalidOperationException: Reflection-based serialization has been disabled`
+    and exit status 134. The script therefore builds each JSON payload — the ledger and both stderr
+    records — as a `JsonObject` and writes it with `ToJsonString`, and the test script reads the
+    ledger with `JsonDocument`. That route compiles with no warnings.
+  - *The default encoder escapes text a copied value needs literally.* It writes `TEST + IMPLEMENT`
+    as `TEST \u002B IMPLEMENT`, and `—`, `<`, `>`, `"` and `é` as `\u` escapes, and 0036's task
+    titles all contain `—`. The script writes with `JavaScriptEncoder.UnsafeRelaxedJsonEscaping`,
+    which writes `+`, `—`, `<`, `>` and `é` literally. It still escapes, among others, what JSON
+    requires — `\"`, `\\` and control characters — and characters outside Unicode's Basic
+    Multilingual Plane, as surrogate-pair escapes. "Unsafe" refers to embedding the output in HTML,
+    which no payload is. A value the command copies from a payload is the decoded value, so `\"` is
+    copied as `"`. Of 0036's task lines, one contains `"` and none contains a character outside the
+    plane.
 - **It needs no build step.** `dotnet run {file}.cs` needs no project, restore or build command. It
   costs about 7.8 s on the first run, 1.3 s after an edit and 0.2 s warm, measured on this
   repository. The root `Directory.Build.props` does not disturb it.
@@ -680,7 +704,8 @@ the `deny` list in `.claude/settings.json`, and `release_notes.md`. The amendmen
 #### Why the payload travels in a file
 
 Measured on this repository: when a file-based app is recompiled, `dotnet run` writes the compiler's
-warnings to standard output, ahead of the program's own output. A warm run is clean. A contract on
+warnings to standard output, ahead of the program's own output. The reflection route's IL2026 and
+IL3050 are two such warnings, and any later warning joins them. A warm run is clean. A contract on
 standard output would therefore pass every test and fail on a fresh clone, in CI, or after an edit.
 The ledger is a file the script writes itself, so no toolchain can interleave with it.
 
@@ -731,14 +756,15 @@ reading, and the command reads under the byte budget.
 
 #### Why there is no sub-agent
 
-`/spec:status` and `/spec:gear` run in the main agent, and so does this one. A sub-agent starts with a clean context, so it would either receive every extract in its
-prompt or read the inputs a second time, which would double the budget. FR-19's report must come
-from the main agent anyway.
+`/spec:status` and `/spec:gear` run in the main agent, and so does this one. A sub-agent starts with
+a clean context, so it would either receive every extract in its prompt or read the inputs a second
+time, which would double the budget. FR-19's report must come from the main agent anyway.
 
 #### Why the test script is also C#
 
 It inherits every reason the measurement script has, and one more: it parses the ledger as JSON and
-asserts on fields, which C# does with the same serialiser the script writes with. A shell test script
+asserts on decoded field values, which C# does with `JsonDocument` from the same `System.Text.Json`
+the script writes with. A shell test script
 would need a `.ps1` twin for Windows, and would compare JSON as text.
 
 ### Implementation Approach
@@ -759,11 +785,11 @@ comes before the script code that satisfies it. Three steps are verified another
    [0078-spec-family-machine-readable-forms](0078-spec-family-machine-readable-forms.md) defines.
    Fixture: the release-notes file, whose marked
    section's count, first line, last line and byte size are asserted as well as `{m}`.
-6. **Behavioural.** Pinned diff fields: buckets, net lines, `src_subdirectory_count`, public-API lines,
-   commit count, `src_diff` with its windows, `f1_level` and `triggers`. Rows: the calibration spec, where F1
-   is `High` and D1, D2 and D3 fire, and the pinned *declared* fixture. Further pinned rows test the
-   thresholds at their boundaries, each pinned to a pair of commits from `master`'s own history,
-   chosen when the row is built:
+6. **Behavioural.** Pinned diff fields: buckets, net lines, `src_subdirectory_count`, public-API
+   lines, commit count, `src_diff` with its windows, `f1_level` and `triggers`. Rows: the
+   calibration spec, where F1 is `High` and D1, D2 and D3 fire, and the pinned *declared* fixture.
+   Further pinned rows test the thresholds at their boundaries, each pinned to a pair of commits
+   from `master`'s own history, chosen when the row is built:
 
    | Row | The pair's diff | Asserted |
    | --- | --- | --- |
@@ -773,13 +799,21 @@ comes before the script code that satisfies it. Three steps are verified another
    | D1, too few subdirectories | 5 or more files under `src/`, in 1 subdirectory | `triggers.d1` `false` |
    | D1 at both thresholds | 5 files under `src/`, across 2 subdirectories | `triggers.d1` `true` |
    | D2 at 9 and 10 | 9, then 10, changed public API declaration lines | `triggers.d2` `false`, then `true` |
+   | A file directly under `src/` | `c53875f3c..5247862cd`: `src/Directory.Build.props` and 2 files in one project | 3 files under `src/`; `src_subdirectory_count` `1`, not `2` |
 
-   That is nine rows. `master`'s history is never rewritten, so these pairs stay reachable.
+   That is ten rows. The last row tests the Definition of *Immediate subdirectory of `src/`*: a file
+   directly under `src/` contributes no subdirectory. Its pair is named here, measured on
+   2026-09-25, because a search of `master`'s first-parent history found no pair that fits the
+   *D1, too few subdirectories* row and also changes `src/Directory.Build.props`. AC-67's own shape —
+   five files, with D1 failing on its second clause — therefore stays a command-level criterion.
+   `master`'s history is never rewritten, so these pairs stay reachable.
 7. **Behavioural, verified by the command-level criteria.** Unpinned ref fields: spec branch, base
    ref, PR discovery, measured head, merge base, the `gh` record, and FR-10's divergence and
    merged-candidate lines. Fixture runs null every ref field by design (FR-21), so the test script
    cannot assert these values; the step is verified against AC-18, AC-46, AC-47, AC-84 and AC-85,
-   with the stand-in `gh` AC-84 describes. The kinds-of-run nulls are test-script rows.
+   with the stand-in `gh` AC-84 describes. AC-18 and AC-47 are *(C-8)* and lapse when #4282 merges,
+   so this logic has no regression net after that (Negative; Alternative 8). The kinds-of-run nulls
+   are test-script rows.
 8. **Behavioural, partly by inspection.** The atomic write and the over-cap refusal are verified by
    inspecting the write path (AC-83), because provoking either needs a fault hook or an outsized
    fixture. The residue check is a test-script row.
@@ -806,7 +840,8 @@ comes before the script code that satisfies it. Three steps are verified another
   and the command writes `show-me.md` only after that. AC-7 and AC-71 follow from the order. The one
   exception is FR-21's fifth failure state, whose ledger is gitignored.
 - **The protocol is small.** Once the target is resolved, two probes, the exit status, one prefixed
-  line and one ledger parse decide every branch. Standard output is never parsed, so toolchain noise cannot change a run's outcome.
+  line and one ledger parse decide every branch. Standard output is never parsed, so toolchain noise
+  cannot change a run's outcome.
 - **Every diff in a run describes the same change.** The ledger pins two shas once, and every read
   names them. Two sets of numbers cannot appear in one `show-me.md` (FR-20).
 - **The budget is met by arithmetic.** Every read is priced before it is issued, so a run that keeps
@@ -827,6 +862,14 @@ comes before the script code that satisfies it. Three steps are verified another
   than fifty window sizes, and whether the ledger parses as one JSON object is judged by the model
   over its windows. This ADR's defect table shows the model can miscount. Neither has a mechanical
   backstop; both are model-checked targets, as 0077's diagram caps are.
+- **Ref resolution has no automated test.** FR-10's three rules, the merged-candidate skip, the
+  remote-versus-local divergence, FR-20's highest-number choice and the head-present fallback are
+  the most branch-heavy logic in the script, and every diff field depends on the merge base and
+  measured head they produce. They are verified only by command runs (Implementation Approach step
+  7), and AC-18 and AC-47 lapse when #4282 merges. After that, a regression here is visible to a
+  reader only as a wrong ref in a `show-me.md` metadata block or `## Blast radius` provenance line,
+  which can be checked against `git log` and the pull request; every count measured from that ref is
+  wrong with it.
 - **The .NET 10 SDK becomes a hard requirement** for anyone running `/spec:show-me`, and the first
   run after an edit pays a compile of several seconds.
 - **FR-18's confinement moved into code.** The `gh` call is in the script, so the front matter no
@@ -886,8 +929,8 @@ let the model run them as written.
 **Rejected because the reproducibility is illusory.** A pipeline that runs is deterministic. A
 pipeline transcribed into markdown is a description that no one executes and no test reaches, and it
 carries the markdown's escaping. The four defects in *Counting in prose that nobody runs* are that
-failure, observed. A script is not new to this family either: `.claude/commands/adr/generate_adr_index.awk`
-is an executable artefact in it already.
+failure, observed. A script is not new to this family either:
+`.claude/commands/adr/generate_adr_index.awk` is an executable artefact in it already.
 
 ### Alternative 2: Replace the judged sections with mechanical proxies
 
@@ -930,7 +973,7 @@ the Explainer, for a reason of its own.
 ### Alternative 5: Write the measurement script in awk, Python or shell
 
 - **awk** is the family's one precedent and needs nothing installed. **Rejected because it has no
-  JSON support.** Hand-writing the escaping of quotes, backslashes and non-ASCII text rebuilds the
+  JSON support.** Hand-writing the escaping of quotes, backslashes and control characters rebuilds the
   hazard this seam removes. `"cmd" | getline` also hides a child's exit status, and the script must
   tell "`gh` found nothing" from "`gh` failed".
 - **Python** fits best technically: a probe emitted valid JSON on a clean standard output and ran in
@@ -956,6 +999,19 @@ path-scoped `git diff` over two pinned shas returns the same bytes on every run.
 context window, so the run would fail rather than degrade. `tasks.md` is read whole, because at
 229,159 bytes it fits the budget. What stays rejected is letting the model count, which would
 collapse NFR-1's split.
+
+### Alternative 8: Test ref resolution in a repository the test script builds
+
+Let the test script create a throwaway git repository with `spec/*` branches and remote-tracking
+refs, put a stand-in `gh` first on `PATH`, and run the script from that repository's root. That
+selects inputs without a fault hook, and it would give ref resolution the regression net it lacks.
+
+**Rejected.** NFR-9 defines the test as runs of the script against named, tracked fixtures and
+commit pairs of this repository, and a repository built at run time is neither, so adopting it would
+change the requirement, not implement it. The stand-in `gh` must be an executable named `gh`, which
+means a shell script on Linux and macOS and a `gh.cmd` on Windows — the two-platform twin the choice
+of C# exists to avoid (*Why the test script is also C#*). The gap it would close is recorded as a
+Negative instead.
 
 ## References
 

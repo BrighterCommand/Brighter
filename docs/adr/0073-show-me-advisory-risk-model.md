@@ -121,11 +121,11 @@ and let nothing outside that step test it.**
 The Classifier judges each breaking-change item and requirement status once. F2 and F5 are derived
 from those judgements, and F1 is copied from the fact ledger. FR-16's forced levels are applied
 before any threshold, each factor takes its highest matching column, and the overall level is the
-maximum over the factors. The Classifier's judgements feed two renderings: the sections that present the evidence, and the
-factor rows that summarise it. The risk step computes the level from those rows and writes the
-lines that set it. The level then appears in two places: the `**Overall risk: …**` line in
-`show-me.md`, and FR-19's session report, which copies it. Nothing else in the command tests the
-level.
+maximum over the factors. The Classifier's judgements feed two renderings: the sections that present
+the evidence, and the factor rows that summarise it. The risk step computes the level from those
+rows and writes the lines that set it. The level then appears in two places: the `**Overall risk:
+…**` line in `show-me.md`, and FR-19's session report, which copies it. Nothing else in the command
+tests the level.
 
 ### The mechanism, end to end
 
@@ -190,8 +190,8 @@ flowchart LR
 ```
 
 The Explainer and the risk step have no edge between them: neither's output is an input to the
-other, although both read the ledger. This ADR adds one stage and one marked step to the command file, and nothing to its front
-matter or to `.claude/settings.json`.
+other, although both read the ledger. This ADR adds one stage and one marked step to the command
+file, and nothing to its front matter or to `.claude/settings.json`.
 
 ### Key Components
 
@@ -295,8 +295,8 @@ The risk step writes the lines that set the level, and every instruction that te
 The raising sentence is part of the rationale, as AC-23 requires, and counts toward its two to five
 sentences. The Synthesiser names the factors that set the level from the risk step's list — the
 factors at the maximum. On a raise, those factors still set the computed level, and the raising
-sentence names what they miss. The Synthesiser may state a factor's level as a fact the table shows — "F1 is `High`" — so the instructions that write
-the rationale compare no levels.
+sentence names what they miss. The Synthesiser may state a factor's level as a fact the table shows
+— "F1 is `High`" — so the instructions that write the rationale compare no levels.
 
 Before the risk step ends, still inside its markers, it checks the lines it wrote: the stated level
 is not below the maximum, and a stated level above the maximum has a raising sentence (AC-23). The
@@ -379,9 +379,10 @@ Numbered in commit order. These steps follow the test script's harness,
 Implementation Approach step 3, and form part of its step 10. The test-script rows come before the
 command-file text they check.
 
-1. **Behavioural.** The test script's FR-13 row, which fails until step 2 adds the markers: the paragraph check, the marker-count assertion
-   (exactly one begin marker and one end marker, begin first), and the AC-81 literal line, which
-   must yield zero matches. It runs against the command file as each later step changes it.
+1. **Behavioural.** The test script's FR-13 row, which fails until step 2 adds the markers: the
+   paragraph check, the marker-count assertion (exactly one begin marker and one end marker, begin
+   first), and the AC-81 literal line, which must yield zero matches. It runs against the command
+   file as each later step changes it.
 2. **Behavioural.** The risk-step markers in `.claude/commands/spec/show-me.md`, at Step 5 between
    the Classifier and the Synthesiser (see
    [0072-show-me-command-resolution-and-output](0072-show-me-command-resolution-and-output.md),

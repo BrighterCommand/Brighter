@@ -80,7 +80,7 @@ it owns.**
 
 ### A form with a reader and no writer
 
-| Form | Read by | Written today by | What drift does |
+| Form | Read by | Written, before this ADR, by | What drift does |
 | --- | --- | --- | --- |
 | Requirement declaration | the declared-id pattern | `/spec:requirements`, which asks for numbered FRs but prescribes no form | A heading or numbered-list declaration is not counted, and FR-16 row 9 reports no ids in the bold lead-in form |
 | Task lead-in | the task-type tag pattern | `/spec:tasks`, which templates only `TEST + IMPLEMENT` | This spec's own `tasks.md` drifted to `**T1.1 — STRUCTURAL:`, which counts as `untagged` |
@@ -112,12 +112,11 @@ nothing reports a malformed document.
 **Prescribe each form where it is written, check it where it is reviewed, and give the release-notes
 form one writer that never guesses whose section is whose.**
 
-Each form is given by example, never by pattern. `/spec:write_release_notes` replaces its own
-section in place, and stops without writing whenever proceeding would mean guessing. `/spec:requirements`
-and `/spec:tasks` state their forms in words and by example. `/spec:review`
-flags a document that departs from them. `/spec:write_release_notes` writes a spec's release-notes
-section in the marked form, and `/spec:design` and `/spec:review` call for it when a design breaks
-something.
+Each form is given by example, never by pattern. `/spec:requirements` and `/spec:tasks` state their
+forms in words and by example, and `/spec:review` flags a document that departs from them.
+`/spec:write_release_notes` writes a spec's release-notes section in the marked form, replaces its
+own section in place, and stops without writing whenever proceeding would mean guessing.
+`/spec:design` and `/spec:review` call for it when a design breaks something.
 
 ### The mechanism, end to end
 
@@ -152,9 +151,10 @@ Three invariants read off the ladder:
 - **At most one section per spec is ever written.** Row 5 stops on two, row 8 replaces the one, and
   row 9 writes one only when none exists.
 - **The command never decides ownership.** A section is the target's only when its marker line,
-  trimmed, equals `<!-- spec: {target's full directory name} -->` exactly. An unmarked heading that might be the target's stops the command
-  rather than being claimed or duplicated (row 7). A section marked for another directory — even one
-  sharing the target's id — is not the target's, and is left unchanged like any other line.
+  trimmed, equals `<!-- spec: {target's full directory name} -->` exactly. An unmarked heading that
+  might be the target's stops the command rather than being claimed or duplicated (row 7). A section
+  marked for another directory — even one sharing the target's id — is not the target's, and is left
+  unchanged like any other line.
 
 ### Where the pieces live
 
@@ -297,13 +297,40 @@ long before a spec is finished.
 | 5 | Judge the breaking-change items and write the section in the form of Key Components 4 |
 | 6 | Replace the marked section (row 8), or insert the new one directly after the first `##` heading line (row 9) |
 
-`release_notes.md` is 118,145 bytes as of 2026-09-25, too large to read in one call. The command therefore
-reads it by line numbers: step 2's one `Grep` gives every heading and fence line, so fence tracking
-never has to survive a split read, and every section it then needs is read by `Read` with an offset
-and a limit. That read is also what the `Edit` below requires, because an edit is refused on a file
-the session has not read. `Read` shortens any line over 2,000 characters; such a line in the target's
-section would make the `Edit`'s old text fail to match, and the edit would be refused with
-`release_notes.md` unchanged, which is a failed write (row 8's invariant), not a wrong one.
+`release_notes.md` is 118,145 bytes as of 2026-09-25, too large to read in one call. The command
+therefore reads it by line numbers: step 2's one `Grep` gives every heading and fence line, so fence
+tracking never has to survive a split read, and every section it then needs is read by `Read` with
+an offset and a limit. That read is also what the `Edit` below requires, because an edit is refused
+on a file the session has not read. `Read` shortens any line over 2,000 characters; such a line in
+the target's section would make the `Edit`'s old text fail to match, and the edit would be refused
+with `release_notes.md` unchanged, which is a failed write (row 8's invariant), not a wrong one.
+
+The item sources are read the same way, because they are as large. Spec 0036's `requirements.md`
+is 273,674 bytes, over the 256 KB `Read` refuses without an offset, and its ADRs average about
+100 KB.
+
+- **`.adr-list` entries** resolve by FR-16 row 7's rule: a full filename, or `docs/adr/{filename}`,
+  resolves as that file in `docs/adr/`, and anything else does not resolve. This command does not
+  run the measurement script, so it applies the rule itself, with a `Glob` of `docs/adr/`. An entry
+  that does not resolve to exactly one file contributes no items, and the command's closing message
+  names it with FR-16 row 7's wording. It is not a stop, because FR-23 lists every stop. When no
+  entry resolves and there is no `requirements.md`, the list is `No breaking changes.`, and the
+  closing message says it was derived from no source and names every entry, so the user can correct
+  `.adr-list` and re-run, which replaces the section (ladder row 8).
+- **An ADR's *Consequences*** is found by one `Grep` for the ADR's `## ` heading lines and its fence
+  lines, with line numbers, discarding any heading between an opening and a closing fence, as step 2
+  does for `release_notes.md`. It is read from `## Consequences` to the next `## ` heading.
+- **`requirements.md`** is read in full.
+
+Each of these is read by `Read` with an offset and a limit of at most 200 lines per call, taken from
+the `Grep` line numbers or, for a whole file, from a `Grep` count of its lines. A call refused for
+size is re-issued with half the limit. Nothing else in the target's directory is read except
+`.issue-number`, for the heading.
+
+The command's `allowed-tools` are `Bash(ls:*)` for the pre-executed `specs/` listing FR-1's match
+runs over, as in
+[0072-show-me-command-resolution-and-output](0072-show-me-command-resolution-and-output.md), and
+`Read`, `Grep`, `Glob` and `Edit`. It lists no `Write`, no `git` and no `gh`.
 
 The write is an exact-match `Edit`, never a whole-file `Write`. A replacement's old text is the whole
 marked section, which the marker makes unique. An insertion is anchored on the first `##` heading
@@ -394,8 +421,9 @@ command.
 2. **Behavioural.** `/spec:tasks`: the four template lines and the drifted form in the *DO NOT* block
    (AC-87).
 3. **Behavioural.** `/spec:review`: the requirements and tasks checks (AC-88).
-4. **Behavioural.** `/spec:write_release_notes`: the ladder, the form, the exact-match edit, and each
-   stop's message (AC-89, AC-90, AC-95).
+4. **Behavioural.** `/spec:write_release_notes`: the ladder, the form, the item-source reads and
+   `.adr-list` resolution, the `allowed-tools`, the exact-match edit, and each stop's message (AC-89,
+   AC-90, AC-95).
 5. **Behavioural.** `/spec:design`: the breaking-change step. `/spec:review`: the design check
    (AC-91).
 6. **Structural.** The README catalogue entry.
@@ -443,12 +471,11 @@ that file when it is next revised, which is the tasks phase's work.
   write, not one of FR-23's stops, and it needs no ladder row.
 - **Risk: `/spec:write_release_notes` and the measurement script recognise headings and fences
   differently.** Both apply the *Marked release-notes section* definition's rules for headings and
-  fences, and for marker lines — the script in C#, this command in its two `Grep`s — so there are
-  two implementations of one rule. The four stated patterns are not among them, so FR-21's exactly-once rule is not broken,
-  but the two can drift.
-  *Mitigation*: the command's output is read back by the script on every `/spec:show-me` run, and
-  `/spec:review`'s design check flags a spec whose breaking changes have no marked section the
-  script can find.
+  fences, and for marker lines — the script in C#, this command in its `Grep`s — so there are
+  two implementations of one rule. The four stated patterns are not among them, so FR-21's
+  exactly-once rule is not broken, but the two can drift. *Mitigation*: the command's output is read
+  back by the script on every `/spec:show-me` run, and `/spec:review`'s design check flags a spec
+  whose breaking changes have no marked section the script can find.
 - **Risk: a hand-added marker names the wrong directory.**
   *Mitigation*: none in tooling. The marker is a literal the person chose, and `/spec:show-me` trusts
   it. `/spec:review`'s design check will still flag the spec that is missing its section.
