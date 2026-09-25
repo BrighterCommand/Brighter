@@ -1,762 +1,970 @@
 # Tasks — `/spec:show-me`
 
-**Spec**: [requirements.md](requirements.md) · **Design**: [ADR 0072 — Target Resolution and Output Shape (`0072-show-me-command-resolution-and-output`)](../../docs/adr/0072-show-me-command-resolution-and-output.md), [ADR 0073 — Review-History Decomposition and the Five-Factor Risk Model (`0073-show-me-review-history-and-risk-model`)](../../docs/adr/0073-show-me-review-history-and-risk-model.md) · **Issue**: none (`.issue-number` absent — origin is a wrap-up note in spec 0036)
+**Spec**: [requirements.md](requirements.md) · **Design**: [0072-show-me-command-resolution-and-output](../../docs/adr/0072-show-me-command-resolution-and-output.md), [0073-show-me-advisory-risk-model](../../docs/adr/0073-show-me-advisory-risk-model.md), [0077-show-me-visual-explanation](../../docs/adr/0077-show-me-visual-explanation.md), [0078-spec-family-machine-readable-forms](../../docs/adr/0078-spec-family-machine-readable-forms.md) · **Issue**: none (`specs/0037-show-me/.issue-number` is absent; the spec came from a wrap-up note in spec 0036)
 
-> **This spec has no C# component, and therefore no `/test-first`.** The whole deliverable is one markdown prompt file, `.claude/commands/spec/show-me.md`, executed by Claude Code itself, plus a catalogue entry in `.claude/commands/spec/README.md`. There is no class, no assembly and no xUnit project anywhere in this spec, so the repository's standard `TEST + IMPLEMENT` / `/test-first` template does not apply: `/test-first` has no way to generate a compilable test for a prompt file's behaviour.
->
-> **What testing means here instead.** Every behavioural task is tagged `VERIFY` and carries a `Verify by` block naming (a) the exact `/spec:show-me` invocation to run, (b) the exact fixture it runs against, and (c) the exact AC-derived assertions to check by hand against the produced output. Fixtures are real directories already in this repository wherever one exists; where no real fixture exercises a rule, the task states exactly what synthetic fixture to create and that it must be removed afterwards. There is **no automated harness, no shell test scripts and no `.cs` files** — this was weighed against writing shell scripts (rejected: no precedent in the `/spec:*` family, and a real scripting/maintenance surface for one command — the same argument ADR 0072 Alternative 1 makes) and against skipping verification entirely (rejected: weakest guarantee available).
->
-> **The approval gate still applies.** Every `VERIFY` task stops for user approval before its section is merged into the command file. The gate fires in the `review-before` gear, which is the default ([ADR 0071](../../docs/adr/0071-tdd-review-gear.md)); `/spec:gear` can scope an upshift to a single phase below, which is why the phase headings are meaningful and stable.
+This list replaces the pre-rescope task list completely. Numbering starts fresh, and every box starts unchecked. Every checkbox uses the tag-first form that FR-22 prescribes. Only the four tags exist.
 
-## Overview
+## How to read this list
 
-`/spec:show-me [spec-id]` runs after a spec's implementation is finished and writes one file, `specs/NNNN-name/show-me.md`: what changed and why, breaking changes, a requirement-by-requirement reconciliation, how it was built, blast radius, an advisory Low/Medium/High risk read from five named factors, where to look first, and a provenance table.
+**Two shapes of behavioural task.** Both are tagged `TEST + IMPLEMENT`, and both carry the ⛔ gate line.
 
-The command file is built in the order ADR 0072's Step 0–8 skeleton runs, because each step consumes the previous step's ledger rows:
+1. **Script behaviour** is test-first through `/test-first`. The code is in `.claude/commands/spec/show_me_facts.cs` or in the test script's harness. The "test" is not an xUnit file. It is one or more rows in `.claude/commands/spec/show_me_facts_tests.cs`, a C# file-based app with no test framework, run from the repository root as `dotnet run .claude/commands/spec/show_me_facts_tests.cs`. You write the row, watch it fail, and then write the script code that makes it pass (ADR 0072, Implementation Approach preamble).
+2. **Command-file behaviour** has no `/test-first` line. This covers `show-me.md`, `write_release_notes.md` and the amendments to `/spec:requirements`, `/spec:tasks`, `/spec:review` and `/spec:design`. A markdown prompt executed by Claude Code has no unit that `/test-first` can build a test around, and NFR-9 limits the automated net to the measurement script plus the FR-13 check. Each of these tasks therefore gives a **Verify by** block after the gate, with three parts: (a) the exact invocations, (b) the exact fixture, and (c) the assertions taken from the ACs.
+   - Two exceptions follow from the ADRs. The FR-13 invariant check is a test-script row (T13.1), so it does use `/test-first`. ADR 0072 Implementation Approach step 7 (unpinned ref resolution) is script code but takes the Verify-by shape (T6.1, T6.2), because fixture runs null every ref field by design (FR-21). ADR 0072 records this gap as a Negative.
 
-```
-scaffolding → precondition gate → branch/PR/diff resolution → measurement
-  → section synthesis → review-history classification → risk scoring → write → budget check → docs
-```
+**STRUCTURAL / DOC / PROJECT** tasks have no gate and no `/test-first`. Each one carries an acceptance check and a `Traces to:` line.
 
-Two structural invariants are established in Phase 1 and depended on by everything after: **the precondition gate sits above every write** (AC-7 is a property of step ordering), and **the Measurer/Classifier/Synthesiser split** (NFR-1's determinism claim is a property of where a value comes from).
+**Gear.** The ⛔ line states the default. The gear itself lives in `.current-gear` and is changed with `/spec:gear`, which can be scoped to one of the `## Phase N — …` headings below. Keep those headings stable.
 
-### Fixtures available on this branch
+## Shared rules (stated once; tasks cite them as R1–R8)
 
-Verified present on `spec/show-me` at the time of writing. Tasks below cite these by path; re-confirm a count before asserting on it if the branch has moved.
+- **R1 — Baselines.**
+  - Before T1.1, record `PRE=$(git rev-parse HEAD)`. Every "one added line" or "no other criterion changed" check diffs against `$PRE`.
+  - Every "`git status --porcelain` byte-identical" check compares two captures taken inside the same Verify block, one before the run and one after. Standing entries, such as a temporarily modified fixture, are therefore constant and cancel out.
+- **R2 — Real fixtures are restored.**
+  - A task that changes a tracked path in a real fixture restores it with `git checkout -- {path}` as the last step of its Verify block. This includes `specs/.current-spec`, which is tracked.
+  - Untracked additions are deleted.
+  - Each Verify block names every path it touches.
+- **R3 — Generated output is removed.** Every `/spec:show-me` run against a real spec directory ends by deleting that directory's `show-me.md` and `.show-me-ledger.json`, unless the task's next step inspects them. A direct script run deletes the ledger it wrote.
+- **R4 — The disposable clone.** Use it for ref manipulation, constructed spec branches, synthetic spec directories, and synthetic ADR or `release_notes.md` edits. Never do these things in the working repository.
+  - Build the clone with a setup script kept in the scratch directory, never committed: `git clone <repo> "$SCRATCH/showme-clone"`, then check out the committed `spec/show-me`.
+  - For each K-fixture that has a branch, create `spec/{name}` off `origin/master` with one commit holding the source changes and the spec directory.
+  - On the working branch, write the same `specs/NNNN-name/` and **stage it without committing**. Staging makes it tracked for FR-17. Not committing means FR-10 rule 3 never resolves it to `HEAD`.
+  - Start a Claude Code session **in the clone** so that its `.claude/settings.json` applies.
+  - Rebuild the clone whenever the command or the script has changed since the last build. Delete the clone when you are done. Nothing built in it is ever pushed.
+  - In the clone, `origin` is a filesystem path, so `gh pr list` fails and every clone run is FR-16 row 2 (`gh unavailable`) unless R5 is used.
+- **R5 — Stand-in `gh`.** This is an executable `gh` in `$SCRATCH/fake-gh/`, placed first on the `PATH` of the shell or Claude Code session that starts the run. It answers `pr list …` with canned JSON and exits 0; variants exit 1, or sleep 60 s. Remove it afterwards.
+- **R6 — Running things.**
+  - Direct script runs use `dotnet run .claude/commands/spec/show_me_facts.cs -- {target} [options]` from the repository root. A `specs/…` target matches the T1.3 allow entry, and a fixture path prompts for permission, which is expected.
+  - Command runs are made in a Claude Code session at the repository root. Restart the session after editing a command file so the new text is loaded.
+  - Commit each task before building an R4 clone from it.
+- **R7 — Clone fixtures (K1–K12).** Each is built by the R4 setup script. Where "branch" is given, the directory name without `NNNN-` equals the branch name after `spec/`.
 
-| Fixture | Property it exercises |
+| K | Directory / branch | Content | Used for |
+|---|---|---|---|
+| K1 | `specs/9001-small-change/`, `spec/small-change` | 2 files under `src/Paramore.Brighter/` (comment-only edits); `.adr-list` = `0062-pg-advisory-lock-sha256.md`; `requirements.md` declaring FR-1…FR-3; all tasks checked, tag-first | AC-57, AC-26 |
+| K2 | `specs/9002-low-risk/`, `spec/low-risk` | 4 comment-only files in one `src/` subdirectory; every requirement evidenced by a task; variant with `.adr-list` deleted | AC-21, AC-25 (Low), AC-40, AC-28 |
+| K3 | `specs/9003-declarations/`, `spec/declarations` | AC-66's three declarations (one added, one removed, one modified pair) in files under `src/Paramore.Brighter/` | AC-66, AC-22 |
+| K4 | `specs/9004-props/`, `spec/props` | `src/Directory.Build.props` plus 4 files in `src/Paramore.Brighter/` | AC-67 |
+| K5 | `specs/9005-ten-dtos/`, `spec/ten-dtos` | one added `public` property on each of ten unrelated classes | AC-64 |
+| K6 | `specs/9006-tree/`, `spec/tree` | 3–5 changed files in one namespace hierarchy; `.adr-list` of 2 resolvable ADRs | AC-65, AC-60 |
+| K7 | `specs/9007-budget/`, `spec/budget` | a `tasks.md` of about 940,000 B of checked lines; 5 changed files across 2 `src/` subdirectories, each padded past 150,000 B with lines naming the one type the relationship concerns; a section in the clone's `release_notes.md`, marked for `9007-budget`, whose `#### Breaking changes` list exceeds 30,000 B | AC-58, AC-68 |
+| K8 | `specs/9008-wide/`, no branch | a 15-entry `.adr-list` of real resolvable ADRs; a copy of 0036's `tasks.md` (229,159 B) | AC-52 |
+| K9 | `specs/9009-reconcile-17/`, no branch | FR-1…FR-12 and NFR-1…NFR-5, including `**FR-7.2 — …**` and prose cross-references | AC-15 |
+| K10 | `specs/9010-withdrawn/`, no branch | FR-27 with FR-27.1–.3; a staged synthetic ADR `docs/adr/9010-withdraw-fr-27-3.md` recording FR-27.3's withdrawal and naming a superseding requirement | AC-45 |
+| K11 | `specs/9011-twenty-eight/`, no branch | 28 declared ids; `tasks.md` evidencing one `Shipped with deviation` and one `Deferred` with a follow-up issue; variant with all shipped | AC-54, AC-55 |
+| K12 | ref-only edits | `git branch spec/sqs-cleanup origin/master`; `git update-ref refs/remotes/origin/spec/small-change origin/master`; `git branch -f spec/scoped-lifetime-per-pipeline spec/scoped-lifetime-per-pipeline~1` | AC-85, AC-47 |
+
+- **R8 — The (C-8) window.**
+  - `specs/0036-scoped-lifetime-per-pipeline/` is in the working tree because merge commit `72882520a` brought it in.
+  - PR #4282 was OPEN at head `91d549be6` on 2026-09-26.
+  - Every (C-8) check must run while #4282 is open, and therefore before T18.1.
+
+**Real fixtures (verified on `spec/show-me`, 2026-09-26)**
+
+| Path | Property |
 |---|---|
-| `specs/0002-sqs-cleanup/`, `specs/0002-backstop-error-handler/`, `specs/0002-universal_scheduler_delay/` | FR-1 ambiguity on `0002`; `sqs-cleanup` resolves uniquely |
-| `specs/0021-Expose Unacceptable Message Window/` | FR-1 whole-`$ARGUMENTS` rule (four whitespace-separated words); complete |
-| `specs/0005-defer-message-on-error/` | FR-3 `tasks.md` **absent** — the directory holds `requirements.md` and nothing else. This is the **only** fixture for that case on this branch |
-| `specs/0023-asyncapi-document-generation/` | FR-3 `tasks.md` present with **zero** checkboxes. Its `.adr-list` also holds the single path-prefixed entry `docs/adr/0040-asyncapi-document-generation.md`, which resolves to **no** file (`docs/adr/` holds only `0040-add-the-specification-pattern.md` and `0040-mssql-dlq-brighter-managed.md`) — an FR-16 row 7 case in the real data. Because its `tasks.md` has 0 checkboxes, 0023 can **never** be used as a successful-run fixture |
-| `specs/0003-remove_clear_event_bus_calls/` | FR-3 unfinished: **2 of 10** unchecked, both titled `**VALIDATION: Run full …**` |
-| `specs/0002-sqs-cleanup/` | complete (6 tasks: 5 `TEST + IMPLEMENT`, 1 untagged `IMPLEMENT:`); **no `.issue-number`**; `requirements.md` declares **zero** numbered ids; no `release_notes.md` section |
-| `specs/0031-test_naming_conventions/` | complete (7 tasks, **all untagged**); **no `.adr-list`**; declares FR-1…FR-6 as `**FR-n: …**` lead-ins **and** NFR-1…NFR-6 as `- **NFR-n (…)**:` list lead-ins, with AC lines cross-referencing them ⇒ **12** declared ids |
-| `specs/0033-pg-advisory-lock-sha256/` | complete (5 tasks: 3 `TEST + IMPLEMENT`, 1 `DOC`, 1 untagged); declares exactly **8** ids (FR-1…FR-5, NFR-1…NFR-3); `.issue-number` 4145 |
-| `specs/0034-failed-delivery-context/` | complete (24 tasks); declares **15** ids — FR-1…FR-9 in the bold-lead-in shape (`**FR-1 [SHARED] — …**`, lines 50–86) **and** NFR-1…NFR-6 in the list-lead-in shape (`- **NFR-1 (Log level).**`, lines 94–99). A second positive fixture for the third declaration shape |
-| `specs/0027-box-schema-versioning-and-migrations/` | complete, **137 KB** `tasks.md`, 111 tasks — the NFR-3 large-artefact case available without the calibration branch. Its `requirements.md` declares **18** ids (FR-1…FR-12, NFR-1…NFR-6), **all** in the list-lead-in shape — a third positive fixture for that shape |
-| `specs/9999-show-me-fixture/` | **synthetic, created once by T2.1 and torn down once at the close of T6.5.** The only fixture on this branch with a genuinely resolvable spec branch, a complete `tasks.md` and no dependency on this spec's own state. See the synthetic-fixture rule below |
-| `docs/adr/` | five files beginning `0037`, four beginning `0057` — C-9 ambiguity, real, on this branch. `docs/adr/0026-use-source-generated-logging.md` carries **no** `## Consequences` heading — the NFR-3 extraction-degradation fixture |
-| `spec/scoped-lifetime-per-pipeline` (local **and** `origin/`), PR **#4282** reachable via `gh` | the C-8 calibration case; PR comment history is queryable **without** checking the branch out, and the branch is **merged in by T4.1** so Phases 4–6 can observe real runs |
-| repo root: `PROMPT.md` (gitignored, `.gitignore:353`) + nine `PROMPT-*.md` (merely untracked) | FR-17's "tracked, not gitignored" test |
+| `specs/0002-backstop-error-handler/`, `specs/0002-sqs-cleanup/`, `specs/0002-universal_scheduler_delay/` | ambiguity on `0002`. `sqs-cleanup` is unique; it is complete (6/6), has no `.issue-number`, and declares **0** ids in the bold lead-in form |
+| `specs/0021-Expose Unacceptable Message Window/` | a name with spaces; complete (4/4) |
+| `specs/0005-defer-message-on-error/` | `requirements.md` only (no `tasks.md`) |
+| `specs/0023-asyncapi-document-generation/` | `tasks.md` with 0 checkboxes |
+| `specs/0003-remove_clear_event_bus_calls/` | unfinished: 2 of 10 unchecked |
+| `specs/0033-pg-advisory-lock-sha256/` | complete (5/5); 8 declared ids; `.issue-number` 4145; `.adr-list` = `0062-pg-advisory-lock-sha256.md`; no spec branch, so every FR-10 rule fails; no `(spec 0033` heading in `release_notes.md` |
+| `specs/0036-scoped-lifetime-per-pipeline/` (C-8) | 82/82 tasks (62/12/2/6/0 by tag); 37 ids; 7 ADRs, among them `0070-…`/`0071-…`/`0072-…`/`0073-…`, whose numbers are duplicated in `docs/adr/`; `tasks.md` 229,159 B; `requirements.md` 273,674 B. Over `6145913a0..91d549be6`: 517 files (76/393/14/24/0/10), `src/` diff 303,715 B, 131 public API lines, 6 `src/` subdirectories, 363 commits, +45,284/−515 lines |
+| `docs/adr/0037-*.md` | five files, which gives the C-9 ambiguity |
+| `release_notes.md` | 118,145 B; first `##` is `## Master`, followed by an **unmarked** `### Scoped lifetime per pipeline (spec 0036, #4256)`; zero marker lines |
 
-**AC-8 note**: AC-8 in `requirements.md` is worded around `specs/0037-show-me/` having no `tasks.md`. That is no longer true — this file exists. AC-8 is satisfied on this branch **only** by `specs/0005-defer-message-on-error/`, and T1.5 asserts it in that form. Nothing else in this file may use `specs/0037-show-me/` as a *successful-run* fixture: with 37+ unchecked boxes, FR-3 refuses it until T6.6's second run.
+## Phase 1 — Configuration, fixtures and clean-up
 
-**Branch-resolution note**: none of the `specs/000*`–`specs/003*` fixtures above has a `spec/<name>` branch, and none has commits reachable from `HEAD` but not `origin/master` touching its directory — so all of FR-10's three rules fail for them and they are **not determinable**. That is not a defect; it makes them the real fixtures for FR-16 rows 12–15. The fixtures with a resolvable branch are: the synthetic `specs/9999-show-me-fixture/` (T2.1 builds its refs), spec 0036 once T4.1 has merged the calibration branch (C-8), and `specs/0037-show-me/` itself on `spec/show-me` — usable only by T6.6, and only on its second run.
+*ADR 0072 Implementation Approach steps 1–2. Dependencies: none. T1.1 comes first.*
 
-### Synthetic-fixture rule (stated once; every task using a synthetic fixture references this)
+- [ ] **STRUCTURAL: T1.1 — Remove the staged pre-rescope fixture `specs/9999-show-me-fixture/`**
+  - Do: `git rm -r --cached specs/9999-show-me-fixture/`, then `rm -rf specs/9999-show-me-fixture/`.
+  - Acceptance: `git status --porcelain specs/` shows no `specs/9999-show-me-fixture/` entry; `ls specs/9999-show-me-fixture` fails; nothing is committed for it.
+  - Traces to: NFR-9 (no synthetic fixture under `specs/`); ADR 0072 KC6 *Fixtures*.
 
-FR-17 requires every path written into `show-me.md` to pass `git ls-files --error-unmatch`. An **untracked** synthetic fixture therefore makes its own checks vacuous: the metadata block's spec-directory line, the `## Inputs used` rows naming its files, and FR-16 row 13's fallback line would all have to be dropped or rewritten, leaving nothing to assert. Every synthetic fixture in this file is therefore **tracked before it is run against**, and untracked again on teardown.
+- [ ] **STRUCTURAL: T1.2 — Add the exact-match `.gitignore` line for the fact ledger**
+  - Do: append the single line `.show-me-ledger.json`.
+  - Acceptance: `git diff $PRE -- .gitignore` shows exactly one added line and no edited line. After `touch specs/0033-pg-advisory-lock-sha256/.show-me-ledger.json`, `git check-ignore -v` on that path names the new line; then delete the file.
+  - Traces to: FR-4, NFR-8, AC-74, AC-82; ADR 0072 *Where each artefact is touched*, IA 1.
 
-1. **The shared fixture.** `specs/9999-show-me-fixture/` is created **once** by **T2.1** and torn down **once** at the close of **T6.5**. Its files are **staged** (`git add`), not committed: a staged path passes `git ls-files --error-unmatch`, so FR-17 is satisfied without putting two throwaway commits into `spec/show-me`'s history — commits that would distort T6.6's own blast radius and commit count. Teardown is `git rm -r --cached specs/9999-show-me-fixture/` followed by `rm -rf specs/9999-show-me-fixture/`, then `git status --porcelain specs/` must return to its pre-T2.1 state.
-2. **Temporary additions on top of the shared fixture.** T3.3 (two bad `.adr-list` entries), T3.7 (`FR-27` sub-clauses in `requirements.md`), T3.8 (`requirements.md` removed), T3.10 (`PROMPT.md`/`PROMPT-history.md` added) and T6.5 (a 137 KB `tasks.md` and a 15-entry `.adr-list`) each modify the fixture **in the working tree only** and restore it with `git checkout -- specs/9999-show-me-fixture/{path}`, which restores the staged content byte-for-byte from the index. Additions that were never staged (T3.10's `PROMPT*` files) are simply deleted. Each such task names the exact paths it touches and restores them inside its own Verify block.
-3. **One-off synthetic elements inside a real fixture** (T2.6's Consequences-less `.adr-list` entry) are added to the real tracked file and restored the same way, with `git checkout -- {path}`.
-4. **`git status --porcelain` baselines.** Between T2.1 and T6.5 the fixture shows as staged `A` entries in every `git status --porcelain` capture. That is a **constant**: every before/after comparison in this file compares two captures taken while it is present, so the fixture never shows up as a difference. Where a task asserts "differs only by `show-me.md`", it means over and above those standing fixture entries.
+- [ ] **STRUCTURAL: T1.3 — Add the one path-scoped allow-list entry**
+  - Do: add `Bash(dotnet run .claude/commands/spec/show_me_facts.cs -- specs/:*)` to `allow` in `.claude/settings.json`.
+  - Acceptance: `git diff $PRE -- .claude/settings.json` shows exactly this one added line. The `gh` entries and the `deny` array are unchanged. No `Bash(dotnet run:*)` or other interpreter grant exists.
+  - Traces to: FR-18, C-10, AC-82; ADR 0072 *Why the one allow-list entry names the script*, IA 1.
 
-### Generated-output cleanup rule (stated once)
+- [ ] **STRUCTURAL: T1.4 — Create NFR-9's fixture tree under `.claude/test-fixtures/show-me/`**
+  - Do: create these tracked files, each with the content NFR-9's table states:
+    - `declared/`: `requirements.md` declaring `**FR-1 — …**`, `- **FR-2 — …**` and `**NFR-1 — …**`, plus one prose cross-reference; `tasks.md` of two checked, untagged lines; `.adr-list` of `0062-pg-advisory-lock-sha256.md` and `docs/adr/0072-show-me-command-resolution-and-output.md`.
+    - `zero-id/`: `requirements.md` with prose-only ids and one legacy `#### FR-9: …` heading; `tasks.md` of three checked lines with the lead-ins `**TEST + IMPLEMENT: …**`, `**DOC TIDY: …**` and `**T1.1 — STRUCTURAL: …**`; no `.adr-list`.
+    - `no-tasks/`: `requirements.md` only.
+    - `unfinished/`: `tasks.md` with one checked line plus the unchecked lines titled `**DOC: Alpha**` and `**DOC: Beta**`.
+    - `release-notes.md`: the release-notes fixture file, laid out exactly as NFR-9's row states. It has one section marked `<!-- spec: declared -->` with 2 top-level bullets, 1 indented sub-bullet, and between the bullets a fence containing a column-0 `- ` line and a column-0 `# ` line. It then has `#### Usage` with 2 bullets and a fence holding a column-0 `- ` line. Last comes an unmarked section with 3 bullets.
+    - `wordcount-eight.md`: exactly 8 counted tokens; one fenced block holding 8 more; an H1 and metadata block, a `|`-leading line, and an `## Inputs used` tail, each holding tokens NFR-2 excludes.
+    - `wordcount-conforming.md`: a counted body of a known exact total between 400 and 2,000 (record the total in a comment line inside the fixture's excluded tail).
+    - `probe.cs`: a file-based app that writes nothing and exits **77**, a status no other row uses.
+  - Acceptance:
+    - `git ls-files .claude/test-fixtures/show-me/` lists every file. No file is named `show-me.md`.
+    - No `.md` file sits under `.claude/commands/` for a fixture, and `/spec:status` shows no new spec.
+  - Traces to: NFR-9 fixture table, AC-79, AC-80, AC-81 (literal line lives in the test script, T13.1), AC-83; ADR 0072 KC6, IA 2.
 
-Every task that runs `/spec:show-me` against a **real** fixture directory **deletes the `specs/{dir}/show-me.md` it produced** as the last step of its Verify block, so the next task finds the directory exactly as it found it. **Tasks are performed in the order they appear in this file**; that ordering plus this rule is what makes T5.5's "no pre-existing `show-me.md`" precondition hold. The directories written into more than once are:
+## Phase 2 — Test-script harness
 
-- `specs/0033-pg-advisory-lock-sha256/` — T2.7, T3.1, T3.2, T3.5, T3.6, T3.7, T3.10, T4.6, T5.2, T5.3, T5.5
-- `specs/0002-sqs-cleanup/` — T2.4, T2.7, T3.4, T3.8, T3.9, T3.10, T4.6, T5.2, T5.4
-- `specs/0034-failed-delivery-context/` — T3.4, T3.6, T5.6, T6.2
-- `specs/0031-test_naming_conventions/` — T2.7, T3.2, T3.6, T4.6
+*ADR 0072 IA 3. Depends on Phase 1.*
 
-Three exceptions, each stated where it occurs: **T5.5** deliberately leaves its first run's file in place for its own second run, then deletes it; **T6.4** deletes `specs/0036-scoped-lifetime-per-pipeline/show-me.md` *before* resetting the calibration merge, so the reset does not orphan it in a directory that no longer exists; **T6.6** **keeps** `specs/0037-show-me/show-me.md` — it is the artefact this spec exists to produce.
-
----
-
-## Phase 1 — Command scaffolding and precondition gate
-
-*(ADR 0072 Key Components 1–3, Steps 0–2; FR-1, FR-2, FR-3, NFR-6, NFR-8)*
-
-- [x] **T1.1 — STRUCTURAL: Create `.claude/commands/spec/show-me.md` with front matter, the Step 0 pre-flight block, and the Step 0–8 heading skeleton.**
-  - Create the file with the front matter ADR 0072 *Technology Choices* fixes verbatim: `allowed-tools` listing `Bash(cat:*)`, `Bash(ls:*)`, `Bash(test:*)`, `Bash(grep:*)`, `Bash(head:*)`, `Bash(wc:*)`, `Bash(awk:*)`, `Bash(date:*)`, `Bash(git log:*)`, `Bash(git diff:*)`, `Bash(git rev-parse:*)`, `Bash(git merge-base:*)`, `Bash(git ls-files:*)`, `Bash(git branch:*)`, `Bash(gh pr list:*)`, `Bash(gh pr view:*)`, `Bash(gh pr diff:*)`, `Read`, `Write`, `Glob`, `Grep`; `description: Summarise a finished spec and give an advisory merge-risk read`; `argument-hint: [spec-id]`.
-  - The three `gh` verbs are declared narrowly and **never** `Bash(gh:*)`, so FR-18's confinement is checkable by reading the front matter (AC-30's second half). No `gh run`, `gh api`, `gh checks`, `git rev-list`, `sed` or `sort` appears anywhere in the file.
-  - Add the Step 0 pre-flight block in the family's pre-executed-shell style (`switch.md` is the precedent): an `## Available specifications` heading followed by `` !`ls -1d specs/*/ 2>/dev/null` ``.
-  - Add empty headings for Steps 1–8 in ADR 0072's order, each with a one-line statement of what it owns, so later tasks fill slots rather than inventing structure.
-  - Acceptance check: front matter parses and carries all three fields (`allowed-tools`, `description`, `argument-hint`); **`grep -oE 'gh [a-z]+ [a-z]+' .claude/commands/spec/show-me.md | grep -vE '^gh pr (view|list|diff)$'` returns no output at all** — every two-word `gh` invocation in the file is one of the three allowed verbs, and the check fails loudly by producing a line if any other appears; Step headings 0–8 all present in order.
-  - Traces to: NFR-6, AC-53, AC-30; ADR 0072 Key Components 1 and *Technology Choices*, Step 0.
-
-- [x] **T1.2 — STRUCTURAL: Add the role split, the fact-ledger contract and the global invariants block.**
-  - Add the three-role table verbatim in substance: **Measurer** (ADR 0072) owns every value NFR-1 requires identical between runs, by `git`/`gh`/`grep`/`awk` invocations whose output is a count, a sha, a ref name or a short line list; **Classifier** (ADR 0073) owns round/finding/severity/resolution tallies and F1–F5 levels, reading only Measurer-produced extracts; **Synthesiser** owns prose. State the two crossing prohibitions: the Measurer never paraphrases, and **the Synthesiser never counts** (no shell calls during Step 6).
-  - Define the fact-ledger row shape — `{input or metric} | {value} | {command or path it came from} | used | not available: {reason}` — as an **in-context** table, never a file, and state why (FR-18 permits exactly one write; a marker file is forbidden by FR-13 and Out of Scope). Note the verification consequence: because the ledger is in-context, a Classifier row is observable **in the session transcript**, which is where several Phase 4 tasks assert against it.
-  - State the traceability rule the rest of the file depends on: **a section may state only values present in the ledger, and must name the ledger row it came from** (NFR-7).
-  - State the ledger's one deliberate exception: `PROMPT.md`/`PROMPT-*.md` gets **no ledger row at all**, because a row would surface it in `## Inputs used` (FR-16 row 11, AC-41).
-  - State the global invariants referenced later: one `Write` only; **no step may branch on the risk level** (ADR 0073 Key Components 7); skeleton-first for PR comments (ADR 0073 Key Components 2); **BSD-compatible POSIX-class regexes only** — `^[[:space:]]*-[[:space:]]\[[ xX]\]` for a task checkbox, `^[+-][[:space:]]*(public|protected)[^[:alnum:]_]` for a public-API declaration line — because macOS `grep` has no `\b`.
-  - Record the no-sub-agent decision and its reason in one line each (ADR 0072 Key Components 1; ADR 0073 Key Components 1): the README's delegation rationale is empty for a read-only command, a clean-context sub-agent would spend the NFR-3 budget twice, and delegated judgement is unauditable.
-  - Acceptance check: the file contains the role table, the five-column ledger row shape, the "Synthesiser never counts" and "no step branches on the level" sentences, and the two POSIX regexes literally.
-  - Traces to: NFR-1, NFR-7, FR-13, FR-18; ADR 0072 Key Components 1 and 3, *Technology Choices*; ADR 0073 Decision and Key Components 1.
-
-- [x] **T1.3 — VERIFY: Step 1 resolves a given spec-id by the three-rule set, taking `$ARGUMENTS` whole.**
+- [ ] **TEST + IMPLEMENT: T2.1 — The test script runs fixture rows, reports each failed assertion, leaves every ledger as it found it, and exits non-zero on failure**
+  - **USE COMMAND**: `/test-first when the show-me test script runs a fixture row whose measurement fails it should print the failed assertion, restore any pre-existing ledger byte-for-byte and exit non-zero`
+  - Test script: `.claude/commands/spec/show_me_facts_tests.cs` (new)
+  - Test row(s): the NFR-9 *declared* row, unpinned, asserting only exit `0` and a ledger that parses as one JSON object. It is red because `show_me_facts.cs` does not exist yet.
+  - Test should verify:
+    - The run prints `FAIL declared: …` naming the assertion and exits non-zero.
+    - A dummy `.show-me-ledger.json` planted in `declared/` before the run is byte-identical afterwards. A ledger created by a row is deleted.
+    - Changing any one expected value to a wrong value makes that row print which assertion failed, and the script exits non-zero (AC-79's perturbation clause).
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - Take `$ARGUMENTS` **whole** — trim leading/trailing whitespace, strip wrapping quotes, preserve internal whitespace verbatim — and never split on whitespace (FR-1; ADR 0072 Step 1).
-    - Match over Step 0's line list **by the executing model**, not by a shell `for` loop, and say why in one line (an unquoted loop variable splits `0021-Expose Unacceptable Message Window` into four tokens).
-    - Apply the ordered rules, stopping at the first yielding exactly one match: exact directory name → exact four-digit id → case-insensitive substring (FR-1).
-    - Emit FR-1's two stop messages verbatim, listing every matching directory name on the ambiguity path, and stop without writing (ADR 0072 Key Components 2).
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `/spec:show-me 0002` · then `/spec:show-me sqs-cleanup` · then `/spec:show-me kafka-widget` · then `/spec:show-me 0021-Expose Unacceptable Message Window` (unquoted, four words) · then `/spec:show-me README.md`
-    - Fixture: real, on this branch — `specs/0002-backstop-error-handler/`, `specs/0002-sqs-cleanup/`, `specs/0002-universal_scheduler_delay/`, `specs/0021-Expose Unacceptable Message Window/`, and the non-candidate file `specs/README.md`.
-    - Check: **AC-1a** — `0002` prints `Ambiguous spec id '0002' — matches: …` naming **all three** `0002-*` directory names and asks for the full directory name; `sqs-cleanup` resolves to `specs/0002-sqs-cleanup/`. **AC-3** — `kafka-widget` prints `No spec matches 'kafka-widget'. Run /spec:status to list specs.` **AC-35** — the four-word argument resolves to `specs/0021-Expose Unacceptable Message Window/` (it must **not** attempt a match on `0021-Expose` alone and must not error), and `README.md` yields the no-match message because `specs/README.md` is a file, not a candidate directory. In all five runs `git status --porcelain` is unchanged and no `show-me.md` is created anywhere. If the `sqs-cleanup` resolution proceeds and writes, **delete `specs/0002-sqs-cleanup/show-me.md` afterwards** per the cleanup rule.
-  - Traces to: FR-1, C-1; AC-1a, AC-3, AC-35; ADR 0072 Step 1.
+    - Be a C# file-based app, committed at mode `100644`, with no first-line marker. It uses no test framework and references nothing under `src/` or `tests/`.
+    - Hold a table of rows. Each row starts `dotnet run .claude/commands/spec/show_me_facts.cs -- {args}` as a child process from the repository root, with both streams captured. It never parses stdout, and it reads only the last stderr line carrying a given prefix.
+    - Parse ledgers with `JsonDocument`. Save each target's ledger bytes before a row and restore or delete them afterwards. Print a summary and set the exit code.
+  - Traces to: NFR-9, AC-79; ADR 0072 KC6, *Why the test script is also C#*, *Why the payload travels in a file*, IA 3.
 
-- [x] **T1.4 — VERIFY: Step 1's no-argument path targets the current spec and names missing/empty/stale precisely.**
+## Phase 3 — Script file fields and the gate
+
+*ADR 0072 IA 4, with the write mechanism of IA 8. Depends on T2.1. Tasks run in order.*
+
+- [ ] **TEST + IMPLEMENT: T3.1 — Measuring a fixture directory writes one well-formed JSON ledger, atomically, with every ref and diff field null for `not a spec directory`**
+  - **USE COMMAND**: `/test-first when the measurement script measures a fixture directory it should atomically write a single JSON ledger whose ref and diff fields are null with reason not a spec directory`
+  - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
+  - Test row(s): the *declared* row, unpinned.
+  - Test should verify:
+    - Exit `0`, and `declared/.show-me-ledger.json` parses as a single object with `schema_version` 1, `target` as given and `pinned` false.
+    - Every ref field (`spec_branch`, `rules_tried`, `local_divergence`, `base`, `pr`, `pr_count`, `measured_head`, `merge_base`) and every diff field (`buckets`, `src_subdirectory_count`, `public_api_lines`, `commits`, `src_diff`, `f1_level`, `triggers`) is null, with `null_reasons` reading `not a spec directory`.
+    - `gh_commands` is empty. The ledger is ≤ 65,536 B and is indented (more than one line). No `.show-me-ledger.json.tmp` remains.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - With no argument, `cat specs/.current-spec` (verified format: the bare directory name, e.g. `0037-show-me`) and `test -d "specs/{value}"` (FR-2; ADR 0072 Step 1).
-    - Select the correct word — `missing` / `empty` / `stale: names '{value}'` — inside FR-2's single message template, print it verbatim, and stop without writing.
-    - Treat whitespace-only content as `empty`.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `/spec:show-me` (no argument), run three times against three states of `specs/.current-spec`.
-    - Fixture: real for the happy path — `specs/.current-spec` currently contains `0037-show-me`. For the two failure states, create the synthetic condition and **restore the file byte-for-byte afterwards**: (a) temporarily rename `specs/.current-spec` aside to produce the `missing` case; (b) temporarily replace its contents with a stale name such as `0099-does-not-exist` to produce the `stale` case. Restore the original single-line content `0037-show-me` (no trailing newline) and confirm `git status --porcelain specs/.current-spec` is empty before moving on.
-    - Check: **AC-5** — the `missing` run prints FR-2's template with the word `missing`, and the `stale` run prints it with `stale: names '0099-does-not-exist'`; both offer **both** remedies (pass a spec id with the worked `/spec:show-me 0036-scoped-lifetime-per-pipeline` example, and `/spec:switch`); neither writes any file. **AC-4 (branch-independent form)** — with the file restored, the no-argument run targets `specs/0037-show-me/` and says so **before** the FR-3 gate speaks; the FR-3 gate then refuses it (tasks unchecked), which is the correct and expected outcome at this point and writes nothing.
-  - Traces to: FR-2; AC-4, AC-5; ADR 0072 Step 1.
+    - Create `.claude/commands/spec/show_me_facts.cs` as a C# file-based app at mode `100644` with no marker.
+    - Build the ledger as a `JsonObject` and write it with `ToJsonString`, using `WriteIndented` and `JavaScriptEncoder.UnsafeRelaxedJsonEscaping`. Use no reflection-based `JsonSerializer`.
+    - Treat any target not directly under `specs/` as FR-21's second kind of run.
+    - Write through `.show-me-ledger.json.tmp` in the same directory, then `File.Move(…, overwrite: true)`, and delete the temporary file in `finally`.
+    - Check the serialised size before writing, and write data to no stream except the two stderr records.
+  - Traces to: FR-21 (artefact, ledger contract, kinds of run, atomic write), FR-4, NFR-1, NFR-6, AC-70 (ledger half), AC-83; ADR 0072 KC1, KC2, *The write is atomic*, *Why the script is a C# file-based app*, IA 4, IA 8.
 
-- [x] **T1.5 — VERIFY: Step 2's completeness gate refuses an incomplete spec with the right message and writes nothing.**
+- [ ] **TEST + IMPLEMENT: T3.2 — The script accepts exactly its argument grammar, `--` keeps `dotnet run` from reading later options, and a pinned sha that is not a local commit is a tooling fault**
+  - **USE COMMAND**: `/test-first when the measurement script is given an argument outside its grammar or an absent pinned sha it should exit with a tooling-fault status and write no ledger`
+  - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
+  - Test row(s):
+    - Usage errors: no argument; `--bogus`; `--pinned` with one sha.
+    - The **`--` probe row**: `-- specs/x --file .claude/test-fixtures/show-me/probe.cs`.
+    - `declared/` pinned to an all-zero 40-hex sha.
+    - The *declared* row pinned to `6145913a0 91d549be6` with `--release-notes`, in both option orders.
+    - The calibration row `specs/0036-scoped-lifetime-per-pipeline/` pinned to the same pair.
+  - Test should verify:
+    - Usage errors and the zero sha exit with a status other than `0`, `2` or `77`, and create no ledger (AC-93, second half). The probe row's status is not 77, so the probe did not run. The row prints `dotnet --version`.
+    - On both pinned rows: `pinned` true; `merge_base` and `measured_head` hold the pinned shas, with `measured_head.source` `pinned`; every other ref field is null with reason `pinned`; no field carries `not a spec directory`. The diff-field assertions belong to Phase 5.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - Run exactly the three bounded `grep`s of ADR 0072 Step 2 against `specs/{dir}/tasks.md` — `grep -cE '^[[:space:]]*-[[:space:]]\[[ xX]\]'` for the total, `grep -cE '^[[:space:]]*-[[:space:]]\[ \]'` for unchecked, `grep -m3 -E '^[[:space:]]*-[[:space:]]\[ \]'` for the first three unchecked titles — and **never** `Read` the file (spec 0036's is 229 KB; NFR-3).
-    - Emit FR-3's three messages verbatim for absent / zero-checkbox / unchecked>0, with `{n} of {total}` and the three titles one per line.
-    - State the gate's contract once, in bold, above Step 3: **if any check in Steps 1–2 fails, print the exact message given and stop; do not proceed to Step 3; do not write, create or touch any file** (ADR 0072 Key Components 2).
-    - Check `grep`'s exit status, not just its output, so a failed extraction is never reported as a real zero (ADR 0072 *Risks and Mitigations*; NFR-3).
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `/spec:show-me 0005-defer-message-on-error` · `/spec:show-me 0023-asyncapi-document-generation` · `/spec:show-me 0003-remove_clear_event_bus_calls`
-    - Fixture: all three real on this branch — `specs/0005-defer-message-on-error/` has **no** `tasks.md` (it holds `requirements.md` only, and is the **sole** fixture for AC-8 on this branch, since `specs/0037-show-me/tasks.md` now exists); `specs/0023-asyncapi-document-generation/tasks.md` exists with **0** checkboxes; `specs/0003-remove_clear_event_bus_calls/tasks.md` has **2 of 10** unchecked. For the AC-7 half, additionally place a one-line sentinel file at `specs/0003-remove_clear_event_bus_calls/show-me.md` containing `SENTINEL`, record its sha with `git hash-object`, and **delete it after the check**.
-    - Check: **AC-8 (restated for the 0005 fixture)** — the first run prints `Spec specs/0005-defer-message-on-error has no tasks.md — /spec:show-me runs only against a finished spec. Current phase: run /spec:status.` and writes nothing. **FR-3 second message** — the second run prints `…tasks.md contains no task checkboxes — nothing to summarise.` **AC-6** — the third run prints `2 of 10` and lists the first three (here: both) unchecked titles one per line, which are `**VALIDATION: Run full integration test suite and confirm no regressions**` and `**VALIDATION: Run full unit test suite and confirm no regressions**`. **AC-7 / NFR-8** — after the third run the sentinel `show-me.md`'s `git hash-object` is unchanged and `git status --porcelain` differs from its pre-run value only by that sentinel file itself.
-  - Traces to: FR-3, NFR-3, NFR-8; AC-6, AC-7, AC-8; ADR 0072 Key Components 2, Step 2.
+    - Parse exactly the three forms in ADR 0072 KC1's table: `--pinned` and `--release-notes` in either order, and `--word-count`. Everything else is a usage error that exits with a fixed status other than `0`/`2`.
+    - Confirm each pinned sha with a `git cat-file -e {sha}^{commit}` child process.
+    - For pinned runs, apply the pinned row of the *kinds of run* table, which takes precedence over the target's kind.
+  - Risk mitigation: the probe row is the tripwire for a later SDK that re-parses options after `--`.
+  - Traces to: FR-21 (pinned invocation, inputs not hooks), FR-18, AC-82 (why `--` matters), AC-93; ADR 0072 KC1, KC6 *Arguments are checked*, *Why the one allow-list entry names the script*, Risks (SDK change), IA 4.
 
----
-
-## Phase 2 — Target and source resolution (ADR 0072 Steps 3–5)
-
-*(FR-10, FR-20, FR-16 rows 5–7, 10, 12–15, NFR-3)*
-
-- [x] **T2.1 — STRUCTURAL: Create the shared synthetic fixture `specs/9999-show-me-fixture/` and its resolvable branch refs.**
-  - This is the **one** fixture on this branch with a genuinely resolvable spec branch that is not `specs/0037-show-me/`. It is created **once, here**, used by **T2.2, T2.4, T2.5, T3.9, T4.2 and T6.3** for successful runs and by **T3.3, T3.7, T3.8, T3.10 and T6.5** with temporary modifications on top, and torn down **once**, at the close of **T6.5**. Do not recreate or delete it between those tasks. Read the **synthetic-fixture rule** above before starting.
-  - Create the directory with exactly these three tracked files:
-    - `tasks.md` — exactly **two** lines matching `^[[:space:]]*-[[:space:]]\[x\]`, with plain titles (no task-type tag), so FR-3's gate reports 2 of 2 checked and passes, and FR-9's per-tag counts come out `0/0/0/0/2` with `untagged` as the complement.
-    - `requirements.md` — minimal, declaring `**FR-1 — …**` and `**FR-2 — …**` in the bold-lead-in shape, plus one `NFR-1` in the list-lead-in shape, so the FR-8 row set is 3 and non-empty.
-    - `.adr-list` — exactly **two** lines, one of each entry shape found in this repository: the bare filename `0062-pg-advisory-lock-sha256.md`, and the **path-prefixed** `docs/adr/0072-show-me-command-resolution-and-output.md`. Both must resolve to exactly one real file once the leading `docs/adr/` is stripped (T2.7 owns that rule and asserts this entry).
-    - `.issue-number` — omit it deliberately; FR-16 row 10 is already covered by `sqs-cleanup` and the absence keeps the fixture minimal.
-  - Stage them: `git add specs/9999-show-me-fixture/`. Do **not** commit — a staged path already passes `git ls-files --error-unmatch`, which is FR-17's own test, and committing would put throwaway commits into `spec/show-me`'s history that T6.6 would then measure.
-  - Build the branch refs, pinning both to a fixed sha so later commits on `spec/show-me` cannot move the fixture's measured diff out from under a later phase. **The branch name is `spec/show-me-fixture`, not `spec/9999-show-me-fixture`** — FR-10 rule 1 strips the leading `NNNN-` from the directory name before forming the ref, so `9999-show-me-fixture` yields `name = show-me-fixture`:
-    ```
-    FIXTURE_HEAD=$(git rev-parse HEAD)          # record this sha in the task notes — T2.2 and T6.5 both need it
-    FIXTURE_PREV=$(git rev-parse HEAD~1)        # record this one too
-    git branch spec/show-me-fixture "$FIXTURE_HEAD"
-    git update-ref refs/remotes/origin/spec/show-me-fixture "$FIXTURE_HEAD"
-    ```
-    Both refs start **equal**, so the FR-10 "local differs from the measured ref" line is correctly absent by default; T2.2 moves the local branch to `$FIXTURE_PREV` to produce the divergence case and moves it back.
-  - Confirm before moving on: `/spec:show-me 9999-show-me-fixture` resolves by FR-1 rule 1 (exact directory name) and is not ambiguous against `0037-show-me`; `gh pr list --head spec/show-me-fixture --state all` returns `[]` (the zero-PR path T2.4, T4.2 and T6.3 rely on); `git ls-files --error-unmatch specs/9999-show-me-fixture/tasks.md` exits 0.
-  - Acceptance check: `git ls-files specs/9999-show-me-fixture/` lists all three files; `git rev-parse refs/remotes/origin/spec/show-me-fixture` and `git rev-parse refs/heads/spec/show-me-fixture` both print `$FIXTURE_HEAD`; `grep -cE '^[[:space:]]*-[[:space:]]\[x\]' specs/9999-show-me-fixture/tasks.md` returns `2` and the unchecked count returns `0`.
-  - Traces to: FR-10, FR-17, NFR-8, C-4; ADR 0072 Step 3 and Key Components 3.
-
-- [x] **T2.2 — VERIFY: Step 3 resolves the spec branch, base ref and merge base, preferring the remote-tracking ref.**
+- [ ] **TEST + IMPLEMENT: T3.3 — Task checkboxes, per-tag counts and `tasks.md` windows are counted by the stated patterns, and copied text survives the encoder**
+  - **USE COMMAND**: `/test-first when the measurement script counts task checkboxes it should report total, unchecked and per-tag counts that sum to the total, with tasks.md windows`
+  - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
+  - Test row(s): *declared*, *zero-id*, and the calibration row (pinned).
+  - Test should verify:
+    - *declared*: 2 checkboxes, 0 unchecked; `by_tag` = 2 `untagged`.
+    - *zero-id*: 3 checkboxes, 0 unchecked; 1 `TEST + IMPLEMENT`, 2 `untagged` (`DOC TIDY` and the drifted `T1.1 — STRUCTURAL` form).
+    - Calibration: 82 checkboxes, 0 unchecked; 62/12/2/6/0.
+    - In every row, the four tags plus `untagged` sum to the total.
+    - `tasks.bytes` equals the file size (calibration 229,159). The windows are contiguous from line 1 to the end, each ≤ 25,000 B, and their bytes sum to `tasks.bytes`.
+    - The calibration ledger's **raw text** contains `"TEST + IMPLEMENT"` literally, which proves the encoder is not the default one.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - Compute `name` = the spec directory name with the leading `NNNN-` removed, then try in order: `git rev-parse --verify --quiet refs/remotes/origin/spec/${name}` (rule 1, **remote-tracking wins**), `refs/heads/spec/${name}` (rule 1 local fallback), `git rev-parse --abbrev-ref HEAD` when the checked-out branch name contains `${name}` (rule 2), `git log --oneline "{base}..HEAD" -- "specs/{dir}/"` non-empty ⇒ `HEAD` (rule 3) — ADR 0072 Step 3.
-    - Resolve the base ref as `origin/master` when `git rev-parse --verify --quiet origin/master` succeeds, else `master`, and name the chosen ref **and its sha** (FR-10).
-    - Take the merge base with an explicit `git merge-base {base} {head}` rather than relying on `git diff`'s three-dot form, because the sha itself is reported.
-    - Emit FR-10's `Ref used: …` line and, when rule 1 chose the remote ref while a local branch of the same name sits at a different sha, the `Local branch {name} is at {sha} and differs from the measured ref.` line — and **omit** that line when the two shas are equal.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `/spec:show-me 9999-show-me-fixture` (run **twice** — once with the refs equal, once after moving the local branch).
-    - Fixture: the shared synthetic fixture from **T2.1**, already in place and tracked. `specs/0037-show-me/` cannot be used here: its own `tasks.md` has unchecked boxes, so FR-3 refuses it. Run 1 is taken as T2.1 left things (`spec/show-me-fixture` and `refs/remotes/origin/spec/show-me-fixture` both at `$FIXTURE_HEAD`). For run 2, `git branch -f spec/show-me-fixture "$FIXTURE_PREV"` to produce the divergence, then **restore with `git branch -f spec/show-me-fixture "$FIXTURE_HEAD"`** so the fixture is back in its canonical state for T2.4 onwards. Confirm `git branch -a` matches its post-T2.1 state before moving on. Delete the generated `specs/9999-show-me-fixture/show-me.md` after each run.
-    - Check: **AC-11 / FR-10** — run 1's `## Blast radius` carries `Ref used: refs/remotes/origin/spec/show-me-fixture at {sha}; base ref origin/master at {sha}; merge base {sha}.` with the **full** ref spelling (not `spec/show-me-fixture`, not `origin/spec/show-me-fixture`), and the metadata block repeats the same ref and shas; run 1 carries **no** `Local branch …` line, because the two refs are equal. **AC-47** — run 2 still names `refs/remotes/origin/spec/show-me-fixture` at `$FIXTURE_HEAD` as the measured ref (**not** the local branch, proving remote-wins is an ordering property) and carries the line `Local branch spec/show-me-fixture is at {short $FIXTURE_PREV} and differs from the measured ref.` **Rule-order control** — in both runs, rule 2 is not what fired: the checked-out branch is `spec/show-me`, which does not contain the string `show-me-fixture`.
-  - Traces to: FR-10, C-4; AC-11, AC-47; ADR 0072 Step 3.
+    - Implement the task-checkbox and task-type-tag patterns once each, translated to .NET with the POSIX original quoted beside each. Never copy a pattern into any markdown file.
+    - Take a title as the remainder after the match, trimmed. `first_unchecked` holds at most three titles.
+    - Share one window helper: whole lines, at most 25,000 B per window, and a single longer line forms its own window flagged `oversize`.
+  - Traces to: FR-9, FR-3 (counts), FR-21 (patterns once, locating fields), C-2, NFR-1, NFR-9 rows 1, 2 and 4, AC-79; ADR 0072 KC1, KC2 `tasks`, KC6 *The encoder is checked*, IA 4.
 
-- [x] **T2.3 — VERIFY: A non-determinable branch degrades across four sections without failing the run (FR-16 rows 12–15).**
+- [ ] **TEST + IMPLEMENT: T3.4 — An unfinished or taskless target exits `2`, writes no ledger, and emits one parseable gate record**
+  - **USE COMMAND**: `/test-first when the measurement script's target fails the completeness gate it should exit 2 with a show-me-gate record on stderr and write no ledger`
+  - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
+  - Test row(s): *no-tasks*; *unfinished*; *unfinished* again with a planted ledger.
+  - Test should verify:
+    - Each row exits `2`, and no ledger exists afterwards where none existed.
+    - The last `show-me-gate: ` stderr line parses as one JSON object. For *no-tasks* its case is `tasks.md` absent. For *unfinished* it records unchecked `{n}` = 2, `{total}` = 3, and titles `**DOC: Alpha**` and `**DOC: Beta**`.
+    - A planted ledger is byte-identical immediately after the run (AC-71, second half, at script level).
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - When all three FR-10 rules fail, record a ledger row `spec branch | not determinable | rules 1–3 tried`, and continue past Step 3 — no absence below the gate stops the run (ADR 0072 Key Components 2).
-    - Row 12: `## Blast radius` states `Spec branch not determinable — no diff measured.` **followed by the rules it tried**, and F1 = Medium.
-    - Row 15: the metadata block's spec-branch, head-sha and merge-base-sha lines each read the single word `undetermined`; the base ref is still resolved and named normally (it does not depend on the spec branch); the PR-reference line reads `none found`, because FR-20's discovery needs the branch name; generation date, spec directory and issue are populated normally and the block is present in full.
-    - Rows 13 and 14 are implemented in their own sections (Phase 3) but are cross-referenced here so the four behaviours are kept in step.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `/spec:show-me sqs-cleanup`
-    - Fixture: real, on this branch — `specs/0002-sqs-cleanup/` is complete (6 tasks, 0 unchecked) and **all three FR-10 rules fail for it**: there is no `spec/sqs-cleanup` branch local or remote, the checked-out branch `spec/show-me` does not contain `sqs-cleanup`, and `git log --oneline origin/master..HEAD -- specs/0002-sqs-cleanup/` returns 0 commits. (Confirm those three facts before asserting, so a genuine zero is not mistaken for a failed extraction.) **Delete `specs/0002-sqs-cleanup/show-me.md` afterwards.**
-    - Check: **AC-19** — the run **succeeds** and writes `specs/0002-sqs-cleanup/show-me.md`; `## Blast radius` contains `Spec branch not determinable — no diff measured.` plus an enumeration of the three rules tried; the risk table shows **F1 `Medium`**; the metadata block's spec-branch, head-sha and merge-base-sha lines each read exactly `undetermined`; its base-ref line still names `origin/master` with its sha; its PR-reference line reads `none found`; generation date, spec directory and linked issue are populated normally and all eight H2 headings are present.
-  - Traces to: FR-10, FR-16 rows 12 and 15; AC-19; ADR 0072 Step 3.
+    - Evaluate FR-3's three cases (absent, zero checkboxes, unchecked) from the file fields **before** any ref resolution or `gh` call.
+    - Emit the record as a single-line JSON object with no indentation, relaxed encoder, and fixed field names such as `case`, `unchecked`, `total` and `first_unchecked`, which T9.2 reads.
+    - Capture children's stderr so no child line can carry the prefix.
+  - Traces to: FR-3, FR-21 (exit `2`, gate record, stderr rule), NFR-8, AC-7, AC-71; ADR 0072 KC1 *stderr records*, KC4, IA 4.
 
-- [x] **T2.4 — VERIFY: Step 4 discovers the PR by the stated rule and elects exactly one diff source (FR-20).**
+- [ ] **TEST + IMPLEMENT: T3.5 — Declared ids are the distinct anchored lead-in ids, in FR-then-NFR order, each located by its paragraph's windows**
+  - **USE COMMAND**: `/test-first when the measurement script reads requirements.md it should report the distinct declared ids in FR-then-NFR order with each declaration's paragraph windows`
+  - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
+  - Test row(s): *declared*, *zero-id*, and the calibration row.
+  - Test should verify:
+    - *declared*: `declared_ids` = `FR-1, FR-2, NFR-1`, and `declared_total` 3. `declarations` has 3 entries. Their first line, last line and bytes are computed by hand from the fixture under KC1's paragraph rule and written into the row.
+    - *declared*: `requirements.present` true, and its bytes and windows are correct.
+    - *zero-id*: `declared_total` 0, with an empty list rather than null; this is FR-16 row 9.
+    - Calibration: 37.
+    - **Escaped-pipe regression**: the declared-id count must be non-zero for every fixture that declares ids. The row states that the count was once 0 where the answer was 28.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - Strip any remote prefix from the branch name, run `gh pr list --head "spec/${name}" --state all --json number,url,headRefName,createdAt`, and keep **only** results whose `headRefName` equals that name exactly — the filter is load-bearing because `gh` matches loosely (ADR 0072 Step 4).
-    - One result ⇒ that PR. More than one ⇒ **highest number wins**, and the ledger records `{k} pull requests found for branch {branch}; using #{n} (highest number).` for `## Blast radius`. Zero results or a **non-zero exit** from `gh` ⇒ no PR, FR-16 rows 1–2.
-    - Never consult `.issue-number` for PR discovery — state in one line that it names the tracking *issue* (spec 0036's is 4256 while its PR is #4282) and feeds only FR-5's linked-issue line.
-    - Elect exactly one diff source: `gh pr diff {n}` when a PR was discovered and the command succeeds, otherwise `git diff {merge base}..{head}`; name the chosen source and never mix or average the two.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `gh pr list --head spec/scoped-lifetime-per-pipeline --state all --json number,url,headRefName,createdAt` run by hand to establish ground truth, then `/spec:show-me 9999-show-me-fixture` for the zero-result path.
-    - Fixture: real for the ground truth — the calibration branch's query returns exactly one result, `{"headRefName":"spec/scoped-lifetime-per-pipeline","number":4282}`. For the zero-result path, the shared fixture from **T2.1**: its branch `spec/show-me-fixture` resolves but has **no** PR (`gh pr list --head spec/show-me-fixture --state all` returns `[]`), so the run reaches Step 4 with a resolvable branch and still finds nothing — which `specs/0037-show-me/` could not demonstrate, since FR-3 refuses it. Delete the generated `specs/9999-show-me-fixture/show-me.md` afterwards. For the two-PR case, hand-evaluate the rule against a **synthetic two-element result list** (`#4200` and `#4282`, both with `headRefName` equal to the branch) recorded in the task's approval notes — there is no second real PR to create, and creating one is forbidden by FR-18. **This is one of the hand-evaluated cases named in the Phase 4 note.**
-    - Check: **AC-46** — against the synthetic two-element list the procedure selects **#4282**, `## Blast radius` would record `2 pull requests found for branch spec/scoped-lifetime-per-pipeline; using #4282 (highest number).`, the measurement-source line names `gh pr diff #4282` and **not** a `git diff`, and only one set of blast-radius numbers is produced. **FR-16 row 1** — the `9999-show-me-fixture` run finds no PR, states `No pull request found for branch spec/show-me-fixture — no external review findings available.` in `## How it was built`, measures blast radius from `git diff` (a real, non-empty diff, since the branch resolved), and sets F3 and F4 to `Medium`. **AC-30 (partial)** — every `gh` invocation the run issued is one of `gh pr view` / `gh pr list` / `gh pr diff`; none is `gh run`, `gh api` or `gh checks`.
-  - Traces to: FR-20, FR-16 rows 1–2, FR-18, C-10; AC-30, AC-46; ADR 0072 Step 4.
+    - Implement the declared-id pattern once, translated, with the POSIX original quoted.
+    - Fold a sub-numbered id into its parent and keep distinct ids in numeric order.
+    - Run a paragraph to the line before the next declaration, or to the next heading of level three or higher, or to the end of the file.
+    - When `requirements.md` is absent, make the `requirements` size and windows, `declared_ids`, `declared_total` and `declarations` null with `not present`.
+  - Traces to: FR-8 (counting rule, folding), FR-21, FR-16 rows 8–9, NFR-1, NFR-9 (regression 1), AC-43 (script half), AC-70, AC-79; ADR 0072 KC1 *locates everything … in parts*, KC2, IA 4.
 
-- [x] **T2.5 — VERIFY: Step 5 produces every blast-radius number by counting, never by reading the diff (FR-10, NFR-3).**
+- [ ] **TEST + IMPLEMENT: T3.6 — `.adr-list` entries resolve by FR-16 row 7's rule, each with its extract windows, and `adr_resolved_count` counts only single-file matches**
+  - **USE COMMAND**: `/test-first when the measurement script resolves adr-list entries it should resolve full filenames and docs/adr paths, locate each ADR's extract, and count resolved entries`
+  - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
+  - Test row(s): *declared*, *zero-id*, and the calibration row.
+  - Test should verify:
+    - *declared*: two entries, both resolved, the second through the `docs/adr/` path form. `reason` and `matches` are null. Each `extract` has front-matter, `## Status` and `## Consequences` parts with bytes > 0. `adr_resolved_count` is 2.
+    - *zero-id* has no `.adr-list`, so `adr_list` is `[]` and `adr_resolved_count` is 0, a measured zero.
+    - Calibration: 7. This includes names whose numbers are duplicated in `docs/adr/`.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - Take the file list from the elected source (`gh pr diff {n} --name-only` or `git diff --name-only "{mb}..{head}"`) and count the six buckets with `grep -cE '^src/'`, `'^tests/'`, `'^docs/'`, `'^specs/'`, `'^\.github/'` and **`other` as the complement** `grep -vcE '^(src/|tests/|docs/|specs/|\.github/)'`, plus `wc -l` for the total — so the six counts sum to the total by identity rather than by care (ADR 0072 Step 5, *Positive* consequences).
-    - List **all six buckets always, including zeros**, with files changed and net lines per bucket (FR-10).
-    - Net lines: `git diff --numstat "{mb}..{head}" | awk '{a+=$1; d+=$2} END {print a+0, d+0}'` for the git source; two `grep -c` passes (`'^\+([^+]|$)'`, `'^-([^-]|$)'`) over `gh pr diff` for the PR source, and record in one line that the PR path fetches the patch twice because `gh pr diff` has no `--numstat` (ADR 0072 *Negative* consequences).
-    - Public-API declaration lines restricted to `src/`: `git diff -U0 … -- src/ | grep -cE '^[+-][[:space:]]*(public|protected)[^[:alnum:]_]'` for the git source, and the `awk` form tracking the current file from the `+++ b/` header for the PR source.
-    - Commit count with `git log --oneline "{mb}..{head}" | wc -l` — **not** `git rev-list --count`, keeping the tool surface inside what the repo grants.
-    - Emit FR-10's `Measured from …` line naming exactly one source with its refs and shas.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `/spec:show-me 9999-show-me-fixture` (git source, branch resolvable), with the same pipelines run by hand against `git diff {mb}..$FIXTURE_HEAD` to establish ground truth.
-    - Fixture: the shared fixture from **T2.1**, whose measured ref `refs/remotes/origin/spec/show-me-fixture` is pinned at `$FIXTURE_HEAD` and whose diff against `origin/master` is `spec/show-me`'s own real, non-empty change set at that sha. `specs/0037-show-me/` is not usable: FR-3 refuses it. The calibration assertion with the published numbers is deferred to **T6.4**. Delete the generated `specs/9999-show-me-fixture/show-me.md` afterwards.
-    - Check: **AC-18 (branch-independent form)** — `## Blast radius` lists **all six** buckets including any that are `0`, and the six file counts **sum exactly** to the reported total; each bucket count equals the value the corresponding `grep -c` returns when run by hand against the same pinned sha; the public-API declaration-line count equals the hand-run `grep -c`; the commit count equals `git log --oneline {mb}..$FIXTURE_HEAD | wc -l`; and exactly **one** measurement-source line is present, naming `git diff {merge-base sha}..{head sha}` with both shas. No two sets of numbers appear anywhere in the file.
-  - Traces to: FR-10, FR-20, NFR-3, C-5; AC-18, AC-32; ADR 0072 Step 5.
+    - Resolve a full filename, or `docs/adr/{filename}`, to that file. Any other prefix does not match.
+    - For a bare number, zero matches gives `ADR file not found`; more than one gives `ambiguous ADR number`, listing the `matches`.
+    - Recognise headings and fences once. The not-found and ambiguous branches are also exercised by the direct run in T14.1's Verify block.
+  - Traces to: FR-16 rows 6–7, FR-6 D3's input, FR-21, C-9, AC-42 (ledger half); ADR 0072 KC1, KC2 `adr_list`/`adr_resolved_count`, IA 4.
 
-- [x] **T2.6 — VERIFY: Step 5's bounded extraction honours the 25-full-read budget and degrades by chunking, never by skipping (NFR-3).**
+## Phase 4 — Marked release-notes sections
+
+*ADR 0072 IA 5, reading the form set by ADR 0078 KC4. Depends on Phase 3.*
+
+- [ ] **TEST + IMPLEMENT: T4.1 — Only sections marked for the target are counted, and `{m}` counts only the top-level bullets of their `#### Breaking changes` lists**
+  - **USE COMMAND**: `/test-first when the measurement script reads a release-notes file it should count sections marked for the target and their top-level breaking-change bullets only`
+  - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
+  - Test row(s):
+    - Both *declared* runs (unpinned and pinned) with `--release-notes .claude/test-fixtures/show-me/release-notes.md`.
+    - *zero-id*, which reads the repository-root `release_notes.md`.
+  - Test should verify:
+    - *declared*: `release_notes` = `{present: true, count: 1, m: 2}`. The section's first line, last line, bytes and windows equal hand-computed values. The fenced `# ` line ends no list, and the sub-bullet, the fenced lines, the `#### Usage` bullets and the unmarked section are not counted.
+    - *zero-id*: `count` 0 and `m` null. The real file's unmarked sections, 0036's `(spec 0036` heading among them, are not counted.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - State the budget allocation table from ADR 0072 Step 5 explicitly in the command file: `tasks.md` by `grep -c`/`grep -m3` only (**no read**); `requirements.md` by declared-id greps then **one** full `Read` (1 of 25); `.adr-list`/`.issue-number`/`.current-spec` by `cat` (no read); each ADR named in `.adr-list` by `head -14` plus `grep -A 25 '^## Consequences'` (**excluded from the 25** by NFR-3); the `release_notes.md` section by `grep -n` then `grep -A` (no read); `## Where to look first` files by `Read` on demand, taking the remainder.
-    - Derive FR-9's per-tag counts from the same checkbox `grep` family, with `untagged` as the complement (`grep -vcE '(TEST \+ IMPLEMENT|STRUCTURAL|PROJECT|DOC)'` over the checkbox lines) so the parts always sum to the total.
-    - State NFR-3's degradation rule next to the extraction: read in bounded chunks or by targeted extraction, and if an extraction could not be completed report the value as `Unverifiable` (FR-8) or `not available` (FR-15) **with the reason** — never as zero, never omitted. Check exit status, not just empty output.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `/spec:show-me 0027-box-schema-versioning-and-migrations`
-    - Fixture: real, on this branch — `specs/0027-box-schema-versioning-and-migrations/` is complete with **111** tasks in a **137 KB** `tasks.md`, one `.adr-list` entry (`0057-box-schema-versioning-and-migrations.md`), no `.issue-number`, and a `requirements.md` declaring **18** numbered ids — FR-1…FR-12 and NFR-1…NFR-6, **all** in the list-lead-in shape (`- **FR-1**: …`, `- **NFR-1 (backward compatibility)**: …`, lines 29–68). That is not a no-table run: sizing the budget from this task must allow for an 18-row reconciliation **plus** one full `Read` of `requirements.md`, which is itself the useful extra data point — the budget has to survive the largest table this branch can produce, not the smallest. (This is the large-artefact case available without the calibration branch; the 15-ADR case is exercised by T6.5.) **Delete `specs/0027-box-schema-versioning-and-migrations/show-me.md` afterwards.**
-    - Check: **AC-52 (partial)** — the run completes; the session transcript shows **no `Read` of `tasks.md`** and at most 25 full-file `Read` calls in total; the `## How it was built` task total is **111** and the per-tag counts plus `untagged` **sum to 111**; the FR-8 table has **18** rows (FR-1…FR-12 then NFR-1…NFR-6), confirming the third declaration shape is matched; nothing in the output is reported as `0` for a value whose extraction did not actually run. **NFR-3 degradation** — deliberately point the ADR extraction at a non-existent `Consequences` heading by temporarily adding the line `0026-use-source-generated-logging.md` to `specs/0027-box-schema-versioning-and-migrations/.adr-list` (that ADR really has **no** `## Consequences` heading — one of only three in `docs/adr/`), re-run, and confirm the affected value reads `not available: …` with a reason rather than an empty or zero-valued row. Restore the file with `git checkout -- specs/0027-box-schema-versioning-and-migrations/.adr-list` per the synthetic-fixture rule, and confirm `git status --porcelain` is back to its pre-task state.
-  - Traces to: NFR-3, FR-9, FR-15; AC-52; ADR 0072 Step 5 (continued).
+    - Apply the *Marked release-notes section* Definition: headings outside fences only; a section runs to the next `##`/`###` heading or the end of the file; the marker is compared literally, after trimming, with `<!-- spec: {target directory name} -->`.
+    - Apply FR-21's `{m}` rule: `null` versus `0`, and fenced lines skipped. An absent file gives `present` false and `count` 0.
+  - Traces to: FR-7, FR-21 (`{m}` rule), NFR-1, AC-92 (script half), AC-79; ADR 0072 KC2 `release_notes`, IA 5; ADR 0078 KC4.
 
-- [x] **T2.7 — VERIFY: Step 5 resolves `.adr-list`, `.issue-number` and the `release_notes.md` section into ledger rows, including their absence cases.**
+## Phase 5 — Pinned diff fields and threshold boundaries
+
+*ADR 0072 IA 6. Depends on T3.2.*
+
+**How to choose a boundary pair.** This applies to T5.2–T5.4 and was settled for T5.3's named pair.
+
+- Search `git log --first-parent --format=%H origin/master` for commits A and B, with A an ancestor of B, whose `A..B` diff has the required value. Start with adjacent first-parent commits and widen from there.
+- Measure the value **independently of the script**: `git diff --name-only A..B -- src/ | wc -l` for file counts, the second path segment for subdirectories, and the public-API pattern as stated in `requirements.md` § *Definitions* under `grep -E` for declaration lines.
+- Record in a comment beside the row the two full shas, the measured value, the command used and the date. `master`'s history is never rewritten, so the pair stays reachable.
+- Every boundary row targets `.claude/test-fixtures/show-me/declared/`. Only its diff fields are asserted.
+
+- [ ] **TEST + IMPLEMENT: T5.1 — Pinned runs measure buckets, net lines, `src/` subdirectories, public-API lines, commits and the `src/`-scoped diff's windows over exactly the pinned pair**
+  - **USE COMMAND**: `/test-first when the measurement script is pinned to the calibration pair it should report 517 files bucketed 76/393/14/24/0/10, 131 public API lines, 6 src subdirectories and 363 commits`
+  - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
+  - Test row(s): the calibration row, and the pinned *declared* row.
+  - Test should verify:
+    - Calibration buckets: `src/` 76, `tests/` 393, `docs/` 14, `specs/` 24, `.github/` 0, `other` 10, `total` 517. Total +45,284/−515, of which `src/` is +3,641/−264, measured on 2026-09-26 with independent `git diff --numstat`.
+    - `src_subdirectory_count` 6, `public_api_lines` 131, `commits` 363.
+    - `src_diff.command` names both pinned shas and the `src/` pathspec. `src_diff.bytes` is 303,715. The windows are contiguous, each ≤ 25,000 B, and sum to 303,715.
+    - The calibration ledger's size is printed and is ≤ 65,536. This is the first measurement of ADR 0072's under-20 KB estimate, and a risk check on the cap's headroom.
+    - Pinned *declared*: `buckets.src.files` 76; its file fields equal those of its unpinned row.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - `cat specs/{dir}/.adr-list`. **Normalise each entry first by stripping a leading `docs/adr/`**, then resolve with `ls docs/adr/ | grep -E "^{normalised entry}"` (ADR 0072 Step 6). The strip is load-bearing: `ls docs/adr/` emits bare filenames, so a path-prefixed entry can never match without it. Entries are ordinarily the **full filename including `.md`**, which resolves unambiguously; record one ledger row per ADR with its resolved path, title and Status from the ADR's own front matter/body, read by `head -14` + `grep`.
-    - Tolerate both entry shapes present in this repository — a bare filename (`0062-pg-advisory-lock-sha256.md`) and a path-prefixed entry (`docs/adr/0040-asyncapi-document-generation.md`, which is what `specs/0023-asyncapi-document-generation/.adr-list` holds) — so that the **shape** is never the reason an entry fails. Whether an entry resolves is then purely a question of whether the named file exists.
-    - State explicitly, in one line, that the 0023 entry above resolves to **nothing** even after stripping — `docs/adr/` holds `0040-add-the-specification-pattern.md` and `0040-mssql-dlq-brighter-managed.md`, and no `0040-asyncapi-document-generation.md` — and is therefore an **FR-16 row 7 "ADR file not found"** case in the real data, not a shape-tolerance case. 0023 is not usable as a fixture for anything else: its `tasks.md` has 0 checkboxes, so FR-3 refuses it.
-    - Missing or empty `.adr-list` ⇒ FR-16 row 6 ledger row; **no factor consequence**.
-    - `cat specs/{dir}/.issue-number`; missing, empty or whitespace-only ⇒ metadata linked issue reads `none` and `Inputs used` marks it `not available: not present`; **no factor consequence** (FR-16 row 10).
-    - Locate a `release_notes.md` section for the spec by `grep -n` against the file's own heading convention (`### Title (spec NNNN)`), then `grep -A` for its bullets; absence ⇒ FR-16 row 5's ledger row. `release_notes.md` is **never** modified and never a prerequisite (FR-18, Out of Scope).
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `/spec:show-me 0033-pg-advisory-lock-sha256` · `/spec:show-me sqs-cleanup` · `/spec:show-me 0031-test_naming_conventions` · `/spec:show-me 9999-show-me-fixture`
-    - Fixture: the first three real on this branch — `specs/0033-pg-advisory-lock-sha256/` has `.adr-list` = `0062-pg-advisory-lock-sha256.md` and `.issue-number` = `4145`; `specs/0002-sqs-cleanup/` has `.adr-list` = `0037-aws-test-resource-cleanup.md` (a number with **five** files in `docs/adr/`, resolved unambiguously because the entry names the full filename) and **no** `.issue-number`; `specs/0031-test_naming_conventions/` has **no** `.adr-list` and `.issue-number` = `4157`. The fourth is the shared fixture from **T2.1**, whose `.adr-list` carries one entry of each shape — `0062-pg-advisory-lock-sha256.md` and the path-prefixed `docs/adr/0072-show-me-command-resolution-and-output.md`. Confirm by hand that `grep -n '(spec 0002' release_notes.md` returns nothing before asserting the row-5 case. **Delete the generated `show-me.md` from all four directories afterwards.**
-    - Check: **AC-44 / FR-16 row 10** — the `sqs-cleanup` run's metadata block's linked-issue line reads exactly `none`, `## Inputs used` marks `.issue-number` as `not available: not present`, and no risk factor differs from the same run computed with an issue present. **FR-16 row 5** — that run's `## Breaking changes` carries `No release_notes.md section found for this spec; this list is derived from the ADRs and the diff.` and `git status --porcelain release_notes.md` is empty afterwards. **AC-40 / FR-16 row 6** — the `0031` run succeeds and `## What changed and why` states `No ADRs recorded for this spec.` **Positive control (bare filename)** — the `0033` run resolves its one ADR to `docs/adr/0062-pg-advisory-lock-sha256.md` with its real title and Status, and the metadata block's linked issue reads `4145`. **Positive control (path-prefixed)** — the `9999-show-me-fixture` run resolves **both** entries: `0062-pg-advisory-lock-sha256.md` and, after stripping the leading `docs/adr/`, `0072-show-me-command-resolution-and-output.md`, each named, titled and linked; `## Inputs used` marks neither `not available`; this is the only exercise of the path-prefixed shape that can actually succeed, because the one real path-prefixed entry in the repository (0023's) names a file that does not exist. **Real-data row-7 control** — run `ls docs/adr/ | grep -E "^0040-asyncapi-document-generation.md"` by hand and confirm it returns nothing, so the 0023 entry's fate under FR-16 row 7 is a fact of the data and not an artefact of the matching mechanism.
-  - Traces to: FR-5, FR-6, FR-7, FR-15, FR-16 rows 5, 6, 7 and 10, C-9; AC-40, AC-44; ADR 0072 Steps 5–6.
+    - Take net lines from `--numstat`, treating binary `-` as 0. Take buckets from `--name-only` by first path segment. Take the public-API count from the `src/`-scoped diff under the translated pattern, counted per diff line.
+    - Count subdirectories per the Definition, so a file directly under `src/` contributes none. Count commits with `rev-list --count`.
+    - Never run a `git diff` without a pathspec or a summary flag.
+  - Traces to: FR-9, FR-10, FR-21, NFR-1, NFR-3 (full-diff ban), NFR-9 rows 2–3, AC-18 values, AC-66 (counting rule), AC-79; ADR 0072 KC1, KC2, IA 6.
 
----
+- [ ] **TEST + IMPLEMENT: T5.2 — `f1_level` applies FR-11's F1 thresholds exactly at 10/11 and 50/51**
+  - **USE COMMAND**: `/test-first when the measurement script measures 10, 11, 50 and 51 src files it should report f1_level Low, Medium, Medium and High`
+  - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
+  - Test row(s): the four F1 boundary rows, plus `f1_level` on the calibration row.
+  - Test should verify: `Low`, `Medium`, `Medium`, `High`, with each row's `src/` file count equal to its recorded value; calibration `High`.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should: compute `f1_level` once, from the `src/` bucket, as a diff field that is null whenever the diff fields are null.
+  - Traces to: FR-11 (F1), NFR-1, AC-79; ADR 0072 KC1 *values NFR-1 derives*, IA 6 table rows 1–2; ADR 0073 KC2.
 
-## Phase 3 — Content synthesis (FR-5, FR-6, FR-7, FR-8, FR-14, FR-15)
+- [ ] **TEST + IMPLEMENT: T5.3 — `triggers.d1` fires only at ≥ 5 `src/` files across ≥ 2 immediate subdirectories, and a file directly under `src/` contributes no subdirectory**
+  - **USE COMMAND**: `/test-first when the measurement script evaluates D1 it should fire only for at least five src files across at least two immediate subdirectories`
+  - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
+  - Test row(s): the three D1 boundary rows (4 files across ≥ 2 subdirectories; ≥ 5 files in 1; 5 across 2), the named pair `c53875f3c..5247862cd`, and the calibration row.
+  - Test should verify:
+    - D1 is `false`, `false`, `true` on the three boundary rows.
+    - The named pair gives 3 `src/` files and `src_subdirectory_count` **1**, not 2. On 2026-09-26 that diff was `src/Directory.Build.props` plus two files in `src/Paramore.Brighter.MessagingGateway.Kafka/`.
+    - Calibration: `true`.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should: evaluate D1 once from the two diff fields, exactly as FR-6 (a) states it.
+  - Traces to: FR-6 (a) D1, Definitions (*Immediate subdirectory of `src/`*), NFR-1, AC-67 (script half); ADR 0072 IA 6 table rows 3–5 and 10; ADR 0077 KC4.
 
-*(ADR 0072 Step 6; the Synthesiser reads ledger rows and makes no shell call)*
+- [ ] **TEST + IMPLEMENT: T5.4 — `triggers.d2` fires at ≥ 10 public-API declaration lines and `triggers.d3` at ≥ 2 resolved ADRs**
+  - **USE COMMAND**: `/test-first when the measurement script evaluates D2 and D3 it should fire D2 at ten public API lines and D3 at two resolved adr-list entries`
+  - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
+  - Test row(s): the two D2 boundary rows, the pinned *declared* row (D3), and the calibration row.
+  - Test should verify: D2 is `false` at 9 and `true` at 10, with `public_api_lines` as recorded. Pinned *declared*: D3 `true` (2 resolved). Calibration: D2 and D3 both `true`.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should: evaluate D2 from `public_api_lines` and D3 from `adr_resolved_count`. All three triggers are diff fields, so they are null when no diff was measured.
+  - Traces to: FR-6 (a) D2/D3, NFR-1; ADR 0072 KC1, KC2 `triggers`, IA 6 table rows 8–9; ADR 0077 KC4.
 
-- [x] **T3.1 — VERIFY: The document's header, metadata block and eight H2 sections are emitted in FR-5's fixed order.**
+## Phase 6 — Unpinned ref fields
+
+*ADR 0072 IA 7. This is script code verified at command level. Depends on Phase 5. (C-8) parts need R8.*
+
+- [ ] **TEST + IMPLEMENT: T6.1 — The script resolves the spec branch by FR-10's ordered rules, skipping merged candidates, and records every rule tried and any local divergence**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Verify by (R6 direct runs; R3 cleanup):
+    - (C-8) `-- specs/0036-scoped-lifetime-per-pipeline`:
+      - `spec_branch.ref` = `refs/remotes/origin/spec/scoped-lifetime-per-pipeline`; both refs are at `91d549be6`, so `local_divergence` is null.
+      - `base` = `origin/master` with its sha. `merge_base` starts `6145913a0`.
+      - The diff fields are 517 files / 76 `src/` / 131 API lines / 6 subdirectories / 363 commits.
+    - `-- specs/0033-pg-advisory-lock-sha256`:
+      - `rules_tried` lists all three rules with their outcomes, and `base` is resolved.
+      - Every other ref field and every diff field is null with `spec branch not determinable`. `gh_commands` is empty (AC-19, script half).
+    - In the clone (R4, K12):
+      - `spec/sqs-cleanup` at `origin/master`: not determinable, and `rules_tried` names `{ref} is already merged into origin/master` (AC-85).
+      - A merged `origin/spec/small-change` over an unmerged local `spec/small-change`: the local ref is chosen, and the skipped remote ref is named.
+      - The local 0036 branch moved back one commit (C-8): the remote ref wins and `local_divergence` = `{spec/scoped-lifetime-per-pipeline, sha of ~1}` (AC-47).
+      - In the clone, checking out `wip/tiny-thing` with a commit touching `specs/9020-tiny-thing/` resolves by rule 2. Checking out `other` with such a commit resolves by rule 3 to `HEAD`.
   - Implementation should:
-    - Emit `# Show me — {spec directory name}` followed by a metadata block with one line each for: generation date (ISO-8601), spec directory path, linked issue (from `.issue-number`, or `none`), spec branch (**the full ref** actually used), head commit sha (short), base ref and merge-base sha (short), and PR reference (number and URL, or `none found`) — every value a ledger projection (FR-5; ADR 0072 Key Components 3).
-    - Emit the eight H2 sections with FR-5's **exact** spellings, in order, **all always present**: `## What changed and why`, `## Breaking changes`, `## Did it ship what it said?`, `## How it was built`, `## Blast radius`, `## Risk assessment (advisory)`, `## Where to look first`, `## Inputs used`.
-    - Never omit a section when its input is absent — the section states the absence instead (FR-16).
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `/spec:show-me 0033-pg-advisory-lock-sha256`
-    - Fixture: real — `specs/0033-pg-advisory-lock-sha256/`, complete (5 tasks), with `.adr-list` and `.issue-number` present so the metadata block is fully populated; its branch is not determinable, so the FR-16 row 15 substitutions apply and must not remove any line.
-    - Check: **AC-11** — `grep -n '^## ' specs/0033-pg-advisory-lock-sha256/show-me.md` returns exactly the eight headings in FR-5's order with byte-identical spellings (including the `?` in `## Did it ship what it said?` and the `(advisory)` in `## Risk assessment (advisory)`); the metadata block carries all seven named lines, with the linked issue reading `4145`; the base-ref line names `origin/master` and its short sha. **Cleanup — delete `specs/0033-pg-advisory-lock-sha256/show-me.md` after the check.** This is the decision, not a deferral: this directory is written into by eleven tasks, and T5.5's AC-9 assertion needs it empty when it starts.
-  - Traces to: FR-5, FR-16; AC-11; ADR 0072 Steps 6–7.
+    - Apply rule 1 (remote-tracking first, then local), rule 2, then rule 3. A candidate whose tip is already contained is skipped, with `git merge-base --is-ancestor` as a child process.
+    - Choose the base ref as `origin/master`, else `master`.
+    - Make `rules_tried` strings in FR-10's wording, and set the nulls and reasons per ADR 0072 KC2. Capture all children's streams.
+  - Traces to: FR-10, FR-16 rows 12 and 15, FR-21 (kinds-of-run row 1), C-4, AC-18, AC-19, AC-47, AC-85; ADR 0072 KC2 (`rules_tried`, `local_divergence`, `base`), Negative (ref resolution has no automated test), IA 7.
 
-- [x] **T3.2 — VERIFY: `## What changed and why` is a 150–600-word narrative naming every ADR by slug, never by bare number.**
+- [ ] **TEST + IMPLEMENT: T6.2 — The script makes one `gh pr list` query, keeps exact-name open PRs, takes the highest number, uses the PR head only when it is present locally, and treats any `gh` failure as no PR**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Verify by (R6 direct runs on `specs/0036-scoped-lifetime-per-pipeline`; R5; R3):
+    - (C-8) With the live `gh`:
+      - `pr` = `{4282, url, head_sha 91d549be6…, head_present: true}`, `pr_count` 1, and `measured_head` = `{91d549be6…, pr_head}`.
+      - `gh_commands` is exactly one entry: `gh pr list --head spec/scoped-lifetime-per-pipeline --state open --json number,url,headRefName,headRefOid,createdAt`.
+    - Stand-in `gh` returning #4200 and #4282 (#4282's head is `91d549be6`): `pr.number` 4282, `pr_count` 2 (AC-46).
+    - Stand-in returning #4282 with a well-formed head sha for which `git cat-file -e {sha}^{commit}` fails: `head_present` false, `measured_head.source` `branch_tip`, and no fetch was issued (AC-84).
+    - Stand-in returning only a PR whose `headRefName` differs: `pr_count` 0, with reason `no PR found for branch spec/scoped-lifetime-per-pipeline` (row 1).
+    - `gh` removed from `PATH`, a stand-in that exits 1, and a stand-in that sleeps 60 s: each run exits `0`, `pr` is null with `gh unavailable`, `pr_count` is null, the measured head is the branch tip, and the sleeping case ends within about 30 s plus the compile time (row 2, NFR-4, AC-28 ledger half).
   - Implementation should:
-    - Synthesise 150–600 words of prose — not a bullet dump, not a copy-paste of ADR *Decision* sections — stating what the spec set out to fix, what a Brighter user can now do or what now behaves differently, and the one or two decisions that most shaped the result (FR-6; ADR 0072 Step 6 table: the `.adr-list` entry set, each ADR's title and Status, and the resolved link path are **measured**, the narrative and the "which decisions mattered" call are **judged**).
-    - Name **every** ADR in `.adr-list` at least once with its title and current Status, linked relatively with **the filename stem visible in the link text** — e.g. `[Title (0070-per-pipeline-di-scope-for-mapper-and-transform-factories)](../../docs/adr/0070-….md)`. A bare-number reference such as `ADR 0070` is **forbidden anywhere in the file**, because `docs/adr/` carries five files beginning `0037` and four beginning `0057` on this branch alone (C-9).
-    - Gloss any internal type name on first use (A-2).
-    - FR-16 row 6: with `.adr-list` missing or empty, state `No ADRs recorded for this spec.` and synthesise from `requirements.md`, `tasks.md` and the commits.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `/spec:show-me 0033-pg-advisory-lock-sha256` · `/spec:show-me 0031-test_naming_conventions`
-    - Fixture: real — `specs/0033-pg-advisory-lock-sha256/` (one ADR, `0062-pg-advisory-lock-sha256.md`) and `specs/0031-test_naming_conventions/` (**no** `.adr-list`). **Delete both generated `show-me.md` files afterwards.**
-    - Check: **AC-12 (branch-independent form)** — the `0033` narrative is between 150 and 600 words by the same whitespace-token count NFR-2 defines; it names `0062-pg-advisory-lock-sha256` **by stem** with the ADR's real title and its Status as written in that file; its relative link resolves from `specs/0033-pg-advisory-lock-sha256/` (check by opening the link target path); and `grep -nE 'ADR [0-9]{4}' show-me.md` finds **no** occurrence that is not accompanied by its filename stem. **AC-40** — the `0031` run's section contains exactly `No ADRs recorded for this spec.` and the narrative still names what changed, drawn from `requirements.md`/`tasks.md`/commits; the risk table's factor levels are unaffected by the absence.
-  - Traces to: FR-6, FR-16 row 6, C-9, A-2, NFR-2; AC-12, AC-40, AC-51; ADR 0072 Step 6.
+    - Strip any remote prefix from the branch name, and keep only exact `headRefName` matches. When several remain, the highest number wins.
+    - Check that the head is present with `git cat-file -e`. Kill `gh` after 30 s. Record every `gh` command line in order.
+    - Never fetch. Compute the merge base against the measured head.
+  - Traces to: FR-20, FR-18, FR-16 rows 1, 2 and 16, NFR-4, AC-18, AC-28, AC-30 (ledger record), AC-46, AC-73, AC-84; ADR 0072 KC1 (children, `gh` outcomes), KC2 (`pr`, `pr_count`, `measured_head`, `gh_commands`), IA 7.
 
-- [x] **T3.3 — VERIFY: An `.adr-list` entry that cannot be resolved to exactly one file degrades per FR-16 row 7 without stopping the run.**
+## Phase 7 — Write safety
+
+*ADR 0072 IA 8. Depends on Phase 6.*
+
+- [ ] **TEST + IMPLEMENT: T7.1 — No run leaves a temporary or partial artefact, an over-cap ledger is refused before anything is written, and the ledger appears only by an atomic replacement**
+  - **USE COMMAND**: `/test-first when the show-me test script has run every row it should find no temporary or partial artefact in any target directory`
+  - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
+  - Test row(s): the **residue check**, run after all rows. It covers every fixture directory, the calibration directory, and the `specs/x` probe path.
+  - Test should verify: no `.show-me-ledger.json.tmp` and no untracked file remains, apart from ledgers the harness restored.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - Detect the two cases with the normalised match from T2.7 (`ls docs/adr/ | grep -E "^{entry with any leading docs/adr/ stripped}"`): **zero** matches ⇒ `{entry} — ADR file not found in docs/adr/.`; **more than one** match (a bare number, C-9) ⇒ `{entry} — ambiguous ADR number, matches: {filenames}; .adr-list should name the full filename instead.`
-    - Continue the narrative with the remaining ADRs, mark the unresolved entry `not available` in `## Inputs used`, and let the run succeed. **No factor consequence** (FR-16 row 7).
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `/spec:show-me 9999-show-me-fixture`
-    - Fixture: the **shared tracked fixture from T2.1**, with two temporary lines appended to its `.adr-list` in the working tree only, per the synthetic-fixture rule: `0099-no-such-adr.md` (resolves to none) and the bare number `0037` (resolves to **five** real files on this branch). Its two standing entries — `0062-pg-advisory-lock-sha256.md` and the path-prefixed `docs/adr/0072-show-me-command-resolution-and-output.md` — both resolve and serve as the in-run positive control. Afterwards restore with `git checkout -- specs/9999-show-me-fixture/.adr-list` and confirm `git status --porcelain specs/9999-show-me-fixture/` is back to the three staged-add entries and nothing else. Delete the generated `show-me.md` from the fixture directory. **Do not delete the fixture** — it is shared and is torn down at T6.5.
-    - Check: **AC-42** — the run **succeeds**; `## What changed and why` names `0099-no-such-adr.md` as `ADR file not found` and names `0037` as `ambiguous ADR number` and **lists all five** matching filenames (`0037-add-messaging-gateway-generated-test.md`, `0037-aws-test-resource-cleanup.md`, `0037-provide-roslyn-analyzers-for-brighter.md`, `0037-reject-message-on-error-handler.md`, `0037-universal-scheduler-delay.md`); **both** resolvable entries are still named, titled and linked; `## Inputs used` marks **both** unresolved entries `not available` with the reason; and the five factor levels are identical to a control run of the same fixture with the two bad entries removed (that control run is the T2.7 run, whose factor levels should be recorded in the approval notes for comparison).
-  - Traces to: FR-6, FR-16 row 7, C-9; AC-42; ADR 0072 Step 6.
+    - Serialise in memory. When the size exceeds 65,536 B, exit `1` before creating any file.
+    - Otherwise write to `.tmp`, then `File.Move(…, overwrite: true)`, and delete in `finally`. No `Append`/`Truncate` or in-place write touches the ledger path.
+    - Record the AC-83 inspection, naming each line of that path, in the commit message.
+  - Traces to: FR-21 (atomic write, cap), FR-4, NFR-8, NFR-9 (*What it does not test*, residue), AC-83; ADR 0072 *The write is atomic*, Risks (killed script leaves its temporary file), IA 8.
 
-- [x] **T3.4 — VERIFY: `## Breaking changes` enumerates classified items with migrations and a matching count line.**
+## Phase 8 — Word-count mode
+
+*ADR 0072 IA 9. Depends on T3.2.*
+
+- [ ] **TEST + IMPLEMENT: T8.1 — Word-count mode counts only NFR-2's counted body and excludes every fenced line**
+  - **USE COMMAND**: `/test-first when the measurement script word-counts a file it should count only NFR-2's counted body and report 8 for the eight-token fixture`
+  - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
+  - Test row(s): `-- .claude/test-fixtures/show-me/wordcount-eight.md --word-count`, and a missing file with `--word-count`.
+  - Test should verify:
+    - Exit `0`. The last `show-me-wordcount: ` line reports total **8**, the excluded fenced-line count equal to the fixture's fence lines including fences, and in-range `false`.
+    - **Fence regression**: the row states that the total must be 8, not 16.
+    - No file is created and no ledger is touched in the fixture directory.
+    - The missing file exits with a status other than `0` and emits no record.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - Derive items from the spec's **own** artefacts — the ADRs' *Consequences* sections, `requirements.md`, and the public-API declaration lines in the spec diff (FR-7).
-    - Emit one bullet per item: a one-sentence statement of what breaks, its classification as a **set** of one or more of source / binary / behavioural / compatibility (e.g. "source and binary"), and the migration in one sentence.
-    - End with `Total breaking-change items: {n}` matching the bullet count — the count line is **measured** (ADR 0072 Step 6 table), the item boundaries and classifications are **judged**.
-    - When a `release_notes.md` section for the spec was read, follow **the catalogue's own bullet boundaries** as the tie-break for what counts as one item, rather than re-partitioning them; when the counts disagree, add the single line `release_notes.md records {m} items; this summary identifies {n}`.
-    - FR-16 row 5 (no section): fall back to one item per distinct public-API declaration change or per ADR *Consequences* bullet describing a behavioural break, and add the defined line.
-    - Zero items: the section contains exactly `No breaking changes identified for this spec.` plus `Total breaking-change items: 0`.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `/spec:show-me sqs-cleanup` · `/spec:show-me 0034-failed-delivery-context`
-    - Fixture: real — `specs/0002-sqs-cleanup/` has **no** `release_notes.md` section (confirm with `grep -n '(spec 0002' release_notes.md`, which returns nothing) and is a plausible zero-breaking-change spec; `specs/0034-failed-delivery-context/` is a larger complete spec with an ADR carrying a *Consequences* section. **Delete both generated `show-me.md` files afterwards.**
-    - Check: **AC-13** — in whichever of the two runs lists items, **every** bullet carries at least one of source/binary/behavioural/compatibility (a combined "source and binary" is valid) **and** a one-sentence migration, and the trailing `Total breaking-change items: {n}` equals the number of bullets counted by hand. **AC-14 / FR-16 row 5** — the `sqs-cleanup` run succeeds, the section contains `No release_notes.md section found for this spec; this list is derived from the ADRs and the diff.`, and `git status --porcelain release_notes.md` is empty. **Zero case** — if the run identifies no items, the section is exactly `No breaking changes identified for this spec.` plus `Total breaking-change items: 0`, and F2 is `Low`.
-  - Traces to: FR-7, FR-16 row 5, FR-18; AC-13, AC-14; ADR 0072 Step 6.
-  - **Deviation from AC-14 as literally written (discussed and agreed 2026-09-19)**: `specs/0002-sqs-cleanup/`'s branch turned out to also be not determinable (confirmed live: no `spec/sqs-cleanup` ref, current branch doesn't contain the name, no commits since `origin/master` touch the directory), so FR-16 row 14 is *also* active for this fixture, not just row 5. Row 14 was made to take precedence — its line states the ADRs+requirements.md-only fallback accurately, whereas row 5's line asserts "…and the diff", which is false when no diff exists. AC-14's exact-line assertion could not be satisfied by this fixture as a result; AC-13 (classification, migration, count-line arithmetic) was verified instead against both fixtures, both of which exercise row 14. No real fixture with a determinable branch and no `release_notes.md` section exists on this branch yet, so row 5's line in isolation (without row 14 also firing) remains unverified until one does — e.g. the shared `specs/9999-show-me-fixture/` or, from T4.1 onward, spec 0036's calibration branch.
+    - Apply NFR-2's rule: exclude the H1 and metadata above the first H2, lines beginning with `|` after trimming, everything from `## Inputs used` onwards, and fences inclusive. Count only tokens containing an alphanumeric character.
+    - Emit a single-line JSON record with fixed field names such as `total`, `excluded_fence_lines` and `in_range`, which T14.7 reads.
+  - Traces to: NFR-2, FR-21 (*Modes*), NFR-9 (regression 2), AC-80, AC-59 (mechanism); ADR 0072 KC1 stderr records, IA 9.
 
-- [x] **T3.5 — VERIFY: With no diff measured, `## Breaking changes` derives from ADRs and `requirements.md` only and still carries its count line (FR-16 row 14).**
+- [ ] **TEST + IMPLEMENT: T8.2 — Word-count mode reports a conforming file's exact total and that it is inside 400–2,000**
+  - **USE COMMAND**: `/test-first when the measurement script word-counts the conforming fixture it should report its exact total and in-range true`
+  - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
+  - Test row(s): `-- .claude/test-fixtures/show-me/wordcount-conforming.md --word-count`.
+  - Test should verify: exit `0`; total equals the fixture's recorded count; in-range `true`.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should: add the in-range flag with inclusive bounds, and nothing else.
+  - Traces to: NFR-2, FR-21 (*Modes*), AC-80; ADR 0072 IA 9.
+
+## Phase 9 — Command file: resolution, gate and stops
+
+*ADR 0072 IA 10, Steps 1–3. Depends on Phases 1–8, committed. This phase **rewrites** `.claude/commands/spec/show-me.md`.*
+
+- [ ] **TEST + IMPLEMENT: T9.1 — `/spec:show-me` resolves its whole argument over the pre-listed spec directories, or stops with FR-1's or FR-2's exact message**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Verify by:
+    - Run:
+      - `/spec:show-me 0002`, `/spec:show-me kafka-widget`, `/spec:show-me README.md`.
+      - `/spec:show-me` with `specs/.current-spec` in four states: deleted; empty; whitespace only; naming `9999-gone`.
+      - (C-8) `/spec:show-me 0036`.
+    - Fixture: the real directories. `specs/.current-spec` is restored under R2.
+    - Check:
+      - AC-1a (first half): all three `0002-*` names are listed, with a request for the full name.
+      - AC-3: no spec matches, and the output points at `/spec:status`.
+      - AC-35 (second half): `README.md` matches nothing.
+      - AC-5: the message names `missing`, `empty` or `stale: names '9999-gone'` as the case is, and offers both remedies.
+      - AC-1 (C-8): both 0036 directories are named.
+      - Every run: no `show-me.md` and no ledger is created, and `git status --porcelain` is unchanged.
+      - The successful resolutions (AC-1a `sqs-cleanup`, AC-2, AC-4, AC-35's unquoted name) are checked in T9.2.
   - Implementation should:
-    - When the branch is not determinable, derive the item list from the ADRs' *Consequences* sections and `requirements.md` **only**, and add the line `No diff measured — this list is derived from the ADRs and requirements.md only; public-API declaration lines could not be inspected.`
-    - Keep the `Total breaking-change items: {n}` line present, and compute **F2 from the items actually found** — the degradation changes the evidence, not the factor's definition (FR-16 row 14).
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `/spec:show-me 0033-pg-advisory-lock-sha256`
-    - Fixture: real — `specs/0033-pg-advisory-lock-sha256/` is complete and its branch is not determinable by any FR-10 rule (no `spec/pg-advisory-lock-sha256` branch; checked-out branch does not contain the name; no commits since `origin/master` touch the directory — confirm all three before asserting). **Delete the generated `show-me.md` afterwards.**
-    - Check: **AC-37** — `## Breaking changes` contains the FR-16 row 14 line verbatim; every item cites an ADR *Consequences* bullet or a `requirements.md` statement and **none** cites a diff hunk or a public-API declaration line; the section still ends with `Total breaking-change items: {n}`; and the risk table's F2 level is the one FR-11's thresholds give for that `{n}` (0 ⇒ Low, 1–3 ⇒ Medium, ≥ 4 ⇒ High).
-  - Traces to: FR-7, FR-11, FR-16 row 14; AC-37; ADR 0072 Step 3.
-  - **No new command-file content (2026-09-19)**: T3.4's row-14 rule already matches this task's Implementation bullets verbatim, so nothing was merged for T3.5 — it is pure re-verification against a different fixture. Verified: 0033's `.adr-list` ADR (0062) has one genuine breaking item (the `pg_locks` namespace-visibility change — an operator/tooling-facing behavioural break, judged consistent with how T3.4 classified spec 0034's span-reparenting item), so the row-14 line appears (the zero-item override does not apply here) and F2 reads Medium for n=1.
+    - Replace the whole pre-rescope body; git history keeps it.
+    - Front matter: `allowed-tools` exactly as ADR 0072 *Technology Choices* lists them (`ls`, `cat`, `date`, `head`, `tail`, `test`, `wc`, `grep`, `git diff`, `git log`, `git ls-files`, the script entry, `Read`, `Write`), with no `gh`, no `git merge-base` and no interpreter. Also `description`, and `argument-hint: [spec-id]`.
+    - Use `$ARGUMENTS`, trimmed and unquoted as a whole, with a pre-executed `ls -1d specs/*/` listing and FR-1's three rules applied in the model.
+    - Print FR-1's and FR-2's messages verbatim. Run in the main agent, with no sub-agent.
+  - Traces to: FR-1, FR-2, FR-18 (front matter), NFR-6, C-1, AC-1, AC-1a, AC-3, AC-5, AC-35; ADR 0072 KC4, *Why there is no sub-agent*, *allowed-tools* paragraph, Risks (argument split), IA 10.
 
-- [x] **T3.6 — VERIFY: `## Did it ship what it said?` extracts exactly one row per declared top-level id, in order, with a summing count line — the mechanical half.**
-  - *(This task owns everything NFR-1 requires identical between runs: which rows exist, in what order, and the arithmetic of the count line. The statuses that fill those rows are judged, and are T3.7's subject. The split follows NFR-1's own boundary — determinism is claimed for the row set, explicitly not for the statuses.)*
+- [ ] **TEST + IMPLEMENT: T9.2 — Step 2 probes the script, invokes it with the target only, and turns each exit status into exactly one outcome: continue, FR-3's stop, or FR-21's tooling fault**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Verify by (R2, R3; `git status` compared per R1 for every stop):
+    - Successful resolution:
+      - `/spec:show-me sqs-cleanup` invokes `-- specs/0002-sqs-cleanup` (AC-1a).
+      - `/spec:show-me 0021-Expose Unacceptable Message Window`, unquoted, invokes `-- specs/"0021-Expose Unacceptable Message Window"` with no permission prompt (AC-35).
+      - (C-8) `/spec:show-me scoped-lifetime` (AC-2), and a bare `/spec:show-me` with `.current-spec` = `0036-scoped-lifetime-per-pipeline` (AC-4), both target `specs/0036-scoped-lifetime-per-pipeline`.
+    - FR-3's stops:
+      - `0005-defer-message-on-error` gives the `tasks.md`-absent message (AC-8).
+      - `0023-asyncapi-document-generation` gives the zero-checkbox message.
+      - `0003-remove_clear_event_bus_calls` gives `2 of 10` and both titles.
+      - The same `0003` run with a planted `show-me.md` and ledger leaves both byte-identical (AC-7, AC-71). Without a planted ledger, none exists afterwards (AC-71).
+      - AC-6: uncheck two boxes of 0036's `tasks.md` in the working tree. The message reads `2 of 82` and lists both titles. Restore the file.
+    - AC-72, states 1–4:
+      - absent: move the script to the scratch directory;
+      - unreadable: `chmod 000`;
+      - `exited {code}`: temporarily edit the script to return 3;
+      - `gate facts were not parseable`: temporarily edit the gate record to malformed JSON, with target `0003`.
+      - Each gives FR-21's exact message naming its state, no `show-me.md`, and no ledger created, while a planted ledger is unchanged. Restore with `mv`, `chmod 644` and `git checkout`.
+    - AC-93 (first half): inspection shows the measuring invocation passes only `-- specs/{dir}`, and never `--pinned` or `--release-notes`.
   - Implementation should:
-    - Build the **row set mechanically** (ADR 0072 Step 5/6: this is why NFR-1 can require the row count and id set to be identical between runs while leaving statuses judged). A numbered requirement is an id matching `(FR|NFR)-[0-9]+` **declared** at the start of a heading or a bold lead-in — not one merely cross-referenced in another requirement's prose.
-    - **Match all three declaration shapes present in this repository**, not just the two ADR 0072 names: `^\*\*(FR|NFR)-[0-9]+` (e.g. `**FR-7 — …**`), `^#{1,6}.*(FR|NFR)-[0-9]+`, **and** a bold lead-in on a list item, `^[[:space:]]*[-*][[:space:]]*\*\*(FR|NFR)-[0-9]+`. Three fixtures on this branch use the third shape — `specs/0031-test_naming_conventions/` for its NFRs, `specs/0034-failed-delivery-context/` for its NFRs, and `specs/0027-box-schema-versioning-and-migrations/` for **everything** — and a two-pattern extraction silently drops six, six and eighteen rows respectively. Record this as a known format-drift surface per ADR 0072's *Negative* consequences.
-    - Exclude sub-numbered ids (`FR-27.3`) from the row set by the `[0-9]+` anchor, and fold them into their parent row. (What that parent row then *says* about them — the paraphrase, the evidence, and the least-shipped status — is T3.7's.)
-    - Order rows `FR-1 … FR-n` then `NFR-1 … NFR-n`, regardless of the order in which the declarations appear in the file.
-    - Emit the count line `Shipped: {a} · Shipped with deviation: {b} · Deferred: {c} · Dropped: {d} · Withdrawn: {w} · Unverifiable: {e} (of {total})`, where `{total}` equals the row count and the six terms sum to it **by construction** — the arithmetic is measured even though each individual term's membership is judged.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
+    - Run `test -f` and `test -r` on the script path before invoking it. The invocation string must match the allow entry, with spaced names quoted after `specs/`.
+    - On `2`, read the last `show-me-gate: ` line and print FR-3's message. On any other status other than `0`, print FR-21's message.
+    - Never compute a value inline and never write a partial file.
+  - Traces to: FR-3, FR-19 (stop prints only the message), FR-21 (failure mode), NFR-8, AC-1a, AC-2, AC-4, AC-6, AC-7, AC-8, AC-35, AC-71, AC-72, AC-93; ADR 0072 KC4, allow-list paragraph (spaced names), IA 10.
+
+- [ ] **TEST + IMPLEMENT: T9.3 — Step 3 reads the ledger in sized windows, stops on anything but one JSON object, and afterwards copies every counted value by field name**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
-    - Command: `/spec:show-me 0031-test_naming_conventions` · `/spec:show-me 0033-pg-advisory-lock-sha256` · `/spec:show-me 0034-failed-delivery-context`
-    - Fixture: all three real on this branch, one per declaration shape, each count re-confirmed against the file before asserting:
-      - `specs/0031-test_naming_conventions/requirements.md` declares **FR-1…FR-6** as `**FR-n: …**` lead-ins **and NFR-1…NFR-6** as `- **NFR-n (…)**:` list lead-ins, and its AC-1…AC-9 lines cross-reference those ids without declaring anything ⇒ **12 rows**.
-      - `specs/0033-pg-advisory-lock-sha256/requirements.md` declares FR-1…FR-5 and NFR-1…NFR-3 ⇒ **8 rows**.
-      - `specs/0034-failed-delivery-context/requirements.md` declares **FR-1…FR-9** in the bold-lead-in shape (`**FR-1 [SHARED] — …**`, lines 50–86) **and NFR-1…NFR-6** in the list-lead-in shape (`- **NFR-1 (Log level).**`, lines 94–99) ⇒ **15 rows**. This is a second positive fixture for the third shape, not a counter-example: a run that produces 9 rows here has silently dropped the NFRs.
+    - AC-72, fifth state: temporarily edit the script to write `{} {}` and exit `0`. Running `/spec:show-me 0033-pg-advisory-lock-sha256` prints `ledger was not a single JSON object`. No `show-me.md` is written, the replaced ledger stays in place, and `git status` is identical. Delete the ledger and `git checkout` the script afterwards.
+    - AC-70: in a `0033` run, the transcript shows the ledger priced with `wc -c` and read by `tail`/`head` windows, and nothing is parsed from the script's stdout. Search the command file for counting pipelines (`wc -l`, `grep -c`, `awk`, `sort | uniq`, `--numstat` arithmetic): there are none. Every counted value names its ledger field.
+  - Implementation should: read the ledger as unplanned windows of at most 25,000 B each; parse it once; map fields to sections through one table in the command file; and turn `null_reasons` into FR-16 rows.
+  - Traces to: FR-21, NFR-1, NFR-8, AC-70, AC-72; ADR 0072 *The seam runs between counting and reading*, KC3 (unplanned windows), KC4 (fifth state), Risks (model computes a count), IA 10.
 
-      **Delete all three generated `show-me.md` files afterwards.**
-    - Check: **AC-15 (row set)** — the `0031` table has exactly **12** rows (FR-1…FR-6 then NFR-1…NFR-6) and **no** row for any AC id; the `0033` table has exactly **8**; the `0034` table has exactly **15** (FR-1…FR-9 then NFR-1…NFR-6). In each, the rows are in FR-then-NFR ascending order, the count line's `(of {total})` equals the row count, and the six terms sum to it. **Shape control** — run the three declaration greps by hand against each `requirements.md` and confirm the union of their matches is exactly the row set the command produced, with no id present in one and absent in the other.
-  - Traces to: FR-8, NFR-1, NFR-3, NFR-7; AC-15 (row set); ADR 0072 Steps 5–6.
+## Phase 10 — Command file: evidence reads and the read log
 
-- [x] **T3.7 — VERIFY: Each reconciliation row carries a status from the allowed set, a reason, follow-up text, and the least-shipped fold for sub-clauses — the judged half.**
-  - *(NFR-1 explicitly exempts these from its determinism claim; they are judged from evidence, and two runs may legitimately differ. What must hold is that each value is in range, justified, and consistent with that same run's own count line.)*
+*ADR 0072 IA 10, Step 4. Depends on Phase 9.*
+
+- [ ] **TEST + IMPLEMENT: T10.1 — Every read is priced before it is issued, made as a window of at most 25,000 B, charged to one in-context read log, and kept inside 1,048,576 B, with the last 100,000 B reserved**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Verify by:
+    - `0033` run, with a planted `show-me.md`:
+      - `test -f` then `Read` is used once for that file, priced at `wc -c` + 8 × (`wc -l` + 1) and not used as evidence.
+      - Every other read is preceded by `wc -c` on the same path or priced from ledger `bytes`, and made with `tail | head`.
+      - The read log's running total is ≤ 1,048,576 (AC-76).
+    - Clone K8 (AC-52): `tasks.md` is read in full through all its windows (229,159 B). 15 targeted ADR extracts are charged. The total is within budget, and no value is zero or omitted because of a skip.
+    - (C-8) `0036` run:
+      - Every `git diff` issued names the ledger's two shas plus a pathspec or summary flag, and no `gh pr diff` is issued. The `src/`-scoped diff is read with `src_diff.command` (AC-77).
+      - `tasks.md` is read in full. ADR extracts are charged. `requirements.md` is read by declaration windows. At least 100,000 B remain when source reads would begin (AC-78, reads half).
   - Implementation should:
-    - Give every row a status from the set `Shipped` / `Shipped with deviation` / `Deferred` / `Dropped` / `Withdrawn` / `Unverifiable`, and every non-`Shipped` row a one-sentence reason.
-    - Make every `Deferred`/`Dropped`/`Withdrawn` row state a follow-up issue number, a superseding requirement, or `no follow-up recorded`; distinguish `Withdrawn` (a **recorded decision**, cited) from `Dropped` (an absence).
-    - For a row folding sub-numbered clauses, address each sub-clause individually in that row's paraphrase and evidence, and take the **least-shipped** status by the precedence `Shipped` < `Shipped with deviation` < `Unverifiable` < `Deferred` < `Withdrawn` < `Dropped`, naming which sub-clause differs.
-    - Follow the table with a `Shipped beyond the requirements` list (or `Nothing shipped outside the numbered requirements.`).
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `/spec:show-me 9999-show-me-fixture` · `/spec:show-me 0033-pg-advisory-lock-sha256`
-    - Fixture: the **shared tracked fixture from T2.1**, with its `requirements.md` temporarily extended in the working tree only, per the synthetic-fixture rule, to declare `**FR-27 — …**` with sub-clauses `FR-27.1`/`FR-27.2` shipped and `FR-27.3` withdrawn by a decision recorded in a named ADR that names a superseding requirement. Restore with `git checkout -- specs/9999-show-me-fixture/requirements.md` afterwards; **do not delete the fixture.** `specs/0033-pg-advisory-lock-sha256/` supplies the real-data half. **Delete both generated `show-me.md` files afterwards.**
-    - Check: **AC-15 (statuses)** — in the `0033` run every row's status is from the allowed set, every non-`Shipped` row carries a reason, every `Deferred`/`Dropped`/`Withdrawn` row states a follow-up issue number, a superseding requirement, or `no follow-up recorded`, and each of the count line's six terms equals the number of rows carrying that status when counted by hand. **AC-45** — on the synthetic fixture the table has a single `FR-27` row and **no** `FR-27.3` row; that row's paraphrase and evidence address all three sub-clauses; its status is `Withdrawn`, which is the least-shipped of the three under the stated precedence; its evidence cites both where the withdrawal is recorded and the superseding requirement; and the count line includes a `Withdrawn:` term. **Precedence control** — change the synthetic `FR-27.3` from withdrawn to `Dropped` with `no follow-up recorded`, re-run, and confirm the parent row's status becomes `Dropped`, since `Dropped` sits below `Withdrawn`; restore the file afterwards.
-  - Traces to: FR-8, NFR-1 (judged-field exemption), NFR-7; AC-15 (statuses), AC-45; ADR 0072 Step 6.
+    - Apply KC3's window rules 1–4: planned windows from ledger lists; unplanned windows sized by piping into `wc -c` starting at 200 lines and halving; `oversize` lines not read; truncated output treated as not read but charged.
+    - Keep the read log with path, method and bytes. Reserve 100,000 B for the Explainer. Never read `PROMPT*.md`.
+  - Traces to: NFR-3, FR-6 (f) (reserve size), FR-17, AC-52, AC-76, AC-77, AC-78; ADR 0072 KC3 *How a read is made*, *The read log*, *The full diff is never read*, IA 10.
 
-- [x] **T3.8 — VERIFY: A missing or requirement-free `requirements.md` produces the defined line and F5 = Medium (FR-16 rows 8–9).**
-  - **No new command-file content (2026-09-19)**: T3.6's row-set mechanics already added both exact lines and their F5=Medium scoring verbatim, so nothing was merged for T3.8 — it is pure re-verification. Verified against `specs/0002-sqs-cleanup/` (declares 0 `FR-n`/`NFR-n` ids by all three T3.6 greps → row-9 line, no table, no count line) and the shared `specs/9999-show-me-fixture/` with `requirements.md` temporarily removed (→ row-8 line), restored via `mv` back afterward with `git diff --stat` confirming no residual change. The two lines are distinct strings and each fixture produced the one matching its actual condition.
+- [ ] **TEST + IMPLEMENT: T10.2 — Step 4 reads its inputs in KC3's order, always reads a marked release-notes section when every such section fits, and records a present-but-unread section as row 5a**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Verify by:
+    - AC-69, with a temporary hand-marked section (R2):
+      - Add under `## Master` in `release_notes.md` a section `### Probe (spec 0033)` followed by `<!-- spec: 0033-pg-advisory-lock-sha256 -->` and a `#### Breaking changes` list of 1 bullet.
+      - Run `/spec:show-me 0033-pg-advisory-lock-sha256`. The ledger shows `count` 1 and `m` 1. The transcript shows `wc -c release_notes.md`, then the section's windows read and charged.
+      - Restore with `git checkout -- release_notes.md`.
+    - AC-68 in K7 (clone): the read log shows `tasks.md` consuming the general allowance and the marked section skipped because its bytes exceed the remainder. The run records row 5a.
+    - K2 variant with `.adr-list` deleted: commit subjects are read with `git log --format='%h %s' {merge base}..{measured head}`. On `0033` with `.adr-list` emptied (no diff), no `git log` is issued.
+    - (C-8) On `0036`, `requirements.md` paragraphs are read in declaration order. Any paragraph not afforded is noted as the reason for `Unverifiable`.
   - Implementation should:
-    - Row 8 (`requirements.md` absent): `## Did it ship what it said?` contains **exactly** `No requirements.md found for this spec — scope reconciliation is not possible.`; F5 = Medium.
-    - Row 9 (present but declaring zero numbered ids by the counting rule in T3.6): the section contains **exactly** `requirements.md declares no numbered requirements — nothing to reconcile.`, with **no table and no count line**; F5 = Medium.
-    - Both are ledger-recorded absences below the gate; neither stops the run.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `/spec:show-me sqs-cleanup` · `/spec:show-me 9999-show-me-fixture`
-    - Fixture: real for row 9 — `specs/0002-sqs-cleanup/requirements.md` exists and declares **zero** `FR-n`/`NFR-n` ids (confirm with all three declaration greps from T3.6, each returning 0). For row 8, the **shared tracked fixture from T2.1** with its `requirements.md` temporarily removed from the working tree (`rm specs/9999-show-me-fixture/requirements.md`), keeping its two-checkbox `tasks.md` so the gate passes; restore with `git checkout -- specs/9999-show-me-fixture/requirements.md` afterwards and **do not delete the fixture**. **Delete both generated `show-me.md` files afterwards.**
-    - Check: **AC-43 / row 9** — the `sqs-cleanup` run succeeds and its section contains exactly `requirements.md declares no numbered requirements — nothing to reconcile.` with **no** pipe-table rows and **no** `Shipped: …` count line between that heading and the next H2, and the risk table shows **F5 `Medium`**. **AC-16 / row 8** — the synthetic run succeeds, its section contains exactly `No requirements.md found for this spec — scope reconciliation is not possible.`, and **F5 is `Medium`**. **Row-8/row-9 discrimination** — the two lines are different strings and the run picks the one matching the actual condition; a run that emits the row-9 line for an absent file fails.
-  - Traces to: FR-8, FR-11, FR-16 rows 8 and 9; AC-16, AC-43; ADR 0072 Step 6.
+    - Follow KC3's read table in order: the existing `show-me.md`; `.issue-number`; `.adr-list`; `tasks.md`; the `src/` diff; `--name-only` only when there is no `src/` change; ADR extracts; marked sections (all or none); commit subjects only under row 6 with a diff; `requirements.md` whole, or else by declarations.
+    - When a read needed for FR-7 or FR-8 evidence fails, give `Unverifiable` or `not available` with a reason, never zero.
+  - Traces to: FR-7 (read obligation, all-or-none), FR-16 rows 5, 5a and 6, NFR-3 (degradation), AC-68, AC-69; ADR 0072 KC3 table, *Two reads are obligations, not options*, IA 10.
 
-- [x] **T3.9 — VERIFY: `## Where to look first` names 3–7 real diff paths with reasons, or takes its exact no-diff fallback.**
+## Phase 11 — Command file: output skeleton and the one Write
+
+*ADR 0072 IA 10, the Synthesiser's ledger-copied part and Step 6. Depends on Phase 10. From here on, every Verify block inspects a written `show-me.md`. Judged sections are filled in by Phases 12–14.*
+
+- [ ] **TEST + IMPLEMENT: T11.1 — The command writes `show-me.md` in one `Write`, with FR-5's header and eight headings in order, and copies How it was built and Blast radius wholly from the ledger**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Verify by:
+    - `0033` (no branch):
+      - AC-9: the file is created, and `git status` gains only `show-me.md`.
+      - Re-run for AC-10: the file is replaced, with no `show-me-2.md` or `.bak`.
+      - AC-19: the three metadata lines read `undetermined`; the base ref is named; the PR line reads `none found`; Blast radius shows `Spec branch not determinable — no diff measured.` plus the rules tried; `Commits: not determinable — spec branch not resolved.` appears; the task shape is still reported.
+    - `0002-sqs-cleanup`: the metadata issue line reads `none` (AC-44).
+    - AC-74: `git check-ignore -v` names the ledger, `git ls-files --error-unmatch` on it fails, and a second run replaces it.
+    - Clone:
+      - K2: AC-11 headings are verbatim and in order, with the full metadata block.
+      - K4: AC-67 reports 5 files and 1 subdirectory, and a second run gives the identical pair.
+      - K3: AC-66 reports 4.
+      - K12: AC-85's `already merged` line.
+    - (C-8) `0036`:
+      - AC-18: six buckets summing to 517, 6 subdirectories, and `Measured from git diff … (PR #4282 head)`.
+      - AC-17: 82 tasks with the per-tag split and 363 commits, and no review or CI content.
+      - With R5: the AC-46 PR-count line, and the AC-84 row-16 line naming both shas.
   - Implementation should:
-    - When a spec diff was measured: list **3–7 paths drawn from the spec diff**, most-important first, each with a reason of **≤ 25 words**. Every path must exist in the spec diff (the candidate list is measured; the ordering, the 3–7 selection and the reasons are judged — ADR 0072 Step 6 table). If the diff touches no files under `src/`, draw from whatever it does touch and say so.
-    - When **no** diff was measured (FR-16 row 13): the section contains **exactly** `No diff measured — spec branch not determinable, so no files can be ranked. Start from specs/{spec dir}/tasks.md and the ADRs listed in specs/{spec dir}/.adr-list.` — no paths, and FR-14's 3–7 rule does not apply.
-    - `Read` a candidate file only where the path is not self-explanatory, and charge it against the NFR-3 remainder.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `/spec:show-me 9999-show-me-fixture` (diff measured) · `/spec:show-me sqs-cleanup` (no diff)
-    - Fixture: the **shared fixture from T2.1** for the diff case — its measured ref is pinned at `$FIXTURE_HEAD`, giving a real non-empty diff against `origin/master` whose paths are all genuinely present in the repository. `specs/0037-show-me/` cannot serve here: FR-3 refuses it. `specs/0002-sqs-cleanup/` for the no-diff case, whose branch is not determinable. **Delete both generated `show-me.md` files afterwards; do not delete the fixture.**
-    - Check: **AC-26** — the first run lists between **3 and 7** paths; every listed path appears in the hand-run `git diff --name-only {mb}..$FIXTURE_HEAD` output; every reason is ≤ 25 words by whitespace-token count; and, because that diff touches no `src/` files, the section says so explicitly. **AC-36 / FR-16 row 13** — the second run contains the fallback line **verbatim and only** that line, lists **zero** paths, and the run still succeeds.
-  - Traces to: FR-14, FR-16 row 13, NFR-3; AC-26, AC-36; ADR 0072 Step 6.
+    - Write the H1 and metadata block: `date +%F`, `.issue-number`, the full ref, short shas, and the PR.
+    - Write the eight H2 headings verbatim.
+    - Write How it was built: five tag counts plus the commit count, or the fallback line.
+    - Write Blast radius:
+      - a pipe table of all six buckets plus a totals row;
+      - the API and subdirectory prose lines;
+      - FR-10's provenance lines (measured-from, PR head differs, ref used, local divergence);
+      - FR-20's PR-count line;
+      - the row 12 and row 16 lines.
+    - Run `git ls-files --error-unmatch` on every path before writing it. Use `test -f` to know whether the file is created or replaced, `Read` before `Write` when it exists, and one `Write`. Never stage anything.
+  - Traces to: FR-4, FR-5, FR-9, FR-10, FR-16 rows 10, 12, 15 and 16, FR-17, FR-20, NFR-1, NFR-5, NFR-8, AC-9, AC-10, AC-11, AC-17, AC-18, AC-19, AC-44, AC-46, AC-66, AC-67, AC-74, AC-84, AC-85; ADR 0072 KC5, IA 10.
 
-- [x] **T3.10 — VERIFY: `## Inputs used` is a projection of the ledger, references only git-tracked paths, and says nothing about `PROMPT`.**
-  - **AC-27 deviation found and resolved with the user (2026-09-19)**: AC-27 assumes a spec whose branch *is* determinable (zero PR results, no `release_notes.md` section — FR-16 rows 1/5), so it expects `git history` marked `used`. The real fixture named for this check, `specs/0002-sqs-cleanup/`, has a branch that is **not determinable** in this repo state (the same situation T3.4/T3.5 hit) — so `git history` and `pull request` were never measured, and marking either `used` would violate the traceability rule. **Resolved**: Step 3's non-determinable-branch consequences (FR-16 rows 12–15) gained a fifth item — `## Inputs used` marks `pull request` and `git history` `not available: spec branch not determinable` — and AC-27 is verified as its achievable subset (PR/review-comments/CI-checks not-available-with-a-reason, `release_notes.md` not-available, `tasks.md`/`requirements.md`/`.adr-list` used), with `git history`/`pull request` reading the row-15 line instead of `used`.
+## Phase 12 — Command file: the Explainer
+
+*ADR 0077 IA 1–2, inside ADR 0072 IA 10's Step 5. Depends on Phase 11.*
+
+- [ ] **TEST + IMPLEMENT: T12.1 — The command states the six-row ladder, quotes the five named lines by name, and gives the node-list row shape, so an undiagrammable run carries exactly one named line**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Verify by:
+    - `0033`: What changed and why has no fenced block and carries exactly `No diagram: spec branch not determinable, so no change could be drawn.`, and the triggers are not evaluated (AC-61).
+    - K1 (clone): the no-trigger line names `2`, `1` directory, `0` and `1` (AC-57, first half).
+    - Inspection: the five lines are quoted verbatim outside any table and referenced by name, never by ordinal.
+  - Implementation should: add the ladder as ADR 0077's *mechanism* table; the lines with the no-trigger values copied from the ledger (`src/` files, `src_subdirectory_count`, `public_api_lines`, `adr_resolved_count`); and the node-list row with one licensing source.
+  - Traces to: FR-6 (a), (b), (e), FR-16 row 12, NFR-1, AC-57, AC-61; ADR 0077 *mechanism*, KC3, IA 1.
+
+- [ ] **TEST + IMPLEMENT: T12.2 — The Explainer probes, reads or extracts, or abandons; charges every read; and renders only nodes it has a licensing source for**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Verify by:
+    - (C-8) `0036`:
+      - The transcript's node list gives one source for every node. Participants pass `git ls-files` and are probed before they are read. Reads are charged, and at least 100,000 B remain at the start (AC-78).
+      - What changed and why carries exactly one block: ≤ 40 lines, ≤ 100 columns, Mermaid for a flow and a plain block for a hierarchy, and no `No diagram:` line (AC-56).
+      - If a second diagram is drawn, both spend from one reserve (AC-63).
+    - K5 (clone): when a stand-down is taken, there is exactly one stand-down line naming D2 with a one-sentence reason, and no invented relationship (AC-64).
+    - K7 (clone): the budget line, no fenced block, and no unread type named (AC-58).
+    - K1: when the Explainer raises, one diagram plus a one-sentence reason and no `No diagram:` line (AC-57, second half).
+    - Record which ladder row each run took, since stand-down and raise are judgements.
   - Implementation should:
-    - Emit one row per input — `requirements.md`, `tasks.md`, `.adr-list` **and one row per ADR it names, identified by slug**, `.issue-number`, `release_notes.md` section, git history, pull request, review comments, CI checks — each marked `used` or `not available: {one-line reason}`. The section is **wholly measured**: a projection of the ledger, with no judged content (ADR 0072 Key Components 3, Step 6 table).
-    - Before any path is written **anywhere** in `show-me.md`, test it with `git ls-files --error-unmatch {path}` and drop or replace it if untracked — one test that covers both the gitignored literal `PROMPT.md` and the merely-untracked `PROMPT-*.md` companions, exactly as FR-17 asks (`.gitignore:353` carries an exact-match `PROMPT.md` entry, not a glob).
-    - Write no tokens, credentials, absolute machine-local paths, or contents of untracked files; every repository path written is relative to the repository root (NFR-5).
-    - Give `PROMPT.md`/`PROMPT-*.md` **no ledger row and no mention anywhere** — it may be read as background only (FR-16 row 11, FR-17).
-    - Exclude this section from NFR-2's word budget (it is everything from the `## Inputs used` heading to end of file).
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `/spec:show-me sqs-cleanup` (no PR, no `release_notes.md` section) · `/spec:show-me 9999-show-me-fixture` (PROMPT present) · `/spec:show-me 0033-pg-advisory-lock-sha256` (no PROMPT anywhere)
-    - Fixture: real for the first — `specs/0002-sqs-cleanup/` has no PR for its (non-determinable) branch and no `release_notes.md` section. For the second, the **shared tracked fixture from T2.1** with **both** a `PROMPT.md` and a `PROMPT-history.md` added inside it as **untracked** working-tree files; delete just those two files afterwards, leaving the fixture's three staged files intact. Separately, confirm the repo root's nine `PROMPT-*.md` files are untracked (`git ls-files --error-unmatch PROMPT-history.md` exits non-zero). **Delete the generated `show-me.md` from all three directories afterwards.**
-    - Check: **AC-27** — the first run's table marks the pull request, review comments and CI checks rows `not available` each with a reason, marks the `release_notes.md` section not available, and marks `tasks.md`, `requirements.md`, `.adr-list` and git history `used`. **AC-29 / NFR-5** — the second run's `show-me.md` contains **no** occurrence of `PROMPT.md` or `PROMPT-history.md`, no link to either, and no absolute path beginning `/Users/`. **Non-vacuity (FR-17)** — count the relative repository paths written into that second run's `show-me.md`: the count must be **greater than zero** — at minimum the spec-directory line, the `tasks.md` and `requirements.md` rows and the two resolved ADR paths, which are present precisely because T2.1 staged the fixture — and **every one** of them must pass `git ls-files --error-unmatch` on its resolved path. A run in which the check passes because nothing was written **fails this task**. **AC-41 / FR-16 row 11** — the third run against `specs/0033-pg-advisory-lock-sha256/` (which has no PROMPT files) produces a `show-me.md` in which `grep -c PROMPT` returns **0** and `## Inputs used` has no row for it.
-  - Traces to: FR-15, FR-16 row 11, FR-17, NFR-5, NFR-7, NFR-2; AC-27, AC-29, AC-41; ADR 0072 Key Components 3, Step 6.
+    - Read the trigger fields and never re-evaluate them.
+    - Spend in order: probe the known set, probe each file found while reading, then read whole, extract with a sized `grep -n -F` for literal member names, or abandon.
+    - Keep the node list. Render from it, following the Mermaid trap list.
+    - Hand over the block or line with its target section and, for `## Where to look first`, three to seven changed paths.
+  - Traces to: FR-6 (b), (c), (f), FR-14 (optional tree), NFR-3 (reserve), NFR-7, AC-56, AC-57, AC-58, AC-63, AC-64, AC-78; ADR 0077 KC1, KC2, KC3, KC4, KC5, IA 2.
 
----
+## Phase 13 — Command file: Classifier and the risk step
 
-## Phase 4 — Review-history decomposition (ADR 0073)
+*ADR 0073 IA 1–5, inside ADR 0072 IA 10's Step 5. Depends on Phase 12.*
 
-*(Step 5R measurement, Step 5R.7 stages A–H, Step 6.a; FR-9, FR-16 rows 1–3)*
+- [ ] **TEST + IMPLEMENT: T13.1 — The FR-13 invariant check finds no paragraph outside the risk-step markers that joins a conditional keyword to a level name, and requires exactly one marker pair**
+  - **USE COMMAND**: `/test-first when the show-me test script checks the command file it should report no paragraph outside the risk-step markers containing both a whole-word conditional and a capitalised level name`
+  - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
+  - Test row(s): the FR-13 row over `.claude/commands/spec/show-me.md`; the AC-81 literal line held in the test script; one positive self-check paragraph held in the test script.
+  - Test should verify:
+    - The marked region is removed with its markers, and the rest is split into blank-line paragraphs. No paragraph contains both a whole-word `if`/`when`/`unless`/`else`/`otherwise` (any case) and a whole-word `Low`/`Medium`/`High` (capitalised).
+    - There is exactly one begin marker and one end marker, begin first. The row is red now, because there are no markers.
+    - The literal line containing `git diff` and `gh pr diff` gives zero matches (AC-81).
+    - The self-check paragraph `If the level is High, stop.` is reported, which proves the check can fire.
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should: add the check to the test script and nothing to the measurement script.
+  - Traces to: FR-13, NFR-9 (invariant), AC-81; ADR 0073 KC5, *Where each artefact is touched*, IA 1; ADR 0072 KC6.
 
-**Why the calibration branch is merged first.** The review-history decomposition is the most defect-prone part of this command, and verifying it by re-applying the procedure by hand tests the reader, not the command. T4.1 therefore merges `spec/scoped-lifetime-per-pipeline` **before** any stage task runs, so T4.3, T4.4, T4.5 and T4.6 can each assert against a **real `/spec:show-me scoped-lifetime` run** — reading the pass list, attachment and exclusion decisions, and severity/resolution tallies the command itself reports. The merge stays in place through T6.4 and is reset at the close of T6.4.
-
-**What stays hand-evaluated, and why.** These cases cannot be given a fixture at all and remain hand-evaluations recorded in the relevant task's approval notes: **AC-46** (a second PR on the branch — FR-18 forbids creating one), **AC-48** (rollup variants — CI state cannot be fabricated), **AC-49** (the exact severity-marker set — only in-set markers occur live), **AC-38 / FR-16 row 3** (a PR whose every surviving pass is excluded — #4282 has three that survive), and **FR-11's three collective tie-break cases** plus **AC-21's all-Low factor set** (no two simultaneously-matching real conditions exist on this branch; see T5.2). Everything else in Phases 4–6 is observed.
-
-- [x] **T4.1 — STRUCTURAL: Merge the calibration branch into `spec/show-me` so Phases 4–6 can observe real runs (C-8).**
-  - `specs/0036-scoped-lifetime-per-pipeline/`, its seven ADRs (`0070-per-pipeline-di-scope-for-mapper-and-transform-factories.md` … `0076-scope-affinity-option-and-write-through.md`) and its `release_notes.md` section exist **only** on `spec/scoped-lifetime-per-pipeline`. The branch must be **merged into `spec/show-me`** — **not checked out**: checking it out removes `.claude/commands/spec/show-me.md` and `specs/0037-show-me/` from the tree, so the command under test would not exist to invoke.
-  - Record both shas in this task's approval notes before merging, because the teardown in T6.4 needs them:
-    ```
-    PRE_MERGE=$(git rev-parse HEAD)
-    git merge --no-ff spec/scoped-lifetime-per-pipeline -m "temp: calibration fixture for phases 4-6 (reset by T6.4)"
-    MERGE_SHA=$(git rev-parse HEAD)
-    ```
-  - Confirm after merging: `test -f specs/0036-scoped-lifetime-per-pipeline/tasks.md` succeeds; `grep -cE '^[[:space:]]*-[[:space:]]\[ \]' specs/0036-scoped-lifetime-per-pipeline/tasks.md` returns `0` (82 tasks, all checked), so FR-3's gate passes; `ls docs/adr/ | grep -c '^007'` shows the seven new ADRs present alongside the existing ones, including the **two** files numbered 0070 and **two** numbered 0071 that AC-12 depends on; `gh pr list --head spec/scoped-lifetime-per-pipeline --state all` still returns `[{"headRefName":"spec/scoped-lifetime-per-pipeline","number":4282}]`.
-  - State the two consequences to keep in view: (a) `git diff origin/master..HEAD` now includes the calibration branch's 76 `src/` files, so **T6.6's dogfood run must not happen while the merge is in place** — T6.4 resets it first; (b) `.claude/commands/spec/show-me.md` is being edited on `spec/show-me` throughout Phases 4–6, so commits land **after** the merge and the teardown must account for them.
-  - Acceptance check: `git log --oneline -1 --merges` names the merge; `git rev-parse HEAD` equals the recorded `MERGE_SHA`; the working tree is otherwise clean apart from the standing `specs/9999-show-me-fixture/` staged entries.
-  - Traces to: C-8; ADR 0072 *Decision* (the whole command, end to end, against the case the requirements were written from), ADR 0073 *Decision* (the review-history decomposition needs a real PR-backed spec to be observed at all).
-  - **Landed 2026-09-19**: `PRE_MERGE=55be89295568d1eee29875c1083a047d64ff124d`, `MERGE_SHA=72882520a49f7277e0a31591d704c626d8c8e550`. All acceptance checks passed as specified: `specs/0036-scoped-lifetime-per-pipeline/tasks.md` exists with 0 unchecked boxes (82/82 done); `docs/adr/` has 11 files matching `^007` — the two `0070`s and two `0071`s AC-12 depends on, plus `0072`–`0076`; `gh pr list --head spec/scoped-lifetime-per-pipeline --state all` returns PR #4282; `git log --oneline -1 --merges` names the merge commit; `git rev-parse HEAD` equals `MERGE_SHA`.
-  - **Deviation from the literal script (discussed and agreed 2026-09-19)**: the plain `git merge --no-ff` in this task's script failed outright — `error: Your local changes to … would be overwritten by merge` — because `specs/9999-show-me-fixture/`'s three files are deliberately staged-but-uncommitted (per the fixture lifecycle table), and `ort`'s safety check refuses to run a merge at all while any path has staged-but-uncommitted content, even a path absent from both branches' histories. **Resolved**: `git stash push -- specs/9999-show-me-fixture/` immediately before the merge, then `git stash pop` immediately after the merge commit landed, restoring the exact same staged-not-committed state (confirmed via `git status --porcelain` showing the same three `A ` entries before and after). Two further **real, unanticipated conflicts** then required manual resolution, since both branches touch shared files independently of the fixture: (1) `specs/.current-spec` — HEAD had `0037-show-me`, theirs had `0036-scoped-lifetime-per-pipeline`; resolved to `0037-show-me` since that is the spec actively being worked on `spec/show-me`. (2) `docs/adr/index.md` — both branches independently appended rows (HEAD: `0072`/`0073` show-me ADRs; theirs: `0072`/`0073`/`0074`/`0075`/`0076` scoped-lifetime ADRs) and both bumped the trailing `_N ADRs indexed._` count line; resolved by taking the union of both branches' rows, alphabetically ordered by slug within each shared ADR number (matching the file's existing 0070/0071 dual-numbering convention), and recomputing the count line from the actual row count (`grep -c '^| \`0' docs/adr/index.md` → 103, not either branch's stated 95 or 101) rather than trusting either side's arithmetic. Neither conflict was anticipated by the task's script or acceptance checks, but both are resolved and verified: `grep -n '<<<<<<<\|=======\|>>>>>>>'` on both files returns nothing, and the acceptance checks above all pass on the resulting commit.
-
-- [x] **T4.2 — VERIFY: Step 5R measures the PR comment history as a structural skeleton, never as raw JSON.**
+- [ ] **TEST + IMPLEMENT: T13.2 — The risk step is fenced by its two marker lines at Step 5, between the Classifier and the Synthesiser**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Verify by: `dotnet run .claude/commands/spec/show_me_facts_tests.cs` exits `0` with the FR-13 row green. `/spec:show-me 0033-pg-advisory-lock-sha256` still writes the file.
   - Implementation should:
-    - Run 5R.1 census (`gh pr view {n} --json comments --jq '.comments[] | "\(.createdAt)\t\(.author.login)\t\(.body|length)"'`), **5R.2 the structural skeleton** (the `--jq` projection piped to `grep -E '^===|^#{1,6}[[:space:]]|^[0-9]+\.[[:space:]]\*\*|^\*\*Fix'`), 5R.3 the review stubs (`--json reviews`), and 5R.6 the `tasks.md` first-add **author** date (`git log --diff-filter=A --format='%aI' "{base}..{head}" -- "specs/{dir}/tasks.md" | tail -1`) — ADR 0073 Step 5R.
-    - State the **skeleton-first rule as a named step with its own projection command**, and record why: the raw payload is 68,837 bytes on PR #4282 and the skeleton is 10,151 — an 85% reduction — and reading the raw JSON "just to be safe" is the regression that restores the case for delegation this ADR argued away.
-    - Use `--jq` as an argument to the allow-listed `gh pr view`, never a standalone `jq` binary; use POSIX classes, and **do not key any rule on heading level** (round 2 heads `### New findings`, round 3 heads `## New findings`; items are `#### 1.` and `### 1.`).
-    - 5R.4: pull **bounded body slices** only from comments the skeleton marked as carrying a findings sequence or a numbered disposition reply, and only between the located heading and the next heading — never a whole comment.
-    - `gh` exiting non-zero at any of these is FR-16 rows 1–2: ledger row `not available: gh unavailable`, `## How it was built` takes its defined line, F3 and F4 both Medium. Check **exit status**, not empty output, because a PR with no comments and a failed `gh` look identical on stdout (NFR-3).
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: the 5R.2 skeleton pipeline run by hand against PR **#4282**, then `/spec:show-me 9999-show-me-fixture` for the no-PR path.
-    - Fixture: real for the skeleton — PR #4282, now reachable both via `gh` and as a merged spec directory (T4.1). For the no-PR path, the **shared fixture from T2.1**: `spec/show-me-fixture` resolves but `gh pr list --head spec/show-me-fixture --state all` returns `[]`. `specs/0037-show-me/` cannot be used — FR-3 refuses it. **Delete the generated `show-me.md` from the fixture afterwards; do not delete the fixture.**
-    - Check: **ADR 0073 Key Components 2** — the skeleton pipeline's output piped to `wc -c` is on the order of 10 KB against a raw `--json comments` payload on the order of 69 KB, and the skeleton visibly contains **all** of: the `part 1 of 2` / `part 2 of 2` titles, the six 2026-09-16 task-completion comment boundary lines (13:23:20, 13:45:25, 14:25:54, 17:03:59, 17:16:55, 17:35:13) **each with no numbered item beneath**, `### Verdict on each fix`, `### New findings`, `## New findings`, `### Smaller notes`, `### 10. Smaller items`, and **all eight** `*(…)*` severity markers — round 2's five, carried on the `#### 1.`–`#### 5.` headings of the `2026-09-18T07:44:11Z` comment (`*(medium)*`, `*(low)*`, `*(medium)*`, `*(low — a question, not a defect)*`, `*(low)*`), plus round 3's three, on the `### 1.`–`### 3.` headings of the `2026-09-18T11:39:33Z` comment (`*(medium — NFR-10)*`, `*(low)*`, `*(nit)*`). A skeleton carrying only five of the eight has dropped a round. **FR-16 rows 1–2** — the no-PR run states `No pull request found for branch spec/show-me-fixture — no external review findings available.` and sets F3 and F4 to `Medium`. **NFR-4 pre-check** — with `gh` made unavailable (run with a `PATH` that excludes it), the same fixture records `not available: gh unavailable` rather than reporting zero comments.
-  - Traces to: FR-9, FR-16 rows 1–2, NFR-3, NFR-4, C-10; AC-28; ADR 0073 Key Components 2, Step 5R.
-  - **Landed 2026-09-19 (commit `abe2ffaae` feat)**: added `### Step 5R — Review-history measurement` to `.claude/commands/spec/show-me.md`, between Step 5 and Step 6, covering 5R.1 (census), 5R.2 (structural skeleton), 5R.3 (review stubs), 5R.4 (bounded-slice rule), 5R.6 (`tasks.md` first-add author date), and the `gh`-failure/FR-16 rows 1–2 consequence. Verified against real PR #4282: the 5R.2 pipeline run by hand produced a 10,258-byte skeleton (ADR 0073 cited 10,151 at drafting time — both are "on the order of 10 KB", the small drift is the PR's live state moving slightly since the ADR was authored, not a defect) against a 68,837-byte raw `--json comments` payload (exact match to the ADR's cited figure) — an 84.9% reduction. The skeleton's content was confirmed to carry **all** required lines: the `part 1 of 2`/`part 2 of 2` titles, all six 2026-09-16 boundary lines (13:23:20, 13:45:25, 14:25:54, 17:03:59, 17:16:55, 17:35:13) each with no numbered item beneath, `### Verdict on each fix`, `### New findings`, `## New findings`, `### Smaller notes`, `### 10. Smaller items`, and all eight `*(…)*` severity markers (round 2's five on the `2026-09-18T07:44:11Z` comment, round 3's three on the `2026-09-18T11:39:33Z` comment) — none dropped. 5R.1, 5R.3 and 5R.6 were each run by hand against PR #4282/`spec/scoped-lifetime-per-pipeline` and returned correct output (15 comments, 3 review stubs, first-add author date `2026-08-28T00:43:21+01:00`). **No-PR path**: `gh pr list --head spec/show-me-fixture --state all` returns `[]` (exit 0), confirming Step 5R correctly does not fire — its "runs only when Step 4 elected a PR" gate held, since Step 4's existing (Phase 2) logic already handles the zero-result case and its exact line/F3-F4-Medium consequence; nothing new was needed there. **NFR-4 pre-check**: `gh` made unavailable via a restricted `PATH` exits `127` (command not found) against the real zero-result case's exit `0` with stdout `[]` — confirmed distinguishable by exit status alone, as NFR-3/NFR-4 require. **Deviation from the literal Verify Command line**: did not run the full `/spec:show-me 9999-show-me-fixture` end-to-end to a real `show-me.md` Write, since `## How it was built` and `## Risk assessment (advisory)` (Step 6.a/6.b) have no synthesis rule yet (T4.6/T5.x) and a full Write would either fail FR-5's "all eight sections always present" invariant or require inventing content ahead of its own task — instead verified the no-PR/`gh`-unavailable behaviour directly via the underlying `gh pr list` calls Step 4 already runs, which is what the run's ledger state actually depends on. No `show-me.md` was generated, so there is nothing to delete under the cleanup rule.
+    - Add Step 5's stage headings in the order Explainer, Classifier (filled by T13.5), risk step, Synthesiser.
+    - Wrap the risk step in `<!-- show-me:risk-step:begin -->` and `<!-- show-me:risk-step:end -->`, and move any text that tests a level inside them.
+  - Traces to: FR-13, *Advisory* (Definitions), AC-81; ADR 0073 KC5, IA 2; ADR 0072 stage table.
 
-- [x] **T4.3 — VERIFY: Classification stages A–D qualify comments, locate the findings sequence, split containers and group passes.**
+- [ ] **TEST + IMPLEMENT: T13.3 — Inside the markers: F1 is copied from the ledger, the forced levels apply first, and F2 and F5 take their highest matching column over all their evidence**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Verify by:
+    - `0033`: the F1 row reads `no diff measured — spec branch not determinable` at `Medium`.
+    - `0002-sqs-cleanup`: F5 `0 declared ids in the bold lead-in form` at `Medium` (AC-43, F5 half).
+    - `0033` with `requirements.md` moved aside (R2): F5 is `Medium` with the row-8 cell (AC-16, F5 half).
+    - The table has exactly the rows F1, F2 and F5, with no `F3` or `F4` row. The FR-13 row stays green.
+    - The F2 and F5 mapping on judged evidence is verified in T13.5.
+  - Implementation should: copy `f1_level`, or use row 12's `Medium` when it is null; state the forced-level table; apply the four-step mapping procedure; and give each factor-table row a measured value and a level.
+  - Traces to: FR-11, FR-16 rows 8, 9 and 12, NFR-1, AC-16, AC-20 (shape), AC-43; ADR 0073 KC2, KC3, IA 3.
+
+- [ ] **TEST + IMPLEMENT: T13.4 — Inside the markers: the overall level is the maximum, a raise needs its sentence, and the `**Overall risk: …**` line and FR-13's sentence are written, then checked**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Verify by:
+    - `0033` produces `**Overall risk: Medium**` on its own line, and FR-13's sentence verbatim.
+    - The transcript shows the two self-checks run: the stated level is not below the maximum, and a raise has its sentence (AC-23).
+    - The FR-13 row stays green.
+  - Implementation should: compute the maximum over Low < Medium < High; allow a raise only with a first rationale sentence naming what the factors miss; write FR-13's sentence as a literal; and hand the list of factors at the maximum to the Synthesiser.
+  - Traces to: FR-12, FR-13, AC-23, AC-24 (sentence); ADR 0073 KC4, IA 4.
+
+- [ ] **TEST + IMPLEMENT: T13.5 — The Classifier judges each breaking-change item, requirement status and uncovered piece of work once, with evidence, and tallies only its own judgements**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Verify by (clone, then (C-8)):
+    - K2: `No deviations`; F1, F2 and F5 all `Low` (AC-21, AC-55).
+    - K3: F2 `Medium`, F1 `Low`, F5 `Low`, and `**Overall risk: Medium**` (AC-22).
+    - K9: 17 ids with statuses (AC-15).
+    - K10: `FR-27` is `Withdrawn`, citing the ADR and its superseding requirement, and F5 is `Medium` (AC-45).
+    - K11: 26 `Shipped`, one `Shipped with deviation`, one `Deferred` with an issue number (AC-54).
+    - (C-8) `0036`: F1 `High` citing 76, F2 `High` citing an item tally of at least 4 (AC-20).
+    - Every item and every status names its evidence, and statuses are assigned only to ledger ids.
   - Implementation should:
-    - **A — Qualify**: a comment is part of a round only if it contains at least one finding — a numbered item naming a file, symbol, requirement or behaviour in the change under review and asserting a defect, risk or requested change. Task-completion reports, progress updates, CI notifications and finding-free replies are **not** rounds, **even under the same `Claude finished @user's task` preamble a genuine round's tracking comment carries** — the discriminator is numbered findings in the body, never the preamble. Mark this **judgement point 1** (only the residual case: a comment that *has* numbered items whose assertions may or may not be defects).
-    - **B — Locate the findings sequence**, in order: (1) a heading whose text names new findings, **level-agnostic**, its numbered items running to the next heading at the same or higher level; (2) failing that, the single numbered list describing defects; (3) **exclude fix-verdict sections** (`### Verdict on each fix`, `## Fix #1 — …: ✅`) — evidence for Resolved/Acknowledged, **never** a source of a new finding, *even where a verdict item is qualified or flags a residual concern*; (4) **exclude a trailing titled-but-unnumbered aside** (e.g. `### Smaller notes`) however many bullets it holds and whatever they assert. Quote the Definitions' clauses for B.3, B.4 and C **verbatim** next to those stages — paraphrasing them is how six rounds of review get undone.
-    - **C — Split container items**: a numbered item that is itself a container for several distinct sub-issues counts as one finding **per sub-issue**. The discriminator against B.4 is **numbering, not content** (`### 10. Smaller items` is item 10; `### Smaller notes` has no number). Mark this **judgement point 2**.
-    - **D — Group comments into passes** by three conjunctive tests: same author, the later comment's numbering continues the earlier's without restarting, and posted within 15 minutes. A comment whose numbering restarts at 1 begins a new round.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `/spec:show-me scoped-lifetime` — a **real run** against the spec T4.1 merged in, with the stages built so far. Read the pass list the run itself reports in the session transcript (the fact ledger is in-context by design, so the transcript is where a Classifier row is observable), not a pass list re-derived by the reader. **Delete `specs/0036-scoped-lifetime-per-pipeline/show-me.md` afterwards.**
-    - Fixture: real — PR #4282's fifteen issue comments, and `specs/0036-scoped-lifetime-per-pipeline/` now in the working tree.
-    - Check: **AC-50** — in the run's own reported pass list: (a) the `2026-08-28T15:24:52Z` "part 1 of 2" and `2026-08-28T15:25:21Z` "part 2 of 2" comments (29 seconds apart, same author, item 5 → item 6) group into **one** pass, not two; (b) the six `2026-09-16` comments at 13:23, 13:45, 14:25, 17:03, 17:16 and 17:35 contribute **zero** passes; (c) each of the three implementation tracking comments restarts numbering at 1 and is its own pass. **ADR 0073 risk mitigations** — round 2's `### Smaller notes` three bullets contribute **zero** findings (counting them would make round 2 eight instead of five); round 2's `### Verdict on each fix` item `**Fix 3 — fd77dcec, unreadable override: ⚠️ …**` contributes **zero** new findings (counting it would make round 2 six), and the same concern is confirmed present as `#### 1.` of that comment's `### New findings`; the design pass's `### 10. Smaller items` container of five bullets contributes **five** findings, making that pass **fourteen** rather than ten. Each of these four numbers must be read off the run's own output; a hand-derivation that agrees with a differing machine output fails the task.
-  - Traces to: FR-9, Definitions (`Finding`, `Review round`), NFR-1; AC-50; ADR 0073 Key Components 3 stages A–D.
-  - **Landed 2026-09-20 (commit `9a2238ad4` feat)**: added `#### Step 5R.7 — Classification (stages A–D)` to `.claude/commands/spec/show-me.md`, under Step 5R, quoting the `Finding` and `Review round` definitions verbatim next to B.3, B.4 and C per the task's instruction. Verified with a real `/spec:show-me scoped-lifetime` run against PR #4282's fifteen comments (via T4.1's merge), applying stages A–D by hand in the session and reporting the pass list here in the transcript, per the task's instruction to read it from the run rather than re-derive it independently: **Pass 1** (merged `2026-08-28T15:24:52Z` + `2026-08-28T15:25:21Z`, same author 29s apart, numbering continues item 5→6) — 14 findings (9 individual + item 10's `### 10. Smaller items` container, confirmed by a bounded slice to hold exactly 5 bullets, split per stage C). **Pass 2** (`2026-09-16T17:43:48Z`) — 3 findings. **Pass 3** (`2026-09-18T07:44:11Z`) — 5 findings (its `### Verdict on each fix` section, including Fix 3's qualified residual concern, excluded per B.3 and confirmed by a bounded slice to be the same issue as finding 1, not a second finding; its `### Smaller notes` section, confirmed by a bounded slice to hold exactly 3 bullets, excluded whole per B.4). **Pass 4** (`2026-09-18T11:39:33Z`) — 3 findings (its two `## Fix #N` verdict lines excluded per B.3). The six `2026-09-16` "Claude is reviewing this PR" comments and the four `iancooper` reply comments (`07:43:57Z`, `10:13:14Z`, `11:39:20Z`, `14:46:58Z`) all failed stage A — the four replies have no numbered items asserting a *new* defect (they report dispositions of already-raised findings: "fixed", "closed for free", "acknowledged, no change"), which is judgement point 1's residual case correctly resolved against them; two of the four (`07:43:57Z`, `11:39:20Z`) additionally have no numbered items at all in the skeleton. **AC-50 checks, all confirmed**: (a) the two-part design comment groups into one pass, not two; (b) the six 2026-09-16 comments contribute zero passes; (c) each of the three implementation tracking comments restarts at 1 and is its own pass. **ADR 0073 risk mitigations, all four numbers read from bounded slices (5R.4), not hand-derived from the task's own prose**: the Smaller-items container is 5 bullets (pass would be 10, not 14, if miscounted as one item); the Smaller-notes aside is 3 bullets (round would be 8, not 5, if wrongly counted); Fix 3 contributes 0 new findings (round would be 6, not 5, if counted) and is confirmed the same issue as finding 1 via the comment's own closing summary line. No `show-me.md` was generated (Steps 6.a/7/8 aren't reached from stages A–D alone), so there is nothing to delete under the cleanup rule.
+    - Read only what the read log holds.
+    - Follow the catalogue's bullet boundaries when a marked section with `m` > 0 was read, and the no-catalogue rule otherwise.
+    - Emit `{n}`, the per-status tallies and Part 3's list with task ids.
+  - Traces to: FR-7, FR-8, FR-11, NFR-1, NFR-7, AC-15, AC-20, AC-21, AC-22, AC-45, AC-54, AC-55; ADR 0073 KC1, IA 5 (Classifier part).
 
-- [x] **T4.4 — VERIFY: Stages E–F attach inline comments with dedup and exclude specification-phase passes before numbering.**
+## Phase 14 — Command file: judged sections, pre-Write checks, word count and report
+
+*Covers the rest of ADR 0072 IA 10, ADR 0077 IA 3–5, and ADR 0073 IA 5's rationale and FR-19 part. Depends on Phase 13.*
+
+- [ ] **TEST + IMPLEMENT: T14.1 — What changed and why names every ADR by stem, title, Status and relative link, and places the Explainer's block or line; Breaking changes renders the Classifier's items with a count line and the defined absence lines**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Verify by:
+    - (C-8) `0036`:
+      - AC-12: 150–600 prose words, fences excluded. All seven ADRs appear by stem, title and Status. Links resolve. There is no bare `ADR 0070`.
+      - AC-51: the duplicated 0070, 0071, 0072 and 0073 numbers resolve to the files `.adr-list` named.
+      - AC-13: items are ≤ 40 words, each with a classification set and a migration, followed by `Total breaking-change items: {n}`.
+      - AC-14: row 5's line appears, and `release_notes.md` is unchanged.
+    - `0033` (no diff): AC-37's row 14 line, the count line, and F2 computed from the listed items.
+    - K2 with `.adr-list` deleted: AC-40's `No ADRs recorded for this spec.`; D3 does not fire, while D1 and D2 do.
+    - `0033` with `.adr-list` temporarily extended (R2) by a missing filename and the bare number `0037`:
+      - Run the script directly: the ledger shows `ADR file not found`, `ambiguous ADR number` with 5 matches, and `adr_resolved_count` 1.
+      - The section names both entries. The remaining ADR is still linked (AC-42).
+    - T10.2's temporary one-bullet marked section, when `{n}` ≠ 1: the disagreement line `release_notes.md records 1 items; this summary identifies {n}`.
   - Implementation should:
-    - **E — Attach and dedup**: enumerate review submissions with `gh pr view {n} --json reviews --jq '.reviews[] | "\(.submittedAt)\t\(.author.login)\t\(.state)"'`; attribute each to whichever round's tracking comment was posted **within 15 minutes before or after** it and describes the same finding. **The 15-minute window is the whole of the attachment test: author login is explicitly not consulted at this stage.** State the reason in one line — this repository has posted a round's tracking comment and its inline comments under different bot identities in the past, and a login test would silently drop those submissions. Dedup: an issue posted both inline and as a restatement in the same pass's tracking comment is **one** finding, the inline comment being the finding of record.
-    - Record the **known limitation** as a ledger row rather than hiding it: inline review comment **bodies** are unreachable inside the allow-list (`--json reviews` returns `"body": ""`; `gh pr view --comments` renders only issue comments; only `gh api` would return them, forbidden by C-10). The command therefore reads the restatement and treats the submission count as a **corroborating cardinality check**; a mismatch is a ledger row, not a repair.
-    - **F — Exclude specification-phase passes**, applied to the **pass** (after grouping, so a two-part pass is excluded whole), on any of three **disjunctive** tests: (i) self-identification as a requirements/design/tasks review; (ii) posted before the commit that first adds `specs/{dir}/tasks.md`, **by author date** (5R.6) — committer date is not used, because a rebase moves it; (iii) every finding cites only paths under `specs/{dir}/` or `docs/adr/`.
-    - Number surviving passes **1..k in chronological order after exclusion** — `Round {i}` counts only surviving implementation rounds. State that **D before F** and **F before numbering** both matter.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `/spec:show-me scoped-lifetime` — a **real run**, reading the run's own reported attachment and exclusion decisions from the session transcript — plus `gh pr view 4282 --json reviews --jq '.reviews[] | "\(.submittedAt)\t\(.author.login)\t\(.state)"'` run by hand for ground truth. **Delete `specs/0036-scoped-lifetime-per-pipeline/show-me.md` afterwards.**
-    - Fixture: real — PR #4282.
-    - Check: **AC-17 (round set)** — round 1's three review submissions at `17:53:32`, `17:53:39` and `17:53:45` are attached to the `17:43:48` tracking comment (posted ten minutes *before* them, inside the 15-minute window), and the three submissions plus three restatements yield **three** findings, not six. **Login-independence — asserted against the command file, not the fixture.** On this PR all four objects carry the **same** author login: the hand-run `--json reviews` query returns `claude`, `claude`, `claude`, and the `17:43:48` issue comment's author is also `claude` (verified live; there is no `claude[bot]` anywhere on #4282). The fixture therefore **cannot** demonstrate a login mismatch, and asserting one would be asserting a property that does not hold. Confirm login-independence instead by reading the command file: `grep -n 'author' .claude/commands/spec/show-me.md` must show `.author.login` used only in the 5R.1/5R.3 projections and in **stage D's same-author grouping test** — and **nowhere in stage E**, whose attachment rule must contain no comparison of a submission's login against a tracking comment's. **AC-50(c) / F exclusion** — the 2026-08-28 pass is excluded by test (i) (its title reads `(design only)`) **and** test (iii) (its ten item titles cite only `requirements.md`, ADRs and FR/NFR/AC ids), while test (ii) is **false** for it — confirming the three tests are disjunctive; it contributes **zero** rounds and **zero** findings and increments the excluded counter to **1**. **Numbering** — the surviving passes are numbered `Round 1`, `Round 2`, `Round 3` and not `Round 2/3/4`. **Limitation row** — the run's ledger carries a row recording that inline bodies are unreachable and that the submission count is corroboration only.
-  - Traces to: FR-9, Definitions (`Finding`, `Review round`), FR-18, C-3, C-10; AC-17, AC-50; ADR 0073 Key Components 3 stages E–F, Step 5R.7.
-  - **Landed 2026-09-20 (commit `79b8039b5` feat)**: added stage E (attach inline review submissions to their tracking comment by timestamp alone, dedup) and stage F (exclude specification-phase passes on the three disjunctive tests, then number survivors) to Step 5R.7 in `.claude/commands/spec/show-me.md`, quoting `Review round` (a) and `Finding`'s dedup clause verbatim, per the task's instruction. **Login-independence rewrite mid-task**: the first draft restated stage E's `gh pr view --json reviews` command inline (reusing 5R.3's literal `.author.login` projection text), which would have failed the task's own AC check — `grep -n 'author' .claude/commands/spec/show-me.md` requires `.author.login` to appear **only** in the 5R.1/5R.2/5R.3 projections, never in stage E. Rewrote stage E to reference 5R.3's already-captured stub (`{submittedAt}\t{author}\t{state}`) instead of re-quoting the jq expression, and to state explicitly that the submission's author field is read off the stub but never compared against the tracking comment's author. Re-ran the grep after the rewrite and confirmed `.author.login` (the literal dotted field-access substring) appears only at the 5R.1/5R.2/5R.3 command lines, nowhere in stage D's or stage E's prose — verified line-by-line, not just "grep found nothing new". Verified with a real `/spec:show-me scoped-lifetime` run against PR #4282, applying stages E–F by hand in the session (as T4.2–T4.3 did, for the same reason: `## How it was built`/`## Risk assessment` have no synthesis rule yet, so a full `Write` would violate FR-5's all-eight-sections-always-present invariant ahead of its own task — recorded as the same deviation shape below). **Ground truth**: `gh pr view 4282 --json reviews --jq '...'` returns exactly the three submissions AC-17 names — `2026-09-16T17:53:32Z`, `:39Z`, `:45Z`, all author `claude`, state `COMMENTED` — no `gh api` used. **Stage E**: all three attach to the `2026-09-16T17:43:48Z` tracking comment (Pass 2 from T4.3, 3 findings) — 9m44s/9m51s/9m57s *after* it, inside the 15-minute window; no other pass (the 2026-08-28 design pass, or the two 2026-09-18 passes) has any submission within its window, since these are the PR's only three review-API entries. Dedup: 3 submissions + 3 tracking-comment-restated findings = **3** findings, not 6, matching AC-17 exactly. **Limitation ledger row** (observed in-session, per NFR-1's traceability rule): `inline review comment bodies | unreachable — gh pr view --json reviews returns "body": "" for all three | gh pr view 4282 --json reviews | used (submission count as corroboration only, not a repair)`. **Stage F**: the 2026-08-28 design pass (14 findings, T4.3) is excluded by test (i) (title reads `(design only)`) **and** test (iii) (all ten pre-split item titles cite only `requirements.md`, ADR numbers or FR/NFR/AC ids) — test (ii) is **false** for it (posted `2026-08-28T15:24:52Z`, which is *after* the 5R.6 first-add author date `2026-08-28T00:43:21+01:00` T4.2 recorded, not before), confirming the three tests are genuinely disjunctive rather than redundant. None of the three 2026-09-16/09-18 passes match any exclusion test. **Excluded-pass counter = 1**. **Numbering**: the three surviving passes — `17:43:48` (3 findings), `07:44:11` (5 findings), `11:39:33` (3 findings) — number `Round 1`, `Round 2`, `Round 3` in chronological order, not `Round 2/3/4`, confirming **F before numbering**. All of AC-17's round set, AC-50(c)'s numbering assertion, and the login-independence check pass. No `show-me.md` was generated (same deviation as T4.2/T4.3, recorded above), so there is nothing to delete under the cleanup rule.
+    - What changed and why: glossed type names; the row 6 and row 7 texts; and placement of the Explainer's output for this section (ADR 0077 IA 3, first part).
+    - Breaking changes: rows 5, 5a and 14 lines; the none line; and the disagreement line only when `m` is non-null and differs from `{n}`.
+  - Traces to: FR-6 (narrative), FR-7, FR-16 rows 5, 5a, 6, 7 and 14, C-9, AC-12, AC-13, AC-14, AC-37, AC-40, AC-42, AC-51, AC-56; ADR 0072 KC5; ADR 0077 IA 3.
 
-- [x] **T4.5 — VERIFY: Stages G–H read severity from the title only and resolve findings by the stated precedence.**
+- [ ] **TEST + IMPLEMENT: T14.2 — Did it ship what it said? renders the Classifier's statuses as one collapsed shipped-as-planned line, one entry per deviation, Part 3 and a count line, keeping the partition invariant**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Verify by:
+    - K9: AC-15 — total 17; every id appears exactly once across Parts 1 and 2; the count terms sum to 17.
+    - K10: AC-45 — one `FR-27` entry naming `FR-27.3`, and a `Withdrawn:` term.
+    - K11: AC-54's exact Part 1 and count lines. The K11 variant gives AC-55's `No deviations: …`.
+    - `0033` with `requirements.md` moved aside: AC-16's exact line.
+    - `0002-sqs-cleanup`: AC-43's exact line, with no shipped-as-planned line and no count line.
+    - Expanding each Part 1 id list back to ids gives exactly the `Shipped` ids and never an undeclared one.
   - Implementation should:
-    - **G — Severity** read **only** from a marker in the finding's **title** — a trailing parenthetical/italicised tag immediately after the title text, or a leading bracketed tag — matched case-insensitively after stripping markdown emphasis and surrounding punctuation, taking the **first word** and ignoring anything after a dash or colon within it. Map `critical`→Critical, `high`→High, `medium`→Medium, `low`→Low, `nit`→Low; no marker or an out-of-set word ⇒ **unclassified**, risk-scored Medium by F3 but reported in FR-9's own `{u}` slot. Quote the Definitions' title-only rule **verbatim** next to this stage: a severity word in body prose, or restated inside a tracking-comment summary, **must not match**.
-    - **H — Resolution** per finding, in precedence: an author reply's per-item disposition; then a commit on the spec branch made after the finding was posted that changes the code or document it names (`git log --format='%H %aI' {mb}..{head} -- {path}`); then the PR thread marking it resolved/outdated. `Acknowledged` is a reply accepting the finding while explicitly taking no code change ("by design", "leaving as-is", "accepted for now, will revisit if it's hit", "tracked separately") and is **not** Resolved. Mark "addressed by the fix made for another finding in the same round" as **judgement point 3**.
-    - State in one line that stage B.3 **excludes** the verdict section as a source of findings while stage H **admits** it as evidence of resolution — one input read twice with two different questions — so a later simplifying edit does not collapse them.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `/spec:show-me scoped-lifetime` — a **real run**, reading the run's own per-round severity and resolution tallies. **Delete `specs/0036-scoped-lifetime-per-pipeline/show-me.md` afterwards.** For AC-49's exact marker set, additionally hand-evaluate stage G against the **synthetic title list** `*(medium)*`, `*(low — a question, not a defect)*`, `*(nit)*`, `*(Blocker)*` and one with no marker, recorded in the task's approval notes — a real fixture cannot supply an out-of-set marker, since every marker live on #4282 is in-set. **This is one of the hand-evaluated cases named in the Phase 4 note.**
-    - Fixture: real — PR #4282 and the merged `specs/0036-scoped-lifetime-per-pipeline/`.
-    - Check: **AC-17 severity splits** — round 1 (three bold file-link titles, no markers) is `0/0/0/0/3`; round 2 (`*(medium)*`, `*(low)*`, `*(medium)*`, `*(low — a question, not a defect)*`, `*(low)*`) is `0/0/2/3/0`; round 3 (`*(medium — NFR-10)*`, `*(low)*`, `*(nit)*`) is `0/0/1/2/0` in (Critical/High/Medium/Low/unclassified) order. **Body-prose trap** — round 1's third finding ends `…so low blast radius, but could produce flaky test failures if hit.` and that `low` is **not** matched; round 1's three findings remain **unclassified**, which is the assertion that fails if body prose is ever matched. **AC-49** — the synthetic list gives 0 Critical, 0 High, **1 Medium**, **2 Low** (the lowercase `low` and the `nit`), and **2 unclassified** (the out-of-set `Blocker` and the unmarked one), with matching case-insensitive and the parenthetical qualifier after the dash ignored. **AC-17 resolution** — the round-2 reply (`2026-09-18T10:13:14Z`) yields Resolved / Resolved / Resolved / Acknowledged / Acknowledged for items 1–5 (item 2 "closed for free by #1's fix" is Resolved under the same-round clause, and is judgement point 3); rounds 1 and 3 are 3/0/0 each; totals are **11 findings, 9 resolved, 2 acknowledged, 0 open**.
-  - Traces to: FR-9, FR-11, Definitions (`Finding severity`, `Resolved finding`, `Acknowledged finding`, `Open finding`), NFR-1, C-3; AC-17, AC-49; ADR 0073 Key Components 3 stages G–H.
-  - **Landed 2026-09-20 (commit `8833d8a24` feat)**: added stages G (severity read only from a title marker, mapped `critical/high/medium/low/nit`, unclassified fallback reported in FR-9's own `{u}` slot) and H (resolution by precedence — author reply's per-item disposition, then a later commit touching the named path, then the PR thread marker; Acknowledged distinct from Resolved; Open as fallback) to Step 5R.7 in `.claude/commands/spec/show-me.md`, quoting `Finding severity`/`Resolved finding`/`Acknowledged finding`/`Open finding` verbatim, and stating the B.3-vs-H dual-reading of the fix-verdict section in one line per the task's instruction. Verified against real PR #4282: pulled bounded slices (5R.4) of the three findings-sequence headings directly — round 1's three inline-comment titles are bold file links with **no** marker (item 3's body ends "…so low blast radius, but…", confirming the body-prose trap: `low` there is correctly not matched) ⇒ `0/0/0/0/3`; round 2's five titles carry `*(medium)*`/`*(low)*`/`*(medium)*`/`*(low — a question, not a defect)*`/`*(low)*` ⇒ `0/0/2/3/0`; round 3's three carry `*(medium — NFR-10)*`/`*(low)*`/`*(nit)*` ⇒ `0/0/1/2/0` — all three splits match AC-17 exactly. **Stage H**: pulled the round-2 reply (`2026-09-18T10:13:14Z`) verbatim and matched each item against the precedence in order — item 1 ("fixed in `ac46633de`") and item 3 ("fixed in `ec60be748`") resolve at precedence step 2 (a later commit), confirmed those two shas exist on the spec branch after the finding's post time; item 2 ("closed for free by #1's fix") resolves at step 1 via `Resolved finding`'s same-round clause — **judgement point 3**, correctly resolved as the task anticipated; items 4 and 5 ("acknowledged, no change… leaving as-is" / "accepted for now… will revisit if it's hit") match `Acknowledged finding`'s phrase list at step 1 ⇒ Resolved/Resolved/Resolved/Acknowledged/Acknowledged. Rounds 1 and 3 confirmed `3/0/0` each by locating, for every one of their six findings, a real commit on the spec branch after the finding's post time that touches the file/concern it names (`d4ac64b8e`, `fd77dcece7`, `dbe70e0b0` for round 1; `35ee1b3bf9`, `386efee78` — the latter covering both the guidance-page and doc-comment findings in one commit — for round 3) — none needed a reply or PR-thread marker. Totals: **11 findings, 9 resolved, 2 acknowledged, 0 open**, matching FR-9's worked example exactly. **AC-49's synthetic title list** (hand-evaluated, since every marker live on #4282 is already in-set): `*(medium)*`→Medium, `*(low — a question, not a defect)*`→Low, `*(nit)*`→Low, `*(Blocker)*`→out-of-set→unclassified, no-marker→unclassified — `0/0/1/2/2`, matching AC-49 exactly. No `show-me.md` generated (same T4.2/T4.3/T4.4 deviation — `## How it was built`/`## Risk assessment` still have no synthesis rule, T4.6/T5.x), so nothing to delete under the cleanup rule.
+    - Apply FR-8's two collapse rules: integer adjacency, and ranges only for runs of three or more.
+    - Add the follow-up for `Deferred`, `Dropped` and `Withdrawn`, give Part 3 a cap of 5 entries, and write rows 8 and 9 verbatim.
+  - Traces to: FR-8, FR-16 rows 8–9, AC-15, AC-16, AC-43, AC-45, AC-54, AC-55; ADR 0072 KC5; ADR 0073 KC1.
 
-- [x] **T4.6 — VERIFY: `## How it was built` renders task shape, commit shape and the review history from Classifier rows.**
+- [ ] **TEST + IMPLEMENT: T14.3 — Where to look first lists three to seven spec-diff paths with reasons, taking them from the Explainer's handover when it drew a tree there, or gives row 13's line when there is no diff**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Verify by:
+    - (C-8) `0036`: AC-26 — 3–7 paths, all in the diff, with reasons of ≤ 25 words. AC-60 when a tree is present — `(unchanged)` marks, no path slot used, and no `No diagram:` line.
+    - K1: the paths include the spec-directory files the fixture's branch commit carries.
+    - `0033`: AC-36's exact row 13 line, with no paths and no diagram.
+    - K6: when ladder row 5 was elected, AC-65 — a tree here and the placed-elsewhere line in What changed and why. Record which row was elected.
+  - Implementation should: take paths from the `src/` diff read, or from `--name-only` when there is no `src/` change; use the Explainer's handed-over paths when it drew a diagram for this section (ADR 0077 IA 3, second part); and write row 13 verbatim.
+  - Traces to: FR-14, FR-6 (e) placed-elsewhere line, FR-16 row 13, AC-26, AC-36, AC-60, AC-65; ADR 0077 KC5, IA 3; ADR 0072 KC5.
+
+- [ ] **TEST + IMPLEMENT: T14.4 — Inputs used gives exactly FR-15's rows plus one per Explainer source file, each marked from the read log, and never a row for the ledger, the script, review or CI**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Verify by:
+    - `0033`: AC-27 — the PR and release-notes rows are `not available` with reasons; the others are `used`; there is no review or CI row. AC-41 — no `PROMPT` string anywhere. AC-75 — no `.show-me-ledger.json`, no script path, and no rows for either.
+    - `0002-sqs-cleanup`: `.issue-number` is `not available: not present` (AC-44).
+    - K2 in the clone, where `gh` fails: the `gh unavailable` row, with F1 unchanged (AC-28).
+    - T10.2's section gives the row `used` (AC-69). K7 gives `not available: read budget exhausted before release_notes.md section could be read` (AC-68).
+    - (C-8) `0036`: Explainer rows are marked `used` or `used (targeted extraction)`.
+  - Implementation should: produce the fixed row set, the git history row per KC5, one Explainer row per source file however it was read (ADR 0077 IA 4), and no row for `.current-spec`, the existing `show-me.md` or `PROMPT*`.
+  - Traces to: FR-15, FR-16 rows 1, 2, 5, 5a, 10 and 11, FR-17, AC-27, AC-28, AC-41, AC-44, AC-68, AC-69, AC-75; ADR 0072 KC5; ADR 0077 IA 4.
+
+- [ ] **TEST + IMPLEMENT: T14.5 — The rationale has 2–5 sentences around the risk step's lines and names the factors at the maximum without comparing levels**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Verify by: K3's rationale references F2 (AC-22). (C-8) `0036`'s names F1 and F2. On a raised run, the raising sentence comes first (AC-23). The FR-13 row stays green.
+  - Implementation should: place the risk step's lines in the order ADR 0073 KC4 gives; state factor levels only as the table shows them; and put no conditional on a level outside the markers.
+  - Traces to: FR-12, FR-13, AC-22, AC-23; ADR 0073 KC4, IA 5 (rationale part).
+
+- [ ] **TEST + IMPLEMENT: T14.6 — Before the `Write`, the command checks its own diagrams and every path it names, so no over-cap block and no untracked path is ever written**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Verify by:
+    - `0033` with an untracked `PROMPT.md` and `PROMPT-history.md` added (R2): no occurrence of either anywhere, including diagrams, and every relative link resolves to a tracked path (AC-29).
+    - (C-8) `0036`: at most two fenced blocks, each ≤ 40 lines and ≤ 100 characters; block-or-line exclusivity; every path-shaped label tracked (AC-59, caps part).
+  - Implementation should: add the four checks from ADR 0077 KC6 over the assembled text, and the FR-17 test on every path, node and link.
+  - Traces to: FR-6 (d), FR-17, NFR-5, AC-29, AC-59; ADR 0077 KC6, IA 5; ADR 0072 KC5.
+
+- [ ] **TEST + IMPLEMENT: T14.7 — After the `Write`, the command word-counts the file once and reports the path, created or replaced, the copied overall level, the advisory reminder and the word count, whatever the level**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Verify by:
+    - `0033`: AC-31. For AC-33, the total equals a direct `--word-count` run on the same file.
+    - (C-8) `0036` at `High`: AC-24 — the file is written, the report is complete, and there is no error, refusal, marker, label or comment.
+    - AC-59: delete the fenced lines into a scratch copy. Word-counting it by hand gives the same total.
+    - With the word-count mode temporarily edited to exit 3, the report reads `word count unavailable: measurement script exited 3` and the file stays. Restore with `git checkout`.
+    - The FR-13 row is green.
   - Implementation should:
-    - State the total tasks and the count per task-type tag found in `tasks.md` (`TEST + IMPLEMENT`, `STRUCTURAL`, `PROJECT`, `DOC`, plus `untagged` as the **complement**, so the parts always sum), and the number of commits on the spec branch since the merge base (ADR 0073 Step 6.a; the counts are ADR 0072 Step 2/Step 5 material).
-    - Render one line per surviving round in FR-9's exact shape: `Round {i}: {n} findings ({c} Critical, {h} High, {m} Medium, {l} Low, {u} unclassified) — {r} resolved, {a} acknowledged, {o} open.` — a **rendering of a Classifier row**, never a fresh count.
-    - Keep `{m}` and `{u}` in separate slots even though F3 scores both Medium, because FR-9 says why.
-    - End with a totals line across rounds, then `Specification-phase review passes excluded: {n}` (or `none`) — and nothing more about those passes (Out of Scope).
-    - FR-16 row 3 (PR exists, no implementation round survived): state `Pull request #{n} has no recorded implementation review rounds.` **plus** the exclusion count; F3 = Medium.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
+    - Invoke only `-- specs/{dir}/show-me.md --word-count` and read the last `show-me-wordcount: ` line.
+    - Never revise the file and never invoke a third time.
+    - Copy the level from the `**Overall risk:**` line without testing it (ADR 0073 IA 5, FR-19 part), and print only the stop message on a stop.
+  - Traces to: FR-19, FR-13, FR-21 (*Modes*), NFR-2, AC-24, AC-25 (no side effect varies), AC-31, AC-33, AC-59; ADR 0072 IA 10 Steps 7–8; ADR 0073 KC5, IA 5.
+
+## Phase 15 — Spec-family forms
+
+*ADR 0078 IA 1–5. Depends only on Phase 1, but it follows Phase 14 so that T15.5 can use a working `/spec:show-me`. The AC checks run each stated pattern by copying it from `requirements.md` § Definitions at verification time. No pattern is ever typed into a task or a command file.*
+
+- [ ] **TEST + IMPLEMENT: T15.1 — `/spec:requirements` requires the bold lead-in declaration form, shown by concrete examples that match the declared-id pattern**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
-    - Command: `/spec:show-me scoped-lifetime` (the rendering case, with real round data) · `/spec:show-me 0033-pg-advisory-lock-sha256` · `/spec:show-me 0031-test_naming_conventions` · `/spec:show-me sqs-cleanup` (the task-shape and no-PR cases). **Delete all four generated `show-me.md` files afterwards.**
-    - Fixture: `specs/0036-scoped-lifetime-per-pipeline/` via the T4.1 merge for the round rendering; the other three real on this branch with hand-verifiable tag counts — `specs/0033-pg-advisory-lock-sha256/tasks.md` has **5** checkboxes: 3 `TEST + IMPLEMENT`, 1 `DOC`, 0 `STRUCTURAL`, 0 `PROJECT`, **1 untagged**. `specs/0031-test_naming_conventions/tasks.md` has **7** checkboxes, **all untagged**. `specs/0002-sqs-cleanup/tasks.md` has **6**: 5 `TEST + IMPLEMENT` and **1 untagged** (`IMPLEMENT:` alone does not match the `TEST + IMPLEMENT` tag).
-    - Check: **AC-17 (round rendering, now observed)** — the `scoped-lifetime` run's `## How it was built` carries exactly three `Round {i}:` lines with counts 3, 5 and 3, the severity splits `0/0/0/0/3`, `0/0/2/3/0`, `0/0/1/2/0`, the resolution splits `3/0/0`, `3/2/0`, `3/0/0`, a totals line of **11 findings / 9 resolved / 2 acknowledged / 0 open**, and the line `Specification-phase review passes excluded: 1`; each rendered number is byte-identical to the Classifier row T4.5's run reported, and no fresh count is issued during Step 6. **AC-17 (task shape, branch-independent form)** — the other three runs report totals **5**, **7** and **6**, with per-tag breakdowns `3/0/0/1/1`, `0/0/0/0/7` and `5/0/0/0/1` (TEST + IMPLEMENT / STRUCTURAL / PROJECT / DOC / untagged) that **sum to the total** in each case. **FR-16 row 1** — with no PR found, each of those three sections states `No pull request found for branch {branch} — no external review findings available.` and reports no round lines. **AC-38 / FR-16 row 3** — hand-evaluate the render against PR #4282's classification with test (i) of stage F artificially widened so that every surviving pass is excluded: the section would read `Pull request #4282 has no recorded implementation review rounds.` followed by `Specification-phase review passes excluded: 4`, with F3 `Medium`. **This stays a hand-evaluation** — #4282 has three passes that legitimately survive, and no PR on this branch has zero, so the case cannot be fixtured.
-  - Traces to: FR-9, FR-16 rows 1 and 3, NFR-3; AC-17, AC-38; ADR 0073 Step 6.a, ADR 0072 Steps 2 and 5.
-  - **Landed 2026-09-20 (commit `f21a2db6f` feat)**: added `#### \`## How it was built\`` to Step 6 in `.claude/commands/spec/show-me.md` — task-shape and commit-count rendering, one `Round {i}:` line per surviving round in FR-9's exact shape (a pure rendering of Step 5R.7's now-complete Classifier rows, no counting in this section), the totals line, the exclusion-count line, and FR-16 rows 1/2 (no PR — items 3–5 replaced by Step 4's defined line, F3/F4 Medium; items 1–2 still render since neither needs a PR) and row 3 (a PR exists but zero rounds survived — the "no recorded implementation review rounds" line plus the exclusion count). Verified against real data across all four named fixtures, not the run's own prose: `scoped-lifetime`'s task shape is real `grep` output — **82 tasks: 62 TEST + IMPLEMENT, 12 STRUCTURAL, 2 PROJECT, 6 DOC, 0 untagged** — and its commit count, `git log --oneline {mb}..{head} | wc -l` between `origin/master`'s merge-base and `origin/spec/scoped-lifetime-per-pipeline`'s tip, is **363**; its three `Round` lines, byte-checked against T4.5's already-confirmed Classifier data, render `3`/`5`/`3` findings with splits `0/0/0/0/3`/`0/0/2/3/0`/`0/0/1/2/0` and resolutions `3/0/0`/`3/2/0`/`3/0/0`, totalling **11 findings, 9 resolved, 2 acknowledged, 0 open**, plus `Specification-phase review passes excluded: 1` — no fresh count issued, matching AC-17 exactly. The three branch-independent fixtures' task shapes are real `grep` output too — `specs/0033-pg-advisory-lock-sha256/` **5: 3/0/0/1/1**, `specs/0031-test_naming_conventions/` **7: 0/0/0/0/7**, `specs/0002-sqs-cleanup/` **6: 5/0/0/0/1** — each confirmed by a live `gh pr list --head spec/{name} --state all` returning `[]`, firing FR-16 row 1's exact line for each. **AC-38/FR-16 row 3** is hand-evaluated only, exactly as the task anticipates (no real PR on this branch has zero surviving rounds to fixture it against): with stage F's test (i) hypothetically widened to also exclude PR #4282's three genuine implementation passes, the section would read `Pull request #4282 has no recorded implementation review rounds.` followed by `Specification-phase review passes excluded: 4`, F3 `Medium`. **Same deviation as T4.2–T4.5, recorded again here rather than assumed carried over**: did not run any of the four commands to a real `show-me.md` `Write`, since `## Risk assessment (advisory)` (T5.x) still has no synthesis rule and a full Write would violate FR-5's all-eight-sections-always-present invariant one task early; verified `## How it was built`'s content directly against real `grep`/`git log`/`gh pr list` ground truth instead of the run's own claimed output. No `show-me.md` was generated, so there is nothing to delete under the cleanup rule despite the Verify block's literal "delete all four" instruction, which assumed (incorrectly, at this point in the task order) that a full run was already possible.
+    - `grep -nE '{declared-id pattern}' .claude/commands/spec/requirements.md` matches every concrete-number example (`**FR-3 — …**`, `- **NFR-1 — …**`, `**FR-27.3 — …**`). The placeholder `**FR-{n} — {title}.**` is exempt.
+    - The heading and numbered-list forms are shown only with placeholders and are stated as not recognised by `/spec:show-me`.
+    - A search for each pattern's distinctive text finds none.
+    - `git diff $PRE` is additive only (AC-86).
+  - Implementation should: add the form and its examples to the template and the quality bar, without removing or renumbering anything.
+  - Traces to: FR-22, NFR-6, AC-86; ADR 0078 KC1, IA 1.
 
----
+- [ ] **TEST + IMPLEMENT: T15.2 — `/spec:tasks` gives one template line per tag, requires the tag first with any id after the colon, and lists the drifted form only under *DO NOT***
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Verify by: running the task-type tag pattern over `.claude/commands/spec/tasks.md` matches every example checkbox line outside the *DO NOT Format Tasks Like This* block; the four tag lines are present; the drifted `T1.1 — STRUCTURAL` form appears only inside that block; no pattern text is present; `git diff $PRE` is additive (AC-87).
+  - Implementation should: add the four template lines from ADR 0078 KC2 and the drifted form to the *DO NOT* block.
+  - Traces to: FR-22, C-2, NFR-6, AC-87; ADR 0078 KC2, IA 2.
 
-## Phase 5 — Risk scoring and output (ADR 0073 Key Components 4–7; ADR 0072 Steps 7–8)
+- [ ] **TEST + IMPLEMENT: T15.3 — `/spec:review` treats a non-lead-in requirement declaration and a non-tag-first task checkbox as findings**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Verify by:
+    - `git diff $PRE -- .claude/commands/spec/review.md` shows one added check under *Requirements Review Criteria* and one under *Tasks Review Criteria*, and no other criterion removed or reworded (AC-88).
+    - In the clone, `/spec:review requirements` and `/spec:review tasks` on a scratch spec holding one `#### FR-1:` heading and one drifted task line each report the finding.
+  - Implementation should: add the two checks, worded by example.
+  - Traces to: FR-22, AC-88; ADR 0078 KC3, IA 3.
 
-- [x] **T5.1 — VERIFY: F4 reads the rollup with a three-way fallback and tallies to the rollup's own length.**
+- [ ] **TEST + IMPLEMENT: T15.4 — `/spec:write_release_notes` resolves its target as `/spec:show-me` does and stops without writing on every ladder row from 1 to 7**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Verify by (`shasum release_notes.md` and `git status` taken before and after each case; R2):
+    - Real repository:
+      - A bare invocation with no usable `.current-spec`, and `0002`: the messages name `/spec:write_release_notes` (AC-95, last part).
+      - `0036-scoped-lifetime-per-pipeline` stops naming `### Scoped lifetime per pipeline (spec 0036, #4256)`, asks the user to delete the section or mark it, and says marking hands over the body (AC-95, first part).
+      - `0036-generator-universal-rejection-tests` also stops, because of the shared id.
+    - Clone:
+      - `release_notes.md` deleted: the command stops and creates no file (AC-90).
+      - A file with no `##`.
+      - A target with no `.adr-list` and no `requirements.md`.
+      - Two sections marked for `0033-pg-advisory-lock-sha256`.
+      - A marked section under `## 10.7.0`.
+      - In each case the message names the case and nothing is written (AC-95).
   - Implementation should:
-    - Project each rollup entry to **one token** with `gh pr view {n} --json statusCheckRollup --jq '.statusCheckRollup[] | (.conclusion // .state // .status // "UNKNOWN")'`, and fetch `.statusCheckRollup | length` separately (ADR 0073 Step 5R.5).
-    - Write the **reason** for the three-way fallback beside it: `statusCheckRollup` is **not** a uniform array — on PR #4282 it returns 28 entries of which 26 are `CheckRun` (`conclusion` populated, `state` null) and 2 are `StatusContext` (`state` populated, `name`/`status`/`conclusion` all **null**; one is `license/cla` with `state: "SUCCESS"`). Reading `.conclusion` alone would classify those two as unrecognised → Medium when their real state is `SUCCESS`. A running `CheckRun` also has a null `conclusion`, with its live value in `.status`.
-    - Count with `grep -c` per value plus a **complement bucket** for everything else, so the tally sums to the rollup length by identity; no `sort`, no `uniq`.
-    - Map F4 per FR-11: Low only when a PR was found, the rollup returned ≥ 1 check, and **every** check is `SUCCESS` or `SKIPPED`; High on any `FAILURE`/`CANCELLED`/`TIMED_OUT`/`STARTUP_FAILURE`; Medium for no PR, empty/absent rollup, any `PENDING`/`IN_PROGRESS`/`QUEUED`/`NEUTRAL`/`ACTION_REQUIRED`, **any unrecognised value**, or a not-determinable result. FR-16 row 4: record `CI: no checks found for {sha}` as F4's measured value and set F4 Medium.
-    - Cite the value, not just the level — e.g. `28 checks: 26 CheckRun, 2 StatusContext; conclusions/states: 5 SUCCESS, 22 SKIPPED, 1 FAILURE`.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `gh pr view 4282 --json statusCheckRollup --jq '.statusCheckRollup[] | (.conclusion // .state // .status // "UNKNOWN")'` and `… --jq '.statusCheckRollup | length'`, run by hand, then `/spec:show-me scoped-lifetime` so the same mapping is observed in a real run's risk table. **Delete `specs/0036-scoped-lifetime-per-pipeline/show-me.md` afterwards.**
-    - Fixture: real and branch-independent — PR **#4282**'s live rollup. For AC-48's three cases, hand-evaluate the mapping against the rollup as measured and against two **synthetic variants** recorded in the approval notes: the same tally plus one `NEUTRAL`, and the same tally plus one `TIMED_OUT`. **This is one of the hand-evaluated cases named in the Phase 4 note** — CI state cannot be fabricated, and FR-18 forbids re-running checks to produce one.
-    - Check: **ADR 0073 named risk mitigation — `StatusContext` must not be misclassified.** The projection emits a non-`UNKNOWN` token for **every** entry: the count of `UNKNOWN` tokens is **0**, and specifically the `license/cla` entry projects as `SUCCESS` and not as unrecognised. **Tally identity** — the sum of the per-value `grep -c` counts plus the complement bucket equals `.statusCheckRollup | length` exactly, and the run's F4 cell cites that tally verbatim. **AC-48** — a rollup of 14 `SUCCESS` + 4 `SKIPPED` gives F4 **`Low`** with a measured value citing the skipped checks; adding one `NEUTRAL` gives **`Medium`**; adding one `TIMED_OUT` gives **`High`**. **AC-39 / FR-16 row 4** — an empty or absent rollup records `CI: no checks found for {sha}` as F4's measured value and F4 is `Medium`.
-  - Traces to: FR-11, FR-16 row 4, Definitions (`CI check`), C-10; AC-39, AC-48; ADR 0073 Key Components 5, Step 5R.5.
-  - **Landed 2026-09-20 (commit `5b30bfff9` feat)**: added Step 5R.5 (`gh pr view --json statusCheckRollup`, the three-way `.conclusion // .state // .status // "UNKNOWN"` fallback plus the separate `length` fetch) to the Step 5R measurement block, and opened `## Risk assessment (advisory)` in Step 6 with **F4 only** — its Low/Medium/High thresholds evaluated downward from High, the branch-protection-sense exclusion (C-10), and FR-16 row 4's empty/absent-rollup fallback. Verified against real PR #4282, not hand-derivation: the live rollup has **28** entries — **26 `CheckRun`** (5 `SUCCESS`, 22 `SKIPPED`, 1 `FAILURE`) and **2 `StatusContext`** (both project to `SUCCESS` via the `.state` fallback, including `license/cla`, which carries no `conclusion`/`status`/`name` at all) — confirmed with `gh pr view 4282 --json statusCheckRollup --jq '...'` run by hand. **Tally identity holds**: 1 + 22 + 5 = 28 = `.statusCheckRollup | length`; **`UNKNOWN` count is 0**. Under the rule as drafted, PR #4282's real current F4 is `High` (the one `FAILURE`) — a real, current result, not one of the task's synthetic cases. **AC-48's three cases are hand-evaluated, exactly as the task anticipates** (no real PR on this branch has the specific 14 SUCCESS/4 SKIPPED shape): base 14 `SUCCESS` + 4 `SKIPPED` → Low; + 1 `NEUTRAL` → Medium; + 1 `TIMED_OUT` (applied to the base, per the task's own phrasing) → High. **Same deviation as T4.2–T4.6, recorded again**: did not run `/spec:show-me scoped-lifetime` to a real `Write` — `## Risk assessment (advisory)` covers F4 only, so a full write would violate FR-5's all-eight-sections-always-present invariant one task early; verified the F4 rule directly against real `gh` ground truth instead. **Gotcha caught before merging**: the first draft's Step 6 owns-line read "an advisory Low/Medium/High read from five named factors" — `grep -oE 'gh [a-z]+ [a-z]+' show-me.md | grep -vE '^gh pr (view|list|diff)$'` false-positived on "…Hig**h read from**…" (the no-word-boundary gotcha PROMPT.md documents), reworded to "an advisory read — Low, Medium or High — from five named factors", re-ran the grep clean. No `show-me.md` generated, so nothing to delete under the cleanup rule.
+    - Create the new file `.claude/commands/spec/write_release_notes.md`. Its front matter: `allowed-tools` of `Bash(ls:*)`, `Read`, `Grep`, `Glob` and `Edit`; `description`; `argument-hint: [spec-id]`.
+    - Resolve by FR-1/FR-2, with no FR-3 check.
+    - Find headings and fence lines with one `Grep` that returns line numbers, discarding headings inside fences. Find markers with a literal `<!-- spec: ` `Grep`, and match them exactly after trimming.
+    - Evaluate ladder rows 1–7 in order.
+  - Traces to: FR-23 (stops), FR-1, FR-2, NFR-6, AC-53 (front matter), AC-90, AC-95; ADR 0078 *mechanism* ladder, KC5, IA 4.
 
-- [x] **T5.2 — VERIFY: The five factors are mapped by one shared evaluate-downward-from-High procedure, and no factor re-derives its own input.**
+- [ ] **TEST + IMPLEMENT: T15.5 — `/spec:write_release_notes` writes or replaces exactly one marked section under the first `##`, in the fixed form, with one exact-match `Edit`**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Verify by:
+    - Clone, with `specs/9015-two-breaks/` and a staged synthetic ADR recording two breaks:
+      - AC-89: one section directly under `## Master`; the marker on the next line; a summary; two bullets, each with an italic classification set and a migration. `git diff` shows one added hunk and nothing staged.
+      - Edit the ADR to one break and re-run for AC-90: one section, one bullet, all other bytes unchanged.
+      - An ADR with no break gives `No breaking changes.`
+    - AC-92 in the clone:
+      - A hand-written `### X (spec 9015)` section: the script run directly records `count` 0 and `m` null, and `/spec:show-me` reports row 5.
+      - Delete it and write three breaks: `count` 1, `m` 3.
+      - Hand-mark a section that has no `#### Breaking changes`: `count` 1, `m` null. `/spec:show-me` reads it, gives no disagreement line, and groups items by the no-catalogue rule.
+    - Real repository, with R2 restore:
+      - Hand-mark 0036's section. Running the command replaces it in place, keeps the title `Scoped lifetime per pipeline`, and leaves no second section (AC-95).
+      - Mark it instead for `0036-generator-universal-rejection-tests`. The command leaves it byte-identical and writes the target's own section (AC-95).
   - Implementation should:
-    - State the shared procedure **once** and apply it five times: *for factor F with evidence set E, evaluate F's **High** condition over the whole of E; if it holds, F is High and no further column is evaluated; otherwise evaluate **Medium** over the whole of E; otherwise F is **Low***. This makes FR-11's "highest matching column" a property of evaluation order rather than a post-hoc comparison, and it cannot produce "no column matched" (ADR 0073 Key Components 6).
-    - Apply it to F1 and F2 too, even though scalar counts over disjoint ranges make it vacuous — one rule with two vacuous applications beats one rule with two exceptions.
-    - Wire each factor's input per ADR 0073 Key Components 4: F1 = the `src/` bucket integer (ADR 0072 Step 5); F2 = **the emitted `Total breaking-change items: {n}` line**; F3 = the Classifier's round rows; F4 = the per-entry rollup tally; F5 = **the emitted `Shipped: … (of {total})` count line plus each non-`Shipped` row's follow-up text**.
-    - State the **handoff rule**: a factor mapping **never re-derives its own input** — re-partitioning breaking-change items or re-judging a requirement status inside the risk table would judge the same evidence twice and could contradict the section two pages above. The consequence is a sequencing constraint: **the risk table is synthesised after the sections it projects from** (Step 6 runs 6.a sections 1–5, then 6.b section 6, then 6.c sections 7–8; assembly into FR-5's fixed order happens at Step 7).
-    - Emit one table row per factor carrying **the measured value, not just the level** (`76 files under src/`, `14 items`, `11 findings over 3 implementation review rounds; 9 resolved, 2 acknowledged, 0 open`, the rollup tally, F5's count line), each cell a Classifier row's evidence field.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
+    - Write the form in ADR 0078 KC4, keeping the existing title on replacement.
+    - Take items from the Consequences sections and `requirements.md`. Resolve `.adr-list` entries by row 7's rule with `Glob`; an unresolved entry is named in the closing message, not treated as a stop.
+    - Read at most 200 lines per call, halving the limit when refused.
+    - Replace (row 8) or insert after the first `##` line (row 9) with one exact-match `Edit`. Never stage anything.
+  - Traces to: FR-23 (form, replacement), FR-7 (the reader), AC-89, AC-90, AC-92, AC-95; ADR 0078 KC4, KC5, IA 4.
+
+- [ ] **TEST + IMPLEMENT: T15.6 — `/spec:design` recommends `/spec:write_release_notes` when an ADR records a break, and `/spec:review`'s design criteria flag a break with no marked section**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
-    - Command: `/spec:show-me 0033-pg-advisory-lock-sha256` · `/spec:show-me sqs-cleanup`, plus the hand-evaluations below. **Delete both generated `show-me.md` files afterwards.**
-    - Fixture: real for the runs — both complete specs with non-determinable branches (F1 Medium), no PR (F3, F4 Medium) and, for `sqs-cleanup`, zero declared requirements (F5 Medium).
-    - Hand-evaluation 1 — **the three FR-11 collective tie-break cases**, from FR-11's own worked examples, recorded in the approval notes: a `Deferred` row with a recorded follow-up alongside a `Dropped` row stating `no follow-up recorded`; an acknowledged finding in one round alongside an open Critical finding in another; a rollup with one `NEUTRAL` alongside one `TIMED_OUT`. **These stay hand-evaluated** — each requires two conditions to hold simultaneously in one run, and no fixture on this branch (real or synthetic) produces such a pair.
-    - Hand-evaluation 2 — **AC-21's full all-Low factor set**, recorded in the approval notes: F1 = 4 `src/` files changed ⇒ Low; F2 = `Total breaking-change items: 0` ⇒ Low; F3 = one review round, 2 findings, both resolved, **none acknowledged, none open** ⇒ Low; F4 = a rollup of ≥ 1 check in which every entry concluded `SUCCESS` ⇒ Low; F5 = every requirement `Shipped`, count line `Shipped: n · … (of n)` ⇒ Low; therefore **all five factors are `Low`** and the overall level is `Low`. **State plainly that this can never be fixtured on this branch, rather than implying otherwise.** F3 = Low requires a real PR with a clean review history — every finding resolved and none acknowledged. A synthetic fixture has no PR at all, which forces F3 and F4 to Medium by FR-16 row 1, so the all-Low set is unreachable there. The one real PR available, **#4282, does not give F3 = Low either**: its tally is 11 findings / 9 resolved / **2 acknowledged** / 0 open, which AC-20 fixes at **Medium** precisely because F3's Low column requires nothing be acknowledged. AC-21 therefore remains a hand-evaluation permanently, and this is where it is discharged — it is verified nowhere else in this file.
-    - Check: **AC-21 (shape)** — in both runs every factor row states a measured value **and** a level, and no row states a level without a value. **AC-21 (full set)** — hand-evaluation 2 yields five `Low` levels, with each factor's Low column reached only after its High and Medium columns were evaluated and failed. **Handoff rule** — the F2 cell's `{n}` is byte-identical to the `Total breaking-change items: {n}` line in `## Breaking changes`, and the F5 cell reproduces the `Shipped: … (of {total})` count line from `## Did it ship what it said?`; neither number is recomputed anywhere in the risk section. **FR-11 collective rule** — hand-evaluation 1's three cases give **F5 High**, **F3 High** and **F4 High** respectively. **AC-45 (F5 boundary)** — a `Withdrawn` row citing both its decision and a superseding requirement puts F5 at **`Medium`**, not Low and not High. **AC-20 (F3 boundary)** — a tally of 11 findings / 9 resolved / **2 acknowledged** / 0 open puts F3 at **`Medium`**, not `Low`. **AC-16 / AC-43** — the `sqs-cleanup` run's F5 is `Medium`.
-  - Traces to: FR-7, FR-8, FR-11, NFR-7; AC-16, AC-20, AC-21, AC-43, AC-45, AC-48; ADR 0073 Key Components 4 and 6, Step 6.b.
-  - **Landed 2026-09-20 (commit `ff6d57771` feat)**: stated the shared evaluate-downward-from-High procedure once in `## Risk assessment (advisory)` (replacing F4's standalone duplicate from T5.1) and applied it to all five factors; added the handoff rule naming each factor's already-emitted source; wired F1 (Step 5's `src/` bucket), F2 (`## Breaking changes`' count line), F3 (Step 5R.7's round rows) and F5 (`## Did it ship what it said?`'s reconciliation table) with their Low/Medium/High columns verbatim from FR-11; wrote the three FR-11 collective-tie-break worked examples directly into the procedure paragraph. Verified against both named real fixtures: `specs/0033-pg-advisory-lock-sha256/` — F1 Medium (branch not determinable), **F2 Medium** (T3.5's real 1 breaking-change item, the `pg_locks` namespace-visibility break, falls in the 1–3 range), F3/F4 Medium (`gh pr list --head spec/pg-advisory-lock-sha256 --state all` returns empty), **F5 Low** (all 8 declared ids Shipped, per T3.7's real run) — every row states a value and a level (AC-21 shape). `specs/0002-sqs-cleanup/` — F1/F3/F4 Medium (no PR, confirmed empty `gh pr list`), F2 Medium (T3.4's real 1 item), **F5 Medium** (0 declared ids → FR-16 row 9), matching **AC-16/AC-43** exactly. **Hand-evaluation 1** (the three FR-11 collective cases) is written verbatim into the command file itself, so it doubles as the task's own worked documentation. **Hand-evaluation 2 (AC-21's full all-Low set) recorded as permanently unfixturable on this branch, exactly as the task states**: real PR #4282 has 2 acknowledged findings, which the Medium column's `≥ 1 acknowledged finding` clause pins F3 at Medium, not Low, so the all-five-Low combination cannot be produced from any fixture here — discharged by inspection of the rule and the real data, not by a run. **AC-20** confirmed against the already-established #4282 tally (11 findings, 9 resolved, 2 acknowledged, 0 open) — F3 Medium, not Low. **AC-45** confirmed against T3.7's synthetic `FR-27` Withdrawn-with-both-citations case — F5's Medium column's explicit inclusion clause covers it verbatim. Same deviation as T4.2–T5.1: no full `/spec:show-me` `Write` run — the overall-level computation (T5.3) and advisory framing (T5.4) aren't written yet, so FR-5's all-eight-sections invariant still isn't met; verified directly against real `gh`/`grep` ground truth and the prior tasks' already-confirmed data instead. **Gotcha hit three more times, same root cause as T5.1**: "High and no further", "High and stopping", "through it anyway" and "High is reserved" all false-positived the T1.1 acceptance grep (word after "…**Hig**h" or "t**h**rough" read as two lowercase words) — each reworded (a comma after "High" in the first two, "are still evaluated" replacing "go through it anyway", "only a gap left *unrecorded* reaches High" replacing "High is reserved…") and the grep re-run clean. No `show-me.md` generated, nothing to clean up.
+    - `git diff $PRE` on `design.md` and `review.md` shows one added step and one added check, with nothing else removed or reworded (AC-91).
+    - In the clone, `/spec:review design` on `9015-two-breaks` with its section deleted reports the finding and recommends `/spec:write_release_notes`.
+  - Implementation should: add the `/spec:design` step (tell the user and recommend the command, but do not run it) and the *Design (ADR) Review Criteria* check.
+  - Traces to: FR-23, AC-91; ADR 0078 KC3, KC6, IA 5.
 
-- [x] **T5.3 — VERIFY: The overall level is the maximum of the five factors, may be raised with a stated reason, and never lowered.**
-  - Implementation should:
-    - Compute the maximum mechanically over `Low < Medium < High` from the five Classifier-emitted levels (FR-12).
-    - Emit `**Overall risk: {Low|Medium|High}**` on its own line, followed by **2–5 sentences** of rationale referencing at least the factor(s) that set the level.
-    - Permit the Synthesiser to state a **higher** level with an explicit one-sentence reason naming what the factors miss, and **never** a lower one.
-    - Before Step 7's `Write`, run two assertions over the assembled text: the stated level is **≥** the computed maximum, and if strictly greater, a raising sentence is present (ADR 0073 Key Components 7).
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `/spec:show-me 0033-pg-advisory-lock-sha256` (real levels), plus hand-evaluation of AC-22's factor set. **Delete the generated `show-me.md` afterwards.**
-    - Fixture: real for the run. For **AC-22**, hand-evaluate the rule against the factor set F1 `Low`, F2 `Medium`, F3 `Low`, F4 `Low`, F5 `Low` and record the expected output in the approval notes.
-    - Check: **AC-22** — that factor set yields the line `**Overall risk: Medium**` and a rationale referencing **F2**. **AC-23** — in the real run, the stated level is **not lower** than the maximum of the five table rows read by hand; the rationale is between 2 and 5 sentences and names the factor(s) at the maximum; and if the stated level is strictly higher than the maximum, an explicit sentence giving the reason for raising it is present. **FR-12 non-averaging** — a factor set of F1 High, F2 High, F3 Medium yields `High`, not a mid value.
-  - Traces to: FR-12, NFR-1; AC-22, AC-23; ADR 0073 Key Components 7, Step 6.b.
-  - **Landed 2026-09-20 (commit `6d62d37b2` feat)**: added `## Risk assessment (advisory)`'s overall-level rule — the mechanical maximum of the five factor levels over `Low < Medium < High`, the `**Overall risk: {…}**` line plus 2–5 sentences of rationale, the raise-never-lower permission with its explicit-reason requirement, and the two pre-`Write` assertions (stated level ≥ computed maximum; a raising sentence present whenever strictly greater) — plus the C-8/spec-0036 worked example already used in `requirements.md`, reused verbatim here rather than invented fresh. Verified against `specs/0033-pg-advisory-lock-sha256/`'s already-established levels (T5.2: F1/F2/F3/F4 Medium, F5 Low) — max is **Medium**, and any of the four Medium-setting factors satisfies the "names the factor(s) at the maximum" requirement. **AC-22** hand-evaluated exactly as the task specifies: F1 Low, F2 Medium, F3 Low, F4 Low, F5 Low → max **Medium**, referencing **F2** — matches the task's literal assertion. **FR-12 non-averaging** confirmed trivially from the max definition: F1 High, F2 High, F3 Medium → High, never a mid value. Same deviation as T4.2–T5.2: no full `Write` run — T5.4's advisory framing (the FR-13 verbatim sentence, the no-branching invariant) is still pending, so FR-5's all-eight-sections invariant isn't met yet. Gotcha grep run clean on the first draft this time — no false positive. No `show-me.md` generated, nothing to clean up.
+## Phase 16 — Documentation
 
-- [ ] **T5.4 — VERIFY: The assessment is advisory by construction — the level is rendered in two places and tested in none.**
-  - Implementation should:
-    - Place FR-13's sentence in the command file as a **literal**, not something composed at run time: `This assessment is advisory only. It is not a merge gate; the merge decision stays with a human reviewer.`
-    - State the invariant: **no step in the procedure may branch on the level.** `High` and `Low` are values that get rendered, never conditions that get tested — which is what makes AC-25 a property of the procedure's shape (ADR 0073 Key Components 7).
-    - Write the level into exactly **two** places: the `**Overall risk: {…}**` line and FR-19's session report.
-    - Once the FR-3 precondition passes, always write the file, always complete, always report per FR-19, with **no error message and no refusal** — and never block, warn-and-stop, set a marker file, apply a label, post a comment, request changes or alter any approval state (FR-13, FR-18, Out of Scope).
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `/spec:show-me sqs-cleanup` run **twice** against the same fixture, with `git status --porcelain` captured before each run and after each run, and the full session transcript of each kept; then `grep -nE '(if|when|unless).*(High|Low|Medium)' .claude/commands/spec/show-me.md` over the command file. **Delete `specs/0002-sqs-cleanup/show-me.md` after the second run.**
-    - Fixture: real — `specs/0002-sqs-cleanup/`, used for both the advisory-text assertion and the side-effect comparison. **The synthetic all-Low / all-High fixture pair that an earlier draft of this task proposed does not exist and cannot be built**: a synthetic fixture has no PR, so FR-16 row 1 forces F3 = Medium and F4 = Medium and the "Low-shaped" run comes out Medium. AC-25's literal Low-versus-High pairing is therefore **not constructible from any fixture on this branch**, and this task discharges it in three parts rather than pretending otherwise:
-      1. **Structural** — the `grep` over the command file, which is the real content of AC-25: if no step tests the level, no side effect can depend on it.
-      2. **Empirical** — the two real runs above, whose computed factor levels are recorded in the approval notes, compared for side effects.
-      3. **Hand-evaluated** — two full factor sets recorded in the approval notes, in the same style T5.3 uses for AC-22: set L = F1 Low, F2 Low, F3 Low, F4 Low, F5 Low ⇒ `**Overall risk: Low**`; set H = F1 High, F2 Low, F3 Low, F4 Low, F5 Low ⇒ `**Overall risk: High**`. Walk the rendered document for each and confirm the **only** places the two differ are the `**Overall risk:**` line, its 2–5-sentence rationale, and the level word in the FR-19 session report — three renderings, no fourth.
-    - Check: **AC-24** — each run writes `show-me.md` whatever the level; the session output carries the full FR-19 report and **no error message and no refusal**; no marker file, label or comment is produced (`git status --porcelain` differs only by `show-me.md`, and `gh pr view` shows no new comment or label); and `## Risk assessment (advisory)` contains the FR-13 sentence **verbatim**, byte for byte. **ADR 0073 named mitigation** — the `grep` over the command file finds **no conditional whose test mentions the level**; if it finds one, this task fails regardless of what the runs produced. **AC-25 (empirical half)** — between the two real runs, the set of commands issued, the set of files touched, and the session report's structure are identical, and the `git status --porcelain` delta is the same single path both times. **AC-25 (hand-evaluated half)** — sets L and H differ in exactly the three renderings named above. Record explicitly in the approval notes whether the two real runs computed the same overall level; if they did, say so — the empirical half then demonstrates side-effect invariance across two runs rather than across two levels, and the Low-versus-High claim rests on parts 1 and 3.
-  - Traces to: FR-13, FR-18, FR-19, Definitions (`Advisory`); AC-24, AC-25; ADR 0073 Key Components 7.
+*ADR 0072 IA 11 and ADR 0078 IA 6. Depends on Phases 14–15.*
 
-- [ ] **T5.5 — VERIFY: Step 7 writes exactly one file, in one `Write`, with every link checked as tracked first.**
-  - Implementation should:
-    - Assemble the whole document in memory in FR-5's fixed order and emit it with a **single `Write`** to `specs/{dir}/show-me.md` — mirroring how `review.md` Step 6 writes `review-{phase}.md` after validating the content rather than streaming it out (ADR 0072 Key Components 4).
-    - Rely on `Write`'s own semantics for FR-4's "replaces its entire contents": no append, no `show-me-2.md`, no `.bak`, no refusal, no `git add`, no commit.
-    - Before writing, check **each** relative link with `git ls-files --error-unmatch {path}` and keep all paths repository-relative (FR-17, NFR-5).
-    - Modify nothing else: not `release_notes.md`, `requirements.md`, `tasks.md`, any ADR, any approval marker, `specs/.current-spec` or `.current-gear`; no stage, commit, push, branch, checkout, stash or rebase; no GitHub mutation of any kind (FR-18).
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `test ! -f specs/0033-pg-advisory-lock-sha256/show-me.md` (the precondition — see below), then `git status --porcelain > {capture A}`, then `/spec:show-me 0033-pg-advisory-lock-sha256`, then the same capture again and a diff; then run the command a **second** time against the same spec. **Delete `specs/0033-pg-advisory-lock-sha256/show-me.md` after the second run.**
-    - Fixture: real — `specs/0033-pg-advisory-lock-sha256/`, which must have **no pre-existing `show-me.md`** when this task starts and one when the second run starts. **Precondition, stated as a hard requirement**: ten earlier tasks write into this directory (T2.7, T3.1, T3.2, T3.5, T3.6, T3.7, T3.10, T4.6, T5.2, T5.3), and each of them now deletes its generated file per the generated-output cleanup rule. **Tasks must be performed in the order they appear in this file**; that ordering plus the cleanup rule is what makes the `test ! -f` precondition hold. If the precondition check fails, delete the stray file, record which task left it, and fix that task's cleanup line before proceeding — do not simply delete and carry on.
-    - Check: **AC-9** — after the first run `specs/0033-pg-advisory-lock-sha256/show-me.md` exists, the session output says it was **created** (not "replaced"), and the `git status --porcelain` diff shows that path as the **only** new/modified entry, unstaged and uncommitted — over and above the standing `specs/9999-show-me-fixture/` staged entries, which are present in both captures and are therefore not a difference. **AC-10** — after the second run the file's contents are **wholly replaced** (no duplicated headings, no appended second document), the session output says **replaced**, and no `show-me-2.md`, `show-me.md.bak` or similarly named file exists in the directory. **AC-30 / NFR-8** — across both runs the only `git status --porcelain` difference is that one path; `git log -1` is unchanged; `git branch --show-current` is unchanged; and `gh pr view` for any PR shows no new comment, label or state change. **AC-29** — every relative link in the written file passes `git ls-files --error-unmatch` on its resolved path, and the number of such links is greater than zero.
-  - Traces to: FR-4, FR-5, FR-17, FR-18, NFR-5, NFR-8, C-7; AC-9, AC-10, AC-29, AC-30; ADR 0072 Key Components 4, Step 7.
+- [ ] **DOC: T16.1 — Catalogue `/spec:show-me`, `/spec:write_release_notes` and both scripts in `.claude/commands/spec/README.md`**
+  - Do:
+    - Add command sections for both commands.
+    - Add rows to the *Sub-agents & model policy* table (no sub-agent).
+    - Document `show_me_facts.cs`: what it emits (the ledger, exit statuses and the two stderr records), how it is invoked, and that a user never invokes it directly.
+    - Document `show_me_facts_tests.cs`: how to run it, what it covers, and that it is not part of CI.
+  - Acceptance: the README clauses of AC-53 hold, links resolve, and the diff is additive.
+  - Traces to: NFR-6, AC-53; ADR 0072 *Where each artefact is touched*, IA 11; ADR 0078 IA 6.
 
-- [ ] **T5.6 — VERIFY: Step 8 checks the word budget mechanically and prints the FR-19 report.**
-  - Implementation should:
-    - Run NFR-2's word count with the `awk` program ADR 0072 Step 8 fixes — counting whitespace-delimited tokens containing at least one alphanumeric character, over every line from the first H2 onward, **excluding** lines beginning with `|` after trimming and **exiting at** `## Inputs used`. Headings, prose and **bullet lists** all count.
-    - Outside **400–2,000** ⇒ revise and re-`Write` **the same path** — re-writing one file the command already owns keeps NFR-8 true.
-    - Print FR-19's session report: the path written, whether it was **created or replaced**, the overall level, and the one-line reminder that the level is advisory. On any FR-1/FR-2/FR-3 stop, print **only** that stop message.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `/spec:show-me 0034-failed-delivery-context` (the largest requirement table available without the calibration branch, so the budget is under real pressure), then the Step 8 `awk` program run by hand against the produced file. **Delete `specs/0034-failed-delivery-context/show-me.md` afterwards.**
-    - Fixture: real — `specs/0034-failed-delivery-context/`, complete with 24 tasks and a **15**-row reconciliation table (FR-1…FR-9 plus NFR-1…NFR-6, per T3.6). Fifteen rows is the pressure this task exists to apply: the budget must accommodate the whole table plus eight sections of prose.
-    - Check: **AC-33** — the hand-run `awk` count over the written file is between **400 and 2,000**, and it equals the number the command itself reported in its self-check (the command does not estimate); the table's 15 rows are excluded from the count by the leading-`|` rule, and the `## Inputs used` section is excluded by the exit rule. **AC-31 / FR-19** — the session output states the written path `specs/0034-failed-delivery-context/show-me.md`, says `created` or `replaced`, states the overall level, and carries the advisory reminder — four elements, all present. **Stop-path contrast** — re-running against `specs/0003-remove_clear_event_bus_calls/` prints **only** the FR-3 stop message, with no path, no level and no advisory line.
-  - Traces to: NFR-2, FR-19, NFR-8; AC-31, AC-33; ADR 0072 Step 8, ADR 0073 Step 8.
+- [ ] **DOC: T16.2 — Ask for merge commits in `CONTRIBUTING.md`, and say why**
+  - Do: add one paragraph under *Submitting Changes*. It asks that pull requests are merged with a merge commit, not squashed or rebased, because tooling pins commit shas from a merged branch's history and only a merge commit keeps them reachable.
+  - Acceptance: AC-94 holds, and `git diff $PRE -- CONTRIBUTING.md` adds one paragraph only.
+  - Traces to: NFR-9, AC-94; ADR 0072 KC6, Risks (calibration commits unreachable), IA 11.
 
----
+## Phase 17 — Acceptance on the finished command
 
-## Phase 6 — Documentation and final verification
+*Depends on Phases 1–16. T17.2 and T17.3 are the (C-8) criteria and must finish while #4282 is OPEN (R8). Each task re-runs, on the final command, the Verify-by set-ups named in earlier tasks.*
 
-- [ ] **T6.1 — STRUCTURAL: Add `/spec:show-me` to `.claude/commands/spec/README.md`.**
-  - Add a `### `/spec:show-me [spec-id]`` catalogue section in the `## Commands` list (matching the file's own backtick-wrapped heading convention, e.g. `### `/spec:ralph-implement [count]``), **after the `### Running the unattended loop` material and before `## Complete Example`**, separated by the file's `---` rule like its neighbours. `### Running the unattended loop` is a continuation of `/spec:ralph-implement`'s own documentation, so inserting between the two would split one command's entry in half; placing the new section after it keeps `/spec:ralph-implement` whole and keeps `/spec:show-me` inside `## Commands`. The section carries: a one-line purpose, two usage examples (`/spec:show-me` and `/spec:show-me 0036-scoped-lifetime-per-pipeline`), the fact that it runs **only against a complete spec** (FR-3), that it writes exactly one file `specs/{spec}/show-me.md` and overwrites in place (FR-4), and the advisory-not-a-gate statement (FR-13).
-  - Add a row to the **Model policy** table recording ADR 0072's and ADR 0073's no-sub-agent decision for this command, alongside the file's existing entries for the other no-sub-agent commands.
-  - Add `show-me.md` to the **File Structure** tree under the spec directory, annotated `# Spec summary + advisory risk read (/spec:show-me)`.
-  - Acceptance check: `grep -c '/spec:show-me' .claude/commands/spec/README.md` returns ≥ 3 (catalogue heading, model-policy row, file tree or example); the new heading appears **after** the `### Running the unattended loop` heading and **before** the `## Complete Example` heading in `grep -nE '^#{2,4} ' .claude/commands/spec/README.md` output; the new section's relative links resolve; the `---` separators above and below it match the surrounding style.
-  - Traces to: NFR-6; AC-53; ADR 0072 Key Components 1.
+- [ ] **PROJECT: T17.1 — Pre-flight: confirm the (C-8) window and the calibration preconditions**
+  - Do:
+    - Confirm `gh pr view 4282 --json state` returns `OPEN`.
+    - Confirm `git diff --quiet 91d549be6 HEAD -- specs/0036-scoped-lifetime-per-pipeline/requirements.md specs/0036-scoped-lifetime-per-pipeline/tasks.md` succeeds, and that `git cat-file -e` succeeds for `6145913a0` and `91d549be6`.
+    - Check that `dotnet --version` is 10.x, and that `dotnet run .claude/commands/spec/show_me_facts_tests.cs` exits `0`.
+  - Risk handling:
+    - If #4282 has merged, the (C-8) criteria have lapsed. Record which could not be exercised and do not simulate them.
+    - If either 0036 file changed, re-measure the calibration row's file figures (37; 82; 62/12/2/6/0) with independent `grep -E` and update the row. If the change came from new #4282 commits, re-pin to the new head, re-measure the diff figures, and record the date.
+  - Traces to: C-8, NFR-9 (*Why the calibration row is pinned*), AC-79.
 
-- [ ] **T6.2 — VERIFY: Two runs on unchanged inputs produce identical mechanical fields (NFR-1).**
-  - Implementation should:
-    - Rely on the structural split rather than on restraint: every field NFR-1 lists comes from the Measurer, and Step 6 makes no shell call (ADR 0072 *Positive* consequences, *Risks and Mitigations*).
-    - State in the command file which fields are guaranteed identical (section set and order; every `## Blast radius` number and the named source/refs/shas; task total and per-tag counts; CI check tally; FR-8 row count and id set; F1 and F4) and which are **not** (FR-7's item list and F2; FR-8's statuses and F5; the review-round decomposition and F3; all prose).
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `/spec:show-me 0034-failed-delivery-context` run twice with the generated file copied aside between runs, then compared. **Delete `specs/0034-failed-delivery-context/show-me.md` and the copy afterwards.**
-    - Fixture: real — `specs/0034-failed-delivery-context/`, with no change to any input between the two runs (same measured ref, same head sha, same PR state, same rollup). Its branch is not determinable, so no part of the comparison depends on the calibration merge still being in place.
-    - Check: **AC-32** — between the two outputs, **every** number in `## Blast radius`, the `Measured from` and `Ref used` lines, the task total and per-tag counts, the CI check tally, the FR-8 **row count** (**15**) and the **set of requirement ids** (FR-1…FR-9, NFR-1…NFR-6), and the **F1 and F4 levels** are byte-identical. The F3/F2/F5 values, the overall level and all prose are **not** required to be identical; instead assert that each run's F2 matches that run's own `Total breaking-change items:` line, each run's F5 matches that run's own count line and follow-up cells, and each run's F3 matches that run's own `## How it was built` round lines. **AC-34 / NFR-7** — spot-check every count in each file against the input `## Inputs used` attributes it to, and confirm it matches that input's actual content.
-  - Traces to: NFR-1, NFR-7; AC-32, AC-34; ADR 0072 *Risks and Mitigations*.
+- [ ] **PROJECT: T17.2 — (C-8) Run `/spec:show-me` on spec 0036 while PR #4282 is open**
+  - Do:
+    - Run `/spec:show-me 0036-scoped-lifetime-per-pipeline` twice, capturing `git status --porcelain` before and after each run.
+    - Check AC-1, AC-2, AC-4 (resolution); AC-11; AC-12; AC-13; AC-14; AC-17; AC-18; AC-20; AC-24; AC-26; AC-30 (the only `git status` change is `show-me.md`; the ledger's `gh_commands` holds one `gh pr list … --state open`; no command-issued `gh` or `git merge-base`); AC-31; AC-32 (the two runs' mechanical fields are identical, and each run's F2 and F5 match its own evidence); AC-33; AC-34; AC-51; AC-56; AC-59 and AC-63 (when two diagrams are drawn); AC-62; AC-73; AC-74; AC-75; AC-76; AC-77; AC-78.
+    - Copy the output to the scratch directory for the user, since it may inform #4282, then apply R3.
+  - Acceptance: every listed AC holds, or its failure is recorded as a defect against the task that owns it.
+  - Traces to: C-8, FR-1–FR-21, NFR-1–NFR-8, and the ACs listed.
 
-- [ ] **T6.3 — VERIFY: The command works offline with no `gh` (NFR-4).**
-  - Implementation should:
-    - Degrade per FR-16 rows 1–2 on any non-zero `gh` exit: ledger row `not available: gh unavailable`, `## How it was built` takes its defined line, blast radius still measured from `git diff`, F3 and F4 both `Medium` — and the run still produces a **complete** `show-me.md` (NFR-4).
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `/spec:show-me 9999-show-me-fixture` run in a session whose `PATH` excludes `gh` (or with `gh` temporarily shadowed by a non-executable stub on `PATH` — restore `PATH` afterwards; do **not** move or delete the real binary). **Delete the generated `show-me.md` from the fixture afterwards.**
-    - Fixture: the **shared fixture from T2.1**, whose branch `refs/remotes/origin/spec/show-me-fixture` **is** resolvable at `$FIXTURE_HEAD`, so the git-diff fallback path is genuinely exercised rather than masked by a not-determinable branch. `specs/0037-show-me/` cannot be used — FR-3 refuses it. **Do not delete the fixture here**: T6.5 still needs it, and it is torn down at the close of T6.5.
-    - Check: **AC-28** — the run still writes a **complete** `show-me.md` with all eight H2 sections; `## Inputs used` records `gh unavailable` as the reason on the pull-request, review-comments and CI-checks rows; the risk table shows **F3 `Medium`** and **F4 `Medium`**; and `## Blast radius`'s `Measured from` line names `git diff {merge-base sha}..{head sha}` and not `gh pr diff`. The bucket counts match the hand-run `git diff --name-only {mb}..$FIXTURE_HEAD` counts, confirming the fallback measured rather than gave up — a non-zero total is required; a run that measured nothing has not exercised the fallback.
-  - Traces to: NFR-4, FR-16 rows 1–2, C-6; AC-28; ADR 0073 Step 5R.
+- [ ] **PROJECT: T17.3 — (C-8) AC-47 in the clone: a local branch that diverges from the remote-tracking ref**
+  - Do: in R4 with K12's moved local 0036 branch, run `/spec:show-me 0036-scoped-lifetime-per-pipeline`. Check that the remote-tracking ref is measured, that the metadata and Blast radius name that full ref and its sha together with the base ref and merge base, and that the local-divergence line is present.
+  - Traces to: FR-10, C-4, C-8, AC-47.
 
-- [ ] **T6.4 — VERIFY: The C-8 calibration run against spec 0036 reproduces the published figures, then the calibration merge is reset.**
-  - Implementation should:
-    - Require no code change — this task is the end-to-end calibration of everything built above against the case the requirements were written from.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `/spec:show-me 0036` (expect an ambiguity stop) · `/spec:show-me scoped-lifetime` · `/spec:show-me` with `specs/.current-spec` temporarily set to `0036-scoped-lifetime-per-pipeline` (restore it to `0037-show-me`, byte for byte, afterwards).
-    - Fixture: **real, and already in the tree** — the calibration branch was **merged** into `spec/show-me` by **T4.1** and has stayed merged through Phases 4–6, so `specs/0036-scoped-lifetime-per-pipeline/`, its seven ADRs and its `release_notes.md` section are all present. Both `spec/scoped-lifetime-per-pipeline` and `origin/spec/scoped-lifetime-per-pipeline` exist; PR **#4282** is live.
-    - **Closing steps, in this order** (this is where the calibration fixture's life ends):
-      1. Delete `specs/0036-scoped-lifetime-per-pipeline/show-me.md` **before** the reset, so the reset does not leave it orphaned inside a directory that no longer exists.
-      2. **Reset the merge.** If no commit landed on `spec/show-me` after `MERGE_SHA`, `git reset --hard {PRE_MERGE sha}`. If commits did land — which they will, since Phases 4–6 edit the command file — use `git rebase --onto {PRE_MERGE sha} {MERGE_SHA}` to drop the merge commit while keeping the Phase 4–6 work. Both shas were recorded in T4.1's approval notes.
-      3. Confirm afterwards: `test ! -d specs/0036-scoped-lifetime-per-pipeline` succeeds; `ls docs/adr/ | grep -c '^0070'` returns 1, not 2; `git log --oneline --merges -1` no longer names the calibration merge; `git status --porcelain` is clean apart from the standing `specs/9999-show-me-fixture/` staged entries. **This must happen before T6.6**, whose dogfood run measures `specs/0037-show-me/`'s own branch diff and would otherwise report the calibration branch's 76 `src/` files as part of it.
-    - Check: **AC-1** — `0036` stops with the ambiguity message naming **both** `0036-generator-universal-rejection-tests` and `0036-scoped-lifetime-per-pipeline`, writing nothing. **AC-2** — `scoped-lifetime` resolves to `specs/0036-scoped-lifetime-per-pipeline/`. **AC-4** — the no-argument run targets the same spec. **AC-18** — `## Blast radius` reports `src/` **76**, `tests/` **393**, `specs/` **24**, `docs/` **14**, `.github/` **0**, `other` **10**, which sum to the reported total **517**; net lines and the public-API declaration-line count are reported; and exactly one measurement source is named with its refs and shas. **AC-12 / AC-51** — `## What changed and why` is 150–600 words, names all seven ADRs `0070-per-pipeline-di-scope-for-mapper-and-transform-factories` … `0076-scope-affinity-option-and-write-through` **by stem** with title and Status, links each so it resolves from the spec directory, and contains **no** bare-number ADR reference — which matters because that tree holds **two** files numbered 0070 and **two** numbered 0071. **AC-17** — exactly **three** rounds with counts 3, 5, 3; severity splits `0/0/0/0/3`, `0/0/2/3/0`, `0/0/1/2/0`; resolution splits `3/0/0`, `3/2/0`, `3/0/0`; totals **11 findings / 9 resolved / 2 acknowledged / 0 open**; the line `Specification-phase review passes excluded: 1`; **no** round derived from any of the six task-completion comments; the **82**-task total with its per-tag breakdown; and the branch commit count. These figures must match the ones T4.3–T4.6 observed; a divergence between an earlier stage run and this one means a later task regressed an earlier stage. **AC-20** — the risk table shows F1 **`High`** citing `76`, F2 **`High`** citing `14`, F3 **`Medium`** citing the 11/9/2/0 tally, and the overall line reads `**Overall risk: High**` set by F1 and F2. **AC-47** — if the local and remote refs have diverged by the time this runs, the measured ref is the remote-tracking one and the `Local branch … differs from the measured ref.` line is present; if they are still equal, that line is **absent** and the ref named is still the full `refs/remotes/origin/…` form.
-  - Traces to: FR-1, FR-2, FR-6, FR-9, FR-10, FR-11, FR-12, C-5, C-8, C-9; AC-1, AC-2, AC-4, AC-12, AC-17, AC-18, AC-20, AC-47, AC-51; ADR 0072 *Decision* and ADR 0073 *Decision*, exercised end to end — this task composes every Key Component of both against the single case the requirements were calibrated from, which is the only place either Decision is validated as a whole rather than component by component.
+- [ ] **PROJECT: T17.4 — Regression sweep over the real no-diff fixtures**
+  - Do: re-run the Verify set-ups of T9.1–T9.3, T11.1, T12.1, T13.3, T14.1–T14.4, T14.6 and T14.7 on the fixtures they name (`0002-*`, `0003`, `0005`, `0021`, `0023`, `0033`, plus `README.md` and `kafka-widget`). Check AC-1a, AC-3, AC-5, AC-6, AC-7, AC-8, AC-9, AC-10, AC-16, AC-19, AC-27, AC-29, AC-35, AC-36, AC-37, AC-41, AC-42, AC-43, AC-44, AC-61, AC-70, AC-71, AC-72 and AC-93.
+  - Traces to: FR-1–FR-3, FR-16, FR-17, FR-21, NFR-8, and the ACs listed.
 
-- [ ] **T6.5 — VERIFY: A 15-ADR spec with a very large `tasks.md` stays inside the NFR-3 budget (AC-52), then the shared fixture is torn down.**
-  - Implementation should:
-    - Require no code change — this task confirms that the ADR exclusion from the 25-read cap is what makes a many-ADR spec tractable (ADR 0072 Step 5 continued).
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `/spec:show-me 9999-show-me-fixture`
-    - Fixture: the **shared tracked fixture from T2.1**, temporarily reshaped in the working tree only, per the synthetic-fixture rule: (a) overwrite its `tasks.md` with a **verbatim copy** of `specs/0027-box-schema-versioning-and-migrations/tasks.md` (137 KB, 111 checkboxes, none unchecked); (b) overwrite its `.adr-list` with **15 real ADR filenames** from `docs/adr/` (any fifteen that exist, each with its `.md` extension so all resolve unambiguously — note the calibration branch's seven ADRs are gone by now, T6.4 having reset the merge, so choose from what remains); (c) leave its `requirements.md` as it stands (FR-1, FR-2, NFR-1 ⇒ 3 rows). Because both files are staged, the fixture is still tracked throughout, so FR-17's test passes on every path the run writes.
-    - **Closing steps** — this is where the shared fixture's life ends, since this is the last task that uses it:
-      1. Delete the generated `specs/9999-show-me-fixture/show-me.md`.
-      2. `git rm -r --cached specs/9999-show-me-fixture/` then `rm -rf specs/9999-show-me-fixture/`.
-      3. `git branch -D spec/show-me-fixture` and `git update-ref -d refs/remotes/origin/spec/show-me-fixture`.
-      4. Confirm `git status --porcelain specs/` is empty and `git branch -a` matches its pre-T2.1 state. **This must happen before T6.6**, so the dogfood run sees the repository as a user would.
-    - Check: **AC-52** — the run **completes**; the transcript shows at most **25** full-file `Read` calls, with the fifteen ADRs read only via `head -14` and `grep -A 25 '^## Consequences'` and therefore **excluded** from that count; `tasks.md` is processed by `grep` extraction and is **never** `Read`; FR-9's task total is **111** with per-tag counts summing to it; FR-8's three rows each carry evidence; and **no** value anywhere in the output is reported as zero or omitted because a read was skipped.
-  - Traces to: NFR-3, FR-17; AC-52; ADR 0072 Step 5 (continued).
+- [ ] **PROJECT: T17.5 — Regression sweep over the clone fixtures K1–K12**
+  - Do:
+    - Rebuild R4 from the final commit and re-run the K-fixture set-ups. Check AC-15, AC-21, AC-22, AC-28, AC-40, AC-45, AC-52, AC-54, AC-55, AC-57, AC-58, AC-60, AC-64, AC-65, AC-66, AC-67, AC-68 and AC-85.
+    - For AC-25, compare the K2 run (`Low`) with a `0036` run (`High`) in the same clone. The only difference in side effects is the text of `show-me.md`: the same shape of commands, one written path, and no marker, label or comment.
+    - Rerun the R5 stand-in cases on the real repository for AC-46 and AC-84.
+  - Traces to: FR-6, FR-8, FR-10–FR-13, FR-20, NFR-3, and the ACs listed.
 
-- [ ] **T6.6 — VERIFY: The command runs against its own spec — the dogfood check, and the final FR-3 proof.**
-  - Implementation should:
-    - Require no code change. This is the closing end-to-end run, and it exercises FR-3 twice by construction: first while this very task is still unchecked, then after it is ticked.
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL before merging this task's section into the command file** *(fires in the `review-before` gear, which is the default — see ADR 0071)*
-  - Verify by:
-    - Command: `/spec:show-me 0037-show-me` run **twice** — once with this task's own checkbox still `- [ ]`, then, after ticking every task in this file including this one, again.
-    - Fixture: real and self-referential — `specs/0037-show-me/` on branch `spec/show-me`, whose FR-10 rule 1 resolves (`spec/show-me` exists; note `origin/spec/show-me` may not, in which case the local branch is used and the local-differs line is correctly absent), whose `.adr-list` names `0072-show-me-command-resolution-and-output.md` and `0073-show-me-review-history-and-risk-model.md`, and which has **no** `.issue-number`. **Preconditions, both established by earlier tasks and both to be re-confirmed here before the first run**: T6.4 has reset the calibration merge (`test ! -d specs/0036-scoped-lifetime-per-pipeline` succeeds), so the measured diff is this spec's own and not 0036's; and T6.5 has torn down `specs/9999-show-me-fixture/` (`git status --porcelain specs/` is empty), so the tree is as a user would find it. **Cleanup exception**: the generated `specs/0037-show-me/show-me.md` is **kept** — it is the artefact this spec exists to produce, and it is the only generated file this task list leaves behind.
-    - Check: **First run — AC-6/FR-3** — the command stops with `Spec specs/0037-show-me is not finished: 1 of {total} tasks are still unchecked.` naming this task's title, and writes nothing (`git status --porcelain` unchanged). **Second run — AC-9** — `specs/0037-show-me/show-me.md` is created and is the only new path. **AC-11** — all eight H2 headings in order, with a metadata block whose linked issue reads `none` and whose spec-branch/head/base/merge-base lines are populated. **AC-12** — the narrative names **both** ADRs by stem with title and Status `Accepted`, with links resolving from `specs/0037-show-me/`, and no bare-number reference. **AC-26** — 3–7 paths, all present in the hand-run diff, each with a ≤ 25-word reason, noting that the diff touches no `src/` files — an assertion that holds only because the calibration merge was reset at T6.4. **AC-33** — the counted body is between 400 and 2,000 words by the Step 8 `awk`. **AC-31** — the session report names the path, says `created`, states the level and carries the advisory line. **AC-34** — every count in the file is attributable to a row in its own `## Inputs used` and matches that input's actual content. **AC-30** — `git status --porcelain` before and after differs only by `specs/0037-show-me/show-me.md`, and every `gh` invocation in the transcript is one of the three allowed verbs.
-  - Traces to: FR-3, FR-4, FR-5, FR-6, FR-14, FR-18, FR-19, NFR-2, NFR-6, NFR-7; AC-6, AC-9, AC-11, AC-12, AC-26, AC-30, AC-31, AC-33, AC-34; ADR 0072 *Decision* and ADR 0073 *Decision*, exercised end to end on the one spec whose inputs the reader can check line by line — the self-referential run is the only test of both Decisions against a spec whose entire provenance is in front of the reviewer.
+- [ ] **PROJECT: T17.6 — End to end with a real marked section written by `/spec:write_release_notes`**
+  - Do:
+    - Run `/spec:write_release_notes 0033-pg-advisory-lock-sha256`, then `/spec:show-me 0033-pg-advisory-lock-sha256`.
+    - Check AC-69: the section is read, the `release_notes.md` row is `used`, and neither row 5's nor row 5a's line appears. When `{m}` ≠ `{n}`, the disagreement line is present.
+    - Tear down with `git checkout -- release_notes.md` and R3.
+  - Traces to: FR-7, FR-15, FR-23, AC-69, AC-92.
 
----
+- [ ] **PROJECT: T17.7 — Conventions and permission boundaries**
+  - Do:
+    - `git clone` into the scratch directory with no build, restore or install step. From its root, run `dotnet run .claude/commands/spec/show_me_facts.cs -- specs/0033-pg-advisory-lock-sha256`, which exits `0`, and the test script, which exits `0` (AC-53).
+    - `git ls-files --stage` shows `100644` for both scripts, and there is exactly one of each in `.claude/commands/spec/`.
+    - Both new command files have the family's front matter.
+    - AC-82:
+      - `git diff $PRE -- .claude/settings.json` shows only the T1.3 line.
+      - In a Claude Code session, `dotnet run $SCRATCH/other.cs -- specs/x` and `dotnet run .claude/commands/spec/show_me_facts.cs --file x.cs` both raise a permission prompt.
+      - The `.gitignore` diff is one exact line.
+    - `git diff --stat $PRE -- src tests .github` is empty. `release_notes.md` matches `$PRE`.
+  - Traces to: NFR-6, FR-18, C-10, AC-53, AC-82, AC-94 (inspection); ADR 0072 *Where each artefact is touched* ("Deliberately unchanged").
+
+## Phase 18 — Close-out after PR #4282 merges
+
+*Depends on T17.1–T17.3 being finished and on PR #4282 having merged.*
+
+- [ ] **PROJECT: T18.1 — Merge `origin/master` into `spec/show-me` so that the spec's own diff no longer carries spec 0036, then re-run the test script**
+  - Do:
+    - `git fetch origin`, then `git merge origin/master` on `spec/show-me`, and resolve any conflicts.
+    - Confirm that `git merge-base --is-ancestor 91d549be6 origin/master` succeeds (it was a merge commit), and that `git diff --stat origin/master...HEAD` lists only this spec's files.
+    - Re-run `dotnet run .claude/commands/spec/show_me_facts_tests.cs`, which must exit `0` (AC-79 after the merge).
+  - Risk handling:
+    - If #4282 was squashed or rebased, `91d549be6` stays reachable only through this branch's history. Record that, and raise the AC-94 risk with the user.
+    - If 0036's `requirements.md` or `tasks.md` changed on master after `91d549be6`, re-measure the calibration row's file figures as in T17.1.
+  - Traces to: C-8, NFR-9 (*Why the calibration row is pinned*), AC-79, AC-94; ADR 0072 Risks (calibration commits unreachable).
 
 ## Coverage cross-reference
 
-### Functional and non-functional requirements
+### Requirements → tasks
 
-| Requirement | Covered by |
-|---|---|
-| FR-1 — argument taken whole, three-rule resolution, ambiguity/no-match stops | T1.3; T6.4 (AC-1/AC-2) |
-| FR-2 — no-argument targets `.current-spec`, missing/empty/stale | T1.4; T6.4 (AC-4) |
-| FR-3 — complete-spec precondition, three stop messages | T1.5; T6.6 (self-referential proof) |
-| FR-4 — exactly one file, overwritten in place | T5.5 |
-| FR-5 — H1, metadata block, eight H2 sections in fixed order | T3.1; T2.3 (row 15 substitutions); T2.7 (linked issue) |
-| FR-6 — synthesised narrative, every ADR by slug, no bare numbers | T3.2; T3.3 (unresolved entries); T6.4 (AC-12/AC-51) |
-| FR-7 — breaking-change items, classification set, count line | T3.4; T3.5 (no-diff derivation) |
-| FR-8 — reconciliation table, row set, statuses, count line | T3.6 (row set); T3.7 (statuses); T3.8 (rows 8–9) |
-| FR-9 — task shape, commit shape, review-history lines | T4.6; T4.3/T4.4/T4.5 (the tallies it renders) |
-| FR-10 — branch/base/merge-base resolution, six buckets, measurement lines | T2.2; T2.3; T2.5 |
-| FR-11 — five factors, thresholds, measured values, collective tie-break | T5.1 (F4); T5.2 (shared mapping, F1/F2/F3/F5) |
-| FR-12 — maximum of factors, raise never lower | T5.3 |
-| FR-13 — advisory, verbatim sentence, no behavioural difference | T5.4 |
-| FR-14 — 3–7 paths with reasons, or the no-diff fallback | T3.9 |
-| FR-15 — `## Inputs used` provenance for every input | T3.10 |
-| FR-16 rows 1–2 (no PR / `gh` unavailable) | T2.4; T4.2; T6.3 |
-| FR-16 row 3 (PR, no implementation round) | T4.6 |
-| FR-16 row 4 (no CI checks) | T5.1 |
-| FR-16 row 5 (no `release_notes.md` section) | T2.7; T3.4 |
-| FR-16 row 6 (`.adr-list` missing/empty) | T2.7; T3.2 |
-| FR-16 row 7 (unresolvable `.adr-list` entry) | T2.7; T3.3 |
-| FR-16 rows 8–9 (`requirements.md` missing / no ids) | T3.8 |
-| FR-16 row 10 (`.issue-number` absent) | T2.7 |
-| FR-16 row 11 (`PROMPT.md` absent — reported nowhere) | T3.10 |
-| FR-16 rows 12 and 15 (branch not determinable; metadata) | T2.3 |
-| FR-16 row 13 (`Where to look first` fallback) | T3.9 |
-| FR-16 row 14 (`Breaking changes` without a diff) | T3.5 |
-| FR-17 — `PROMPT.md` never cited; only git-tracked paths referenced | T2.1 (fixture staged/tracked); T3.10; T5.5 (pre-write link check); T6.5 |
-| FR-18 — no write but `show-me.md`; `gh` confined to three verbs | T1.1 (front matter); T2.4; T5.5 |
-| FR-19 — session report | T5.6; T5.4 (report present whatever the level) |
-| FR-20 — PR discovery rule, one diff source named | T2.4 |
-| NFR-1 — deterministic mechanical fields, judged fields named | T1.2 (the role split that makes it structural); T6.2 |
-| NFR-2 — 400–2,000 counted words, mechanically checked | T5.6; T3.10 (section excluded from the count) |
-| NFR-3 — bounded cost, 25-read cap, degrade by chunking | T1.5; T2.6; T6.5 |
-| NFR-4 — works offline | T6.3; T4.2 |
-| NFR-5 — no secrets, no untracked contents, relative paths | T3.10 |
-| NFR-6 — convention conformance (front matter, `$ARGUMENTS`, README) | T1.1; T6.1 |
-| NFR-7 — traceable claims | T1.2 (ledger rule); T3.10; T6.2 (AC-34) |
-| NFR-8 — safe re-run; stop leaves repo unchanged | T1.5 (AC-7); T5.5 (AC-10/AC-30); T5.6 (re-`Write` same path); T2.1 (fixture teardown symmetry) |
-
-**Gaps: none.** Every FR-1…FR-20 and NFR-1…NFR-8 maps to at least one task.
-
-### ADR decisions
-
-| ADR decision / component | Covered by |
-|---|---|
-| **0072** Decision — single self-contained prompt file, measure-then-synthesise, one `Write` | T1.1; T1.2; T5.5 |
-| **0072** Measurer/Synthesiser split ("the Measurer never paraphrases, the Synthesiser never counts") | T1.2; T6.2 |
-| **0072** KC 1 — the command file and its README catalogue entry | T1.1; T6.1 |
-| **0072** KC 1 — no sub-agent | T1.2 |
-| **0072** KC 2 — the precondition gate above every write | T1.5 |
-| **0072** KC 3 — the in-context fact ledger, its row shape, the traceability rule, the `PROMPT.md` no-row exception | T1.2; T3.10 |
-| **0072** KC 4 — the output document, single `Write` | T5.5 |
-| **0072** Tech — front matter and the three narrow `gh` verbs | T1.1 |
-| **0072** Tech — no `git rev-list`, no `sed`, no `sort`; BSD-compatible POSIX regexes | T1.1; T1.2; T2.5 |
-| **0072** Step 0 — pre-flight `ls -1d specs/*/` candidate list | T1.1; T1.3 |
-| **0072** Step 1 — whole-`$ARGUMENTS`, model-side matching over the line list | T1.3; T1.4 |
-| **0072** Step 2 — three bounded `grep`s, never a `Read` | T1.5 |
-| **0072** Step 3 — branch rules, remote-wins, base ref, explicit merge-base | T2.2; T2.3 |
-| **0072** Step 4 — PR discovery, exact `headRefName` filter, highest number, diff election | T2.4 |
-| **0072** Step 5 — blast radius by counting; `other`/`untagged` as complements | T2.5; T4.6 |
-| **0072** Step 5 (continued) — the 25-read budget allocation table; ADR reads excluded | T2.6; T6.5 |
-| **0072** Step 6 — the measured/judged table per section; `release_notes.md` bullet grouping as tie-break; ADR slug rule; `.adr-list` entry normalisation | T3.1–T3.10 (one task per section, with FR-8 split across T3.6 and T3.7); T3.4 (tie-break); T3.2/T3.3 (slug rule); T2.7 (normalisation) |
-| **0072** Step 7 — one `Write`, pre-write `git ls-files` link check | T5.5 |
-| **0072** Step 8 — `awk` budget self-check, revise-and-rewrite, FR-19 report | T5.6 |
-| **0072** Risk — Synthesiser recomputing a Measurer-owned value | T1.2 (no shell in Step 6); T6.2 (AC-32 two-run comparison) |
-| **0072** Risk — a second write / marker file | T1.2 (ledger is in-context); T5.5 (`git status` before/after) |
-| **0072** Risk — argument split on whitespace | T1.3 (AC-35, unquoted four-word form) |
-| **0072** Risk — `gh pr diff` head moved since `gh pr list` | T2.2/T2.5 (the sha queried is recorded and named; the synthetic fixture's refs are pinned so the sha cannot move under a later phase) |
-| **0072** Risk — an empty `grep` mistaken for a real zero | T1.5; T2.6; T4.2 (exit status, not output) |
-| **0072** Risk — format drift in requirement declarations | T3.6 (all three shapes, three positive fixtures: 0031, 0034, 0027) |
-| **0073** Decision — inline decomposition from a structural skeleton, eight stages, three judgement points | T4.2–T4.5, each observed against a real `/spec:show-me scoped-lifetime` run; T6.4 (end to end) |
-| **0073** Classifier role and its three-part contract | T1.2; T4.6 (rendering, not counting) |
-| **0073** KC 1 — no sub-agent, decided on its own evidence | T1.2; T4.2 |
-| **0073** KC 2 — the structural skeleton projection; level-agnostic headings | T4.2 |
-| **0073** KC 3 stage A — qualification; preamble is not the discriminator | T4.3 |
-| **0073** KC 3 stage B — locate sequence; exclude verdict sections and trailing asides | T4.3 |
-| **0073** KC 3 stage C — split numbered container items | T4.3 |
-| **0073** KC 3 stage D — group comments into passes (author · numbering · 15 min) | T4.3 |
-| **0073** KC 3 stage E — attach inline comments by the window alone, dedup, the unreachable-body limitation | T4.4 |
-| **0073** KC 3 stage F — phase exclusion by three disjunctive tests, author date; then 1..k numbering | T4.4 |
-| **0073** KC 3 stage G — severity from the title marker only | T4.5 |
-| **0073** KC 3 stage H — resolution precedence, Acknowledged, judgement point 3; verdict read twice | T4.5 |
-| **0073** KC 4 — factor inputs and the handoff rule ("never re-derives its own input"); 6.a/6.b/6.c sequencing | T5.2 |
-| **0073** KC 5 — F4's three-way `.conclusion // .state // .status` fallback; tally sums to rollup length | T5.1 |
-| **0073** KC 6 — one shared evaluate-downward-from-High mapping, five uses | T5.2 |
-| **0073** KC 7 — maximum as overall level; raise-never-lower assertions; advisory-by-construction; verbatim sentence as a literal; no step branches on the level | T5.3; T5.4 |
-| **0073** Tech — `--jq` as part of `gh pr view`; `grep -c` with a complement; body slices never whole comments | T4.2; T5.1 |
-| **0073** Step 5R.1–5R.6 measurement, incl. `tasks.md` first-add author date | T4.2; T4.4 |
-| **0073** Step 5R.7 ordering (D before F, F before numbering) | T4.4 |
-| **0073** Step 6.a — FR-9 rendering, `{m}`/`{u}` separate slots, FR-16 row 3 | T4.6 |
-| **0073** Step 6.b — factor table with measured values, maximum, rationale, verbatim sentence | T5.2; T5.3; T5.4 |
-| **0073** Step 8 — unchanged from ADR 0072 | T5.6 |
-| **0073** Risk — raw comment JSON read back into context | T4.2 (skeleton-first stated as a named step, byte figures checked) |
-| **0073** Risk — rounds counted by tracking-comment timestamps | T4.3 (AC-50's three failure modes, read off the run's own output) |
-| **0073** Risk — severity matched from body prose | T4.5 (round 1's three findings must stay unclassified) |
-| **0073** Risk — verdict section's residual concern counted as a new finding | T4.3 (round 2 must be five, not six) |
-| **0073** Risk — `StatusContext` entries misclassified as unrecognised | T5.1 (zero `UNKNOWN` tokens; `license/cla` projects as `SUCCESS`; tally sums to length) |
-| **0073** Risk — a `High` level leaking into behaviour | T5.4 (grep the command file for a conditional mentioning the level) |
-| **Fixture infrastructure** — the tracked synthetic fixture (FR-17) and the calibration merge (C-8) that make the above observable rather than hand-evaluated | T2.1 (create `9999-show-me-fixture`); T6.5 (tear it down); T4.1 (merge the calibration branch); T6.4 (reset the merge) |
-
-### Fixture lifecycle summary
-
-Two fixtures span multiple phases. Both are created once and destroyed once, and nothing between those points recreates them.
-
-| Fixture | Created by | Used by | Destroyed by |
+| Id | Tasks | Id | Tasks |
 |---|---|---|---|
-| `specs/9999-show-me-fixture/` + `spec/show-me-fixture` refs (tracked, staged) | **T2.1** | T2.2, T2.4, T2.5, T3.9, T4.2, T6.3 (successful runs); T2.7, T3.3, T3.7, T3.8, T3.10, T6.5 (temporary modifications on top, each restored with `git checkout --`) | **T6.5**, closing steps — the last task that needs it, and before T6.6's clean-tree dogfood |
-| `spec/scoped-lifetime-per-pipeline` merged into `spec/show-me` | **T4.1** | T4.3, T4.4, T4.5, T4.6, T5.1, T6.4 | **T6.4**, closing steps — before T6.6, whose blast radius must not include the calibration branch's 76 `src/` files |
+| FR-1 | T9.1, T9.2, T17.2, T17.4 | FR-17 | T10.1, T11.1, T14.4, T14.6 |
+| FR-2 | T9.1, T9.2 | FR-18 | T1.3, T3.2, T6.2, T9.1, T17.2, T17.7 |
+| FR-3 | T3.3, T3.4, T9.2 | FR-19 | T9.2, T14.7 |
+| FR-4 | T1.2, T3.1, T7.1, T11.1 | FR-20 | T6.2, T11.1 |
+| FR-5 | T11.1 | FR-21 | T2.1–T8.2, T9.2, T9.3, T14.7 |
+| FR-6 | T5.3, T5.4, T10.1, T12.1, T12.2, T14.1, T14.3, T14.6 | FR-22 | T15.1, T15.2, T15.3 (and the form of this file) |
+| FR-7 | T4.1, T10.2, T13.5, T14.1 | FR-23 | T15.4, T15.5, T15.6, T16.1, T17.6 |
+| FR-8 | T3.5, T13.5, T14.2 | NFR-1 | T3.1–T5.4, T9.3, T11.1, T17.2 |
+| FR-9 | T3.3, T5.1, T11.1 | NFR-2 | T8.1, T8.2, T14.7 |
+| FR-10 | T5.1, T6.1, T11.1, T17.3 | NFR-3 | T5.1, T10.1, T10.2, T12.2 |
+| FR-11 | T5.2, T13.3, T13.5 | NFR-4 | T6.2, T14.4 |
+| FR-12 | T13.4, T14.5 | NFR-5 | T11.1, T14.6 |
+| FR-13 | T13.1–T13.4, T14.5, T14.7 | NFR-6 | T3.1, T9.1, T15.1–T15.4, T16.1, T17.7 |
+| FR-14 | T12.2, T14.3 | NFR-7 | T12.2, T13.5, T17.2 |
+| FR-15 | T14.4 | NFR-8 | T3.4, T7.1, T9.2, T9.3, T11.1 |
+| FR-16 | T3.5, T3.6, T6.1, T6.2, T10.2, T11.1, T12.1, T13.3, T14.1–T14.4 | NFR-9 | T1.1, T1.4, T2.1–T8.2, T13.1, T16.2, T17.1, T18.1 |
+
+All 32 declared ids have at least one task.
+
+### Acceptance criteria → tasks
+
+(C-8) criteria are **bold**. Retired criteria (AC-38, 39, 48, 49, 50) need no task.
+
+| AC | Tasks | AC | Tasks | AC | Tasks | AC | Tasks |
+|---|---|---|---|---|---|---|---|
+| **AC-1** | T9.1, T17.2 | AC-21 | T13.5, T17.5 | AC-45 | T13.5, T14.2 | AC-69 | T10.2, T14.4, T17.6 |
+| AC-1a | T9.1, T9.2 | AC-22 | T13.5, T14.5 | AC-46 | T6.2, T11.1, T17.5 | AC-70 | T3.1, T3.5, T9.3 |
+| **AC-2** | T9.2, T17.2 | AC-23 | T13.4, T14.5 | **AC-47** | T6.1, T17.3 | AC-71 | T3.4, T9.2 |
+| AC-3 | T9.1 | AC-24 | T13.4, T14.7, T17.2 | **AC-51** | T14.1, T17.2 | AC-72 | T9.2, T9.3 |
+| **AC-4** | T9.2, T17.2 | AC-25 | T14.7, T17.5 | AC-52 | T10.1, T17.5 | AC-73 | T6.2, T17.2 |
+| AC-5 | T9.1 | AC-26 | T14.3, T17.2 | AC-53 | T15.4, T16.1, T17.7 | AC-74 | T1.2, T11.1, T17.2 |
+| AC-6 | T9.2 | AC-27 | T14.4 | AC-54 | T13.5, T14.2 | AC-75 | T14.4, T17.2 |
+| AC-7 | T3.4, T9.2 | AC-28 | T6.2, T14.4 | AC-55 | T13.5, T14.2 | AC-76 | T10.1, T17.2 |
+| AC-8 | T9.2 | AC-29 | T14.6 | **AC-56** | T12.2, T14.1, T17.2 | **AC-77** | T10.1, T17.2 |
+| AC-9 | T11.1 | AC-30 | T6.2, T17.2 | AC-57 | T12.1, T12.2 | **AC-78** | T10.1, T12.2, T17.2 |
+| AC-10 | T11.1 | AC-31 | T14.7 | AC-58 | T12.2 | AC-79 | T2.1–T8.2, T17.1, T18.1 |
+| AC-11 | T11.1, T17.2 | AC-32 | T17.2 | AC-59 | T8.1, T14.6, T14.7 | AC-80 | T8.1, T8.2 |
+| **AC-12** | T14.1, T17.2 | AC-33 | T14.7 | AC-60 | T14.3 | AC-81 | T13.1 |
+| AC-13 | T14.1 | AC-34 | T17.2 | AC-61 | T12.1 | AC-82 | T1.3, T3.2, T17.7 |
+| AC-14 | T14.1 | AC-35 | T9.1, T9.2 | AC-62 | T17.2 | AC-83 | T3.1, T7.1 |
+| AC-15 | T13.5, T14.2 | AC-36 | T14.3 | AC-63 | T10.1, T12.2, T17.2 | AC-84 | T6.2, T11.1 |
+| AC-16 | T13.3, T14.2 | AC-37 | T14.1 | AC-64 | T12.2 | AC-85 | T6.1, T11.1 |
+| **AC-17** | T11.1, T17.2 | AC-40 | T14.1 | AC-65 | T14.3 | AC-86 | T15.1 |
+| **AC-18** | T5.1, T6.1, T6.2, T11.1, T17.2 | AC-41 | T14.4 | AC-66 | T5.1, T11.1 | AC-87 | T15.2 |
+| AC-19 | T6.1, T11.1 | AC-42 | T3.6, T14.1 | AC-67 | T5.3, T11.1 | AC-88 | T15.3 |
+| **AC-20** | T13.3, T13.5, T17.2 | AC-43 | T3.5, T13.3, T14.2 | AC-68 | T10.2, T14.4 | AC-89 | T15.5 |
+| AC-90 | T15.4, T15.5 | AC-91 | T15.6 | AC-92 | T4.1, T15.5, T17.6 | AC-93 | T3.2, T9.2 |
+| AC-94 | T16.2, T17.7 | AC-95 | T15.4, T15.5 | | | | |
+
+Every one of the 91 live ACs is covered. The 12 (C-8) criteria are AC-1, 2, 4, 12, 17, 18, 20, 47, 51, 56, 77 and 78. They are exercised in T17.2 and T17.3 inside R8's window, and they lapse when #4282 merges. AC-79 is pinned and survives the merge (T18.1).
+
+### ADR decisions and Implementation Approach steps → tasks
+
+| ADR | Decision / step | Tasks |
+|---|---|---|
+| 0072 | IA 1 (`.gitignore`, settings) | T1.2, T1.3 |
+| 0072 | IA 2 (fixture tree) | T1.4 (plus T1.1, the staged-fixture removal) |
+| 0072 | IA 3 (harness) | T2.1 |
+| 0072 | IA 4 (file fields, grammar, gate) | T3.1–T3.6 |
+| 0072 | IA 5 (marked sections, `{m}`) | T4.1 |
+| 0072 | IA 6 (pinned diff fields, 10 boundary rows) | T5.1–T5.4 |
+| 0072 | IA 7 (unpinned ref fields) | T6.1, T6.2 |
+| 0072 | IA 8 (atomic write, cap, residue) | T3.1, T7.1 |
+| 0072 | IA 9 (word count) | T8.1, T8.2 |
+| 0072 | IA 10 (command file, Steps 1–8) | T9.1–T9.3, T10.1–T10.2, T11.1, T12.x, T13.x, T14.1–T14.7 |
+| 0072 | IA 11 (README, CONTRIBUTING) | T16.1, T16.2 |
+| 0072 | KC1 script / KC2 ledger | T3.1–T6.2, T7.1, T8.1 |
+| 0072 | KC3 reads and read log | T9.3, T10.1, T10.2 |
+| 0072 | KC4 gate and four stops | T3.4, T9.1–T9.3 |
+| 0072 | KC5 output document | T11.1, T14.1–T14.4, T14.6 |
+| 0072 | KC6 test script and fixtures | T1.4, T2.1, T3.2, T3.3, T7.1, T13.1, T16.2 |
+| 0072 | Technology Choices (C# app and JSON, payload in a file, allow entry, `allowed-tools`, no sub-agent) | T3.1, T2.1, T1.3, T3.2, T9.1 |
+| 0072 | Risks (SDK `--`, killed tmp, prefixes, argument split, calibration reachability, model counting) | T3.2, T7.1, T3.4, T9.1, T16.2/T18.1, T9.3/T17.2 |
+| 0073 | IA 1 (FR-13 row) · IA 2 (markers) · IA 3 (factors, forced, mapping) · IA 4 (max, raise, sentence, checks) · IA 5 (Classifier; rationale; FR-19 copy) | T13.1 · T13.2 · T13.3 · T13.4 · T13.5, T14.5, T14.7 |
+| 0073 | KC1–KC5 | T13.5, T13.3, T13.3, T13.4/T14.5, T13.1/T13.2/T14.7 |
+| 0077 | IA 1 (ladder, lines, node list) · IA 2 (Explainer) · IA 3 (placement) · IA 4 (Inputs used rows) · IA 5 (pre-Write checks) | T12.1 · T12.2 · T14.1, T14.3 · T14.4 · T14.6 |
+| 0077 | KC1–KC6 | T12.2 (KC1–KC4), T14.3 (KC5), T14.6 (KC6) |
+| 0078 | IA 1 · IA 2 · IA 3 · IA 4 · IA 5 · IA 6 | T15.1 · T15.2 · T15.3 · T15.4, T15.5 · T15.6 · T16.1 |
+| 0078 | KC1–KC6 | T15.1, T15.2, T15.3/T15.6, T15.5, T15.4/T15.5, T15.6 |
+
+Every Implementation Approach step of the four ADRs has at least one task.
 
 ### Scope-creep check
 
-Every task above traces to at least one FR/NFR **and** at least one ADR decision, as listed in its own `Traces to:` line and in the two tables. The two end-to-end calibration tasks, **T6.4** and **T6.6**, cite ADR 0072's and ADR 0073's *Decision* sections at that level deliberately: they introduce no new behaviour, and instead compose every Key Component already tested individually, against the two cases where the whole Decision can be validated as a unit — the spec the requirements were calibrated from, and this spec itself. The two fixture-infrastructure tasks, **T2.1** and **T4.1**, trace to the requirements whose verification would otherwise be vacuous (FR-17 and C-8 respectively) rather than to behaviour of their own. **No task is present that does not trace back to a requirement or an ADR decision.**
+Every task traces to a requirement or an ADR decision. The four that might look extra are these:
 
-Three things deliberately *not* tasked, for the record: no `.claude/settings.json` change (C-10, FR-18, Out of Scope — both ADRs confirm the command fits the existing allow-list); no automated test harness or helper script (ADR 0072 Alternative 1, and the owner's decision recorded at the top of this file); and no second pull request, fabricated CI state or synthetic review history on a real PR, which is why AC-46, AC-48, AC-49, AC-38 and AC-21 remain hand-evaluated — each is discharged in a named task's approval notes, with the reason it cannot be fixtured stated there rather than implied.
+- **T1.1** is the settled removal of the staged fixture. It traces to NFR-9's "not under `specs/`" rule.
+- **T17.1–T17.7** are acceptance runs. They add no artefact.
+- **T18.1** traces to C-8, NFR-9's pinning rationale and AC-79/AC-94.
+
+No task adds anything under `src/`, `tests/` or CI, and no task edits `release_notes.md` permanently.
