@@ -48,7 +48,7 @@
 
 ## Phase 1 — Structural (Tidy First)
 
-- [ ] **1.1 GATE: Commit the five compile-only V10 compatibility samples before any public surface changes (R-24, AC-27)**
+- [x] **1.1 GATE: Commit the five compile-only V10 compatibility samples before any public surface changes (R-24, AC-27)**
   - Add one compile-only sample file (`V10CompatibilitySample.cs`) to each of these existing projects:
     - `tests/Paramore.Brighter.Core.Tests/`: `Subscription`, `MessageHeader`, `Message`
     - `tests/Paramore.Brighter.AWS.Tests/`: `SqsSubscription`

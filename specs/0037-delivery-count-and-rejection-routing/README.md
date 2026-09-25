@@ -143,7 +143,8 @@ those two rungs; a third mechanism is out of bounds.
 - [x] **Adversarial Review (tasks) — round 4**, 2026-09-25. NEEDS WORK, 4 findings, 1 at or above threshold 60. Phase 5's stream routing needed the `googclient_deliveryattempt` ignore entry that only landed in 6.4. The 6.3/6.4 area had drawn a finding three rounds running, so on the user's call they move into Phase 5 as 5.5c/5.5d ahead of 5.6. All 4 applied and verified against the file.
 - [x] **Adversarial Review (tasks) — round 5**, 2026-09-25. **PASS**: 2 findings, none at or above threshold 60 (Medium 55, Low 25). Both applied with no further round (user's call): 5.6's routed-copy clause reads the destination with a raw `Pull`, not through `Parser`; 1.5's citations and Verification wording corrected.
 - [x] **Tasks approved** 2026-09-25 (`.tasks-approved`) after 5 review rounds: 79 tasks — 36 TEST + IMPLEMENT, 17 CHARACTERISE, 4 TIDY, 17 GATE, 5 MEASURE.
-- [ ] **Implementation** — `/spec:implement` (not started — no code written)
+- [ ] **Implementation** — `/spec:ralph-implement` (review-after, scoped to tasks 1.1–2.7) in progress
+  - [x] AC-27 samples committed (0da0169b9) — task 1.1
 
 **TDD gear:** `review-before` (armed by default). No `.current-gear` file exists for this spec.
 
