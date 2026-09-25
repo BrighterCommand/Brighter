@@ -411,7 +411,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - The `(?!Type)` carve-out is required because FR-5's remedy clause contains `ChannelFactoryType` preceded by a space; without it AC-13 and AC-15 could not both pass
   - Depends on: 23.
 
-- [ ] **25. CHARACTERISE: Findings are one-per-subscription, ordered and deterministic (AC-30, FR-13)**
+- [x] **25. CHARACTERISE: Findings are one-per-subscription, ordered and deterministic (AC-30, FR-13)**
   - **USE COMMAND**: `/test-first when the same configuration is evaluated twice the rule should produce identical ordered findings`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_evaluating_the_same_configuration_twice_should_produce_identical_ordered_findings.cs`
