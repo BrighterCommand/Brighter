@@ -533,7 +533,7 @@ One task per transport. Each bundles that transport's one-line `ChannelFactoryTy
     - Keep it an **expression-bodied `typeof(...)`** on the non-generic base — ADR 0073's sweep reads it from an uninitialised instance
   - Depends on: 30.
 
-- [ ] **32. TEST + IMPLEMENT: `MqttSubscription` declares the MQTT channel factory (FR-8 — AC-21, AC-25b, AC-26b, AC-26f)**
+- [x] **32. TEST + IMPLEMENT: `MqttSubscription` declares the MQTT channel factory (FR-8 — AC-21, AC-25b, AC-26b, AC-26f)**
   - **USE COMMAND**: `/test-first when reading the channel factory type of an MQTT subscription it should be the MQTT channel factory and the rule should report no findings`
   - Test location: "tests/Paramore.Brighter.MQTT.Tests/MessagingGateway"
   - Test files:
