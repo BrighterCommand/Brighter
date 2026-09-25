@@ -65,7 +65,7 @@
   - Do not rename the generated harness record `RejectionMetadataKeys` (`Templates/MessagingGateway/Shared/RejectionMetadataKeys.cs.liquid`).
   - Verification: no behaviour change; existing tests stay green.
 
-- [ ] **1.3 TIDY: In-scope `RefreshMetadata` methods use `RejectionMetadataKeyNames`**
+- [x] **1.3 TIDY: In-scope `RefreshMetadata` methods use `RejectionMetadataKeyNames`**
   - **USE COMMAND**: `/tidy-first replace rejection metadata string literals with RejectionMetadataKeyNames in SQS and RocketMQ consumers`
   - Change `src/Paramore.Brighter.MessagingGateway.AWSSQS/SqsMessageConsumer.cs` `RefreshMetadata` (`:496-513`), the V4 twin (`:489`), and `src/Paramore.Brighter.MessagingGateway.RocketMQ/RocketMessageConsumer.cs` `RefreshMetadata` (`:248`). Replace literals only. The null-reason early return stays for now; it changes in 4.5 and 7.2.
   - Depends on: 1.2
