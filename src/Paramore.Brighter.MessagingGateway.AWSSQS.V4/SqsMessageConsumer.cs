@@ -489,19 +489,19 @@ public partial class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageCo
     private static void RefreshMetadata(Message message, MessageRejectionReason? reason)
     {
         // Keys use camelCase because the bag is JSON-serialized with CamelCase naming policy
-        message.Header.Bag["originalTopic"] = message.Header.Topic.Value;
-        message.Header.Bag["rejectionTimestamp"] = DateTimeOffset.UtcNow.ToString("o");
-        message.Header.Bag["originalMessageType"] = message.Header.MessageType.ToString();
+        message.Header.Bag[RejectionMetadataKeyNames.OriginalTopic] = message.Header.Topic.Value;
+        message.Header.Bag[RejectionMetadataKeyNames.RejectionTimestamp] = DateTimeOffset.UtcNow.ToString("o");
+        message.Header.Bag[RejectionMetadataKeyNames.OriginalMessageType] = message.Header.MessageType.ToString();
 
         // Remove SQS-specific headers that will be reset when sent to the DLQ
         message.Header.Bag.Remove("ReceiptHandle");
 
         if (reason == null) return;
 
-        message.Header.Bag["rejectionReason"] = reason.RejectionReason.ToString();
+        message.Header.Bag[RejectionMetadataKeyNames.RejectionReason] = reason.RejectionReason.ToString();
         if (!string.IsNullOrEmpty(reason.Description))
         {
-            message.Header.Bag["rejectionMessage"] = reason.Description ?? string.Empty;
+            message.Header.Bag[RejectionMetadataKeyNames.RejectionMessage] = reason.Description ?? string.Empty;
         }
     }
 
