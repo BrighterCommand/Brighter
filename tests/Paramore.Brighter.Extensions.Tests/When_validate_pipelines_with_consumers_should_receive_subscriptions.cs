@@ -78,7 +78,7 @@ public class ValidatePipelinesWithConsumersTests
         var specs = provider.GetServices<ISpecification<Subscription>>().ToList();
 
         // Assert — AddConsumers should register 6 consumer validation specs
-        Assert.Equal(6, specs.Count);
+        Assert.Equal(7, specs.Count);
     }
 
     [Fact]
