@@ -229,3 +229,150 @@ Applied, each verified by grepping the text back from the ADR (not from script o
 | 13 | both | `Parser.cs:296`; `bag read :70` (both verified in source) |
 
 Index regenerated (no frontmatter change). Round 2 to follow.
+
+---
+
+# Review: design — 0037-delivery-count-and-rejection-routing (round 2)
+
+**Date**: 2026-09-25
+**Threshold**: 60
+**Verdict**: NEEDS WORK
+
+2 findings at or above threshold 60. Address these before approving.
+
+## Findings
+
+### 1. Step 5's `.native` move leaves the DLQ reader and subscription names unspecified — Brighter-routed copy read from the wrong place or dropped (Score: 64)
+
+Round 1's remediation moves the harness's native `DeadLetterPolicy` to topic `{deadLetterRoutingKey}.native` and has the providers "pre-provision each destination topic with a reading subscription", but does not say (a) that `GetMessageFromDeadLetterQueue(Async)` — which today reads `subscription.DeadLetter.Subscription` on `DeadLetter.TopicName` — must be re-pointed at the reading subscription on the Brighter topic `{deadLetterRoutingKey}` (with R=3 < M=5 the routed copy lands there, not on `.native`); nor (b) how the native policy's subscription is named. It is `new ChannelName(deadLetterRoutingKey.Value)` today; if the new reading subscription also takes the routing key's name, `EnsureSubscriptionExistsAsync`'s static per-name cache returns early, the Brighter topic is left without a subscription, and routed copies are discarded — the hazard 0078 itself lists under Negative consequences.
+
+**Evidence**: 0078:281-282; `GcpPullMessageGatewayProvider.cs:143`, `:152`, `:290-292`, `:325-327`; `GcpPubSubMessageGateway.cs:201-205`; FR-23 and rejection-routing templates call `GetMessageFromDeadLetterQueue`.
+
+**Recommendation**: In step 5: `GetMessageFromDeadLetterQueue(Async)` reads the reading subscription on `{deadLetterRoutingKey}`; the native policy's subscription is also named `{deadLetterRoutingKey}.native`; AC-9/AC-43's native read keeps `DeadLetter.Subscription`.
+
+**Fix type**: ADR addition
+
+---
+
+### 2. AC-18's Given: "identical but with Assume" makes the subscription under test Pull on Stream configurations and leaves broker-side attributes unassigned (Score: 62)
+
+0078:185 gives the provisioning subscription `SubscriptionMode.Pull` "on every configuration"; 0078:186 makes the subscription under test "identical but with `makeChannels: OnMissingChannel.Assume`" — read literally, Pull on `GCP / Stream` and `GCP / StreamOrdering`, so AC-18/AC-43 would exercise the pull consumer there. Also, under `Assume` `EnsureSubscriptionExistsAsync` returns immediately (`:188-192`), so the broker learns the ack deadline, ordering and `DeadLetterPolicy` only from the provisioning subscription. AC-18's release proof rests on `AckDeadlineSeconds: 60`; the provider's non-DLQ shape uses `10` (`GcpPullMessageGatewayProvider.cs:166`), so an unreleased message would return inside `W` = 10 s and AC-18 could pass vacuously.
+
+**Evidence**: 0078:185-186; `GcpPubSubMessageGateway.cs:188-192`; `GcpPubSubConsumerFactory.cs:80-85`; requirements AC-18 "on the pull consumer `AckDeadlineSeconds: 60`".
+
+**Recommendation**: (2) the subscription under test is the configuration's own subscription, own `SubscriptionMode`, `makeChannels: Assume`; (1) the provisioning subscription differs only in `Create` + `Pull` and carries every broker-side attribute the scenario relies on (`AckDeadlineSeconds`, `EnableMessageOrdering`, AC-43's `DeadLetterPolicy`).
+
+**Fix type**: ADR rephrase
+
+---
+
+### 3. RocketMQ AC-24: `ReadHandledCount` runs before the bag exists (Score: 50)
+
+0077:194 says `ReadHandledCount` uses `DeliveryCount.Resolve(header, view.DeliveryAttempt, bag)`, but `ReadHandledCount(message)` (static, `MessageView` only, `RocketMessageConsumer.cs:422`) is called at `:292` before the header is built; `header.Bag` is filled from `message.Properties` afterwards. The ADR records the equivalent ordering for SQS and GCP but not RocketMQ.
+
+**Recommendation**: resolve after the bag loop: `header.HandledCount = DeliveryCount.Resolve(header.HandledCount, view.DeliveryAttempt, header.Bag)`.
+
+**Fix type**: ADR rephrase
+
+---
+
+### 4. Async path's post-`Failed` producer disposal unspecified (Score: 42)
+
+0078:135 puts disposal in the guarded region but not that `RouteAsync` uses `DisposeAsync`; `GcpMessageProducer.Dispose` is sync-over-async (`GcpMessageProducer.cs:141-143` vs `:150-152`).
+
+**Recommendation**: "`Route` uses `Dispose`, `RouteAsync` uses `DisposeAsync`."
+
+**Fix type**: ADR rephrase
+
+---
+
+### 5. "Created once per consumer" contradicts re-creation after `Failed` (Score: 40)
+
+0078:173 vs 0078:135.
+
+**Recommendation**: "created on first use, and again after each `Failed` outcome".
+
+**Fix type**: ADR rephrase
+
+---
+
+### 6. 0077 says the inline creator reads the handled count "before the bag and topic" (Score: 35)
+
+`SqsInlineMessageCreator.cs` reads topic `:55`, handled count `:60`, bag `:76`.
+
+**Recommendation**: "before the bag (`:60` vs `:76`)".
+
+**Fix type**: ADR rephrase
+
+---
+
+### 7. `GcpIamCallTolerance` contract omits `public` on two methods (Score: 35)
+
+0078:229, :232 — `TryCallAsync`, `TryCreateProjectsClientAsync` have no modifier; `IsTolerated` is `public`.
+
+**Recommendation**: mark both `public`.
+
+**Fix type**: ADR rephrase
+
+---
+
+### 8. Line citation drift (Score: 25)
+
+0077:185 cites `GcpPubSubConsumerFactory.cs:88-91`; the derivation is at `:89-92`.
+
+**Fix type**: ADR rephrase
+
+---
+
+## Summary
+
+| Score Range | Count |
+|-------------|-------|
+| 90-100 (Critical) | 0 |
+| 70-89 (High) | 0 |
+| 50-69 (Medium) | 3 |
+| 0-49 (Low) | 5 |
+
+**Total findings**: 8
+**Findings at or above threshold (60)**: 2
+
+## Regression check (round 2)
+
+- 0077 R-26 site rule — OK (delegation verified: AWS `:82-83`, GCP `:54-55`; RocketMQ none delegate).
+- 0077 step 7 pointer — OK (target incomplete: finding 1).
+- 0078 step 5 `.native` policy — **finding 1**.
+- Provisioning `SubscriptionMode.Pull` — **finding 2** (mode correct; "identical" wording is the problem).
+- Router dispose guard — OK (async detail: finding 4).
+- Missing-handle paragraph — OK (`Parser.cs:78`, `:130`).
+- `RejectionMetadataKeyNames` rename — OK; the only `RejectionMetadataKeys` (0078:284) names the harness record.
+- ADR MUST cross-check — all obligations discharged; no contradiction between the ADRs.
+
+## Main-agent validation (round 2)
+
+Summary recounted: Medium 64/62/50, Low 42/40/35/35/25 — 8 total, 2 ≥ 60. Correct.
+
+1. **Confirmed.** `GcpPullMessageGatewayProvider.cs:143` `dlqChannelName = new ChannelName(deadLetterRoutingKey.Value)`, `:152` policy; both DLQ readers (`:290-292`, `:325-327`) read `subscription.DeadLetter!.Subscription`/`TopicName`; `GcpPubSubMessageGateway.cs:201-205` name cache returns early. 0078:281-282 is silent on both.
+2. **Confirmed.** 0078:185-186 wording as quoted; `:188-192` Assume returns before any create/update; provider non-DLQ shape `ackDeadlineSeconds: 10` (`:166`).
+
+**Pattern flag (PROMPT.md rule):** both ≥ 60 findings sit on sections round 1 changed — step 5 (round 1 F2) and the AC-18 Given (round 1 F4). Second round running on the same sections → user asked whether to patch the ADR or defer to tasks/tests.
+
+## Remediation (round 2): the user's decisions and what was applied
+
+Decisions (user, 2026-09-25): patch F1 and F2 in the ADR **once**, as short clauses. If round 3 finds
+0078 step 5 or the AC-18 Given again, they move to tasks. Apply all the below-threshold findings (F3–F8).
+No requirement, AC or NFR text was touched.
+
+Every change was verified by grepping the text back from the ADR, not from the script's output:
+
+| # | ADR | Applied text (grep anchor) |
+|---|---|---|
+| 1 | 0078 | step 5: "The native policy's subscription is named `{deadLetterRoutingKey}.native` too … per-name creation cache (`GcpPubSubMessageGateway.cs:201-205`)"; "`GetMessageFromDeadLetterQueue(Async)` reads the one on `{deadLetterRoutingKey}`, not `subscription.DeadLetter` (AC-9/AC-43's native read keeps `DeadLetter.Subscription`)" |
+| 2 | 0078 | Given (1): "differs from the subscription under test only in `makeChannels: Create` and `SubscriptionMode.Pull` … carries every broker-side attribute … (`AckDeadlineSeconds`, `EnableMessageOrdering`, and AC-43's `DeadLetterPolicy`)"; (2): "the configuration's own subscription, keeping its own `SubscriptionMode`, with `makeChannels: OnMissingChannel.Assume`" |
+| 3 | 0077 | AC-24: "`HandledCount` is resolved after the bag loop (`RocketMessageConsumer.cs:328`) … `header.HandledCount = DeliveryCount.Resolve(header.HandledCount, view.DeliveryAttempt, header.Bag)`" (`:292`, `:328` verified) |
+| 4 | 0078 | "`Route` uses `Dispose`, `RouteAsync` uses `DisposeAsync`" (`GcpMessageProducer.cs:141`, `:150` verified) |
+| 5 | 0078 | NFR-3: "created on first use, and again after each `Failed` outcome" |
+| 6 | 0077 | AWSSQS row: "**before** the bag (`:60` vs `:76`) … so `Resolve` can see it." |
+| 7 | 0078 | `public Task<(bool completed, T? result)> TryCallAsync<T>(`, `public Task<ProjectsClient?> TryCreateProjectsClientAsync(` |
+| 8 | 0077 | `GcpPubSubConsumerFactory.cs:89-92` (verified) |
+
+Old text: "88-91", "once per consumer" and "identical but with" now have 0 occurrences in both ADRs. Frontmatter is unchanged, so the index was not regenerated.

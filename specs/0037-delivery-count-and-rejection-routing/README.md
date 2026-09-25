@@ -130,8 +130,10 @@ those two rungs; a third mechanism is out of bounds.
 - [x] **Adversarial Review (requirements) — round 14**, 2026-09-24. NEEDS WORK, 5 findings, 2 at or above threshold 60; none Critical or High, and both were slips in the R-19 consolidation. R-19's outcomes drew none. On the user's call, a failed pull acknowledgement is left to its ack deadline (a second accepted outstanding case). How unforceable failures are evidenced is no longer specified in the requirements: the AC-15/AC-18 clauses (findings in rounds 12–14) were removed, and those outcomes are verified at design review against the ADR's record. All 5 remediated and verified against the file.
 - [x] **Adversarial Review (requirements) — round 15**, 2026-09-24. **PASS**: 6 findings, none at or above threshold 60, all Low. All six applied in one batch with no further round (user's call). R-17 joins the failed-acknowledgement outcome, recorded evidence must be produced at implementation, and there are framing and wording nits.
 - [x] **Requirements approved** — 2026-09-24, `/spec:approve requirements`.
-- [ ] **Design (ADR)** — `/spec:design` (not started)
-- [ ] **Adversarial Review (design)** — `/spec:review`
+- [x] **Design (ADR)** — ADR 0077 `delivery-count-contract` and ADR 0078 `gcp-rejection-routing-and-dlq-channel-creation`, both Proposed (2026-09-24).
+- [x] **Adversarial Review (design) — round 1**, 2026-09-24. NEEDS WORK, 13 findings, 4 at or above threshold 60. The core key type was renamed to `RejectionMetadataKeyNames`, and the GCP providers keep a native `DeadLetterPolicy` on `{deadLetterRoutingKey}.native` (both the user's calls). All 13 applied.
+- [x] **Adversarial Review (design) — round 2**, 2026-09-25. NEEDS WORK, 8 findings, 2 at or above threshold 60, both on text round 1 changed: 0078 step 5 (the DLQ reader and the `.native` subscription name) and AC-18's two-subscription Given (the subscription under test keeps its own mode; the provisioning subscription carries the broker attributes). On the user's call, patched once in the ADR; if round 3 finds these sections again, they move to tasks. All 8 applied and verified against the file.
+- [ ] **Adversarial Review (design) — round 3** — `/spec:review design`
 - [ ] **Tasks** — `/spec:tasks` (not started)
 - [ ] **Implementation** — `/spec:implement` (not started — no code written)
 

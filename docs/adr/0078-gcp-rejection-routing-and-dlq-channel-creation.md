@@ -132,7 +132,7 @@ internal sealed class GcpRejectionRouter : IDisposable, IAsyncDisposable
 
   It then calls `GcpPubSubMessageProducerFactory.Create`/`CreateAsync` (`GcpPubSubMessageProducerFactory.cs:50`, `EnsureTopicExistAsync` at `:69`), so it reuses existing topic handling rather than duplicating it.
   - **Ordering is always enabled.** A copy that carries a partition key is published with an `OrderingKey` (`Parser.cs:296`), and Pub/Sub refuses that unless the publisher enables ordering (the harness records this at `GcpPullMessageGatewayProvider.cs:98-102`). Messages without a key are unaffected.
-  - **Only success is cached.** SQS uses `Lazy<T>` and caches a `null` from a failed creation (`SqsMessageConsumer.cs:104`, `:455-475`). GCP does not: after a `Failed` outcome the router disposes and discards its cached producer — the disposal is inside the same guarded region, so a throw is logged and the reference dropped — and the next `Reject` builds it again. Two reasons:
+  - **Only success is cached.** SQS uses `Lazy<T>` and caches a `null` from a failed creation (`SqsMessageConsumer.cs:104`, `:455-475`). GCP does not: after a `Failed` outcome the router disposes and discards its cached producer — the disposal is inside the same guarded region, so a throw is logged and the reference dropped; `Route` uses `Dispose`, `RouteAsync` uses `DisposeAsync` — and the next `Reject` builds it again. Two reasons:
     - A released message comes back, so a later attempt should be able to succeed once the topic exists.
     - An ordering-enabled `PublisherClient` pauses an ordering key after a failed publish. A fresh client clears that pause.
   - **Divergence from SQS:** a failed producer creation is `Failed`, not "no destination". SQS turns a creation failure into a `null` producer, which then leads to "no channels configured" and a delete. On GCP a configured destination is never treated as absent.
@@ -170,7 +170,7 @@ Both settle calls are `TaskCompletionSource.TrySetResult` (`GcpStreamConsumer.cs
 
 This case is unreachable by construction: both parsers always set the handle (`Parser.cs:78`, `:130`). The path is defensive only, so that a message which somehow lacks one neither discards a configured destination nor escapes `Reject`.
 
-**NFR-3.** The requeue path is untouched. On `Reject`, the settle call (ack, or a release that **replaces** the ack) is the one call the path already made. The only addition is the routing publish, which R-16 requires and which is not a requeue round trip. After that, a producer is created once per consumer, plus `EnsureTopicExistAsync` once per process under `Validate`/`Create`.
+**NFR-3.** The requeue path is untouched. On `Reject`, the settle call (ack, or a release that **replaces** the ack) is the one call the path already made. The only addition is the routing publish, which R-16 requires and which is not a requeue round trip. After that, a producer is created on first use, and again after each `Failed` outcome, plus `EnsureTopicExistAsync` once per process under `Validate`/`Create`.
 
 ### The destination producer's `makeChannels` (AC-18, AC-43)
 
@@ -182,8 +182,8 @@ This case is unreachable by construction: both parsers always set the handle (`P
 
 The conformance subscriptions use `OnMissingChannel.Create` (for example `When_rejecting_message_should_include_metadata.cs` passes it to `CreateSubscription`). Under inheritance, a Create-configured subscription would create AC-18's missing topic, so **AC-18's Given is set up with two subscription objects**:
 
-1. A **provisioning** subscription, with the same names, `makeChannels: Create` and `SubscriptionMode.Pull` on every configuration, so that on the Stream configurations it starts no competing streaming pull (`GcpPubSubConsumerFactory.cs:89-95`); subscription creation does not depend on the mode. It creates the source topic and subscription and, for AC-43, the `DeadLetterPolicy` topic and its subscription (`:220-236`). It **does not** create the `deadLetterRoutingKey` topic, because the destination producer is lazy and nothing creates it at channel creation.
-2. The **subscription under test**, identical but with `makeChannels: OnMissingChannel.Assume`. `EnsureSubscriptionExistsAsync` returns immediately (`:188-192`). The inherited `Assume` producer publishes to the missing topic, the publish fails, and the topic still does not exist afterwards.
+1. A **provisioning** subscription that differs from the subscription under test only in `makeChannels: Create` and `SubscriptionMode.Pull` on every configuration. Because `Assume` sets nothing on the broker, it carries every broker-side attribute the scenario relies on (`AckDeadlineSeconds`, `EnableMessageOrdering`, and AC-43's `DeadLetterPolicy`). `SubscriptionMode.Pull` is used so that on the Stream configurations it starts no competing streaming pull (`GcpPubSubConsumerFactory.cs:89-95`); subscription creation does not depend on the mode. It creates the source topic and subscription and, for AC-43, the `DeadLetterPolicy` topic and its subscription (`:220-236`). It **does not** create the `deadLetterRoutingKey` topic, because the destination producer is lazy and nothing creates it at channel creation.
+2. The **subscription under test**: the configuration's own subscription, keeping its own `SubscriptionMode`, with `makeChannels: OnMissingChannel.Assume`. `EnsureSubscriptionExistsAsync` returns immediately (`:188-192`). The inherited `Assume` producer publishes to the missing topic, the publish fails, and the topic still does not exist afterwards.
 
 AC-43 uses the same two-object Given.
 
@@ -226,10 +226,10 @@ public sealed class GcpIamCallTolerance(ILogger? logger = null)   // defaults to
     // Runs one IAM RPC. Returns (true, result) on success; (false, default) when tolerated, after one Warning.
     // Any RpcException outside the tolerated set, and any other exception, propagates unchanged
     // (exception filter: `catch (RpcException ex) when (IsTolerated(ex.StatusCode))` — never caught otherwise).
-    Task<(bool completed, T? result)> TryCallAsync<T>(IamStep step, Func<Task<T>> rpc);
+    public Task<(bool completed, T? result)> TryCallAsync<T>(IamStep step, Func<Task<T>> rpc);
 
     // Resource Manager client construction only. Catches System.InvalidOperationException and nothing else.
-    Task<ProjectsClient?> TryCreateProjectsClientAsync(IamStep step, Func<Task<ProjectsClient>> create);
+    public Task<ProjectsClient?> TryCreateProjectsClientAsync(IamStep step, Func<Task<ProjectsClient>> create);
 
     public static bool IsTolerated(StatusCode code);   // Unimplemented | PermissionDenied | Unauthenticated
 }
@@ -278,8 +278,8 @@ The order follows Tidy First: structural changes before behavioural ones.
 3. Add `GcpRejectionRouter` and the consumer constructor parameters, and wire them in `GcpPubSubConsumerFactory.CreateAsync`. Consumers dispose the router.
 4. Compose `Reject`/`RejectAsync` on both consumers (AC-15, AC-16, AC-17, AC-18; NFR-8).
 5. **Harness:**
-   - the providers pass the routing keys to the Brighter route instead of mapping `deadLetterRoutingKey` onto `DeadLetterPolicy` (`GcpPullMessageGatewayProvider.cs:136-164` today). Wherever a routing key is passed they **also** keep a `DeadLetterPolicy { MaxDeliveryAttempts = 5 }` (0077 step 7), on a separately named native topic `{deadLetterRoutingKey}.native`, so FR-23 keeps its delivery counter (A-1) and AC-18's two topics stay distinct. A subscription given no routing key is unchanged;
-   - they pre-provision each destination topic **with a reading subscription** before `Reject`;
+   - the providers pass the routing keys to the Brighter route instead of mapping `deadLetterRoutingKey` onto `DeadLetterPolicy` (`GcpPullMessageGatewayProvider.cs:136-164` today). Wherever a routing key is passed they **also** keep a `DeadLetterPolicy { MaxDeliveryAttempts = 5 }` (0077 step 7), on a separately named native topic `{deadLetterRoutingKey}.native`, so FR-23 keeps its delivery counter (A-1) and AC-18's two topics stay distinct. The native policy's subscription is named `{deadLetterRoutingKey}.native` too, so it cannot collide with the reading subscription in the per-name creation cache (`GcpPubSubMessageGateway.cs:201-205`). A subscription given no routing key is unchanged;
+   - they pre-provision each destination topic **with a reading subscription** before `Reject`, and `GetMessageFromDeadLetterQueue(Async)` reads the one on `{deadLetterRoutingKey}`, not `subscription.DeadLetter` (AC-9/AC-43's native read keeps `DeadLetter.Subscription`);
    - they implement `GetMessageFromInvalidChannelAsync`;
    - they fill the generated harness record `RejectionMetadataKeys` (empty today, `:363-370`) — a test type, distinct from 0077's core `RejectionMetadataKeyNames`;
    - they add the two-subscription Given for AC-18 and AC-43.
