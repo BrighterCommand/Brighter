@@ -366,7 +366,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - "is one of" rather than "is" is deliberate — a subscription declares exactly one type, a combined factory offers several
   - Depends on: 20.
 
-- [ ] **22. CHARACTERISE: The combined arm also suppresses the in-memory half (AC-13c, template T3b)**
+- [x] **22. CHARACTERISE: The combined arm also suppresses the in-memory half (AC-13c, template T3b)**
   - **USE COMMAND**: `/test-first when the combined arm sees a subscription declaring the in-memory factory the message should suppress the configuration-side remedy`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_the_combined_arm_declares_the_in_memory_factory_should_suppress_the_configuration_remedy.cs`
