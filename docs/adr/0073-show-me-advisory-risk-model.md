@@ -5,7 +5,7 @@ status: Proposed
 author:
   - "Ian Cooper"
 created: 2026-09-19
-summary: "/spec:show-me scores merge risk from three factors it uniquely measures — product-code blast radius, breaking-change count and requirement fidelity — mapped by one shared evaluate-downward-from-High procedure whose maximum is the overall level, raisable with a stated reason but never lowerable, computed after the sections F2 and F5 project from and read by no conditional anywhere in the command."
+summary: "/spec:show-me scores merge risk from three factors - product-code blast radius (F1, taken from the fact ledger unless FR-16 forces it), breaking-change count (F2) and requirement fidelity (F5) - where F2 and F5 are levels of the Classifier's own judgements, the same judgements the Breaking changes and Did it ship sections render. FR-16's forced levels are applied before any column is evaluated, each factor takes its highest matching column, and the overall level is their maximum, raisable with a stated reason but never lowerable. The level has exactly two sinks, and no instruction outside the one marked step that computes it may branch on it."
 tags:
   - "meta"
   - "api-design"
@@ -21,418 +21,431 @@ Proposed
 
 ## Context
 
-Spec 0037's `/spec:show-me` writes one file that answers "what did we build, and what deserves a
-second look?". Seven of its eight sections report things the repository can be asked directly. The
-eighth, `## Risk assessment (advisory)`, has to turn several unlike measurements into a single
-`Low`/`Medium`/`High` word — and then be trusted not to act on it.
+`/spec:show-me` writes one file that answers "what did we build, and what deserves a second look?".
+Seven of its eight sections report things the repository can be asked directly. The eighth,
+`## Risk assessment (advisory)`, turns three unlike measurements into one word — `Low`, `Medium` or
+`High` — and must then be trusted not to act on it. A risk word that is quietly averaged, that
+changes what the command does, or that re-judges evidence the file already presented, looks
+authoritative and is not.
 
-That word is the part most likely to be wrong in a way nobody notices. A risk read that is quietly
-averaged, or that changes what the command does, or that re-judges evidence the document already
-presented two pages earlier, is worse than no risk read at all: it looks authoritative and is not.
+### Terms
 
-**Parent Requirement**: [specs/0037-show-me/requirements.md](../../specs/0037-show-me/requirements.md)
+- **Classifier** — the stage that judges breaking-change items and requirement statuses. Key
+  Components 1 states its rule.
+- **Factor** — one of F1, F2 and F5, each with a measured value and a level. FR-11 states the
+  thresholds.
+- **Forced level** — a factor level FR-16 assigns regardless of the thresholds. Key Components 3
+  lists the three.
+- **Measurer**, **Synthesiser**, **fact ledger**, **read log** — see
+  [0072-show-me-command-resolution-and-output](0072-show-me-command-resolution-and-output.md),
+  whose *Terms* block states each.
 
-**Scope**: This ADR decides one thing — **how the advisory risk level is computed, and how it is kept
-advisory by construction rather than by promise**. It discharges FR-11, FR-12, FR-13, NFR-1's
-judgement enumeration for the factors, and the `Advisory` definition.
+### Scope
 
-It does **not** decide command invocation, target/branch/PR resolution, the fact ledger or the output
-file's structure — [ADR 0072](0072-show-me-command-resolution-and-output.md) owns those. It does not
-decide how a diagram is triggered, drawn or attributed —
-[ADR 0077](0077-show-me-visual-explanation.md) owns that, including the Explainer role.
+**Parent requirement**: [specs/0037-show-me/requirements.md](../../specs/0037-show-me/requirements.md)
+
+**In scope**:
+
+- FR-7's and FR-8's judgements — which changes are breaking-change items, and each declared id's
+  status — made once, by the Classifier (Key Components 1).
+- FR-11 — the three factors, their inputs, and one mapping procedure that takes the highest
+  matching column (Key Components 2 and 3).
+- FR-12 — the overall level as the maximum, the raise with a reason, and no lowering (Key
+  Components 4).
+- FR-13 and the *Advisory* definition — the level's two sinks, and the rule that nothing branches on
+  it (Key Components 5).
+- FR-16 rows 8, 9 and 12 — their forced factor levels (Key Components 3).
+- NFR-1 — which factor fields are judged (F2, F5, the overall level) and which is copied (F1).
+- NFR-9 and AC-81 — what the FR-13 invariant check asserts. The check itself lives in the test
+  script, which 0072 owns.
+
+**Out of scope**:
+
+- The ledger, the reads, the section shapes of `## Breaking changes` and `## Did it ship what it
+  said?`, and the test script —
+  [0072-show-me-command-resolution-and-output](0072-show-me-command-resolution-and-output.md).
+- Diagrams — [0077-show-me-visual-explanation](0077-show-me-visual-explanation.md). The Explainer and
+  the risk step exchange nothing: neither's output is an input to the other.
+- The marked release-notes form that FR-7's catalogue comes from —
+  [0078-spec-family-machine-readable-forms](0078-spec-family-machine-readable-forms.md).
 
 ### Where this ADR sits
 
 | ADR | Decides |
 | --- | --- |
-| [0072](0072-show-me-command-resolution-and-output.md) | What the command is, how it resolves its target, and the shape of the file it writes |
-| **[0073](0073-show-me-advisory-risk-model.md)** *(this one)* | How the advisory risk level is computed, and how it stays advisory |
-| [0077](0077-show-me-visual-explanation.md) | When the command draws a diagram, what it may draw, and which stage may read code to draw it |
+| [0072-show-me-command-resolution-and-output](0072-show-me-command-resolution-and-output.md) | What the command is, how it resolves its target, what it measures and reads, and the shape of the file it writes |
+| **[0073-show-me-advisory-risk-model](0073-show-me-advisory-risk-model.md)** *(this one)* | How the advisory risk level is computed, and how it stays advisory |
+| [0077-show-me-visual-explanation](0077-show-me-visual-explanation.md) | When the command draws a diagram, what it may draw, and which stage may read source to draw it |
+| [0078-spec-family-machine-readable-forms](0078-spec-family-machine-readable-forms.md) | The forms the `/spec` family writes so that a tool can read them, and the command that writes release notes in one of them |
 
-The sentence that unifies all three: **the command states only what it has measured, names what it
+The sentence that unifies all four: **the command states only what it has measured, names what it
 measured it from, and changes nothing.**
 
-### This ADR was rescoped after implementation had begun
+### A risk word that could disagree with its own evidence
 
-The version of this ADR accepted on 2026-09-19 was titled *Review-History Decomposition and the
-Five-Factor Risk Model*, and the majority of it specified how to decompose a pull request's comment
-history into per-round finding, severity and resolution tallies — feeding a fifth section line and
-two of five risk factors, F3 (state of review findings) and F4 (the CI rollup).
+Each factor summarises evidence that another section of the same file presents in full:
 
-That material was removed from the requirements on 2026-09-20, and is removed here. The reason was
-not that it was wrong — it was calibrated against PR #4282 and worked — but that it was **the wrong
-command's job**. The pull request already carries its own review comments and its own checks tab, and
-`/spec:review code` already assesses the code properly rather than by counting comments. The framing
-that settled it: this command is the end-of-sprint demo, not a review.
+| Factor | Evidence | Presented in |
+| --- | --- | --- |
+| F1 — product-code blast radius | files changed under `src/` | `## Blast radius` |
+| F2 — breaking changes | the breaking-change items | `## Breaking changes` |
+| F5 — requirement fidelity | the deviation entries | `## Did it ship what it said?` |
 
-Two things follow, and both are load-bearing for a reader of the current document:
-
-- **F3 and F4 are retired identifiers.** They must never be reused. `F5` keeps the one meaning it has
-  ever had, in this ADR, in `requirements.md`, and in the implementation already built against it. A
-  `show-me.md` containing an `F3` or `F4` row is non-conforming.
-- **The Classifier stage survives the cut, and is better for it** — see Key Components 1.
+If the risk table derives F2 or F5 on its own, the same judgement is made twice, and two
+applications of a judged rule to the same evidence can differ. The file could then list five
+breaking changes and score F2 from six. Nothing would reveal the discrepancy, because both numbers
+look like measurements.
 
 ### The forces
 
-- **The factors are not commensurable.** "76 files changed under `src/`" and "one breaking change with
-  no migration note" are not quantities on a shared scale. Any arithmetic that combines them invents
-  an exchange rate nothing justifies.
-- **Two of the three factors are judged, not counted.** NFR-1 names F2 and F5 as judgement-derived:
-  deciding what constitutes one breaking-change item, and whether a requirement's status is a
-  deviation, are readings of prose. Only F1 is a pure count.
-- **The evidence has already been presented.** By the time the risk table is written, `## Breaking
-  changes` has stated its item count and `## Did it ship what it said?` has stated its deviations. A
-  factor that re-derives its own input can disagree with the section printed above it.
-- **FR-13 forbids any behavioural difference between a `Low` result and a `High` one.** This is
-  trivially satisfiable by writing careful prose and trivially violable by one `if`. It needs to be a
-  property of the procedure's shape, not a rule someone remembers.
-- **NFR-7 requires every claim to be attributable.** A level with no cited measurement is exactly the
-  unattributable claim it forbids.
+- **The factors are not commensurable.** "76 files under `src/`" and "one breaking change with no
+  migration" are not quantities on one scale. Any arithmetic that combines them invents an exchange
+  rate.
+- **One factor is copied and two are judged.** NFR-1 makes F1 mechanical and F2 and F5
+  judgement-derived. Only F1 can be identical between runs.
+- **A factor must never disagree with its section.** AC-32 and AC-34 check each run's F2 and F5
+  against the evidence cited in the same run's own sections.
+- **Three rows of FR-16 override the thresholds.** A missing `requirements.md`, zero declared ids,
+  and an undeterminable spec branch each force a factor to `Medium` (AC-16, AC-19, AC-43).
+- **A level must never change behaviour.** FR-13 allows no difference between a `Low` run and a
+  `High` run except the text written. One conditional would break that.
+- **The invariant check must not fire on ordinary words.** A substring check for `if` matches inside
+  `diff` (AC-81).
 
 ## Decision
 
-**Compute each of three factors by one shared mapping procedure evaluated downward from `High` over
-that factor's whole body of evidence; take their maximum as the overall level; permit the level to be
-raised with a stated reason but never lowered; and write it into exactly two places, neither of which
-is a condition.**
+**Judge each breaking-change item and requirement status once, in the Classifier; derive F2 and F5
+from those judgements and copy F1 from the fact ledger; apply FR-16's forced levels before any
+threshold; take the highest matching column for each factor and the maximum over the factors; and
+confine every conditional that touches a level to one marked step.**
 
-Each factor projects from evidence some earlier section already produced and cited, so the table is a
-re-presentation of the document's own findings rather than a second opinion about them.
+The Classifier's judgements feed two renderings: the sections that present the evidence, and the
+factor rows that summarise it. The risk step computes the level from those rows, and the level is
+written in two places: in `show-me.md`, and in FR-19's session report. Nothing else in the command
+tests the level.
 
 ### The mechanism, end to end
 
 ```mermaid
 flowchart TD
-    A["Sections 1-5 already written<br/>(Step 6.a)"] --> B & C & D
-    B["F1 - src/ file count<br/>from ADR 0072 Step 5"] --> E
-    C["F2 - breaking-change items<br/>from the count line FR-7 wrote"] --> E
-    D["F5 - deviation entries<br/>from the rows FR-8 wrote"] --> E
-    E["Shared mapping, per factor:<br/>High? then Medium? else Low"] --> F
-    F["Overall = highest of the three levels"] --> G
-    G{"Stated level<br/>higher than max?"}
-    G -->|"yes"| H["Raising sentence required<br/>(asserted before Write)"]
-    G -->|"no"| I["Stated level = max"]
-    H --> J["Render the Overall risk line<br/>+ rationale + FR-13's verbatim sentence"]
-    I --> J
-    J --> K["FR-19 session report<br/>(the only other place the level appears)"]
+    R["The command's reads<br/>(0072 Key Components 3)"] --> CL
+    CL["Classifier<br/>judges items and statuses once"] --> S7["Breaking changes section"]
+    CL --> S8["Did it ship section"]
+    CL --> F2["F2 from the item count"]
+    CL --> F5["F5 from the deviation entries"]
+    LED["Fact ledger"] --> F1["F1 level from the ledger,<br/>or FR-16 row 12's Medium"]
+    F1 --> MX
+    F2 --> FO
+    F5 --> FO
+    FO["F2 and F5: forced levels first (FR-16 rows 8, 9)<br/>then the highest matching column"] --> MX
+    MX["Overall = highest factor level"] --> G
+    G{"Stated level higher<br/>than the maximum?"}
+    G -->|"yes"| H["Raising sentence required"]
+    G -->|"no"| I["Stated level = maximum"]
+    H --> OUT["Overall risk line, rationale,<br/>FR-13's verbatim sentence"]
+    I --> OUT
+    OUT --> REP["FR-19 session report"]
 ```
 
-Three invariants read directly off that shape. The factors flow **in** from sections already written,
-so no factor re-judges its own evidence. The comparison at `G` is the **only** test the level is ever
-subjected to, and it guards a writing decision, not a control-flow decision. And the level leaves by
-exactly two arrows, both of which are renderings — there is no edge from the level back into the
-procedure.
+Four invariants read off the flowchart:
+
+- **The sections and the factors share one source.** F2 and F5 are counts over what the Classifier
+  judged, and the sections render the same judgements. The risk table cannot disagree with the
+  sections above it.
+- **F1 is never judged.** Its level comes from the ledger, or from FR-16 row 12 when the ledger has
+  none, so the model applies no threshold to it.
+- **Every test on the level is inside the risk step**: the diamond, and the two checks in Key
+  Components 4. Each guards what is written, not what happens next.
+- **The level leaves by two arrows, both renderings.** No edge leads from the level back into the
+  procedure.
 
 ### Where the pieces live
 
 ```mermaid
 flowchart LR
-    subgraph ADR0072["ADR 0072 - resolution and output"]
-        M["Measurer<br/>blast-radius counts"]
-        S["Synthesiser<br/>prose from ledger rows"]
+    subgraph ADR0072["0072-show-me-command-resolution-and-output"]
+        M["Measurer<br/>F1 level in the ledger"]
+        RD["The command's reads"]
+        S["Synthesiser<br/>renders every section"]
     end
-    subgraph ADR0073["ADR 0073 - this ADR"]
-        CL["Classifier<br/>prose to counted rows<br/>counted rows to levels"]
+    subgraph ADR0073["0073-show-me-advisory-risk-model"]
+        CL["Classifier<br/>items, statuses"]
+        RK["Risk step<br/>factor rows, overall level"]
     end
-    subgraph ADR0077["ADR 0077 - visual explanation"]
-        EX["Explainer<br/>source to relationships"]
+    subgraph ADR0077["0077-show-me-visual-explanation"]
+        EX["Explainer"]
     end
-    M --> CL
+    RD --> CL
+    RD --> EX
+    CL --> RK
+    M --> RK
     CL --> S
-    M --> EX
+    RK --> S
     EX --> S
 ```
 
-Nothing new is introduced in the command's tool surface, its front matter, or
-`.claude/settings.json`. This ADR adds one stage and one procedure, both inside the existing prompt file.
+The Explainer and the risk step have no edge between them: neither's output is an input to the
+other, although both read the ledger. This ADR adds one stage and one marked step to the command file, and nothing to its front
+matter or to `.claude/settings.json`.
 
 ### Key Components
 
-#### The procedure's stages, and the rule each one holds
+The stage table is stated once, in
+[0072-show-me-command-resolution-and-output](0072-show-me-command-resolution-and-output.md). This
+ADR owns the Classifier's rule and the risk step.
 
-The command is one prompt file, not a program, so these are named stages of a single ordered
-procedure rather than components. Each name is shorthand for a rule:
+#### 1. The Classifier
 
-| Stage | Where | The rule it holds |
+| Judges | From | Emits, per item |
 | --- | --- | --- |
-| Measurer | ADR 0072, Steps 3–5 | Produces every value NFR-1 requires identical between runs, and never paraphrases |
-| Explainer | [ADR 0077](0077-show-me-visual-explanation.md), Step 5D | The only stage that may read source; draws nothing it has not read |
-| Classifier | this ADR, Step 6.b | Reads only what the Measurer extracted, and never re-derives its own input |
-| Synthesiser | ADR 0072, Step 6 | Writes all prose, runs no shell call, and counts nothing |
+| Which changes are breaking-change items, and each item's classification set (FR-7) | ADR *Consequences* extracts, `requirements.md`, the `src/`-scoped diff, and the marked release-notes section when one was read | the item, its classification set, a one-sentence migration, and the evidence it came from |
+| Each declared id's status (FR-8) | `requirements.md`, `tasks.md`, the ADR extracts and the diff | the id, its status, a one-sentence reason, its evidence, and its follow-up for `Deferred`, `Dropped` or `Withdrawn` |
 
-The distinction a reader would otherwise collapse: **the Synthesiser may not count, and the
-Classifier may not write prose.** A factor level is a Classifier row; the sentence
-explaining it is a Synthesiser rendering of that row. Keeping them apart is what makes "the rationale
-matches the table" checkable instead of hoped for.
+Four rules bind it:
 
-#### 1. The Classifier, retained and retightened
+- **It reads only what the read log records.** Its inputs are the reads 0072 charges to the budget.
+  It makes no read of its own and does not read source files; that right is the Explainer's.
+- **It judges each thing once.** An item list or a status set is produced once per run, and every
+  later use renders that result.
+- **It follows the catalogue's boundaries when there is one.** When a marked section was read and
+  its `#### Breaking changes` list has a bullet, each bullet is one item (FR-7's tie-break).
+  Otherwise one item is one distinct public-API declaration change, or one *Consequences* bullet
+  describing a behavioural break.
+- **Every item and status carries its evidence.** An item names the catalogue bullet, ADR entry or
+  diff hunk it came from. A status names a task id, a path or an ADR stem. This is what AC-32 and
+  AC-34 check a run against.
 
-The Classifier was introduced by this ADR's previous version to hold work neither of ADR 0072's two
-stages could take: its **output is numbers**, which looks like Measurer work, but its
-**method is reading prose**, which looks like Synthesiser work. That seam did not close when review
-history left the command's scope — it moved.
+It also tallies its own judgements: `{n}`, the number of breaking-change items, and the number of
+ids with each status, which gives FR-8's `{k}` and Part 4's six terms. NFR-1 names these tallies as
+judgement-derived, and they are the only numbers the Classifier emits. Every other number in
+`show-me.md` comes from the ledger.
 
-What the Classifier owns now is its cleanest expression:
+The declared-id set and `{total}` are not the Classifier's. They are ledger fields (0072). The
+Classifier assigns a status to each id the ledger lists, and to no other id.
 
-| Judged input | Classifier output | Cited from |
+#### 2. Factor inputs
+
+| Factor | Value | Level comes from |
 | --- | --- | --- |
-| `release_notes.md` bullets, ADR *Consequences* entries | the breaking-change item count (FR-7) | the catalogue bullet or ADR entry each item came from |
-| declared requirement ids and their evidence | each non-`Shipped` id's status and follow-up (FR-8) | the requirement id and the evidence for its status |
-| the two counts above, plus the Measurer's `src/` count | F1, F2 and F5's levels | the measured value, stated in the row |
+| F1 | files changed under `src/` | the ledger, as computed by the Measurer from FR-11's thresholds; FR-16 row 12's `Medium` when the ledger has none |
+| F2 | `{n}`, the Classifier's item tally — the number FR-7's count line states | the mapping procedure (Key Components 3) |
+| F5 | the deviation entries — every declared id the Classifier judged not `Shipped`, with its follow-up | the mapping procedure |
 
-Its contract is unchanged from the previous version, and deliberately so:
+Each row states its measured value, not only its level. For example: `76 files under src/`,
+`5 items`, and `2 deviation entries of 37 requirements: 1 Shipped with deviation, 1 Withdrawn with a
+superseding requirement` (FR-11).
 
-- **It may read only Measurer-produced extracts.** It never re-fetches and never works from a source
-  the ledger does not already hold. This restriction was originally written to bound how much comment
-  text the command pulled in; that pressure is gone, but the rule now costs nothing and keeps one stage
-  honest, so it stays. The stage that genuinely needs to read source directly is the Explainer, and
-  [ADR 0077](0077-show-me-visual-explanation.md) grants that right there — scoped to the stage that
-  needs it, rather than widened across a stage that does not.
-- **Every row it emits carries the rule it applied and the line it applied it to**, not just a value.
-  A factor row is not `F2 | High`; it is
-  `F2 | 14 items | High | release_notes.md "Scoped lifetime per pipeline", 14 bullets; 5 carrying combined source-and-binary markers`.
-  That is what AC-34's "consistent with the evidence cited in the same run's own output" is checked
-  against.
-- **The Synthesiser still may not count.** FR-12's rationale sentences are a rendering of Classifier
-  rows.
+F3 and F4 are retired identifiers. They must never be reused, so that F5 keeps the one meaning it
+has. A `show-me.md` with an `F3` or `F4` row does not conform (FR-11).
 
-#### 2. Factor inputs, and who owns each
+#### 3. The mapping procedure
 
-| Factor | Input | Computed by | Consumed here as |
-|---|---|---|---|
-| F1 | files changed under `src/` | ADR 0072 Step 5 (blast-radius bucket counts) | the `src/` bucket integer |
-| F2 | breaking-change item count | ADR 0072 Step 6 (FR-7 synthesis) | the emitted `Total breaking-change items: {n}` line |
-| F5 | requirement statuses | ADR 0072 Step 6 (FR-8 synthesis) | the deviation entries FR-8 wrote, plus each entry's follow-up text |
+One procedure serves all three factors. For F1 only step 1 can apply: its level comes from the
+ledger unless FR-16 row 12 forces it. F2 and F5 go through every step.
 
-**The handoff rule, stated once: a factor mapping never re-derives its own input.** F2 reads the count
-line FR-7 already wrote; F5 reads the deviation entries FR-8 already wrote. Re-partitioning
-breaking-change items or re-judging a requirement status inside the risk table would judge the same
-evidence twice and could disagree with the section printed two pages above it — which AC-34 would
-catch as a claim not matching its input's actual content.
+1. **Forced level.** If FR-16 assigns this factor a level, take that level and evaluate no column.
+2. **High.** Otherwise, if the factor's `High` condition holds over its whole body of evidence, the
+   level is `High`.
+3. **Medium.** Otherwise, if its `Medium` condition holds over its whole body of evidence, the level
+   is `Medium`.
+4. **Low.** Otherwise, the level is `Low`.
 
-The consequence is a sequencing constraint: **the risk table is synthesised after the sections it
-projects from**, even though FR-5 places it sixth. Step 6 therefore runs 6.a (sections 1–5), 6.b
-(section 6), 6.c (sections 7–8), and assembly into FR-5's fixed order happens at Step 7, which ADR
-0072 already defines as a single in-memory `Write`.
+The forced levels:
 
-#### 3. The shared factor-mapping procedure
+| FR-16 row | Condition | Forced level |
+| --- | --- | --- |
+| 8 | `requirements.md` missing | F5 = `Medium` |
+| 9 | `requirements.md` declares zero ids in the bold lead-in form | F5 = `Medium` |
+| 12 | spec branch not determinable, so no diff and no F1 level in the ledger | F1 = `Medium` |
 
-FR-11's general clause is the load-bearing one:
+Step 1 comes first because FR-16's rows describe inputs, not evidence. Rows 8 and 9 leave no
+deviation entries, so without step 1 F5's `Low` column would hold. Row 12 leaves F1 null in the
+ledger, so its forced level is applied here as a constant.
 
-> When more than one of a factor's three column conditions is satisfied *collectively* by the evidence
-> that factor measures — the full set of deviation entries for F5, the full item list for F2 — the
-> factor takes the *highest* matching column (High beats Medium beats Low).
+Steps 2 to 4 test the whole body of evidence at once, and stop at the first column that holds. That
+is FR-11's rule — when more than one column is satisfied collectively, the highest wins — made a
+property of evaluation order. One `Deferred` entry with a follow-up alongside one `Dropped` entry
+stating `no follow-up recorded` puts F5 at `High`, because the `High` condition holds somewhere in
+the evidence. FR-11's mapping is total, so step 4 is always reachable and no factor is left without
+a level.
 
-Implemented as **one procedure, three uses, no per-factor passes**:
+#### 4. The overall level
 
-> For factor F with evidence set E: evaluate F's **High** condition over the whole of E; if it holds,
-> F is High and no further column is evaluated. Otherwise evaluate **Medium** over the whole of E;
-> if it holds, F is Medium. Otherwise F is **Low**.
+The overall level is the maximum of the three factor levels, over `Low` < `Medium` < `High`. The
+risk step may state a higher level, with one sentence naming what the factors miss. It may never
+state a lower one. The raise is decided inside the risk-step markers, because deciding it compares
+levels; the Synthesiser writes the rationale around the level and the reason the risk step
+recorded. Before the risk step ends, still inside its markers, it checks the rendered section: the
+stated level is not below the maximum, and a stated level above the maximum is followed by a raising
+sentence (AC-23).
 
-Evaluating downward from High and stopping at the first hit is equivalent to evaluating all three and
-taking the maximum — FR-11's mapping is total by construction, so at least one column always holds —
-but it is one pass, it cannot produce "no column matched", and it makes the "highest wins" rule a
-property of evaluation order rather than a post-hoc comparison someone has to remember to perform.
+The section writes the level on its own line as `**Overall risk: {level}**`, then two to five
+sentences of rationale naming at least the factor or factors that set it, then FR-13's sentence:
 
-The worked example requirements.md gives falls out unchanged: a `Deferred` entry with a recorded
-follow-up alongside a `Dropped` entry stating `no follow-up recorded` → F5 High, because the High
-condition holds somewhere in the evidence set even though a Medium condition also holds.
+> This assessment is advisory only. It is not a merge gate; the merge decision stays with a human
+> reviewer.
 
-F1 and F2 are scalar counts over disjoint ranges, so the downward evaluation is vacuous for them. They
-still go through it. One rule with two vacuous applications is cheaper to keep correct than one rule
-with two exceptions.
+That sentence is a literal in the command file, not composed at run time.
 
-#### 4. The overall level, and advisory-by-construction
+#### 5. Advisory by construction
 
-FR-12's maximum is computed mechanically from the three Classifier-emitted levels over the ordering
-`Low < Medium < High`. The Synthesiser may then raise it with an explicit one-sentence reason naming
-what the factors miss, and may never lower it. Before Step 7's `Write`, two assertions run over the
-assembled text: the stated level is ≥ the computed maximum, and if it is strictly greater, a raising
-sentence is present (AC-23).
+The level has exactly two sinks: the `**Overall risk: …**` line and FR-19's session report. The
+command file holds the whole of the risk step between two marker lines,
+`<!-- show-me:risk-step:begin -->` and `<!-- show-me:risk-step:end -->`. Inside the markers,
+conditionals test factor evidence, which is how a level is computed. Outside them, no instruction may
+test a level.
 
-FR-13 is made structural rather than promised. The level is written into exactly two places — the
-`**Overall risk: {…}**` line in `show-me.md`, and FR-19's session report — and the command file states
-the invariant: **no step in the procedure may branch on the level.** `High` and `Low` are values that
-get rendered, never conditions that get tested. That is what makes AC-25's "the only difference is the
-text inside `show-me.md`" a property of the procedure's shape rather than a behaviour to remember, and
-it is the same construction ADR 0072 used to make AC-7's byte-for-byte guarantee a property of step
-ordering.
+The FR-13 invariant check, run by the test script, asserts exactly that:
 
-The invariant is checkable from outside the running command, which is the point:
+> Outside the risk-step markers, no line of `.claude/commands/spec/show-me.md` contains both a
+> conditional keyword — `if`, `when`, `unless`, `else`, `otherwise` — and a level name — `Low`,
+> `Medium`, `High` — where each is matched as a whole word, the keywords in any case and the level
+> names as capitalised.
 
-```bash
-grep -nE '(if|when|unless).*(High|Low|Medium)' .claude/commands/spec/show-me.md   # must be empty
-```
-
-The verbatim sentence FR-13 requires —
-`This assessment is advisory only. It is not a merge gate; the merge decision stays with a human
-reviewer.` — is a literal in the command file, not something composed at run time.
+Whole-word matching is what keeps `diff` from matching `if`. Case-insensitive keywords catch
+`When` at the start of a sentence. Capitalised level names keep ordinary prose such as "a low
+cost" out of the check, and the command file writes a level only in its capitalised form. The test script proves it on a literal
+line held in the test script itself, which contains `git diff` and `gh pr diff` and no conditional,
+and must yield zero matches (AC-81). The check also fails if either marker is missing or appears
+twice, so a deleted marker cannot switch the check off.
 
 ### Technology Choices
 
-**Why a maximum rather than any combining function.** The maximum is the only function over these
-three levels that needs no exchange rate between incommensurable factors, is explainable in one
-sentence ("the highest factor sets it"), and cannot be gamed by averaging a `High` away. See
-Alternatives 1 and 2.
+#### Why a maximum
 
-**Why the level may be raised but not lowered.** Raising is the safe direction: it costs a reviewer
-attention. Lowering costs them a defect. Requiring a stated reason for the raise keeps the asymmetry
-auditable rather than merely permitted.
+The maximum is the only combining function over these levels that needs no exchange rate. It is
+explainable in one sentence — the highest factor sets it — and it cannot average a `High` away. See
+Alternative 1.
 
-**No new tools, no new allow-list entry.** Every input this ADR consumes is already in the ledger by
-the time Step 6.b runs. It adds no `gh` call, no `git` call, and therefore no change to
-`.claude/commands/spec/show-me.md`'s front matter and none to `.claude/settings.json` — keeping Out of
-Scope's "no change to the allow-list" intact. **This is a change from the previous version of this
-ADR**, which needed `--json reviews` and `--json statusCheckRollup`; with review history and CI out of
-scope, FR-18 now forbids those queries outright.
+#### Why the level may be raised but not lowered
 
-### Implementation Approach
+A raise costs a reviewer some attention. A lowering can cost them a defect. Requiring a stated
+reason keeps the raise auditable.
 
-#### Step 6.b — `## Risk assessment (advisory)` (FR-11, FR-12, FR-13)
+#### Why the forced levels come before the columns
 
-1. **Structural.** Emit the factor table's three rows: factor, measured value, level. FR-11 requires
-   the value, not just the level — `76 files under src/`, `14 items`, and F5's deviation summary
-   (`2 deviation entries of 28 requirements: 1 Shipped with deviation, 1 Withdrawn with a superseding
-   requirement`). Each cell is a Classifier row's evidence field, so NFR-7 holds by projection rather
-   than by assertion, exactly as ADR 0072 made `## Inputs used` a projection of the ledger.
-2. **Structural.** Apply the shared mapping (Key Components 3) to each of the three factors.
-3. **Behavioural.** Take the maximum; run the two pre-`Write` assertions; emit
-   `**Overall risk: {Low|Medium|High}**` on its own line, then 2–5 sentences of rationale referencing
-   at least the factor(s) that set the level, then FR-13's verbatim sentence.
+The alternative is a special case inside each factor's columns. FR-16's rows are conditions on
+inputs — a file missing, a branch not found — and not evidence the columns weigh. Taking them first
+keeps each column's condition exactly as FR-11 states it.
 
-On the calibration case that is F1 `High` (76 files under `src/`), F2 `High` (14 breaking-change
-items), F5 as measured from the reconciliation → **Overall risk: High**, set by F1 and F2 as the
-maximum. Whatever F5 measures cannot lower it.
+#### Why a marked step, not a keyword ban
 
-#### Step 8 — no change
-
-ADR 0072's budget self-check and FR-19 report are unchanged. FR-12's rationale counts toward NFR-2's
-400–2,000 words; the factor *table* does not, because NFR-2 excludes lines beginning with `|`.
+The command file has to describe the mapping, and the mapping is conditionals over levels: "`High`
+if four or more items". A check over the whole file would therefore fire on the procedure it
+protects. The markers separate computing a level, which needs conditionals, from using a level,
+which FR-13 forbids.
 
 ## Consequences
 
 ### Positive
 
-- **The risk table cannot disagree with the document that contains it.** Because every factor projects
-  from a line an earlier section already wrote and cited, "the table matches the sections" is a
-  property of the handoff rule rather than a consistency check someone has to run.
-- **Advisory is structural.** With the level written to exactly two sinks and no step permitted to
-  test it, FR-13's "a `High` result and a `Low` result differ only in the text written" is checkable
-  with one `grep` over the command file, from outside a run.
-- **The scope cut made the model smaller and the remaining factors sharper.** Three factors, all of
-  which this document uniquely measures, replace five of which two duplicated the PR's own UI. There
-  is now no factor whose value a reviewer could get more accurately by clicking the checks tab.
-- **One mapping rule, three uses.** The general tie-break clause has one implementation, so a change
-  to how "collectively" works cannot apply to two factors and miss the third.
-- **The Classifier's rule got tighter as its job got smaller.** It reads only ledger extracts and
-  emits only evidenced rows, and the work that needed broader read rights was separated out rather
-  than accommodated by loosening this one.
+- **The risk table cannot disagree with the file.** F2 and F5 count the Classifier's own
+  judgements, and the sections render the same judgements.
+- **F1 is reproducible.** The Measurer computes its level, and the model copies it (NFR-1).
+- **The forced levels are total.** Every FR-16 row that forces a level is one row of one table, and
+  the procedure applies them before any column.
+- **One procedure, two uses.** A change to how "collectively" works cannot reach one factor and miss
+  the other.
+- **Advisory is checkable from outside a run.** The invariant check runs over the command file, with
+  no false positive on `diff`.
 
 ### Negative
 
-- **Three factors is a thin basis for a single word.** With F3 and F4 gone, a change can be large,
-  breaking and faithful to plan — and the model has nothing else to say about it. The level is
-  coarser than it was, and the rationale sentences now carry more of the load.
-- **F5 can dominate for a reason a reviewer may not care about.** One `Dropped` requirement stating
-  `no follow-up recorded` puts F5 at High, and the maximum then puts the whole assessment at High,
-  even for a two-file change. This is intended (an unrecorded gap is exactly what should be surfaced)
-  but it will produce `High` on small diffs, and a reader who expects the level to track size will
-  find that surprising.
-- **The sequencing constraint is invisible in the output.** FR-5 prints the risk section sixth, but it
-  must be *computed* after sections seven and eight's inputs exist. An implementor reading the output
-  order will get it wrong; only Step 6's 6.a/6.b/6.c split records the real dependency.
-- **Retired identifiers are a permanent tax.** Every future reader of a factor table has to be told
-  why the numbering skips 3 and 4, and the prohibition on reuse has to survive in both this ADR and
-  `requirements.md` or the two will drift.
-- **The raise is unfalsifiable.** "The factors miss something" plus one sentence is enough to move the
-  level up. Nothing checks that the sentence is true, only that it is present.
+- **Three factors are a thin basis for one word.** A change that is large, breaking and faithful to
+  its plan gets `High`, and the model has nothing else to say about it. The rationale carries more of
+  the load.
+- **F5 can dominate on a small change.** One `Dropped` requirement with no follow-up puts the whole
+  assessment at `High`, even for two files. That is intended — an unrecorded gap is what should be
+  surfaced — but a reader who expects the level to track size will be surprised.
+- **The overall level can differ between runs.** F2 and F5 are judged, and they feed the maximum.
+  NFR-1 acknowledges it; this design does not remove it.
+- **The raise is not falsifiable.** The checks confirm that a raising sentence is present, not that
+  it is true.
+- **The risk step is policed by review, not by the check.** Inside the markers, conditionals are
+  allowed, so an instruction there that acts on the level would pass the check.
+- **Retired identifiers are a permanent cost.** Every reader of a factor table meets a numbering that
+  skips F3 and F4.
 
 ### Risks and Mitigations
 
-- **Risk: the Synthesiser recomputes a factor's input while writing the rationale** — re-counting
-  breaking-change items in prose and stating a number that differs from the table.
-  *Mitigation*: the handoff rule makes the count line FR-7 wrote the single source; AC-34 checks the
-  rationale against the same run's own cited evidence, and the Classifier/Synthesiser split means a
-  number appearing in prose that no Classifier row emitted is a visible violation, not a subtle one.
-- **Risk: a future change adds a conditional on the level** — for example, "if `High`, also emit a
-  warning line" — which would quietly end FR-13's guarantee.
-  *Mitigation*: the `grep` in Key Components 4 is stated in the ADR, and is run as an acceptance check
-  (AC-25's structural half) rather than left as advice.
-- **Risk: `F3`/`F4` are resurrected by someone reading the previous version of this ADR** in git
-  history, or reading the implementation built against it.
-  *Mitigation*: the retirement is stated in both this ADR and FR-11, with the non-conformance
-  consequence spelled out; the rescope note above tells a reader of the history why the material is
-  gone rather than leaving them to assume it was lost.
-- **Risk: the two pre-`Write` assertions are written as prose the model may skip** rather than as steps
-  with observable output.
-  *Mitigation*: they run over the *assembled* text immediately before the single `Write`, which is the
-  one point where both the computed maximum and the stated level exist side by side.
+- **Risk: the Synthesiser re-counts breaking-change items while writing the rationale**, and states
+  a number that differs from the table.
+  *Mitigation*: the rationale renders the Classifier's rows. AC-34 checks every count against its
+  cited evidence.
+- **Risk: a later edit adds an action on the level** — "if `High`, also emit a warning line".
+  *Mitigation*: outside the markers, the invariant check fails. Inside them, the step has one job,
+  and the markers make it the one place a reviewer must read.
+- **Risk: F3 or F4 is revived** by someone reading an earlier version of this ADR or of the command
+  file.
+  *Mitigation*: FR-11 and Key Components 2 state the retirement as a rule, with its non-conformance
+  consequence.
+- **Risk: a forced level is missed** because FR-16 gains a row.
+  *Mitigation*: the forced levels are one table here, and a new FR-16 row that sets a factor level
+  is a change to that table.
 
 ## Alternatives Considered
 
-### Alternative 1: A weighted or averaged risk score instead of max-of-factors
+### Alternative 1: A weighted or averaged risk score
 
-Give the factors weights, map `Low`/`Medium`/`High` to 1/2/3, and report a composite.
+Give the factors weights, map the levels to 1, 2 and 3, and report a composite.
 
-**Rejected, and this ADR owns the rejection rather than merely citing FR-12's.** Requirements states
-the reason — "reproducible, explainable in one sentence, and cannot be gamed by averaging a `High`
-away" — and the calibration case shows the shape of the failure: F1 High and F2 High alongside a
-lower F5 averages to something defensible-looking and materially below High, which is the wrong answer
-for a 76-file change to `src/` carrying fourteen breaking-change items. Two arguments of this ADR's
-own: the factors are **not commensurable** — "76 files under `src/`" and "one breaking change with no
-migration note" are not quantities on a shared scale, so any weighting invents an exchange rate that
-nothing in the requirements justifies and that NFR-1 would then have to defend for stability across
-runs on top of everything else. And **two of the three factors are already judged** (F2 and F5 per
-NFR-1); multiplying judged values by invented weights compounds variance in the one direction —
-downward — that FR-12 forbids. The maximum needs no exchange rate: only the ordering
-`Low < Medium < High` the factor table already defines.
+**Rejected.** The factors are not commensurable, so any weight invents an exchange rate that nothing
+in the requirements justifies. Two of the three factors are already judged, so weighting them
+compounds their variance. Averaging also runs in the one direction FR-12 forbids: on the calibration
+case, F1 `High` and F2 `High` beside a lower F5 average to something below `High`, which is the wrong
+answer for a 76-file change carrying more than four breaking changes. The maximum needs only the
+order `Low` < `Medium` < `High`.
 
-### Alternative 2: Drop the level entirely and write "what deserves scrutiny" as prose
+### Alternative 2: No level, only prose about what deserves scrutiny
 
-State the same measurements in sentences and let the reader form their own view, with no
-`Low`/`Medium`/`High` word at all.
+State the measurements and let the reader decide, with no `Low`, `Medium` or `High`.
 
-**Rejected, though it was genuinely open during the rescope.** The argument for it is real: a single
-word invites exactly the gate-like treatment FR-13 forbids, and three factors is a thin basis for one
-(see Consequences). The argument against is the problem this command exists to solve. "Is this safe to
-merge?" was being re-derived ad hoc every session precisely because there was nothing stable to
-compare against; prose that carefully avoids committing to a level reproduces that state. A level that
-is wrong is arguable and therefore improvable. Prose that declines to conclude is neither. The level
-stays, with the raise/never-lower asymmetry and the advisory construction as the guards against it
-hardening into a gate.
+**Rejected.** A single word does invite gate-like treatment, and three factors are a thin basis for
+it. But the problem this command exists for is that "is this safe to merge?" was re-derived every
+session with nothing stable to compare against. Prose that declines to conclude reproduces that
+state. A level that is wrong can be argued with and improved. The raise-only rule and the advisory
+construction guard against the level becoming a gate.
 
-### Alternative 3: Keep F3 and F4, and accept the overlap with the PR's own UI
+### Alternative 3: Factors for review findings and CI state
 
-Retain the review-findings factor and the CI-rollup factor, on the grounds that having them in one
-place alongside the other three is a convenience even if the data is available elsewhere.
+Add a factor for the pull request's open review findings and one for its CI rollup.
 
-**Rejected on scope, not on accuracy.** Both factors worked — F4's three-way
-`.conclusion // .state // .status` fallback was calibrated against PR #4282's heterogeneous 28-entry
-rollup, and F3's tallies matched a hand decomposition of the same PR. The objection is that a summary
-which recounts a review is a second review, and this repository already has two things that own that
-material properly: the pull request's own comments and checks tab, and `/spec:review code`. A
-convenience that duplicates an authoritative source acquires a way to be *stale* that the source does
-not have — a `show-me.md` written before the last CI run states a CI fact that is now false, with no
-mechanism to notice. FR-18 now forbids the queries outright, so the overlap cannot be reintroduced by
-accident.
+**Rejected on scope.** The pull request already presents its own review comments and its own checks,
+and `/spec:review code` assesses the code. A summary that re-counts a review is a second review, and
+one that copies a CI result can go stale without anything noticing. FR-18 forbids the queries these
+factors would need.
 
-### Alternative 4: Compute the risk table before the sections it projects from, in FR-5's print order
+### Alternative 4: Let the risk table derive F2 and F5 itself
 
-Synthesise sections 1–8 in the order they appear, and have the risk table derive F2 and F5 itself.
+Compute the table independently from the sections, in FR-5's print order.
 
-**Rejected because it makes the table a second opinion.** Deriving the breaking-change count inside
-the risk table means partitioning the same catalogue twice, by the same judgement, on two occasions —
-and two applications of a judged rule to the same evidence can differ. The document would then state
-`14 items` in one section and score `High` from a different number in another, with nothing to reveal
-the discrepancy. The 6.a/6.b/6.c split costs one paragraph of explanation and removes the possibility.
+**Rejected.** It makes the table a second opinion about the same evidence. Two applications of one
+judged rule can differ, and the file would then state one item count in `## Breaking changes` and
+score F2 from another. Judging once removes the possibility.
+
+### Alternative 5: A substring check for conditionals near level names
+
+Search the whole command file for `if`, `when` or `unless` followed by a level name.
+
+**Rejected.** `if` matches inside `diff`, `classified` and `verify`, and the command file describes
+diffs throughout, so the check is never quiet. It also fires on the mapping procedure itself. A check
+that always fires is waived, which is the same as not having one.
 
 ## References
 
 - Requirements: [specs/0037-show-me/requirements.md](../../specs/0037-show-me/requirements.md)
 - Related ADRs:
-  - [ADR 0072: Target Resolution and Output Shape for /spec:show-me](0072-show-me-command-resolution-and-output.md) — the sibling ADR this one extends. Its Step 5 produces F1's input and its Step 6 produces F2's and F5's; its Measurer/Synthesiser vocabulary is the one the Classifier joins.
-  - [ADR 0077: Visual Explanation in /spec:show-me](0077-show-me-visual-explanation.md) — the sibling that introduces the Explainer stage and grants it the direct source-read rights this ADR deliberately withholds from the Classifier.
-  - [ADR 0071: Shiftable Review Gear for the TDD Approval Gate](0071-tdd-review-gear.md) — the only other ADR recording a decision about a `/spec:*` command's own behaviour rather than Brighter's runtime.
+  - [0072-show-me-command-resolution-and-output](0072-show-me-command-resolution-and-output.md) — the
+    ledger, the Measurer's F1 level, the command's reads, the section shapes and the test script.
+  - [0077-show-me-visual-explanation](0077-show-me-visual-explanation.md) — the Explainer, which
+    exchanges nothing with the risk step.
+  - [0078-spec-family-machine-readable-forms](0078-spec-family-machine-readable-forms.md) — the
+    marked release-notes form whose `#### Breaking changes` list is FR-7's catalogue.
+  - [0071-tdd-review-gear](0071-tdd-review-gear.md) — the other ADR that decides a `/spec:*`
+    command's own behaviour rather than Brighter's runtime.
 - Conventions and prior art in this repository:
-  - [`.agent_instructions/adr_frontmatter.md`](../../.agent_instructions/adr_frontmatter.md) — tag taxonomy and the slug-is-identity rule.
-- External references: PR [#4282](https://github.com/BrighterCommand/Brighter/pull/4282) — spec 0036's pull request, the calibration case. The figures this ADR retains from it (76 files changed under `src/`, 14 breaking-change items) were verified with `git` and `gh` while drafting. The review-history and CI figures the previous version of this ADR calibrated against the same PR are recorded in git history and are no longer part of this decision.
+  - [`.agent_instructions/adr_frontmatter.md`](../../.agent_instructions/adr_frontmatter.md) — tag
+    taxonomy and the rule that an ADR's identity is its filename stem.
+- External references: PR [#4282](https://github.com/BrighterCommand/Brighter/pull/4282) — spec 0036's
+  pull request, the calibration case: 76 files under `src/`, and more than four breaking changes
+  recorded in its ADRs' *Consequences* sections.
