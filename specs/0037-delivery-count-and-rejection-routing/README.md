@@ -136,7 +136,9 @@ those two rungs; a third mechanism is out of bounds.
 - [x] **Adversarial Review (design) — round 3**, 2026-09-25. NEEDS WORK, 3 findings, 1 at or above threshold 60. On RocketMQ, the dead-letter copy's `HandledCount` was overwritten by the stale bag entry. On the user's call, the publisher's bag loop now skips any key already written. Round 2's sections drew no findings. All 3 applied and verified against the file.
 - [x] **Adversarial Review (design) — round 4**, 2026-09-25. **PASS**: 2 findings, none at or above threshold 60, both Low. Both applied in one batch with no further round (user's call). The RocketMQ publisher bag-loop skip lands on both branches, and its effect on every RocketMQ publish is recorded as a Negative consequence.
 - [x] **Design approved** — 2026-09-25, `/spec:approve design`. ADRs 0077 and 0078 are `Accepted`, and the index is regenerated.
-- [ ] **Tasks** — `/spec:tasks` (not started)
+- [x] **Tasks** — drafted 2026-09-25, `tasks.md`: 78 tasks in 8 phases (51 TEST + IMPLEMENT, 4 TIDY, 18 GATE, 5 MEASURE), with the GCP (AC-39) and RocketMQ (AC-23) branches pre-listed. One PR. Not yet reviewed.
+- [x] **Adversarial Review (tasks) — round 1**, 2026-09-25. NEEDS WORK, 12 findings, 4 at or above threshold 60. On the user's call, the 17 tasks expected green on first run become `CHARACTERISE`, each with a named production mutation; the convention comes from the #4334 branch and is summarised in `tasks.md`. The validation tests are split between `Core.Tests` and `Extensions.Tests`. All 12 applied; 5.5 re-split by the main agent to avoid `InternalsVisibleTo`. Now 79 tasks.
+- [ ] **Adversarial Review (tasks) — round 2** — `/spec:review tasks`
 - [ ] **Implementation** — `/spec:implement` (not started — no code written)
 
 **TDD gear:** `review-before` (armed by default). No `.current-gear` file exists for this spec.
