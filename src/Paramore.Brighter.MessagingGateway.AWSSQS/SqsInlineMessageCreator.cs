@@ -57,6 +57,7 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
             var cloudEvents = ReadMessageCloudEvents(); 
             var contentType = ReadContentType(cloudEvents);
             var correlationId = ReadCorrelationId();
+            var bag = ReadMessageBag();
             var handledCount = ReadHandledCount();
             var messageType = ReadMessageType();
             var timeStamp = ReadTimestamp(cloudEvents);
@@ -72,8 +73,7 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
             var traceParent = ReadCloudEventsTraceParent(cloudEvents);
             var traceState = ReadCloudEventsTraceState(cloudEvents);
             var baggage = ReadCloudEventsBaggage(cloudEvents);
-            
-            var bag = ReadMessageBag();
+
             if (deduplicationId.Success)
             {
                bag[HeaderNames.DeduplicationId] = deduplicationId.Result;
