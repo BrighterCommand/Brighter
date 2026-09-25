@@ -191,3 +191,140 @@ The ADR step 3/4 coverage rows were updated to match; `InternalsVisibleTo` now h
 - Every TEST + IMPLEMENT and CHARACTERISE task has exactly one `/test-first` and one ⛔ line, and every CHARACTERISE task has a 🔁 mutation line. No GATE, MEASURE or TIDY task has a ⛔ line.
 - Every cited task id resolves, and no bare `5.5` reference remains.
 - Mutation targets spot-checked in the source: `MessagePump.cs:171-174`, `Message.cs:161-164`, `Reactor.cs:498`, `Proactor.cs:504`, `ConsumerValidationRules.cs:114`.
+
+---
+
+# Review: tasks — 0037-delivery-count-and-rejection-routing (round 2)
+
+**Date**: 2026-09-25
+**Threshold**: 60
+**Verdict**: NEEDS WORK
+
+1 finding at or above threshold 60. Address these before approving.
+
+## Findings
+
+### 1. 6.15's mutation (a) cannot turn the GCP test RED, so its main assertion has no working mutation (Score: 65)
+
+6.15's mutation (a) is "`Resolve` ignores the discriminator → the DLQ copy presents `0`". On GCP, however, the Brighter DLQ is read through 5.4's pre-provisioned reading subscription, which has no `DeadLetterPolicy`. Pub/Sub therefore leaves `DeliveryAttempt` unset (A-1), and 2.2's "broker count `null`, `0` or negative → header count" returns the stamped 3. Mutation (b), no stamping, fails only the metadata clause. So no named mutation fails the R-28/AC-41 count assertion, and on GCP the test does not exercise the "DLQ's own counter" half of R-28 the way its SQS (4.6) and RocketMQ (7.12) twins do.
+
+**Evidence**: 6.15 🔁 line; tasks.md:498 (5.4, reading subscription); tasks.md:97, :111 (2.1, 2.2); ADR 0078:282; AC-41.
+
+**Recommendation**: (i) read the Brighter DLQ through a subscription that carries a `DeadLetterPolicy`, so its own counter is populated and mutation (a) bites; or (ii) replace (a) with a publish-side mutation (`Parser.cs:307` stops writing `HandledCount`) and note that the discriminator is exercised on GCP only when the DLQ subscription has a policy.
+
+**Fix type**: task rephrase
+
+---
+
+### 2. 6.4's RED depends on 6.3's measurement, and the Given that puts the attribute on the message is not specified (Score: 52)
+
+The pull path exposes `DeliveryAttempt` as a field, not an attribute, and stream injection by `SubscriberClient` is 6.3(i)'s open question. Pub/Sub may also reserve `goog*` attribute keys (6.3(ii)).
+
+**Recommendation**: state the Given for each 6.3 outcome. Publish the attribute explicitly if the emulator accepts it; otherwise use a DLQ-backed stream subscription, and the pull clause becomes CHARACTERISE (mutation: remove the `s_ignoreHeaders` entry).
+
+**Fix type**: task rephrase
+
+---
+
+### 3. 5.6's "RejectAsync is genuinely async" clause cannot be observed through the public API (Score: 45)
+
+The router is internal and `InternalsVisibleTo` is forbidden; the public observables are identical either way.
+
+**Recommendation**: move the clause to "Implementation should", checked by code review, or name an observable (the returned task does not complete synchronously while the publish is pending).
+
+**Fix type**: task rephrase
+
+---
+
+### 4. 1.5 says the client lookup goes "inside each helper's `try`", but the helper contract gives helpers no try/catch (Score: 40)
+
+**Recommendation**: "each helper performs the client lookup and the RPC with no try/catch of its own; every caller invokes it inside its existing `try`".
+
+**Fix type**: task rephrase
+
+---
+
+### 5. 4.8's mutation is contrived rather than the realistic defect (Score: 30)
+
+`HandledCountReached(Math.Min(RequeueCount, 2))` is valid, but it is an arbitrary constant.
+
+**Recommendation**: use an over-counting `Resolve` mutation instead, or keep it with a note on why.
+
+**Fix type**: task rephrase
+
+---
+
+### 6. 6.30 mutation (b) fails on "arrival", not on "topic still absent" as stated (Score: 30)
+
+**Recommendation**: "fails on 'the message arrives' (count at or below M); the topic now exists".
+
+**Fix type**: task rephrase
+
+---
+
+### 7. Leftover cross-references from the 5.5 split (Score: 25)
+
+5.5b's RED comes only from the `.Invalid` clause, because `NoDestination` exists from 5.5a. 5.10 says "composed in 5.5b/5.8" where it should say 5.5a.
+
+**Recommendation**: note the RED source in 5.5b, and change 5.10's "5.5b/5.8" to "5.5a/5.8".
+
+**Fix type**: task rephrase
+
+---
+
+### 8. 6.1's second test needs the R-11 rule from 2.5, but 6.1 depends only on 2.4 (Score: 25)
+
+**Recommendation**: "Depends on: 2.5, 5.1".
+
+**Fix type**: reorder/dependency
+
+---
+
+## Summary
+
+| Score Range | Count |
+|-------------|-------|
+| 90-100 (Critical) | 0 |
+| 70-89 (High) | 0 |
+| 50-69 (Medium) | 2 |
+| 0-49 (Low) | 6 |
+
+**Total findings**: 8
+**Findings at or above threshold (60)**: 1
+
+## Regression check (round 2)
+
+- All round-1 changes are OK apart from #1 and some minor wording (#4, #6, #7, #8):
+  - F1 (7.3) is RED today and holds on AC-24.
+  - F2's spec-count bumps are right: only 2.3, 2.4 and 2.5 register a spec.
+  - F5: `Gcp.Tests` can construct `PipelineValidator` (ServiceActivator reference, csproj:39).
+  - F6: 5.10 is genuinely RED, since today's `Reject` rethrows (`GcpPullMessageConsumer.cs:290-293`).
+  - F8: 5.5b is RED on `.Invalid`, and `InternalsVisibleTo` appears nowhere.
+- CHARACTERISE tasks: 16 of 17 are OK (their mutations are effective and their citations verified). 6.15 is #1. No CHARACTERISE task is RED on arrival, and the enabling tasks 4.3, 6.10, 6.11 and 7.10 are genuinely RED.
+
+## Main-agent validation (round 2)
+
+Summary recounted: Medium 65/52, Low 45/40/30/30/25/25. That is 8 total, 1 ≥ 60. Correct.
+
+1. **Confirmed.** tasks.md:498: 5.4's reading subscription carries no policy. tasks.md:97 and :111: an unset counter normalises to 0, and `Resolve` then returns the header count. So 6.15's mutation (a) leaves the DLQ copy at the stamped 3, and the test stays green.
+
+## Remediation (round 2): the user's decisions and what was applied
+
+Decisions (user, 2026-09-25): F1 is fixed by giving 6.15's DLQ read a subscription that carries its own
+`DeadLetterPolicy`, so the discriminator mutation bites and GCP exercises R-28's "not the destination's
+own counter" half. Apply F2–F8, then run round 3.
+
+The main agent applied the changes with exact-anchor replacements scoped to each task's block, and grepped every one back:
+
+| # | Task | Applied text (grep anchor) |
+|---|---|---|
+| F1 | 6.15 | "over a reading subscription that **carries its own `DeadLetterPolicy`**"; "Depends on: 5.4, 6.10, 6.11" |
+| F2 | 6.4 | "**Given, chosen by 6.3's outcome:**" (a) explicit publish; (b) `SubscriberClient` injection, pull clause characterised by removing the `s_ignoreHeaders` entry |
+| F3 | 5.6 | The "genuinely async" clause moved from the test to Implementation: "checked at code review and by 8.2's broker-call review, not asserted" |
+| F4 | 1.5 | "with **no try/catch of its own**; every caller invokes it inside its existing `try`" |
+| F5 | 4.8 | Mutation (a) is now "`DeliveryCount.Resolve` (2.2) over-counts — returns `Normalise(brokerCount) * 5`" |
+| F6 | 6.30 | Mutation (b) "fails on \"the message arrives\" … the routing-key topic now exists" |
+| F7 | 5.5b, 5.10 | "RED comes from the `Unacceptable` → `.Invalid` clause …"; "composed in 5.5a/5.8" |
+| F8 | 6.1 | "Depends on: 2.5, 5.1" |
+
+Old text now has 0 occurrences: `Math.Min(RequeueCount, 2)`, "**inside** each helper's", "5.5b/5.8". The task count is unchanged at 79.

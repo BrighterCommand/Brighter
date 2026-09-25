@@ -78,7 +78,7 @@
 
 - [ ] **1.5 TIDY: Extract private settle helpers from the GCP consumers' `Acknowledge`/`Requeue` (ADR 0078 Implementation step 1)**
   - **USE COMMAND**: `/tidy-first extract handle-taking ack and release helpers in GcpPullMessageConsumer and GcpPubSubStreamMessageConsumer`
-  - `GcpPullMessageConsumer`: add private `AckByHandle(string ackId)`/`AckByHandleAsync`, from the ack RPC call currently made in `Acknowledge` (`:29`, call `:39`), `AcknowledgeAsync` (`:55`, call `:65`), `Reject` (`:276`, call `:288`) and `RejectAsync` (`:306`, call `:317`), and `ReleaseByHandle(string ackId)`/`ReleaseByHandleAsync`, from `Requeue` (`:344/349`, `:379/384`). Call `GetOrCreateSubscriberServiceApiClient`/`CreateSubscriberServiceApiClientAsync` **inside** each helper's `try`.
+  - `GcpPullMessageConsumer`: add private `AckByHandle(string ackId)`/`AckByHandleAsync`, from the ack RPC call currently made in `Acknowledge` (`:29`, call `:39`), `AcknowledgeAsync` (`:55`, call `:65`), `Reject` (`:276`, call `:288`) and `RejectAsync` (`:306`, call `:317`), and `ReleaseByHandle(string ackId)`/`ReleaseByHandleAsync`, from `Requeue` (`:344/349`, `:379/384`). Each helper performs the client lookup (`GetOrCreateSubscriberServiceApiClient`/`CreateSubscriberServiceApiClientAsync`) and the RPC with **no try/catch of its own**; every caller invokes it inside its existing `try`, so a client-construction failure is handled like an RPC failure, as today.
   - Helper contract: each helper wraps **only** the client lookup and the RPC, and throws exactly as today. Logging and the catch/return decision stay with the callers (whose log messages differ today).
   - `GcpPubSubStreamMessageConsumer`: add private `Accept(GcpStreamMessage)` and `Nack(GcpStreamMessage)` (used by 5.6's accept after routing and 5.8's Nack on failed routing).
   - The public methods keep their current contracts: pull `Requeue` swallows exceptions and returns `false` (`:354-358`); stream `Requeue` returns `true` with no handle (`:219-222`).
@@ -380,7 +380,7 @@
     - Bespoke `requeueCount: 10`, `RedrivePolicy(maxReceiveCount: 3)`, the deferring pump
     - The native target holds the message with **none** of the five `RejectionMetadataKeyNames` keys
     - No `HandledCount` is asserted
-  - 🔁 **Characterisation — expected green on first run:** SQS performs the native redrive itself and Brighter neither suppresses nor stamps it (R-9); with 4.3 in place a budget of 10 is never reached in 3 receives. **RED mutation(s)**, applied and reverted one at a time: (a) in `Reactor.RequeueMessage` (`src/Paramore.Brighter.ServiceActivator/Reactor.cs:498`) and `Proactor` (`Proactor.cs:504`), call `message.HandledCountReached(Math.Min(RequeueCount, 2))` — Brighter dead-letters ahead of the native limit, so the native target read returns `MT_NONE` and it fails on "the native target holds the message".
+  - 🔁 **Characterisation — expected green on first run:** SQS performs the native redrive itself and Brighter neither suppresses nor stamps it (R-9); with 4.3 in place a budget of 10 is never reached in 3 receives. **RED mutation(s)**, applied and reverted one at a time: (a) `DeliveryCount.Resolve` (2.2) over-counts — returns `Normalise(brokerCount) * 5`, the realistic defect of a mis-scaled counter — so the third receive presents 10, the budget is reached and Brighter dead-letters ahead of the native limit, so the native target read returns `MT_NONE` and it fails on "the native target holds the message".
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed — before committing if the test was green on arrival, before implementing if it was not** *(fires in the `review-before` gear, which is the default)*
   - Implementation should (only if the test is unexpectedly RED on arrival — otherwise no production change):
     - Brighter neither suppresses nor stamps a native redrive (R-9); a red points at the pump's budget check or at a Brighter stamp reaching the native copy.
@@ -532,6 +532,7 @@
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Select the destination by reason in `GcpRejectionRouter`: `Unacceptable` → invalid key, falling back to the DLQ key; `DeliveryError`/`None` → DLQ key; neither → `RoutingOutcome.NoDestination`
+    - RED comes from the `Unacceptable` → `.Invalid` clause; the DLQ-fallback and no-destination clauses may already be green, because 5.5a routes every reason to the DLQ key and already returns `NoDestination` when it is absent
   - Depends on: 5.5a
 
 - [ ] **5.6 TEST + IMPLEMENT: A GCP stream Reject routes by reason with rejection metadata, then accepts the original; RejectAsync is genuinely async**
@@ -540,9 +541,9 @@
   - Test file: `When_a_gcp_stream_consumer_rejects_should_route_by_reason_with_metadata.cs` (async: `…_async.cs`)
   - Test should verify (R-16, R-18, AC-15, AC-16; NFR-8), on `GCP / Stream` and `GCP / StreamOrdering`:
     - The same clauses as 5.5a and 5.5b
-    - `RejectAsync` routes through `RouteAsync` rather than `Task.FromResult(Reject(...))`
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
+    - `RejectAsync` routes through `RouteAsync` rather than `Task.FromResult(Reject(...))` (`GcpPubSubStreamMessageConsumer.cs:106` today). This is not observable through the public API — the router is internal and `InternalsVisibleTo` is forbidden — so it is checked at code review and by 8.2's broker-call review, not asserted
     - Add the ctor parameters to `GcpPubSubStreamMessageConsumer`, wired at `GcpPubSubConsumerFactory.cs:99`, and have it dispose the router
     - Compose `Reject` (`:84`) and `RejectAsync` (`:104-106`): copy the `GcpStreamMessage` handle → route → `handle.Accepted()` on `Routed`/`NoDestination`. A missing handle still routes, logs an Error and returns `true`.
   - Depends on: 5.5b
@@ -612,7 +613,7 @@
       - **The interceptor's fired-counter is > 0**. This guards against the invoker being silently dropped, and confirms at runtime that `Validate` accepts the invoker (ADR 0078 Risks).
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - Add the settle-failure handling to the pull `Reject`/`RejectAsync` composed in 5.5b/5.8: a failed `AckByHandle`/`ReleaseByHandle` RPC is caught, logs a source-generated Error naming the message id, and `Reject` still returns `true` (nothing escapes)
+    - Add the settle-failure handling to the pull `Reject`/`RejectAsync` composed in 5.5a/5.8: a failed `AckByHandle`/`ReleaseByHandle` RPC is caught, logs a source-generated Error naming the message id, and `Reject` still returns `true` (nothing escapes)
     - Record the evidence: a dated "Evidence" entry in `docs/adr/0078-gcp-rejection-routing-and-dlq-channel-creation.md` naming the test files and results, and the checklist item "R-16/R-17/R-19 failure evidence produced" ticked in `specs/0037-delivery-count-and-rejection-routing/README.md`. These are evidence, not ACs.
   - Depends on: 5.8
 
@@ -642,7 +643,7 @@
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Implement the interface on `GcpPubSubSubscription` (`GcpPubSubSubscription.cs:75`, `DeadLetterPolicy.cs:47`). The AC-40 branch (6.20) widens the reason.
-  - Depends on: 2.4, 5.1
+  - Depends on: 2.5, 5.1
 
 - [ ] **6.2 TEST + IMPLEMENT: Creating a GCP channel whose budget is unenforceable logs exactly one Warning, and receiving never logs another**
   - **USE COMMAND**: `/test-first when a gcp channel is created for an unenforceable budget should log exactly one warning and none on the receive path`
@@ -673,6 +674,7 @@
   - Test file: `When_a_gcp_message_carries_delivery_attempt_attribute_should_not_copy_it_into_bag.cs` (async: `…_async.cs`)
   - Test should verify (R-28; ADR 0077 "Where each transport reads its counter", GCP stream row):
     - A message received through the stream and the pull consumer has no `googclient_deliveryattempt` key in `Header.Bag`
+    - **Given, chosen by 6.3's outcome:** (a) if 6.3(ii) shows the emulator accepts a published `googclient_deliveryattempt` attribute, publish it explicitly and assert on both consumers — RED today on both; (b) otherwise use a DLQ-backed stream subscription and rely on `SubscriberClient`'s injection (6.3(i)) — RED on the stream clause; the pull clause then carries the attribute only if published, so it is characterised by the mutation "remove the `s_ignoreHeaders` entry" rather than observed RED. Record which Given was used in the test's comment
     - A copy routed by 5.5b/5.6's Reject carries no such attribute on the destination
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
@@ -791,14 +793,14 @@
   - Test file: `When_gcp_budget_is_exhausted_dead_letter_copy_should_keep_stamped_count_and_metadata.cs` (async: `…_async.cs`)
   - Test should verify (R-5, R-28, AC-4, AC-41), for both consumers:
     - `requeueCount: 3` and `DeadLetterPolicy` M = 5 on `.native`
-    - The Brighter DLQ is read via a `ChannelFactory` channel
+    - The Brighter DLQ is read via a `ChannelFactory` channel over a reading subscription that **carries its own `DeadLetterPolicy`** (to a further topic), so the DLQ's own delivery counter is populated (A-1) and the read genuinely exercises R-28's "not the destination's own counter" half, as SQS (4.6) and RocketMQ (7.12) do. Without that policy Pub/Sub leaves the counter unset and `Resolve` falls back to the header count, so no mutation of the discriminator could fail the test
     - `HandledCount >= 3` and not `0`
     - The five AC-4 keys are present and valid
   - 🔁 **Characterisation — expected green on first run:** the publish-side `HandledCount` attribute (`Parser.cs:307`), 5.5a's router stamping and `Resolve`'s discriminator (2.2, applied by 6.10/6.11) already deliver it. **RED mutation(s)**, applied and reverted one at a time: (a) `DeliveryCount.Resolve` (2.2) ignores the `rejectionReason` discriminator and returns the normalised broker count whenever one is present — the DLQ copy presents `0`, failing on "`HandledCount >= 3` and not `0`"; (b) `GcpRejectionRouter` (5.5a) skips the `RejectionMetadataKeyNames` stamping — failing on "the five AC-4 keys are present and valid".
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed — before committing if the test was green on arrival, before implementing if it was not** *(fires in the `review-before` gear, which is the default)*
   - Implementation should (only if the test is unexpectedly RED on arrival — otherwise no production change):
     - A red points at `Parser.cs:307` (`HandledCount` attribute), the router's stamping (5.5a), or `Resolve`'s discriminator.
-  - Depends on: 6.10, 6.11
+  - Depends on: 5.4, 6.10, 6.11
 
 - [ ] **6.16 GATE: GCP FR-23 passes on all four configurations, both variants; move the four ledger cells (AC-19, AC-3 on GCP, AC-30 row 3, NFR-7)**
   - Set the four `GCP / *` FR-23 cells to `Fixed (#4386)`, regenerate, and run FR-23 on a clean emulator in both variants.
@@ -843,7 +845,7 @@
     - The routing-key topic is still absent
     - The final dispatch count is `> 3` and equals the arrival snapshot
     - ⚠️ If there is no arrival within 60 s **and** the count is past M = 5, A-6 is refuted for that configuration. Still assert the Error, the absent topic and the count past M, and record the refutation per configuration in the GCP paragraph of `conformance-status.md`. No arrival with the count at or below M is an ordinary failure.
-  - 🔁 **Characterisation — expected green on first run:** 5.8's release-on-failure, the native policy (5.4, M = 5) and the branch taken already deliver it; there is no new production code beyond 5.8 and the branch taken (ADR 0078 step 7). **RED mutation(s)**, applied and reverted one at a time: (a) on `RoutingOutcome.Failed`, pull `Reject`/`RejectAsync` call `AckByHandle` instead of `ReleaseByHandle`, and stream `Reject`/`RejectAsync` call `Accept` instead of `Nack` (5.8's failure branch) — the release loop ends at the first rejection and the message never reaches the policy subscription, failing on "the message arrives" (with the count at or below M); (b) `GcpRejectionRouter`'s lazy producer (5.5a) is created with `MakeChannels = OnMissingChannel.Create` instead of the subscription's `Assume` — routing succeeds, the loop ends, and it fails on "the routing-key topic is still absent".
+  - 🔁 **Characterisation — expected green on first run:** 5.8's release-on-failure, the native policy (5.4, M = 5) and the branch taken already deliver it; there is no new production code beyond 5.8 and the branch taken (ADR 0078 step 7). **RED mutation(s)**, applied and reverted one at a time: (a) on `RoutingOutcome.Failed`, pull `Reject`/`RejectAsync` call `AckByHandle` instead of `ReleaseByHandle`, and stream `Reject`/`RejectAsync` call `Accept` instead of `Nack` (5.8's failure branch) — the release loop ends at the first rejection and the message never reaches the policy subscription, failing on "the message arrives" (with the count at or below M); (b) `GcpRejectionRouter`'s lazy producer (5.5a) is created with `MakeChannels = OnMissingChannel.Create` instead of the subscription's `Assume` — routing succeeds, the original is acked and the loop ends, so it fails on "the message arrives" (count at or below M); the routing-key topic now exists.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed — before committing if the test was green on arrival, before implementing if it was not** *(fires in the `review-before` gear, which is the default)*
   - Implementation should (only if the test is unexpectedly RED on arrival — otherwise no production change):
     - If the branch taken needs a change, make it only in 5.8's failure path or the branch's own task. This test is also the A-6 risk measurement.
