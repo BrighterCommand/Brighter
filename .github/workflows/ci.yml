@@ -49,6 +49,8 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+      - name: AWS Cleanup Offline Tests
+        run: bash test_clean_failed_tests_aws_assets_offline.sh
       - uses: actions/cache@v6
         with:
           path: ~/.nuget/packages
