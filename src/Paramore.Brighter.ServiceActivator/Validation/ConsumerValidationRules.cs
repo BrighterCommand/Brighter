@@ -186,6 +186,38 @@ public static class ConsumerValidationRules
                 $"Did you mean -1 (requeue for ever) or 1 (reject after one delivery)?"));
 
     /// <summary>
+    /// Validates that a subscription's configured delivery budget (<see cref="Subscription.RequeueCount"/>)
+    /// will fire ahead of its visible native redrive limit (R-10, ADR 0077). When both are configured
+    /// and <c>R &gt;= M</c>, the native limit fires first and the budget is ineffective — this is
+    /// reported as a <see cref="ValidationSeverity.Warning"/> naming the subscription, the budget, the
+    /// native limit, and that the effective limit is the native one. Vacuously passes for subscriptions
+    /// that do not implement <see cref="IAmADeliveryCountingSubscription"/> (R-22), when <c>R == -1</c>
+    /// (budget disabled), or when <see cref="IAmADeliveryCountingSubscription.NativeRedriveLimit"/> is
+    /// <c>null</c>.
+    /// </summary>
+    /// <returns>A simple specification that reports a Warning when the budget meets or exceeds the native redrive limit.</returns>
+    public static ISpecification<Subscription> BudgetAtNativeRedriveLimit()
+        => new Specification<Subscription>(
+            s =>
+            {
+                if (s is not IAmADeliveryCountingSubscription counting) return true;
+                if (s.RequeueCount == -1) return true;
+                if (counting.NativeRedriveLimit is not int m) return true;
+                return s.RequeueCount < m;
+            },
+            s =>
+            {
+                var counting = (IAmADeliveryCountingSubscription)s;
+                var m = counting.NativeRedriveLimit!.Value;
+                return new ValidationError(
+                    ValidationSeverity.Warning,
+                    $"Subscription '{s.Name}'",
+                    $"Subscription '{s.Name}' has requeueCount {s.RequeueCount} which meets or exceeds " +
+                    $"the native redrive limit of {m}. The effective limit is the native limit ({m}); " +
+                    $"the Brighter budget will not fire first.");
+            });
+
+    /// <summary>
     /// Checks whether <paramref name="handlerType"/> derives from <c>RequestHandlerAsync&lt;&gt;</c>.
     /// Walks the base type chain so it works with both open and closed generic types.
     /// </summary>

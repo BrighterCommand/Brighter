@@ -214,6 +214,8 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
                 ConsumerValidationRules.RequestTypeSubtype());
             services.AddSingleton<ISpecification<Subscription>>(_ =>
                 ConsumerValidationRules.ZeroBudget());
+            services.AddSingleton<ISpecification<Subscription>>(_ =>
+                ConsumerValidationRules.BudgetAtNativeRedriveLimit());
             services.AddSingleton<ISpecification<Subscription>>(sp =>
             {
                 // The transformer-resolvability probe is registered by ValidatePipelines (a complete snapshot
