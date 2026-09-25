@@ -552,7 +552,7 @@ One task per transport. Each bundles that transport's one-line `ChannelFactoryTy
     - Note for the release notes (task 36): MQTT is the one transport whose `ChannelFactory` accepts *any* `Subscription` (`MQTT/ChannelFactory.cs:32-73` passes it through untouched), so a plain `Subscription<T>` consumes MQTT **correctly today** and becomes an `Error` after this change — that is **C-11**
   - Depends on: 31.
 
-- [ ] **33. TEST + IMPLEMENT: `SqsSubscription` (AWSSQS) declares its channel factory (FR-9 — AC-22, AC-25c, AC-26c, AC-26f)**
+- [x] **33. TEST + IMPLEMENT: `SqsSubscription` (AWSSQS) declares its channel factory (FR-9 — AC-22, AC-25c, AC-26c, AC-26f)**
   - **USE COMMAND**: `/test-first when reading the channel factory type of an AWS SQS subscription it should be the AWS SQS channel factory and the rule should report no findings`
   - Test location: "tests/Paramore.Brighter.AWS.Tests/MessagingGateway"
   - Test files:
