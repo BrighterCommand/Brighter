@@ -167,6 +167,25 @@ public static class ConsumerValidationRules
     }
 
     /// <summary>
+    /// Validates that the subscription's <see cref="Subscription.RequeueCount"/> is not a zero-budget
+    /// value (R-7, ADR 0077). A <see cref="Subscription.RequeueCount"/> of <c>0</c> or below <c>-1</c>
+    /// means the budget is effectively zero: the pump rejects the first deferral, which is almost certainly
+    /// not the operator's intent. The two likely intents are <c>-1</c> (requeue for ever) and <c>1</c>
+    /// (reject after one delivery). Reports a single <see cref="ValidationSeverity.Warning"/> naming the
+    /// subscription, the problematic value, and both likely intents.
+    /// </summary>
+    /// <returns>A simple specification that reports a Warning for a zero-budget subscription.</returns>
+    public static ISpecification<Subscription> ZeroBudget()
+        => new Specification<Subscription>(
+            s => s.RequeueCount == -1 || s.RequeueCount >= 1,
+            s => new ValidationError(
+                ValidationSeverity.Warning,
+                $"Subscription '{s.Name}'",
+                $"Subscription '{s.Name}' has requeueCount {s.RequeueCount}, which is a zero-budget value " +
+                $"(the first deferral is immediately rejected). " +
+                $"Did you mean -1 (requeue for ever) or 1 (reject after one delivery)?"));
+
+    /// <summary>
     /// Checks whether <paramref name="handlerType"/> derives from <c>RequestHandlerAsync&lt;&gt;</c>.
     /// Walks the base type chain so it works with both open and closed generic types.
     /// </summary>
