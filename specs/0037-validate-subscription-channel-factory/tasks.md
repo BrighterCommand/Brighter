@@ -395,7 +395,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - Confirm `DisplayName` strips at the `` ` `` of the **generic type definition's** `FullName` and recurses into type arguments, rather than using the closed type's `FullName` directly
   - Depends on: 22.
 
-- [ ] **24. CHARACTERISE: Same-named factory types in different namespaces are distinguishable (AC-15, FR-5 items 2-3)**
+- [x] **24. CHARACTERISE: Same-named factory types in different namespaces are distinguishable (AC-15, FR-5 items 2-3)**
   - **USE COMMAND**: `/test-first when two channel factories share a simple name the message should render both namespace-qualified and use no bare ChannelFactory token`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_two_channel_factories_share_a_simple_name_should_render_namespace_qualified_names.cs`
