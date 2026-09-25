@@ -1,5 +1,7 @@
 using System;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -21,6 +23,12 @@ public abstract class CausationTrackingOutboxBaseTests<TTransaction> : IDisposab
     /// <see cref="IAmACausationTrackingOutbox"/>.
     /// </summary>
     protected abstract IAmAnOutboxSync<Message, TTransaction> Outbox { get; }
+
+    /// <summary>
+    /// How long outstanding-message assertions may wait for an eventually consistent index.
+    /// The default requires reads to reflect writes immediately.
+    /// </summary>
+    protected virtual TimeSpan ReadConsistencyTimeout => TimeSpan.Zero;
 
     private IAmAnOutboxAsync<Message, TTransaction> OutboxAsync => (IAmAnOutboxAsync<Message, TTransaction>)Outbox;
     private IAmACausationTrackingOutbox TrackingOutbox => (IAmACausationTrackingOutbox)Outbox;
@@ -88,15 +96,18 @@ public abstract class CausationTrackingOutboxBaseTests<TTransaction> : IDisposab
         Outbox.MarkDispatched(messageWithB.Id, contextB, dispatchedAt);
 
         // all three start dispatched, so none are outstanding
-        var outstandingBefore = Outbox.OutstandingMessages(TimeSpan.Zero, contextA).Select(m => m.Id).ToArray();
+        var outstandingBefore = WaitForOutstandingMessages(contextA,
+            ids => !ids.Contains(firstWithA.Id) && !ids.Contains(secondWithA.Id) && !ids.Contains(messageWithB.Id));
         Assert.DoesNotContain(firstWithA.Id, outstandingBefore);
         Assert.DoesNotContain(secondWithA.Id, outstandingBefore);
+        Assert.DoesNotContain(messageWithB.Id, outstandingBefore);
 
         // Act
         TrackingOutbox.ReplayCausation(CausationA, contextA);
 
         // Assert — the two CausationA messages are outstanding again
-        var outstanding = Outbox.OutstandingMessages(TimeSpan.Zero, contextA).Select(m => m.Id).ToArray();
+        var outstanding = WaitForOutstandingMessages(contextA,
+            ids => ids.Contains(firstWithA.Id) && ids.Contains(secondWithA.Id) && !ids.Contains(messageWithB.Id));
         Assert.Contains(firstWithA.Id, outstanding);
         Assert.Contains(secondWithA.Id, outstanding);
 
@@ -124,17 +135,18 @@ public abstract class CausationTrackingOutboxBaseTests<TTransaction> : IDisposab
         await OutboxAsync.MarkDispatchedAsync(messageWithB.Id, contextB, dispatchedAt);
 
         // all three start dispatched, so none are outstanding
-        var outstandingBefore =
-            (await OutboxAsync.OutstandingMessagesAsync(TimeSpan.Zero, contextA)).Select(m => m.Id).ToArray();
+        var outstandingBefore = await WaitForOutstandingMessagesAsync(contextA,
+            ids => !ids.Contains(firstWithA.Id) && !ids.Contains(secondWithA.Id) && !ids.Contains(messageWithB.Id));
         Assert.DoesNotContain(firstWithA.Id, outstandingBefore);
         Assert.DoesNotContain(secondWithA.Id, outstandingBefore);
+        Assert.DoesNotContain(messageWithB.Id, outstandingBefore);
 
         // Act
         await TrackingOutbox.ReplayCausationAsync(CausationA, contextA);
 
         // Assert — the two CausationA messages are outstanding again
-        var outstanding =
-            (await OutboxAsync.OutstandingMessagesAsync(TimeSpan.Zero, contextA)).Select(m => m.Id).ToArray();
+        var outstanding = await WaitForOutstandingMessagesAsync(contextA,
+            ids => ids.Contains(firstWithA.Id) && ids.Contains(secondWithA.Id) && !ids.Contains(messageWithB.Id));
         Assert.Contains(firstWithA.Id, outstanding);
         Assert.Contains(secondWithA.Id, outstanding);
 
@@ -161,15 +173,18 @@ public abstract class CausationTrackingOutboxBaseTests<TTransaction> : IDisposab
         Outbox.MarkDispatched(messageWithB.Id, contextB, dispatchedAt);
 
         // all three start dispatched, so none are outstanding
-        var outstandingBefore = Outbox.OutstandingMessages(TimeSpan.Zero, contextA).Select(m => m.Id).ToArray();
+        var outstandingBefore = WaitForOutstandingMessages(contextA,
+            ids => !ids.Contains(firstWithA.Id) && !ids.Contains(secondWithA.Id) && !ids.Contains(messageWithB.Id));
         Assert.DoesNotContain(firstWithA.Id, outstandingBefore);
         Assert.DoesNotContain(secondWithA.Id, outstandingBefore);
+        Assert.DoesNotContain(messageWithB.Id, outstandingBefore);
 
         // Act
         TrackingOutbox.ReplayCausation(CausationA, contextA);
 
         // Assert — the two bulk-deposited CausationA messages are outstanding again
-        var outstanding = Outbox.OutstandingMessages(TimeSpan.Zero, contextA).Select(m => m.Id).ToArray();
+        var outstanding = WaitForOutstandingMessages(contextA,
+            ids => ids.Contains(firstWithA.Id) && ids.Contains(secondWithA.Id) && !ids.Contains(messageWithB.Id));
         Assert.Contains(firstWithA.Id, outstanding);
         Assert.Contains(secondWithA.Id, outstanding);
 
@@ -196,17 +211,18 @@ public abstract class CausationTrackingOutboxBaseTests<TTransaction> : IDisposab
         await OutboxAsync.MarkDispatchedAsync(messageWithB.Id, contextB, dispatchedAt);
 
         // all three start dispatched, so none are outstanding
-        var outstandingBefore =
-            (await OutboxAsync.OutstandingMessagesAsync(TimeSpan.Zero, contextA)).Select(m => m.Id).ToArray();
+        var outstandingBefore = await WaitForOutstandingMessagesAsync(contextA,
+            ids => !ids.Contains(firstWithA.Id) && !ids.Contains(secondWithA.Id) && !ids.Contains(messageWithB.Id));
         Assert.DoesNotContain(firstWithA.Id, outstandingBefore);
         Assert.DoesNotContain(secondWithA.Id, outstandingBefore);
+        Assert.DoesNotContain(messageWithB.Id, outstandingBefore);
 
         // Act
         await TrackingOutbox.ReplayCausationAsync(CausationA, contextA);
 
         // Assert — the two bulk-deposited CausationA messages are outstanding again
-        var outstanding =
-            (await OutboxAsync.OutstandingMessagesAsync(TimeSpan.Zero, contextA)).Select(m => m.Id).ToArray();
+        var outstanding = await WaitForOutstandingMessagesAsync(contextA,
+            ids => ids.Contains(firstWithA.Id) && ids.Contains(secondWithA.Id) && !ids.Contains(messageWithB.Id));
         Assert.Contains(firstWithA.Id, outstanding);
         Assert.Contains(secondWithA.Id, outstanding);
 
@@ -222,5 +238,36 @@ public abstract class CausationTrackingOutboxBaseTests<TTransaction> : IDisposab
 
         // Assert
         Assert.True(supportsCausationTracking);
+    }
+
+    private Id[] WaitForOutstandingMessages(RequestContext context, Func<Id[], bool> expectedState)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        while (true)
+        {
+            var outstanding = Outbox.OutstandingMessages(TimeSpan.Zero, context).Select(m => m.Id).ToArray();
+            if (expectedState(outstanding) || stopwatch.Elapsed >= ReadConsistencyTimeout)
+                return outstanding;
+
+            var remaining = ReadConsistencyTimeout - stopwatch.Elapsed;
+            if (remaining > TimeSpan.Zero)
+                Thread.Sleep(remaining < TimeSpan.FromMilliseconds(50) ? remaining : TimeSpan.FromMilliseconds(50));
+        }
+    }
+
+    private async Task<Id[]> WaitForOutstandingMessagesAsync(RequestContext context, Func<Id[], bool> expectedState)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        while (true)
+        {
+            var outstanding = (await OutboxAsync.OutstandingMessagesAsync(TimeSpan.Zero, context))
+                .Select(m => m.Id).ToArray();
+            if (expectedState(outstanding) || stopwatch.Elapsed >= ReadConsistencyTimeout)
+                return outstanding;
+
+            var remaining = ReadConsistencyTimeout - stopwatch.Elapsed;
+            if (remaining > TimeSpan.Zero)
+                await Task.Delay(remaining < TimeSpan.FromMilliseconds(50) ? remaining : TimeSpan.FromMilliseconds(50));
+        }
     }
 }

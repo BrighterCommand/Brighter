@@ -41,6 +41,8 @@ public class CausationTrackingOutboxTests : CausationTrackingOutboxBaseTests<Ama
 
     protected override IAmAnOutboxSync<Message, Amazon.DynamoDBv2.Model.TransactWriteItemsRequest> Outbox => _outbox ??= _outboxProvider.CreateOutbox();
 
+    protected override System.TimeSpan ReadConsistencyTimeout => System.TimeSpan.FromMilliseconds(30000);
+
     protected override void CreateStore() => _outboxProvider.CreateStore();
 
     protected override void DeleteStore() => _outboxProvider.DeleteStore([]);
