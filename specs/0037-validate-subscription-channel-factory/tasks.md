@@ -444,7 +444,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
   - **Why no test of its own**: fixtures with no behaviour; consumed by tasks 27-30.
   - Depends on: 1 (as the shape to copy).
 
-- [ ] **27. TEST + IMPLEMENT: A channel factory mismatch blocks startup under `throwOnError: true` (AC-16, FR-6) — and the rule is registered**
+- [x] **27. TEST + IMPLEMENT: A channel factory mismatch blocks startup under `throwOnError: true` (AC-16, FR-6) — and the rule is registered**
   - **USE COMMAND**: `/test-first when a channel factory mismatch is validated with throwOnError true the host should fail to start and report the mismatch`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_channel_factory_mismatch_is_validated_with_throw_on_error_should_fail_startup.cs`
