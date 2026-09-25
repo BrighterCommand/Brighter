@@ -133,7 +133,7 @@
     - Bump `Assert.Equal(4, specs.Count)` at `tests/Paramore.Brighter.Extensions.Tests/When_validate_pipelines_with_consumers_should_receive_subscriptions.cs:81` to `5`
     - Nothing logs on the receive path (NFR-4)
 
-- [ ] **2.4 TEST + IMPLEMENT: A delivery budget at or above a visible native redrive limit reports one startup Warning**
+- [x] **2.4 TEST + IMPLEMENT: A delivery budget at or above a visible native redrive limit reports one startup Warning**
   - **USE COMMAND**: `/test-first when subscription budget meets or exceeds its native redrive limit should report a warning that the native limit is effective`
   - Test locations (split as in 2.3):
     - (i) Specification: "tests/Paramore.Brighter.Core.Tests/Validation", file `When_subscription_budget_meets_native_redrive_limit_should_report_warning.cs`, asserting directly on the `ConsumerValidationRules` specification
