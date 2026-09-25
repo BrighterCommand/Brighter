@@ -461,7 +461,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - Change nothing about the four existing registrations
   - Depends on: 25, 26.
 
-- [ ] **28. CHARACTERISE: The same configuration does not block under `throwOnError: false` (AC-17, FR-6)**
+- [x] **28. CHARACTERISE: The same configuration does not block under `throwOnError: false` (AC-17, FR-6)**
   - **USE COMMAND**: `/test-first when a channel factory mismatch is validated with throwOnError false the host should start and still report the mismatch`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_a_channel_factory_mismatch_is_validated_without_throw_on_error_should_start_and_report.cs`
