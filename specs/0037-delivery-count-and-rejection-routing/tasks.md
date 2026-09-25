@@ -101,7 +101,7 @@
     - Add `public static class Paramore.Brighter.DeliveryCount` with `Normalise(int? brokerCount) => brokerCount is > 1 ? brokerCount.Value - 1 : 0`, as in the ADR 0077 "DeliveryCount contract"
     - Allocate nothing (NFR-2)
 
-- [ ] **2.2 TEST + IMPLEMENT: Resolving the delivery count keeps the stamped count on a routed rejection copy and falls back to the header count when no broker counter exists**
+- [x] **2.2 TEST + IMPLEMENT: Resolving the delivery count keeps the stamped count on a routed rejection copy and falls back to the header count when no broker counter exists**
   - **USE COMMAND**: `/test-first when resolving delivery count for a routed rejection copy should keep the stamped handled count`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessagingGateway"
   - Test file: `When_resolving_delivery_count_for_a_routed_rejection_copy_should_keep_stamped_count.cs`
