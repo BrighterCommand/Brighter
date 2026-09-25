@@ -39,6 +39,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private readonly ServiceCollectionSubscriberRegistry _serviceCollectionSubscriberRegistry;
         private readonly ServiceCollectionMessageMapperRegistryBuilder _mapperRegistryBuilder;
         private readonly ServiceCollectionTransformerRegistry _transformerRegistry;
+        private readonly HashSet<(Type RequestType, Type HandlerType)> _scannedHandlers = [];
         
         /// <inheritdoc />
         [Obsolete("Migrate to ResiliencePolicyRegistry")]
@@ -261,7 +262,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     // would appear as registered request types.
                     _serviceCollectionSubscriberRegistry.EnsureHandlerIsRegistered(subscriber.HandlerType);
                 }
-                else
+                else if (_scannedHandlers.Add((subscriber.RequestType, subscriber.HandlerType)))
                 {
                     _serviceCollectionSubscriberRegistry.Add(subscriber.RequestType, subscriber.HandlerType);
                 }
