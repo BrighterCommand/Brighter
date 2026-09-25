@@ -607,7 +607,7 @@ One task per transport. Each bundles that transport's one-line `ChannelFactoryTy
 
 *ADR 0072 step 6.*
 
-- [ ] **36. DOC: Release notes for C-8's obligations — four separate breaking-change notes**
+- [x] **36. DOC: Release notes for C-8's obligations — four separate breaking-change notes**
   - File: `release_notes.md`, under `## Master`
   - Write, in British spelling (NFR-7):
     - A summary entry for the feature: the fifth consumer validation rule, its `Error` severity, and the fact that FR-7 to FR-11 make AWS SQS, AWS SQS V4 and Postgres subscriptions routable by `CombinedChannelFactory` for the first time. Reference [ADR 0072], [ADR 0073] and this spec.
