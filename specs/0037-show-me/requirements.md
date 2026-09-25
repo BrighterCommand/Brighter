@@ -1297,8 +1297,10 @@ spec's ADRs.
 context. The unit is bytes because the unit is what the old cap got wrong: across spec 0036's 76
 changed `src/` files the mean is 8,226 B, the median 4,035 B, the p90 11,666 B and the max 88,957 B,
 so a cap counting *files* priced a 4 KB file and an 89 KB file identically and could not bound a run
-at all. 1,048,576 B is ~300 K tokens at the ~3.5 B/token rate these measurements derive from — about
-30% of a 1 M context window, leaving the synthesis itself room to run.
+at all. 1,048,576 B is roughly 420 K tokens at the ~2.5 B/token these artefacts tokenise at — measured
+2026-09-25 as 2.45 B/token for spec 0036's `tasks.md` and for its `src/`-scoped diff, and 2.77 B/token
+for this document — which is about 40% of a 1 M context window, leaving the synthesis itself room to
+run.
 
 **The file-count cap is retired.** The rule "the full content of at most 25 individual files" and
 every citation of a *25-file read budget* are withdrawn and replaced by this byte budget. The number
@@ -1344,7 +1346,7 @@ all (FR-18, FR-20). The ban binds the script too, even though the script's unemi
 nothing: one rule for every diff in a run is simpler to verify than two, and the script needs nothing
 it forbids — its net-line counts come from `--numstat` and its public-API count from the `src/`-scoped
 diff. Spec 0036's full 517-file diff is
-**4,081,673 B ≈ 1.24 M tokens** — it **exceeds the context window outright**. This is a hard wall: a
+**4,081,673 B ≈ 1.6 M tokens** at the same rate — it **exceeds the context window outright**. This is a hard wall: a
 run that attempted it would not degrade, it would fail. The ban is stated here rather than left
 implicit because the previous revision banned the full diff without ever saying why, and a reader who
 does not know the number will reasonably assume the ban is negotiable.

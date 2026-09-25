@@ -819,7 +819,7 @@ path-scoped `git diff` over two pinned shas returns the same bytes on every run.
 
 ### Alternative 7: Read `tasks.md` and the full diff and let the model count
 
-**Rejected.** Spec 0036's full diff is 4,081,673 bytes, about 1.24 M tokens, which exceeds the
+**Rejected.** Spec 0036's full diff is 4,081,673 bytes, about 1.6 M tokens, which exceeds the
 context window, so the run would fail rather than degrade. `tasks.md` is read whole, because at
 229,159 bytes it fits the budget. What stays rejected is letting the model count, which would
 collapse NFR-1's split.
