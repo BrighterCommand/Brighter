@@ -36,6 +36,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 /// </summary>
 public class SqsSubscription : Subscription, IUseBrighterDeadLetterSupport, IUseBrighterInvalidMessageSupport
 {
+    /// <inheritdoc />
+    public override Type ChannelFactoryType => typeof(ChannelFactory);
+
     /// <summary>
     /// The routing key type.
     /// </summary>
