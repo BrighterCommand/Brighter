@@ -35,8 +35,8 @@ public partial class GcpPubSubStreamMessageConsumer(
         {
             return;
         }
-        
-        gcpStreamMessage.Accepted();
+
+        Accept(gcpStreamMessage);
         Log.AcknowledgeSuccess(s_logger, message.Id.Value, "", subscriptionName.ToString());
     }
     
@@ -87,8 +87,8 @@ public partial class GcpPubSubStreamMessageConsumer(
         {
             return true;
         }
-        
-        gcpStreamMessage.Accepted();
+
+        Accept(gcpStreamMessage);
         Log.RejectMessage(s_logger, message.Id.Value, "", subscriptionName.ToString());
         return true;
     }
@@ -220,8 +220,8 @@ public partial class GcpPubSubStreamMessageConsumer(
         {
             return true;
         }
-        
-        gcpStreamMessage.Reject();
+
+        Nack(gcpStreamMessage);
         Log.RequeueComplete(s_logger, message.Id.Value);
         return true;
     }
@@ -256,7 +256,17 @@ public partial class GcpPubSubStreamMessageConsumer(
     {
         await consumer.StopAsync();
     }
-    
+
+    /// <summary>
+    /// Signals that the stream message was successfully processed and should be acknowledged.
+    /// </summary>
+    private static void Accept(GcpStreamMessage gcpStreamMessage) => gcpStreamMessage.Accepted();
+
+    /// <summary>
+    /// Signals that the stream message failed processing and should be negatively acknowledged for redelivery.
+    /// </summary>
+    private static void Nack(GcpStreamMessage gcpStreamMessage) => gcpStreamMessage.Reject();
+
     private static partial class Log
     {
         [LoggerMessage(LogLevel.Information, "GcpStreamMessageConsumer: The message {Id} acknowledged with the receipt handle {ReceiptHandle} on the subscription {SubscriptionName}")]

@@ -35,8 +35,7 @@ public partial class GcpPullMessageConsumer(
 
         try
         {
-            var client = connection.GetOrCreateSubscriberServiceApiClient();
-            client.Acknowledge(subscriptionName, [ackId]);
+            AckByHandle(ackId);
             Log.AcknowledgeSuccess(s_logger, message.Id.Value, ackId, subscriptionName.ToString());
         }
         catch (Exception ex)
@@ -61,8 +60,7 @@ public partial class GcpPullMessageConsumer(
 
         try
         {
-            var client = await connection.CreateSubscriberServiceApiClientAsync();
-            await client.AcknowledgeAsync(subscriptionName, [ackId], cancellationToken);
+            await AckByHandleAsync(ackId, cancellationToken);
             Log.AcknowledgeSuccess(s_logger, message.Id.Value, ackId, subscriptionName.ToString());
         }
         catch (Exception ex)
@@ -280,12 +278,10 @@ public partial class GcpPullMessageConsumer(
             return false;
         }
 
+        Log.RejectMessage(s_logger, message.Id.Value, ackId, subscriptionName.ToString());
         try
         {
-            var client = connection.GetOrCreateSubscriberServiceApiClient();
-
-            Log.RejectMessage(s_logger, message.Id.Value, ackId, subscriptionName.ToString());
-            client.Acknowledge(subscriptionName, [ackId]);
+            AckByHandle(ackId);
         }
         catch (Exception ex)
         {
@@ -295,7 +291,7 @@ public partial class GcpPullMessageConsumer(
 
         return true;
     }
-    
+
     /// <summary>
     /// Asynchronously rejects a message.
     /// </summary>
@@ -310,11 +306,10 @@ public partial class GcpPullMessageConsumer(
             return false;
         }
 
+        Log.RejectMessage(s_logger, message.Id.Value, ackId, subscriptionName.ToString());
         try
         {
-            var client = await connection.CreateSubscriberServiceApiClientAsync();
-            Log.RejectMessage(s_logger, message.Id.Value, ackId, subscriptionName.ToString());
-            await client.AcknowledgeAsync(subscriptionName, [ackId], cancellationToken);
+            await AckByHandleAsync(ackId, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -339,14 +334,11 @@ public partial class GcpPullMessageConsumer(
             return false;
         }
 
+        Log.RequeueStart(s_logger, message.Id.Value);
         try
         {
-            var client = connection.GetOrCreateSubscriberServiceApiClient();
-
-            Log.RequeueStart(s_logger, message.Id.Value);
-
             // The requeue policy is defined by subscription, during its creation
-            client.ModifyAckDeadline(subscriptionName, [ackId], 0);
+            ReleaseByHandle(ackId);
 
             Log.RequeueComplete(s_logger, message.Id.Value);
             return true;
@@ -374,19 +366,11 @@ public partial class GcpPullMessageConsumer(
             return false;
         }
 
+        Log.RequeueStart(s_logger, message.Id.Value);
         try
         {
-            var client = await connection.CreateSubscriberServiceApiClientAsync();
-
-            Log.RequeueStart(s_logger, message.Id.Value);
-
             // The requeue policy is defined by subscription, during its creation
-            await client.ModifyAckDeadlineAsync(new ModifyAckDeadlineRequest
-            {
-                SubscriptionAsSubscriptionName = subscriptionName,
-                AckIds = { ackId },
-                AckDeadlineSeconds = 0
-            }, cancellationToken);
+            await ReleaseByHandleAsync(ackId, cancellationToken);
 
             Log.RequeueComplete(s_logger, message.Id.Value);
             return true;
@@ -405,6 +389,49 @@ public partial class GcpPullMessageConsumer(
 
     public void Dispose()
     {
+    }
+
+    /// <summary>
+    /// Acknowledges a message by ack id, performing the client lookup and the RPC.
+    /// </summary>
+    private void AckByHandle(string ackId)
+    {
+        var client = connection.GetOrCreateSubscriberServiceApiClient();
+        client.Acknowledge(subscriptionName, [ackId]);
+    }
+
+    /// <summary>
+    /// Asynchronously acknowledges a message by ack id, performing the client lookup and the RPC.
+    /// </summary>
+    private async Task AckByHandleAsync(string ackId, CancellationToken cancellationToken)
+    {
+        var client = await connection.CreateSubscriberServiceApiClientAsync();
+        await client.AcknowledgeAsync(subscriptionName, [ackId], cancellationToken);
+    }
+
+    /// <summary>
+    /// Releases a message by ack id by setting its acknowledgment deadline to zero, performing
+    /// the client lookup and the RPC.
+    /// </summary>
+    private void ReleaseByHandle(string ackId)
+    {
+        var client = connection.GetOrCreateSubscriberServiceApiClient();
+        client.ModifyAckDeadline(subscriptionName, [ackId], 0);
+    }
+
+    /// <summary>
+    /// Asynchronously releases a message by ack id by setting its acknowledgment deadline to zero,
+    /// performing the client lookup and the RPC.
+    /// </summary>
+    private async Task ReleaseByHandleAsync(string ackId, CancellationToken cancellationToken)
+    {
+        var client = await connection.CreateSubscriberServiceApiClientAsync();
+        await client.ModifyAckDeadlineAsync(new ModifyAckDeadlineRequest
+        {
+            SubscriptionAsSubscriptionName = subscriptionName,
+            AckIds = { ackId },
+            AckDeadlineSeconds = 0
+        }, cancellationToken);
     }
 
     private static partial class Log
