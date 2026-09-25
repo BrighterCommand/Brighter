@@ -79,7 +79,7 @@
 - [ ] **1.5 TIDY: Extract private settle helpers from the GCP consumers' `Acknowledge`/`Requeue` (ADR 0078 Implementation step 1)**
   - **USE COMMAND**: `/tidy-first extract handle-taking ack and release helpers in GcpPullMessageConsumer and GcpPubSubStreamMessageConsumer`
   - `GcpPullMessageConsumer`: add private `AckByHandle(string ackId)`/`AckByHandleAsync`, from the ack RPC call currently made in `Acknowledge` (`:29`, call `:39`), `AcknowledgeAsync` (`:55`, call `:65`), `Reject` (`:276`, call `:288`) and `RejectAsync` (`:306`, call `:317`), and `ReleaseByHandle(string ackId)`/`ReleaseByHandleAsync`, from `Requeue` (`:344/349`, `:379/384`). Each helper performs the client lookup (`GetOrCreateSubscriberServiceApiClient`/`CreateSubscriberServiceApiClientAsync`) and the RPC with **no try/catch of its own**; every caller invokes it inside its existing `try`, so a client-construction failure is handled like an RPC failure, as today. This deliberately moves ADR 0078's placement of the client lookup inside a `try` from the helper to its callers; the ADR's invariant (a client-construction failure is handled like an RPC failure) is preserved.
-  - Helper contract: each helper wraps **only** the client lookup and the RPC, and throws exactly as today. Logging and the catch/return decision stay with the callers (whose log messages differ today).
+  - Helper contract: each helper wraps **only** the client lookup and the RPC, and throws exactly as today. Logging and the catch/return decision stay with the callers (whose log messages differ today). Accepted log-order change: `Reject`'s `RejectMessage` and `Requeue`'s `RequeueStart` logs (today between the lookup and the RPC, `:285-288`, `:349-354`) move before the helper call, so a failed client lookup now emits the start log first.
   - `GcpPubSubStreamMessageConsumer`: add private `Accept(GcpStreamMessage)` and `Nack(GcpStreamMessage)` (used by 5.6's accept after routing and 5.8's Nack on failed routing).
   - The public methods keep their current contracts: pull `Requeue` swallows exceptions and returns `false` (`:354-358`); stream `Requeue` returns `true` with no handle (`:219-222`).
   - Verification: no behaviour change; existing tests stay green.
@@ -537,18 +537,40 @@
     - RED comes from the `Unacceptable` → `.Invalid` clause; the DLQ-fallback and no-destination clauses may already be green, because 5.5a routes every reason to the DLQ key and already returns `NoDestination` when it is absent
   - Depends on: 5.5a
 
+- [ ] **5.5c MEASURE: Does `SubscriberClient` inject or overwrite `googclient_deliveryattempt`? (ADR 0077 Risks, "unverified library behaviours")**
+  - On the emulator with a DLQ-backed stream subscription:
+    - (i) record whether a received `PubsubMessage` carries attribute `googclient_deliveryattempt`, and whether `GetDeliveryAttempt` matches it
+    - (ii) publish a message that already carries a stale `googclient_deliveryattempt` attribute (as a routed copy would) and record first whether the emulator **accepts** that publish and, if it does, whether `SubscriberClient` overwrites the attribute or keeps the stale value
+  - Use a measurement fixture committed as `[Fact(Skip = "measurement — ADR 0077 risk")]` in `tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream`.
+  - **Output:** a dated amendment note in `docs/adr/0077-delivery-count-contract.md` (Risks) recording (i), whether (ii)'s publish was accepted, and (ii)'s overwrite result. If (ii) shows a stale value would be read, flag it for 6.11.
+  - Runs before 5.5d and 5.6: stream routing re-publishes every non-ignored bag entry (`Parser.cs:350-356`), and 5.4 keeps a `DeadLetterPolicy` on the very subscriptions `SubscriberClient` injects on, so the answer decides whether 5.6 can route at all (ADR 0078:38).
+  - Depends on: 5.3, 5.4
+
+- [ ] **5.5d TEST + IMPLEMENT: The GCP parser never admits `googclient_deliveryattempt` into `Header.Bag`, so a routed copy cannot re-publish it**
+  - **USE COMMAND**: `/test-first when a gcp message carrying googclient deliveryattempt is received should not copy it into the header bag`
+  - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream" and "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Pull"
+  - Test file: `When_a_gcp_message_carries_delivery_attempt_attribute_should_not_copy_it_into_bag.cs` (async: `…_async.cs`)
+  - Test should verify (R-28; ADR 0077 "Where each transport reads its counter", GCP stream row):
+    - A message received through the stream and the pull consumer has no `googclient_deliveryattempt` key in `Header.Bag`
+    - **Given, chosen by 5.5c's outcome:** (a) if 5.5c(ii) shows the emulator accepts a published `googclient_deliveryattempt` attribute, publish it explicitly and assert on both consumers — RED today on both; (b) otherwise, if 5.5c(i) shows `SubscriberClient` injects the attribute, use a DLQ-backed stream subscription and rely on that injection — RED on the stream clause. The pull clause does not apply under (b): the pull path has no `SubscriberClient` to inject the attribute and nothing publishes it, so the stream clause (and 5.6's routed-copy clause) evidence the single `s_ignoreHeaders` entry both parsers share; (c) if 5.5c shows neither injection nor an accepted publish, the attribute cannot reach `Header.Bag` on the emulator — record that in 0077's Risks note, drop the receive clauses here and 5.6's routed-copy clause (no test file is committed for this task), and add the ignore entry as a defensive change justified by the real-service `SubscriberClient` behaviour; the gate then reviews the ADR note instead of a RED test. Record which Given was used in the test's comment (or the ADR note, under (c))
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Implementation should:
+    - Add `"googclient_deliveryattempt"` to `Parser.s_ignoreHeaders` (`Parser.cs:12`). The router in 0078 must not reintroduce it. This lands before 5.6 so stream routing never re-publishes the attribute (ADR 0078:38); 5.6 asserts the routed copy.
+  - Depends on: 5.4, 5.5c
+
 - [ ] **5.6 TEST + IMPLEMENT: A GCP stream Reject routes by reason with rejection metadata, then accepts the original**
   - **USE COMMAND**: `/test-first when a gcp stream consumer rejects a message should route by reason with rejection metadata and accept the original`
   - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream"
   - Test file: `When_a_gcp_stream_consumer_rejects_should_route_by_reason_with_metadata.cs` (async: `…_async.cs`)
   - Test should verify (R-16, R-18, AC-15, AC-16; NFR-8), on `GCP / Stream` and `GCP / StreamOrdering`:
+    - A copy routed from a DLQ-backed stream subscription carries no `googclient_deliveryattempt` on the destination (ADR 0078:38). The ignore entry lands in 5.5d, so this clause guards against the router reintroducing it; not applicable under 5.5c outcome (c)
     - The same clauses as 5.5a and 5.5b, including 5.5a's missing-handle clause: a message with no `GcpStreamMessage` handle still routes to the configured destination, logs an Error and returns `true`
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - `RejectAsync` routes through `RouteAsync` rather than `Task.FromResult(Reject(...))` (`GcpPubSubStreamMessageConsumer.cs:106` today). This is not observable through the public API — the router is internal and `InternalsVisibleTo` is forbidden — so it is checked at code review and by 8.2's broker-call review, not asserted
     - Add the ctor parameters to `GcpPubSubStreamMessageConsumer`, wired at `GcpPubSubConsumerFactory.cs:99`, and have it dispose the router
     - Compose `Reject` (`:84`) and `RejectAsync` (`:104-106`): copy the `GcpStreamMessage` handle → route → `handle.Accepted()` on `Routed`/`NoDestination`. A missing handle still routes, logs an Error and returns `true` (asserted by the missing-handle clause above).
-  - Depends on: 5.5b
+  - Depends on: 5.5b, 5.5d
 
 - [ ] **5.7 TEST + IMPLEMENT: A GCP Reject with no destination configured acknowledges the message and logs a Warning naming the message id and reason**
   - **USE COMMAND**: `/test-first when a gcp consumer rejects with no destination configured should acknowledge and log a warning naming the message id and reason`
@@ -575,7 +597,7 @@
     - `Reject(DeliveryError)` logs an Error naming the message id and `"DeliveryError"`, and returns `true`
     - The message is redelivered **within W = 10 s** (so it was released, not left outstanding), and the topic still does not exist
     - **Risk check (ADR 0078 Risks):** the sync `Reject` returns within W. This verifies the emulator fails promptly on a missing topic and that `GcpMessageProducer.Dispose` (sync-over-async, `:141-143`) returns promptly after a failed publish. If it does not, amend ADR 0078 with a dated note.
-    - **Creation failure (ADR 0078 "Divergence from SQS"):** a second row with the subscription under test at `makeChannels: Validate`. The destination producer's creation throws on the missing topic, and the router reports `Failed`, not `NoDestination`, so the same assertions hold: an Error, redelivery within W, `true`, and the topic still absent
+    - **Creation failure (ADR 0078 "Divergence from SQS"):** a second row with the subscription under test at `makeChannels: Validate`. The destination producer's creation throws on the missing topic, and the router reports `Failed`, not `NoDestination`, so the same assertions hold: an Error, redelivery within W, `true`, and the topic still absent. The `Validate` row uses a destination name unique to that row and variant (a fresh Guid) and issues exactly one `Reject` before asserting, because `EnsureTopicExistAsync` caches the name before `Validate` checks it (`GcpPubSubMessageGateway.cs:44-60`; ADR 0078 Risks), so a repeated name would exercise the publish failure instead
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - On `Failed`: pull → `ReleaseByHandle` (`ModifyAckDeadline(…, 0)`); stream → `handle.Reject()` (Nack)
@@ -663,26 +685,7 @@
     - Call `DeliveryBudgetDiagnostics.WarnIfUnenforceable` in `GcpPubSubChannelFactory.CreateSyncChannel` (`:26`) and `CreateAsyncChannelAsync` (`:65`) only, not `CreateAsyncChannel` (`:54-55`)
   - Depends on: 2.6, 6.1
 
-- [ ] **6.3 MEASURE: Does `SubscriberClient` inject or overwrite `googclient_deliveryattempt`? (ADR 0077 Risks, "unverified library behaviours")**
-  - On the emulator with a DLQ-backed stream subscription:
-    - (i) record whether a received `PubsubMessage` carries attribute `googclient_deliveryattempt`, and whether `GetDeliveryAttempt` matches it
-    - (ii) publish a message that already carries a stale `googclient_deliveryattempt` attribute (as a routed copy would) and record first whether the emulator **accepts** that publish and, if it does, whether `SubscriberClient` overwrites the attribute or keeps the stale value
-  - Use a measurement fixture committed as `[Fact(Skip = "measurement — ADR 0077 risk")]` in `tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream`.
-  - **Output:** a dated amendment note in `docs/adr/0077-delivery-count-contract.md` (Risks) recording (i), whether (ii)'s publish was accepted, and (ii)'s overwrite result. If (ii) shows a stale value would be read, flag it for 6.11.
-  - Depends on: 5.3, 5.4
-
-- [ ] **6.4 TEST + IMPLEMENT: The GCP parser never admits `googclient_deliveryattempt` into `Header.Bag`, so a routed copy cannot re-publish it**
-  - **USE COMMAND**: `/test-first when a gcp message carrying googclient deliveryattempt is received should not copy it into the header bag`
-  - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream" and "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Pull"
-  - Test file: `When_a_gcp_message_carries_delivery_attempt_attribute_should_not_copy_it_into_bag.cs` (async: `…_async.cs`)
-  - Test should verify (R-28; ADR 0077 "Where each transport reads its counter", GCP stream row):
-    - A message received through the stream and the pull consumer has no `googclient_deliveryattempt` key in `Header.Bag`
-    - **Given, chosen by 6.3's outcome:** (a) if 6.3(ii) shows the emulator accepts a published `googclient_deliveryattempt` attribute, publish it explicitly and assert on both consumers — RED today on both; (b) otherwise, if 6.3(i) shows `SubscriberClient` injects the attribute, use a DLQ-backed stream subscription and rely on that injection — RED on the stream clause. The pull clause does not apply under (b): the pull path has no `SubscriberClient` to inject the attribute and nothing publishes it, so the stream clause and the routed-copy clause evidence the single `s_ignoreHeaders` entry both parsers share; (c) if 6.3 shows neither injection nor an accepted publish, the attribute cannot reach `Header.Bag` on the emulator — record that in 0077's Risks note, drop the test clauses, and add the ignore entry as a defensive change justified by the real-service `SubscriberClient` behaviour; the gate then reviews the ADR note instead of a RED test. Record which Given was used in the test's comment (or the ADR note, under (c))
-    - A copy routed by 5.5b/5.6's Reject carries no such attribute on the destination
-  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
-  - Implementation should:
-    - Add `"googclient_deliveryattempt"` to `Parser.s_ignoreHeaders` (`Parser.cs:12`). The router in 0078 must not reintroduce it.
-  - Depends on: 5.6, 6.3
+> **6.3 and 6.4 moved** to Phase 5 as **5.5c** and **5.5d** (tasks review round 4): 5.6's stream routing needs the `googclient_deliveryattempt` ignore entry first. The ids 6.3 and 6.4 are not reused.
 
 - [ ] **6.5 CHARACTERISE: GCP budget of -1 never rejects, on both consumers**
   - **USE COMMAND**: `/test-first when gcp budget is minus one should never reject and never dead letter`
@@ -734,7 +737,7 @@
   - Implementation should:
     - In `Parser.ToBrighterMessage(ReceivedMessage)` (`~:84`; `ReadHandleCount` `:167`), after the bag is filled from attributes, set `HandledCount = DeliveryCount.Resolve(headerCount, receivedMessage.DeliveryAttempt, bag)` (`0` → header count)
     - No allocation and no RPC (NFR-1, NFR-2)
-  - Depends on: 2.2, 3.1, 3.3, 6.4, 6.7
+  - Depends on: 2.2, 3.1, 3.3, 5.5d, 6.7
 
 - [ ] **6.11 TEST + IMPLEMENT: The GCP stream consumer presents a strictly increasing delivery count across redeliveries, starting at 0**
   - **USE COMMAND**: `/test-first when a gcp stream message is redelivered should present a strictly greater delivery count starting at zero`
@@ -745,7 +748,7 @@
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - In `Parser.ToBrighterMessage(GcpStreamMessage)` (`:33`), read `PubsubExtensions.GetDeliveryAttempt(message)` (`int?`) and apply `Resolve` after the bag is filled
-    - If 6.3(ii) showed a stale attribute survives, record the effect in ADR 0077 before proceeding
+    - If 5.5c(ii) showed a stale attribute survives, record the effect in ADR 0077 before proceeding
   - Depends on: 6.10
 
 - [ ] **6.12 CHARACTERISE: A GCP pull message whose ack deadline lapses presents a higher count on the expiry redelivery, with no pump and no Requeue**
@@ -826,7 +829,7 @@
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Make `DeliveryBudgetUnenforceableReason` return fixed text naming the blocker for every subscription. The rules already exclude `R == -1`.
-    - Leave the parser receive path unchanged apart from 6.4
+    - Leave the parser receive path unchanged apart from 5.5d
   - Depends on: 6.1, 6.2, 6.7
 
 - [ ] **6.21 GATE: Re-point the four GCP FR-23 cells at the emulator limitation (AC-40 ledger clauses, AC-30 row 3)**
@@ -853,7 +856,7 @@
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE once RED is observed — before committing if the test was green on arrival, before implementing if it was not** *(fires in the `review-before` gear, which is the default)*
   - Implementation should (only if the test is unexpectedly RED on arrival — otherwise no production change):
     - If the branch taken needs a change, make it only in 5.8's failure path or the branch's own task. This test is also the A-6 risk measurement.
-  - Depends on: 5.8, 6.4, 6.16 or 6.20
+  - Depends on: 5.5d, 5.8, 6.16 or 6.20
 
 - [ ] **6.31 GATE: Run the GCP rejection-routing behaviours twice on a clean emulator with identical results, with no gcp-ci (AC-22, R-21)**
   - Run the GCP conformance behaviours FR-4, FR-5, FR-6, FR-8 and FR-17, plus FR-23 if AC-19 was claimed, twice across all four configurations and both variants, with `docker-compose -f docker-compose-gcp.yaml down -v; up -d` between runs.
@@ -1126,7 +1129,7 @@
 | R-25 | 2.3, 2.4, 2.5, 2.7 |
 | R-26 | 2.6, 4.1, 6.2, 7.4, 7.20 |
 | R-27 | 3.2, 3.3, 3.4 (c); 4.2 (a, AWS); 5.4 (a and b, GCP) |
-| R-28 | 2.2, 4.5, 4.6, 6.4, 6.15, 7.2, 7.3, 7.12, 8.1 |
+| R-28 | 2.2, 4.5, 4.6, 5.5d, 6.15, 7.2, 7.3, 7.12, 8.1 |
 | NFR-1 | 4.3, 6.10, 8.2 |
 | NFR-2 | 2.1, 2.2, 8.3 |
 | NFR-3 | 8.2 |
@@ -1177,17 +1180,17 @@ Every AC has at least one task.
 | Step 2: core (`DeliveryCount`, interface, `DeliveryBudgetDiagnostics`, three rules) | 2.1–2.7 |
 | Step 3: conformance oracle (`>=` redelivery arms) | 3.1 |
 | Step 4: SQS both packages (creators, `"None"` stamping, interface, factory calls) | 4.1, 4.3, 4.5 (tests 4.2–4.12) |
-| Step 5: GCP (parser pull and stream, ignore entry, interface, factory calls; FR-23 gated on AC-39) | 6.1, 6.2, 6.4, 6.7, 6.10, 6.11, 6.16 |
+| Step 5: GCP (parser pull and stream, ignore entry, interface, factory calls; FR-23 gated on AC-39) | 5.5d, 6.1, 6.2, 6.7, 6.10, 6.11, 6.16 |
 | Step 6: RocketMQ (AC-23, then branch; `"None"` stamping and bag-loop skip on both branches) | 7.1, 7.2, 7.3, 7.4, 7.10–7.21 |
 | Step 7: harness (R = 3, M = 5; IAM members; dispatch count and recording consumer; FR-23 `<=` assertion) | 3.2, 3.3, 3.4, 4.2, 5.4 |
 | R-26 channel-creation logging sites (AWS ×2 per package, GCP ×2, RocketMQ ×3) | 4.1, 6.2, 7.4 |
-| `googclient_deliveryattempt` added to `Parser.s_ignoreHeaders` | 6.3 (risk), 6.4 |
+| `googclient_deliveryattempt` added to `Parser.s_ignoreHeaders` | 5.5c (risk), 5.5d (before 5.6) |
 | Publisher bag-loop skip | 7.3 |
 | `RejectionMetadataKeyNames` (core) vs harness `RejectionMetadataKeys` | 1.2, 1.3, 2.2, 5.4, 5.5a |
 | Null-reason `"None"` | 4.5, 7.2, 5.5a (router) |
 | AC-42 stream procedure and `StreamOrdering` alternative | 6.13, 6.14 |
 | Measurement amendments (AC-39(b)/(c), AC-23 reclassification) | 6.7, 7.1 |
-| Risks: `SubscriberClient`/`googclient_deliveryattempt`; `bufferSize: 2`; client-local RocketMQ counter; C-7 over-count | 6.3; 6.13; 7.1; 8.7 |
+| Risks: `SubscriberClient`/`googclient_deliveryattempt`; `bufferSize: 2`; client-local RocketMQ counter; C-7 over-count | 5.5c; 6.13; 7.1; 8.7 |
 | Edge case 2 and 3 documentation | 8.5 |
 
 **ADR 0078**
@@ -1196,7 +1199,7 @@ Every AC has at least one task.
 |---|---|
 | Step 1: structural settle helpers | 1.5 |
 | Step 2: R-15 ctor params appended, interfaces | 5.1 |
-| Step 3: `GcpRejectionRouter`, consumer ctor params, factory wiring, dispose | 5.5a (router, pull ctor params, factory wiring, dispose), 5.5b (selection by reason), 5.6 |
+| Step 3: `GcpRejectionRouter`, consumer ctor params, factory wiring, dispose | 5.5a (router, pull ctor params, factory wiring, dispose), 5.5b (selection by reason), 5.6; 0077's ignore entry (5.5d) precedes 5.6, as 0078:38 relies on it |
 | Step 4: `Reject` composition (AC-15/16/17/18; NFR-8; always returns `true`) | 5.5a, 5.5b, 5.6, 5.7, 5.8 |
 | Step 5: harness (Brighter route, `.native` topic and subscription at M = 5, DLQ and invalid readers, keys record, two-subscription Given) | 5.4, 5.8 |
 | Step 6: `GcpIamCallTolerance` (`InvalidOperationException`), applied in both helpers | 5.2, 5.3 |
@@ -1212,7 +1215,7 @@ Every step and decision has a task.
 No task falls outside the requirements or an ADR decision. The less obvious links:
 - 1.1 is AC-27, placed early.
 - 5.9 comes from ADR 0078's "Only success is cached" decision and its ordering-key risk.
-- 6.3 and 6.13 come from ADR 0077's Risks table.
+- 5.5c and 6.13 come from ADR 0077's Risks table.
 - 8.5 comes from ADR 0077 edge cases 2 and 3 ("Brighter documents this").
 
 Nothing is tasked for #4415, `RocketMessageConsumer.ReadDelay`, or the requirements' Out of Scope list. 7.10 says explicitly not to touch `ReadDelay`.

@@ -478,3 +478,120 @@ Applied with exact-anchor replacements scoped to each task's block, all asserted
 | F6 | 5.6 | Title ends "then accepts the original**" |
 
 Old text now has 0 occurrences: "RejectAsync is genuinely async", "carries the attribute only if published", "recording both answers". The task count is unchanged at 79.
+
+---
+
+# Review: tasks — 0037-delivery-count-and-rejection-routing (round 4)
+
+**Date**: 2026-09-25
+**Threshold**: 60
+**Verdict**: NEEDS WORK
+
+1 finding at or above threshold 60. Address these before approving.
+
+## Findings
+
+### 1. The `googclient_deliveryattempt` ignore entry lands in Phase 6, but Phase 5's stream routing (5.6, 5.11) already depends on it (Score: 62)
+
+ADR 0078 relies on 0077's ignore entry: "The routed copy does not re-publish `googclient_deliveryattempt`, which 0077 adds to `Parser.s_ignoreHeaders`" (0078:38). The tasks add it only in 6.4, which depends on 5.6, so 5.6 and the 5.11 GATE (including `GCP / Stream*` cells) run before the entry exists. 5.4 keeps `DeadLetterPolicy` M = 5 on every DLQ-backed subscription, so the stream subscriptions 5.6/5.11 use are exactly those on which `SubscriberClient` injects the attribute (if the emulator populates `delivery_attempt`). The parser copies every non-ignored attribute into the bag (`Parser.cs:12-29`, `:71-75`), and `AddHeaders` re-publishes every non-local bag entry (`Parser.cs:350-356`). If the attribute is injected and a publish carrying it is refused (the real service reserves `goog*` keys), every stream-routed copy fails, the router reports `Failed`, and 5.6 cannot go green by its own implementation. 6.3 (MEASURE) depends only on 5.3/5.4; nothing places it before 5.6.
+
+**Evidence**: ADR 0078:38; ADR 0077:113, :288, :325; tasks.md 5.4, 5.6, 5.11, 6.3 "Depends on: 5.3, 5.4", 6.4 "Depends on: 5.6, 6.3"; `Parser.cs:12-29`, `:71-75`, `:350-356`.
+
+**Fix type**: reorder/dependency
+
+**Recommendation**: Make 5.6 depend on 6.3. If 6.3 shows injection, land the `s_ignoreHeaders` entry before 5.6 (split it out of 6.4), or at minimum add a stop-and-ask note to 5.6 and 5.11. Record the order in the ADR 0078 step 3 coverage row.
+
+---
+
+### 2. 5.8's `Validate` row can silently exercise the publish failure instead of the creation failure (Score: 32)
+
+`EnsureTopicExistAsync` caches the topic in the static `s_topicOrSubscriptionAlreadyCreatedUpdate` **before** `Validate` checks it (`GcpPubSubMessageGateway.cs:44-47`, throw `:53-60`; ADR 0078 Risks :319). If anything in the process already passed the same destination name, creation succeeds and the publish fails instead; every assertion still holds.
+
+**Evidence**: tasks.md 5.8; `GcpPubSubMessageGateway.cs:44-60`; `GcpPubSubMessageProducerFactory.cs:66`; ADR 0078:180, :319.
+
+**Fix type**: task rephrase
+
+**Recommendation**: The `Validate` row uses a destination name unique to that row and variant (a fresh Guid) and issues exactly one `Reject` before asserting.
+
+---
+
+### 3. Under 6.4 Given (c), it is unclear whether "drop the test clauses" includes the routed-copy clause (Score: 28)
+
+The routed-copy bullet sits outside the Given bullet; under (c) it is vacuous.
+
+**Evidence**: tasks.md 6.4.
+
+**Fix type**: task rephrase
+
+**Recommendation**: "drop both test clauses (receive and routed-copy); no test file is committed".
+
+---
+
+### 4. 1.5's helper extraction reorders the existing Start logs relative to the client lookup (Score: 20)
+
+`Requeue` logs `RequeueStart` and `Reject` logs `RejectMessage` between the client lookup and the RPC (`GcpPullMessageConsumer.cs:285-288`, `:349-354`). A helper wrapping "only the client lookup and the RPC" moves the log before the lookup, so a failed lookup emits a Start log it does not emit today.
+
+**Evidence**: tasks.md 1.5; `GcpPullMessageConsumer.cs:285-288`, `:349-354`, `:381-386`.
+
+**Fix type**: task rephrase
+
+**Recommendation**: Note that the Start log moves before the lookup (an accepted log-order change).
+
+---
+
+## Summary
+
+| Score Range | Count |
+|-------------|-------|
+| 90-100 (Critical) | 0 |
+| 70-89 (High) | 0 |
+| 50-69 (Medium) | 1 |
+| 0-49 (Low) | 3 |
+
+**Total findings**: 4
+**Findings at or above threshold (60)**: 1
+
+## Coverage check
+
+- Every R-n (28), NFR-n (8) and AC-n (43) maps to at least one task. Round 3's gaps are closed: R-16's missing-handle MUST (5.5a, 5.6); ADR 0078's creation failure → `Failed` (5.8 `Validate` row).
+- ADR 0077 steps 1-7 and ADR 0078 steps 1-8 covered; the one ordering gap is ADR 0078:38 (#1).
+- No scope creep. Counts: 79 tasks = 36 TEST + IMPLEMENT, 17 CHARACTERISE, 4 TIDY, 17 GATE, 5 MEASURE. CHARACTERISE mutations unaffected by round 3.
+
+## Regression check (round 4)
+
+| Round-3 edit | Result |
+|---|---|
+| 5.5a missing-handle clause + Implementation | OK — RED today (`:278-281`, `:308-311`); no conflict with 5.8 or 5.10 |
+| 5.6 missing-handle clause; title | OK — today returns `true` with no routing (`GcpPubSubStreamMessageConsumer.cs:86-89`), so RED |
+| 6.3 accepted-publish record | OK; but the measurement is needed before 5.6 (#1) |
+| 6.4 Given (a)/(b)/(c) | OK with caveat (#3) |
+| 6.15 subscription created first | OK |
+| 5.8 `Validate` row | Correct against source; static-cache weakness (#2) |
+| 1.5 `try` sentence | OK; log-order note (#4) |
+
+## Main-agent validation (round 4)
+
+Summary recounted: Medium 62; Low 32/28/20. That is 4 total, 1 ≥ 60. Correct.
+
+1. **Confirmed.** `Parser.cs:12-29` has no `googclient_deliveryattempt` entry; `:71-75` copies every non-ignored attribute into `Header.Bag`; `:350-356` re-publishes every non-local bag entry; ADR 0078:38 states the routed copy relies on 0077's entry; tasks.md 5.4 keeps M = 5; 6.3 depends only on 5.3/5.4 and 6.4 on 5.6. Whether the emulator injects and refuses is unmeasured, which is why the ordering matters.
+
+**Pattern note:** the `googclient_deliveryattempt` measurement/ignore-entry area (6.3/6.4) has drawn a finding in rounds 2, 3 and 4.
+
+## Remediation (round 4): the user's decisions and what was applied
+
+Decisions (user, 2026-09-25): 6.3/6.4 drew a finding three rounds running, so rather than patch again they **move into Phase 5** as **5.5c** (MEASURE) and **5.5d** (ignore entry, receive-side clauses only), ahead of 5.6; the routed-copy clause joins 5.6's test and 5.6 depends on 5.5d. Apply all three Lows. Then run round 5.
+
+Applied in one script (all anchors asserted, single write); every applied text grepped back (1 occurrence each):
+
+| # | Where | Applied text (grep anchor) |
+|---|---|---|
+| F1 | 5.5c (was 6.3) | "Runs before 5.5d and 5.6"; "Depends on: 5.3, 5.4" unchanged |
+| F1 | 5.5d (was 6.4) | "chosen by 5.5c's outcome"; "if 5.5c(i) shows"; "(and 5.6's routed-copy clause) evidence"; "This lands before 5.6"; "Depends on: 5.4, 5.5c"; routed-copy bullet removed |
+| F1 | 5.6 | "carries no `googclient_deliveryattempt` on the destination (ADR 0078:38)"; "Depends on: 5.5b, 5.5d" |
+| F1 | Phase 6 | Note "**6.3 and 6.4 moved** to Phase 5 as **5.5c** and **5.5d** … not reused" |
+| F1 | refs | 6.10 "3.3, 5.5d, 6.7"; 6.11 "If 5.5c(ii)"; 6.20 "apart from 5.5d"; 6.30 "Depends on: 5.5d, 5.8, 6.16"; R-28 row "4.6, 5.5d, 6.15"; 0077 Step 5 row "5.5d, 6.1, 6.2"; ignore-entry row "5.5c (risk), 5.5d (before 5.6)"; Risks row "5.5c; 6.13"; scope check "5.5c and 6.13 come"; 0078 Step 3 row "ignore entry (5.5d) precedes 5.6" |
+| F2 | 5.8 | "a fresh Guid … exactly one `Reject`" |
+| F3 | 5.5d | "(no test file is committed for this task)" under (c), which also drops 5.6's routed-copy clause |
+| F4 | 1.5 | "Accepted log-order change" |
+
+No reference to 6.3 or 6.4 remains outside the move note; "5.5b/5.6's Reject" has 0 occurrences. The task count is unchanged at 79 (MEASURE still 5).
