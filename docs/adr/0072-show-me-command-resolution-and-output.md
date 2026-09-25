@@ -463,13 +463,12 @@ Every window is charged the bytes it brought into context, which is the size it 
 it was issued. The total therefore stays inside the budget by the same arithmetic as before: nothing
 is read whose size the bytes remaining do not cover.
 
-Reading in windows is how every read is made, not a degradation. "Read in full", as FR-7, NFR-3 and
-AC-52 use it, is met when every byte of the file reaches context. The tools cannot bring a
-229,159-byte file into context in one call, so AC-52's literal "rather than chunked" cannot be met by
-any design; this design meets the criterion's intent — every byte read, nothing skipped — and the
-wording is a matter for `requirements.md`. Degradation, as NFR-3 uses the word, is reading by
-targeted extraction when the whole cannot be afforded; when even that cannot be afforded, the
-affected value is `Unverifiable`.
+Reading in windows is how every read is made, not a degradation. A read *in full*, as
+`requirements.md` defines it under *Charged bytes*, brings every byte of the file into context in as
+many calls as the tools require, which is what a file read by its windows does. Degradation, as NFR-3
+uses the word, is reading only part of a file that does not fit the bytes remaining — by targeted
+extraction or bounded chunks — and when even that cannot be afforded, the affected value is
+`Unverifiable`.
 
 The `src/`-scoped diff's windows are line numbers in the script's own `git diff` output, so the
 command must produce the same output. The ledger records the exact command line the script ran, in
