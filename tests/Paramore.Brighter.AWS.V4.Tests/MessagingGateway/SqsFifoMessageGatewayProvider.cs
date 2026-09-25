@@ -17,6 +17,17 @@ public class SqsFifoMessageGatewayProvider
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
     private readonly AwsTestResourceReaper _reaper;
+    private ConformanceHarnessMessageScheduler? _scheduler;
+
+    private ConformanceHarnessMessageScheduler Scheduler =>
+        _scheduler ??= new ConformanceHarnessMessageScheduler(RepublishToSqs);
+
+    private IDisposable? RepublishToSqs(Message message)
+    {
+        var publication = CreatePublication(message.Header.Topic, OnMissingChannel.Validate);
+        var producer = new SqsMessageProducer(_awsConnection, publication);
+        return ConformanceHarnessMessageScheduler.SendAndHandBack(producer, () => producer.Send(message));
+    }
 
     public SqsFifoMessageGatewayProvider()
     {
@@ -204,6 +215,7 @@ public class SqsFifoMessageGatewayProvider
             // Purge and Dispose reach AWS and can fail — PurgeQueue alone is throttled to one
             // call per queue a minute — and a teardown that throws before it reaps is how the
             // topics and queues leaked in the first place.
+            _scheduler?.Dispose();
             _reaper.Reap();
         }
     }
@@ -229,6 +241,7 @@ public class SqsFifoMessageGatewayProvider
         finally
         {
             // See CleanUp: the reap has to survive a teardown that throws.
+            _scheduler?.Dispose();
             await _reaper.ReapAsync();
         }
     }
@@ -271,6 +284,7 @@ public class SqsFifoMessageGatewayProvider
         }
 
         var producer = new SqsMessageProducer(connection, publication);
+        producer.Scheduler = Scheduler;
         return new FifoMetadataProducer(producer);
     }
 
@@ -286,6 +300,7 @@ public class SqsFifoMessageGatewayProvider
         }
 
         var producer = new SqsMessageProducer(connection, publication);
+        producer.Scheduler = Scheduler;
         return new FifoMetadataProducer(producer);
     }
 
