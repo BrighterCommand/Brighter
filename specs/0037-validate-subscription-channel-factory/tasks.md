@@ -324,7 +324,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - Known and accepted simplification: nested types render with the CLR `+` separator. No criterion exercises one — `AlphaBus`/`BetaBus` are *namespaces*, not nested types
   - Depends on: 17.
 
-- [ ] **19. TEST + IMPLEMENT: The two-way remedy, where both directions are legitimate (AC-13, template T1)**
+- [x] **19. TEST + IMPLEMENT: The two-way remedy, where both directions are legitimate (AC-13, template T1)**
   - **USE COMMAND**: `/test-first when both remedies are legitimate the direct arm message should offer both directions`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_both_remedies_are_legitimate_should_offer_both_directions.cs`
