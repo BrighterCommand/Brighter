@@ -273,7 +273,7 @@ public static class ConsumerValidationRules
         var definitionName = type.GetGenericTypeDefinition().FullName ?? type.Name;
         var backtickIndex = definitionName.IndexOf('`');
         if (backtickIndex >= 0)
-            definitionName = definitionName[..backtickIndex];
+            definitionName = definitionName.Substring(0, backtickIndex);
 
         var args = string.Join(", ", type.GetGenericArguments().Select(DisplayName));
         return $"{definitionName}<{args}>";
