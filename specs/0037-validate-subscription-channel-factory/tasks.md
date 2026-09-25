@@ -338,7 +338,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - The remedy is **asymmetric** by design: `{D}` on the "change the configuration" side, `{F}` on the "change the subscription" side
   - Depends on: 18.
 
-- [ ] **20. CHARACTERISE: The in-memory case offers only the direction that fixes the defect (AC-13a, template T3a)**
+- [x] **20. CHARACTERISE: The in-memory case offers only the direction that fixes the defect (AC-13a, template T3a)**
   - **USE COMMAND**: `/test-first when the declared type is the in-memory channel factory the message should offer only the subscription-side remedy`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_the_declared_type_is_the_in_memory_factory_should_offer_only_the_subscription_remedy.cs`
