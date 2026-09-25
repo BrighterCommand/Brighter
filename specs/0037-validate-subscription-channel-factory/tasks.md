@@ -381,7 +381,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - With tasks 13, 15, 19, 20, 21 this completes all **five** literals and confirms the selection conditions are **ordered and total** over the input space
   - Depends on: 21.
 
-- [ ] **23. CHARACTERISE: Display names carry no assembly identity (AC-14, FR-5 display format)**
+- [x] **23. CHARACTERISE: Display names carry no assembly identity (AC-14, FR-5 display format)**
   - **USE COMMAND**: `/test-first when rendering a closed generic subscription type the message should carry no assembly identity or arity suffix`
   - Test location: "tests/Paramore.Brighter.Core.Tests/Validation"
   - Test file: `When_rendering_a_closed_generic_subscription_type_should_carry_no_assembly_identity.cs`
