@@ -59,7 +59,7 @@
   - No `#pragma warning disable`, no new project, no new `ProjectReference`/`PackageReference`.
   - **Output / verification:** the solution builds with no new errors or warnings. Tick "AC-27 samples committed (commit sha)" in `specs/0037-delivery-count-and-rejection-routing/README.md` Status Checklist.
 
-- [ ] **1.2 TIDY: Add core `RejectionMetadataKeyNames` constants for the five rejection-metadata keys**
+- [x] **1.2 TIDY: Add core `RejectionMetadataKeyNames` constants for the five rejection-metadata keys**
   - **USE COMMAND**: `/tidy-first add RejectionMetadataKeyNames constants type to Paramore.Brighter`
   - Add a new static class `Paramore.Brighter.RejectionMetadataKeyNames` holding `RejectionReason = "rejectionReason"`, `RejectionMessage`, `RejectionTimestamp`, `OriginalTopic` and `OriginalMessageType`, spelled exactly as `SqsMessageConsumer.RefreshMetadata` spells them today. Source: ADR 0077 Key Components, "Metadata vocabulary".
   - Do not rename the generated harness record `RejectionMetadataKeys` (`Templates/MessagingGateway/Shared/RejectionMetadataKeys.cs.liquid`).
