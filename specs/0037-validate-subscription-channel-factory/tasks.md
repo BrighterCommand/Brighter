@@ -627,7 +627,7 @@ One task per transport. Each bundles that transport's one-line `ChannelFactoryTy
 
 New public static class `SubscriptionChannelFactoryDeclaration` in namespace `Paramore.Brighter`, in `src/Paramore.Brighter`. It has **exactly two public members** and is the **one** new public type FR-12 permits — no result record, no type-scoped `Sweep` overload, no third member added later so a test can avoid a `Single(...)`.
 
-- [ ] **37. STRUCTURAL: the `ChannelFactoryDeclaration` test-double folder and its two helper types**
+- [x] **37. STRUCTURAL: the `ChannelFactoryDeclaration` test-double folder and its two helper types**
   - Test location: `tests/Paramore.Brighter.Core.Tests/MessagingGateway/ChannelFactoryDeclaration/TestDoubles/`
   - These live **beside** the existing `CombinedChannelFactory` and channel tests and are deliberately **not** in `Validation/TestDoubles/`, whose double set C-9 declares closed for the rule's own criteria.
   - Add, one class per file:
