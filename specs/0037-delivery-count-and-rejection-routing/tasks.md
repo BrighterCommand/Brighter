@@ -71,7 +71,7 @@
   - Depends on: 1.2
   - Verification: no behaviour change; existing tests stay green.
 
-- [ ] **1.4 TIDY: Swap the SQS inline creators' call order so the bag is read before the handled count**
+- [x] **1.4 TIDY: Swap the SQS inline creators' call order so the bag is read before the handled count**
   - **USE COMMAND**: `/tidy-first move bag read before ReadHandledCount in SqsInlineMessageCreator`
   - Change `src/Paramore.Brighter.MessagingGateway.AWSSQS/SqsInlineMessageCreator.cs` (`ReadHandledCount` called `:60`, bag read `:76`) and the V4 twin (`:60`). Source: ADR 0077 "Where each transport reads its counter".
   - Verification: no behaviour change; existing tests stay green.
