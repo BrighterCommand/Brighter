@@ -103,9 +103,9 @@ public class GcpPubSubSubscription : Subscription
 
     /// <summary>
     /// Gets the type of the channel factory used to create this channel.
-    /// For GCP, this is always <see cref="GcpPubSubConsumerFactory"/>.
+    /// For GCP, this is always <see cref="GcpPubSubChannelFactory"/>.
     /// </summary>
-    public override Type ChannelFactoryType => typeof(GcpPubSubConsumerFactory);
+    public override Type ChannelFactoryType => typeof(GcpPubSubChannelFactory);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GcpPubSubSubscription"/> class with all Pub/Sub specific parameters.

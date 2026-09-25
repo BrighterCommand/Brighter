@@ -1,0 +1,50 @@
+#region Licence
+
+/* The MIT License (MIT)
+Copyright © 2026 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+
+#endregion
+
+using Paramore.Brighter.Gcp.Tests.TestDoubles;
+using Paramore.Brighter.MessagingGateway.GcpPubSub;
+
+namespace Paramore.Brighter.Gcp.Tests.MessagingGateway;
+
+public class GcpPubSubSubscriptionChannelFactoryTypeTests
+{
+    [Fact]
+    public void When_reading_the_channel_factory_type_of_a_gcp_pubsub_subscription_should_be_the_gcp_pubsub_channel_factory()
+    {
+        // Arrange — the three positional arguments and the explicit pump type are both required:
+        // GcpPubSubSubscription<T> defaults messagePumpType to Unknown, which Subscription rejects
+        var subscription = new GcpPubSubSubscription<MyCommand>(
+            new SubscriptionName("t"),
+            new ChannelName("t"),
+            new RoutingKey("t"),
+            messagePumpType: MessagePumpType.Proactor);
+
+        // Act
+        var channelFactoryType = subscription.ChannelFactoryType;
+
+        // Assert
+        Assert.Equal(typeof(GcpPubSubChannelFactory), channelFactoryType);
+    }
+}
