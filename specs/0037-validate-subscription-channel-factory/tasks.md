@@ -570,7 +570,7 @@ One task per transport. Each bundles that transport's one-line `ChannelFactoryTy
     - Note for the release notes (task 36): this is one of the three corrections that cause **C-12**, the exception `ValidatePipelines(throwOnError: false)` does **not** rescue
   - Depends on: 32.
 
-- [ ] **34. TEST + IMPLEMENT: `SqsSubscription` (AWSSQS.V4) declares its channel factory (FR-10 — AC-23, AC-25d, AC-26d, AC-26f)**
+- [x] **34. TEST + IMPLEMENT: `SqsSubscription` (AWSSQS.V4) declares its channel factory (FR-10 — AC-23, AC-25d, AC-26d, AC-26f)**
   - **USE COMMAND**: `/test-first when reading the channel factory type of an AWS SQS V4 subscription it should be the V4 channel factory and the rule should report no findings`
   - Test location: "tests/Paramore.Brighter.AWS.V4.Tests/MessagingGateway"
   - Test files: the four equivalents of task 33's, named for the V4 assembly, plus a locally declared request type
