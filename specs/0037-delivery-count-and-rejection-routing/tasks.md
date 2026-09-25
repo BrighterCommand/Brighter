@@ -151,7 +151,7 @@
     - Bump `Assert.Equal(5, specs.Count)` (after 2.3) at `tests/Paramore.Brighter.Extensions.Tests/When_validate_pipelines_with_consumers_should_receive_subscriptions.cs:81` to `6`
   - Depends on: 2.3
 
-- [ ] **2.5 TEST + IMPLEMENT: A budget on a subscription that cannot advance its delivery count reports one startup Warning naming the reason**
+- [x] **2.5 TEST + IMPLEMENT: A budget on a subscription that cannot advance its delivery count reports one startup Warning naming the reason**
   - **USE COMMAND**: `/test-first when subscription cannot advance its delivery count should report a warning naming the subscription the budget and the reason`
   - Test locations (split as in 2.3):
     - (i) Specification: "tests/Paramore.Brighter.Core.Tests/Validation", file `When_subscription_cannot_advance_delivery_count_should_report_warning.cs`, asserting directly on the `ConsumerValidationRules` specification
