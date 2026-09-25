@@ -1,7 +1,7 @@
 ---
 id: 0072-show-me-command-resolution-and-output
 title: "The Measurement Seam and Output of /spec:show-me"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-09-19
@@ -17,7 +17,7 @@ Date: 2026-09-19
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 

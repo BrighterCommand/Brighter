@@ -1,7 +1,7 @@
 ---
 id: 0073-show-me-advisory-risk-model
 title: "The Advisory Risk Model for /spec:show-me"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-09-19
@@ -17,7 +17,7 @@ Date: 2026-09-19
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 

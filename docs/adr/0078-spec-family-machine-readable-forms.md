@@ -1,7 +1,7 @@
 ---
 id: 0078-spec-family-machine-readable-forms
 title: "Machine-Readable Forms in the /spec Family"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-09-25
@@ -17,7 +17,7 @@ Date: 2026-09-25
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 

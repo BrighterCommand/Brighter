@@ -1,7 +1,7 @@
 ---
 id: 0077-show-me-visual-explanation
 title: "Visual Explanation in /spec:show-me"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-09-20
@@ -17,7 +17,7 @@ Date: 2026-09-20
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
