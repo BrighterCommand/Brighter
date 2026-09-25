@@ -93,9 +93,9 @@ nothing reports a malformed document.
 
 - **The reader and its writers must change together.** A pattern changed without its producer, or a
   producer without its pattern, recreates the drift (FR-22, FR-23).
-- **A pattern is written once.** FR-21 forbids transcribing a pattern into a command file, because
-  prose escaping changes a pattern's meaning. A producer needs a form its reader can copy, and that
-  is an example line.
+- **A stated pattern is written once.** FR-21 forbids transcribing any of the four stated patterns
+  into a command file, because prose escaping changes a pattern's meaning. A producer needs a form
+  its reader can copy, and that is an example line.
 - **The amendments are additive.** No existing section or criterion of an amended command file is
   removed, renumbered or reworded (AC-88, AC-91).
 - **Existing documents are settled.** Specs and release notes written before this ADR are not
@@ -109,12 +109,12 @@ nothing reports a malformed document.
 
 ## Decision
 
-**Prescribe each form where it is written and check it where it is reviewed, by example and never by
-pattern; and give the marked release-notes form one writer, `/spec:write_release_notes`, which
-replaces its own section in place and stops without writing whenever proceeding would mean guessing
-whose section a section is.**
+**Prescribe each form where it is written, check it where it is reviewed, and give the release-notes
+form one writer that never guesses whose section is whose.**
 
-`/spec:requirements` and `/spec:tasks` state their forms in words and by example. `/spec:review`
+Each form is given by example, never by pattern. `/spec:write_release_notes` replaces its own
+section in place, and stops without writing whenever proceeding would mean guessing. `/spec:requirements`
+and `/spec:tasks` state their forms in words and by example. `/spec:review`
 flags a document that departs from them. `/spec:write_release_notes` writes a spec's release-notes
 section in the marked form, and `/spec:design` and `/spec:review` call for it when a design breaks
 something.
@@ -291,11 +291,19 @@ long before a spec is finished.
 | Step | Does |
 | --- | --- |
 | 1 | Resolve the target (ladder row 1) |
-| 2 | Read `release_notes.md` and find its `##` and `###` headings, ignoring any `#` line inside a fenced block (rows 2, 3) |
+| 2 | Find `release_notes.md`'s `##` and `###` headings and its fence lines with one `Grep` that returns line numbers, and discard any heading between an opening and a closing fence (rows 2, 3) |
 | 3 | Check the target has something to derive items from (row 4) |
 | 4 | Find every section marked for the target, and every unmarked `###` heading under the first `##` that contains `(spec {NNNN}` (rows 5–7) |
 | 5 | Judge the breaking-change items and write the section in the form of Key Components 4 |
 | 6 | Replace the marked section (row 8), or insert the new one directly after the first `##` heading line (row 9) |
+
+`release_notes.md` is 118,145 bytes today, too large to read in one call. The command therefore
+reads it by line numbers: step 2's one `Grep` gives every heading and fence line, so fence tracking
+never has to survive a split read, and every section it then needs is read by `Read` with an offset
+and a limit. That read is also what the `Edit` below requires, because an edit is refused on a file
+the session has not read. `Read` shortens any line over 2,000 characters; such a line in the target's
+section would make the `Edit`'s old text fail to match, and the edit would be refused with
+`release_notes.md` unchanged, which is a failed write (row 8's invariant), not a wrong one.
 
 The write is an exact-match `Edit`, never a whole-file `Write`. A replacement's old text is the whole
 marked section, which the marker makes unique. An insertion is anchored on the first `##` heading
@@ -430,6 +438,14 @@ commit of its own, checked by the acceptance criterion named on it.
   *Mitigation*: an exact-match `Edit` fails on a non-unique anchor rather than editing the wrong
   place. The command reports the failure and `release_notes.md` is unchanged. This is a failed
   write, not one of FR-23's stops, and it needs no ladder row.
+- **Risk: `/spec:write_release_notes` and the measurement script recognise headings and fences
+  differently.** Both apply the *Marked release-notes section* definition's rules for headings and
+  fences — the script in C#, this command in its one `Grep` — so there are two implementations of
+  one rule. The four stated patterns are not among them, so FR-21's exactly-once rule is not broken,
+  but the two can drift.
+  *Mitigation*: the command's output is read back by the script on every `/spec:show-me` run, and
+  `/spec:review`'s design check flags a spec whose breaking changes have no marked section the
+  script can find.
 - **Risk: a hand-added marker names the wrong directory.**
   *Mitigation*: none in tooling. The marker is a literal the person chose, and `/spec:show-me` trusts
   it. `/spec:review`'s design check will still flag the spec that is missing its section.

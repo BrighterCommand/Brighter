@@ -115,12 +115,13 @@ guess that looks like a fact, and FR-6 (c) forbids it.
 
 ## Decision
 
-**Add one stage, the Explainer, as the only stage that reads source files; have it take the trigger
-from the ledger, elect at most one relationship for `## What changed and why`, probe every file
-before reading it against what the budget has left, and abandon a relationship it cannot afford
-rather than draw part of it; and have every outcome be a diagram or exactly one named line.**
+**Give source reads to one stage, the Explainer, and make every outcome either a fully attributed
+diagram or exactly one named line.**
 
-The Explainer runs in the main agent, after the command's other reads and before the Classifier and
+The Explainer takes the trigger from the ledger and elects at most one relationship for
+`## What changed and why`. It probes every file before reading it against what the budget has left,
+and it abandons a relationship it cannot complete rather than draw part of it. The Explainer runs in
+the main agent, after the command's other reads and before the Classifier and
 the Synthesiser. It hands over what Key Components 1 calls its output: at most two rendered blocks,
 or a named line in place of the first. The Synthesiser places what it was given and draws nothing
 itself.
@@ -151,7 +152,9 @@ The five named lines, quoted from FR-6 (e):
   read accurately.`
 - **the no-diff line**: `No diagram: spec branch not determinable, so no change could be drawn.`
 
-The values `{a}` to `{d}` in the no-trigger line are the ledger's, copied.
+The values `{a}` to `{d}` in the no-trigger line are the ledger's, copied: `{a}` from the `src/`
+bucket's file count, `{b}` from `src_subdirectory_count`, `{c}` from `public_api_lines` and `{d}`
+from `adr_resolved_count`.
 
 Three properties read off the ladder:
 
@@ -222,8 +225,8 @@ Two arrows carry this ADR's argument. The command's reads and the Explainer's re
 read log, which is why there is one budget. The Explainer renders its block only from the node list,
 which is why a node with no recorded source cannot be drawn. What the Synthesiser receives is the
 Explainer's output, as Key Components 1 states it. The node list stays in the run's transcript as the
-attribution record. This ADR adds one stage
-to the command file, and nothing to its front matter or to `.claude/settings.json`.
+attribution record. This ADR adds one stage to the command file. The one front-matter entry it
+relies on, `grep`, is listed in 0072's `allowed-tools`; nothing is added to `.claude/settings.json`.
 
 ### Key Components
 
@@ -265,12 +268,18 @@ The Explainer spends in this order:
    is read by targeted extraction of the members the relationship needs, recorded as
    `used (targeted extraction)`. If not even the extract fits, the relationship is abandoned.
 
+Every Explainer read follows 0072's window rule. These files are not in the ledger, so their windows
+are unplanned: each is sized with `wc -c` before it is read, halved until it fits 25,000 bytes, and
+charged the bytes it brought in. An extraction is located by a `grep -n -F` for the literal member
+names the relationship needs, never by a pattern. That `grep` is itself an unplanned window, sized
+first and charged its output, and the lines it finds are then read as windows.
+
 The bytes remaining are whatever the general allowance has left plus the reserve. Only the
 Explainer's reads may spend the reserve. When a run draws a second diagram — the optional tree in
 `## Where to look first` — it spends from the same remainder, so the two share one reserve (AC-63).
 
-Every read the Explainer makes is charged to the read log and gets its own `## Inputs used` row,
-whether or not a diagram is drawn from it (FR-15).
+Every read the Explainer makes is charged to the read log. Each source file it reads, in however
+many windows, gets one `## Inputs used` row, whether or not a diagram is drawn from it (FR-15).
 
 #### 3. Attribution by projection
 
@@ -280,11 +289,13 @@ source that licenses it, which is exactly one of:
 | Source | Licenses a node that names |
 | --- | --- |
 | a path in the spec diff | that file |
+| a declaration line in the `src/`-scoped diff | the type or member that line declares |
 | an ADR stem from `.adr-list` | a component or type the ADR's extract names |
 | a path in the read log, read by the Explainer | that file — marked `(unchanged)` when it is not in the spec diff — or a type or member read in it |
 
-The block is rendered from the node list, so a node with no row cannot be drawn. A diff path
-licenses a node naming the **file**, not a type inside it; a type node needs a read or an ADR. A node
+The block is rendered from the node list, so a node with no row cannot be drawn. A diff path alone
+licenses only a node naming the **file**. A type or member node needs a declaration line in the
+diff, an Explainer read, or an ADR. A call between two nodes needs a read that shows the call. A node
 that names a path is written only if the path is tracked in git (FR-17). A tree node that is not in
 the spec diff is marked `(unchanged)` (FR-14).
 
@@ -337,9 +348,19 @@ Over the assembled text, before the one `Write`, the command confirms that:
 - every path-shaped node label is tracked in git.
 
 These are checks on the command's own output, not measurements, so they sit on the command's side of
-0072's seam. A rendered Mermaid block also follows `.agent_instructions/documentation.md`'s trap
+0072's seam. They are a model-checked target, not a guarantee. 0072's defect table shows the model
+can miscount, and nothing mechanical backs these four checks. A rendered Mermaid block also follows `.agent_instructions/documentation.md`'s trap
 list: no `;` inside a `sequenceDiagram`, no `<` or `>` in a label, no HTML entities, and quoted
 labels where a label carries a comma, colon or parenthesis.
+
+#### Where each artefact is touched
+
+| Path | Change |
+| --- | --- |
+| `.claude/commands/spec/show-me.md` | The Explainer step, the ladder and the five named lines, the node-list row shape, and the pre-`Write` checks |
+
+Deliberately unchanged: the measurement script, whose trigger fields and `adr_resolved_count` are
+0072's, and the test script, which has no diagram row because a diagram is judged.
 
 ### Technology Choices
 
@@ -379,7 +400,7 @@ written against.
 
 Numbered in commit order, in the command file.
 
-1. **Structural.** State the ladder, the five named lines quoted outside any table, and the node-list
+1. **Behavioural.** State the ladder, the five named lines quoted outside any table, and the node-list
    row shape in the command file.
 2. **Behavioural.** The Explainer step: read the trigger fields from the ledger; walk the ladder;
    probe, read or extract, charge the read log; write the node list; render; record the target
@@ -387,7 +408,7 @@ Numbered in commit order, in the command file.
 3. **Behavioural.** Placement: the Synthesiser places each block or the line, and writes FR-14's
    paths from the changed paths handed over with a block for `## Where to look first`, when there
    is one.
-4. **Behavioural.** One `## Inputs used` row per Explainer read, with its mark.
+4. **Behavioural.** One `## Inputs used` row per source file the Explainer read, with its mark.
 5. **Behavioural.** The pre-`Write` checks in Key Components 6.
 
 ## Consequences
@@ -408,6 +429,9 @@ Numbered in commit order, in the command file.
 
 - **Attribution is not checkable from the file alone.** The type question needs the node list in the
   transcript.
+- **The caps are checked by the model.** Line counts and line widths are counted over the model's
+  own output, with no mechanical backstop, and a miscount can ship a block over 40 lines or 100
+  columns.
 - **The Explainer can starve nothing but itself.** It runs after the command's other reads, so it
   spends only what they left. On a spec larger than spec 0036, that can be little more than the
   reserve.

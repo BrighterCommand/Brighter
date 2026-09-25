@@ -115,12 +115,13 @@ look like measurements.
 
 ## Decision
 
-**Judge each breaking-change item and requirement status once, in the Classifier; derive F2 and F5
-from those judgements and copy F1 from the fact ledger; apply FR-16's forced levels before any
-threshold; take the highest matching column for each factor and the maximum over the factors; and
-confine every conditional that touches a level to one marked step.**
+**Judge the evidence once, compute the level from the maximum of three factors in one marked step,
+and let nothing outside that step test it.**
 
-The Classifier's judgements feed two renderings: the sections that present the evidence, and the
+The Classifier judges each breaking-change item and requirement status once. F2 and F5 are derived
+from those judgements, and F1 is copied from the fact ledger. FR-16's forced levels are applied
+before any threshold, each factor takes its highest matching column, and the overall level is the
+maximum over the factors. The Classifier's judgements feed two renderings: the sections that present the evidence, and the
 factor rows that summarise it. The risk step computes the level from those rows and writes the
 lines that set it. The level then appears in two places: the `**Overall risk: …**` line in
 `show-me.md`, and FR-19's session report, which copies it. Nothing else in the command tests the
@@ -257,11 +258,11 @@ ledger unless FR-16 row 12 forces it. F2 and F5 go through every step.
 
 The forced levels:
 
-| FR-16 row | Condition | Forced level |
-| --- | --- | --- |
-| 8 | `requirements.md` missing | F5 = `Medium` |
-| 9 | `requirements.md` declares zero ids in the bold lead-in form | F5 = `Medium` |
-| 12 | spec branch not determinable, so no diff and no F1 level in the ledger | F1 = `Medium` |
+| FR-16 row | Condition | Forced level | The row's measured-value cell |
+| --- | --- | --- | --- |
+| 8 | `requirements.md` missing | F5 = `Medium` | `no requirements.md — reconciliation not possible` |
+| 9 | `requirements.md` declares zero ids in the bold lead-in form | F5 = `Medium` | `0 declared ids in the bold lead-in form` |
+| 12 | spec branch not determinable, so no diff and no F1 level in the ledger | F1 = `Medium` | `no diff measured — spec branch not determinable` |
 
 Step 1 comes first because FR-16's rows describe inputs, not evidence. Rows 8 and 9 leave no
 deviation entries, so without step 1 F5's `Low` column would hold. Row 12 leaves F1 null in the
@@ -285,15 +286,16 @@ The risk step writes the lines that set the level, and every instruction that te
 | Line | Written by |
 | --- | --- |
 | the factor table, one row per factor with its value and level | the risk step |
-| the factor or factors whose level equals the stated maximum, handed to the Synthesiser as a list, not written as a line | the risk step |
+| the factor or factors whose level equals the maximum, handed to the Synthesiser as a list, not written as a line | the risk step |
 | `**Overall risk: {level}**`, on its own line | the risk step |
 | the rationale's first sentence, when the stated level is above the maximum: the raising sentence | the risk step |
 | the rest of the rationale, so that it has two to five sentences in all and names at least the factor or factors that set the level | the Synthesiser |
 | FR-13's sentence, below | the risk step |
 
 The raising sentence is part of the rationale, as AC-23 requires, and counts toward its two to five
-sentences. The Synthesiser names the factors that set the level from the risk step's list, and may
-state a factor's level as a fact the table shows — "F1 is `High`" — so the instructions that write
+sentences. The Synthesiser names the factors that set the level from the risk step's list — the
+factors at the maximum. On a raise, those factors still set the computed level, and the raising
+sentence names what they miss. The Synthesiser may state a factor's level as a fact the table shows — "F1 is `High`" — so the instructions that write
 the rationale compare no levels.
 
 Before the risk step ends, still inside its markers, it checks the lines it wrote: the stated level
@@ -333,6 +335,16 @@ to "the overall level" and copies it. The test script proves the whole-word rule
 held in the test script itself, which contains `git diff` and `gh pr diff` and no conditional,
 and must yield zero matches (AC-81). The check also fails if either marker is missing or appears
 twice, so a deleted marker cannot switch the check off.
+
+#### Where each artefact is touched
+
+| Path | Change |
+| --- | --- |
+| `.claude/commands/spec/show-me.md` | The Classifier's instructions, before the risk step; the risk step between its two markers; the rationale instructions after it |
+| `.claude/commands/spec/show_me_facts_tests.cs` | The FR-13 row: the paragraph check, the marker-count assertion and the AC-81 literal line |
+
+Deliberately unchanged: the measurement script, the ledger and every other test-script row. The
+risk step reads `f1_level` and adds no field.
 
 ### Technology Choices
 
