@@ -118,7 +118,7 @@ These terms are used with exactly these meanings throughout this document.
 | **Advisory** | Producing a level and rationale only: no gating, no blocking, no refusal, no label, no comment, no marker file, no change to any approval state, and no behavioural difference between a `Low` result and a `High` result. Whatever the level, the command completes its run and reports per FR-19. |
 | **Measurement script** | The single executable artefact, delivered by this spec and living beside the command file in `.claude/commands/spec/`, that performs every mechanically countable measurement this document defines and writes them as one JSON object to the *fact ledger* (FR-21). **Its implementation language, filename and invocation form are a design decision, not a requirement** — this document constrains only what it emits, that there is exactly one of it, and how narrowly it may be permitted to run (FR-21, NFR-6, C-10). It is part of the command, not an input to it: it is never an `## Inputs used` row (FR-15) and never an FR-16 absence row. |
 | **Fixture directory** | A directory under `.claude/test-fixtures/show-me/` holding a `requirements.md` and/or a `tasks.md` (and optionally an `.adr-list`) laid out as a spec directory would be, used only by NFR-9's test script. It is **not** a spec directory: FR-1 never considers it, so `/spec:show-me` cannot target it, but the measurement script accepts it as its target (FR-21). |
-| **Marked release-notes section** | A `###` section of the repository-root `release_notes.md` whose heading line is followed immediately by the line `<!-- spec: {name} -->`, where `{name}` is the target directory's full name (e.g. `<!-- spec: 0036-scoped-lifetime-per-pipeline -->`). The section runs from that `###` heading to the next `##` or `###` heading. The marker is compared as a literal string after trimming whitespace — it is not a pattern — and it uses the full directory name because spec ids are not unique (C-1): `release_notes.md` already holds two sections from two different specs numbered 0027. Only `/spec:write_release_notes` writes the marker (FR-23). A section without one — every section written before this spec shipped included — is not a marked section, and for this command a spec with no marked section has **no** `release_notes.md` section (FR-7, FR-16 row 5). |
+| **Marked release-notes section** | A `###` section of `release_notes.md` — the repository-root file, or the file named by FR-21's test-only release-notes path — whose heading line is followed immediately by a *marker line*, `<!-- spec: {name} -->`. A section is marked **for the target** only when `{name}` is the target directory's full name (e.g. `<!-- spec: 0036-scoped-lifetime-per-pipeline -->`); a section marked for any other directory, including another spec that shares the target's id, is not the target's. The marker is compared as a literal string after trimming whitespace — it is not a pattern — and it uses the full directory name because spec ids are not unique (C-1): `release_notes.md` already holds two sections from two different specs numbered 0027. **Headings and extent.** A *heading* is a line outside any fenced block that begins with one to six `#` followed by a space; a fenced block runs from a line beginning ```` ``` ```` to the next such line, so a `#` line inside a fence (a `#region`, a shell comment) is never a heading. A section runs from its `###` heading to the next `##` or `###` heading, or the end of the file. **Who marks.** `/spec:write_release_notes` writes a marker line on every section it writes (FR-23), and never adds one to an existing section. The only other way a section becomes marked is a person adding the marker line by hand beneath a hand-written section's heading, as FR-23's stop invites; doing so hands that section to the command, whose next run — provided the section sits under the first `##` heading — replaces its body in FR-23's form and keeps only its title. A section without a marker line — every section written before this spec shipped included — is not a marked section, and for this command a spec with no marked section has **no** `release_notes.md` section (FR-7, FR-16 row 5). |
 | **Fact ledger** | The file `{target directory}/.show-me-ledger.json` — `specs/{target spec directory}/.show-me-ledger.json` whenever the command runs, since the command only ever targets a spec directory — holding the JSON the measurement script wrote for the run that produced it. It is the **only** channel by which measured values reach the command. It is **working state, not a deliverable**: it is gitignored by an exact-match `.gitignore` entry, is never staged or committed, is never cited from `show-me.md` (FR-17, NFR-5), and is written only after the FR-3 precondition passes (FR-3, FR-4, FR-21). It holds measured values only; it never caches fetched diff text. |
 | **Charged bytes** | The number of bytes of file or command output that a read brings into the command's context. A full-content read is charged its whole-file byte count; a targeted or chunked read is charged the byte count of the extract actually brought into context. Bytes that the measurement script reads but does not emit are **not** charged — only its JSON output is. `wc -c` is a size measurement, **not a read**, and is charged nothing. This is the unit NFR-3's budget is denominated in. |
 
@@ -478,8 +478,8 @@ measured by the script (FR-21), never judged by the command. An unmarked section
 about the same spec is not looked for and not inferred: it is a miss this document accepts, and FR-16
 row 5 reports it honestly. But **when a marked section for this spec does exist, the command must
 read it** — the read is not optional. Presence and reading are therefore the same
-state, which is what lets FR-16 row 5, FR-15 and the tie-break below each be written against a single
-condition instead of two. It also removes one source of variance from F2 — two runs over the same
+state, which is what lets FR-16 row 5 and FR-15 each be written against a single condition instead
+of two. (The tie-break below needs one more: that the section read has a catalogue.) It also removes one source of variance from F2 — two runs over the same
 tree cannot differ merely because one of them declined to read the catalogue — but it does not make F2
 deterministic: F2 remains judgement-derived (NFR-1), and what is fixed is only the *decision to read*.
 Having read it, the
@@ -506,13 +506,14 @@ factory-and-registry interfaces (source and binary); `IAmAHandlerFactory` gainin
 for this command it is absent: FR-16 row 5 applies, and the list is derived from the ADRs and the
 diff under the no-catalogue grouping rule below.
 
-**When a `release_notes.md` section for the spec is read — which, per FR-7 above, is whenever one
-exists and the read budget allowed it — its grouping is the tie-break
-for what counts as one item** — the command follows the catalogue's own bullet boundaries rather than
+**When a marked section for the spec is read — which, per FR-7 above, is whenever one exists and the
+read budget allowed it — and it has a catalogue, a `#### Breaking changes` list holding at least one
+bullet (`{m}` greater than 0, FR-21), that list's grouping is the tie-break for what counts as one item** — the command follows the catalogue's own bullet boundaries rather than
 re-partitioning them: if the catalogue reports two interface changes in one bullet they are one item,
 and if it gives a third its own bullet that is a separate item. When no `release_notes.md`
 section is read — because none exists (FR-16 row 5) or because the read budget was exhausted
-(FR-16 row 5a) — there is no catalogue to defer to, and the rule falls back to: one
+(FR-16 row 5a) — or the section read has no `#### Breaking changes` list with a bullet in it (`{m}` null or 0),
+there is no catalogue to defer to, and the rule falls back to: one
 item per distinct public-API declaration change or per ADR *Consequences* bullet describing a
 behavioural break.
 
@@ -810,8 +811,8 @@ countable is computed in the command file, and nothing judgement-derived is comp
 command file in `.claude/commands/spec/`, taking a target directory as its argument and invoked from
 the repository root. The command always passes a spec directory. NFR-9's test also passes *fixture
 directories* (Definitions), and for a target that is not directly under `specs/` the script resolves
-no spec branch and queries no PR: the branch, PR and diff fields are null with the reason
-`not a spec directory`, and every file-derived field (tasks, declared ids, `.adr-list` resolution,
+no spec branch and queries no PR: unless the run is pinned (below), the branch, PR and diff fields
+are null with the reason `not a spec directory`, and every file-derived field (tasks, declared ids, `.adr-list` resolution,
 release-notes section) is measured normally. The ledger is written beside the target, at
 `{target directory}/.show-me-ledger.json`, which the exact-match `.gitignore` entry covers at any
 depth.
@@ -840,8 +841,9 @@ none exists — and, summed over them, the count `{m}` of top-level bullets in e
 invocation it made (FR-18, FR-20).
 
 *The `{m}` rule.* A section's `#### Breaking changes` list runs from the line after that heading to
-the next heading of any level (a line beginning `#`) or the end of the section, whichever comes
-first; within it, lines inside a fenced block are skipped, and every other line beginning `- ` in
+the next *heading* of any level (Definitions, *Marked release-notes section* — a `#` line inside a
+fenced block is not one) or the end of the section, whichever comes first; within it, lines inside a
+fenced block are skipped, and every other line beginning `- ` in
 column 0 is one item. Indented sub-bullets, and bullets in any later `####` subsection, are not
 counted. A marked section with no `#### Breaking changes` heading contributes nothing; `{m}` is
 **null** when no marked section carries the heading (including when there is no marked section at
@@ -853,8 +855,11 @@ optional **pinned pair** — a merge-base sha and a head sha — and an optional
 Given the pinned pair, it measures the spec diff over exactly those two commits: it performs no
 branch resolution for the diff, issues no `gh` query, and records in the ledger that the run was
 pinned. On a pinned run the merge-base and measured-head fields are the pinned shas; the
-spec-branch, base-ref and PR fields are null with the reason `pinned`; and every diff-derived field
-is measured over the pair. A pinned pair is accepted with any target, fixture directories included.
+spec-branch, base-ref and PR fields are null with the reason `pinned`, whatever the target; and
+every diff-derived field is measured over the pair. A pinned pair is accepted with any target,
+fixture directories included, and takes precedence over the not-a-spec-directory rule above, so no
+field of a pinned run carries that reason. Pinning fixes the diff, not the files: every file-derived
+field is still read from the target directory in the working tree.
 If either sha is not a commit present locally, that is a tooling fault (a status other than
 `0` or `2`), not a null — a pinned run exists to prove a figure, and a silently empty proof is worse
 than a loud failure. Given a release-notes path, it looks for marked sections in that file instead of
@@ -1001,7 +1006,8 @@ review pointed it out. Until now nothing wrote them in a shape a tool could find
   `##` heading (the unreleased heading — `## Master` today), in this form:
   - a `### {title} (spec {NNNN}{, #issue when .issue-number exists})` heading, where `{title}` is a
     short plain-language name for the change, written from the spec's problem statement (on a
-    replacement, the existing title is kept);
+    replacement, the existing title is kept — the heading text before its first ` (spec `, or the
+    whole heading text when it has none);
   - on the very next line, the marker `<!-- spec: {spec directory name} -->` (Definitions);
   - a short summary paragraph for a user of the library;
   - a `#### Breaking changes` heading followed by one top-level `- ` bullet per *breaking change item*
@@ -1023,14 +1029,22 @@ review pointed it out. Until now nothing wrote them in a shape a tool could find
   - `release_notes.md` has no `##` heading to write under;
   - the target's marked section sits under a later `##` heading than the first — that is, under a
     released version — because released notes are not rewritten;
+  - more than one section is marked for the target — the command names them and asks the user to
+    delete all but one, since it cannot tell which to replace;
   - **an unmarked section may already describe this spec** — a `###` heading under the first `##`
-    heading contains `(spec {NNNN}` for the target's four-digit id. Adding a section would duplicate
-    notes written by hand, and editing that section is ruled out above, so the command stops, names
-    the heading it found, and asks the user either to delete that section or to add the marker line
-    beneath its heading by hand, then re-run — after which the section is marked, and is replaced in
-    place. The match is on the id alone, so a different spec sharing the id also stops the command;
-    that is deliberate, since the user, not the command, decides which spec a hand-written section
-    belongs to.
+    heading contains `(spec {NNNN}` for the target's four-digit id and is **not** followed
+    immediately by a marker line (Definitions). A heading followed by a marker line is never this
+    case: the target's own marked section is replaced as above, and a section marked for another
+    directory — even one sharing the target's id — is left unchanged like every other line. Adding a
+    section would duplicate notes written by hand, and editing that section is ruled out above, so
+    the command stops, names the heading it found, and asks the user either to delete that section or
+    to add, beneath its heading by hand, a marker line naming the spec directory that section belongs
+    to — which may be another spec sharing the id — then re-run. The message also says what
+    marking means: the next run replaces that section's body in FR-23's form and keeps only its
+    title, so hand-written text meant to survive must be moved out first. The match is on the id
+    alone, so an unmarked section belonging to a different spec that shares the id also stops the
+    command; that is deliberate, since the user, not the command, decides which spec a hand-written
+    section belongs to.
 - **`/spec:design`** (`.claude/commands/spec/design.md`) gains one step: when an ADR it writes or
   amends records, in its *Consequences*, a change that breaks an existing behaviour or interface, it
   tells the user so and recommends running `/spec:write_release_notes`.
@@ -1405,8 +1419,9 @@ fails**. Every synthetic fixture lives under `.claude/test-fixtures/show-me/` �
 script, because Claude Code registers every `.md` file under `.claude/commands/` as a slash command,
 and a fixture `requirements.md` there would appear as an invocable `/spec:…` command; and not under
 `specs/`, because a permanent fake spec would appear in `/spec:status`, `/spec:switch` and FR-1's
-matching. The test script removes every ledger its own runs created, so the fixture directories are
-left as it found them. The fixtures and the facts asserted are, at minimum:
+matching. The test script leaves every target's ledger as it found it: it removes a ledger its own
+run created and, where a target already held one — a real `/spec:show-me` ledger in the calibration
+spec's directory, say — restores that ledger byte-for-byte afterwards. The fixtures and the facts asserted are, at minimum:
 
 | Fixture | Asserted |
 |---|---|
@@ -1417,7 +1432,7 @@ left as it found them. The fixtures and the facts asserted are, at minimum:
 | A tracked *unfinished* fixture directory, whose `tasks.md` holds one checked line and the two unchecked lines `- [ ] **DOC: Alpha**` and `- [ ] **DOC: Beta**` | exit **`2`**; no ledger created; a gate record with `{n}` = 2, `{total}` = 3 and the titles `**DOC: Alpha**` and `**DOC: Beta**` |
 | A tracked word-count fixture file, whose counted body holds exactly **8** tokens, whose single fenced block holds **8** more, and which also carries an H1 and metadata block, a `\|`-leading line and an `## Inputs used` tail, each holding tokens NFR-2 excludes | word-count mode reports **8** (AC-80) |
 | A second tracked word-count fixture file, whose counted body is between 400 and 2,000 tokens | word-count mode reports a total inside 400–2,000 and says so (AC-80) |
-| A tracked release-notes fixture file, laid out like `release_notes.md`: one marked section naming the *declared* fixture, whose `#### Breaking changes` list holds two top-level bullets and one indented sub-bullet, followed inside the same section by a `#### Usage` subsection with two bullets and a fenced block containing a column-0 `- ` line; then an unmarked section with three bullets | read only through the *declared* fixture's run, above: `{m}` = 2, so the sub-bullet, the `#### Usage` bullets, the fenced line and the unmarked section are not counted |
+| A tracked release-notes fixture file, laid out like `release_notes.md`: one marked section naming the *declared* fixture, whose `#### Breaking changes` list holds two top-level bullets, one indented sub-bullet and, between the two bullets, a fenced block containing a column-0 `- ` line and a column-0 `# ` line, followed inside the same section by a `#### Usage` subsection with two bullets and a fenced block containing a column-0 `- ` line; then an unmarked section with three bullets | read only through the *declared* fixture's run, above: `{m}` = 2 — so the fenced `# ` line ends no list, and the sub-bullet, every fenced line, the `#### Usage` bullets and the unmarked section are not counted |
 | A literal line held in the test script itself, containing `git diff` and `gh pr diff` and no conditional | the FR-13 invariant check reports zero matches over it (AC-81) |
 
 The calibration spec's figures were measured with the stated patterns on 2026-09-21 and 2026-09-23
@@ -1429,13 +1444,17 @@ mistaken for a generated deliverable.
 
 *Why the calibration row is pinned.* Unpinned, the script would measure to PR #4282's live head:
 every push to that PR would change 131 and 76, and once it merged the branch would stop resolving
-and the row would fail on every run. Pinned to two shas, the figures hold for as long as both
+and the row would fail on every run. Pinned to two shas, the diff figures hold for as long as both
 commits stay reachable — which they do after #4282 merges **provided it is merged with a merge
 commit**. A squash or rebase merge would replace `91d549be6` with a new commit, and once the branch
 is deleted the pinned head would eventually be unreachable. `CONTRIBUTING.md` therefore asks that
-pull requests are merged with a merge commit (AC-94). The 0036 row's file-derived figures (ids and
-tasks) additionally need `specs/0036-scoped-lifetime-per-pipeline/` in the working tree, which holds
-on any branch that contains #4282's merge (C-8). The zero-id fixture deliberately carries lead-ins that are **not**
+pull requests are merged with a merge commit (AC-94). The row's file-derived figures (ids and
+tasks) are not pinned (FR-21): they are read from `specs/0036-scoped-lifetime-per-pipeline/` in the
+working tree and are that directory's content at `91d549be6`. They hold on any branch whose copy of
+its `requirements.md` and `tasks.md` is unchanged since `91d549be6` — true before and after #4282
+merges, unless #4282 first gains a commit that edits either file. If it does, the row fails on those
+figures until it is re-pinned to the new head and every figure in it re-measured; that is
+maintenance of the fixture, not a fault in the script. The zero-id fixture deliberately carries lead-ins that are **not**
 tags — including `**T1.1 — STRUCTURAL:`, the drifted form this spec's own `tasks.md` uses — and a
 legacy heading declaration, so the test pins both the `untagged` rule and the declaration form's
 scope, not just the happy path. The two exit-`2` fixtures are the only ones on which the gate record
@@ -1502,7 +1521,8 @@ running `/spec:show-me`. It is a script a person or a task runs.
   inform that merge. Once #4282 merges, FR-20 (open PRs only) finds no PR and FR-10 no longer resolves
   the spec branch (its tip is contained in the base ref), so the *(C-8)* criteria lapse — by design,
   not by accident. NFR-9's calibration row, and AC-79 which runs it, are the exception: they are pinned to
-  two shas (FR-21), carry no *(C-8)* marker, and survive the merge (NFR-9, AC-94). **A fixture cited
+  two shas (FR-21), carry no *(C-8)* marker, and survive the merge, subject to NFR-9's condition on
+the calibration spec's own files (NFR-9, AC-94). **A fixture cited
   by any unpinned criterion that asserts a branch-, PR- or diff-derived value must resolve under FR-10
   on the branch the criterion is run on**; fixtures used only for their
   `requirements.md` and `tasks.md` need not — spec 0036 does, which is why every worked example in this document uses it
@@ -1580,11 +1600,11 @@ running `/spec:show-me`. It is a script a person or a task runs.
 - **`/spec:show-me` changing `release_notes.md`.** The command neither writes nor edits it, never
   requires it as an input, and never requires a cross-reference to it. Writing release notes is
   `/spec:write_release_notes`'s job (FR-23).
-- **Migrating existing release notes.** No section already in `release_notes.md` is rewritten,
-  re-formatted or given a marker by any command, and nothing infers which spec an unmarked section
-  belongs to. `/spec:show-me` reports those sections as absent (FR-16 row 5), and
-  `/spec:write_release_notes` stops and asks when one may describe its target (FR-23); marking one is
-  left to a person.
+- **Migrating existing release notes.** No command rewrites, re-formats or marks an *unmarked*
+  section of `release_notes.md`, and nothing infers which spec an unmarked section belongs to.
+  `/spec:show-me` reports such sections as absent (FR-16 row 5), and `/spec:write_release_notes`
+  stops and asks when one may describe its target (FR-23). Marking one is left to a person; once
+  marked, it is a marked section like any other, and FR-23 replaces it in place.
 - **Enforcing the merge method.** `CONTRIBUTING.md` asks for merge commits (NFR-9); changing the
   repository's GitHub merge settings is an administrative choice this spec does not make.
 - **Gating merge in any form**: blocking, required checks, CI integration, PR labels, requesting
@@ -2127,10 +2147,11 @@ carries a diagram and **not** FR-6 (e)'s budget line; and the run's total charge
 ≤ 1,048,576.
 
 **AC-79** *(NFR-9)* **Given** the delivered test script, with commits `6145913a0` and `91d549be6`
-present in the local repository and `specs/0036-scoped-lifetime-per-pipeline/` in the working tree —
-true on any branch that contains PR #4282, before or after it merges, provided it merges with a merge
-commit (AC-94) — **when** it is run from the repository root, **then** it invokes the measurement
-script against every fixture in NFR-9's table — `specs/0036-scoped-lifetime-per-pipeline/`, pinned
+present in the local repository, and `specs/0036-scoped-lifetime-per-pipeline/requirements.md` and
+`tasks.md` in the working tree identical to their content at `91d549be6` — true on any branch that
+contains PR #4282, before or after it merges, provided it merges with a merge commit (AC-94) and
+gains no later commit editing either file — **when** it is run from the repository root, **then** it
+invokes the measurement script against every fixture *directory* in NFR-9's table — `specs/0036-scoped-lifetime-per-pipeline/`, pinned
 to `6145913a0` and `91d549be6`, and the four fixture directories under
 `.claude/test-fixtures/show-me/`; asserts **every** fact NFR-9's table states for each, including
 the exit status, declared-id total, checkbox and unchecked counts and per-tag counts (**3** for the
@@ -2139,7 +2160,8 @@ spec's public-API and `src/` file counts, the declared fixture's `.adr-list` res
 marked-section count and `{m}` and its null branch, PR and diff fields with the reason
 `not a spec directory`, and, for the two exit-`2` fixtures, that no ledger was created and the gate
 record carries the stated facts;
-leaves no ledger it created behind;
+leaves every target's ledger as it found it — none where there was none, and a pre-existing one
+restored byte-for-byte;
 exits `0` when every assertion holds; and, **when** any single asserted value is perturbed, prints
 which assertion failed and exits **non-zero**; **and when** the script is inspected, **then** it
 invokes no test framework and reads or runs no file under `src/` or `tests/`.
@@ -2250,7 +2272,7 @@ reports FR-16 row 5's line; **and given** that hand-written section deleted and
 **then** the ledger records **1** marked section and `{m}` = **3**; **and given** instead the marker
 line added by hand beneath the hand-written section's heading, which has no `#### Breaking changes`
 heading, **then** the ledger records **1** marked section and a null `{m}`, and the command reads the
-section and emits no disagreement line.
+section, emits no disagreement line, and groups breaking-change items by FR-7's no-catalogue rule.
 
 **AC-93** *(FR-21, NFR-9)* **Given** the delivered command file, **when** it is inspected, **then**
 every invocation of the measurement script it contains passes only a target directory — never a
@@ -2266,11 +2288,17 @@ shas from a merged branch's history, and only a merge commit keeps them reachabl
 **AC-95** *(FR-23)* **Given** a spec with id `NNNN`, no marked section, and a hand-written `###`
 heading under `release_notes.md`'s first `##` heading containing `(spec NNNN`, **when**
 `/spec:write_release_notes` is run for it, **then** it writes nothing, `release_notes.md` is
-byte-for-byte unchanged, and its message names that heading and asks the user to delete the section
-or add the marker beneath its heading; **and given** the marker then added by hand, **when** it is
-run again, **then** that section is replaced in place in FR-23's form and no second section exists;
-**and given** a `release_notes.md` with no `##` heading, or a target whose marked section sits under
-a later `##` heading than the first, **then** it writes nothing and its message names the case;
+byte-for-byte unchanged, and its message names that heading, asks the user to delete the section
+or add beneath its heading a marker line naming the directory the section belongs to, and states
+that marking it hands its body to the command,
+which regenerates everything but its title; **and given** the marker then added by hand, **when** it
+is run again, **then** that section is replaced in place in FR-23's form, keeping its title, and no
+second section exists; **and given** instead that the only such heading is followed by a marker line
+naming a different directory, **then** the command does not stop on it, leaves that section
+byte-for-byte unchanged, and writes the target's own section;
+**and given** a `release_notes.md` with no `##` heading, a target whose marked section sits under
+a later `##` heading than the first, or two sections marked for the target, **then** it writes
+nothing and its message names the case;
 **and given** no argument and no usable `specs/.current-spec`, **then** its stop message names
 `/spec:write_release_notes`, not `/spec:show-me`.
 
