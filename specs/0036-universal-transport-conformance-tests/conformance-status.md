@@ -28,14 +28,16 @@ cell remains `Unknown`.
   ahead of any generation run rather than discovered late.
 - The cleanup gate is evaluated over all twelve targeted transports, not over whichever rows happen
   to exist.
-- `AWS / SqsFifo` **and `AWS.V4 / SqsFifo`** FR-9 (delayed send) are `Deferred -> #4240`: SQS **FIFO
-  queues do not support per-message delay** — `SendMessage` with `DelaySeconds` returns
-  `AmazonSQSException: … not valid for this queue type`. Delayed send is proven natively for
-  `AWS / SqsStandard` (and `AWS.V4 / SqsStandard`); on FIFO it would require an external scheduler
-  (re-publish after the delay, as wired for Kafka), which is beyond this configuration's localized fix
-  boundary. The V4 gateway shares the same AWS SQS platform limit, so the deferral applies identically.
-  Requeue-with-delay (FR-2) conforms on FIFO because it uses `ChangeMessageVisibility`, which FIFO does
-  support.
+- `AWS / SqsFifo` **and `AWS.V4 / SqsFifo`** FR-9 (delayed send) are `Fixed (7a0ec644f)` for #4390:
+  SQS FIFO does not support per-message `DelaySeconds`, so both producers delegate positive FIFO
+  delays to the configured `Scheduler`. Zero and null delays remain immediate sends; Standard queues
+  continue to use native delays up to 15 minutes and the scheduler for longer delays. Both FIFO
+  providers wire the generated `ConformanceHarnessMessageScheduler`, which waits before publishing
+  the already-stamped message directly through `SqsMessageProducer`, preserving its group and
+  deduplication identifiers. Reactor and Proactor delayed-send tests pass against Floci 1.5.19;
+  this verification does not include real AWS. Before the fix, Floci delivered immediately rather
+  than reproducing AWS's parameter rejection, and both variants failed the before-delay assertion.
+  Requeue-with-delay (FR-2) remains native via `ChangeMessageVisibility` and is unchanged.
 - `AWS / SnsStandard` **and `AWS.V4 / SnsStandard`** FR-9 (delayed send) are `Fixed (#4240)`: SNS has
   **no native delayed publish** — `SnsMessageProducer.SendWithDelay` delegates a non-zero delay to the
   `IAmAMessageProducer.Scheduler` seam (as Kafka does). Two changes were needed: (1) a localized `src`
@@ -48,11 +50,9 @@ cell remains `Unknown`.
   delay by wall-clock and re-publishes to the SNS topic once it elapses (the V4 test project got its own
   copy). Requeue-with-delay (FR-2) is `Pass` natively — it is consumer-side `ChangeMessageVisibility` on
   the subscribed SQS queue, not an SNS publish, so it needs no scheduler.
-- `AWS / SnsFifo` **and `AWS.V4 / SnsFifo`** FR-9 (delayed send) are `Fixed (#4240)` — and, unlike
-  `AWS / SqsFifo` (+ `AWS.V4 / SqsFifo`), they are **not**
-  deferred. SqsFifo's deferral was because SQS FIFO **rejects native per-message `DelaySeconds`**; SNS
-  FIFO never uses that path — the SNS producer delegates the delay to the `Scheduler` seam, so the FIFO
-  platform limit does not apply. The `SnsHarnessMessageScheduler` re-publishes to the FIFO topic after
+- `AWS / SnsFifo` **and `AWS.V4 / SnsFifo`** FR-9 (delayed send) are `Fixed (#4240)`. Like SQS FIFO,
+  SNS FIFO delegates delayed sends to the `Scheduler` seam rather than using native per-message
+  `DelaySeconds`. The harness scheduler re-publishes to the FIFO topic after
   the delay, and the delayed message keeps the FIFO `MessageGroupId`/`MessageDeduplicationId` that
   `FifoMetadataProducer` stamped, so the re-publish is a valid FIFO publish. Reuses the same
   `SnsMessageProducer` sync `SendWithDelay` src fix as `AWS / SnsStandard` (hence `Fixed`). FR-2 is
@@ -819,11 +819,11 @@ CI is unaffected — GitHub Actions `services:` mount no volume.
 | AWS / SnsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
 | AWS / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
 | AWS / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
-| AWS / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
+| AWS / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (7a0ec644f) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
 | AWS.V4 / SnsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
 | AWS.V4 / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
 | AWS.V4 / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
-| AWS.V4 / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
+| AWS.V4 / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (7a0ec644f) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
 | GCP / Pull | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
 | GCP / PullOrdering | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
 | GCP / Stream | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
