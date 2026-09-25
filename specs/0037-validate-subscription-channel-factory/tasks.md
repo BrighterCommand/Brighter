@@ -437,7 +437,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
 
 `tests/Paramore.Brighter.Core.Tests` references neither `ServiceActivator.Extensions.DependencyInjection` nor any `MessagingGateway.*` assembly, so host-start behaviour lives in `tests/Paramore.Brighter.Extensions.Tests`, which already references what is needed.
 
-- [ ] **26. STRUCTURAL: Extensions.Tests declares its own copies of the doubles (C-9)**
+- [x] **26. STRUCTURAL: Extensions.Tests declares its own copies of the doubles (C-9)**
   - Test location: `tests/Paramore.Brighter.Extensions.Tests/TestDoubles/`
   - `Paramore.Brighter.Extensions.Tests` does **not** reference `Paramore.Brighter.Core.Tests` — test projects here do not reference one another — so it MUST declare its **own** copies of the doubles it needs, in its **own** namespace, with their **own** distinct request types. This duplication is deliberate and is stated so it is not discovered mid-task.
   - Needed for tasks 27-30: a declaring subscription double, a declared channel factory double, a non-matching channel factory double, and one or two local request types (one per file). All channel factory members throw, as in task 1.
