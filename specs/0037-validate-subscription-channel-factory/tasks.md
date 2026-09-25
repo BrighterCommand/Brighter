@@ -637,7 +637,7 @@ New public static class `SubscriptionChannelFactoryDeclaration` in namespace `Pa
   - References: ADR 0073 *Hand-written cases in `Core.Tests`* — "Two helper types they declare, named here because the design depends on both".
   - Depends on: nothing (may start in parallel with phases 2-6).
 
-- [ ] **38. TEST + IMPLEMENT: `Check` rejects a declaration that is not a channel factory (AC-28, not-a-channel-factory branch)**
+- [x] **38. TEST + IMPLEMENT: `Check` rejects a declaration that is not a channel factory (AC-28, not-a-channel-factory branch)**
   - **USE COMMAND**: `/test-first when a subscription declares a type that is not a channel factory the declaration check should report a reason naming it`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessagingGateway/ChannelFactoryDeclaration"
   - Test file: `When_a_subscription_declares_a_type_that_is_not_a_channel_factory_should_report_a_reason.cs`
