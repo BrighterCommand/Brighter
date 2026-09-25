@@ -142,8 +142,9 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
             throw new ConfigurationException("No publication specified for producer");
         
         delay ??= TimeSpan.Zero;
-        // SQS support delay until 15min, more than that we are going to use scheduler
-        if (delay > TimeSpan.FromMinutes(15) && _publication.QueueAttributes.Type == SqsType.Standard)
+        // FIFO has no per-message delay; Standard supports at most 15 minutes natively.
+        if (delay > TimeSpan.Zero &&
+            (_publication.QueueAttributes.Type == SqsType.Fifo || delay > TimeSpan.FromMinutes(15)))
         {
             if (useAsyncScheduler)
             {
