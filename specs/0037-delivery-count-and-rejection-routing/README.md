@@ -134,7 +134,8 @@ those two rungs; a third mechanism is out of bounds.
 - [x] **Adversarial Review (design) — round 1**, 2026-09-24. NEEDS WORK, 13 findings, 4 at or above threshold 60. The core key type was renamed to `RejectionMetadataKeyNames`, and the GCP providers keep a native `DeadLetterPolicy` on `{deadLetterRoutingKey}.native` (both the user's calls). All 13 applied.
 - [x] **Adversarial Review (design) — round 2**, 2026-09-25. NEEDS WORK, 8 findings, 2 at or above threshold 60, both on text round 1 changed: 0078 step 5 (the DLQ reader and the `.native` subscription name) and AC-18's two-subscription Given (the subscription under test keeps its own mode; the provisioning subscription carries the broker attributes). On the user's call, patched once in the ADR; if round 3 finds these sections again, they move to tasks. All 8 applied and verified against the file.
 - [x] **Adversarial Review (design) — round 3**, 2026-09-25. NEEDS WORK, 3 findings, 1 at or above threshold 60. On RocketMQ, the dead-letter copy's `HandledCount` was overwritten by the stale bag entry. On the user's call, the publisher's bag loop now skips any key already written. Round 2's sections drew no findings. All 3 applied and verified against the file.
-- [ ] **Adversarial Review (design) — round 4** — `/spec:review design`
+- [x] **Adversarial Review (design) — round 4**, 2026-09-25. **PASS**: 2 findings, none at or above threshold 60, both Low. Both applied in one batch with no further round (user's call). The RocketMQ publisher bag-loop skip lands on both branches, and its effect on every RocketMQ publish is recorded as a Negative consequence.
+- [x] **Design approved** — 2026-09-25, `/spec:approve design`. ADRs 0077 and 0078 are `Accepted`, and the index is regenerated.
 - [ ] **Tasks** — `/spec:tasks` (not started)
 - [ ] **Implementation** — `/spec:implement` (not started — no code written)
 

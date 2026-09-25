@@ -461,3 +461,65 @@ Every change was verified by grepping the text back from the ADR:
 | 3 | 0078 | "(`GcpMessagingGatewayConnection.cs:126`/`:153`)"; "(`GcpPubSubMessageGateway.cs:220-236`)" |
 
 Old text: "first-delivery arms keep", "first-receive arms", "`:181`)" and "`:124`/`:151`" now have 0 occurrences. Frontmatter is unchanged.
+
+---
+
+# Review: design — 0037-delivery-count-and-rejection-routing (round 4)
+
+**Date**: 2026-09-25
+**Threshold**: 60
+**Verdict**: PASS
+
+No findings at or above threshold 60. Consider addressing lower-scored items.
+
+## Findings
+
+### 1. The RocketMQ publisher-side skip is tied to the AC-24 branch, but the stale-bag overwrite happens on both (Score: 48)
+
+The round-3 fix sits in 0077's "Condition holds (AC-24)" bullet, and "What the dead-letter copy carries" says "AC-24 below". The overwrite itself does not depend on the branch: the consumer copies `HandledCount` into the bag on every receive (`RocketMessageConsumer.cs:328-331`), and the publisher overwrites `:103` from the bag (`RocketMqMessagePublisher.cs:54-59`). On AC-25 it shows only in R-7's `R` = 0/1 case, which no AC exercises. Two implementers could still disagree on whether the skip ships on AC-25.
+
+**Recommendation**: step 6's parenthesis becomes "(null-reason stamping and the publisher bag-loop skip land on either branch)", and "AC-24 below" becomes "below".
+
+**Fix type**: ADR rephrase
+
+---
+
+### 2. The skip changes every RocketMQ publish, and this is not recorded as a consequence (Score: 35)
+
+`CreateRocketMqMessage` is the single publish path. After the change, header-owned properties take precedence over same-named `Header.Bag` entries. This is benign for Brighter's own traffic: the DLQ copy's `Topic` property now carries the DLQ topic, and `originalTopic` still carries the source. A user who forwards a received message, or sets such a key in the bag to override a header, sees the header win. How the written keys are tracked is left to implementation.
+
+**Recommendation**: one Negative-consequence bullet; leave key tracking to tasks.
+
+**Fix type**: ADR addition
+
+---
+
+## Summary
+
+| Score Range | Count |
+|-------------|-------|
+| 90-100 (Critical) | 0 |
+| 70-89 (High) | 0 |
+| 50-69 (Medium) | 0 |
+| 0-49 (Low) | 2 |
+
+**Total findings**: 2
+**Findings at or above threshold (60)**: 0
+
+## Regression check (round 4)
+
+All round-3 changes OK: the AC-24 bullet and its citations (`:54-59`, `:103`, `:328`, `:422`, `Parser.cs:352`); the R-28 RocketMQ row; "What the dead-letter copy carries"; the FR-2/15/16/22 "Decided" paragraph; the C-7 exposed-cells sentence; AC-23 `:333`; 0078 `GcpMessagingGatewayConnection.cs:126`/`:153`; `GcpPubSubMessageGateway.cs:220-236`. Every ADR MUST is still discharged, there are no contradictions between the ADRs, and 0078 honours 0077's three constraints.
+
+## Main-agent validation (round 4)
+
+Summary recounted: Low 48/35, 2 total, 0 ≥ 60. **PASS** confirmed.
+
+## Remediation (round 4): the user's decision and what was applied
+
+Decision (user, 2026-09-25): apply both Lows in one batch with no further round, then approve the design
+(the requirements round 15 precedent). Both changes were verified by grepping the text back from 0077:
+
+| # | Applied text (grep anchor) |
+|---|---|
+| 1 | step 6: "(null-reason stamping and the publisher bag-loop skip land on either branch)"; "What the dead-letter copy carries": "skips keys already written, below" ("AC-24 below" now has 0 occurrences) |
+| 2 | Negative: "On RocketMQ, header-owned properties now take precedence over same-named `Header.Bag` entries on every publish (the bag-loop skip) …" |

@@ -1,7 +1,7 @@
 ---
 id: 0078-gcp-rejection-routing-and-dlq-channel-creation
 title: "GCP Rejection Routing and DLQ Channel Creation"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-09-24
@@ -19,7 +19,7 @@ Date: 2026-09-24
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 

@@ -1,7 +1,7 @@
 ---
 id: 0077-delivery-count-contract
 title: "Delivery Count Contract"
-status: Proposed
+status: Accepted
 author:
   - "Ian Cooper"
 created: 2026-09-24
@@ -19,7 +19,7 @@ Date: 2026-09-24
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
@@ -57,7 +57,7 @@ broker receive ──► transport creator/parser (per-transport seam)
 
 Exact counter: rejection on delivery `R`, after `R − 1` requeues. Approximate (`b(n) ≥ n`): on or before delivery `R` — R-4's "at most `R`". `R = 1`: `0 → 1 ≥ 1`, rejected on first delivery. `R = 0` or `R < −1`: `1 ≥ R` true, first deferral rejects (R-7). `R = −1`: budget never consulted (`MessagePump.cs:171`, R-6).
 
-**What the dead-letter copy carries (R-5, R-28).** Brighter sends the in-memory header, whose count is `c(R) + 1 = b(R) ≥ R`; the senders serialise it (SQS `SqsMessageSender.cs:130` / `SnsMessagePublisher.cs:110`, RocketMQ `RocketMqMessagePublisher.cs:103` — kept only once its bag loop skips keys already written, AC-24 below — GCP `Parser.cs:307`). The copy also carries `rejectionReason` (`SqsMessageConsumer.cs:508`, `RocketMessageConsumer.cs:256`), so on a DLQ read the discriminator keeps the stamped count (`≥ R`; exactly `R` on an exact counter), not the DLQ's own counter, which would normalise to `0`.
+**What the dead-letter copy carries (R-5, R-28).** Brighter sends the in-memory header, whose count is `c(R) + 1 = b(R) ≥ R`; the senders serialise it (SQS `SqsMessageSender.cs:130` / `SnsMessagePublisher.cs:110`, RocketMQ `RocketMqMessagePublisher.cs:103` — kept only once its bag loop skips keys already written, below — GCP `Parser.cs:307`). The copy also carries `rejectionReason` (`SqsMessageConsumer.cs:508`, `RocketMessageConsumer.cs:256`), so on a DLQ read the discriminator keeps the stamped count (`≥ R`; exactly `R` on an exact counter), not the DLQ's own counter, which would normalise to `0`.
 
 ### Key Components
 
@@ -234,7 +234,7 @@ Structural and behavioural commits kept apart (Tidy First, C-10):
 3. **Conformance oracle:** the redelivery-arm change in the FR-2/15/16/22 templates, regenerated — lands before or with step 4 so no `Pass` cell goes red.
 4. **SQS, both packages in one commit (NFR-6):** creators; null-reason `"None"` stamping in `RefreshMetadata`; interface on `SqsSubscription`; factory calls.
 5. **GCP:** parser (pull + stream, `googclient_deliveryattempt` ignore entry); interface; factory calls. FR-23 gated on AC-39, after 0078/R-20.
-6. **RocketMQ:** AC-23 measurement, then the AC-24 or AC-25 branch (null-reason stamping lands on either branch).
+6. **RocketMQ:** AC-23 measurement, then the AC-24 or AC-25 branch (null-reason stamping and the publisher bag-loop skip land on either branch).
 7. **Harness (R-27):** `R = 3, M = 5` on the 12 providers (GCP's native-policy shape: 0078 Implementation step 5); GCP IAM members; dispatch-count and recording consumer in `ConformanceDeferredPump.cs.liquid`; the `<= RequeueCount` assertion in both FR-23 templates.
 
 **Testing** follows `.agent_instructions/generated_tests.md` — templates edited, tests regenerated, never hand-edited.
@@ -274,6 +274,7 @@ Bespoke tests (constructed subscriptions, not provider-supplied): AC-1, AC-5, AC
 - The conformance oracle weakens from equality to `>=` on the `HandledCount` of four behaviours' redelivery arms.
 - A null-reason rejection now carries `rejectionReason = "None"` on the in-scope transports — a visible change to what a DLQ consumer sees, and a divergence from the out-of-scope Brighter-managed transports until they follow.
 - A message put back on its source with rejection metadata attached is rejected again; resetting it is left to the replaying tool, which Brighter can only document (edge case 2).
+- On RocketMQ, header-owned properties now take precedence over same-named `Header.Bag` entries on every publish (the bag-loop skip): a user who forwards a received message, or sets such a key in the bag to override a header, sees the header win.
 - RocketMQ and GCP may still end *bound but unimplemented* (C-12's recorded price).
 
 ### Risks and Mitigations
