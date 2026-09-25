@@ -76,6 +76,10 @@ jobs:
       - name: RocketMQ Broker-Free Tests
         run: dotnet test tests/Paramore.Brighter.RocketMQ.Tests/Paramore.Brighter.RocketMQ.Tests.csproj --filter "Category=RocketMQBrokerFree" -c Release --logger GitHubActions --no-restore --no-build
 
+      # These producer race tests use in-memory clients and do not need the Azure job's secrets.
+      - name: Azure Service Bus Creation Race Tests
+        run: dotnet test tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --filter "FullyQualifiedName~AzureServiceBusProducerCreationRaceTests" -c Release --logger GitHubActions --no-restore --no-build
+
       - name: Core Tests
         run: |
           dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --filter "Fragile!=CI" -c Release --logger GitHubActions --no-restore --no-build
