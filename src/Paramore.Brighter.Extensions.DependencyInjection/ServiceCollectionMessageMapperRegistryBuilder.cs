@@ -37,10 +37,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     /// <remarks>
     /// When parsing for message mappers in assemblies, stores any found message mappers. A later step will add these to the message mapper registry
     /// Not used directly
-    /// This builder registers the open generic type <see cref="CloudEventJsonMessageMapper{TRequest}"/> as the default mapper.
+    /// This builder registers the open generic type <see cref="JsonMessageMapper{TRequest}"/> as the default mapper.
     /// When Brighter needs to map a message and no explicit mapper has been registered for the message's type,
-    /// it will instantiate a closed generic version of <see cref="CloudEventJsonMessageMapper{TRequest}"/> with the specific request type.
-    /// This ensures that messages are serialized and deserialized according to the CloudEvents JSON format.
+    /// it will instantiate a closed generic version of <see cref="JsonMessageMapper{TRequest}"/> with the specific request type.
+    /// This serializes and deserializes request bodies as plain JSON rather than a CloudEvents JSON envelope.
     /// You can override this behaviour by providing a different default message mapper.
     /// </remarks>
     public class ServiceCollectionMessageMapperRegistryBuilder(IServiceCollection serviceCollection) 
