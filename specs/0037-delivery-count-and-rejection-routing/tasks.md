@@ -88,7 +88,7 @@
 
 ## Phase 2 — Core contract and budget rules
 
-- [ ] **2.1 TEST + IMPLEMENT: Normalising a broker delivery counter presents 0 on the first delivery and is never negative**
+- [x] **2.1 TEST + IMPLEMENT: Normalising a broker delivery counter presents 0 on the first delivery and is never negative**
   - **USE COMMAND**: `/test-first when normalising a broker delivery counter should present zero on first delivery and never be negative`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessagingGateway"
   - Test file: `When_normalising_a_broker_delivery_counter_should_present_zero_on_first_delivery.cs`
