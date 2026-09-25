@@ -53,6 +53,14 @@ public static class SubscriptionChannelFactoryDeclaration
                    $"which does not implement '{typeof(IAmAChannelFactory).FullName}'.";
         }
 
+        // Inherited-default: the declaration falls back to Subscription's own InMemoryChannelFactory default
+        if (declaredFactoryType == typeof(InMemoryChannelFactory))
+        {
+            return $"Subscription type '{subscriptionType.FullName}' declares '{typeof(InMemoryChannelFactory).FullName}'. " +
+                   "A shipped gateway subscription must declare its own transport's channel factory; a type that " +
+                   "does not override 'ChannelFactoryType' inherits this default.";
+        }
+
         return null;
     }
 }
