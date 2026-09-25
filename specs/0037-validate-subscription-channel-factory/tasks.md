@@ -476,7 +476,7 @@ All tasks in this phase live in `tests/Paramore.Brighter.Core.Tests/Validation/`
     - This is the workaround the C-10, C-11 and C-13 release notes point at (task 36) — and the one C-12 explicitly does **not** rescue
   - Depends on: 27.
 
-- [ ] **29. CHARACTERISE: A disabled validation run evaluates nothing (AC-17a, FR-6, NFR-4)**
+- [x] **29. CHARACTERISE: A disabled validation run evaluates nothing (AC-17a, FR-6, NFR-4)**
   - **USE COMMAND**: `/test-first when pipeline validation is disabled the host should start and produce no validation results at all`
   - Test location: "tests/Paramore.Brighter.Extensions.Tests"
   - Test file: `When_pipeline_validation_is_disabled_should_evaluate_no_rules.cs`
