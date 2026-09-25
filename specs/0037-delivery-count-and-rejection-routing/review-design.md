@@ -376,3 +376,88 @@ Every change was verified by grepping the text back from the ADR, not from the s
 | 8 | 0077 | `GcpPubSubConsumerFactory.cs:89-92` (verified) |
 
 Old text: "88-91", "once per consumer" and "identical but with" now have 0 occurrences in both ADRs. Frontmatter is unchanged, so the index was not regenerated.
+
+---
+
+# Review: design — 0037-delivery-count-and-rejection-routing (round 3)
+
+**Date**: 2026-09-25
+**Threshold**: 60
+**Verdict**: NEEDS WORK
+
+1 finding at or above threshold 60. Address these before approving.
+
+## Findings
+
+### 1. RocketMQ DLQ copy's `HandledCount` is overwritten by the stale bag entry — R-5 / R-28 fail on the AC-24 branch (Score: 74)
+
+0077 says the RocketMQ DLQ copy carries `HandledCount` via `RocketMqMessagePublisher.cs:103` (R-28 table `:127`; "What the dead-letter copy carries" `:60`). But the publisher writes the header count at `:103`, then copies every `Header.Bag` entry as a property (`:54-59`, filtering only `Keys`, `Tag`, local headers). The consumer fills the bag with every broker property, `HandledCount` included (`RocketMessageConsumer.cs:328-331`, unfiltered), and RocketMQ.Client's `AddProperty` overwrites. So the DLQ copy is published with the **received** count, not the stamped `b(R) ≥ R`; on a DLQ read `Resolve` sees `rejectionReason` and keeps that stale count — breaking R-5's `≥ R − 1`, R-28, and the FR-23 template's `dlqMessage.Header.HandledCount >= deliveriesExpected`. SQS avoids this (sender rewrites the bag entry, `SqsMessageSender.cs:130`, `SnsMessagePublisher.cs:110`); GCP too (`HandledCount` in `s_ignoreHeaders`, `Parser.cs:17`; `AddHeaders` skips written keys, `Parser.cs:352`).
+
+**Evidence**: `RocketMqMessagePublisher.cs:40`, `:54-59`, `:103`; `RocketMessageConsumer.cs:328-331`; `RocketMQ/HeaderNames.cs:47`; requirements R-5 (`:198-201`), R-28 (`:245-262`).
+
+**Recommendation**: one clause in 0077's AC-24 bullet and R-28 row: keep the header-owned `HandledCount` out of the republished properties — consumer bag loop skips `HeaderNames.HandledCount` (GCP `s_ignoreHeaders` shape) or publisher bag loop skips keys already written (GCP `!headers.ContainsKey` shape); correct the R-28 row's claim that `:103` alone carries the count.
+
+**Fix type**: ADR addition
+
+---
+
+### 2. The four redelivery behaviours have no "first-delivery arm" (Score: 45)
+
+0077 `:142` "first-delivery arms keep exact equality" and `:161` "FR-2/15/16/22's first-receive arms": each of the eight templates calls `_messageAssertion.Assert` exactly once, redelivered vs the sent message. R-2 still bites via other `Pass` behaviours asserting a first receive.
+
+**Recommendation**: say these templates compare the redelivered message with the sent one only; drop the two clauses.
+
+**Fix type**: ADR rephrase
+
+---
+
+### 3. Citation drift and one ambiguous shorthand (Score: 25)
+
+0078 `:198` "(`:124`/`:151`)" → `Credential = Credential` is at `GcpMessagingGatewayConnection.cs:126`/`:153`; 0078 `:185` "(`:220-236`)" follows a `GcpPubSubConsumerFactory.cs` cite but means `GcpPubSubMessageGateway.cs:220-236`; 0077 `:192` `RocketMessageConsumer.cs:181` is `Requeue` reading the handle — it is set at `:333`.
+
+**Fix type**: ADR rephrase
+
+---
+
+## Summary
+
+| Score Range | Count |
+|-------------|-------|
+| 90-100 (Critical) | 0 |
+| 70-89 (High) | 1 |
+| 50-69 (Medium) | 0 |
+| 0-49 (Low) | 2 |
+
+**Total findings**: 3
+**Findings at or above threshold (60)**: 1
+
+## Regression check (round 3)
+
+All round-2 changes OK: step 5 (`.native` cache key from `DeadLetter.Subscription`, `GcpPubSubMessageGateway.cs:201-205`, `:223-231`; reader change stated); AC-18/AC-43 Given (Assume `:188-192`; stream consumer only for non-Pull, `GcpPubSubConsumerFactory.cs:80-95`); RocketMQ AC-24 resolve-after-bag (`:292`, `:328`); router Dispose/DisposeAsync; NFR-3 paragraph; `GcpIamCallTolerance` public; AWSSQS row and `:89-92`. **Step 5 and the AC-18 Given drew no finding — the "move to tasks" rule is not triggered.** ADR MUST cross-check: all discharged, no contradictions; 0078 honours 0077's three constraints.
+
+## Main-agent validation (round 3)
+
+Summary recounted: High 74, Low 45/25 — 3 total, 1 ≥ 60. Correct.
+
+1. **Confirmed.** `RocketMqMessagePublisher.cs:40` `AddHeaderProperties` (writes `HandledCount` at `:103`), then `:54-59` bag loop with only `Keys`/`Tag`/local filters; `RocketMessageConsumer.cs:328-331` copies every property into the bag unfiltered. Not a regression — new defect on the DLQ side of the AC-24 branch.
+2. (Low) Confirmed: `grep -c _messageAssertion.Assert` = 1 in all eight templates.
+3. (Low) Confirmed: `GcpMessagingGatewayConnection.cs:126`, `:153`.
+
+## Remediation (round 3): the user's decision and what was applied
+
+Decision (user, 2026-09-25): F1 is fixed on the **publisher** side. RocketMQ's bag loop skips any key
+`AddHeaderProperties` already wrote, following GCP's `!headers.ContainsKey` shape (`Parser.cs:352`, verified).
+The lows were applied too. No requirement, AC or NFR text was touched.
+
+Every change was verified by grepping the text back from the ADR:
+
+| # | ADR | Applied text (grep anchor) |
+|---|---|---|
+| 1 | 0077 | AC-24: "the publisher's bag loop (`RocketMqMessagePublisher.cs:54-59`) skips any key `AddHeaderProperties` already wrote … so the stamped `HandledCount` (`:103`) reaches the DLQ copy instead of the stale bag entry" |
+| 1 | 0077 | R-28 RocketMQ row: "provided the publisher's bag loop (`:54-59`) does not overwrite it … — the AC-24 change below" |
+| 1 | 0077 | "What the dead-letter copy carries": "`RocketMqMessagePublisher.cs:103` — kept only once its bag loop skips keys already written, AC-24 below" |
+| 2 | 0077 | "these templates compare the redelivered message with the sent one only, so R-2 still bites through the other behaviours that assert a first receive"; residual risk: "(not FR-2/15/16/22, whose templates compare the redelivered message with the sent one only)" |
+| 3 | 0077 | AC-23: "(set at `RocketMessageConsumer.cs:333`)" |
+| 3 | 0078 | "(`GcpMessagingGatewayConnection.cs:126`/`:153`)"; "(`GcpPubSubMessageGateway.cs:220-236`)" |
+
+Old text: "first-delivery arms keep", "first-receive arms", "`:181`)" and "`:124`/`:151`" now have 0 occurrences. Frontmatter is unchanged.
