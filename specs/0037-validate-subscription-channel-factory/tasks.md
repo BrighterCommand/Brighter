@@ -655,7 +655,7 @@ New public static class `SubscriptionChannelFactoryDeclaration` in namespace `Pa
     - Pure: no reflection beyond `IsAssignableFrom`, no machinery yet
   - Depends on: 37.
 
-- [ ] **39. TEST + IMPLEMENT: `Check` rejects a subscription that inherits the in-memory default (AC-28, inherited-default branch)**
+- [x] **39. TEST + IMPLEMENT: `Check` rejects a subscription that inherits the in-memory default (AC-28, inherited-default branch)**
   - **USE COMMAND**: `/test-first when a subscription inherits the in-memory channel factory default the declaration check should report a reason`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessagingGateway/ChannelFactoryDeclaration"
   - Test file: `When_a_subscription_inherits_the_in_memory_channel_factory_default_should_report_a_reason.cs`
