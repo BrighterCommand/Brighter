@@ -5,7 +5,7 @@ status: Proposed
 author:
   - "Ian Cooper"
 created: 2026-09-25
-summary: "The /spec commands that write requirements.md, tasks.md and release notes prescribe, by example and never by pattern, the three forms /spec:show-me reads: the bold lead-in requirement declaration, the tag-first task lead-in, and the marked release-notes section. /spec:review checks each form where it is reviewed. A new command, /spec:write_release_notes, is the one writer of the marked form: it replaces its own section in place with an exact-match edit, and stops without writing whenever it could not proceed without guessing whose section it is."
+summary: "The /spec commands that write requirements.md, tasks.md and release notes prescribe, by example and never by pattern, the three forms /spec:show-me reads - the bold lead-in declaration, the tag-first task lead-in and the marked release-notes section - and /spec:review checks each where it is reviewed. A new command, /spec:write_release_notes, is the one writer of the marked form: it replaces its own section in place with an exact-match edit, and stops without writing whenever proceeding would mean guessing whose section it is."
 tags:
   - "meta"
   - "api-design"
@@ -74,8 +74,9 @@ forms drift, and a drifted form is not an error — it is silently counted as so
 | [0077-show-me-visual-explanation](0077-show-me-visual-explanation.md) | When the command draws a diagram, what it may draw, and which stage may read source to draw it |
 | **[0078-spec-family-machine-readable-forms](0078-spec-family-machine-readable-forms.md)** *(this one)* | The forms the `/spec` family writes so that a tool can read them, and the command that writes release notes in one of them |
 
-The sentence that unifies all four: **the command states only what it has measured, names what it
-measured it from, and changes nothing.**
+The sentence that unifies all four: **every value a command states is counted by one tested script,
+copied from a named source, or judged from evidence it can name, and no command writes outside what
+it owns.**
 
 ### A form with a reader and no writer
 
@@ -184,8 +185,8 @@ flowchart LR
     MS -->|reads all three| DOCS
 ```
 
-Each document has exactly one producer. The checker and the reader take all three documents and only
-read them. Nothing in
+Each form has exactly one producing command. The checker and the reader take all three documents and
+only read them. Nothing in
 this ADR touches `src/`, `tests/` or `.claude/settings.json`.
 
 ### Key Components
@@ -273,7 +274,9 @@ The rules:
 The items come from the ADRs' *Consequences* sections and `requirements.md`, or from
 `requirements.md` alone when `.adr-list` is missing or empty. They are judged, not extracted.
 
-**Who marks a section.** `/spec:write_release_notes` writes the marker on every section it writes,
+##### Who marks a section
+
+`/spec:write_release_notes` writes the marker on every section it writes,
 and never adds one to an existing section. A person may add one by hand, beneath the heading of a
 hand-written section. Either way, a marked section belongs to the command from then on: its next run
 replaces the body in this form and keeps only the title.
@@ -299,7 +302,9 @@ marked section, which the marker makes unique. An insertion is anchored on the f
 line. An exact-match edit leaves every other byte unchanged, which is what AC-89 and AC-90 assert.
 The command writes that one file and nothing else, and does not stage or commit.
 
-**The stop at row 7.** Adding a section would duplicate notes written by hand, and editing an
+##### The stop at row 7
+
+Adding a section would duplicate notes written by hand, and editing an
 unmarked section is forbidden. So the command stops, names the heading it found, and asks the user
 either to delete that section, or to add a marker line beneath its heading naming the spec directory
 it belongs to — which may be another spec that shares the id — and re-run. The message says what
@@ -308,7 +313,9 @@ text meant to survive must be moved out first (AC-95). The match is on the id al
 section from a different spec sharing the id also stops the command. That is deliberate: the user,
 not the command, decides whose section it is.
 
-**The first `##` heading is taken to be the unreleased one.** Nothing in `release_notes.md` marks a
+##### The first `##` heading is taken to be the unreleased one
+
+Nothing in `release_notes.md` marks a
 heading as released, so the command does not check. Keeping the unreleased heading first is the
 release process's job.
 
@@ -371,16 +378,19 @@ that holds the file's content. `/spec:status`, `/spec:gear` and `/spec:show-me` 
 
 ### Implementation Approach
 
-Numbered in commit order. The amendments are documentation, so each is one structural commit.
+Numbered in commit order. Each amendment changes how a command behaves, so each is a behavioural
+commit of its own, checked by the acceptance criterion named on it.
 
-1. **Structural.** `/spec:requirements`: the declaration form and examples.
-2. **Structural.** `/spec:tasks`: the four template lines and the drifted form in the *DO NOT* block.
-3. **Structural.** `/spec:review`: the requirements and tasks checks.
+1. **Behavioural.** `/spec:requirements`: the declaration form and examples (AC-86).
+2. **Behavioural.** `/spec:tasks`: the four template lines and the drifted form in the *DO NOT* block
+   (AC-87).
+3. **Behavioural.** `/spec:review`: the requirements and tasks checks (AC-88).
 4. **Behavioural.** `/spec:write_release_notes`: the ladder, the form, the exact-match edit, and each
-   stop's message.
-5. **Structural.** `/spec:design`: the breaking-change step. `/spec:review`: the design check.
-6. **Structural.** The README catalogue entry.
-7. **Structural.** This spec's own `tasks.md`, re-tagged tag-first when it is next revised.
+   stop's message (AC-89, AC-90, AC-95).
+5. **Behavioural.** `/spec:design`: the breaking-change step. `/spec:review`: the design check
+   (AC-91).
+6. **Documentation.** The README catalogue entry.
+7. **Documentation.** This spec's own `tasks.md`, re-tagged tag-first when it is next revised.
 
 ## Consequences
 

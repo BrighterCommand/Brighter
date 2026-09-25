@@ -5,7 +5,7 @@ status: Proposed
 author:
   - "Ian Cooper"
 created: 2026-09-19
-summary: "/spec:show-me scores merge risk from three factors - product-code blast radius (F1, taken from the fact ledger unless FR-16 forces it), breaking-change count (F2) and requirement fidelity (F5) - where F2 and F5 are levels of the Classifier's own judgements, the same judgements the Breaking changes and Did it ship sections render. FR-16's forced levels are applied before any column is evaluated, each factor takes its highest matching column, and the overall level is their maximum, raisable with a stated reason but never lowerable. The level has exactly two sinks, and no instruction outside the one marked step that computes it may branch on it."
+summary: "/spec:show-me scores merge risk as the maximum of three factor levels - F1 from the fact ledger, F2 and F5 from the Classifier's own judgements, which the Breaking changes and Did it ship sections also render - with FR-16's forced levels applied first and a raise allowed with a stated reason but never a lowering. One marked risk step computes the level and writes the lines that set it, and no instruction outside that step may branch on the level."
 tags:
   - "meta"
   - "api-design"
@@ -22,16 +22,16 @@ Proposed
 ## Context
 
 `/spec:show-me` writes one file that answers "what did we build, and what deserves a second look?".
-Seven of its eight sections report things the repository can be asked directly. The eighth,
-`## Risk assessment (advisory)`, turns three unlike measurements into one word — `Low`, `Medium` or
+Every other section presents evidence: counts, and judgements with their sources.
+`## Risk assessment (advisory)` turns three unlike measurements into one word — `Low`, `Medium` or
 `High` — and must then be trusted not to act on it. A risk word that is quietly averaged, that
 changes what the command does, or that re-judges evidence the file already presented, looks
 authoritative and is not.
 
 ### Terms
 
-- **Classifier** — the stage that judges breaking-change items and requirement statuses. Key
-  Components 1 states its rule.
+- **Classifier** — the stage that judges breaking-change items, requirement statuses and the work
+  no requirement covers (FR-8 Part 3). Key Components 1 states its rule.
 - **Factor** — one of F1, F2 and F5, each with a measured value and a level. FR-11 states the
   thresholds.
 - **Forced level** — a factor level FR-16 assigns regardless of the thresholds. Key Components 3
@@ -78,8 +78,9 @@ authoritative and is not.
 | [0077-show-me-visual-explanation](0077-show-me-visual-explanation.md) | When the command draws a diagram, what it may draw, and which stage may read source to draw it |
 | [0078-spec-family-machine-readable-forms](0078-spec-family-machine-readable-forms.md) | The forms the `/spec` family writes so that a tool can read them, and the command that writes release notes in one of them |
 
-The sentence that unifies all four: **the command states only what it has measured, names what it
-measured it from, and changes nothing.**
+The sentence that unifies all four: **every value a command states is counted by one tested script,
+copied from a named source, or judged from evidence it can name, and no command writes outside what
+it owns.**
 
 ### A risk word that could disagree with its own evidence
 
@@ -120,9 +121,10 @@ threshold; take the highest matching column for each factor and the maximum over
 confine every conditional that touches a level to one marked step.**
 
 The Classifier's judgements feed two renderings: the sections that present the evidence, and the
-factor rows that summarise it. The risk step computes the level from those rows, and the level is
-written in two places: in `show-me.md`, and in FR-19's session report. Nothing else in the command
-tests the level.
+factor rows that summarise it. The risk step computes the level from those rows and writes the
+lines that set it. The level then appears in two places: the `**Overall risk: …**` line in
+`show-me.md`, and FR-19's session report, which copies it. Nothing else in the command tests the
+level.
 
 ### The mechanism, end to end
 
@@ -142,9 +144,10 @@ flowchart TD
     G{"Stated level higher<br/>than the maximum?"}
     G -->|"yes"| H["Raising sentence required"]
     G -->|"no"| I["Stated level = maximum"]
-    H --> OUT["Overall risk line, rationale,<br/>FR-13's verbatim sentence"]
-    I --> OUT
-    OUT --> REP["FR-19 session report"]
+    H --> LV["The stated level"]
+    I --> LV
+    LV --> OUT["Overall risk line, FR-13's sentence<br/>(written by the risk step)"]
+    LV --> REP["FR-19 session report"]
 ```
 
 Four invariants read off the flowchart:
@@ -155,7 +158,8 @@ Four invariants read off the flowchart:
 - **F1 is never judged.** Its level comes from the ledger, or from FR-16 row 12 when the ledger has
   none, so the model applies no threshold to it.
 - **Every test on the level is inside the risk step**: the diamond, and the two checks in Key
-  Components 4. Each guards what is written, not what happens next.
+  Components 4. Each guards what is written, not what happens next. The Synthesiser adds the
+  rationale around the lines the risk step wrote, and tests nothing.
 - **The level leaves by two arrows, both renderings.** No edge leads from the level back into the
   procedure.
 
@@ -166,7 +170,7 @@ flowchart LR
     subgraph ADR0072["0072-show-me-command-resolution-and-output"]
         M["Measurer<br/>F1 level in the ledger"]
         RD["The command's reads"]
-        S["Synthesiser<br/>renders every section"]
+        S["Synthesiser<br/>renders the other sections and the rationale"]
     end
     subgraph ADR0073["0073-show-me-advisory-risk-model"]
         CL["Classifier<br/>items, statuses"]
@@ -200,6 +204,7 @@ ADR owns the Classifier's rule and the risk step.
 | --- | --- | --- |
 | Which changes are breaking-change items, and each item's classification set (FR-7) | ADR *Consequences* extracts, `requirements.md`, the `src/`-scoped diff, and the marked release-notes section when one was read | the item, its classification set, a one-sentence migration, and the evidence it came from |
 | Each declared id's status (FR-8) | `requirements.md`, `tasks.md`, the ADR extracts and the diff | the id, its status, a one-sentence reason, its evidence, and its follow-up for `Deferred`, `Dropped` or `Withdrawn` |
+| Work in `tasks.md` that no numbered requirement covers (FR-8 Part 3) | `tasks.md` and the declared ids | each piece of work, with the task id it came from |
 
 Four rules bind it:
 
@@ -273,14 +278,29 @@ a level.
 
 The overall level is the maximum of the three factor levels, over `Low` < `Medium` < `High`. The
 risk step may state a higher level, with one sentence naming what the factors miss. It may never
-state a lower one. The raise is decided inside the risk-step markers, because deciding it compares
-levels; the Synthesiser writes the rationale around the level and the reason the risk step
-recorded. Before the risk step ends, still inside its markers, it checks the rendered section: the
-stated level is not below the maximum, and a stated level above the maximum is followed by a raising
-sentence (AC-23).
+state a lower one.
 
-The section writes the level on its own line as `**Overall risk: {level}**`, then two to five
-sentences of rationale naming at least the factor or factors that set it, then FR-13's sentence:
+The risk step writes the lines that set the level, and every instruction that tests it:
+
+| Line | Written by |
+| --- | --- |
+| the factor table, one row per factor with its value and level | the risk step |
+| the factor or factors whose level equals the stated maximum, handed to the Synthesiser as a list, not written as a line | the risk step |
+| `**Overall risk: {level}**`, on its own line | the risk step |
+| the rationale's first sentence, when the stated level is above the maximum: the raising sentence | the risk step |
+| the rest of the rationale, so that it has two to five sentences in all and names at least the factor or factors that set the level | the Synthesiser |
+| FR-13's sentence, below | the risk step |
+
+The raising sentence is part of the rationale, as AC-23 requires, and counts toward its two to five
+sentences. The Synthesiser names the factors that set the level from the risk step's list, and may
+state a factor's level as a fact the table shows — "F1 is `High`" — so the instructions that write
+the rationale compare no levels.
+
+Before the risk step ends, still inside its markers, it checks the lines it wrote: the stated level
+is not below the maximum, and a stated level above the maximum has a raising sentence (AC-23). The
+check runs over the risk step's own lines, which exist by then, so nothing outside the markers has to
+test a level. The Synthesiser then writes the rationale from the factor rows, and places the risk
+step's lines in the section in the order above. FR-13's sentence is:
 
 > This assessment is advisory only. It is not a merge gate; the merge decision stays with a human
 > reviewer.
@@ -289,7 +309,8 @@ That sentence is a literal in the command file, not composed at run time.
 
 #### 5. Advisory by construction
 
-The level has exactly two sinks: the `**Overall risk: …**` line and FR-19's session report. The
+The level has exactly two sinks: the `**Overall risk: …**` line and FR-19's session report, which
+copies that line's level and tests nothing. The
 command file holds the whole of the risk step between two marker lines,
 `<!-- show-me:risk-step:begin -->` and `<!-- show-me:risk-step:end -->`. Inside the markers,
 conditionals test factor evidence, which is how a level is computed. Outside them, no instruction may
@@ -297,15 +318,19 @@ test a level.
 
 The FR-13 invariant check, run by the test script, asserts exactly that:
 
-> Outside the risk-step markers, no line of `.claude/commands/spec/show-me.md` contains both a
+> Outside the risk-step markers, no paragraph of `.claude/commands/spec/show-me.md` contains both a
 > conditional keyword — `if`, `when`, `unless`, `else`, `otherwise` — and a level name — `Low`,
 > `Medium`, `High` — where each is matched as a whole word, the keywords in any case and the level
-> names as capitalised.
+> names as capitalised. The marked region, marker lines included, is removed first; the rest is
+> split into paragraphs, each a run of lines between blank lines, so a conditional wrapped onto the
+> line after its level name is still caught.
 
 Whole-word matching is what keeps `diff` from matching `if`. Case-insensitive keywords catch
 `When` at the start of a sentence. Capitalised level names keep ordinary prose such as "a low
-cost" out of the check, and the command file writes a level only in its capitalised form. The test script proves it on a literal
-line held in the test script itself, which contains `git diff` and `gh pr diff` and no conditional,
+cost" out of the check, and the command file writes a level only in its capitalised form. Outside
+the markers the command file has little reason to name a level at all: the FR-19 report step refers
+to "the overall level" and copies it. The test script proves the whole-word rule on a literal line
+held in the test script itself, which contains `git diff` and `gh pr diff` and no conditional,
 and must yield zero matches (AC-81). The check also fails if either marker is missing or appears
 twice, so a deleted marker cannot switch the check off.
 
@@ -334,6 +359,29 @@ The command file has to describe the mapping, and the mapping is conditionals ov
 if four or more items". A check over the whole file would therefore fire on the procedure it
 protects. The markers separate computing a level, which needs conditionals, from using a level,
 which FR-13 forbids.
+
+### Implementation Approach
+
+Numbered in commit order. These steps follow the test script's harness,
+[0072-show-me-command-resolution-and-output](0072-show-me-command-resolution-and-output.md)'s
+Implementation Approach step 3, and form part of its step 10. The test-script rows come before the
+command-file text they check.
+
+1. **Behavioural.** The test script's FR-13 row, which fails until step 2 adds the markers: the paragraph check, the marker-count assertion
+   (exactly one begin marker and one end marker, begin first), and the AC-81 literal line, which
+   must yield zero matches. It runs against the command file as each later step changes it.
+2. **Behavioural.** The risk-step markers in `.claude/commands/spec/show-me.md`, at Step 5 between
+   the Classifier and the Synthesiser (see
+   [0072-show-me-command-resolution-and-output](0072-show-me-command-resolution-and-output.md),
+   Implementation Approach step 10).
+3. **Behavioural.** Inside the markers: F1 copied from `f1_level`, or FR-16 row 12's `Medium` when
+   it is null; the forced-level table; the mapping procedure for F2 and F5 over the Classifier's
+   judgements and tallies; the factor table.
+4. **Behavioural.** Inside the markers: the maximum, the raise and its sentence, the
+   `**Overall risk: …**` line, FR-13's literal sentence, and the two checks over those lines.
+5. **Behavioural.** Outside the markers: the Classifier's item list, statuses, Part 3 list and
+   tallies, before the risk step; the Synthesiser's rationale after it; FR-19's report copying the
+   level.
 
 ## Consequences
 
@@ -375,8 +423,7 @@ which FR-13 forbids.
 - **Risk: a later edit adds an action on the level** — "if `High`, also emit a warning line".
   *Mitigation*: outside the markers, the invariant check fails. Inside them, the step has one job,
   and the markers make it the one place a reviewer must read.
-- **Risk: F3 or F4 is revived** by someone reading an earlier version of this ADR or of the command
-  file.
+- **Risk: F3 or F4 is re-introduced** as a factor.
   *Mitigation*: FR-11 and Key Components 2 state the retirement as a rule, with its non-conformance
   consequence.
 - **Risk: a forced level is missed** because FR-16 gains a row.

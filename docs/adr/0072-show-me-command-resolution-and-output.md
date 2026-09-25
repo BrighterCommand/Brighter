@@ -1,17 +1,17 @@
 ---
 id: 0072-show-me-command-resolution-and-output
-title: "Target Resolution and Output Shape for /spec:show-me"
+title: "The Measurement Seam and Output of /spec:show-me"
 status: Proposed
 author:
   - "Ian Cooper"
 created: 2026-09-19
-summary: "/spec:show-me is two artefacts with one seam: a C# file-based measurement script that counts every mechanically countable value and writes it atomically to a gitignored JSON fact ledger, and the prompt file .claude/commands/spec/show-me.md that reads evidence within a per-run byte budget, judges, and writes show-me.md in one Write. The seam runs between counting and reading: the command may read files and pinned-sha diffs, but never computes a mechanically countable value. Every stop is decided before either file is written, and the script's exit status - 0, 2 or other - tells the command which stop, if any, applies."
+summary: "/spec:show-me is two artefacts joined by a gitignored JSON fact ledger: a C# file-based measurement script that computes every mechanically countable value and writes the ledger atomically, and the command file .claude/commands/spec/show-me.md, which reads evidence within a per-run byte budget, judges, and writes show-me.md in one Write. The seam runs between counting and reading, and every stop the command makes falls before show-me.md is written."
 tags:
   - "meta"
   - "api-design"
 ---
 
-# 0072. Target Resolution and Output Shape for `/spec:show-me`
+# 0072. The Measurement Seam and Output of `/spec:show-me`
 
 Date: 2026-09-19
 
@@ -33,7 +33,8 @@ counting, and nothing then catches a wrong number.
 - **Measurer** — the measurement script. Key Components 1 states its contract.
 - **Synthesiser** — the executing model reading `.claude/commands/spec/show-me.md`, in the stages
   that write prose. Key Components, *The stages*, states its rule.
-- **Classifier** — the stage that judges breaking-change items and requirement statuses. Its rule is
+- **Classifier** — the stage that judges breaking-change items, requirement statuses and the work
+  no requirement covers. Its rule is
   stated in
   [0073-show-me-advisory-risk-model](0073-show-me-advisory-risk-model.md).
 - **Explainer** — the stage that reads source to draw a diagram. Its rule is stated in
@@ -51,7 +52,8 @@ counting, and nothing then catches a wrong number.
   breaking, how many ids it judged `Shipped` — is not mechanically countable: NFR-1 names those
   tallies as judgement-derived, and the Classifier produces them. Nor is a byte size taken only to
   decide whether a read is affordable: NFR-3 makes that a free size probe, it is never written into
-  `show-me.md`, and the command takes it itself (Key Components 3).
+  `show-me.md`, and the command either takes it itself or reads it from the ledger (Key
+  Components 3).
 
 ### Scope
 
@@ -110,20 +112,21 @@ counting, and nothing then catches a wrong number.
 | [0077-show-me-visual-explanation](0077-show-me-visual-explanation.md) | When the command draws a diagram, what it may draw, and which stage may read source to draw it |
 | [0078-spec-family-machine-readable-forms](0078-spec-family-machine-readable-forms.md) | The forms the `/spec` family writes so that a tool can read them, and the command that writes release notes in one of them |
 
-The sentence that unifies all four: **the command states only what it has measured, names what it
-measured it from, and changes nothing.**
+The sentence that unifies all four: **every value a command states is counted by one tested script,
+copied from a named source, or judged from evidence it can name, and no command writes outside what
+it owns.**
 
 ### Counting in prose that nobody runs
 
 A pattern written into a markdown document is a description of code. Nobody executes it, so no test
-reaches it, and it carries the escaping of the prose around it. This spec's own design review found
-four defects of that kind in earlier drafts of this command:
+reaches it, and it carries the escaping of the prose around it. Patterns and counts embedded in the
+prose of a command file produced these results:
 
 | Defect | Returned | Correct | Cause |
 | --- | --- | --- | --- |
 | Declared-id count | 0 | 28 | The pipe had to be escaped to sit in a markdown table cell, and the escape became part of the pattern |
 | NFR-2 word count | 16 | 8 | The count did not exclude fenced blocks |
-| FR-13 invariant check | 3 hits | 0 | `if` matched inside `diff` |
+| FR-13 invariant check | 3 false positives | 0 | `if` matched inside `diff` |
 | One stated pattern | 3 variants | 1 | The same pattern was copied into three places and drifted |
 
 Each defect was invisible to a reader and untestable where it sat. In an executable artefact, each
@@ -156,14 +159,15 @@ does the counting, and each stated pattern is implemented once, in that script.
 ## Decision
 
 **Split `/spec:show-me` into a measurement script that counts and a command file that reads and
-judges, joined by one JSON ledger file; draw the line between them at counting, not at reading; and
-decide every stop before either file is written.**
+judges, joined by one JSON ledger file, and draw the line between them at counting, not at
+reading.**
 
 The script resolves refs, queries the pull request once, counts everything NFR-1 lists, and writes
 the ledger atomically. The command reads that ledger, reads the evidence it needs within a byte
 budget, judges what NFR-1 names as judged, and writes `show-me.md` in one call. The command may
 issue a path-scoped `git diff` over the ledger's two shas, and it may read files. It may never
-compute a mechanically countable value.
+compute a mechanically countable value. Because the script writes the ledger only after the
+completeness gate passes, every stop falls before either file is written.
 
 ### The mechanism, end to end
 
@@ -175,16 +179,21 @@ sequenceDiagram
     participant L as Fact ledger
     U->>C: /spec:show-me spec-id
     C->>C: Step 1 - resolve the target over the directory listing
-    C->>M: Step 2 - measure the target directory
-    alt exit 2 - the spec is not finished
+    opt no unique target, or no usable current spec
+        C-->>U: the FR-1 or FR-2 stop message
+    end
+    C->>M: Step 2 - check the script exists and is readable, then measure
+    alt exit 2 with a parseable gate record - the spec is not finished
         M-->>C: gate record on stderr, no ledger
         C-->>U: the FR-3 stop message
-    else any status other than 0 or 2
-        M-->>C: nothing usable
+    else script absent or unreadable, any other status, or an unparseable gate record
         C-->>U: the FR-21 tooling-fault message
     else exit 0
         M->>L: replace the ledger atomically
         C->>L: Step 3 - read the ledger
+        opt the ledger is not a single JSON object
+            C-->>U: the FR-21 tooling-fault message
+        end
         C->>C: Step 4 - evidence reads, charged to the read log
         C->>C: Step 5 - Explainer, Classifier, risk step, Synthesiser
         C->>C: Step 6 - one Write of show-me.md
@@ -194,14 +203,17 @@ sequenceDiagram
     end
 ```
 
-The run has four exits and one path to a written file. Four invariants read off the diagram:
+The run has four kinds of stop — FR-1, FR-2, FR-3 and FR-21 — and one path to a written file. Four
+invariants read off the diagram:
 
 - **Nothing is written above the `exit 0` branch.** Step 1's stops happen before the script runs.
   Step 2's two stops happen before the ledger exists, because the script writes the ledger only
   after the gate passes. A stopped run therefore leaves the repository unchanged. The one
   exception is FR-21's fifth failure state, where the script has already replaced the gitignored
   ledger (Key Components 4).
-- **The exit status alone decides the branch.** The command never parses standard output. It reads
+- **The protocol is small.** Once the target is resolved, two probes before invoking, the exit
+  status, the last prefixed line on standard error, and whether the ledger parses decide every
+  branch. The command never parses standard output. It reads
   standard error only on `2` and at Step 7, and then only the last line carrying the right prefix.
 - **Only the script touches the ledger.** The command reads it once, at Step 3, and never writes it.
 - **The word count cannot change the outcome.** Step 7 runs after the one `Write`. Its result is
@@ -254,11 +266,13 @@ is shorthand for the rule the stage holds.
 | --- | --- | --- | --- |
 | Measurer | the measurement script | this ADR | Counts every value NFR-1 lists; never paraphrases, never judges |
 | Explainer | the model, at Step 5 | [0077-show-me-visual-explanation](0077-show-me-visual-explanation.md) | The only stage that reads source files; draws nothing it has not read |
-| Classifier | the model, at Step 5 | [0073-show-me-advisory-risk-model](0073-show-me-advisory-risk-model.md) | Judges each breaking-change item and requirement status once, and tallies its own judgements |
-| Risk step | the model, at Step 5, inside the command file's risk-step markers | [0073-show-me-advisory-risk-model](0073-show-me-advisory-risk-model.md) | Computes the factor levels and the overall level; the only step that may test a level |
-| Synthesiser | the model, at Step 5 | this ADR | Writes all prose; every number it writes comes from the ledger or from the Classifier's tallies |
+| Classifier | the model, at Step 5 | [0073-show-me-advisory-risk-model](0073-show-me-advisory-risk-model.md) | Judges each breaking-change item, requirement status and piece of work no requirement covers once, and tallies its own judgements |
+| Risk step | the model, at Step 5, inside the command file's risk-step markers | [0073-show-me-advisory-risk-model](0073-show-me-advisory-risk-model.md) | Computes the factor levels and the overall level, names the factors that set it, and writes the factor table, the `**Overall risk: …**` line, the raising sentence as the rationale's first sentence when there is one, and FR-13's sentence; the only step that may test a level |
+| Synthesiser | the model, at Step 5 | this ADR | Writes all other prose, including the rest of the risk rationale; every number it writes comes from the ledger or from the Classifier's tallies |
 
-**The seam runs between counting and reading.** A stage on the model's side may read a file or a
+#### The seam runs between counting and reading
+
+A stage on the model's side may read a file or a
 diff, and every read is charged in bytes. No stage on the model's side may compute a mechanically
 countable value (*Terms*), whether or not the ledger carries it. The test for the seam is AC-70:
 the command file contains no pipeline that computes such a value.
@@ -290,8 +304,8 @@ beside it:
   diff. NFR-3's full-diff ban binds the script as it binds the command.
 - **Children's standard error is captured, not passed through.** `git` and `gh` run as child
   processes with both streams redirected, so a child's message can never carry a record prefix.
-  A non-zero `gh` exit means no PR; FR-16 rows 1 and 2 apply, and the script still exits `0`
-  (NFR-4).
+  A `gh` query that returns no matching PR is FR-16 row 1; a non-zero `gh` exit is row 2. Either
+  way there is no PR, and the script still exits `0` (NFR-4).
 - **The script also emits the two values NFR-1 derives from its counts**: factor F1's level, and
   whether each of D1, D2 and D3 fired. F1's thresholds are FR-11's and the tests are FR-6 (a)'s;
   both are implemented once, here. Both are diff fields, so both are null when no spec diff was
@@ -303,9 +317,20 @@ beside it:
   it emits its byte size. Section recognition — headings, fences, extent — is therefore
   implemented once, in the script, and the command reads a section by its line range without
   re-recognising it. The line ranges are inputs the `{m}` field depends on. The byte sizes let the
-  command price two reads it could otherwise size only by running them. FR-21 fixes the ledger's
-  fields as a minimum, so neither addition changes its contract. The section fields are file
+  command price two reads it could otherwise size only by running them. FR-21 says the script owns
+  exactly the NFR-1 fields "plus the inputs those fields depend on", and that the ledger carries
+  them "at minimum". These positions and sizes are of the inputs the owned fields are counted
+  from, so they fall under that clause; they are never values `show-me.md` states. The section fields are file
   fields and the diff size is a diff field.
+- **The script locates each declaration's paragraph.** For every line of `requirements.md` the
+  declared-id pattern matches, it emits the id, the paragraph's first and last line numbers, and its
+  byte size. The paragraph runs from the declaration line to the line before the next declaration
+  or the next heading of level three or higher (`###`, `##` or `#`), whichever comes first, or to
+  the end of the file; headings and fences are recognised by the same rules as for marked sections.
+  Deeper headings stay inside the paragraph, so a requirement with its own sub-headings, such as
+  FR-6's `##### Visual explanation`, is not cut short. When `requirements.md` is too large to read
+  whole, the command reads paragraphs by these ranges without re-recognising the form. They are file
+  fields, and they exist only so the command can locate what it reads.
 - **The script decides nothing a reader could judge.** It emits the marked-section count and `{m}`,
   not a verdict on what the release notes say. It emits the declared-id set, not a status for any id.
 
@@ -317,18 +342,62 @@ command reads only the last line with the right prefix.
 
 #### 2. The fact ledger
 
-One JSON object at `{target directory}/.show-me-ledger.json`, serialised with `System.Text.Json`. It
-carries a `schema_version` integer and one named field per FR-21 value. A value that is not
-determinable is `null` with a sibling reason field, never `0` and never absent. It carries the
-command line of every `gh` invocation the script made, so AC-30 and AC-73 can observe the run's
-GitHub access. It carries no diff text and no file list, which keeps it far below the 65,536-byte
-cap.
+One JSON object at `{target directory}/.show-me-ledger.json`, serialised with `System.Text.Json`. Its
+field names are the contract between the script, the command file and the test script, so they are
+fixed here:
 
-**The write is atomic.** The script serialises the whole object in memory, writes it to a temporary
-file in the same directory, and replaces the ledger with `File.Move(…, overwrite: true)`. A
-same-directory move is a rename, so a reader sees either the old ledger or the new one. The temporary
-file is deleted in a `finally` block. A failure before the move therefore leaves no ledger where
-none existed and leaves a previous ledger unchanged (AC-83).
+| Field | Group | Holds |
+| --- | --- | --- |
+| `schema_version` | — | integer, `1` |
+| `target`, `pinned` | — | the target directory as given; `true` only on a pinned run |
+| `spec_branch` | ref | `{ref, sha}` — the full ref FR-10 resolved and its sha |
+| `rules_tried` | ref | FR-10's rules in order, each with its outcome, including `{ref} is already merged into {base ref}` for a skipped candidate |
+| `local_divergence` | ref | `{name, sha}` when rule 1 chose a remote-tracking ref and the local branch differs; otherwise null |
+| `base` | ref | `{ref, sha}` — `origin/master` or `master` |
+| `pr` | ref | `{number, url, head_sha, head_present}` for the chosen open PR |
+| `pr_count` | ref | how many open PRs FR-20's query kept |
+| `measured_head` | ref | `{sha, source}`, where `source` is `pr_head`, `branch_tip` or `pinned` |
+| `merge_base` | ref | sha |
+| `buckets` | diff | the six buckets and `total`, each `{files, added, removed}` |
+| `src_subdirectory_count` | diff | the number of distinct immediate subdirectories of `src/` |
+| `public_api_lines` | diff | changed public API declaration lines |
+| `commits` | diff | commits in merge base..measured head |
+| `src_diff_bytes` | diff | the byte size of the `src/`-scoped diff |
+| `f1_level` | diff | `Low`, `Medium` or `High` |
+| `triggers` | diff | `{d1, d2, d3}`, each `true` or `false`. D3 reads `.adr-list`, but all three are diff fields because FR-6 (a) evaluates the trigger only over a measured diff |
+| `tasks` | file | `{total, checked, unchecked, first_unchecked, by_tag}`, with `by_tag` holding the four tags and `untagged` |
+| `declared_ids`, `declared_total` | file | the distinct ids, in FR-then-NFR order, and their count |
+| `declarations` | file | `{id, first_line, last_line, bytes}` for every declaration line |
+| `adr_list` | file | one `{entry, path, reason, matches}` per `.adr-list` entry: `path` null and `reason` `ADR file not found` or `ambiguous ADR number` when it does not resolve, and `matches` listing the filenames an ambiguous number matched |
+| `release_notes` | file | `{path, count, sections, m}`: the number of sections marked for the target, each one's `{first_line, last_line, bytes}`, and `{m}` |
+| `gh_commands` | — | the command line of every `gh` invocation, in order |
+
+A field that is null because its value could not be determined has an entry in a `null_reasons`
+object, keyed by field name. The reasons are fixed strings: `not a spec directory`, `pinned`, `spec
+branch not determinable`, `no PR found for branch {branch}`, `gh unavailable` and `not present`. On
+a run whose ref fields FR-21's *kinds of run* table nulls — a fixture run, a pinned run, or a spec
+run whose branch is not determinable — every ref field, `local_divergence` included, carries that
+reason. Otherwise some fields use null as an ordinary value and carry no reason:
+`local_divergence`, null when the spec branch resolved and there is no divergence;
+`release_notes.m`, null when no marked section carries a `#### Breaking changes` heading (FR-21's
+`{m}` rule); and an `.adr-list` entry's `reason` and `matches`, null when the entry resolved. An
+entry that does not resolve carries its reason inside its own entry. A value is never `0` or absent in place of null. The distinction between FR-16 rows 1
+and 2 is the reason on `pr`. Row 16 is `pr` present with `head_present: false` and
+`measured_head.source` of `branch_tip`.
+
+The ledger carries no diff text and no list of changed files, which keeps it far below the
+65,536-byte cap.
+
+#### The write is atomic
+
+The script serialises the whole object in memory, writes it to a temporary file named
+`.show-me-ledger.json.tmp` in the same directory, and replaces the ledger with
+`File.Move(…, overwrite: true)`. A same-directory move is a rename, so a reader sees either the old
+ledger or the new one. The temporary file is deleted in a `finally` block. A failure before the move
+therefore leaves no ledger where none existed and leaves a previous ledger unchanged (AC-83), and it
+leaves no temporary file (FR-4). The fixed name means any run overwrites and then moves a temporary
+file a killed run left behind. Concurrent runs on one target are not supported, and this design
+makes no guarantee about them.
 
 The ledger is working state. The exact-match `.gitignore` line `.show-me-ledger.json` ignores it at
 any depth, so `git status --porcelain` differs after a run only by `show-me.md` (AC-30, AC-74).
@@ -342,22 +411,31 @@ the read log with its path, how it was read, and the bytes charged. No full-cont
 before its size is known, and knowing a size costs nothing:
 
 - a file's size comes from `wc -c` on its path, which is a size probe, not a read;
-- the `src/`-scoped diff's size and each marked section's size come from the ledger;
+- the `src/`-scoped diff's size and each marked section's size come from the ledger. For the
+  release-notes read, the command also runs `wc -c` on the release-notes file first, as FR-7
+  requires, and prices the read from the sections' sizes;
 - the size of any other `git diff` output comes from the same command piped into `wc -c`, which
   brings only the byte count into context.
 
 A file whose size exceeds the bytes remaining is not read whole; it is read by targeted extraction
 or in bounded chunks. An extraction or a chunk is bounded before it is issued — a line range, or a
-chunk no larger than the bytes remaining — and is charged the bytes it brings in.
+chunk no larger than the bytes remaining — and is charged the bytes it brings in. Every extraction
+is located by something the ledger gives or by a literal the command already holds: a declaration's
+line number, a section's line range, or an ADR heading such as `## Consequences`. The command never
+searches for a form — a declaration, a task tag, a marked section — so no pattern is written into
+the command file. `tasks.md`, when it does not fit, is read in consecutive chunks rather than by
+extraction, because the ledger already carries every count taken from it. A chunk that cannot be
+afforded is not read, and a status or Part 3 entry that needed it is `Unverifiable` with that reason
+(NFR-3).
 
 | Read | How | Budget |
 | --- | --- | --- |
 | The ledger | whole | general allowance; at most 65,536 B |
-| `tasks.md` | whole | general allowance |
+| `tasks.md` | whole; when it does not fit, consecutive chunks while bytes remain | general allowance |
 | The `src/`-scoped diff over the ledger's merge base and measured head | whole, as one `git diff` with a `src/` pathspec | general allowance |
 | `git diff --name-only` over the same pair | only when the spec diff touches nothing under `src/` (FR-14) | general allowance |
 | Each ADR in `.adr-list` | front matter, `## Status` and `## Consequences` only | general allowance |
-| `requirements.md` | whole if it fits; otherwise the declarations and the paragraphs the Classifier needs | general allowance |
+| `requirements.md` | whole if it fits; otherwise each declaration's paragraph, by the ranges in `declarations` | general allowance |
 | Marked release-notes section(s) for the target | each by the line range the ledger gives; all together or none | general allowance |
 | `.issue-number`, `.adr-list`, `specs/.current-spec` | whole | general allowance; negligible |
 | Source files for a diagram | as [0077-show-me-visual-explanation](0077-show-me-visual-explanation.md) decides | whatever the general allowance has left, plus the reserve |
@@ -365,18 +443,26 @@ chunk no larger than the bytes remaining — and is charged the bytes it brings 
 The reserve is the last 100,000 bytes of the budget, and only the Explainer's reads may spend it.
 Everything else draws on the remaining 948,576 bytes. On spec 0036 the fixed reads cost 694,377
 bytes — the ledger at its cap, `tasks.md` whole, the `src/`-scoped diff and seven ADR extracts —
-which leaves 254,199 bytes for `requirements.md`. At 273,674 bytes it does not fit, so it is read by
-extraction. The reserve is untouched when the Explainer starts (AC-78).
+which leaves 254,199 bytes for `requirements.md`. At 273,674 bytes it does not fit, so its
+declaration paragraphs are read by the ranges in `declarations`, in declaration order, while bytes
+remain. Any paragraph that cannot be afforded is not read, and a status that needed it is
+`Unverifiable` with that reason (NFR-3). The reserve is untouched when the Explainer starts (AC-78).
 
-**Two reads are obligations, not options.** When a marked section exists for the target, the command
+#### Two reads are obligations, not options
+
+When a marked section exists for the target, the command
 reads it, unless the bytes remaining cannot cover every marked section; then it reads none and
 FR-16 row 5a applies. When evidence FR-7 or FR-8 needs cannot be extracted, the affected status is
 `Unverifiable` or the affected input `not available`, with its reason, never zero (NFR-3). FR-3's and
 FR-9's values come from the ledger and are never extracted by the command.
 
-**The full diff is never read.** At 4,081,673 bytes it exceeds the context window, so a run that
+#### The full diff is never read
+
+At 4,081,673 bytes it exceeds the context window, so a run that
 tried it would fail rather than degrade. Every `git diff` the command issues names the ledger's two
 shas and either a pathspec or a summary flag (AC-73, AC-77).
+
+#### The read log
 
 The read log is the source of FR-15's rows for everything the command read, and the evidence for
 AC-52, AC-63 and AC-76. It lives in the model's context for one run, and nothing writes it to disk.
@@ -388,7 +474,15 @@ AC-52, AC-63 and AC-76. It lives in the model's context for one run, and nothing
 | FR-1 — ambiguous or no match | Step 1 | the pre-executed `ls -1d specs/*/` listing | FR-1's two messages |
 | FR-2 — no usable current spec | Step 1 | `specs/.current-spec` and `test -d` | FR-2's message |
 | FR-3 — spec not finished | Step 2 | exit `2` and the gate record | FR-3's three messages |
-| FR-21 — tooling fault | Step 2, or Step 3 when the ledger does not parse | the exit status, or the unparseable record or ledger | FR-21's one message, naming which of the five states applies |
+| FR-21 — `absent` | Step 2, before invoking | `test -f` on the script's path fails | FR-21's message, naming the state |
+| FR-21 — `unreadable` | Step 2, before invoking | `test -r` on the script's path fails | FR-21's message, naming the state |
+| FR-21 — `exited {code}` | Step 2 | any exit status other than `0` or `2` | FR-21's message, naming the state |
+| FR-21 — `gate facts were not parseable` | Step 2 | exit `2`, with no last `show-me-gate:` line that parses as one JSON object | FR-21's message, naming the state |
+| FR-21 — `ledger was not a single JSON object` | Step 3 | exit `0`, and the ledger does not parse as one JSON object | FR-21's message, naming the state |
+
+The two probes before invoking exist because a missing or unreadable `.cs` file makes `dotnet run`
+itself fail, with an exit status the script never chose. Without them, `absent` and `unreadable`
+would both read as `exited {code}`, and AC-72's first two cases would fail.
 
 The command resolves the target by matching the **whole** trimmed argument over the listing, in
 FR-1's three-rule order, in the model rather than in a shell loop. The listing is a few dozen short
@@ -396,7 +490,7 @@ lines, and a shell loop over `specs/*/` splits `specs/0021-Expose Unacceptable M
 four words unless every expansion is quoted — the kind of detail that rots. The listing's trailing
 slash excludes `specs/README.md` and `specs/.current-spec` by construction (AC-35).
 
-There is no fifth stop. No absent or degraded input stops the run; each FR-16 row sets its
+There is no fifth kind of stop. No absent or degraded input stops the run; each FR-16 row sets its
 section's defined text and the run continues. A run that exits `0` at Step 2 and parses at Step 3
 always writes `show-me.md`, whatever the risk level (FR-13).
 
@@ -417,11 +511,11 @@ filename stem and a relative link, never a bare number (C-9).
 | Metadata block (FR-5) | branch ref, measured head, base ref, merge base, PR number and URL | — (issue from `.issue-number`) |
 | `## What changed and why` (FR-6) | `.adr-list` resolution | the 150–600-word narrative; each ADR's title and Status from its extract. The diagram or fallback line is 0077's |
 | `## Breaking changes` (FR-7) | marked-section count and `{m}` | the item list, classifications, migrations and the count `{n}`, from the Classifier; the disagreement line when `{m}` is not null and differs from `{n}` |
-| `## Did it ship what it said?` (FR-8) | the declared-id set and `{total}` | each id's status, and the tallies `{k}` and Part 4's terms, from the Classifier; the Synthesiser writes Part 1's id list from those statuses by FR-8's collapse rules |
+| `## Did it ship what it said?` (FR-8) | the declared-id set and `{total}` | each id's status, the tallies `{k}` and Part 4's terms, and Part 3's list of work no requirement covers, all from the Classifier; the Synthesiser writes Part 1's id list from those statuses by FR-8's collapse rules |
 | `## How it was built` (FR-9) | task total, per-tag counts, commit count — or FR-9's fallback line when the diff fields are null | nothing |
 | `## Blast radius` (FR-10) | everything, including the provenance lines | nothing |
 | `## Risk assessment (advisory)` (FR-11–FR-13) | F1's `src/` count and F1's level | see [0073-show-me-advisory-risk-model](0073-show-me-advisory-risk-model.md) |
-| `## Where to look first` (FR-14) | — | 3–7 paths from the diff reads, ordered, each with a reason of at most 25 words. The optional tree is 0077's |
+| `## Where to look first` (FR-14) | — | 3–7 paths, each with a reason of at most 25 words: the paths the Explainer handed over with a diagram for this section, or, when there is none, paths chosen from the diff reads. The diagram is 0077's |
 | `## Inputs used` (FR-15) | resolution of `.adr-list` entries, PR presence and its reason | one row per input the read log records, marked `used`, `used (targeted extraction)` or `not available: {reason}` |
 
 `## How it was built` states two things and nothing else: task shape and commit count. It carries
@@ -449,9 +543,9 @@ measurement script, it is committed at mode `100644` and carries no first-line m
   directory. Afterwards it deletes a ledger its run created, and restores a saved one byte-for-byte.
 - **Residue is checked.** After all runs, the test script asserts that no temporary file remains in
   any fixture directory (AC-83).
-- **The FR-13 invariant check** runs over `.claude/commands/spec/show-me.md`. Its assertion is
-  0073's to define. The test script matches whole words only, and it proves this on a literal line
-  held in the test script itself (AC-81).
+- **The FR-13 invariant check** runs over `.claude/commands/spec/show-me.md`. What it asserts —
+  and the literal line held in the test script that proves it does not match inside a word (AC-81)
+  — is 0073's to define.
 
 The calibration row is pinned to `6145913a0` and `91d549be6`, so it survives PR #4282's merge as
 long as both commits stay reachable. `CONTRIBUTING.md` gains one paragraph asking that pull
@@ -529,8 +623,7 @@ reading, and the command reads under the byte budget.
 
 #### Why there is no sub-agent
 
-`/spec:status` and `/spec:gear`, the read-and-report commands, run in the main agent, and so does
-this one. A sub-agent starts with a clean context, so it would either receive every extract in its
+`/spec:status` and `/spec:gear` run in the main agent, and so does this one. A sub-agent starts with a clean context, so it would either receive every extract in its
 prompt or read the inputs a second time, which would double the budget. FR-19's report must come
 from the main agent anyway.
 
@@ -549,21 +642,40 @@ the script code that satisfies it.
 2. **Structural.** Create the fixture tree under `.claude/test-fixtures/show-me/` from NFR-9's table.
 3. **Behavioural.** The test script's harness: invoke the script, parse the ledger, save and restore
    any pre-existing ledger, report failures, set the exit code.
-4. **Behavioural.** Script file fields: task checkboxes and tags, declared ids, `.adr-list`
-   resolution, the gate and exit `2` with its record. Fixtures: *declared*, *zero-id*, *no-tasks*,
-   *unfinished*.
+4. **Behavioural.** Script file fields: task checkboxes and tags, declared ids and their
+   `declarations` ranges and sizes, `.adr-list` resolution, the gate and exit `2` with its record.
+   Fixtures: *declared*, *zero-id*, *no-tasks*, *unfinished*. The *declared* fixture's rows also
+   assert each declaration's range and byte size.
 5. **Behavioural.** Marked-section recognition and `{m}`, reading the form
-   `0078-spec-family-machine-readable-forms` defines. Fixture: the release-notes file.
-6. **Behavioural.** Pinned diff fields: buckets, net lines, `src/` subdirectories, public-API lines,
-   commit count. Rows: the calibration spec and the pinned *declared* fixture.
+   `0078-spec-family-machine-readable-forms` defines. Fixture: the release-notes file, whose marked
+   section's count, first line, last line and byte size are asserted as well as `{m}`.
+6. **Behavioural.** Pinned diff fields: buckets, net lines, `src_subdirectory_count`, public-API lines,
+   commit count, `src_diff_bytes`, `f1_level` and `triggers`. Rows: the calibration spec, where F1
+   is `High` and D1, D2 and D3 fire, and the pinned *declared* fixture. Further pinned rows test the
+   thresholds at their boundaries, each pinned to a pair of commits from `master`'s own history,
+   chosen when the row is built:
+
+   | Row | The pair's diff | Asserted |
+   | --- | --- | --- |
+   | F1 at 10 and 11 | 10, then 11, files under `src/` | `f1_level` `Low`, then `Medium` |
+   | F1 at 50 and 51 | 50, then 51, files under `src/` | `f1_level` `Medium`, then `High` |
+   | D1, too few files | 4 files under `src/`, across 2 or more subdirectories | `triggers.d1` `false` |
+   | D1, too few subdirectories | 5 or more files under `src/`, in 1 subdirectory | `triggers.d1` `false` |
+   | D1 at both thresholds | 5 files under `src/`, across 2 subdirectories | `triggers.d1` `true` |
+   | D2 at 9 and 10 | 9, then 10, changed public API declaration lines | `triggers.d2` `false`, then `true` |
+
+   That is nine rows. `master`'s history is never rewritten, so these pairs stay reachable.
 7. **Behavioural.** Unpinned ref fields: spec branch, base ref, PR discovery, measured head, merge
    base, the `gh` record, and FR-10's divergence and merged-candidate lines. The kinds-of-run nulls.
 8. **Behavioural.** The atomic write, the 65,536-byte cap and the residue check.
 9. **Behavioural.** Word-count mode. Fixtures: the two word-count files.
 10. **Behavioural.** The command file: the pre-executed directory listing; Step 1's resolution; Step 2's exit-status
-    handling and the four stop messages; Step 3's ledger read; Step 4's reads and read log; Step 5's
-    stages in the order *Explainer, Classifier, risk step, Synthesiser*; Step 6's tracked-path check and one
-    `Write`; Step 7's word count; Step 8's report.
+    handling, the two pre-invocation probes and the four stop messages; Step 3's ledger read; Step
+    4's reads and read log; Step 5's stages in the order *Explainer, Classifier, risk step,
+    Synthesiser*, with the risk step between the markers that
+    [0073-show-me-advisory-risk-model](0073-show-me-advisory-risk-model.md)'s Implementation
+    Approach orders; Step 6's tracked-path check and one `Write`; Step 7's word count; Step 8's
+    report.
 11. **Structural.** The README catalogue entries and the `CONTRIBUTING.md` paragraph.
 
 ## Consequences
@@ -574,9 +686,10 @@ the script code that satisfies it.
   program run twice on the same inputs gives the same answer. NFR-1 becomes testable, and NFR-9
   tests it on real fixtures, including the two defects that motivated the split.
 - **A stop writes nothing, by step order.** The script writes the ledger only after the gate passes,
-  and the command writes `show-me.md` only after that. AC-7 and AC-71 follow from the order.
-- **The exit status is the whole protocol.** `0`, `2` and anything else map to three branches. No
-  output is parsed to decide which one applies, so toolchain noise cannot change a run's outcome.
+  and the command writes `show-me.md` only after that. AC-7 and AC-71 follow from the order. The one
+  exception is FR-21's fifth failure state, whose ledger is gitignored.
+- **The protocol is small.** Once the target is resolved, two probes, the exit status, one prefixed
+  line and one ledger parse decide every branch. Standard output is never parsed, so toolchain noise cannot change a run's outcome.
 - **Every diff in a run describes the same change.** The ledger pins two shas once, and every read
   names them. Two sets of numbers cannot appear in one `show-me.md` (FR-20).
 - **The budget is met by arithmetic.** Every read is priced before it is issued, so a correct run
@@ -615,10 +728,10 @@ the script code that satisfies it.
   mechanical fields.
 - **Risk: a killed script leaves its temporary file behind.** The `finally` block does not run when
   the process is killed, and the temporary file's name is not covered by the exact-match
-  `.gitignore` line.
-  *Mitigation*: the temporary file carries a fixed name in the target directory, so the next run
-  overwrites it and removes it. The residue check in NFR-9's test catches a leak in any path the
-  script can exit by.
+  `.gitignore` line, which FR-4 fixes as the one line added.
+  *Mitigation*: the name is fixed, so the next run on that target overwrites the file and moves it
+  away. Until then it shows in `git status`. The residue check in NFR-9's test catches a leak in any
+  path the script can exit by.
 - **Risk: a compiler warning or a `gh` error carries a record prefix.**
   *Mitigation*: the script captures its children's standard error, and the prefixes are
   `show-me-`-qualified strings that no toolchain emits. The command reads only the last prefixed
@@ -634,14 +747,14 @@ the script code that satisfies it.
 
 ### Alternative 1: Keep measuring in shell pipelines written into the command file
 
-Leave the counting where earlier drafts had it: `git`, `gh`, `grep` and `awk` pipelines quoted in
-the prompt.
+Do the counting in `git`, `gh`, `grep` and `awk` pipelines quoted in the command file's prose, and
+let the model run them as written.
 
 **Rejected because the reproducibility is illusory.** A pipeline that runs is deterministic. A
 pipeline transcribed into markdown is a description that no one executes and no test reaches, and it
 carries the markdown's escaping. The four defects in *Counting in prose that nobody runs* are that
-failure, observed. The claim that a script would be "a new category" in this family does not hold
-either: `.claude/commands/adr/generate_adr_index.awk` is an executable artefact in it already.
+failure, observed. A script is not new to this family either: `.claude/commands/adr/generate_adr_index.awk`
+is an executable artefact in it already.
 
 ### Alternative 2: Replace the judged sections with mechanical proxies
 
@@ -725,8 +838,8 @@ collapse NFR-1's split.
   - [0071-tdd-review-gear](0071-tdd-review-gear.md) — the other ADR that decides a `/spec:*`
     command's own behaviour rather than Brighter's runtime.
 - Conventions and prior art in this repository:
-  - [`.claude/commands/spec/status.md`](../../.claude/commands/spec/status.md) — a read-and-report
-    command with no sub-agent.
+  - [`.claude/commands/spec/status.md`](../../.claude/commands/spec/status.md) — a command that runs
+    in the main agent, with no sub-agent.
   - [`.claude/commands/spec/switch.md`](../../.claude/commands/spec/switch.md) — the pre-executed `!`
     shell block and whole-`$ARGUMENTS` handling.
   - [`.claude/commands/spec/README.md`](../../.claude/commands/spec/README.md) — the command

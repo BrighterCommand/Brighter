@@ -5,7 +5,7 @@ status: Proposed
 author:
   - "Ian Cooper"
 created: 2026-09-20
-summary: "/spec:show-me draws at most two diagrams. Whether one is warranted is read from the fact ledger, where the measurement script records which of D1, D2 and D3 fired. A new Explainer stage, the only stage that reads source files, elects the relationship, probes each file with wc -c before reading it, spends the general allowance and then the 100,000-byte reserve, and records every drawn node against its source. Every outcome is either a diagram or exactly one of FR-6 (e)'s named lines, and a relationship it cannot afford is abandoned, never drawn in part."
+summary: "/spec:show-me draws at most two diagrams, warranted by D1-D3 outcomes the measurement script records in the fact ledger, and drawn by an Explainer stage that is the only stage reading source files, probing each file before reading it and spending what the budget has left plus the 100,000-byte reserve. For What changed and why every outcome is either a diagram whose every node is attributed to a source or exactly one of FR-6 (e)'s named lines, and a relationship that cannot be completed is abandoned, never drawn in part."
 tags:
   - "meta"
   - "api-design"
@@ -80,8 +80,9 @@ qualifies it, and nothing in a box-and-arrow sketch shows which boxes the comman
 | **[0077-show-me-visual-explanation](0077-show-me-visual-explanation.md)** *(this one)* | When the command draws a diagram, what it may draw, and which stage may read source to draw it |
 | [0078-spec-family-machine-readable-forms](0078-spec-family-machine-readable-forms.md) | The forms the `/spec` family writes so that a tool can read them, and the command that writes release notes in one of them |
 
-The sentence that unifies all four: **the command states only what it has measured, names what it
-measured it from, and changes nothing.**
+The sentence that unifies all four: **every value a command states is counted by one tested script,
+copied from a named source, or judged from evidence it can name, and no command writes outside what
+it owns.**
 
 ### A picture that claims more than was read
 
@@ -120,8 +121,9 @@ before reading it against what the budget has left, and abandon a relationship i
 rather than draw part of it; and have every outcome be a diagram or exactly one named line.**
 
 The Explainer runs in the main agent, after the command's other reads and before the Classifier and
-the Synthesiser. It produces a rendered block and its target section, or one named line. The
-Synthesiser places what it was given and draws nothing itself.
+the Synthesiser. It hands over what Key Components 1 calls its output: at most two rendered blocks,
+or a named line in place of the first. The Synthesiser places what it was given and draws nothing
+itself.
 
 ### The mechanism, end to end
 
@@ -134,7 +136,7 @@ Six situations, tested in order. The first that applies decides the outcome for
 | 2 | No test fired, and the Explainer does not raise | reads nothing | the no-trigger line |
 | 3 | A test fired, but the evidence does not cohere into one relationship — seen before reading, or found on reading | stands down; reads already made stay charged | the stand-down line |
 | 4 | A relationship is elected — because a test fired, or as a raise with its one-sentence reason — and cannot be completed: a file it needs cannot be afforded, or, for a raise, reading shows no relationship after all | abandons the relationship; reads already made stay charged | after a fired test, the budget line; after a raise, the no-trigger line |
-| 5 | A test fired, and the only relationship worth drawing is the path tree among at least three changed files a reviewer should open first | reads, renders the tree, targets `## Where to look first` | the placed-elsewhere line |
+| 5 | A test fired, and the only relationship worth drawing is the path tree among three to seven changed files a reviewer should open first | reads, renders the tree, targets `## Where to look first` | the placed-elsewhere line |
 | 6 | Any other elected relationship that could be afforded, including every raise | reads, renders the block | the diagram, plus the raise's reason when it was a raise |
 
 The five named lines, quoted from FR-6 (e):
@@ -178,7 +180,7 @@ sequenceDiagram
         E->>R: wc -c, then compare with the bytes remaining
         E->>R: read, and charge the bytes
     end
-    E-->>S: a rendered block, its target section and its node list
+    E-->>S: up to two rendered blocks, each with its target section and any changed paths
     E-->>S: or exactly one named line
     S->>S: place what it was given, and write the prose
 ```
@@ -187,32 +189,40 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-    subgraph ADR0072["0072-show-me-command-resolution-and-output"]
+    subgraph LED["0072 - the ledger"]
         M["Measurer<br/>trigger outcomes in the ledger"]
-        RD["The command's reads<br/>general allowance"]
-        RL["Read log<br/>every read, every byte"]
-        S["Synthesiser<br/>places the block, writes prose"]
     end
-    subgraph ADR0073["0073-show-me-advisory-risk-model"]
-        CL["Classifier"]
+    subgraph IN["0072 - the command's reads"]
+        RD["Evidence reads<br/>general allowance"]
     end
     subgraph ADR0077["0077-show-me-visual-explanation"]
         EX["Explainer<br/>elects, reads, renders"]
         NL["Node list<br/>one row per drawn node"]
     end
-    M --> EX
-    RD --> EX
-    RD --> RL
-    EX --> RL
-    EX --> NL
-    NL --> S
-    RD --> CL
-    CL --> S
+    subgraph LOG["0072 - the budget"]
+        RL["Read log<br/>every read, every byte"]
+    end
+    subgraph ADR0073["0073-show-me-advisory-risk-model"]
+        CL["Classifier"]
+    end
+    subgraph OUT["0072 - output"]
+        S["Synthesiser<br/>places the block, writes prose"]
+    end
+    M -->|"D1-D3"| EX
+    RD -->|"diff and ADR extracts"| EX
+    EX -->|"charges"| RL
+    RD -->|"charges"| RL
+    EX -->|"records each node"| NL
+    EX -->|"block or named line"| S
+    RD -->|"evidence"| CL
+    CL -->|"judgements"| S
 ```
 
 Two arrows carry this ADR's argument. The command's reads and the Explainer's reads both charge one
-read log, which is why there is one budget. The Synthesiser reaches a diagram's contents only through
-the node list, which is why a node with no recorded source cannot be drawn. This ADR adds one stage
+read log, which is why there is one budget. The Explainer renders its block only from the node list,
+which is why a node with no recorded source cannot be drawn. What the Synthesiser receives is the
+Explainer's output, as Key Components 1 states it. The node list stays in the run's transcript as the
+attribution record. This ADR adds one stage
 to the command file, and nothing to its front matter or to `.claude/settings.json`.
 
 ### Key Components
@@ -225,7 +235,7 @@ ADR owns the Explainer's rule.
 
 | Input | Output |
 | --- | --- |
-| The ledger's D1, D2 and D3 outcomes and the values they tested; the `src/`-scoped diff and ADR extracts already in the read log | one rendered block with its target section and node list, or one named line |
+| The ledger's D1, D2 and D3 outcomes and the values they tested; the `src/`-scoped diff and ADR extracts already in the read log | for `## What changed and why`, one rendered block or one named line; for `## Where to look first`, at most one rendered block — the row-5 tree or the optional diagram. Each block comes with its target section, and a block for `## Where to look first` comes with the three to seven changed paths it draws, from which the Synthesiser writes FR-14's list. The node list is kept as the attribution record |
 
 Its rule: **it is the only stage that reads source files, and it draws nothing it has not read.** A
 source file here is any file whose content the command opens only to draw a picture — a whole file
@@ -300,12 +310,17 @@ The Explainer decides placement before the Synthesiser writes anything. When it 
 (row 5), it fixes the tree's node set, and the Synthesiser draws FR-14's three to seven paths from
 the tree's changed nodes. The dependency runs one way: the Explainer cannot wait for a path list that
 does not exist yet, and the Synthesiser cannot be handed a tree of files its list omits. The
-Explainer therefore never elects a tree with fewer than three changed nodes, which is FR-14's floor.
+Explainer therefore elects a tree only with three to seven changed nodes, which is FR-14's range for
+the path list. A relationship among more changed files is drawn at a coarser grain, or in
+`## What changed and why` under row 6. Unchanged nodes, marked `(unchanged)`, do not count toward
+the range.
 
 When the main diagram sits in `## What changed and why` (row 6), the Explainer may also draw
 `## Where to look first`'s optional diagram: a tree or sketch of how the listed paths relate, by
-containment or by which file calls which (FR-14). It draws from what it has already read or can
-still afford. Not drawing it needs no line.
+containment or by which file calls which (FR-14). It chooses three to seven changed paths, draws
+the diagram over them, and hands them over with it, so FR-14's list and the diagram name the same
+files. It draws from what it has already read or can still afford. Not drawing it needs no line,
+and the Synthesiser then chooses FR-14's paths itself.
 
 After any other row, `## Where to look first` carries no second diagram. Rows 2 and 3 have just
 stated that the change has no relationship worth drawing, and a picture beside that line would
@@ -369,8 +384,9 @@ Numbered in commit order, in the command file.
 2. **Behavioural.** The Explainer step: read the trigger fields from the ledger; walk the ladder;
    probe, read or extract, charge the read log; write the node list; render; record the target
    section.
-3. **Behavioural.** Placement: the Synthesiser places the block or the line, and draws FR-14's paths
-   from a tree's changed nodes when the tree was elected.
+3. **Behavioural.** Placement: the Synthesiser places each block or the line, and writes FR-14's
+   paths from the changed paths handed over with a block for `## Where to look first`, when there
+   is one.
 4. **Behavioural.** One `## Inputs used` row per Explainer read, with its mark.
 5. **Behavioural.** The pre-`Write` checks in Key Components 6.
 
