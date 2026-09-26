@@ -118,6 +118,8 @@ string[] diffFields =
     "commits", "src_diff", "f1_level", "triggers",
 ];
 
+var ghCommands = new JsonArray();
+
 if (pinned)
 {
     // FR-21: the pinned row takes precedence over the target's kind.
@@ -204,20 +206,38 @@ else
         ledger["spec_branch"] = new JsonObject { ["ref"] = specRef, ["sha"] = specSha };
         ledger["local_divergence"] = localDivergence;
 
-        // PR discovery is T6.2's job — measured head is always the branch tip for now.
-        ledger["measured_head"] = new JsonObject { ["sha"] = specSha, ["source"] = "branch_tip" };
-        var mergeBase = RunGitText("merge-base", baseSha, specSha).Trim();
+        // FR-20: the spec's PR is discovered by one gh pr list query, keyed on the resolved
+        // branch's name with any remote prefix stripped. The measured head is the PR's head
+        // when one is discovered and present locally, else the branch tip (T6.1).
+        var branchName = StripRefPrefix(specRef);
+        var discovery = DiscoverPr(branchName, specSha, ghCommands);
+
+        ledger["pr"] = discovery.Pr;
+        ledger["pr_count"] = discovery.PrCount;
+        if (discovery.Pr is null && discovery.PrCount is null)
+        {
+            nullReasons["pr"] = "gh unavailable";
+            nullReasons["pr_count"] = "gh unavailable";
+        }
+        else if (discovery.Pr is null)
+        {
+            nullReasons["pr"] = $"no PR found for branch {branchName}";
+        }
+
+        var measuredHeadSha = discovery.MeasuredHeadSha;
+        ledger["measured_head"] = new JsonObject { ["sha"] = measuredHeadSha, ["source"] = discovery.MeasuredHeadSource };
+        var mergeBase = RunGitText("merge-base", baseSha, measuredHeadSha).Trim();
         ledger["merge_base"] = mergeBase;
 
-        var (srcDiffCommand, srcDiffBytes) = RunScopedDiff(mergeBase, specSha, "src/");
-        var buckets = ComputeBuckets(mergeBase, specSha);
-        var srcSubdirectoryCount = ComputeSrcSubdirectoryCount(mergeBase, specSha);
+        var (srcDiffCommand, srcDiffBytes) = RunScopedDiff(mergeBase, measuredHeadSha, "src/");
+        var buckets = ComputeBuckets(mergeBase, measuredHeadSha);
+        var srcSubdirectoryCount = ComputeSrcSubdirectoryCount(mergeBase, measuredHeadSha);
         var publicApiLines = CountPublicApiLines(srcDiffBytes);
 
         ledger["buckets"] = buckets;
         ledger["src_subdirectory_count"] = srcSubdirectoryCount;
         ledger["public_api_lines"] = publicApiLines;
-        ledger["commits"] = CountCommits(mergeBase, specSha);
+        ledger["commits"] = CountCommits(mergeBase, measuredHeadSha);
         ledger["src_diff"] = new JsonObject
         {
             ["command"] = srcDiffCommand,
@@ -291,7 +311,7 @@ if (ledger["triggers"] is JsonObject)
 ledger["release_notes"] = ReadReleaseNotes(target, releaseNotesPath);
 
 ledger["null_reasons"] = nullReasons;
-ledger["gh_commands"] = new JsonArray();
+ledger["gh_commands"] = ghCommands;
 
 var options = new JsonSerializerOptions
 {
@@ -426,6 +446,130 @@ static (string Ref, string Sha, JsonNode? LocalDivergence)? ResolveSpecBranch(
     }
 
     return ("HEAD", RevParse("HEAD"), null);
+}
+
+// FR-20: the branch name to query gh with is the resolved ref with any remote-tracking or
+// local-heads prefix stripped. "HEAD" (rule 3's literal outcome) has no such prefix and is
+// queried as-is — no branch is ever named "HEAD", so the query harmlessly finds nothing.
+static string StripRefPrefix(string specRef) =>
+    specRef.StartsWith("refs/remotes/origin/", StringComparison.Ordinal)
+        ? specRef["refs/remotes/origin/".Length..]
+        : specRef.StartsWith("refs/heads/", StringComparison.Ordinal)
+            ? specRef["refs/heads/".Length..]
+            : specRef;
+
+// FR-20's PR discovery: exactly one `gh pr list` query, always recorded in ghCommands whether
+// or not it succeeds. gh missing, a non-zero exit, a timeout or unparseable output are all
+// "gh unavailable" (FR-16 row 2) — pr and pr_count both null. A parseable response with no
+// exact-name match is "no PR found" (FR-16 row 1) — pr null, pr_count 0 (a real count, not
+// unavailable). A match's head is used as the measured head only when it exists locally
+// (FR-16 row 16); otherwise the measured head falls back to the branch tip.
+static (JsonObject? Pr, int? PrCount, string MeasuredHeadSha, string MeasuredHeadSource) DiscoverPr(
+    string branchName, string branchTipSha, JsonArray ghCommands)
+{
+    var args = new[]
+    {
+        "pr", "list", "--head", branchName, "--state", "open",
+        "--json", "number,url,headRefName,headRefOid,createdAt",
+    };
+    ghCommands.Add((JsonNode)$"gh {string.Join(' ', args)}");
+
+    var (available, exitCode, stdout) = RunGhChecked(args, TimeSpan.FromSeconds(30));
+
+    JsonArray? results = null;
+    if (available && exitCode == 0)
+    {
+        try
+        {
+            results = JsonNode.Parse(stdout) as JsonArray;
+        }
+        catch (JsonException)
+        {
+            results = null;
+        }
+    }
+
+    if (results is null)
+    {
+        // gh not on PATH, a non-zero exit, a timeout, or output that didn't parse.
+        return (null, null, branchTipSha, "branch_tip");
+    }
+
+    var matches = results
+        .OfType<JsonObject>()
+        .Where(pr => (string?)pr["headRefName"] == branchName)
+        .ToList();
+
+    if (matches.Count == 0)
+    {
+        return (null, 0, branchTipSha, "branch_tip");
+    }
+
+    var chosen = matches.OrderByDescending(pr => (int)pr["number"]!).First();
+    var headSha = (string)chosen["headRefOid"]!;
+    var headPresent = CommitExists(headSha);
+
+    var pr = new JsonObject
+    {
+        ["number"] = (int)chosen["number"]!,
+        ["url"] = (string)chosen["url"]!,
+        ["head_sha"] = headSha,
+        ["head_present"] = headPresent,
+    };
+
+    return headPresent
+        ? (pr, matches.Count, headSha, "pr_head")
+        : (pr, matches.Count, branchTipSha, "branch_tip");
+}
+
+// Runs gh as a child process, killing it if it doesn't exit within timeout (a hung or
+// sleeping gh must never block a run). Available is false when gh could not even be started.
+static (bool Available, int ExitCode, string Stdout) RunGhChecked(string[] args, TimeSpan timeout)
+{
+    var startInfo = new ProcessStartInfo("gh")
+    {
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+        UseShellExecute = false,
+    };
+    foreach (var arg in args)
+    {
+        startInfo.ArgumentList.Add(arg);
+    }
+
+    Process process;
+    try
+    {
+        process = Process.Start(startInfo) ?? throw new InvalidOperationException("could not start gh");
+    }
+    catch (System.ComponentModel.Win32Exception)
+    {
+        return (false, -1, "");
+    }
+
+    using (process)
+    {
+        var stdoutTask = process.StandardOutput.ReadToEndAsync();
+        var stderrTask = process.StandardError.ReadToEndAsync();
+
+        if (!process.WaitForExit((int)timeout.TotalMilliseconds))
+        {
+            try
+            {
+                process.Kill(entireProcessTree: true);
+            }
+            catch (InvalidOperationException)
+            {
+                // Already exited between the timeout check and the kill attempt.
+            }
+            process.WaitForExit();
+            return (false, -1, "");
+        }
+
+        var stdout = stdoutTask.GetAwaiter().GetResult();
+        stderrTask.GetAwaiter().GetResult();
+        return (true, process.ExitCode, stdout);
+    }
 }
 
 static void WriteGateRecord(JsonObject record)
