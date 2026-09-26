@@ -669,7 +669,7 @@ New public static class `SubscriptionChannelFactoryDeclaration` in namespace `Pa
     - Accepted duplication, recorded: this judgement and ADR 0072's T3a/T3b case both turn on `D == typeof(InMemoryChannelFactory)`. 0072's rule is **not** expected to consume `Check` — it answers a different question and carries severity and message obligations `Check` has none of. A change to what "inherited default" means must be made in both places
   - Depends on: 38.
 
-- [ ] **40. TEST + IMPLEMENT: `Check` rejects a declaration that is null (ADR 0073's own branch, C-13)**
+- [x] **40. TEST + IMPLEMENT: `Check` rejects a declaration that is null (ADR 0073's own branch, C-13)**
   - **USE COMMAND**: `/test-first when a subscription declares no channel factory type at all the declaration check should report a reason`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessagingGateway/ChannelFactoryDeclaration"
   - Test file: `When_a_subscription_declares_no_channel_factory_type_should_report_a_reason.cs`
