@@ -97,7 +97,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 
 *ADR 0072 Implementation Approach steps 1–2. Dependencies: none. T1.1 comes first.*
 
-- [ ] **STRUCTURAL: T1.1 — Remove the staged pre-rescope fixture `specs/9999-show-me-fixture/`**
+- [x] **STRUCTURAL: T1.1 — Remove the staged pre-rescope fixture `specs/9999-show-me-fixture/`**
   - Do: `git rm -r --cached specs/9999-show-me-fixture/`, then `rm -rf specs/9999-show-me-fixture/`.
   - Acceptance: `git status --porcelain specs/` shows no `specs/9999-show-me-fixture/` entry; `ls specs/9999-show-me-fixture` fails; nothing is committed for it.
   - Traces to: NFR-9 (no synthetic fixture under `specs/`); ADR 0072 KC6 *Fixtures*.
