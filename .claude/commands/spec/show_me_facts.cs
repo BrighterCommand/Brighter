@@ -131,11 +131,12 @@ if (pinned)
     }
 
     // Buckets, net lines, src_subdirectory_count, public_api_lines, commits and src_diff are
-    // measured over the pinned pair alone, independent of the target (ADR 0072 IA 6). f1_level
-    // and triggers are computed from these in a later task and stay nulled here as a placeholder.
+    // measured over the pinned pair alone, independent of the target (ADR 0072 IA 6). triggers
+    // is computed from these in a later task and stays nulled here as a placeholder.
     var (srcDiffCommand, srcDiffBytes) = RunScopedDiff(pinnedBase!, pinnedHead!, "src/");
+    var buckets = ComputeBuckets(pinnedBase!, pinnedHead!);
 
-    ledger["buckets"] = ComputeBuckets(pinnedBase!, pinnedHead!);
+    ledger["buckets"] = buckets;
     ledger["src_subdirectory_count"] = ComputeSrcSubdirectoryCount(pinnedBase!, pinnedHead!);
     ledger["public_api_lines"] = CountPublicApiLines(srcDiffBytes);
     ledger["commits"] = CountCommits(pinnedBase!, pinnedHead!);
@@ -145,12 +146,10 @@ if (pinned)
         ["bytes"] = srcDiffBytes.Length,
         ["windows"] = ComputeWindows(srcDiffBytes),
     };
+    ledger["f1_level"] = ComputeF1Level((int)buckets["src"]!["files"]!);
 
-    foreach (var field in new[] { "f1_level", "triggers" })
-    {
-        ledger[field] = null;
-        nullReasons[field] = "pinned";
-    }
+    ledger["triggers"] = null;
+    nullReasons["triggers"] = "pinned";
 }
 else if (!IsUnderSpecs(target))
 {
@@ -332,6 +331,14 @@ static JsonObject ComputeBuckets(string mergeBase, string measuredHead)
 
     return buckets;
 }
+
+// FR-11's F1 thresholds: Low <= 10, Medium 11-50, High > 50 changed src/ files.
+static string ComputeF1Level(int srcFiles) => srcFiles switch
+{
+    <= 10 => "Low",
+    <= 50 => "Medium",
+    _ => "High",
+};
 
 static string BucketFor(string path) => path.Split('/')[0] switch
 {

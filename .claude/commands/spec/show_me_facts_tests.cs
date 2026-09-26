@@ -117,6 +117,21 @@ var CalibrationPinnedDiffAssertions = PinnedDiffAssertions(
     expectedCommits: 363,
     expectedSrcDiffBytes: 303_715);
 
+// T5.2: F1 boundary pairs, each measured independently 2026-09-26 with
+// `git diff --name-only {a} {b} -- src/ | wc -l` and confirmed `git merge-base --is-ancestor {a} {b}`.
+// `master`'s history is never rewritten, so these pairs stay reachable (R1, "How to choose a
+// boundary pair"). The n=10 pair's base happens to be spec 0036's own merge base
+// (6145913a0) — a real commit in master's first-parent history at that point, not a coincidence
+// worth avoiding.
+const string F1At10Base = "6145913a0ae63c638bd5267c90b45c0b1f32ecfe";
+const string F1At10Head = "a5b1e9ae6fe7faa1d89a6a5bf00e338ee6dfce1f";
+const string F1At11Base = "bd5c938409d596912145276326080827d5be2fc4";
+const string F1At11Head = "8bcc9a0a9c217f4e6ad61a47958c625d1bbbc5a4";
+const string F1At50Base = "2e40648d9cbb24bd9058c8e19c536ac0e175de7e";
+const string F1At50Head = "4582deb37a5931fa60d347ddec4dce10cd856da3";
+const string F1At51Base = "44b804294a51642620643053f99679b15412b012";
+const string F1At51Head = "28d370de51f223eb5188da0df455714b9a26ecb5";
+
 var rows = new[]
 {
     declaredRow,
@@ -182,7 +197,28 @@ var rows = new[]
             // duplicated elsewhere in docs/adr/ (0070-0076 also exist as other spec's ADRs).
             AdrResolvedCountAssertions(expectedResolvedCount: 7),
             CalibrationPinnedDiffAssertions,
-            LedgerSizeAssertion("calibration pinned", maxBytes: 65_536))),
+            LedgerSizeAssertion("calibration pinned", maxBytes: 65_536),
+            F1LevelAssertion(expectedLevel: "High", expectedSrcFiles: 76))),
+    new Row(
+        "F1 boundary: 10 src files (Low)",
+        [DeclaredTarget, "--pinned", F1At10Base, F1At10Head],
+        DeclaredTarget,
+        F1LevelAssertion(expectedLevel: "Low", expectedSrcFiles: 10)),
+    new Row(
+        "F1 boundary: 11 src files (Medium)",
+        [DeclaredTarget, "--pinned", F1At11Base, F1At11Head],
+        DeclaredTarget,
+        F1LevelAssertion(expectedLevel: "Medium", expectedSrcFiles: 11)),
+    new Row(
+        "F1 boundary: 50 src files (Medium)",
+        [DeclaredTarget, "--pinned", F1At50Base, F1At50Head],
+        DeclaredTarget,
+        F1LevelAssertion(expectedLevel: "Medium", expectedSrcFiles: 50)),
+    new Row(
+        "F1 boundary: 51 src files (High)",
+        [DeclaredTarget, "--pinned", F1At51Base, F1At51Head],
+        DeclaredTarget,
+        F1LevelAssertion(expectedLevel: "High", expectedSrcFiles: 51)),
     new Row(
         "zero-id",
         [ZeroIdTarget],
@@ -1080,6 +1116,35 @@ static Func<RunResult, IEnumerable<string>> LedgerSizeAssertion(string label, lo
     return size >= 0 && size <= maxBytes
         ? []
         : [$"expected the {label} ledger to be at most {maxBytes} B, got {size}"];
+};
+
+// T5.2: f1_level applies FR-11's thresholds (Low <=10, Medium 11-50, High >50) to buckets.src.files.
+static Func<RunResult, IEnumerable<string>> F1LevelAssertion(string expectedLevel, int expectedSrcFiles) => result =>
+{
+    var failures = new List<string>();
+
+    if (result.Ledger is null)
+    {
+        failures.Add("expected the ledger to parse as one JSON object, but no valid ledger was found");
+        return failures;
+    }
+
+    var root = result.Ledger.RootElement;
+
+    if (!root.TryGetProperty("f1_level", out var levelEl) || levelEl.GetString() != expectedLevel)
+    {
+        failures.Add($"expected f1_level {expectedLevel}");
+    }
+
+    if (!root.TryGetProperty("buckets", out var buckets)
+        || !buckets.TryGetProperty("src", out var src)
+        || !src.TryGetProperty("files", out var filesEl)
+        || filesEl.GetInt32() != expectedSrcFiles)
+    {
+        failures.Add($"expected buckets.src.files {expectedSrcFiles}");
+    }
+
+    return failures;
 };
 
 // T3.6: .adr-list entry resolution, each resolved entry's extract, and adr_resolved_count.
