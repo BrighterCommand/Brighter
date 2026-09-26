@@ -107,7 +107,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - Acceptance: `git diff $PRE -- .gitignore` shows exactly one added line and no edited line. After `touch specs/0033-pg-advisory-lock-sha256/.show-me-ledger.json`, `git check-ignore -v` on that path names the new line; then delete the file.
   - Traces to: FR-4, NFR-8, AC-74, AC-82; ADR 0072 *Where each artefact is touched*, IA 1.
 
-- [ ] **STRUCTURAL: T1.3 — Add the one path-scoped allow-list entry**
+- [x] **STRUCTURAL: T1.3 — Add the one path-scoped allow-list entry**
   - Do: add `Bash(dotnet run .claude/commands/spec/show_me_facts.cs -- specs/:*)` to `allow` in `.claude/settings.json`, inserted as a new line **before the array's last element** (`"Bash(dotnet --list-runtimes)"` on 2026-09-26) and ending in a comma. Appending it after the last element would add a comma to that element's line and so edit a second line.
   - Acceptance: `git diff $PRE -- .claude/settings.json` shows exactly this one added line. The `gh` entries and the `deny` array are unchanged. No `Bash(dotnet run:*)` or other interpreter grant exists.
   - Traces to: FR-18, C-10, AC-82; ADR 0072 *Why the one allow-list entry names the script*, IA 1.
