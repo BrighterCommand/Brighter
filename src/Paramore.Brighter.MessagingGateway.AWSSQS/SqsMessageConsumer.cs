@@ -503,7 +503,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             // Remove SQS-specific headers that will be reset when sent to the DLQ
             message.Header.Bag.Remove("ReceiptHandle");
 
-            if (reason == null) return;
+            if (reason == null)
+            {
+                message.Header.Bag[RejectionMetadataKeyNames.RejectionReason] = RejectionReason.None.ToString();
+                return;
+            }
 
             message.Header.Bag[RejectionMetadataKeyNames.RejectionReason] = reason.RejectionReason.ToString();
             if (!string.IsNullOrEmpty(reason.Description))
