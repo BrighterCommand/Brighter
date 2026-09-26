@@ -15,8 +15,7 @@ permissions:
 jobs:
   cleanup:
     runs-on: ubuntu-latest
-    # A backlog of leaked resources runs to tens of thousands; the sweep deletes in parallel
-    # but still needs room to work through a large one.
+    # Leave headroom for cleanup to report its own deadline before job cancellation.
     timeout-minutes: 30
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -32,6 +31,7 @@ jobs:
       # the next CI completion, and the six-hourly schedule is the floor. Providers reap their own
       # resources now, so the sweep is a backstop rather than the mechanism.
       CLEANUP_MIN_AGE_SECONDS: 3600
+      CLEANUP_TIMEOUT_SECONDS: 1500
 
     steps:
       - uses: actions/checkout@v7
@@ -41,24 +41,6 @@ jobs:
         # Resources created shortly before CI completes may not yet be discoverable by tag.
         # 15 seconds provides sufficient margin based on observed propagation times.
         run: sleep 15
-
-      - name: Diagnose - count existing resources
-        run: |
-          echo "=== SNS Topics ==="
-          TOPIC_COUNT=$(aws sns list-topics --query 'Topics[*].TopicArn' --output text | tr '\t' '\n' | grep -c . || true)
-          echo "Total topics: $TOPIC_COUNT"
-          echo ""
-          echo "=== FIFO Topics ==="
-          aws sns list-topics --query 'Topics[?ends_with(TopicArn, `.fifo`)].TopicArn' --output text | tr '\t' '\n' | head -50
-          FIFO_COUNT=$(aws sns list-topics --query 'Topics[?ends_with(TopicArn, `.fifo`)].TopicArn' --output text | tr '\t' '\n' | grep -c . || true)
-          echo "Total FIFO topics: $FIFO_COUNT"
-          echo ""
-          echo "=== SQS Queues ==="
-          QUEUE_COUNT=$(aws sqs list-queues --page-size 1000 --query 'QueueUrls[*]' --output text 2>/dev/null | tr '\t' '\n' | grep -c . || true)
-          echo "Total queues: $QUEUE_COUNT"
-          echo ""
-          echo "=== Sample topic names (first 20) ==="
-          aws sns list-topics --query 'Topics[*].TopicArn' --output text | tr '\t' '\n' | sed 's/.*://' | head -20
 
       - name: Cleanup orphaned test resources
         run: |
