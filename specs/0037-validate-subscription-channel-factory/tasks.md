@@ -879,7 +879,7 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
 
 *ADR 0073 step 4; AC-27.* **Sequences after phase 5.**
 
-- [ ] **52. SETUP: the twelve `test-configuration.json` entries — nine edits, three new files**
+- [x] **52. SETUP: the twelve `test-configuration.json` entries — nine edits, three new files**
   - **Three gateway test projects have no `test-configuration.json` today and need one**: `tests/Paramore.Brighter.AzureServiceBus.Tests`, `tests/Paramore.Brighter.MQTT.Tests`, `tests/Paramore.Brighter.RMQ.Sync.Tests`. Theirs carry `Namespace` and a `GatewayConformance` section, nothing else.
   - **`Namespace` is required, not incidental**: it is a top-level property defaulting to `string.Empty` (`Configuration/TestConfiguration.cs:38`), and the template renders `{{ Namespace }}.MessagingGateway.Generated.Conformance`, so omitting it yields `namespace .MessagingGateway.Generated.Conformance` — a failure *after* generation rather than at configuration load. All fourteen existing configurations carry it.
   - The other nine gain the section in the file they already have. `AdditionalExpectedSubjects` is **absent from all twelve**, not omitted here by accident.
