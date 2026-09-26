@@ -1,9 +1,11 @@
 #nullable enable
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 
 const int UsageErrorExitCode = 1;
 const int ToolingFaultExitCode = 1;
@@ -113,6 +115,14 @@ else if (!IsUnderSpecs(target))
 }
 // else: a real, unpinned spec directory — ref resolution is a later task (Phase 6).
 
+// tasks.md's counts are file-derived figures: read from the working tree on every kind of run,
+// pinned or not (NFR-9).
+var tasksPath = Path.Combine(target, "tasks.md");
+if (File.Exists(tasksPath))
+{
+    ledger["tasks"] = CountTasks(File.ReadAllBytes(tasksPath));
+}
+
 ledger["null_reasons"] = nullReasons;
 ledger["gh_commands"] = new JsonArray();
 
@@ -147,4 +157,148 @@ static bool CommitExists(string sha)
     process.StandardError.ReadToEnd();
     process.WaitForExit();
     return process.ExitCode == 0;
+}
+
+static JsonObject CountTasks(byte[] content)
+{
+    var lines = Encoding.UTF8.GetString(content).Split('\n');
+
+    var total = 0;
+    var uncheckedCount = 0;
+    var firstUnchecked = new List<string>();
+    var byTag = new Dictionary<string, int>
+    {
+        ["TEST + IMPLEMENT"] = 0,
+        ["STRUCTURAL"] = 0,
+        ["PROJECT"] = 0,
+        ["DOC"] = 0,
+        ["untagged"] = 0,
+    };
+
+    foreach (var rawLine in lines)
+    {
+        var line = rawLine.TrimEnd('\r');
+        var checkboxMatch = TaskPatterns.Checkbox.Match(line);
+        if (!checkboxMatch.Success)
+        {
+            continue;
+        }
+
+        total++;
+
+        var tagMatch = TaskPatterns.Tag.Match(line);
+        byTag[tagMatch.Success ? tagMatch.Groups[1].Value : "untagged"]++;
+
+        if (TaskPatterns.Unchecked.IsMatch(line))
+        {
+            uncheckedCount++;
+            if (firstUnchecked.Count < 3)
+            {
+                firstUnchecked.Add(line[checkboxMatch.Length..].Trim());
+            }
+        }
+    }
+
+    return new JsonObject
+    {
+        ["total"] = total,
+        ["checked"] = total - uncheckedCount,
+        ["unchecked"] = uncheckedCount,
+        ["first_unchecked"] = new JsonArray(firstUnchecked.Select(title => (JsonNode)title).ToArray()),
+        ["by_tag"] = new JsonObject
+        {
+            ["TEST + IMPLEMENT"] = byTag["TEST + IMPLEMENT"],
+            ["STRUCTURAL"] = byTag["STRUCTURAL"],
+            ["PROJECT"] = byTag["PROJECT"],
+            ["DOC"] = byTag["DOC"],
+            ["untagged"] = byTag["untagged"],
+        },
+        ["bytes"] = content.Length,
+        ["windows"] = ComputeWindows(content),
+    };
+}
+
+// Shared window helper (ADR 0072 IA 4): whole lines, at most 25,000 B per window; a single
+// line already over that limit forms a window of its own, flagged oversize.
+static JsonArray ComputeWindows(byte[] content)
+{
+    const int MaxWindowBytes = 25_000;
+
+    var lines = new List<int>();
+    var lineStart = 0;
+    for (var i = 0; i < content.Length; i++)
+    {
+        if (content[i] == (byte)'\n')
+        {
+            lines.Add(i + 1 - lineStart);
+            lineStart = i + 1;
+        }
+    }
+    if (lineStart < content.Length)
+    {
+        lines.Add(content.Length - lineStart);
+    }
+
+    var windows = new JsonArray();
+    var windowStartLine = 1;
+    var windowBytes = 0;
+    var windowLineCount = 0;
+
+    for (var lineIndex = 0; lineIndex < lines.Count; lineIndex++)
+    {
+        var lineNumber = lineIndex + 1;
+        var lineBytes = lines[lineIndex];
+
+        if (lineBytes > MaxWindowBytes)
+        {
+            if (windowLineCount > 0)
+            {
+                windows.Add(Window(windowStartLine, lineNumber - 1, windowBytes, oversize: false));
+                windowBytes = 0;
+                windowLineCount = 0;
+            }
+            windows.Add(Window(lineNumber, lineNumber, lineBytes, oversize: true));
+            windowStartLine = lineNumber + 1;
+            continue;
+        }
+
+        if (windowLineCount > 0 && windowBytes + lineBytes > MaxWindowBytes)
+        {
+            windows.Add(Window(windowStartLine, lineNumber - 1, windowBytes, oversize: false));
+            windowStartLine = lineNumber;
+            windowBytes = 0;
+            windowLineCount = 0;
+        }
+
+        windowBytes += lineBytes;
+        windowLineCount++;
+    }
+
+    if (windowLineCount > 0)
+    {
+        windows.Add(Window(windowStartLine, lines.Count, windowBytes, oversize: false));
+    }
+
+    return windows;
+
+    static JsonObject Window(int firstLine, int lastLine, int bytes, bool oversize) => new()
+    {
+        ["first_line"] = firstLine,
+        ["last_line"] = lastLine,
+        ["bytes"] = bytes,
+        ["oversize"] = oversize,
+    };
+}
+
+static class TaskPatterns
+{
+    // POSIX (requirements.md, Task checkbox pattern): ^[[:space:]]*-[[:space:]]\[[ xX]\]
+    public static readonly Regex Checkbox = new(@"^\s*-\s\[[ xX]\]");
+
+    // An unchecked box specifically — the same anchor, with a literal space between the brackets.
+    public static readonly Regex Unchecked = new(@"^\s*-\s\[ \]");
+
+    // POSIX (requirements.md, Task-type tag pattern):
+    // ^[[:space:]]*-[[:space:]]\[[ xX]\][[:space:]]*\*\*(TEST [+] IMPLEMENT|STRUCTURAL|PROJECT|DOC):
+    public static readonly Regex Tag = new(@"^\s*-\s\[[ xX]\]\s*\*\*(TEST \+ IMPLEMENT|STRUCTURAL|PROJECT|DOC):");
 }

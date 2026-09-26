@@ -11,6 +11,7 @@ using System.Text.Json;
 var repositoryRoot = Directory.GetCurrentDirectory();
 
 const string DeclaredTarget = ".claude/test-fixtures/show-me/declared";
+const string ZeroIdTarget = ".claude/test-fixtures/show-me/zero-id";
 const string ReleaseNotesFixture = ".claude/test-fixtures/show-me/release-notes.md";
 const string CalibrationTarget = "specs/0036-scoped-lifetime-per-pipeline";
 const string CalibrationMergeBase = "6145913a0";
@@ -20,7 +21,21 @@ var declaredRow = new Row(
     Name: "declared",
     Args: [DeclaredTarget],
     LedgerTarget: DeclaredTarget,
-    Assertions: DeclaredAssertions);
+    Assertions: Combine(
+        DeclaredAssertions,
+        TasksFieldAssertions(
+            repositoryRoot,
+            DeclaredTarget,
+            total: 2,
+            uncheckedCount: 0,
+            byTag: new Dictionary<string, int>
+            {
+                ["TEST + IMPLEMENT"] = 0,
+                ["STRUCTURAL"] = 0,
+                ["PROJECT"] = 0,
+                ["DOC"] = 0,
+                ["untagged"] = 2,
+            })));
 
 var rows = new[]
 {
@@ -57,7 +72,39 @@ var rows = new[]
         "calibration pinned",
         [CalibrationTarget, "--pinned", CalibrationMergeBase, CalibrationMeasuredHead],
         CalibrationTarget,
-        PinnedAssertions(CalibrationTarget, CalibrationMergeBase, CalibrationMeasuredHead)),
+        Combine(
+            PinnedAssertions(CalibrationTarget, CalibrationMergeBase, CalibrationMeasuredHead),
+            TasksFieldAssertions(
+                repositoryRoot,
+                CalibrationTarget,
+                total: 82,
+                uncheckedCount: 0,
+                byTag: new Dictionary<string, int>
+                {
+                    ["TEST + IMPLEMENT"] = 62,
+                    ["STRUCTURAL"] = 12,
+                    ["PROJECT"] = 2,
+                    ["DOC"] = 6,
+                    ["untagged"] = 0,
+                },
+                assertLiteralTestPlusImplement: true))),
+    new Row(
+        "zero-id",
+        [ZeroIdTarget],
+        ZeroIdTarget,
+        TasksFieldAssertions(
+            repositoryRoot,
+            ZeroIdTarget,
+            total: 3,
+            uncheckedCount: 0,
+            byTag: new Dictionary<string, int>
+            {
+                ["TEST + IMPLEMENT"] = 1,
+                ["STRUCTURAL"] = 0,
+                ["PROJECT"] = 0,
+                ["DOC"] = 0,
+                ["untagged"] = 2,
+            })),
 };
 
 var failedAssertions = 0;
@@ -356,6 +403,122 @@ static IEnumerable<string> UnpinnedReleaseNotesAssertions(RunResult result)
         yield return "expected pinned false";
     }
 }
+
+static Func<RunResult, IEnumerable<string>> Combine(params Func<RunResult, IEnumerable<string>>[] checks) =>
+    result => checks.SelectMany(check => check(result));
+
+static Func<RunResult, IEnumerable<string>> TasksFieldAssertions(
+    string repositoryRoot,
+    string target,
+    int total,
+    int uncheckedCount,
+    IReadOnlyDictionary<string, int> byTag,
+    bool assertLiteralTestPlusImplement = false) => result =>
+{
+    var failures = new List<string>();
+
+    if (result.ExitCode != 0)
+    {
+        failures.Add($"expected exit code 0, got {result.ExitCode}");
+    }
+
+    if (result.Ledger is null)
+    {
+        failures.Add("expected the ledger to parse as one JSON object, but no valid ledger was found");
+        return failures;
+    }
+
+    var root = result.Ledger.RootElement;
+
+    if (!root.TryGetProperty("tasks", out var tasks) || tasks.ValueKind != JsonValueKind.Object)
+    {
+        failures.Add("expected a tasks object");
+        return failures;
+    }
+
+    if (!tasks.TryGetProperty("total", out var totalEl) || totalEl.GetInt32() != total)
+    {
+        failures.Add($"expected tasks.total {total}");
+    }
+
+    if (!tasks.TryGetProperty("unchecked", out var uncheckedEl) || uncheckedEl.GetInt32() != uncheckedCount)
+    {
+        failures.Add($"expected tasks.unchecked {uncheckedCount}");
+    }
+
+    if (!tasks.TryGetProperty("by_tag", out var byTagEl) || byTagEl.ValueKind != JsonValueKind.Object)
+    {
+        failures.Add("expected a tasks.by_tag object");
+    }
+    else
+    {
+        foreach (var (tag, expectedCount) in byTag)
+        {
+            if (!byTagEl.TryGetProperty(tag, out var v) || v.GetInt32() != expectedCount)
+            {
+                failures.Add($"expected tasks.by_tag[{tag}] = {expectedCount}");
+            }
+        }
+
+        var sum = byTagEl.EnumerateObject().Sum(p => p.Value.GetInt32());
+        if (sum != total)
+        {
+            failures.Add($"expected tasks.by_tag counts to sum to {total}, got {sum}");
+        }
+    }
+
+    var tasksPath = Path.Combine(repositoryRoot, target, "tasks.md");
+    var expectedBytes = new FileInfo(tasksPath).Length;
+
+    if (!tasks.TryGetProperty("bytes", out var bytesEl) || bytesEl.GetInt64() != expectedBytes)
+    {
+        failures.Add($"expected tasks.bytes {expectedBytes}");
+    }
+
+    if (!tasks.TryGetProperty("windows", out var windows) || windows.ValueKind != JsonValueKind.Array)
+    {
+        failures.Add("expected a tasks.windows array");
+    }
+    else
+    {
+        long sum = 0;
+        long expectedNextFirstLine = 1;
+        foreach (var window in windows.EnumerateArray())
+        {
+            var firstLine = window.GetProperty("first_line").GetInt64();
+            var lastLine = window.GetProperty("last_line").GetInt64();
+            var windowBytes = window.GetProperty("bytes").GetInt64();
+            var oversize = window.GetProperty("oversize").GetBoolean();
+
+            if (firstLine != expectedNextFirstLine)
+            {
+                failures.Add($"expected a window to start at line {expectedNextFirstLine}, got {firstLine}");
+            }
+
+            if (!oversize && windowBytes > 25_000)
+            {
+                failures.Add($"expected a non-oversize window to be at most 25,000 B, got {windowBytes}");
+            }
+
+            sum += windowBytes;
+            expectedNextFirstLine = lastLine + 1;
+        }
+
+        if (sum != expectedBytes)
+        {
+            failures.Add($"expected tasks.windows' bytes to sum to {expectedBytes}, got {sum}");
+        }
+    }
+
+    if (assertLiteralTestPlusImplement
+        && (result.LedgerBytes is null
+            || !Encoding.UTF8.GetString(result.LedgerBytes).Contains("TEST + IMPLEMENT", StringComparison.Ordinal)))
+    {
+        failures.Add("expected the raw ledger text to contain \"TEST + IMPLEMENT\" literally");
+    }
+
+    return failures;
+};
 
 static IEnumerable<string> AssertAllNull(JsonElement root, string[] fields, string reason)
 {
