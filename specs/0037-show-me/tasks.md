@@ -244,7 +244,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - When `requirements.md` is absent, make the `requirements` size and windows, `declared_ids`, `declared_total` and `declarations` null with `not present`.
   - Traces to: FR-8 (counting rule, folding), FR-21, FR-16 rows 8–9, NFR-1, NFR-9 (regression 1), AC-43 (script half), AC-70, AC-79; ADR 0072 KC1 *locates everything … in parts*, KC2, IA 4.
 
-- [ ] **TEST + IMPLEMENT: T3.6 — `.adr-list` entries resolve by FR-16 row 7's rule, each with its extract windows; a bare number never resolves; and `adr_resolved_count` counts only resolved entries**
+- [x] **TEST + IMPLEMENT: T3.6 — `.adr-list` entries resolve by FR-16 row 7's rule, each with its extract windows; a bare number never resolves; and `adr_resolved_count` counts only resolved entries**
   - **USE COMMAND**: `/test-first when the measurement script resolves adr-list entries it should resolve only full filenames and docs/adr paths, give every other entry its row 7 reason, locate each resolved ADR's extract, and count resolved entries`
   - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
   - Test row(s): *declared*, *zero-id*, *adr-unresolved*, and the calibration row.
