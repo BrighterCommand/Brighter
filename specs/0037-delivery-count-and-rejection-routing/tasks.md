@@ -301,7 +301,7 @@
     - Change `new RedrivePolicy(deadLetterChannelName, 3)` to `5` in the four provider files in each project (for example `SqsStandardMessageGatewayProvider.cs:104`). Leave `requeueCount: 3` (`:108`).
   - Depends on: 4.1
 
-- [ ] **4.3 TEST + IMPLEMENT: SQS presents a strictly increasing delivery count across redeliveries, starting at 0**
+- [x] **4.3 TEST + IMPLEMENT: SQS presents a strictly increasing delivery count across redeliveries, starting at 0**
   - **USE COMMAND**: `/test-first when an sqs message is redelivered should present a strictly greater delivery count than the previous delivery starting at zero`
   - Test location: "tests/Paramore.Brighter.AWS.Tests/MessagingGateway/Sqs/Standard/Reactor", "…/Sqs/Standard/Proactor", and the V4 twins
   - Test file: `When_an_sqs_message_is_redelivered_should_present_increasing_delivery_count.cs` (Proactor: `…_async.cs`)
