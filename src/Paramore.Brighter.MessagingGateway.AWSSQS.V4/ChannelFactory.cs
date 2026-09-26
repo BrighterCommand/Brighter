@@ -100,10 +100,11 @@ public partial class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
                             throw new ConfigurationException(
                                 "We expect an SqsSubscription or SqsSubscription<T> as a parameter");
 
+            DeliveryBudgetDiagnostics.WarnIfUnenforceable(subscription);
 
             var isFifo = _subscription.QueueAttributes.Type == SqsType.Fifo;
             var queueName = _subscription.ChannelName.Value.ToValidSQSQueueName(isFifo);
-            
+
             //on assume, don't try to create the queue or topic, just return a channel
             if (_subscription.MakeChannels == OnMissingChannel.Assume)
                 return new ChannelAsync(
@@ -209,6 +210,8 @@ public partial class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
             _subscription = sqsSubscription ??
                             throw new ConfigurationException(
                                 "We expect an SqsSubscription or SqsSubscription<T> as a parameter");
+
+            DeliveryBudgetDiagnostics.WarnIfUnenforceable(subscription);
 
             var isFifo = _subscription.QueueAttributes.Type == SqsType.Fifo;
             var queueName = _subscription.ChannelName.Value.ToValidSQSQueueName(isFifo);
