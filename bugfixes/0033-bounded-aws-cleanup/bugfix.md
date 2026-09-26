@@ -85,8 +85,8 @@ The diagnosis is approved; the confirmation marker is present.
 - Explicitly distinguish a completed sweep, intentionally deferred work, and
   failed operations. Do not claim an exact remaining AWS resource count from an
   eventually consistent listing.
-- Pending PR #4430 changes the same script to add S3 cleanup. Keep this branch
-  based on upstream master; reconcile the overlap when that PR lands.
+- PR #4430 added S3 cleanup and has been merged into this branch from master.
+  Preserve its region, name and age checks within the whole-sweep deadline.
 - No live AWS cleanup has been performed. Incremental processing and the explicit
   deadline are implemented; verification uses offline AWS responses.
 - Incremental age-check/deletion can remove the barrier but does not alone
@@ -165,6 +165,19 @@ These results establish incremental progress, deadline interruption of simulated
 AWS I/O, and the existing offline coverage. They do not certify live IAM
 permissions or how much of a real backlog fits within 25 minutes. The forced-KILL
 fallback is configured but was not separately exercised by the regression suite.
+
+### Integration with S3 cleanup
+
+Merged master at `a0990d5dd` after PR #4430 landed, preserving Ian's existing merge
+at `f5b1dcfd4`. The two manual conflict resolutions retain both `sleep` and
+`python3` in the offline command path and both sets of regression cases.
+
+The combined suite passes all 185 assertions on macOS and in a network-disabled
+Linux SDK container with Python installed and the repository mounted read-only.
+Bash syntax, ShellCheck at warning severity, workflow YAML/safety settings, and
+diff whitespace checks pass. The imported C# fixture files match master exactly.
+The S3 sweep runs inside the supervised invocation without changing its resource
+selection, age guard, or failure reporting. No live AWS cleanup was run.
 
 ### Deadline and reporting
 
