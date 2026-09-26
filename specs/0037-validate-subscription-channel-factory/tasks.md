@@ -792,7 +792,7 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
     - **This shape has no shipped instance at all**, so `Core.Tests` is the only place it can be tested — the generated sweeps test the *outcome* of the no-override shape on real assemblies, these two pairs test the *mechanism*
   - Depends on: 45.
 
-- [ ] **47. TEST + IMPLEMENT: A `ChannelFactoryType` getter that throws yields a reason, not a skip and not a terminated sweep**
+- [x] **47. TEST + IMPLEMENT: A `ChannelFactoryType` getter that throws yields a reason, not a skip and not a terminated sweep**
   - **USE COMMAND**: `/test-first when reading a subscription's channel factory type throws the sweep should report a reason naming the exception`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessagingGateway/ChannelFactoryDeclaration"
   - Test file: `When_reading_a_channel_factory_type_throws_should_report_a_reason_naming_the_exception.cs`
