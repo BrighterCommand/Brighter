@@ -243,7 +243,7 @@
     - Regenerate per generated_tests.md; never hand-edit
   - Depends on: 3.2
 
-- [ ] **3.4 TEST + IMPLEMENT: FR-23 asserts that the dispatch count after quit-and-await is within the budget, and that a metadata-stamping route carries `DeliveryError`**
+- [x] **3.4 TEST + IMPLEMENT: FR-23 asserts that the dispatch count after quit-and-await is within the budget, and that a metadata-stamping route carries `DeliveryError`**
   - **USE COMMAND**: `/test-first when generating the requeue budget test should assert dispatch count within budget and delivery error reason in both variants`
   - Test location: "tests/Paramore.Brighter.Test.Generator.Tests/CanonicalTemplates"
   - Test file: `When_generating_requeue_budget_test_should_assert_dispatch_count_within_budget_both_variants.cs`
