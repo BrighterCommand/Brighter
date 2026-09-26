@@ -211,7 +211,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - Share one window helper: whole lines, at most 25,000 B per window, and a single longer line forms its own window flagged `oversize`.
   - Traces to: FR-9, FR-3 (counts), FR-21 (patterns once, locating fields), C-2, NFR-1, NFR-9 rows 1, 2 and 4, AC-79; ADR 0072 KC1, KC2 `tasks`, KC6 *The encoder is checked*, IA 4.
 
-- [ ] **TEST + IMPLEMENT: T3.4 — An unfinished or taskless target exits `2`, writes no ledger, and emits one parseable gate record**
+- [x] **TEST + IMPLEMENT: T3.4 — An unfinished or taskless target exits `2`, writes no ledger, and emits one parseable gate record**
   - **USE COMMAND**: `/test-first when the measurement script's target fails the completeness gate it should exit 2 with a show-me-gate record on stderr and write no ledger`
   - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
   - Test row(s): *no-tasks*; *unfinished*; *unfinished* again with a planted ledger.
