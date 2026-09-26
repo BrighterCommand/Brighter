@@ -343,7 +343,7 @@
     - In both `SqsMessageConsumer.RefreshMetadata` (v3 `:506` early return; V4 `:489`), stamp `RejectionMetadataKeyNames.RejectionReason = RejectionReason.None.ToString()` when `reason` is null, and leave `rejectionMessage` absent
   - Depends on: 1.3
 
-- [ ] **4.6 CHARACTERISE: The SQS dead-letter copy of a budget rejection, read through a real channel, carries the stamped count and full rejection metadata**
+- [x] **4.6 CHARACTERISE: The SQS dead-letter copy of a budget rejection, read through a real channel, carries the stamped count and full rejection metadata**
   - **USE COMMAND**: `/test-first when the sqs budget is exhausted the dead letter copy read through a channel should present the stamped handled count and rejection metadata`
   - Test location: "tests/Paramore.Brighter.AWS.Tests/MessagingGateway/Sqs/Standard/Reactor", "…/Proactor", and the V4 twins
   - Test file: `When_sqs_budget_is_exhausted_dead_letter_copy_should_keep_stamped_count_and_metadata.cs`
