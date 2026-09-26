@@ -842,7 +842,7 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
   - **Why no test of its own**: it is a data-carrying configuration class. It is exercised by task 50's render test, end-to-end by task 53's generated tests and by task 54's audit, and a mis-shaped section fails configuration load or generation immediately.
   - Depends on: nothing (may run in parallel with phases 7-8).
 
-- [ ] **50. TEST + IMPLEMENT: the Liquid template renders the expected-subject set, including generic entries**
+- [x] **50. TEST + IMPLEMENT: the Liquid template renders the expected-subject set, including generic entries**
   - **USE COMMAND**: `/test-first when rendering the gateway conformance template with generic additional subjects it should render open generic typeof literals and the full expected set`
   - Test location: "tests/Paramore.Brighter.Test.Generator.Tests/GatewayConformanceTemplate"
   - Test file: `When_rendering_the_gateway_conformance_template_with_generic_subjects_should_render_open_generic_literals.cs`
