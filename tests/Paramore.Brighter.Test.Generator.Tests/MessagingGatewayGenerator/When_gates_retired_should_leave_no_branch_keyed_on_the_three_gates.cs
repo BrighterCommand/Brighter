@@ -136,8 +136,9 @@ public class WhenGatesRetiredShouldLeaveNoBranchKeyedOnTheThreeGates : IDisposab
     /// <summary>
     /// HasSupportToDetectMissingInfrastructureOnAssume is deliberately NARROWER than
     /// HasSupportToValidateInfrastructure: it skips assume_channel alone and leaves validate_channel
-    /// generated. A transport can support explicit validation without detecting missing
-    /// infrastructure on its normal send or receive path.
+    /// generated. Kafka's KIP-848 consumer needs exactly this — it honours an explicit
+    /// OnMissingChannel.Validate but completes silently against a topic that does not exist, so the
+    /// coarse flag was suppressing a validate_channel test that passes.
     /// </summary>
     [Fact]
     public async Task When_assume_detection_is_unsupported_should_skip_assume_channel_but_still_emit_validate_channel()

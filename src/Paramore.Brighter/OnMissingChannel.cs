@@ -44,15 +44,14 @@ namespace Paramore.Brighter
         Validate = 1,
         
         /// <summary>
-        /// Assume the infrastructure exists without checking, fail fast if missing.
+        /// Assume the infrastructure exists without checking; rely on the transport to report failures.
         /// </summary>
         /// <remarks>
         /// Use this option to remove the cost of existence checks on platforms 
         /// where such checks are expensive or when you're confident the 
         /// infrastructure is already in place.
-        /// A transport whose client does not report missing infrastructure may require an explicit
-        /// check to preserve fail-fast behavior. Kafka's consumer protocol checks topic existence
-        /// on the first receive, bounded by its topic-find timeout, and caches success.
+        /// Missing infrastructure is not guaranteed to produce an error on every transport.
+        /// Use <see cref="Validate"/> when an explicit existence check is required and permitted.
         /// </remarks>
         Assume = 2
     }

@@ -29,11 +29,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka;
 /// <remarks>
 /// With the consumer protocol (KIP-848), subscribing to a missing topic does not report the
 /// subscription error provided by the classic protocol. With <see cref="OnMissingChannel.Assume"/>,
-/// Brighter therefore checks existence on the first receive using the configured topic-find timeout,
-/// in addition to the receive poll timeout. Success is cached for the consumer lifetime; a failed
-/// check can be retried on a later receive. This check does not validate partition or replication
-/// counts. Explicit <see cref="OnMissingChannel.Validate"/> and <see cref="OnMissingChannel.Create"/>
-/// retain their normal metadata validation and provisioning behavior.
+/// a missing topic can therefore appear to be an empty channel. Register
+/// <see cref="KafkaConsumerValidationRules.MissingTopicDetection"/> with startup pipeline validation
+/// to warn about this configuration without contacting Kafka. Use <see cref="OnMissingChannel.Validate"/>
+/// when explicit infrastructure validation is required and permitted. Validate and
+/// <see cref="OnMissingChannel.Create"/> retain their metadata validation and provisioning behavior.
 /// </remarks>
 public class ConsumerGroupProtocol : IGroupProtocol
 {

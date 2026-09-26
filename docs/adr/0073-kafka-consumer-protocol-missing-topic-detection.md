@@ -5,11 +5,11 @@ status: Proposed
 author:
   - "Avtandil Ushikishvili"
 created: 2026-09-26
-summary: "Perform a bounded, existence-only metadata check on the first receive for KIP-848 consumers using Assume, cache success, and leave failed checks retryable. Classic and explicit provisioning policies remain unchanged."
+summary: "Preserve Assume's no-check behavior for KIP-848 and expose its missing-topic limitation through an opt-in, configuration-only startup warning registered from the Kafka assembly."
 tags:
   - "kafka"
-  - "provisioning"
-  - "error-handling"
+  - "configuration"
+  - "observability"
 ---
 
 # 73. Kafka Consumer Protocol Missing-Topic Detection
@@ -22,78 +22,78 @@ Proposed
 
 ## Context
 
-`OnMissingChannel.Assume` promises to avoid infrastructure checks while failing
-fast when infrastructure is missing. Classic Kafka consumers can meet that
-contract through consume errors. KIP-848 deliberately permits subscription to a
-missing topic without the corresponding subscription error. A receive can then
-return no message indefinitely, indistinguishable from a healthy empty topic.
+KIP-848 permits subscription to a missing topic without the subscription error
+reported by Classic. Under `OnMissingChannel.Assume`, receiving no messages can
+therefore mean either a missing topic or a healthy idle consumer. Empty receives
+and empty assignments cannot distinguish these cases: rebalances and consumer
+groups with more members than partitions are also legitimate.
 
-Brighter cannot repair this by propagating a missing exception. Nor can it infer
-absence from an empty receive or an empty assignment: rebalances and consumer
-groups with more members than partitions legitimately produce those states.
+Assume deliberately avoids infrastructure checks. Adding a metadata lookup to
+the receive path introduces an extra network request, authorization requirements,
+and latency into a policy selected to avoid those checks. Moving the same lookup
+to startup would not resolve that contradiction.
 
 ## Decision
 
-For the effective KIP-848 consumer protocol with `OnMissingChannel.Assume`, check
-topic metadata on the first receive, before polling. Use the consumer's existing
-client handle so connection and security settings applied through `configHook`
-are respected. Both synchronous and asynchronous receives use this same path.
+Keep Assume's receive behavior unchanged. Provide a configuration-only warning
+for subscriptions declaring `ConsumerGroupProtocol` and `OnMissingChannel.Assume`.
+The warning identifies the subscription and topic, explains that missing topics
+do not produce subscription errors, and points to Validate when an explicit
+infrastructure check is required and permitted. It does not claim the topic is
+missing or prevent startup.
 
-The check confirms existence only. It neither creates infrastructure nor validates
-partition or replication counts. Preserve the broker's error code and reason in
-the channel failure; connection and authorization errors must not masquerade as
-missing topics. Do not latch ordinary absence as a fatal consumer error.
+Define the rule in the Kafka assembly as an `ISpecification<Subscription>`.
+Applications register it with dependency injection before calling
+`ValidatePipelines()`. The existing pipeline validator discovers registered
+subscription specifications, and the existing startup services log their
+warnings. Core references only its validation abstraction, never Kafka types.
+No new core dependency or validator-loading mechanism is required.
 
-Bound the check by the existing `topicFindTimeout`, independently of the receive
-poll timeout. This can add that timeout to the first receive, including a receive
-with a zero poll timeout. A successful check is cached for the consumer lifetime;
-a failed check remains eligible for retry on a later receive. This allows the
-same consumer to recover if the topic is subsequently provisioned.
+The rule inspects the declared protocol object. It does not construct a Kafka
+client, connect to a broker, execute a configuration hook, or mutate subscription
+settings. Protocol selection performed only by a custom `IGroupProtocol` or
+`ConfigHook` is outside this static check. Executing arbitrary configuration
+callbacks during validation could have side effects and would not guarantee the
+same result when the actual consumer is created.
 
-This is a documented exception to Assume's no-check behavior, limited to the
-Kafka Consumer protocol. Classic and explicit Validate/Create behavior remain
-unchanged. It is startup detection, not continuous monitoring for topic deletion
-after a successful check.
+Retain the Consumer configuration's opt-out from generated Assume missing-topic
+exception tests. Explicit Validate/Create coverage remains enabled. Clarify the
+general Assume documentation: whether missing infrastructure produces a runtime
+error depends on the transport.
 
 ## Consequences
 
-- Missing topics produce a channel failure instead of an indefinite empty receive.
-- Empty topics and temporary lack of assignment are not failures.
-- The first successful receive path pays for one metadata request. Failed checks
-  may repeat until successful; existing caller retry policies govern retries.
-- A zero poll timeout does not make the initial metadata check nonblocking.
-- Metadata permissions and availability are required for the initial check.
-- A topic can still be deleted after detection; the cached check is not a lifetime
-  guarantee that infrastructure remains available.
-- Maintainers must review this protocol-specific exception before accepting the
-  proposed policy.
+- Teams can retain Assume without additional broker requests or permissions.
+- Opted-in startup validation makes the limitation visible even if the topic exists.
+- Warning-severity findings do not block startup, including with `throwOnError: true`.
+- Registration is explicit; merely referencing the Kafka package does not enable the rule.
+- No new per-empty-receive warning is added. Existing logging and telemetry remain
+  available, but an idle consumer is not treated as proof of failure.
+- Missing topics still require operational investigation or explicit validation;
+  this change makes a limitation visible rather than detecting topic existence.
 
 ## Alternatives Considered
 
-### Document the limitation and recommend Validate
+### Mandatory metadata check during receive or startup
 
-This preserves Assume's no-check promise but leaves its fail-fast promise unmet
-and allows misconfigured consumers to appear idle indefinitely.
+Conflicts with Assume's no-check policy and can add failures and latency unrelated
+to receiving messages. A successful metadata lookup would also not guarantee the
+topic remains present later.
 
-### Reuse full Validate behavior
+### Documentation alone
 
-This also enforces partition and replication settings, changing more than missing
-topic detection. The existence-only check avoids rejecting usable topics whose
-shape differs from configuration intended for provisioning.
+Preserves the contract but does not alert operators when an application starts
+with the affected configuration. A non-blocking configuration warning complements
+documentation without contacting the broker.
 
-### Check on every empty receive
+### Treat empty receives or missing assignments as errors
 
-This adds recurring metadata traffic for healthy idle consumers and still needs
-the same distinction between missing topics, unavailable brokers, and permissions.
-Startup detection is sufficient for the reported missing-topic subscription case.
-
-### Treat missing assignments as fatal
-
-This incorrectly rejects healthy consumers during rebalances and consumers with
-no assigned partition. It would also prevent recovery after later provisioning.
+Cannot distinguish a missing topic from valid idle or rebalancing consumers and
+would introduce false alarms.
 
 ## References
 
 - [Issue #4299](https://github.com/BrighterCommand/Brighter/issues/4299)
+- [PR #4424](https://github.com/BrighterCommand/Brighter/pull/4424)
 - [librdkafka 2.15.0 error-handling changes](https://github.com/confluentinc/librdkafka/blob/v2.15.0/INTRODUCTION.md#error-handling-changes)
-- [OnMissingChannel contract](../../src/Paramore.Brighter/OnMissingChannel.cs)
+- [Kafka missing-topic startup warning](../guides/kafka-missing-topic-warning.md)

@@ -104,8 +104,9 @@ public class MessagingGatewayConfiguration
     /// This is narrower than <see cref="HasSupportToValidateInfrastructure"/>, which covers the
     /// explicit <c>OnMissingChannel.Validate</c> check. A transport can support the explicit check
     /// and still complete a send/receive silently against infrastructure that does not exist.
-    /// Setting this false skips only the
-    /// <c>assume_channel</c> template, leaving <c>validate_channel</c> generated.
+    /// Setting this false skips only the <c>assume_channel</c> template, leaving
+    /// <c>validate_channel</c> generated. Kafka's KIP-848 consumer retains this opt-out because
+    /// Assume performs no broker lookup; its startup warning does not detect topic existence.
     /// </summary>
     public bool HasSupportToDetectMissingInfrastructureOnAssume { get; set; } = true;
 
