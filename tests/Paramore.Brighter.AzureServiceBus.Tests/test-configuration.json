@@ -1,0 +1,6 @@
+{
+  "Namespace": "Paramore.Brighter.AzureServiceBus.Tests",
+  "GatewayConformance": {
+    "SubscriptionType": "Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusSubscription"
+  }
+}

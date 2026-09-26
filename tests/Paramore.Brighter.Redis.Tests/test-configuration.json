@@ -12,5 +12,8 @@
     "HasSupportToValidateBrokerExistence": false,
     "HasSupportToRequeue": true,
     "HasSupportToValidateInfrastructure": false
+  },
+  "GatewayConformance": {
+    "SubscriptionType": "Paramore.Brighter.MessagingGateway.Redis.RedisSubscription"
   }
 }

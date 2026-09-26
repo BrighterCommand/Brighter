@@ -13,5 +13,8 @@
     "HasSupportToDelayedMessages": true,
     "HasSupportToValidateBrokerExistence": false,
     "HasSupportToRequeue": true
+  },
+  "GatewayConformance": {
+    "SubscriptionType": "Paramore.Brighter.MessagingGateway.RocketMQ.RocketSubscription"
   }
 }

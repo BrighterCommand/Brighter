@@ -24,5 +24,8 @@
     "HasSupportToDeadLetterQueue": false,
     "HasSupportToDelayedMessages": false,
     "HasSupportToRequeue": true
+  },
+  "GatewayConformance": {
+    "SubscriptionType": "Paramore.Brighter.MessagingGateway.Postgres.PostgresSubscription"
   }
 }

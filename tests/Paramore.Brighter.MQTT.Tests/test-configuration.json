@@ -1,0 +1,6 @@
+{
+  "Namespace": "Paramore.Brighter.MQTT.Tests",
+  "GatewayConformance": {
+    "SubscriptionType": "Paramore.Brighter.MessagingGateway.MQTT.MqttSubscription"
+  }
+}

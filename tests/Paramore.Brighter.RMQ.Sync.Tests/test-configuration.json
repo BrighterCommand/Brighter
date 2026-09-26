@@ -1,0 +1,6 @@
+{
+  "Namespace": "Paramore.Brighter.RMQ.Sync.Tests",
+  "GatewayConformance": {
+    "SubscriptionType": "Paramore.Brighter.MessagingGateway.RMQ.Sync.RmqSubscription"
+  }
+}

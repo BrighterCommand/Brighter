@@ -75,5 +75,8 @@
       "Category": "Spanner",
       "CollectionName": "SpannerTextOutbox"
     }
+  },
+  "GatewayConformance": {
+    "SubscriptionType": "Paramore.Brighter.MessagingGateway.GcpPubSub.GcpPubSubSubscription"
   }
 }

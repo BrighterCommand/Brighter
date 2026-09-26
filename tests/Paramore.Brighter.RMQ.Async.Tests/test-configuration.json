@@ -28,5 +28,8 @@
       "HasSupportToRequeue": true,
       "ReceiveMessageTimeoutInMilliseconds": 4000
     }
+  },
+  "GatewayConformance": {
+    "SubscriptionType": "Paramore.Brighter.MessagingGateway.RMQ.Async.RmqSubscription"
   }
 }

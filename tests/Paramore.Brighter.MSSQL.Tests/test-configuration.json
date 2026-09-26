@@ -25,5 +25,8 @@
     "HasSupportToDelayedMessages": false,
     "HasSupportToRequeue": true,
     "HasSupportToValidateBrokerExistence": false
+  },
+  "GatewayConformance": {
+    "SubscriptionType": "Paramore.Brighter.MessagingGateway.MsSql.MsSqlSubscription"
   }
 }

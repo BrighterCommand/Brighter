@@ -43,5 +43,8 @@
       "HasSupportToRequeue": false,
       "ReceiveMessageTimeoutInMilliseconds": 15000
     }
+  },
+  "GatewayConformance": {
+    "SubscriptionType": "Paramore.Brighter.MessagingGateway.Kafka.KafkaSubscription"
   }
 }
