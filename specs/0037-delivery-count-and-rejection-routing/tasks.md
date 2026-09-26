@@ -213,7 +213,7 @@
     - Regenerate per generated_tests.md; never hand-edit
   - **Must land before 4.3** so no AWS `Pass` cell goes red.
 
-- [ ] **3.2 TEST + IMPLEMENT: The shared conformance pump counts dispatches per message, keyed on the original message id, reset between tests**
+- [x] **3.2 TEST + IMPLEMENT: The shared conformance pump counts dispatches per message, keyed on the original message id, reset between tests**
   - **USE COMMAND**: `/test-first when generating the deferred pump should emit a dispatch count keyed by original message id and reset per test`
   - Test location: "tests/Paramore.Brighter.Test.Generator.Tests/CanonicalTemplates"
   - Test file: `When_generating_deferred_pump_should_emit_dispatch_count_keyed_by_original_message_id.cs`
