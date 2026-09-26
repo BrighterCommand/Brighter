@@ -89,8 +89,18 @@ public static class SubscriptionChannelFactoryDeclaration
         if (gatewayAssembly is null)
             throw new ArgumentNullException(nameof(gatewayAssembly));
 
-        return gatewayAssembly.GetTypes()
+        // Step 1: candidates - non-abstract classes that are Subscription or whose base chain reaches it.
+        var candidates = gatewayAssembly.GetTypes()
             .Where(type => type.IsClass && !type.IsAbstract && IsSubscriptionOrDerivedFrom(type))
+            .ToList();
+
+        var candidateSet = new HashSet<Type>(candidates);
+
+        // Step 2: subsumption - drop a candidate that declares no ChannelFactoryType of its own when
+        // an ancestor in its base chain is also a candidate: its value is that ancestor's by
+        // construction, so reporting it separately would say nothing new.
+        return candidates
+            .Where(type => !IsSubsumedByAnAncestorCandidate(type, candidateSet))
             .OrderBy(type => type.FullName, StringComparer.Ordinal)
             .Select(ReadAndCheck)
             .ToList();
@@ -108,6 +118,33 @@ public static class SubscriptionChannelFactoryDeclaration
 
         return false;
     }
+
+    // A candidate is subsumed only when it does NOT declare ChannelFactoryType itself (its value is
+    // then inherited, so it cannot disagree with its base) AND an ancestor in its base chain is also
+    // a candidate discovered in this same sweep. Subsumption runs before generic closing, so
+    // candidates are recorded as open definitions (Foo<>) while a .BaseType chain yields closed
+    // constructions (Foo<Bar>) - a constructed generic ancestor must be reduced to its generic type
+    // definition before comparison, or a derived type closing an open generic base never matches it.
+    private static bool IsSubsumedByAnAncestorCandidate(Type candidate, HashSet<Type> candidateSet)
+    {
+        if (DeclaresOwnChannelFactoryType(candidate))
+            return false;
+
+        for (var ancestor = candidate.BaseType; ancestor is not null; ancestor = ancestor.BaseType)
+        {
+            var comparable = ancestor.IsConstructedGenericType ? ancestor.GetGenericTypeDefinition() : ancestor;
+            if (candidateSet.Contains(comparable))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool DeclaresOwnChannelFactoryType(Type type) =>
+        type.GetProperty(
+            nameof(Subscription.ChannelFactoryType),
+            BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+        is not null;
 
     // GetUninitializedObject produces an instance with no constructor run, so Check never sees a
     // side effect of construction and can examine a subscription whose constructor would throw.
