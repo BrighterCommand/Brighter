@@ -149,7 +149,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 
 *ADR 0072 IA 4, plus the harness's ledger save-and-restore from IA 3. Depends on T2.1. Tasks run in order. The atomic write and the over-cap refusal of IA 8 are T7.1's.*
 
-- [ ] **TEST + IMPLEMENT: T3.1 — Measuring a fixture directory writes one well-formed JSON ledger with every ref and diff field null for `not a spec directory`, and the test script leaves every ledger as it found it**
+- [x] **TEST + IMPLEMENT: T3.1 — Measuring a fixture directory writes one well-formed JSON ledger with every ref and diff field null for `not a spec directory`, and the test script leaves every ledger as it found it**
   - **USE COMMAND**: `/test-first when the measurement script measures a fixture directory it should write a single JSON ledger whose ref and diff fields are null with reason not a spec directory`
   - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
   - Test row(s): the *declared* row, unpinned.
