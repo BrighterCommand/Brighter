@@ -595,7 +595,7 @@ relative link, never a bare number (C-9).
 | `## How it was built` (FR-9) | task total, per-tag counts, commit count — or FR-9's fallback line when the diff fields are null | nothing |
 | `## Blast radius` (FR-10) | everything, including the provenance lines | nothing |
 | `## Risk assessment (advisory)` (FR-11–FR-13) | F1's `src/` count and F1's level | see [0073-show-me-advisory-risk-model](0073-show-me-advisory-risk-model.md) |
-| `## Where to look first` (FR-14) | — | 3–7 paths, each with a reason of at most 25 words: the paths the Explainer handed over with a diagram for this section, or, when there is none, paths chosen from the diff reads. The diagram is 0077's |
+| `## Where to look first` (FR-14) | — | 3–7 paths, or every path when the source holds fewer than three (FR-14), each with a reason of at most 25 words: the paths the Explainer handed over with a diagram for this section, or, when there is none, paths chosen from the diff reads. The diagram is 0077's |
 | `## Inputs used` (FR-15) | resolution of `.adr-list` entries, PR presence and its reason | FR-15's rows, with each mark set from the read log (below) |
 
 `## How it was built` states two things and nothing else: task shape and commit count. It carries

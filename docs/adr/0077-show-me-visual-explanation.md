@@ -322,8 +322,8 @@ The Explainer decides placement before the Synthesiser writes anything. When it 
 (row 5), it fixes the tree's node set, and the Synthesiser draws FR-14's three to seven paths from
 the tree's changed nodes. The dependency runs one way: the Explainer cannot wait for a path list that
 does not exist yet, and the Synthesiser cannot be handed a tree of files its list omits. The
-Explainer therefore elects a tree only with three to seven changed nodes, which is FR-14's range for
-the path list. A relationship among more changed files is drawn at a coarser grain, or in
+Explainer therefore elects a tree only with three to seven changed nodes, which is FR-14's three-to-seven range for
+the path list; a list of fewer than three paths gets no tree. A relationship among more changed files is drawn at a coarser grain, or in
 `## What changed and why` under row 6. Unchanged nodes, marked `(unchanged)`, do not count toward
 the range.
 

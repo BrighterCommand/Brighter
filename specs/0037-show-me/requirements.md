@@ -415,7 +415,7 @@ FR-17 (tracked-in-git only) and NFR-5.
 **≤ 40 lines** including its opening and closing fences, and **≤ 100 characters** per line. These
 are the only size rules that apply to diagram content — fenced-block lines are excluded from NFR-2's
 word budget (NFR-2 (d)) and from FR-6's 150–600-word prose range, and a diagram consumes none of
-FR-14's 3–7 path slots. A relationship that will not fit in 40 lines is being drawn at too fine a
+FR-14's path slots. A relationship that will not fit in 40 lines is being drawn at too fine a
 grain: cut detail, or draw the narrower relationship.
 
 **(e) When no diagram is drawn — defined fallbacks.** `## What changed and why` must carry exactly
@@ -725,20 +725,21 @@ warns-and-stops, sets a marker file, applies a label, posts a comment, requests 
 any approval state. A `High` result and a `Low` result differ only in the text written.
 
 **FR-14 — `## Where to look first` names the files a reviewer should open.**
-When a spec diff was measured: three to seven paths from the spec diff, ordered most-important first,
+When a spec diff was measured: three to seven paths from the spec diff (fewer only in the case below), ordered most-important first,
 each with a one-line reason (≤ 25 words) for why it matters. Every path listed must exist in the spec
 diff. The paths come from the spec diff exactly as FR-20 pins it: from the `src/`-scoped diff the
 command reads over the ledger's merge base and measured head (NFR-3) and — only when the spec diff
 touches no file under `src/` — from `git diff --name-only` over that same pair of shas. If the spec diff touches no files under `src/`, the list is drawn from whatever the diff does
-touch and says so. When **no** diff was measured (spec branch not determinable, FR-10), the section
+touch and says so. When the source the list is drawn from holds fewer than three paths, the list holds every one
+of them, each with its reason: a list shorter than three is then complete, not a shortfall. When **no** diff was measured (spec branch not determinable, FR-10), the section
 takes FR-16's fallback text instead of a path list.
 
-*Optional tree.* This section may additionally carry **one** diagram under FR-6's visual-explanation
+*Optional tree.* When the list holds three to seven paths, this section may additionally carry **one** diagram under FR-6's visual-explanation
 rules — in practice an ASCII tree or sketch showing how the listed paths relate to each other (which
 file calls which, or where each sits in a type or namespace hierarchy). It is bound by FR-6 (c)'s
 format and attribution rules, (d)'s caps (≤ 40 lines, ≤ 100 columns, and the whole-file maximum of
-two diagrams), and (f)'s per-run read budget. It **does not consume a path slot**: the 3–7-path rule
-is counted over the path entries only. A node in the tree that is not in the spec diff may appear for
+two diagrams), and (f)'s per-run read budget. It **does not consume a path slot**: the path count
+is taken over the path entries only. A node in the tree that is not in the spec diff may appear for
 context and must be marked `(unchanged)`, which is the one exception to this requirement's
 "every path listed must exist in the spec diff" rule and exists so a diagram can show the caller that
 did not move. When this section carries no diagram it says nothing about that — FR-6 (e)'s line is
@@ -1104,7 +1105,7 @@ exactly as follows (each row has a matching acceptance criterion):
 | 10 | `.issue-number` missing, empty or whitespace-only | The metadata block's linked issue reads `none`; `Inputs used` marks `.issue-number` as `not available: not present`. No factor consequence. |
 | 11 | `PROMPT.md` (or a `PROMPT-*.md` companion) absent | No mention anywhere in the output; its absence is normal and is not recorded in `Inputs used`. |
 | 12 | Spec branch not determinable (FR-10) | `Blast radius` states `Spec branch not determinable — no diff measured.` followed by the rules it tried; `How it was built` reports the commit count per FR-9's fallback; `What changed and why` carries FR-6 (e)'s **no-diff line**; F1 = Medium. |
-| 13 | Spec branch not determinable — effect on `Where to look first` (FR-14) | The section contains exactly: `No diff measured — spec branch not determinable, so no files can be ranked. Start from specs/{spec dir}/tasks.md and the ADRs listed in specs/{spec dir}/.adr-list.` It lists no paths and no diagram, and FR-14's 3–7-path rule does not apply. |
+| 13 | Spec branch not determinable — effect on `Where to look first` (FR-14) | The section contains exactly: `No diff measured — spec branch not determinable, so no files can be ranked. Start from specs/{spec dir}/tasks.md and the ADRs listed in specs/{spec dir}/.adr-list.` It lists no paths and no diagram, and FR-14's path-count rule does not apply. |
 | 14 | Spec branch not determinable — effect on `Breaking changes` (FR-7) | The item list is derived from the ADRs' *Consequences* sections and `requirements.md` only, and the section adds the line `No diff measured — this list is derived from the ADRs and requirements.md only; public-API declaration lines could not be inspected.` The count line is still present, and F2 is computed from the items found. |
 | 15 | Spec branch not determinable — effect on the metadata block (FR-5) | The metadata block's spec-branch, head-sha and merge-base-sha lines are each replaced with the single word `undetermined`. The base ref (FR-10's `origin/master`-or-`master` rule) does **not** depend on the spec branch and is still resolved and named normally. The PR reference reads `none found` — FR-20's PR discovery needs the spec branch's name to query `gh pr list --head`, which is unavailable in this state. Generation date, spec directory and issue are populated normally; the metadata block is still present in full. |
 | 16 | A PR is discovered but its head commit is not present in the local repository (FR-20) | The metadata block still names the PR's number and URL, and `Inputs used` marks the pull-request row `used`. The measured head falls back to the spec branch tip, and `## Blast radius` adds the line `PR #{n} head {sha} is not present locally; measured the spec branch tip {sha} instead. Fetch the branch and re-run to measure the PR head.` The command does not fetch (FR-18). No factor consequence. |
@@ -1817,8 +1818,8 @@ reviewer.`
 `show-me.md`.
 
 **AC-26** *(FR-14)* **Given** any successful run **in which a spec diff was measured**, **when**
-`## Where to look first` is inspected, **then** it lists 3–7 paths, every path appears in the spec
-diff, and each carries a reason of ≤ 25 words.
+`## Where to look first` is inspected, **then** it lists 3–7 paths — or, when the source FR-14 draws them from holds fewer than three, every
+one of them — every path appears in the spec diff, and each carries a reason of ≤ 25 words.
 
 **AC-27** *(FR-15, FR-16 rows 1 and 5)* **Given** a run with no PR and no `release_notes.md` section,
 **when** `## Inputs used` is inspected, **then** it marks the pull-request row `not available` with a
@@ -1883,7 +1884,7 @@ because `specs/README.md` is a file and not a candidate.
 **AC-36** *(FR-14, FR-16 row 13)* **Given** a complete spec whose branch is not determinable, so no
 diff is measured, **when** the command runs, **then** the run succeeds and
 `## Where to look first` contains exactly the FR-16 row 13 fallback line, lists no paths and no
-diagram, and FR-14's 3–7-path rule is not applied.
+diagram, and FR-14's path-count rule is not applied.
 
 **AC-37** *(FR-7, FR-16 row 14)* **Given** the same no-diff run, **when** `## Breaking changes` is
 inspected, **then** its items are derived from the ADRs' *Consequences* sections and
