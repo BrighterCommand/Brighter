@@ -191,6 +191,11 @@ var (adrList, adrResolvedCount) = ReadAdrList(target);
 ledger["adr_list"] = adrList;
 ledger["adr_resolved_count"] = adrResolvedCount;
 
+// Marked release-notes sections (FR-7, FR-21's {m} rule) are file-derived too, read from the
+// working tree on every kind of run — the release-notes path is a test-only input (ADR 0072
+// KC1), not a fault hook, and it never nulls on a pinned or fixture run.
+ledger["release_notes"] = ReadReleaseNotes(target, releaseNotesPath);
+
 ledger["null_reasons"] = nullReasons;
 ledger["gh_commands"] = new JsonArray();
 
@@ -605,6 +610,175 @@ static JsonObject BuildExtractPart(string part, long[] offsets, byte[] content, 
     };
 }
 
+// Marked release-notes sections (Definitions, FR-7, FR-21's {m} rule). Reads the release-notes
+// path given by NFR-9's test-only input, or the repository-root release_notes.md by default.
+// An absent file gives present false, count 0, an empty sections array and m null.
+static JsonObject ReadReleaseNotes(string target, string? releaseNotesPathOverride)
+{
+    var path = releaseNotesPathOverride ?? "release_notes.md";
+
+    if (!File.Exists(path))
+    {
+        return new JsonObject
+        {
+            ["path"] = path,
+            ["present"] = false,
+            ["count"] = 0,
+            ["sections"] = new JsonArray(),
+            ["m"] = null,
+        };
+    }
+
+    var content = File.ReadAllBytes(path);
+    var targetName = Path.GetFileName(target.TrimEnd('/'));
+    var marker = $"<!-- spec: {targetName} -->";
+
+    var markedSections = FindMarkedSections(content, marker);
+
+    var sectionsArray = new JsonArray();
+    int? m = null;
+
+    foreach (var (startLine, sectionBytes) in markedSections)
+    {
+        sectionsArray.Add(new JsonObject
+        {
+            ["bytes"] = sectionBytes.Length,
+            ["windows"] = ComputeWindows(sectionBytes, startLine: startLine),
+        });
+
+        var sectionM = CountBreakingChangeBullets(sectionBytes);
+        if (sectionM.HasValue)
+        {
+            m = (m ?? 0) + sectionM.Value;
+        }
+    }
+
+    return new JsonObject
+    {
+        ["path"] = path,
+        ["present"] = true,
+        ["count"] = markedSections.Count,
+        ["sections"] = sectionsArray,
+        ["m"] = m,
+    };
+}
+
+// A marked section (Definitions): a `###` heading, outside any fence, whose very next line,
+// trimmed, equals the marker literally. It runs to the next `##` or `###` heading outside a
+// fence, or to the end of the file — a `####` subsection (Breaking changes, Usage) stays inside.
+static List<(int StartLine, byte[] Content)> FindMarkedSections(byte[] content, string marker)
+{
+    var lineLengths = ComputeLineByteLengths(content);
+    var lineCount = lineLengths.Count;
+    var rawLines = Encoding.UTF8.GetString(content).Split('\n');
+    var offsets = ComputeLineOffsets(lineLengths);
+
+    var startIndexes = new List<int>();
+    var inFence = false;
+    for (var i = 0; i < lineCount; i++)
+    {
+        var line = rawLines[i].TrimEnd('\r');
+        if (line.StartsWith("```", StringComparison.Ordinal))
+        {
+            inFence = !inFence;
+            continue;
+        }
+
+        if (!inFence
+            && ReleaseNotesPatterns.SectionHeading.IsMatch(line)
+            && i + 1 < lineCount
+            && rawLines[i + 1].TrimEnd('\r').Trim() == marker)
+        {
+            startIndexes.Add(i);
+        }
+    }
+
+    var sections = new List<(int, byte[])>();
+    foreach (var startIndex in startIndexes)
+    {
+        var endIndex = lineCount - 1;
+        var fence = false;
+        for (var j = startIndex + 1; j < lineCount; j++)
+        {
+            var line = rawLines[j].TrimEnd('\r');
+            if (line.StartsWith("```", StringComparison.Ordinal))
+            {
+                fence = !fence;
+                continue;
+            }
+
+            if (!fence && ReleaseNotesPatterns.SectionBoundaryHeading.IsMatch(line))
+            {
+                endIndex = j - 1;
+                break;
+            }
+        }
+
+        var startByte = offsets[startIndex];
+        var endByte = offsets[endIndex + 1];
+        sections.Add((startIndex + 1, content[(int)startByte..(int)endByte]));
+    }
+
+    return sections;
+}
+
+// FR-21's {m} rule: null when the section carries no `#### Breaking changes` heading; otherwise
+// the count of lines starting `- ` in column 0 between that heading and the next heading of any
+// level (or the section's end), skipping fenced lines and indented sub-bullets.
+static int? CountBreakingChangeBullets(byte[] sectionContent)
+{
+    var lineLengths = ComputeLineByteLengths(sectionContent);
+    var lineCount = lineLengths.Count;
+    var rawLines = Encoding.UTF8.GetString(sectionContent).Split('\n');
+
+    var headingIndex = -1;
+    var inFence = false;
+    for (var i = 0; i < lineCount; i++)
+    {
+        var line = rawLines[i].TrimEnd('\r');
+        if (line.StartsWith("```", StringComparison.Ordinal))
+        {
+            inFence = !inFence;
+            continue;
+        }
+
+        if (!inFence && line == "#### Breaking changes")
+        {
+            headingIndex = i;
+            break;
+        }
+    }
+
+    if (headingIndex < 0)
+    {
+        return null;
+    }
+
+    var count = 0;
+    inFence = false;
+    for (var j = headingIndex + 1; j < lineCount; j++)
+    {
+        var line = rawLines[j].TrimEnd('\r');
+        if (line.StartsWith("```", StringComparison.Ordinal))
+        {
+            inFence = !inFence;
+            continue;
+        }
+
+        if (!inFence && ReleaseNotesPatterns.AnyHeading.IsMatch(line))
+        {
+            break;
+        }
+
+        if (!inFence && line.StartsWith("- ", StringComparison.Ordinal))
+        {
+            count++;
+        }
+    }
+
+    return count;
+}
+
 static class RequirementsPatterns
 {
     // POSIX (requirements.md, Declared-id pattern): ^[[:space:]]*(-[[:space:]]+)?\*\*(FR|NFR)-[0-9]+
@@ -622,6 +796,19 @@ static class AdrPatterns
     // A markdown heading of level one or two — bounds an ADR's ## Status / ## Consequences
     // section boundary (unlike the declared-id paragraph rule, level three does not stop it).
     public static readonly Regex SectionBoundaryHeading = new(@"^#{1,2}\s");
+}
+
+static class ReleaseNotesPatterns
+{
+    // A level-3 heading — the only level a marked section can start at (Definitions).
+    public static readonly Regex SectionHeading = new(@"^###\s");
+
+    // A level-2 or level-3 heading — bounds a marked section's extent; a #### subsection
+    // (Breaking changes, Usage) stays inside it.
+    public static readonly Regex SectionBoundaryHeading = new(@"^#{2,3}\s");
+
+    // A heading of any level — bounds the #### Breaking changes list ({m} rule).
+    public static readonly Regex AnyHeading = new(@"^#{1,6}\s");
 }
 
 static class TaskPatterns

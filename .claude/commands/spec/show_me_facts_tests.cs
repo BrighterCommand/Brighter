@@ -16,6 +16,7 @@ const string NoTasksTarget = ".claude/test-fixtures/show-me/no-tasks";
 const string AdrUnresolvedTarget = ".claude/test-fixtures/show-me/adr-unresolved";
 const string UnfinishedTarget = ".claude/test-fixtures/show-me/unfinished";
 const string ReleaseNotesFixture = ".claude/test-fixtures/show-me/release-notes.md";
+const string DefaultReleaseNotesPath = "release_notes.md";
 const string CalibrationTarget = "specs/0036-scoped-lifetime-per-pipeline";
 const string CalibrationMergeBase = "6145913a0";
 const string CalibrationMeasuredHead = "91d549be6";
@@ -70,6 +71,19 @@ var declaredRow = new Row(
             ],
             expectedResolvedCount: 2)));
 
+// T4.1: the release-notes fixture has exactly one section marked for the declared fixture
+// (<!-- spec: declared -->), a ### heading at line 3 running to line 28 (the line before the
+// next ### heading, "### Some other change"). m = 2: the sub-bullet, both fenced lines and the
+// #### Usage bullets are not top-level Breaking-changes bullets, and the unmarked section is
+// not counted at all. Bytes hand-computed from the fixture's byte offsets.
+var DeclaredReleaseNotesAssertions = ReleaseNotesAssertions(
+    repositoryRoot,
+    ReleaseNotesFixture,
+    expectedPresent: true,
+    expectedCount: 1,
+    expectedM: 2,
+    expectedSections: [new ReleaseNotesSectionExpectation(FirstLine: 3, LastLine: 28, Bytes: 603)]);
+
 var rows = new[]
 {
     declaredRow,
@@ -90,17 +104,21 @@ var rows = new[]
         "declared pinned + release-notes (pinned first)",
         [DeclaredTarget, "--pinned", CalibrationMergeBase, CalibrationMeasuredHead, "--release-notes", ReleaseNotesFixture],
         DeclaredTarget,
-        PinnedAssertions(DeclaredTarget, CalibrationMergeBase, CalibrationMeasuredHead)),
+        Combine(
+            PinnedAssertions(DeclaredTarget, CalibrationMergeBase, CalibrationMeasuredHead),
+            DeclaredReleaseNotesAssertions)),
     new Row(
         "declared pinned + release-notes (release-notes first)",
         [DeclaredTarget, "--release-notes", ReleaseNotesFixture, "--pinned", CalibrationMergeBase, CalibrationMeasuredHead],
         DeclaredTarget,
-        PinnedAssertions(DeclaredTarget, CalibrationMergeBase, CalibrationMeasuredHead)),
+        Combine(
+            PinnedAssertions(DeclaredTarget, CalibrationMergeBase, CalibrationMeasuredHead),
+            DeclaredReleaseNotesAssertions)),
     new Row(
         "declared release-notes only, unpinned",
         [DeclaredTarget, "--release-notes", ReleaseNotesFixture],
         DeclaredTarget,
-        UnpinnedReleaseNotesAssertions),
+        Combine(UnpinnedReleaseNotesAssertions, DeclaredReleaseNotesAssertions)),
     new Row(
         "calibration pinned",
         [CalibrationTarget, "--pinned", CalibrationMergeBase, CalibrationMeasuredHead],
@@ -150,7 +168,16 @@ var rows = new[]
             // failure, and the empty set is reported as an empty list rather than null.
             DeclaredIdAssertions(repositoryRoot, ZeroIdTarget, expectedDeclaredTotal: 0, expectedDeclaredIds: []),
             // FR-16 row 6: no .adr-list — a measured, empty zero, not a missing value.
-            AdrListAssertions(expectedEntries: [], expectedResolvedCount: 0))),
+            AdrListAssertions(expectedEntries: [], expectedResolvedCount: 0),
+            // T4.1: no --release-notes given, so the repository-root release_notes.md is read.
+            // It exists but carries zero marker lines naming "zero-id" (or any spec), so count
+            // is 0 and m is null — none of its real, unmarked sections are counted.
+            ReleaseNotesAssertions(
+                repositoryRoot,
+                DefaultReleaseNotesPath,
+                expectedPresent: true,
+                expectedCount: 0,
+                expectedM: null))),
     new Row(
         "adr-unresolved",
         [AdrUnresolvedTarget],
@@ -771,6 +798,112 @@ static IEnumerable<string> AssertFrThenNfrOrder(JsonElement declaredIds)
     }
 }
 
+// T4.1: release_notes' present/count/m and each marked section's windows.
+static Func<RunResult, IEnumerable<string>> ReleaseNotesAssertions(
+    string repositoryRoot,
+    string releaseNotesPath,
+    bool expectedPresent,
+    int expectedCount,
+    int? expectedM,
+    IReadOnlyList<ReleaseNotesSectionExpectation>? expectedSections = null) => result =>
+{
+    var failures = new List<string>();
+
+    if (result.Ledger is null)
+    {
+        failures.Add("expected the ledger to parse as one JSON object, but no valid ledger was found");
+        return failures;
+    }
+
+    var root = result.Ledger.RootElement;
+
+    if (!root.TryGetProperty("release_notes", out var releaseNotes) || releaseNotes.ValueKind != JsonValueKind.Object)
+    {
+        failures.Add("expected a release_notes object");
+        return failures;
+    }
+
+    if (!releaseNotes.TryGetProperty("path", out var pathEl) || pathEl.GetString() != releaseNotesPath)
+    {
+        failures.Add($"expected release_notes.path {releaseNotesPath}");
+    }
+
+    var expectedPresentKind = expectedPresent ? JsonValueKind.True : JsonValueKind.False;
+    if (!releaseNotes.TryGetProperty("present", out var presentEl) || presentEl.ValueKind != expectedPresentKind)
+    {
+        failures.Add($"expected release_notes.present {expectedPresent}");
+    }
+
+    if (!releaseNotes.TryGetProperty("count", out var countEl) || countEl.GetInt32() != expectedCount)
+    {
+        failures.Add($"expected release_notes.count {expectedCount}");
+    }
+
+    if (expectedM is null)
+    {
+        if (!releaseNotes.TryGetProperty("m", out var mNullEl) || mNullEl.ValueKind != JsonValueKind.Null)
+        {
+            failures.Add("expected release_notes.m to be null");
+        }
+    }
+    else if (!releaseNotes.TryGetProperty("m", out var mEl) || mEl.GetInt32() != expectedM.Value)
+    {
+        failures.Add($"expected release_notes.m {expectedM.Value}");
+    }
+
+    if (!releaseNotes.TryGetProperty("sections", out var sectionsEl) || sectionsEl.ValueKind != JsonValueKind.Array)
+    {
+        failures.Add("expected a release_notes.sections array");
+        return failures;
+    }
+
+    if (sectionsEl.GetArrayLength() != expectedCount)
+    {
+        failures.Add($"expected release_notes.sections to have {expectedCount} entries, got {sectionsEl.GetArrayLength()}");
+    }
+
+    if (expectedSections is not null)
+    {
+        var actualSections = sectionsEl.EnumerateArray().ToArray();
+        for (var i = 0; i < expectedSections.Count && i < actualSections.Length; i++)
+        {
+            var expected = expectedSections[i];
+            var actual = actualSections[i];
+
+            if (!actual.TryGetProperty("bytes", out var bytesEl) || bytesEl.GetInt64() != expected.Bytes)
+            {
+                failures.Add($"expected release_notes.sections[{i}].bytes {expected.Bytes}");
+            }
+
+            if (!actual.TryGetProperty("windows", out var windowsEl) || windowsEl.ValueKind != JsonValueKind.Array)
+            {
+                failures.Add($"expected a release_notes.sections[{i}].windows array");
+                continue;
+            }
+
+            if (windowsEl.GetArrayLength() != 1)
+            {
+                failures.Add($"expected release_notes.sections[{i}] to be exactly one window, got {windowsEl.GetArrayLength()}");
+            }
+            else
+            {
+                var window = windowsEl[0];
+                if (window.GetProperty("first_line").GetInt64() != expected.FirstLine
+                    || window.GetProperty("last_line").GetInt64() != expected.LastLine)
+                {
+                    failures.Add(
+                        $"expected release_notes.sections[{i}] to run lines {expected.FirstLine}-{expected.LastLine}, got "
+                        + $"{window.GetProperty("first_line").GetInt64()}-{window.GetProperty("last_line").GetInt64()}");
+                }
+            }
+
+            failures.AddRange(AssertContiguousWindows(windowsEl, expected.Bytes, startLine: expected.FirstLine));
+        }
+    }
+
+    return failures;
+};
+
 // T3.6: .adr-list entry resolution, each resolved entry's extract, and adr_resolved_count.
 static Func<RunResult, IEnumerable<string>> AdrListAssertions(
     IReadOnlyList<AdrListEntryExpectation> expectedEntries,
@@ -1137,3 +1270,5 @@ sealed record Row(string Name, string[] Args, string? LedgerTarget, Func<RunResu
 sealed record DeclaredIdExpectation(string Id, int FirstLine, int LastLine, int Bytes);
 
 sealed record AdrListEntryExpectation(string Entry, string? Path, string? Reason, string[]? Matches, bool ExpectExtract);
+
+sealed record ReleaseNotesSectionExpectation(int FirstLine, int LastLine, int Bytes);
