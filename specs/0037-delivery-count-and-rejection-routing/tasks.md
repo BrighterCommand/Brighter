@@ -358,7 +358,7 @@
     - A red here points at the `handled-count` attribute on the DLQ send (`SqsMessageSender.cs:130`, `SnsMessagePublisher.cs:110`) or at `DeliveryCount.Resolve`.
   - Depends on: 4.3, 4.5
 
-- [ ] **4.7 CHARACTERISE: With budget 3 below a native limit of 5, SQS dead-letters through Brighter and the native target stays empty**
+- [x] **4.7 CHARACTERISE: With budget 3 below a native limit of 5, SQS dead-letters through Brighter and the native target stays empty**
   - **USE COMMAND**: `/test-first when sqs budget is below the native redrive limit should dead letter through brighter and leave the native target empty`
   - Test location: "tests/Paramore.Brighter.AWS.Tests/MessagingGateway/Sqs/Standard/Reactor", "…/Proactor", and the V4 twins
   - Test file: `When_sqs_budget_is_below_native_redrive_limit_should_dead_letter_through_brighter.cs`
