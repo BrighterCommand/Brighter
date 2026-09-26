@@ -35,7 +35,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     1. `git clone <repo> "$SCRATCH/showme-clone"`. The clone starts on the committed `spec/show-me`.
     2. Point the clone's `origin/master` at the source's real `origin/master`: `git -C "$SCRATCH/showme-clone" update-ref refs/remotes/origin/master "$(git -C <repo> rev-parse origin/master)"`. A local clone shares the source's objects, so the commit is present. If `git -C "$SCRATCH/showme-clone" cat-file -e origin/master^{commit}` fails, run `git -C "$SCRATCH/showme-clone" fetch origin +refs/remotes/origin/master:refs/remotes/origin/master` instead. Then confirm that `git merge-base origin/master origin/spec/scoped-lifetime-per-pipeline` gives the same sha in the clone as in the source (in the source the name is the real remote-tracking ref; in the clone it mirrors the source's local branch, both at `91d549be6` on 2026-09-26).
     3. Build every R7 row that has a branch. Each `spec/{name}` is created off `origin/master` with one commit holding the row's source changes and its spec directory. K14's two branches are the exception: they are created off `spec/show-me` (see R7).
-    4. On the working branch, write each row's `specs/NNNN-name/` (every row except K12 and K14) and each synthetic ADR, and **stage them without committing**. Staging makes them tracked for FR-17. Not committing means FR-10 rule 3 never resolves them to `HEAD`. Make K7's `release_notes.md` edit in the working tree and leave it unstaged.
+    4. On the working branch, write each row's `specs/NNNN-name/` (every row except K12 and K14) and each synthetic ADR, and **stage them without committing**. Staging makes them tracked for FR-17. Not committing means FR-10 rule 3 never resolves them to `HEAD`. Make K7's `release_notes.md` edit in the working tree and leave it unstaged. Apply the source changes of K5, K6 and K7 to the working tree as well, and leave them unstaged too (R7, *Source changes*).
     5. Apply K12's ref edits last.
   - **Clone figures are not calibration values.** Merge bases, diff figures, levels and ledger values measured in the clone depend on the clone's refs. Only the figures in the *Real fixtures* table below are calibration values, and no clone result is compared with them.
   - Start a Claude Code session **in the clone** so that its `.claude/settings.json` applies.
@@ -51,7 +51,10 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - `requirements.md` declaring `**FR-1 — …**`, `**FR-2 — …**` and `**FR-3 — …**` in the bold lead-in form.
     - `tasks.md` in which every checkbox is checked and tag-first. It has one `- [x] **TEST + IMPLEMENT: T1.n — …**` line per declared id. Each line's `Traces to:` sub-line names that id, and its text says the id shipped as stated, so every id has `Shipped` evidence.
     - No `.adr-list`.
-  - **Source changes** are committed on the row's branch only. They are comment-only edits unless the row says otherwise.
+  - **Source changes** are committed on the row's branch. They are comment-only edits unless the row says otherwise.
+    - The script measures them from the branch, but the Explainer reads participants in the **working tree** (ADR 0077: `wc -c`, `tail`/`head` and `grep -n -F` on paths that pass `git ls-files`). So a row whose outcome depends on what the Explainer reads must carry its source content there too.
+    - K5, K6 and K7 are those rows. R4 step 4 applies their source changes to the working branch's working tree as unstaged edits, so the files stay tracked paths with the row's content. Without this, K7's five files keep their normal few-KB size, fit the reserve, and AC-58's exhaustion is never produced.
+    - K5, K6 and K7 therefore use files that no other K row changes, and none shared with each other. The unstaged edits do not change any ledger value: the script's diff figures are measured between committed refs (merge base..measured head), not from the working tree, and no ledger field reads these source files.
   - **Synthetic ADRs** are written and staged on the working branch (R4 step 4). Each has YAML front matter (`title`, `status`), a `## Status` section reading `Accepted`, and a `## Consequences` section, so the script finds all three extract parts.
 
 | K | Directory / refs | Content (beyond the default) | Used for |
@@ -62,7 +65,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 | K4 | `specs/9004-props/`, `spec/props` | `src/Directory.Build.props` plus 4 files in `src/Paramore.Brighter/` | AC-67 |
 | K5 | `specs/9005-ten-dtos/`, `spec/ten-dtos` | One added `public` property on each of ten unrelated classes, one class per file, and all ten files in `src/Paramore.Brighter/`. That gives 10 files in 1 subdirectory and 10 public-API lines, so D2 fires and D1 does not. | AC-64 |
 | K6 | `specs/9006-tree/`, `spec/tree` | 3–5 changed files in one namespace hierarchy under `src/Paramore.Brighter/`. `.adr-list` = `0062-pg-advisory-lock-sha256.md` and `0072-show-me-command-resolution-and-output.md` (2 resolved, so D3 fires). | AC-65, AC-60 |
-| K7 | `specs/9007-budget/`, `spec/budget` | `tasks.md` is the default three lines padded with further checked `DOC` lines to about 940,000 B. There are 5 changed files across 2 `src/` subdirectories, each padded past 150,000 B with lines naming the one type the relationship concerns. The clone's `release_notes.md` gets a section under `## Master`, marked `<!-- spec: 9007-budget -->`, whose `#### Breaking changes` list exceeds 30,000 B. That edit is left unstaged. | AC-58, AC-68 |
+| K7 | `specs/9007-budget/`, `spec/budget` | `tasks.md` is the default three lines padded with further checked `DOC` lines to about 940,000 B. There are 5 changed files across 2 `src/` subdirectories, each padded past 150,000 B with lines naming the one type the relationship concerns; the padding is also in the working tree (R7). The clone's `release_notes.md` gets a section under `## Master`, marked `<!-- spec: 9007-budget -->`, whose `#### Breaking changes` list exceeds 30,000 B. That edit is left unstaged. | AC-58, AC-68 |
 | K8 | `specs/9008-wide/`, no branch | A 15-entry `.adr-list` of real ADRs, each named by its full filename. `tasks.md` is a copy of 0036's (229,159 B, 82 checked, tag-first). | AC-52 |
 | K9 | `specs/9009-reconcile-17/`, no branch | `requirements.md` declares FR-1…FR-12 and NFR-1…NFR-5 in the bold lead-in form, including a `**FR-7.2 — …**` sub-clause and prose cross-references to other ids. `tasks.md` has one checked, tag-first line per top-level id: 16 show the id shipped as stated, and `FR-12`'s line records it as deferred to follow-up issue `#9009`. | AC-15 |
 | K10 | `specs/9010-withdrawn/`, no branch | `requirements.md` declares `**FR-27 — …**` with `**FR-27.1 — …**`, `**FR-27.2 — …**` and `**FR-27.3 — …**`, and `**FR-28 — …**`. `tasks.md` has checked, tag-first lines showing FR-27.1, FR-27.2 and FR-28 shipped, plus a checked `DOC` line recording FR-27.3's withdrawal. `.adr-list` = `9010-withdraw-fr-27-3.md`. The synthetic ADR `docs/adr/9010-withdraw-fr-27-3.md` records in `## Consequences` that FR-27.3 is withdrawn and superseded by FR-28. | AC-45 |
@@ -176,13 +179,15 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - The **`--` probe row**: `-- specs/x --file .claude/test-fixtures/show-me/probe.cs`.
     - `declared/` pinned to an all-zero 40-hex sha.
     - The *declared* row pinned to `6145913a0 91d549be6` with `--release-notes`, in both option orders.
+    - The *declared* row with `--release-notes` alone, unpinned.
     - The calibration row `specs/0036-scoped-lifetime-per-pipeline/` pinned to the same pair.
   - Test should verify:
     - Usage errors and the zero sha exit with a status other than `0`, `2` or `77`, and create no ledger (AC-93, second half). The probe row's status is not 77, so the probe did not run. The row prints `dotnet --version`.
+    - The `--release-notes`-only row exits `0`, writes a ledger, and has `pinned` false.
     - On both pinned rows: `pinned` true; `merge_base` and `measured_head` hold the pinned shas, with `measured_head.source` `pinned`; every other ref field is null with reason `pinned`; no field carries `not a spec directory`. The diff-field assertions belong to Phase 5.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - Parse exactly the three forms in ADR 0072 KC1's table: `--pinned` and `--release-notes` in either order, and `--word-count`. Everything else is a usage error that exits with a fixed status other than `0`/`2`.
+    - Parse exactly the forms in ADR 0072 KC1's table: the target alone; the target with `--pinned {base} {head}`, `--release-notes {path}`, or both, in either order; and `{file} --word-count`. Everything else is a usage error that exits with a fixed status other than `0`/`2`.
     - Confirm each pinned sha with a `git cat-file -e {sha}^{commit}` child process.
     - For pinned runs, apply the pinned row of the *kinds of run* table, which takes precedence over the target's kind.
   - Risk mitigation: the probe row is the tripwire for a later SDK that re-parses options after `--`.
@@ -360,7 +365,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - In the clone, K14:
       - With `wip/tiny-thing` checked out, `-- specs/9020-tiny-thing` resolves by rule 2 to `refs/heads/wip/tiny-thing`.
       - With `other` checked out, it resolves by rule 3 to `HEAD`.
-      - Check out `spec/show-me` again afterwards; the staged K directories move across with the checkout.
+      - Check out `spec/show-me` again afterwards; the staged K directories and the unstaged K5–K7 source edits move across with the checkout.
   - Implementation should:
     - Apply rule 1 (remote-tracking first, then local), rule 2, then rule 3. A candidate whose tip is already contained is skipped, with `git merge-base --is-ancestor` as a child process.
     - Choose the base ref as `origin/master`, else `master`.
@@ -590,7 +595,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
     - `0033`: What changed and why has no fenced block and carries exactly `No diagram: spec branch not determinable, so no change could be drawn.`, and the triggers are not evaluated (AC-61).
-    - K1 (clone): the no-trigger line names `2`, `1` directory, `0` and `1` (AC-57, first half).
+    - K1 (clone), when the Explainer does not raise: the no-trigger line names `2`, `1` directory, `0` and `1` (AC-57, first half). When it raises, record the first half `unexercised on this run` in the task's commit message and check the second half in T12.2.
     - Inspection: the five lines are quoted verbatim outside any table and referenced by name, never by ordinal.
   - Implementation should: add the ladder as ADR 0077's *mechanism* table; the lines with the no-trigger values copied from the ledger (`src/` files, `src_subdirectory_count`, `public_api_lines`, `adr_resolved_count`); and the node-list row with one licensing source.
   - Traces to: FR-6 (a), (b), (e), FR-16 row 12, NFR-1, AC-57, AC-61; ADR 0077 *mechanism*, KC3, IA 1.
@@ -733,10 +738,10 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 - [ ] **TEST + IMPLEMENT: T14.4 — Inputs used gives exactly FR-15's rows plus one per Explainer source file, each marked from the read log, and never a row for the ledger, the script, review or CI**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
-    - K2 in the clone, which resolves `spec/low-risk` so a diff is measured, has no PR (R4: `gh` fails), and has no marked section: AC-27 — the pull-request row is `not available` with a reason, `release_notes.md` is `not available`, and `tasks.md`, `requirements.md`, `.adr-list` and git history are `used`. There is no review or CI row.
+    - K2 in the clone, which resolves `spec/low-risk` so a diff is measured, and has no marked section, run with an R5 stand-in that answers `pr list …` with `[]` and exits 0, so there is no PR (FR-16 row 1): AC-27 — the pull-request row reads `not available: no PR found for branch spec/low-risk`, the metadata block's PR reference reads `none found`, `release_notes.md` is `not available`, and `tasks.md`, `requirements.md`, `.adr-list` and git history are `used`. There is no review or CI row.
     - `0033`: the git history row reads `not available: spec branch not determinable` (ADR 0072 KC5), and the PR and release-notes rows are `not available` with reasons. AC-41 — no `PROMPT` string anywhere. AC-75 — no `.show-me-ledger.json`, no script path, and no rows for either.
     - `0002-sqs-cleanup`: `.issue-number` is `not available: not present` (AC-44).
-    - K2 in the clone, where `gh` fails: the `gh unavailable` row, with F1 unchanged (AC-28).
+    - K2 in the clone with no stand-in, where `gh` fails (R4): the `gh unavailable` row, with F1 unchanged (AC-28). This run is not used for AC-27.
     - T10.2's section gives the row `used` (AC-69). K7 gives `not available: read budget exhausted before release_notes.md section could be read` (AC-68).
     - (C-8) `0036`: Explainer rows are marked `used` or `used (targeted extraction)`.
   - Implementation should: produce the fixed row set, the git history row per KC5, one Explainer row per source file however it was read (ADR 0077 IA 4), and no row for `.current-spec`, the existing `show-me.md` or `PROMPT*`.
@@ -771,7 +776,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - Invoke only `-- specs/{dir}/show-me.md --word-count` and read the last `show-me-wordcount: ` line.
     - Never revise the file and never invoke a third time.
     - Copy the level from the `**Overall risk:**` line without testing it (ADR 0073 IA 5, FR-19 part), and print only the stop message on a stop.
-  - Traces to: FR-19, FR-13, FR-21 (*Modes*), NFR-2, AC-24, AC-25 (no side effect varies), AC-31, AC-33, AC-59; ADR 0072 IA 10 Steps 7–8; ADR 0073 KC5, IA 5.
+  - Traces to: FR-19, FR-13, FR-21 (*Modes*), NFR-2, AC-24, AC-31, AC-33, AC-59; ADR 0072 IA 10 Steps 7–8; ADR 0073 KC5, IA 5.
 
 ## Phase 15 — Spec-family forms
 
@@ -825,14 +830,15 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 - [ ] **TEST + IMPLEMENT: T15.5 — `/spec:write_release_notes` writes or replaces exactly one marked section under the first `##`, in the fixed form, with one exact-match `Edit`**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
-    - Clone, with K13 (`specs/9015-two-breaks/` and its staged synthetic ADR recording two breaks):
-      - AC-89: one section directly under `## Master`; the marker on the next line; a summary; two bullets, each with an italic classification set and a migration. `diff` of a copy of `release_notes.md` saved before the run against the file afterwards shows one added hunk, and `git diff --cached --quiet -- release_notes.md` succeeds, so `release_notes.md` is not staged. (R4 stages the fixture directory and the synthetic ADR, and K7's section is an unstaged edit, so neither a whole-index check nor a plain `git diff` would isolate this run.)
+    - Clone, with K13 (`specs/9015-two-breaks/` and its staged synthetic ADR recording two breaks). Before the first run, save `release_notes.md` as `$SCRATCH/release_notes.pre-T15.5.md`. That copy holds K7's unstaged section and no section for `9015`. Every "restore" below copies it back over `release_notes.md`.
+      - AC-89: one section directly under `## Master`; the marker on the next line; a summary; two bullets, each with an italic classification set and a migration. `diff` of the saved copy against the file afterwards shows one added hunk, and `git diff --cached --quiet -- release_notes.md` succeeds, so `release_notes.md` is not staged. (R4 stages the fixture directory and the synthetic ADR, and K7's section is an unstaged edit, so neither a whole-index check nor a plain `git diff` would isolate this run.)
       - Edit the ADR to one break and re-run for AC-90: one section, one bullet, all other bytes unchanged.
       - An ADR with no break gives `No breaking changes.`
-    - AC-92 in the clone:
-      - A hand-written `### X (spec 9015)` section: the script run directly records `count` 0 and `m` null, and `/spec:show-me` reports row 5.
-      - Delete it and write three breaks: `count` 1, `m` 3.
-      - Hand-mark a section that has no `#### Breaking changes`: `count` 1, `m` null. `/spec:show-me` reads it, gives no disagreement line, and groups items by the no-catalogue rule.
+    - AC-92 in the clone. Each given starts from a restore, so no section written by an earlier step is present:
+      - Restore, then add a hand-written `### X (spec 9015)` section with no marker and no `#### Breaking changes`. The script run directly records `count` 0 and `m` null, and `/spec:show-me` reports row 5.
+      - Restore, edit K13's ADR to three breaks, and run `/spec:write_release_notes`: `count` 1, `m` 3.
+      - Restore, add the same hand-written section, then add the marker line `<!-- spec: 9015-two-breaks -->` by hand beneath its heading: `count` 1, `m` null. `/spec:show-me` reads it, gives no disagreement line, and groups items by the no-catalogue rule.
+      - Finish with a restore, and `git checkout -- docs/adr/9015-two-breaks.md` to return the ADR to its staged content.
     - Real repository, with R2 restore:
       - Hand-mark 0036's section. Running the command replaces it in place, keeps the title `Scoped lifetime per pipeline`, and leaves no second section (AC-95).
       - Mark it instead for `0036-generator-universal-rejection-tests`. The command leaves it byte-identical and writes the target's own section (AC-95).
@@ -879,6 +885,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 
 | AC | Judged path | Fixture that makes it likely |
 |---|---|---|
+| AC-57 (first half) | the Explainer does not raise with no trigger | K1 |
 | AC-57 (second half) | the Explainer raises with no trigger | none; K1 is built so that no trigger fires, and a raise there is a judgement |
 | AC-59 | two diagrams totalling about 70 fenced lines | (C-8) `0036` (D1, D2 and D3 all fire) |
 | AC-60 | a tree in `## Where to look first` | K6; (C-8) `0036` |
@@ -915,8 +922,8 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 
 - [ ] **PROJECT: T17.5 — Regression sweep over the clone fixtures K1–K14**
   - Do:
-    - Rebuild R4 from the final commit and re-run the K-fixture set-ups, including K14's rule 2 and rule 3 runs. Check AC-15, AC-21, AC-22, AC-26 (K1), AC-27 (K2), AC-28, AC-40, AC-45, AC-52, AC-54, AC-55, AC-57, AC-58, AC-60, AC-64, AC-65, AC-66, AC-67, AC-68 and AC-85. AC-57's second half, AC-60, AC-64 and AC-65 follow the *Judged paths* rule.
-    - (C-8 window, R8) For AC-25, compare the K2 run (`Low`) with a `0036` run (`High`) in the same clone. The only difference in side effects is the text of `show-me.md`: the same shape of commands, one written path, and no marker, label or comment. The clone's `0036` figures are not calibration values (R4).
+    - Rebuild R4 from the final commit and re-run the K-fixture set-ups, including K14's rule 2 and rule 3 runs. Check AC-15, AC-21, AC-22, AC-26 (K1), AC-27 (K2, with T14.4's `[]` stand-in), AC-28 (K2, `gh` failing), AC-40, AC-45, AC-52, AC-54, AC-55, AC-57, AC-58, AC-60, AC-64, AC-65, AC-66, AC-67, AC-68 and AC-85. Both halves of AC-57, AC-60, AC-64 and AC-65 follow the *Judged paths* rule.
+    - (C-8 window, R8) For AC-25, compare the K2 run with `gh` failing (`Low`) with a `0036` run (`High`) in the same clone, also with `gh` failing, so both runs share one `gh` condition. The only difference in side effects is the text of `show-me.md`: the same shape of commands, one written path, and no marker, label or comment. The clone's `0036` figures are not calibration values (R4).
     - (C-8 window, R8) Rerun the R5 stand-in cases on the real repository for AC-46, AC-84 and FR-10's PR-head-differs line (T6.2, T11.3).
   - Traces to: FR-6, FR-8, FR-10–FR-13, FR-20, NFR-3, and the ACs listed.
 
@@ -986,7 +993,7 @@ All 32 declared ids have at least one task.
 |---|---|---|---|---|---|---|---|
 | **AC-1** | T9.1, T17.2 | AC-23 † | T13.4, T14.5 | **AC-51** | T14.1, T17.2 | AC-74 | T1.2, T11.1, T17.2 |
 | AC-1a | T9.1, T9.2, T17.4 | AC-24 | T13.4, T14.7, T17.2 | AC-52 | T10.1, T17.5 | AC-75 | T14.4, T17.2 |
-| **AC-2** | T9.2, T17.2 | AC-25 | T14.7, T17.5 | AC-53 | T15.4, T16.1, T17.7 | AC-76 | T10.1, T17.2 |
+| **AC-2** | T9.2, T17.2 | AC-25 | T17.5 | AC-53 | T15.4, T16.1, T17.7 | AC-76 | T10.1, T17.2 |
 | AC-3 | T9.1, T17.4 | AC-26 | T14.3, T17.2, T17.5 | AC-54 | T13.5, T14.2, T17.5 | **AC-77** | T10.1, T17.2 |
 | **AC-4** | T9.2, T17.2 | AC-27 | T14.4, T17.5 | AC-55 | T13.5, T14.2, T17.5 | **AC-78** | T10.1, T12.2, T17.2 |
 | AC-5 | T9.1, T17.4 | AC-28 | T6.2, T14.4, T17.5 | **AC-56** | T12.2, T17.2 | AC-79 | T2.1, T3.1, T3.3, T3.5, T4.1, T5.1, T5.2, T17.1, T18.1 |
