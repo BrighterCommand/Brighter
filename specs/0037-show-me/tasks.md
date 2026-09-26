@@ -314,7 +314,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - Never run a `git diff` without a pathspec or a summary flag.
   - Traces to: FR-9, FR-10, FR-21, NFR-1, NFR-3 (full-diff ban), NFR-9 rows 2–3, AC-18 values, AC-66 (counting rule), AC-79; ADR 0072 KC1, KC2, IA 6.
 
-- [ ] **TEST + IMPLEMENT: T5.2 — `f1_level` applies FR-11's F1 thresholds exactly at 10/11 and 50/51**
+- [x] **TEST + IMPLEMENT: T5.2 — `f1_level` applies FR-11's F1 thresholds exactly at 10/11 and 50/51**
   - **USE COMMAND**: `/test-first when the measurement script measures 10, 11, 50 and 51 src files it should report f1_level Low, Medium, Medium and High`
   - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
   - Test row(s): the four F1 boundary rows, plus `f1_level` on the calibration row.
