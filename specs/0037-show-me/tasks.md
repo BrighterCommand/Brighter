@@ -226,7 +226,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - Capture children's stderr so no child line can carry the prefix.
   - Traces to: FR-3, FR-21 (exit `2`, gate record, stderr rule), NFR-8, AC-7, AC-71; ADR 0072 KC1 *stderr records*, KC4, IA 4.
 
-- [ ] **TEST + IMPLEMENT: T3.5 — Declared ids are the distinct anchored lead-in ids, in FR-then-NFR order, each located by its paragraph's windows**
+- [x] **TEST + IMPLEMENT: T3.5 — Declared ids are the distinct anchored lead-in ids, in FR-then-NFR order, each located by its paragraph's windows**
   - **USE COMMAND**: `/test-first when the measurement script reads requirements.md it should report the distinct declared ids in FR-then-NFR order with each declaration's paragraph windows`
   - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
   - Test row(s): *declared*, *zero-id*, and the calibration row.
