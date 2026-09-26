@@ -50,6 +50,9 @@ namespace Paramore.Brighter
         /// Use this option to remove the cost of existence checks on platforms 
         /// where such checks are expensive or when you're confident the 
         /// infrastructure is already in place.
+        /// A transport whose client does not report missing infrastructure may require an explicit
+        /// check to preserve fail-fast behavior. Kafka's consumer protocol checks topic existence
+        /// on the first receive, bounded by its topic-find timeout, and caches success.
         /// </remarks>
         Assume = 2
     }

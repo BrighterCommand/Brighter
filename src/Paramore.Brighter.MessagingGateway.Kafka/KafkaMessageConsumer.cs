@@ -62,6 +62,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private static readonly TimeSpan s_commitSyncTimeout = TimeSpan.FromSeconds(5);
         private readonly ITimer _sweeperTimer;
         private bool _hasFatalError;
+        private bool _topicExistenceConfirmed;
         private readonly Func<Error, LogLevel>? _errorLogLevel;
         private bool _isClosed;
         private readonly RoutingKey? _deadLetterRoutingKey;
@@ -101,7 +102,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="numPartitions">If we are creating missing infrastructure, How many partitions should the topic have. Defaults to 1</param>
         /// <param name="partitionAssignmentStrategy">What is the strategy for assigning partitions to consumers?</param>
         /// <param name="replicationFactor">If we are creating missing infrastructure, how many in-sync replicas do we need. Defaults to 1</param>
-        /// <param name="topicFindTimeout">If we are checking for the existence of the topic, what is the timeout. Defaults to 10000ms</param>
+        /// <param name="topicFindTimeout">Timeout for topic existence checks, including the first receive under
+        /// the consumer protocol with <see cref="OnMissingChannel.Assume"/>. This check has its own timeout,
+        /// in addition to the receive poll timeout. Defaults to 10000ms.</param>
         /// <param name="makeChannels">Should we create infrastructure (topics) where it does not exist or check. Defaults to Create</param>
         /// <param name="configHook">Allows you to modify the Kafka client configuration before a consumer is created.</param>
         /// <param name="timeProvider">The <see cref="TimeProvider"/> used to create the timer for sweeping uncommitted offsets. Defaults to <see cref="TimeProvider.System"/> if not specified. Can be overridden for testing purposes.</param>
@@ -488,7 +491,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         /// <remarks>
         /// We consume the next offset from the stream, and turn it into a Brighter message; we store the offset in the partition into the Brighter message
-        /// headers for use in storing and committing offsets. If the stream is EOF or we are not allocated partitions, returns an empty message. 
+        /// headers for use in storing and committing offsets. If the stream is EOF or we are not allocated partitions, returns an empty message.
+        /// With the consumer protocol and <see cref="OnMissingChannel.Assume"/>, the first receive checks topic
+        /// existence using the configured topic-find timeout in addition to the poll timeout. Success is cached;
+        /// failures remain retryable on later receives. Partition and replication counts are not validated.
         /// </remarks>
         /// <param name="timeOut">The timeout for receiving a message. Defaults to 300ms</param>
         /// <returns>A Brighter message wrapping the payload from the Kafka stream</returns>
@@ -502,7 +508,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             
             try
             {
-                
+                EnsureAssumedTopicExists();
+
                 LogOffSets();
 
                 Log.ConsumingMessages(s_logger, timeOut.Value.TotalMilliseconds);
@@ -548,6 +555,23 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
         }
 
+        private void EnsureAssumedTopicExists()
+        {
+            if (_topicExistenceConfirmed || MakeChannels != OnMissingChannel.Assume
+                || _consumerConfig.GroupProtocol != GroupProtocol.Consumer)
+                return;
+
+            using var adminClient = new DependentAdminClientBuilder(_consumer.Handle).Build();
+            var metadata = adminClient.GetMetadata(Topic!.Value, TopicFindTimeout);
+            var topic = metadata.Topics.FirstOrDefault(candidate => candidate.Topic == Topic.Value);
+            var error = topic?.Error ?? new Error(ErrorCode.UnknownTopicOrPart, "Topic does not exist");
+
+            if (error.IsError)
+                throw new KafkaException(new Error(error.Code, $"Topic {Topic.Value}: {error.Reason}", error.IsFatal));
+
+            _topicExistenceConfirmed = true;
+        }
+
         /// <summary>
         /// Receives from the specified topic. Used by a <see cref="Channel"/> to provide access to the stream.
         /// </summary>
@@ -555,9 +579,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// We consume the next offset from the stream, and turn it into a Brighter message; we store the offset in the partition into the Brighter message
         /// headers for use in storing and committing offsets. If the stream is EOF or we are not allocated partitions, returns an empty message.
         /// Kafka does not support an async consumer, and probably never will. See <a href="https://github.com/confluentinc/confluent-kafka-dotnet/issues/487">Confluent Kafka</a>
-        /// As a result we use TimeSpan.Zero to run the receive loop, which avoids blocking.
+        /// The poll timeout defaults to zero. The initial topic existence check for the consumer protocol
+        /// with <see cref="OnMissingChannel.Assume"/> uses the configured topic-find timeout independently,
+        /// as described by <see cref="Receive"/>.
         /// </remarks>
-        /// <param name="timeOut">The timeout for receiving a message. For async always treated as zero</param>
+        /// <param name="timeOut">The poll timeout for receiving a message. Defaults to zero.</param>
         /// <param name="cancellationToken">The cancellation token - not used as this is async over sync</param>
         /// <returns>A Brighter message wrapping the payload from the Kafka stream</returns>
         /// <exception cref="ChannelFailureException">We catch Kafka consumer errors and rethrow as a ChannelFailureException </exception>
