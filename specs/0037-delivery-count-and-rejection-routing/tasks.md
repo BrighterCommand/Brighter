@@ -289,7 +289,7 @@
     - Call `DeliveryBudgetDiagnostics.WarnIfUnenforceable` once on each non-delegating channel-creation path. In `AWSSQS/ChannelFactory.cs` that is `CreateSyncChannelAsync` (`:204`) and `CreateAsyncChannelAsync` (`:92`), plus the V4 twins. Never in `CreateAsyncChannel` (`:82-83`), which delegates (R-26). This is a uniform no-op for SQS.
   - Depends on: 2.4, 2.6
 
-- [ ] **4.2 TEST + IMPLEMENT: The eight AWS/AWS.V4 conformance providers hold the budget strictly below the native redrive limit (R = 3, M = 5)**
+- [x] **4.2 TEST + IMPLEMENT: The eight AWS/AWS.V4 conformance providers hold the budget strictly below the native redrive limit (R = 3, M = 5)**
   - **USE COMMAND**: `/test-first when reading aws conformance providers should configure requeue count three below max receive count five`
   - Test location: "tests/Paramore.Brighter.AWS.Tests/MessagingGateway" and "tests/Paramore.Brighter.AWS.V4.Tests/MessagingGateway"
   - Test file: `When_reading_conformance_providers_should_hold_budget_below_native_limit.cs`
