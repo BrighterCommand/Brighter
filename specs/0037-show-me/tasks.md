@@ -112,7 +112,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - Acceptance: `git diff $PRE -- .claude/settings.json` shows exactly this one added line. The `gh` entries and the `deny` array are unchanged. No `Bash(dotnet run:*)` or other interpreter grant exists.
   - Traces to: FR-18, C-10, AC-82; ADR 0072 *Why the one allow-list entry names the script*, IA 1.
 
-- [ ] **STRUCTURAL: T1.4 — Create NFR-9's fixture tree under `.claude/test-fixtures/show-me/`**
+- [x] **STRUCTURAL: T1.4 — Create NFR-9's fixture tree under `.claude/test-fixtures/show-me/`**
   - Do: create these tracked files, each with the content NFR-9's table states:
     - `declared/`: `requirements.md` declaring `**FR-1 — …**`, `- **FR-2 — …**` and `**NFR-1 — …**`, plus one prose cross-reference; `tasks.md` of two checked, untagged lines; `.adr-list` of `0062-pg-advisory-lock-sha256.md` and `docs/adr/0072-show-me-command-resolution-and-output.md`.
     - `zero-id/`: `requirements.md` with prose-only ids and one legacy `#### FR-9: …` heading; `tasks.md` of three checked lines with the lead-ins `**TEST + IMPLEMENT: …**`, `**DOC TIDY: …**` and `**T1.1 — STRUCTURAL: …**`; no `.adr-list`.
