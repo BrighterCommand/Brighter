@@ -317,7 +317,7 @@
     - Add no broker call (the attribute is already requested at `SqsMessageConsumer.cs:188-194`) and no allocation (NFR-1, NFR-2)
   - Depends on: 1.4, 2.2, 3.1, 3.3
 
-- [ ] **4.4 CHARACTERISE: An SQS message whose visibility timeout lapses presents a higher count on the expiry redelivery, with no pump and no Requeue**
+- [x] **4.4 CHARACTERISE: An SQS message whose visibility timeout lapses presents a higher count on the expiry redelivery, with no pump and no Requeue**
   - **USE COMMAND**: `/test-first when an sqs visibility timeout lapses without ack or requeue should present a greater delivery count on redelivery`
   - Test location: "tests/Paramore.Brighter.AWS.Tests/MessagingGateway/Sqs/Standard/Reactor", "…/Proactor", and the V4 twins
   - Test file: `When_an_sqs_visibility_timeout_lapses_should_present_greater_delivery_count.cs`
