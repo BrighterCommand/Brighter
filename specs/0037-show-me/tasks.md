@@ -348,7 +348,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 
 *ADR 0072 IA 7. This is script code verified at command level. Depends on Phase 5. (C-8) parts need R8.*
 
-- [ ] **TEST + IMPLEMENT: T6.1 — The script resolves the spec branch by FR-10's ordered rules, skipping merged candidates, and records every rule tried and any local divergence**
+- [x] **TEST + IMPLEMENT: T6.1 — The script resolves the spec branch by FR-10's ordered rules, skipping merged candidates, and records every rule tried and any local divergence**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by (R6 direct runs; R3 cleanup):
     - (C-8) `-- specs/0036-scoped-lifetime-per-pipeline`:
