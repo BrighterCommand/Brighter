@@ -165,7 +165,74 @@ else if (!IsUnderSpecs(target))
         nullReasons[field] = "not a spec directory";
     }
 }
-// else: a real, unpinned spec directory — ref resolution is a later task (Phase 6).
+else
+{
+    // FR-10's ordered rule set for a real, unpinned spec directory. Rule order: (1) the
+    // remote-tracking branch spec/{name}, then the local branch of the same name — either
+    // skipped when its tip is already contained in the base ref; (2) the checked-out branch,
+    // if its name contains {name}; (3) HEAD, if a commit since the base ref touches the spec
+    // directory. The base ref (origin/master, else master) is resolved regardless of whether
+    // a rule succeeds (FR-16 row 15).
+    var name = Path.GetFileName(target.TrimEnd('/'));
+    var nameSuffix = Regex.Replace(name, @"^[0-9]+-", "");
+
+    var (baseRef, baseSha) = ResolveBaseRef();
+    var rulesTried = new JsonArray();
+
+    var resolved = ResolveSpecBranch(nameSuffix, target, baseRef, baseSha, rulesTried);
+
+    ledger["rules_tried"] = rulesTried;
+    ledger["base"] = new JsonObject { ["ref"] = baseRef, ["sha"] = baseSha };
+
+    if (resolved is null)
+    {
+        foreach (var field in refFields.Where(f => f is not "rules_tried" and not "base"))
+        {
+            ledger[field] = null;
+            nullReasons[field] = "spec branch not determinable";
+        }
+        foreach (var field in diffFields)
+        {
+            ledger[field] = null;
+            nullReasons[field] = "spec branch not determinable";
+        }
+    }
+    else
+    {
+        var (specRef, specSha, localDivergence) = resolved.Value;
+
+        ledger["spec_branch"] = new JsonObject { ["ref"] = specRef, ["sha"] = specSha };
+        ledger["local_divergence"] = localDivergence;
+
+        // PR discovery is T6.2's job — measured head is always the branch tip for now.
+        ledger["measured_head"] = new JsonObject { ["sha"] = specSha, ["source"] = "branch_tip" };
+        var mergeBase = RunGitText("merge-base", baseSha, specSha).Trim();
+        ledger["merge_base"] = mergeBase;
+
+        var (srcDiffCommand, srcDiffBytes) = RunScopedDiff(mergeBase, specSha, "src/");
+        var buckets = ComputeBuckets(mergeBase, specSha);
+        var srcSubdirectoryCount = ComputeSrcSubdirectoryCount(mergeBase, specSha);
+        var publicApiLines = CountPublicApiLines(srcDiffBytes);
+
+        ledger["buckets"] = buckets;
+        ledger["src_subdirectory_count"] = srcSubdirectoryCount;
+        ledger["public_api_lines"] = publicApiLines;
+        ledger["commits"] = CountCommits(mergeBase, specSha);
+        ledger["src_diff"] = new JsonObject
+        {
+            ["command"] = srcDiffCommand,
+            ["bytes"] = srcDiffBytes.Length,
+            ["windows"] = ComputeWindows(srcDiffBytes),
+        };
+        ledger["f1_level"] = ComputeF1Level((int)buckets["src"]!["files"]!);
+        ledger["triggers"] = new JsonObject
+        {
+            ["d1"] = ComputeD1((int)buckets["src"]!["files"]!, srcSubdirectoryCount),
+            ["d2"] = ComputeD2(publicApiLines),
+            ["d3"] = null,
+        };
+    }
+}
 
 // tasks.md's counts are file-derived figures, read from the working tree on every kind of run,
 // pinned or not (NFR-9) — the gate above already computed them.
@@ -211,7 +278,9 @@ ledger["adr_list"] = adrList;
 ledger["adr_resolved_count"] = adrResolvedCount;
 
 // D3 reads adr_resolved_count (FR-6 (a)), known only now that .adr-list has been resolved.
-if (pinned)
+// triggers is present whenever a diff was actually measured — a pinned run, or an unpinned
+// run whose spec branch resolved; it stays null when the branch is not determinable.
+if (ledger["triggers"] is JsonObject)
 {
     ledger["triggers"]!["d3"] = ComputeD3(adrResolvedCount);
 }
@@ -236,6 +305,128 @@ return 0;
 
 static bool IsUnderSpecs(string target) =>
     target.TrimEnd('/').Split('/')[0].Equals("specs", StringComparison.Ordinal);
+
+// Runs git and reports its exit code alongside stdout — used by the ref-resolution probes
+// below, which branch on success/failure rather than on parsed output alone.
+static (int ExitCode, string Stdout) RunGitChecked(params string[] args)
+{
+    var startInfo = new ProcessStartInfo("git")
+    {
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+        UseShellExecute = false,
+    };
+    foreach (var arg in args)
+    {
+        startInfo.ArgumentList.Add(arg);
+    }
+
+    using var process = Process.Start(startInfo)
+        ?? throw new InvalidOperationException("could not start git");
+    var stdout = process.StandardOutput.ReadToEnd();
+    process.StandardError.ReadToEnd();
+    process.WaitForExit();
+    return (process.ExitCode, stdout);
+}
+
+static bool RefExists(string refName) => RunGitChecked("rev-parse", "--verify", "-q", refName).ExitCode == 0;
+
+static string RevParse(string refName) => RunGitChecked("rev-parse", refName).Stdout.Trim();
+
+static bool IsAncestor(string candidateSha, string baseSha) =>
+    RunGitChecked("merge-base", "--is-ancestor", candidateSha, baseSha).ExitCode == 0;
+
+// The checked-out branch's short name, or null when HEAD is detached (FR-10 rule 2).
+static string? CurrentBranch()
+{
+    var (exitCode, stdout) = RunGitChecked("symbolic-ref", "--short", "-q", "HEAD");
+    return exitCode == 0 ? stdout.Trim() : null;
+}
+
+// FR-10's base ref: origin/master if it resolves, else master.
+static (string Ref, string Sha) ResolveBaseRef() =>
+    RefExists("refs/remotes/origin/master")
+        ? ("origin/master", RevParse("refs/remotes/origin/master"))
+        : ("master", RevParse("refs/heads/master"));
+
+// FR-10's ordered rule set. Returns null when no rule resolves (spec branch not determinable).
+// Every rule that does not resolve records its outcome in rulesTried, in FR-10's wording, so a
+// fully unresolved run still shows what each of the three rules found.
+static (string Ref, string Sha, JsonNode? LocalDivergence)? ResolveSpecBranch(
+    string name, string target, string baseRef, string baseSha, JsonArray rulesTried)
+{
+    // Rule 1: refs/remotes/origin/spec/{name}, then refs/heads/spec/{name} — remote-tracking
+    // first, per FR-10 ("when both exist, the remote-tracking branch wins").
+    var remoteRef = $"refs/remotes/origin/spec/{name}";
+    var localRef = $"refs/heads/spec/{name}";
+    var remoteSha = RefExists(remoteRef) ? RevParse(remoteRef) : null;
+    var localSha = RefExists(localRef) ? RevParse(localRef) : null;
+
+    if (remoteSha is null)
+    {
+        rulesTried.Add((JsonNode)$"{remoteRef} does not exist");
+    }
+    else if (IsAncestor(remoteSha, baseSha))
+    {
+        rulesTried.Add((JsonNode)$"{remoteRef} is already merged into {baseRef}");
+    }
+    else
+    {
+        JsonNode? divergence = localSha is not null && localSha != remoteSha
+            ? new JsonObject { ["name"] = $"spec/{name}", ["sha"] = localSha }
+            : null;
+        return (remoteRef, remoteSha, divergence);
+    }
+
+    if (localSha is null)
+    {
+        rulesTried.Add((JsonNode)$"{localRef} does not exist");
+    }
+    else if (IsAncestor(localSha, baseSha))
+    {
+        rulesTried.Add((JsonNode)$"{localRef} is already merged into {baseRef}");
+    }
+    else
+    {
+        return (localRef, localSha, null);
+    }
+
+    // Rule 2: the currently checked-out branch, if its name contains {name}.
+    var currentBranch = CurrentBranch();
+    if (currentBranch is null)
+    {
+        rulesTried.Add((JsonNode)"HEAD is detached; rule 2 does not apply");
+    }
+    else if (!currentBranch.Contains(name, StringComparison.Ordinal))
+    {
+        rulesTried.Add((JsonNode)$"checked-out branch refs/heads/{currentBranch} does not contain \"{name}\"");
+    }
+    else
+    {
+        var currentRef = $"refs/heads/{currentBranch}";
+        var currentSha = RevParse("HEAD");
+        if (IsAncestor(currentSha, baseSha))
+        {
+            rulesTried.Add((JsonNode)$"{currentRef} is already merged into {baseRef}");
+        }
+        else
+        {
+            return (currentRef, currentSha, null);
+        }
+    }
+
+    // Rule 3: HEAD, if any commit reachable from HEAD but not the base ref touches the spec
+    // directory. Non-emptiness is the condition, so there is no merged-candidate skip here.
+    var specDir = target.TrimEnd('/');
+    var commitsTouching = RunGitText("log", $"{baseSha}..HEAD", "--oneline", "--", $"{specDir}/").Trim();
+    if (commitsTouching.Length == 0)
+    {
+        rulesTried.Add((JsonNode)$"no commit reachable from HEAD since {baseRef} touches {specDir}/");
+        return null;
+    }
+
+    return ("HEAD", RevParse("HEAD"), null);
+}
 
 static void WriteGateRecord(JsonObject record)
 {
