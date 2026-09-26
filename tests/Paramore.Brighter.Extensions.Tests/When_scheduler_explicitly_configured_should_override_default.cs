@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -31,6 +31,55 @@ namespace Paramore.Brighter.Extensions.Tests;
 
 public class When_scheduler_explicitly_configured_should_override_default
 {
+    [Theory]
+    [InlineData(RequestSchedulerType.Send, false, false)]
+    [InlineData(RequestSchedulerType.Send, false, true)]
+    [InlineData(RequestSchedulerType.Send, true, false)]
+    [InlineData(RequestSchedulerType.Send, true, true)]
+    [InlineData(RequestSchedulerType.Publish, false, false)]
+    [InlineData(RequestSchedulerType.Publish, false, true)]
+    [InlineData(RequestSchedulerType.Publish, true, false)]
+    [InlineData(RequestSchedulerType.Publish, true, true)]
+    [InlineData(RequestSchedulerType.Post, false, false)]
+    [InlineData(RequestSchedulerType.Post, false, true)]
+    [InlineData(RequestSchedulerType.Post, true, false)]
+    [InlineData(RequestSchedulerType.Post, true, true)]
+    public async Task When_scheduling_with_a_legacy_scheduler_should_keep_using_its_existing_contract(
+        RequestSchedulerType operation, bool isAsync, bool useDateTime)
+    {
+        //Arrange
+        var services = new ServiceCollection();
+        services.AddBrighter().UseScheduler(new StubSchedulerFactory());
+        await using var provider = services.BuildServiceProvider();
+        var processor = provider.GetRequiredService<IAmACommandProcessor>();
+        var request = new TestDoubles.DefaultMapperEvent();
+        var context = new RequestContext();
+        context.Bag["custom-value"] = 42;
+        var delay = TimeSpan.FromSeconds(1);
+        var at = DateTimeOffset.UtcNow.Add(delay);
+
+        //Act
+        var id = (operation, isAsync, useDateTime) switch
+        {
+            (RequestSchedulerType.Send, false, false) => processor.Send(delay, request, context),
+            (RequestSchedulerType.Send, false, true) => processor.Send(at, request, context),
+            (RequestSchedulerType.Send, true, false) => await processor.SendAsync(delay, request, context),
+            (RequestSchedulerType.Send, true, true) => await processor.SendAsync(at, request, context),
+            (RequestSchedulerType.Publish, false, false) => processor.Publish(delay, request, context),
+            (RequestSchedulerType.Publish, false, true) => processor.Publish(at, request, context),
+            (RequestSchedulerType.Publish, true, false) => await processor.PublishAsync(delay, request, context),
+            (RequestSchedulerType.Publish, true, true) => await processor.PublishAsync(at, request, context),
+            (RequestSchedulerType.Post, false, false) => processor.Post(delay, request, context),
+            (RequestSchedulerType.Post, false, true) => processor.Post(at, request, context),
+            (RequestSchedulerType.Post, true, false) => await processor.PostAsync(delay, request, context),
+            (RequestSchedulerType.Post, true, true) => await processor.PostAsync(at, request, context),
+            _ => throw new ArgumentOutOfRangeException(nameof(operation))
+        };
+
+        //Assert
+        Assert.Equal("stub", id);
+    }
+
     [Fact]
     public void Should_resolve_custom_factory_instead_of_InMemorySchedulerFactory()
     {
