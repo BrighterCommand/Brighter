@@ -111,11 +111,20 @@ public static class SubscriptionChannelFactoryDeclaration
 
     // GetUninitializedObject produces an instance with no constructor run, so Check never sees a
     // side effect of construction and can examine a subscription whose constructor would throw.
+    // The reported Subject is always the candidate as discovered - an open generic definition is
+    // closed only to obtain an instance to read; the closed construction is never itself reported.
     private static (Type Subject, string? Reason) ReadAndCheck(Type subject)
     {
-        var instance = (Subscription)GetUninitializedInstance(subject);
+        var readableType = CloseIfGeneric(subject);
+        var instance = (Subscription)GetUninitializedInstance(readableType);
         return (subject, Check(subject, instance.ChannelFactoryType));
     }
+
+    // Closes an open generic Subscription subclass against one representative IRequest argument,
+    // Command, which satisfies both constraint forms the gateways use ('where T : IRequest' and
+    // 'where T : class, IRequest'). GetUninitializedObject cannot instantiate an open definition.
+    private static Type CloseIfGeneric(Type type) =>
+        type.IsGenericTypeDefinition ? type.MakeGenericType(typeof(Command)) : type;
 
 #if NETSTANDARD2_0
     private static object GetUninitializedInstance(Type type) =>
