@@ -372,7 +372,7 @@
     - There is no R-8 code (ADR 0077 "R-8 / R-9"); a red points at 4.3's count reading.
   - Depends on: 4.3
 
-- [ ] **4.8 CHARACTERISE: With native limit 3 below budget 10, SQS redrives natively and the copy carries no rejection metadata**
+- [x] **4.8 CHARACTERISE: With native limit 3 below budget 10, SQS redrives natively and the copy carries no rejection metadata**
   - **USE COMMAND**: `/test-first when sqs native redrive limit is below the budget should redrive natively without rejection metadata`
   - Test location: "tests/Paramore.Brighter.AWS.Tests/MessagingGateway/Sqs/Standard/Reactor", "…/Proactor", and the V4 twins
   - Test file: `When_sqs_native_redrive_limit_is_below_budget_should_redrive_without_rejection_metadata.cs`
