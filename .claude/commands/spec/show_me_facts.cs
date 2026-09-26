@@ -152,6 +152,40 @@ else if (!IsUnderSpecs(target))
 // pinned or not (NFR-9) — the gate above already computed them.
 ledger["tasks"] = tasksInfo;
 
+// requirements.md's declared ids are file-derived too, computed the same way on every kind of run.
+var requirementsPath = Path.Combine(target, "requirements.md");
+if (File.Exists(requirementsPath))
+{
+    var requirementsBytes = File.ReadAllBytes(requirementsPath);
+    var (declaredIds, declarations) = ExtractDeclaredIds(requirementsBytes);
+
+    ledger["requirements"] = new JsonObject
+    {
+        ["present"] = true,
+        ["bytes"] = requirementsBytes.Length,
+        ["windows"] = ComputeWindows(requirementsBytes),
+    };
+    ledger["declared_ids"] = new JsonArray(declaredIds.Select(id => (JsonNode)id).ToArray());
+    ledger["declared_total"] = declaredIds.Count;
+    ledger["declarations"] = declarations;
+}
+else
+{
+    ledger["requirements"] = new JsonObject
+    {
+        ["present"] = false,
+        ["bytes"] = null,
+        ["windows"] = null,
+    };
+    ledger["declared_ids"] = null;
+    ledger["declared_total"] = null;
+    ledger["declarations"] = null;
+    nullReasons["requirements"] = "not present";
+    nullReasons["declared_ids"] = "not present";
+    nullReasons["declared_total"] = "not present";
+    nullReasons["declarations"] = "not present";
+}
+
 ledger["null_reasons"] = nullReasons;
 ledger["gh_commands"] = new JsonArray();
 
@@ -258,34 +292,23 @@ static JsonObject CountTasks(byte[] content)
 }
 
 // Shared window helper (ADR 0072 IA 4): whole lines, at most 25,000 B per window; a single
-// line already over that limit forms a window of its own, flagged oversize.
-static JsonArray ComputeWindows(byte[] content)
+// line already over that limit forms a window of its own, flagged oversize. `startLine` offsets
+// the reported line numbers for content that is a slice of a larger file (a declaration's
+// paragraph), rather than the whole file.
+static JsonArray ComputeWindows(byte[] content, int startLine = 1)
 {
     const int MaxWindowBytes = 25_000;
 
-    var lines = new List<int>();
-    var lineStart = 0;
-    for (var i = 0; i < content.Length; i++)
-    {
-        if (content[i] == (byte)'\n')
-        {
-            lines.Add(i + 1 - lineStart);
-            lineStart = i + 1;
-        }
-    }
-    if (lineStart < content.Length)
-    {
-        lines.Add(content.Length - lineStart);
-    }
+    var lines = ComputeLineByteLengths(content);
 
     var windows = new List<JsonObject>();
-    var windowStartLine = 1;
+    var windowStartLine = startLine;
     var windowBytes = 0;
     var windowLineCount = 0;
 
     for (var lineIndex = 0; lineIndex < lines.Count; lineIndex++)
     {
-        var lineNumber = lineIndex + 1;
+        var lineNumber = startLine + lineIndex;
         var lineBytes = lines[lineIndex];
 
         if (lineBytes > MaxWindowBytes)
@@ -315,7 +338,7 @@ static JsonArray ComputeWindows(byte[] content)
 
     if (windowLineCount > 0)
     {
-        windows.Add(Window(windowStartLine, lines.Count, windowBytes, oversize: false));
+        windows.Add(Window(windowStartLine, startLine + lines.Count - 1, windowBytes, oversize: false));
     }
 
     return new JsonArray(windows.Select(w => (JsonNode)w).ToArray());
@@ -327,6 +350,100 @@ static JsonArray ComputeWindows(byte[] content)
         ["bytes"] = bytes,
         ["oversize"] = oversize,
     };
+}
+
+// Byte length of each line (including its trailing '\n', when present) in file order.
+static List<int> ComputeLineByteLengths(byte[] content)
+{
+    var lines = new List<int>();
+    var lineStart = 0;
+    for (var i = 0; i < content.Length; i++)
+    {
+        if (content[i] == (byte)'\n')
+        {
+            lines.Add(i + 1 - lineStart);
+            lineStart = i + 1;
+        }
+    }
+    if (lineStart < content.Length)
+    {
+        lines.Add(content.Length - lineStart);
+    }
+    return lines;
+}
+
+// FR-8's declared-id set and each declaration's paragraph (ADR 0072 IA 4). A paragraph runs
+// from its declaration line to the line before the next declaration or the next heading of
+// level three or higher (###, ##, or #), whichever comes first, or to the end of the file.
+static (List<string> DeclaredIds, JsonArray Declarations) ExtractDeclaredIds(byte[] content)
+{
+    var lineLengths = ComputeLineByteLengths(content);
+    var rawLines = Encoding.UTF8.GetString(content).Split('\n');
+
+    var offsets = new long[lineLengths.Count + 1];
+    for (var i = 0; i < lineLengths.Count; i++)
+    {
+        offsets[i + 1] = offsets[i] + lineLengths[i];
+    }
+
+    var declarationLineIndexes = new List<int>();
+    var idsInFileOrder = new List<string>();
+
+    for (var i = 0; i < lineLengths.Count; i++)
+    {
+        var line = rawLines[i].TrimEnd('\r');
+        var match = RequirementsPatterns.DeclaredId.Match(line);
+        if (match.Success)
+        {
+            declarationLineIndexes.Add(i);
+            idsInFileOrder.Add($"{match.Groups["prefix"].Value}-{match.Groups["num"].Value}");
+        }
+    }
+
+    var declarations = new JsonArray();
+    for (var d = 0; d < declarationLineIndexes.Count; d++)
+    {
+        var startIndex = declarationLineIndexes[d];
+        var endIndex = lineLengths.Count - 1;
+
+        for (var j = startIndex + 1; j < lineLengths.Count; j++)
+        {
+            var line = rawLines[j].TrimEnd('\r');
+            if (RequirementsPatterns.DeclaredId.IsMatch(line) || RequirementsPatterns.Heading.IsMatch(line))
+            {
+                endIndex = j - 1;
+                break;
+            }
+        }
+
+        var startByte = offsets[startIndex];
+        var endByte = offsets[endIndex + 1];
+        var paragraphBytes = content[(int)startByte..(int)endByte];
+
+        declarations.Add(new JsonObject
+        {
+            ["id"] = idsInFileOrder[d],
+            ["bytes"] = paragraphBytes.Length,
+            ["windows"] = ComputeWindows(paragraphBytes, startLine: startIndex + 1),
+        });
+    }
+
+    var declaredIds = idsInFileOrder
+        .Distinct()
+        .OrderBy(id => id.StartsWith("NFR-", StringComparison.Ordinal) ? 1 : 0)
+        .ThenBy(id => int.Parse(id[(id.StartsWith("NFR-", StringComparison.Ordinal) ? 4 : 3)..]))
+        .ToList();
+
+    return (declaredIds, declarations);
+}
+
+static class RequirementsPatterns
+{
+    // POSIX (requirements.md, Declared-id pattern): ^[[:space:]]*(-[[:space:]]+)?\*\*(FR|NFR)-[0-9]+
+    public static readonly Regex DeclaredId = new(@"^\s*(-\s+)?\*\*(?<prefix>FR|NFR)-(?<num>[0-9]+)");
+
+    // A markdown heading of level three or higher (###, ##, or #) — stops a declaration's paragraph.
+    public static readonly Regex Heading = new(@"^#{1,3}\s");
 }
 
 static class TaskPatterns
