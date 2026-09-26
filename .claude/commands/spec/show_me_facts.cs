@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 
 const int UsageErrorExitCode = 1;
 const int ToolingFaultExitCode = 1;
+const int GateNotPassedExitCode = 2;
 
 // ADR 0072 KC1's argument grammar: {target}; {target} --pinned {base} {head};
 // {target} --release-notes {path}; {target} with both, in either order. Anything else — an
@@ -56,6 +57,38 @@ while (i < args.Length)
         default:
             return UsageErrorExitCode;
     }
+}
+
+// FR-3's completeness gate: evaluated from the file fields before any ref resolution or gh
+// call. A run that fails it writes no ledger and reports the gate facts on stderr instead,
+// exiting 2 — the only status that distinguishes this stop from a tooling fault.
+var tasksPath = Path.Combine(target, "tasks.md");
+if (!File.Exists(tasksPath))
+{
+    WriteGateRecord(new JsonObject { ["case"] = "tasks.md absent" });
+    return GateNotPassedExitCode;
+}
+
+var tasksInfo = CountTasks(File.ReadAllBytes(tasksPath));
+var tasksTotal = (int)tasksInfo["total"]!;
+var tasksUnchecked = (int)tasksInfo["unchecked"]!;
+
+if (tasksTotal == 0)
+{
+    WriteGateRecord(new JsonObject { ["case"] = "zero checkboxes" });
+    return GateNotPassedExitCode;
+}
+
+if (tasksUnchecked > 0)
+{
+    WriteGateRecord(new JsonObject
+    {
+        ["case"] = "unchecked",
+        ["unchecked"] = tasksUnchecked,
+        ["total"] = tasksTotal,
+        ["first_unchecked"] = JsonNode.Parse(tasksInfo["first_unchecked"]!.ToJsonString()),
+    });
+    return GateNotPassedExitCode;
 }
 
 var pinned = pinnedBase is not null && pinnedHead is not null;
@@ -115,13 +148,9 @@ else if (!IsUnderSpecs(target))
 }
 // else: a real, unpinned spec directory — ref resolution is a later task (Phase 6).
 
-// tasks.md's counts are file-derived figures: read from the working tree on every kind of run,
-// pinned or not (NFR-9).
-var tasksPath = Path.Combine(target, "tasks.md");
-if (File.Exists(tasksPath))
-{
-    ledger["tasks"] = CountTasks(File.ReadAllBytes(tasksPath));
-}
+// tasks.md's counts are file-derived figures, read from the working tree on every kind of run,
+// pinned or not (NFR-9) — the gate above already computed them.
+ledger["tasks"] = tasksInfo;
 
 ledger["null_reasons"] = nullReasons;
 ledger["gh_commands"] = new JsonArray();
@@ -138,6 +167,16 @@ return 0;
 
 static bool IsUnderSpecs(string target) =>
     target.TrimEnd('/').Split('/')[0].Equals("specs", StringComparison.Ordinal);
+
+static void WriteGateRecord(JsonObject record)
+{
+    var options = new JsonSerializerOptions
+    {
+        WriteIndented = false,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
+    Console.Error.WriteLine($"show-me-gate: {record.ToJsonString(options)}");
+}
 
 static bool CommitExists(string sha)
 {
@@ -239,7 +278,7 @@ static JsonArray ComputeWindows(byte[] content)
         lines.Add(content.Length - lineStart);
     }
 
-    var windows = new JsonArray();
+    var windows = new List<JsonObject>();
     var windowStartLine = 1;
     var windowBytes = 0;
     var windowLineCount = 0;
@@ -279,7 +318,7 @@ static JsonArray ComputeWindows(byte[] content)
         windows.Add(Window(windowStartLine, lines.Count, windowBytes, oversize: false));
     }
 
-    return windows;
+    return new JsonArray(windows.Select(w => (JsonNode)w).ToArray());
 
     static JsonObject Window(int firstLine, int lastLine, int bytes, bool oversize) => new()
     {

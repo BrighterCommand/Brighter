@@ -12,6 +12,8 @@ var repositoryRoot = Directory.GetCurrentDirectory();
 
 const string DeclaredTarget = ".claude/test-fixtures/show-me/declared";
 const string ZeroIdTarget = ".claude/test-fixtures/show-me/zero-id";
+const string NoTasksTarget = ".claude/test-fixtures/show-me/no-tasks";
+const string UnfinishedTarget = ".claude/test-fixtures/show-me/unfinished";
 const string ReleaseNotesFixture = ".claude/test-fixtures/show-me/release-notes.md";
 const string CalibrationTarget = "specs/0036-scoped-lifetime-per-pipeline";
 const string CalibrationMergeBase = "6145913a0";
@@ -105,6 +107,54 @@ var rows = new[]
                 ["DOC"] = 0,
                 ["untagged"] = 2,
             })),
+    new Row(
+        "no-tasks",
+        [NoTasksTarget],
+        NoTasksTarget,
+        GateFailureAssertions((record, failures) =>
+        {
+            if (!record.TryGetProperty("case", out var caseValue) || caseValue.GetString() != "tasks.md absent")
+            {
+                failures.Add("expected the gate record's case to be \"tasks.md absent\"");
+            }
+        })),
+    new Row(
+        "unfinished",
+        [UnfinishedTarget],
+        UnfinishedTarget,
+        GateFailureAssertions((record, failures) =>
+        {
+            if (!record.TryGetProperty("case", out var caseValue) || caseValue.GetString() != "unchecked")
+            {
+                failures.Add("expected the gate record's case to be \"unchecked\"");
+            }
+
+            if (!record.TryGetProperty("unchecked", out var uncheckedValue) || uncheckedValue.GetInt32() != 2)
+            {
+                failures.Add("expected the gate record's unchecked to be 2");
+            }
+
+            if (!record.TryGetProperty("total", out var totalValue) || totalValue.GetInt32() != 3)
+            {
+                failures.Add("expected the gate record's total to be 3");
+            }
+
+            if (!record.TryGetProperty("first_unchecked", out var titles) || titles.ValueKind != JsonValueKind.Array)
+            {
+                failures.Add("expected the gate record's first_unchecked to be an array");
+            }
+            else
+            {
+                var titleStrings = titles.EnumerateArray().Select(t => t.GetString()).ToArray();
+                foreach (var expectedTitle in new[] { "**DOC: Alpha**", "**DOC: Beta**" })
+                {
+                    if (!titleStrings.Contains(expectedTitle))
+                    {
+                        failures.Add($"expected the gate record's first_unchecked to contain \"{expectedTitle}\"");
+                    }
+                }
+            }
+        })),
 };
 
 var failedAssertions = 0;
@@ -114,6 +164,7 @@ foreach (var row in rows)
 }
 
 failedAssertions += CheckLedgerLeftAsFound(declaredRow, repositoryRoot);
+failedAssertions += CheckPlantedLedgerUntouchedOnGateFailure(repositoryRoot, UnfinishedTarget);
 
 Console.WriteLine(failedAssertions == 0
     ? $"{rows.Length} row(s) passed."
@@ -132,7 +183,7 @@ static int RunRow(Row row, string repositoryRoot)
         ? File.ReadAllBytes(ledgerFullPath)
         : null;
 
-    var exitCode = InvokeScript(repositoryRoot, row.Args);
+    var (exitCode, stderr) = InvokeScript(repositoryRoot, row.Args);
 
     var ledgerBytes = ledgerFullPath is not null && File.Exists(ledgerFullPath)
         ? File.ReadAllBytes(ledgerFullPath)
@@ -150,14 +201,17 @@ static int RunRow(Row row, string repositoryRoot)
         }
     }
 
+    var gateRecord = ParseLastGateRecord(stderr);
+
     var failures = 0;
-    foreach (var message in row.Assertions(new RunResult(exitCode, ledgerBytes, ledger)))
+    foreach (var message in row.Assertions(new RunResult(exitCode, ledgerBytes, ledger, gateRecord)))
     {
         Console.WriteLine($"FAIL {row.Name}: {message}");
         failures++;
     }
 
     ledger?.Dispose();
+    gateRecord?.Dispose();
 
     if (ledgerFullPath is not null)
     {
@@ -174,7 +228,7 @@ static int RunRow(Row row, string repositoryRoot)
     return failures;
 }
 
-static int InvokeScript(string repositoryRoot, string[] scriptArgs)
+static (int ExitCode, string Stderr) InvokeScript(string repositoryRoot, string[] scriptArgs)
 {
     var startInfo = new ProcessStartInfo("dotnet")
     {
@@ -192,13 +246,43 @@ static int InvokeScript(string repositoryRoot, string[] scriptArgs)
     }
 
     // Both streams are captured so the child process never blocks on a full pipe buffer.
-    // stdout is never parsed — only the process exit code and the ledger file are asserted on.
+    // stdout is never parsed — only the process exit code, stderr's last gate/word-count
+    // record, and the ledger file are asserted on.
     using var process = Process.Start(startInfo)
         ?? throw new InvalidOperationException("could not start dotnet");
     process.StandardOutput.ReadToEnd();
-    process.StandardError.ReadToEnd();
+    var stderr = process.StandardError.ReadToEnd();
     process.WaitForExit();
-    return process.ExitCode;
+    return (process.ExitCode, stderr);
+}
+
+static JsonDocument? ParseLastGateRecord(string stderr)
+{
+    const string Prefix = "show-me-gate: ";
+    string? lastRecordJson = null;
+
+    foreach (var rawLine in stderr.Split('\n'))
+    {
+        var line = rawLine.TrimEnd('\r');
+        if (line.StartsWith(Prefix, StringComparison.Ordinal))
+        {
+            lastRecordJson = line[Prefix.Length..];
+        }
+    }
+
+    if (lastRecordJson is null)
+    {
+        return null;
+    }
+
+    try
+    {
+        return JsonDocument.Parse(lastRecordJson);
+    }
+    catch (JsonException)
+    {
+        return null;
+    }
 }
 
 static IEnumerable<string> DeclaredAssertions(RunResult result)
@@ -542,6 +626,57 @@ static IEnumerable<string> AssertAllNull(JsonElement root, string[] fields, stri
     }
 }
 
+static Func<RunResult, IEnumerable<string>> GateFailureAssertions(Action<JsonElement, List<string>> checkRecord) => result =>
+{
+    var failures = new List<string>();
+
+    if (result.ExitCode != 2)
+    {
+        failures.Add($"expected exit code 2, got {result.ExitCode}");
+    }
+
+    if (result.LedgerBytes is not null)
+    {
+        failures.Add("expected no ledger to be written");
+    }
+
+    if (result.GateRecord is null)
+    {
+        failures.Add("expected a show-me-gate: stderr record that parses as one JSON object");
+        return failures;
+    }
+
+    checkRecord(result.GateRecord.RootElement, failures);
+
+    return failures;
+};
+
+static int CheckPlantedLedgerUntouchedOnGateFailure(string repositoryRoot, string target)
+{
+    var ledgerFullPath = Path.Combine(repositoryRoot, target, ".show-me-ledger.json");
+    var dummy = Encoding.UTF8.GetBytes("{\"dummy\":true}");
+    File.WriteAllBytes(ledgerFullPath, dummy);
+
+    var (exitCode, _) = InvokeScript(repositoryRoot, [target]);
+    var afterwards = File.Exists(ledgerFullPath) ? File.ReadAllBytes(ledgerFullPath) : null;
+
+    var failures = 0;
+    if (exitCode != 2)
+    {
+        Console.WriteLine($"FAIL unfinished (planted ledger): expected exit code 2, got {exitCode}");
+        failures++;
+    }
+
+    if (afterwards is null || !afterwards.SequenceEqual(dummy))
+    {
+        Console.WriteLine("FAIL unfinished (planted ledger): expected the planted ledger to be left byte-identical (AC-71)");
+        failures++;
+    }
+
+    File.Delete(ledgerFullPath);
+    return failures;
+}
+
 static int CheckLedgerLeftAsFound(Row row, string repositoryRoot)
 {
     var failures = 0;
@@ -569,6 +704,6 @@ static int CheckLedgerLeftAsFound(Row row, string repositoryRoot)
     return failures;
 }
 
-sealed record RunResult(int ExitCode, byte[]? LedgerBytes, JsonDocument? Ledger);
+sealed record RunResult(int ExitCode, byte[]? LedgerBytes, JsonDocument? Ledger, JsonDocument? GateRecord);
 
 sealed record Row(string Name, string[] Args, string? LedgerTarget, Func<RunResult, IEnumerable<string>> Assertions);
