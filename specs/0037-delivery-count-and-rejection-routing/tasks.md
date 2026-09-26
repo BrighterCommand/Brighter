@@ -257,7 +257,7 @@
     - Regenerate per generated_tests.md for every configuration; never hand-edit
   - Depends on: 3.2
 
-- [ ] **3.5 GATE: Regenerate, audit, and confirm the nine already-conformant FR-23 configurations still pass (AC-26, R-22, R-23)**
+- [!] **3.5 GATE: Regenerate, audit, and confirm the nine already-conformant FR-23 configurations still pass (AC-26, R-22, R-23)** <!-- RALPH-FAILED: nine FR-23 configs + AWS FR-2/15/16/22 pass; RocketMQ FR-16/FR-22 (Fixed cells) unverified — local broker broken for all generated tests (pre-existing, same on 82f28ff01); needs a clean docker-compose-rocketmq down -v/up re-run. See conformance-status.md FR-23 run record 2026-09-26 -->
   - Run `./generate-test.sh` and the generated-tree audit, and commit the regenerated tree.
   - Run the scoped conformance suites, both variants, against their compose files for:
     - `Redis / RedisMessagingGateway`
