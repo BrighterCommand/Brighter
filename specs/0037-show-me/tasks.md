@@ -10,7 +10,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 
 1. **Script behaviour** is test-first through `/test-first`. The code is in `.claude/commands/spec/show_me_facts.cs` or in the test script's harness. The "test" is not an xUnit file. It is one or more rows in `.claude/commands/spec/show_me_facts_tests.cs`, a C# file-based app with no test framework, run from the repository root as `dotnet run .claude/commands/spec/show_me_facts_tests.cs`. You write the row, watch it fail, and then write the script code that makes it pass (ADR 0072, Implementation Approach preamble).
 2. **Command-file behaviour** has no `/test-first` line. This covers `show-me.md`, `write_release_notes.md` and the amendments to `/spec:requirements`, `/spec:tasks`, `/spec:review` and `/spec:design`. A markdown prompt executed by Claude Code has no unit that `/test-first` can build a test around, and NFR-9 limits the automated net to the measurement script plus the FR-13 check. Each of these tasks therefore gives a **Verify by** block after the gate, with three parts: (a) the exact invocations, (b) the exact fixture, and (c) the assertions taken from the ACs.
-   - Two exceptions follow from the ADRs. The FR-13 invariant check is a test-script row (T13.1), so it does use `/test-first`. ADR 0072 Implementation Approach step 7 (unpinned ref resolution) is script code but takes the Verify-by shape (T6.1, T6.2), because fixture runs null every ref field by design (FR-21). ADR 0072 records this gap as a Negative.
+   - Three exceptions follow from the ADRs. The FR-13 invariant check is a test-script row (T13.1), so it does use `/test-first`. ADR 0072 Implementation Approach step 7 (unpinned ref resolution) is script code but takes the Verify-by shape (T6.1, T6.2), because fixture runs null every ref field by design (FR-21). ADR 0072 records this gap as a Negative. ADR 0072 Implementation Approach step 8 (the atomic write and the over-cap refusal) is script code verified by inspecting the write path (AC-83), so T7.1 also takes the Verify-by shape; its residue row is a regression guard that cannot be observed red, and the task says so.
 
 **STRUCTURAL / DOC / PROJECT** tasks have no gate and no `/test-first`. Each one carries an acceptance check and a `Traces to:` line.
 
@@ -19,7 +19,8 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 ## Shared rules (stated once; tasks cite them as R1–R8)
 
 - **R1 — Baselines.**
-  - Before T1.1, record `PRE=$(git rev-parse HEAD)`. Every "one added line" or "no other criterion changed" check diffs against `$PRE`.
+  - Before T1.1, record `PRE=$(git rev-parse HEAD)`. Every "one added line" or "no other criterion changed" check diffs against `$PRE`, except where a task names a later baseline.
+  - When T15.3's commit is made, record `POST_T15_3=$(git rev-parse HEAD)`. T15.6 diffs `review.md` and `design.md` against it, because T15.3 has already added two checks to `review.md`.
   - Every "`git status --porcelain` byte-identical" check compares two captures taken inside the same Verify block, one before the run and one after. Standing entries, such as a temporarily modified fixture, are therefore constant and cancel out.
 - **R2 — Real fixtures are restored.**
   - A task that changes a tracked path in a real fixture restores it with `git checkout -- {path}` as the last step of its Verify block. This includes `specs/.current-spec`, which is tracked.
@@ -27,9 +28,16 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - Each Verify block names every path it touches.
 - **R3 — Generated output is removed.** Every `/spec:show-me` run against a real spec directory ends by deleting that directory's `show-me.md` and `.show-me-ledger.json`, unless the task's next step inspects them. A direct script run deletes the ledger it wrote.
 - **R4 — The disposable clone.** Use it for ref manipulation, constructed spec branches, synthetic spec directories, and synthetic ADR or `release_notes.md` edits. Never do these things in the working repository.
-  - Build the clone with a setup script kept in the scratch directory, never committed: `git clone <repo> "$SCRATCH/showme-clone"`, then check out the committed `spec/show-me`.
-  - For each K-fixture that has a branch, create `spec/{name}` off `origin/master` with one commit holding the source changes and the spec directory.
-  - On the working branch, write the same `specs/NNNN-name/` and **stage it without committing**. Staging makes it tracked for FR-17. Not committing means FR-10 rule 3 never resolves it to `HEAD`.
+  - **How a clone's refs are set up.** A `git clone` of a local repository mirrors the source's **local** heads. The clone's only local branch is the one checked out (`spec/show-me`), and every source branch `X` arrives as `refs/remotes/origin/X` only. Two consequences follow:
+    - A revision in the clone must name a source branch as `origin/{name}` (for example `origin/spec/scoped-lifetime-per-pipeline~1`). A bare `spec/scoped-lifetime-per-pipeline~1` does not resolve there, because git does not look up a remote-only branch by its short name when it parses a revision.
+    - The clone's `origin/master` is the source's local `master`, not the real `origin/master`. On 2026-09-26 that was 286 commits behind, and it gave merge base `09f5d988f` against `91d549be6` instead of `6145913a0`.
+  - Build the clone with a setup script kept in the scratch directory, never committed. Its steps, in this order:
+    1. `git clone <repo> "$SCRATCH/showme-clone"`. The clone starts on the committed `spec/show-me`.
+    2. Point the clone's `origin/master` at the source's real `origin/master`: `git -C "$SCRATCH/showme-clone" update-ref refs/remotes/origin/master "$(git -C <repo> rev-parse origin/master)"`. A local clone shares the source's objects, so the commit is present. If `git -C "$SCRATCH/showme-clone" cat-file -e origin/master^{commit}` fails, run `git -C "$SCRATCH/showme-clone" fetch origin +refs/remotes/origin/master:refs/remotes/origin/master` instead. Then confirm that `git merge-base origin/master origin/spec/scoped-lifetime-per-pipeline` gives the same sha in the clone as in the source (in the source the name is the real remote-tracking ref; in the clone it mirrors the source's local branch, both at `91d549be6` on 2026-09-26).
+    3. Build every R7 row that has a branch. Each `spec/{name}` is created off `origin/master` with one commit holding the row's source changes and its spec directory. K14's two branches are the exception: they are created off `spec/show-me` (see R7).
+    4. On the working branch, write each row's `specs/NNNN-name/` (every row except K12 and K14) and each synthetic ADR, and **stage them without committing**. Staging makes them tracked for FR-17. Not committing means FR-10 rule 3 never resolves them to `HEAD`. Make K7's `release_notes.md` edit in the working tree and leave it unstaged.
+    5. Apply K12's ref edits last.
+  - **Clone figures are not calibration values.** Merge bases, diff figures, levels and ledger values measured in the clone depend on the clone's refs. Only the figures in the *Real fixtures* table below are calibration values, and no clone result is compared with them.
   - Start a Claude Code session **in the clone** so that its `.claude/settings.json` applies.
   - Rebuild the clone whenever the command or the script has changed since the last build. Delete the clone when you are done. Nothing built in it is ever pushed.
   - In the clone, `origin` is a filesystem path, so `gh pr list` fails and every clone run is FR-16 row 2 (`gh unavailable`) unless R5 is used.
@@ -38,22 +46,30 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - Direct script runs use `dotnet run .claude/commands/spec/show_me_facts.cs -- {target} [options]` from the repository root. A `specs/…` target matches the T1.3 allow entry, and a fixture path prompts for permission, which is expected.
   - Command runs are made in a Claude Code session at the repository root. Restart the session after editing a command file so the new text is loaded.
   - Commit each task before building an R4 clone from it.
-- **R7 — Clone fixtures (K1–K12).** Each is built by the R4 setup script. Where "branch" is given, the directory name without `NNNN-` equals the branch name after `spec/`.
+- **R7 — Clone fixtures (K1–K14).** The R4 setup script builds each of them from this table, and the table gives every file a K-fixture run needs. T15.3 and T15.4 build their own ad hoc directories in the clone, described in those tasks. Where a `spec/…` branch is given, the directory name without `NNNN-` equals the branch name after `spec/`.
+  - **The default spec directory.** Unless a row says otherwise, a K directory holds exactly these files, so FR-3's gate passes on every one of them:
+    - `requirements.md` declaring `**FR-1 — …**`, `**FR-2 — …**` and `**FR-3 — …**` in the bold lead-in form.
+    - `tasks.md` in which every checkbox is checked and tag-first. It has one `- [x] **TEST + IMPLEMENT: T1.n — …**` line per declared id. Each line's `Traces to:` sub-line names that id, and its text says the id shipped as stated, so every id has `Shipped` evidence.
+    - No `.adr-list`.
+  - **Source changes** are committed on the row's branch only. They are comment-only edits unless the row says otherwise.
+  - **Synthetic ADRs** are written and staged on the working branch (R4 step 4). Each has YAML front matter (`title`, `status`), a `## Status` section reading `Accepted`, and a `## Consequences` section, so the script finds all three extract parts.
 
-| K | Directory / branch | Content | Used for |
+| K | Directory / refs | Content (beyond the default) | Used for |
 |---|---|---|---|
-| K1 | `specs/9001-small-change/`, `spec/small-change` | 2 files under `src/Paramore.Brighter/` (comment-only edits); `.adr-list` = `0062-pg-advisory-lock-sha256.md`; `requirements.md` declaring FR-1…FR-3; all tasks checked, tag-first | AC-57, AC-26 |
-| K2 | `specs/9002-low-risk/`, `spec/low-risk` | 4 comment-only files in one `src/` subdirectory; every requirement evidenced by a task; variant with `.adr-list` deleted | AC-21, AC-25 (Low), AC-40, AC-28 |
-| K3 | `specs/9003-declarations/`, `spec/declarations` | AC-66's three declarations (one added, one removed, one modified pair) in files under `src/Paramore.Brighter/` | AC-66, AC-22 |
+| K1 | `specs/9001-small-change/`, `spec/small-change` | 2 files under `src/Paramore.Brighter/`: 1 subdirectory, 0 public-API lines. `.adr-list` = `0062-pg-advisory-lock-sha256.md` (1 resolved). No trigger fires. | AC-57, AC-26 (a complete 2-path list, FR-14) |
+| K2 | `specs/9002-low-risk/`, `spec/low-risk` | 4 files in `src/Paramore.Brighter/`. `.adr-list` = `0062-pg-advisory-lock-sha256.md`. A variant has `.adr-list` deleted. | AC-21, AC-25 (Low), AC-27, AC-28, AC-40, AC-55 |
+| K3 | `specs/9003-declarations/`, `spec/declarations` | AC-66's three shapes applied to real lines in files under `src/Paramore.Brighter/`: one added `public` declaration; one existing `protected` declaration removed; and one existing `public` method's parameter list changed, which gives a `-`/`+` pair. A removed line must exist at the merge base, so the removal and the change use lines already on `origin/master`. The removal and the change are the 2 breaking changes (F2 `Medium`). The default tasks keep F5 `Low`. | AC-66, AC-22 |
 | K4 | `specs/9004-props/`, `spec/props` | `src/Directory.Build.props` plus 4 files in `src/Paramore.Brighter/` | AC-67 |
-| K5 | `specs/9005-ten-dtos/`, `spec/ten-dtos` | one added `public` property on each of ten unrelated classes | AC-64 |
-| K6 | `specs/9006-tree/`, `spec/tree` | 3–5 changed files in one namespace hierarchy; `.adr-list` of 2 resolvable ADRs | AC-65, AC-60 |
-| K7 | `specs/9007-budget/`, `spec/budget` | a `tasks.md` of about 940,000 B of checked lines; 5 changed files across 2 `src/` subdirectories, each padded past 150,000 B with lines naming the one type the relationship concerns; a section in the clone's `release_notes.md`, marked for `9007-budget`, whose `#### Breaking changes` list exceeds 30,000 B | AC-58, AC-68 |
-| K8 | `specs/9008-wide/`, no branch | a 15-entry `.adr-list` of real resolvable ADRs; a copy of 0036's `tasks.md` (229,159 B) | AC-52 |
-| K9 | `specs/9009-reconcile-17/`, no branch | FR-1…FR-12 and NFR-1…NFR-5, including `**FR-7.2 — …**` and prose cross-references | AC-15 |
-| K10 | `specs/9010-withdrawn/`, no branch | FR-27 with FR-27.1–.3; a staged synthetic ADR `docs/adr/9010-withdraw-fr-27-3.md` recording FR-27.3's withdrawal and naming a superseding requirement | AC-45 |
-| K11 | `specs/9011-twenty-eight/`, no branch | 28 declared ids; `tasks.md` evidencing one `Shipped with deviation` and one `Deferred` with a follow-up issue; variant with all shipped | AC-54, AC-55 |
-| K12 | ref-only edits | `git branch spec/sqs-cleanup origin/master`; `git update-ref refs/remotes/origin/spec/small-change origin/master`; `git branch -f spec/scoped-lifetime-per-pipeline spec/scoped-lifetime-per-pipeline~1` | AC-85, AC-47 |
+| K5 | `specs/9005-ten-dtos/`, `spec/ten-dtos` | One added `public` property on each of ten unrelated classes, one class per file, and all ten files in `src/Paramore.Brighter/`. That gives 10 files in 1 subdirectory and 10 public-API lines, so D2 fires and D1 does not. | AC-64 |
+| K6 | `specs/9006-tree/`, `spec/tree` | 3–5 changed files in one namespace hierarchy under `src/Paramore.Brighter/`. `.adr-list` = `0062-pg-advisory-lock-sha256.md` and `0072-show-me-command-resolution-and-output.md` (2 resolved, so D3 fires). | AC-65, AC-60 |
+| K7 | `specs/9007-budget/`, `spec/budget` | `tasks.md` is the default three lines padded with further checked `DOC` lines to about 940,000 B. There are 5 changed files across 2 `src/` subdirectories, each padded past 150,000 B with lines naming the one type the relationship concerns. The clone's `release_notes.md` gets a section under `## Master`, marked `<!-- spec: 9007-budget -->`, whose `#### Breaking changes` list exceeds 30,000 B. That edit is left unstaged. | AC-58, AC-68 |
+| K8 | `specs/9008-wide/`, no branch | A 15-entry `.adr-list` of real ADRs, each named by its full filename. `tasks.md` is a copy of 0036's (229,159 B, 82 checked, tag-first). | AC-52 |
+| K9 | `specs/9009-reconcile-17/`, no branch | `requirements.md` declares FR-1…FR-12 and NFR-1…NFR-5 in the bold lead-in form, including a `**FR-7.2 — …**` sub-clause and prose cross-references to other ids. `tasks.md` has one checked, tag-first line per top-level id: 16 show the id shipped as stated, and `FR-12`'s line records it as deferred to follow-up issue `#9009`. | AC-15 |
+| K10 | `specs/9010-withdrawn/`, no branch | `requirements.md` declares `**FR-27 — …**` with `**FR-27.1 — …**`, `**FR-27.2 — …**` and `**FR-27.3 — …**`, and `**FR-28 — …**`. `tasks.md` has checked, tag-first lines showing FR-27.1, FR-27.2 and FR-28 shipped, plus a checked `DOC` line recording FR-27.3's withdrawal. `.adr-list` = `9010-withdraw-fr-27-3.md`. The synthetic ADR `docs/adr/9010-withdraw-fr-27-3.md` records in `## Consequences` that FR-27.3 is withdrawn and superseded by FR-28. | AC-45 |
+| K11 | `specs/9011-twenty-eight/`, no branch | `requirements.md` declares FR-1…FR-20 and NFR-1…NFR-8 (28 ids). `tasks.md` has one checked, tag-first line per id: 26 show the id shipped as stated, `FR-5`'s line records a deviation it shipped with, and `FR-9`'s line records it as deferred to follow-up issue `#9011`. A variant `tasks.md` shows all 28 shipped as stated. | AC-54, AC-55 |
+| K12 | ref-only edits, applied last | `git branch spec/sqs-cleanup origin/master`. `git update-ref refs/remotes/origin/spec/small-change origin/master`, which leaves K1's local `spec/small-change` unmerged. `git branch spec/scoped-lifetime-per-pipeline origin/spec/scoped-lifetime-per-pipeline~1`, which puts the local branch at `386efee78` while the remote-tracking ref stays at `91d549be6`. | AC-85, AC-47 |
+| K13 | `specs/9015-two-breaks/`, no branch | `.adr-list` = `9015-two-breaks.md`. The synthetic ADR `docs/adr/9015-two-breaks.md` records two breaking changes in `## Consequences`, each with its classification and a migration. | AC-89, AC-90, AC-91, AC-92 |
+| K14 | `specs/9020-tiny-thing/`, branches `wip/tiny-thing` and `other` | Both branches are made off the clone's `spec/show-me`, so the script is present when they are checked out. Each has one commit adding the default directory. It is **not** staged on the working branch, because a staged copy would conflict with the committed one on checkout. There is no `spec/tiny-thing`. | FR-10 rules 2 and 3 (T6.1) |
 
 - **R8 — The (C-8) window.**
   - `specs/0036-scoped-lifetime-per-pipeline/` is in the working tree because merge commit `72882520a` brought it in.
@@ -89,7 +105,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - Traces to: FR-4, NFR-8, AC-74, AC-82; ADR 0072 *Where each artefact is touched*, IA 1.
 
 - [ ] **STRUCTURAL: T1.3 — Add the one path-scoped allow-list entry**
-  - Do: add `Bash(dotnet run .claude/commands/spec/show_me_facts.cs -- specs/:*)` to `allow` in `.claude/settings.json`.
+  - Do: add `Bash(dotnet run .claude/commands/spec/show_me_facts.cs -- specs/:*)` to `allow` in `.claude/settings.json`, inserted as a new line **before the array's last element** (`"Bash(dotnet --list-runtimes)"` on 2026-09-26) and ending in a comma. Appending it after the last element would add a comma to that element's line and so edit a second line.
   - Acceptance: `git diff $PRE -- .claude/settings.json` shows exactly this one added line. The `gh` entries and the `deny` array are unchanged. No `Bash(dotnet run:*)` or other interpreter grant exists.
   - Traces to: FR-18, C-10, AC-82; ADR 0072 *Why the one allow-list entry names the script*, IA 1.
 
@@ -98,6 +114,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - `declared/`: `requirements.md` declaring `**FR-1 — …**`, `- **FR-2 — …**` and `**NFR-1 — …**`, plus one prose cross-reference; `tasks.md` of two checked, untagged lines; `.adr-list` of `0062-pg-advisory-lock-sha256.md` and `docs/adr/0072-show-me-command-resolution-and-output.md`.
     - `zero-id/`: `requirements.md` with prose-only ids and one legacy `#### FR-9: …` heading; `tasks.md` of three checked lines with the lead-ins `**TEST + IMPLEMENT: …**`, `**DOC TIDY: …**` and `**T1.1 — STRUCTURAL: …**`; no `.adr-list`.
     - `no-tasks/`: `requirements.md` only.
+    - `adr-unresolved/`: `tasks.md` of one checked, untagged line; no `requirements.md`; an `.adr-list` of five entries, one per line. They are: `0000-no-such-adr.md`, a missing file; `0037`, a bare number matching the five `0037-*` files; `0062`, a bare number matching exactly one file (`0062-pg-advisory-lock-sha256.md`, the only `0062-*` on 2026-09-26); `adr/0062-pg-advisory-lock-sha256.md`, a path prefix other than `docs/adr/`; and `0062-pg-advisory-lock-sha256.md`, which resolves. NFR-9's table is a minimum, and this fixture gives FR-16 row 7's unresolved branches a failing row (T3.6).
     - `unfinished/`: `tasks.md` with one checked line plus the unchecked lines titled `**DOC: Alpha**` and `**DOC: Beta**`.
     - `release-notes.md`: the release-notes fixture file, laid out exactly as NFR-9's row states. It has one section marked `<!-- spec: declared -->` with 2 top-level bullets, 1 indented sub-bullet, and between the bullets a fence containing a column-0 `- ` line and a column-0 `# ` line. It then has `#### Usage` with 2 bullets and a fence holding a column-0 `- ` line. Last comes an unmarked section with 3 bullets.
     - `wordcount-eight.md`: exactly 8 counted tokens; one fenced block holding 8 more; an H1 and metadata block, a `|`-leading line, and an `## Inputs used` tail, each holding tokens NFR-2 excludes.
@@ -106,47 +123,50 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - Acceptance:
     - `git ls-files .claude/test-fixtures/show-me/` lists every file. No file is named `show-me.md`.
     - No `.md` file sits under `.claude/commands/` for a fixture, and `/spec:status` shows no new spec.
-  - Traces to: NFR-9 fixture table, AC-79, AC-80, AC-81 (literal line lives in the test script, T13.1), AC-83; ADR 0072 KC6, IA 2.
+  - Traces to: NFR-9 fixture table, FR-16 row 7 (`adr-unresolved/`), AC-42 (ledger half), AC-79, AC-80, AC-81 (literal line lives in the test script, T13.1), AC-83; ADR 0072 KC6, IA 2.
 
 ## Phase 2 — Test-script harness
 
 *ADR 0072 IA 3. Depends on Phase 1.*
 
-- [ ] **TEST + IMPLEMENT: T2.1 — The test script runs fixture rows, reports each failed assertion, leaves every ledger as it found it, and exits non-zero on failure**
-  - **USE COMMAND**: `/test-first when the show-me test script runs a fixture row whose measurement fails it should print the failed assertion, restore any pre-existing ledger byte-for-byte and exit non-zero`
+- [ ] **TEST + IMPLEMENT: T2.1 — The test script runs fixture rows, reports each failed assertion by row, and exits non-zero on failure**
+  - **USE COMMAND**: `/test-first when the show-me test script runs a fixture row whose measurement fails it should print the failed assertion and exit non-zero`
   - Test script: `.claude/commands/spec/show_me_facts_tests.cs` (new)
   - Test row(s): the NFR-9 *declared* row, unpinned, asserting only exit `0` and a ledger that parses as one JSON object. It is red because `show_me_facts.cs` does not exist yet.
-  - Test should verify:
-    - The run prints `FAIL declared: …` naming the assertion and exits non-zero.
-    - A dummy `.show-me-ledger.json` planted in `declared/` before the run is byte-identical afterwards. A ledger created by a row is deleted.
-    - Changing any one expected value to a wrong value makes that row print which assertion failed, and the script exits non-zero (AC-79's perturbation clause).
+  - Test should verify: the run prints `FAIL declared: …` naming the failed assertion, and exits non-zero.
+  - Not verified here: the harness's save-and-restore of ledgers and AC-79's perturbation clause. Both need a script that writes a ledger and a row that can pass, so both are added and verified in T3.1, the first row that writes a ledger.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Be a C# file-based app, committed at mode `100644`, with no first-line marker. It uses no test framework and references nothing under `src/` or `tests/`.
     - Hold a table of rows. Each row starts `dotnet run .claude/commands/spec/show_me_facts.cs -- {args}` as a child process from the repository root, with both streams captured. It never parses stdout, and it reads only the last stderr line carrying a given prefix.
-    - Parse ledgers with `JsonDocument`. Save each target's ledger bytes before a row and restore or delete them afterwards. Print a summary and set the exit code.
-  - Traces to: NFR-9, AC-79; ADR 0072 KC6, *Why the test script is also C#*, *Why the payload travels in a file*, IA 3.
+    - Parse ledgers with `JsonDocument`. Print each failed assertion with its row name, then a summary, and set the exit code.
+  - Traces to: NFR-9, AC-79; ADR 0072 KC6, *Why the test script is also C#*, *Why the payload travels in a file*, IA 3 (invocation, parsing, reporting, exit code).
 
 ## Phase 3 — Script file fields and the gate
 
-*ADR 0072 IA 4, with the write mechanism of IA 8. Depends on T2.1. Tasks run in order.*
+*ADR 0072 IA 4, plus the harness's ledger save-and-restore from IA 3. Depends on T2.1. Tasks run in order. The atomic write and the over-cap refusal of IA 8 are T7.1's.*
 
-- [ ] **TEST + IMPLEMENT: T3.1 — Measuring a fixture directory writes one well-formed JSON ledger, atomically, with every ref and diff field null for `not a spec directory`**
-  - **USE COMMAND**: `/test-first when the measurement script measures a fixture directory it should atomically write a single JSON ledger whose ref and diff fields are null with reason not a spec directory`
+- [ ] **TEST + IMPLEMENT: T3.1 — Measuring a fixture directory writes one well-formed JSON ledger with every ref and diff field null for `not a spec directory`, and the test script leaves every ledger as it found it**
+  - **USE COMMAND**: `/test-first when the measurement script measures a fixture directory it should write a single JSON ledger whose ref and diff fields are null with reason not a spec directory`
   - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
   - Test row(s): the *declared* row, unpinned.
   - Test should verify:
     - Exit `0`, and `declared/.show-me-ledger.json` parses as a single object with `schema_version` 1, `target` as given and `pinned` false.
     - Every ref field (`spec_branch`, `rules_tried`, `local_divergence`, `base`, `pr`, `pr_count`, `measured_head`, `merge_base`) and every diff field (`buckets`, `src_subdirectory_count`, `public_api_lines`, `commits`, `src_diff`, `f1_level`, `triggers`) is null, with `null_reasons` reading `not a spec directory`.
-    - `gh_commands` is empty. The ledger is ≤ 65,536 B and is indented (more than one line). No `.show-me-ledger.json.tmp` remains.
+    - `gh_commands` is empty. The ledger is ≤ 65,536 B and is indented (more than one line).
+    - **Harness checks.** They are moved here from T2.1, because this is the first row that writes a ledger.
+      - A dummy `.show-me-ledger.json` planted in `declared/` before the test run is byte-identical afterwards (`cmp` against a copy saved first).
+      - With nothing planted, no ledger remains in `declared/` afterwards.
+      - Changing any one expected value of this row to a wrong value makes the row print which assertion failed, and the script exits non-zero (AC-79's perturbation clause). Revert the change afterwards.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Create `.claude/commands/spec/show_me_facts.cs` as a C# file-based app at mode `100644` with no marker.
     - Build the ledger as a `JsonObject` and write it with `ToJsonString`, using `WriteIndented` and `JavaScriptEncoder.UnsafeRelaxedJsonEscaping`. Use no reflection-based `JsonSerializer`.
     - Treat any target not directly under `specs/` as FR-21's second kind of run.
-    - Write through `.show-me-ledger.json.tmp` in the same directory, then `File.Move(…, overwrite: true)`, and delete the temporary file in `finally`.
-    - Check the serialised size before writing, and write data to no stream except the two stderr records.
-  - Traces to: FR-21 (artefact, ledger contract, kinds of run, atomic write), FR-4, NFR-1, NFR-6, AC-70 (ledger half), AC-83; ADR 0072 KC1, KC2, *The write is atomic*, *Why the script is a C# file-based app*, IA 4, IA 8.
+    - Write the ledger with a plain, direct write to `.show-me-ledger.json`. T7.1 replaces this with the atomic replacement, its `finally` clean-up and the over-cap refusal.
+    - Write data to no stream except the two stderr records.
+    - In the test script's harness, save each target's ledger bytes before a row. Afterwards, restore them, or delete a ledger the row created.
+  - Traces to: FR-21 (artefact, ledger contract, kinds of run), FR-4, NFR-1, NFR-6, NFR-9 (ledgers left as found), AC-70 (ledger half), AC-79; ADR 0072 KC1, KC2, *Why the script is a C# file-based app*, IA 3 (save and restore), IA 4.
 
 - [ ] **TEST + IMPLEMENT: T3.2 — The script accepts exactly its argument grammar, `--` keeps `dotnet run` from reading later options, and a pinned sha that is not a local commit is a tooling fault**
   - **USE COMMAND**: `/test-first when the measurement script is given an argument outside its grammar or an absent pinned sha it should exit with a tooling-fault status and write no ledger`
@@ -219,19 +239,27 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - When `requirements.md` is absent, make the `requirements` size and windows, `declared_ids`, `declared_total` and `declarations` null with `not present`.
   - Traces to: FR-8 (counting rule, folding), FR-21, FR-16 rows 8–9, NFR-1, NFR-9 (regression 1), AC-43 (script half), AC-70, AC-79; ADR 0072 KC1 *locates everything … in parts*, KC2, IA 4.
 
-- [ ] **TEST + IMPLEMENT: T3.6 — `.adr-list` entries resolve by FR-16 row 7's rule, each with its extract windows, and `adr_resolved_count` counts only single-file matches**
-  - **USE COMMAND**: `/test-first when the measurement script resolves adr-list entries it should resolve full filenames and docs/adr paths, locate each ADR's extract, and count resolved entries`
+- [ ] **TEST + IMPLEMENT: T3.6 — `.adr-list` entries resolve by FR-16 row 7's rule, each with its extract windows; a bare number never resolves; and `adr_resolved_count` counts only resolved entries**
+  - **USE COMMAND**: `/test-first when the measurement script resolves adr-list entries it should resolve only full filenames and docs/adr paths, give every other entry its row 7 reason, locate each resolved ADR's extract, and count resolved entries`
   - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
-  - Test row(s): *declared*, *zero-id*, and the calibration row.
+  - Test row(s): *declared*, *zero-id*, *adr-unresolved*, and the calibration row.
   - Test should verify:
     - *declared*: two entries, both resolved, the second through the `docs/adr/` path form. `reason` and `matches` are null. Each `extract` has front-matter, `## Status` and `## Consequences` parts with bytes > 0. `adr_resolved_count` is 2.
     - *zero-id* has no `.adr-list`, so `adr_list` is `[]` and `adr_resolved_count` is 0, a measured zero.
+    - *adr-unresolved*: five entries, in file order.
+      - `0000-no-such-adr.md`: `path` null, `reason` `ADR file not found`.
+      - `0037`: `path` null, `reason` `ambiguous ADR number`, and `matches` listing exactly the five `0037-*` filenames.
+      - `0062`: `path` null and `reason` `ADR file not found`, although it matches exactly one file.
+      - `adr/0062-pg-advisory-lock-sha256.md`: `path` null and `reason` `ADR file not found`.
+      - `0062-pg-advisory-lock-sha256.md`: resolved, with its three extract parts.
+      - `adr_resolved_count` is **1**. The row is red until the unresolved branches exist.
     - Calibration: 7. This includes names whose numbers are duplicated in `docs/adr/`.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
-    - Resolve a full filename, or `docs/adr/{filename}`, to that file. Any other prefix does not match.
-    - For a bare number, zero matches gives `ADR file not found`; more than one gives `ambiguous ADR number`, listing the `matches`.
-    - Recognise headings and fences once. The not-found and ambiguous branches are also exercised by the direct run in T14.1's Verify block.
+    - Resolve a full filename, or `docs/adr/{filename}`, to that file when it exists. Nothing else resolves. This is FR-16 row 7 ("If an entry is instead a bare number (or otherwise doesn't match any file): … `ADR file not found`") and ADR 0078 KC5 ("anything else does not resolve").
+    - Give a bare number that matches more than one `docs/adr/` file `ambiguous ADR number`, listing the `matches`. Give every other unresolved entry `ADR file not found`, including a bare number that matches exactly one file.
+    - Count in `adr_resolved_count` only entries that resolved.
+    - Recognise headings and fences once. T14.1 repeats the not-found and ambiguous cases by direct run and at command level.
   - Traces to: FR-16 rows 6–7, FR-6 D3's input, FR-21, C-9, AC-42 (ledger half); ADR 0072 KC1, KC2 `adr_list`/`adr_resolved_count`, IA 4.
 
 ## Phase 4 — Marked release-notes sections
@@ -255,7 +283,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 
 ## Phase 5 — Pinned diff fields and threshold boundaries
 
-*ADR 0072 IA 6. Depends on T3.2.*
+*ADR 0072 IA 6. Depends on Phases 3 and 4: T5.1's pinned *declared* row compares its file fields with the unpinned row's (T3.3–T3.6, T4.1), and T5.4's D3 reads `adr_resolved_count` (T3.6).*
 
 **How to choose a boundary pair.** This applies to T5.2–T5.4 and was settled for T5.3's named pair.
 
@@ -300,7 +328,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - Calibration: `true`.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should: evaluate D1 once from the two diff fields, exactly as FR-6 (a) states it.
-  - Traces to: FR-6 (a) D1, Definitions (*Immediate subdirectory of `src/`*), NFR-1, AC-67 (script half); ADR 0072 IA 6 table rows 3–5 and 10; ADR 0077 KC4.
+  - Traces to: FR-6 (a) D1, Definitions (*Immediate subdirectory of `src/`*), NFR-1, AC-67 (script half); ADR 0072 IA 6 table rows 3–5 and 7; ADR 0077 KC4.
 
 - [ ] **TEST + IMPLEMENT: T5.4 — `triggers.d2` fires at ≥ 10 public-API declaration lines and `triggers.d3` at ≥ 2 resolved ADRs**
   - **USE COMMAND**: `/test-first when the measurement script evaluates D2 and D3 it should fire D2 at ten public API lines and D3 at two resolved adr-list entries`
@@ -309,7 +337,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - Test should verify: D2 is `false` at 9 and `true` at 10, with `public_api_lines` as recorded. Pinned *declared*: D3 `true` (2 resolved). Calibration: D2 and D3 both `true`.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should: evaluate D2 from `public_api_lines` and D3 from `adr_resolved_count`. All three triggers are diff fields, so they are null when no diff was measured.
-  - Traces to: FR-6 (a) D2/D3, NFR-1; ADR 0072 KC1, KC2 `triggers`, IA 6 table rows 8–9; ADR 0077 KC4.
+  - Traces to: FR-6 (a) D2/D3, NFR-1; ADR 0072 KC1, KC2 `triggers`, IA 6 table row 6 (D3 has no boundary row); ADR 0077 KC4.
 
 ## Phase 6 — Unpinned ref fields
 
@@ -325,11 +353,14 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - `-- specs/0033-pg-advisory-lock-sha256`:
       - `rules_tried` lists all three rules with their outcomes, and `base` is resolved.
       - Every other ref field and every diff field is null with `spec branch not determinable`. `gh_commands` is empty (AC-19, script half).
-    - In the clone (R4, K12):
+    - In the clone (R4; the refs are K12's, and clone figures are not calibration values):
       - `spec/sqs-cleanup` at `origin/master`: not determinable, and `rules_tried` names `{ref} is already merged into origin/master` (AC-85).
       - A merged `origin/spec/small-change` over an unmerged local `spec/small-change`: the local ref is chosen, and the skipped remote ref is named.
-      - The local 0036 branch moved back one commit (C-8): the remote ref wins and `local_divergence` = `{spec/scoped-lifetime-per-pipeline, sha of ~1}` (AC-47).
-      - In the clone, checking out `wip/tiny-thing` with a commit touching `specs/9020-tiny-thing/` resolves by rule 2. Checking out `other` with such a commit resolves by rule 3 to `HEAD`.
+      - (C-8) The local `spec/scoped-lifetime-per-pipeline` at `386efee78` (`origin/spec/scoped-lifetime-per-pipeline~1`): the remote-tracking ref at `91d549be6` wins, and `local_divergence` = `{spec/scoped-lifetime-per-pipeline, 386efee7880e32428a96a96ede6d44a21541e48c}` (AC-47).
+    - In the clone, K14:
+      - With `wip/tiny-thing` checked out, `-- specs/9020-tiny-thing` resolves by rule 2 to `refs/heads/wip/tiny-thing`.
+      - With `other` checked out, it resolves by rule 3 to `HEAD`.
+      - Check out `spec/show-me` again afterwards; the staged K directories move across with the checkout.
   - Implementation should:
     - Apply rule 1 (remote-tracking first, then local), rule 2, then rule 3. A candidate whose tip is already contained is skipped, with `git merge-base --is-ancestor` as a child process.
     - Choose the base ref as `origin/master`, else `master`.
@@ -344,6 +375,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
       - `gh_commands` is exactly one entry: `gh pr list --head spec/scoped-lifetime-per-pipeline --state open --json number,url,headRefName,headRefOid,createdAt`.
     - Stand-in `gh` returning #4200 and #4282 (#4282's head is `91d549be6`): `pr.number` 4282, `pr_count` 2 (AC-46).
     - Stand-in returning #4282 with a well-formed head sha for which `git cat-file -e {sha}^{commit}` fails: `head_present` false, `measured_head.source` `branch_tip`, and no fetch was issued (AC-84).
+    - Stand-in returning #4282 with `headRefOid` `386efee7880e32428a96a96ede6d44a21541e48c` (`91d549be6~1`, present locally but not the branch tip): `head_present` true, `measured_head` = `{386efee78…, pr_head}`, and `merge_base` is computed against that head. This is FR-10's PR-head-differs case, whose line T11.3 checks.
     - Stand-in returning only a PR whose `headRefName` differs: `pr_count` 0, with reason `no PR found for branch spec/scoped-lifetime-per-pipeline` (row 1).
     - `gh` removed from `PATH`, a stand-in that exits 1, and a stand-in that sleeps 60 s: each run exits `0`, `pr` is null with `gh unavailable`, `pr_count` is null, the measured head is the branch tip, and the sleeping case ends within about 30 s plus the compile time (row 2, NFR-4, AC-28 ledger half).
   - Implementation should:
@@ -354,18 +386,24 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 
 ## Phase 7 — Write safety
 
-*ADR 0072 IA 8. Depends on Phase 6.*
+*ADR 0072 IA 8, "behavioural, partly by inspection". Depends on Phase 6. This task takes the Verify-by shape (see *How to read this list*).*
 
-- [ ] **TEST + IMPLEMENT: T7.1 — No run leaves a temporary or partial artefact, an over-cap ledger is refused before anything is written, and the ledger appears only by an atomic replacement**
-  - **USE COMMAND**: `/test-first when the show-me test script has run every row it should find no temporary or partial artefact in any target directory`
-  - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
-  - Test row(s): the **residue check**, run after all rows. It covers every fixture directory, the calibration directory, and the `specs/x` probe path.
-  - Test should verify: no `.show-me-ledger.json.tmp` and no untracked file remains, apart from ledgers the harness restored.
+- [ ] **TEST + IMPLEMENT: T7.1 — The ledger appears only by an atomic replacement, an over-cap ledger is refused before anything is written, and no run leaves a temporary or partial artefact**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
-  - Implementation should:
-    - Serialise in memory. When the size exceeds 65,536 B, exit `1` before creating any file.
-    - Otherwise write to `.tmp`, then `File.Move(…, overwrite: true)`, and delete in `finally`. No `Append`/`Truncate` or in-place write touches the ledger path.
-    - Record the AC-83 inspection, naming each line of that path, in the commit message.
+  - Verify by:
+    - **Inspection of the write path (AC-83; ADR 0072 IA 8).** Read the code in `show_me_facts.cs` that writes the ledger, and confirm each of these by line:
+      - the ledger is serialised in memory;
+      - a serialised size above 65,536 B exits `1` before any file is created;
+      - the bytes are written to `.show-me-ledger.json.tmp` in the same directory;
+      - `File.Move(…, overwrite: true)` is the only operation that touches `.show-me-ledger.json`;
+      - the temporary file is deleted in `finally`;
+      - no `Append`, `Truncate`, in-place open or `File.Write*` call names the ledger path.
+      - Record the inspection, naming each line, in the commit message.
+    - **Residue row (a regression guard).** Add one test-script row, run after all other rows. It covers every fixture directory, the calibration directory and the `specs/x` probe path, and asserts that no `.show-me-ledger.json.tmp` and no untracked file remains, apart from ledgers the harness restored.
+      - This row **cannot be observed red**. T3.1's plain write creates no temporary file, and provoking a partial write would need the fault hook NFR-9 rules out.
+      - It is written, seen green, and kept to guard against a later change that leaves residue.
+    - `dotnet run .claude/commands/spec/show_me_facts_tests.cs` exits `0`, with every earlier row still green after the write path is replaced.
+  - Implementation should: replace T3.1's plain write. Serialise in memory. When the size exceeds 65,536 B, exit `1` before creating any file. Otherwise write to `.tmp`, then `File.Move(…, overwrite: true)`, and delete the temporary file in `finally`. No `Append`/`Truncate` or in-place write touches the ledger path.
   - Traces to: FR-21 (atomic write, cap), FR-4, NFR-8, NFR-9 (*What it does not test*, residue), AC-83; ADR 0072 *The write is atomic*, Risks (killed script leaves its temporary file), IA 8.
 
 ## Phase 8 — Word-count mode
@@ -377,23 +415,26 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
   - Test row(s): `-- .claude/test-fixtures/show-me/wordcount-eight.md --word-count`, and a missing file with `--word-count`.
   - Test should verify:
-    - Exit `0`. The last `show-me-wordcount: ` line reports total **8**, the excluded fenced-line count equal to the fixture's fence lines including fences, and in-range `false`.
+    - Exit `0`. The last `show-me-wordcount: ` line reports total **8**, and the excluded fenced-line count equal to the fixture's fence lines including fences. The in-range flag is T8.2's.
     - **Fence regression**: the row states that the total must be 8, not 16.
     - No file is created and no ledger is touched in the fixture directory.
     - The missing file exits with a status other than `0` and emits no record.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Implementation should:
     - Apply NFR-2's rule: exclude the H1 and metadata above the first H2, lines beginning with `|` after trimming, everything from `## Inputs used` onwards, and fences inclusive. Count only tokens containing an alphanumeric character.
-    - Emit a single-line JSON record with fixed field names such as `total`, `excluded_fence_lines` and `in_range`, which T14.7 reads.
+    - Emit a single-line JSON record with the fixed field names `total` and `excluded_fence_lines`, which T14.7 reads. T8.2 adds `in_range`.
   - Traces to: NFR-2, FR-21 (*Modes*), NFR-9 (regression 2), AC-80, AC-59 (mechanism); ADR 0072 KC1 stderr records, IA 9.
 
-- [ ] **TEST + IMPLEMENT: T8.2 — Word-count mode reports a conforming file's exact total and that it is inside 400–2,000**
-  - **USE COMMAND**: `/test-first when the measurement script word-counts the conforming fixture it should report its exact total and in-range true`
+- [ ] **TEST + IMPLEMENT: T8.2 — Word-count mode reports whether the total is inside 400–2,000, with inclusive bounds**
+  - **USE COMMAND**: `/test-first when the measurement script word-counts a file it should report in_range true for the conforming fixture and false for the eight-token fixture`
   - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
-  - Test row(s): `-- .claude/test-fixtures/show-me/wordcount-conforming.md --word-count`.
-  - Test should verify: exit `0`; total equals the fixture's recorded count; in-range `true`.
+  - Test row(s): `-- .claude/test-fixtures/show-me/wordcount-conforming.md --word-count`, and T8.1's eight-token row extended with an `in_range` assertion.
+  - Test should verify:
+    - Conforming: exit `0`; total equals the fixture's recorded count; `in_range` `true`.
+    - Eight-token: `in_range` `false`.
+    - Both rows are red until the record carries `in_range`.
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
-  - Implementation should: add the in-range flag with inclusive bounds, and nothing else.
+  - Implementation should: compute `in_range` as 400 ≤ `total` ≤ 2,000 and add it to the record, and nothing else.
   - Traces to: NFR-2, FR-21 (*Modes*), AC-80; ADR 0072 IA 9.
 
 ## Phase 9 — Command file: resolution, gate and stops
@@ -494,38 +535,52 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 
 ## Phase 11 — Command file: output skeleton and the one Write
 
-*ADR 0072 IA 10, the Synthesiser's ledger-copied part and Step 6. Depends on Phase 10. From here on, every Verify block inspects a written `show-me.md`. Judged sections are filled in by Phases 12–14.*
+*ADR 0072 IA 10, the Synthesiser's ledger-copied part and Step 6. Depends on Phase 10. Tasks run in order. From here on, every Verify block inspects a written `show-me.md`. Judged sections are filled in by Phases 12–14.*
 
-- [ ] **TEST + IMPLEMENT: T11.1 — The command writes `show-me.md` in one `Write`, with FR-5's header and eight headings in order, and copies How it was built and Blast radius wholly from the ledger**
+- [ ] **TEST + IMPLEMENT: T11.1 — The command checks every path it names is tracked and writes `show-me.md` in one `Write`, with FR-5's header and the eight headings in order**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
     - `0033` (no branch):
       - AC-9: the file is created, and `git status` gains only `show-me.md`.
       - Re-run for AC-10: the file is replaced, with no `show-me-2.md` or `.bak`.
-      - AC-19: the three metadata lines read `undetermined`; the base ref is named; the PR line reads `none found`; Blast radius shows `Spec branch not determinable — no diff measured.` plus the rules tried; `Commits: not determinable — spec branch not resolved.` appears; the task shape is still reported.
+      - AC-19, metadata part: the three metadata lines read `undetermined`; the base ref is named; the PR line reads `none found`.
     - `0002-sqs-cleanup`: the metadata issue line reads `none` (AC-44).
     - AC-74: `git check-ignore -v` names the ledger, `git ls-files --error-unmatch` on it fails, and a second run replaces it.
-    - Clone:
-      - K2: AC-11 headings are verbatim and in order, with the full metadata block.
+    - Clone K2: AC-11's headings are verbatim and in order, with the full metadata block.
+  - Implementation should:
+    - Write the H1 and metadata block: `date +%F`, `.issue-number`, the full ref, short shas, and the PR.
+    - Write the eight H2 headings verbatim.
+    - Run `git ls-files --error-unmatch` on every path before writing it. Use `test -f` to know whether the file is created or replaced, `Read` before `Write` when it exists, and one `Write`. Never stage anything.
+  - Traces to: FR-4, FR-5, FR-16 rows 1, 10 and 15, FR-17, NFR-5, NFR-8, AC-9, AC-10, AC-11, AC-19, AC-44, AC-74; ADR 0072 KC5, IA 10 (Step 6).
+
+- [ ] **TEST + IMPLEMENT: T11.2 — How it was built copies the five tag counts and the commit count from the ledger, or gives FR-9's fallback line, and nothing else**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Verify by:
+    - `0033`: `Commits: not determinable — spec branch not resolved.` appears, and the task shape is still reported (AC-19, How it was built part).
+    - `0002-sqs-cleanup`: the five tag counts equal the ledger's `by_tag` values and sum to 6.
+    - (C-8) `0036`: AC-17 — 82 tasks with the 62/12/2/6/0 split and 363 commits, and no review or CI content.
+  - Implementation should: write How it was built as the five tag counts plus the commit count, or the fallback line when the diff fields are null. Carry no review history and no CI state.
+  - Traces to: FR-9, FR-16 row 12, NFR-1, AC-17, AC-19; ADR 0072 KC5, IA 10.
+
+- [ ] **TEST + IMPLEMENT: T11.3 — Blast radius copies the six buckets, the API and subdirectory lines, FR-10's provenance lines and FR-20's PR lines wholly from the ledger**
+  - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
+  - Verify by:
+    - `0033`: Blast radius shows `Spec branch not determinable — no diff measured.` plus the rules tried (AC-19, Blast radius part).
+    - Clone (R4; clone figures are not calibration values):
       - K4: AC-67 reports 5 files and 1 subdirectory, and a second run gives the identical pair.
       - K3: AC-66 reports 4.
       - K12: AC-85's `already merged` line.
     - (C-8) `0036`:
-      - AC-18: six buckets summing to 517, 6 subdirectories, and `Measured from git diff … (PR #4282 head)`.
-      - AC-17: 82 tasks with the per-tag split and 363 commits, and no review or CI content.
+      - AC-18: six buckets summing to 517, 6 subdirectories, `Measured from git diff … (PR #4282 head)`, and the `Ref used:` line.
       - With R5: the AC-46 PR-count line, and the AC-84 row-16 line naming both shas.
-  - Implementation should:
-    - Write the H1 and metadata block: `date +%F`, `.issue-number`, the full ref, short shas, and the PR.
-    - Write the eight H2 headings verbatim.
-    - Write How it was built: five tag counts plus the commit count, or the fallback line.
-    - Write Blast radius:
-      - a pipe table of all six buckets plus a totals row;
-      - the API and subdirectory prose lines;
-      - FR-10's provenance lines (measured-from, PR head differs, ref used, local divergence);
-      - FR-20's PR-count line;
-      - the row 12 and row 16 lines.
-    - Run `git ls-files --error-unmatch` on every path before writing it. Use `test -f` to know whether the file is created or replaced, `Read` before `Write` when it exists, and one `Write`. Never stage anything.
-  - Traces to: FR-4, FR-5, FR-9, FR-10, FR-16 rows 10, 12, 15 and 16, FR-17, FR-20, NFR-1, NFR-5, NFR-8, AC-9, AC-10, AC-11, AC-17, AC-18, AC-19, AC-44, AC-46, AC-66, AC-67, AC-74, AC-84, AC-85; ADR 0072 KC5, IA 10.
+      - With R5 returning #4282 with `headRefOid` `386efee7880e32428a96a96ede6d44a21541e48c` (T6.2's case): the line `Spec branch tip 91d549be6… differs from PR #4282 head 386efee78…; measured the PR head.` appears, and `Measured from …` names `PR #4282 head`.
+  - Implementation should: write Blast radius as
+    - a pipe table of all six buckets plus a totals row;
+    - the API and subdirectory prose lines;
+    - FR-10's provenance lines (measured-from, PR head differs, ref used, local divergence);
+    - FR-20's PR-count line;
+    - the row 12 and row 16 lines.
+  - Traces to: FR-10, FR-16 rows 12 and 16, FR-20, NFR-1, AC-18, AC-19, AC-46, AC-66, AC-67, AC-84, AC-85; ADR 0072 KC5, IA 10.
 
 ## Phase 12 — Command file: the Explainer
 
@@ -550,7 +605,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - K5 (clone): when a stand-down is taken, there is exactly one stand-down line naming D2 with a one-sentence reason, and no invented relationship (AC-64).
     - K7 (clone): the budget line, no fenced block, and no unread type named (AC-58).
     - K1: when the Explainer raises, one diagram plus a one-sentence reason and no `No diagram:` line (AC-57, second half).
-    - Record which ladder row each run took, since stand-down and raise are judgements.
+    - Record which ladder row each run took, since stand-down and raise are judgements. A judged path that was not taken is recorded as `unexercised on this run` in the task's commit message, not as passed (Phase 17's *Judged paths* rule).
   - Implementation should:
     - Read the trigger fields and never re-evaluate them.
     - Spend in order: probe the known set, probe each file found while reading, then read whole, extract with a sized `grep -n -F` for literal member names, or abandon.
@@ -597,7 +652,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 - [ ] **TEST + IMPLEMENT: T13.4 — Inside the markers: the overall level is the maximum, a raise needs its sentence, and the `**Overall risk: …**` line and FR-13's sentence are written, then checked**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
-    - `0033` produces `**Overall risk: Medium**` on its own line, and FR-13's sentence verbatim.
+    - `0033` produces a `**Overall risk: {level}**` line on its own line, and FR-13's sentence verbatim. Until the Classifier exists (T13.5), F2 and F5 have no judged inputs, so this task asserts only F1 = `Medium` and that the stated level is not below the maximum of the three rows as written. T13.5 checks `0033`'s level against its three rows.
     - The transcript shows the two self-checks run: the stated level is not below the maximum, and a raise has its sentence (AC-23).
     - The FR-13 row stays green.
   - Implementation should: compute the maximum over Low < Medium < High; allow a raise only with a first rationale sentence naming what the factors miss; write FR-13's sentence as a literal; and hand the list of factors at the maximum to the Synthesiser.
@@ -611,6 +666,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - K9: 17 ids with statuses (AC-15).
     - K10: `FR-27` is `Withdrawn`, citing the ADR and its superseding requirement, and F5 is `Medium` (AC-45).
     - K11: 26 `Shipped`, one `Shipped with deviation`, one `Deferred` with an issue number (AC-54).
+    - `0033`: F2 and F5 each cite their evidence, and `**Overall risk: …**` states the maximum of the three rows. F1 is forced to `Medium` (row 12), so the level is `Medium` unless an F2 or F5 row reads `High` and cites the evidence for it.
     - (C-8) `0036`: F1 `High` citing 76, F2 `High` citing an item tally of at least 4 (AC-20).
     - Every item and every status names its evidence, and statuses are assigned only to ledger ids.
   - Implementation should:
@@ -632,15 +688,19 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
       - AC-13: items are ≤ 40 words, each with a classification set and a migration, followed by `Total breaking-change items: {n}`.
       - AC-14: row 5's line appears, and `release_notes.md` is unchanged.
     - `0033` (no diff): AC-37's row 14 line, the count line, and F2 computed from the listed items.
-    - K2 with `.adr-list` deleted: AC-40's `No ADRs recorded for this spec.`; D3 does not fire, while D1 and D2 do.
+    - K2 with `.adr-list` deleted: AC-40's `No ADRs recorded for this spec.`; the ledger's `triggers.d3` is `false`, and `triggers.d1` and `triggers.d2` are evaluated (non-null). On K2 both are `false` (4 files, 0 public-API lines). F1 is unchanged, and no factor row cites the absence.
     - `0033` with `.adr-list` temporarily extended (R2) by a missing filename and the bare number `0037`:
       - Run the script directly: the ledger shows `ADR file not found`, `ambiguous ADR number` with 5 matches, and `adr_resolved_count` 1.
-      - The section names both entries. The remaining ADR is still linked (AC-42).
+      - Run `/spec:show-me 0033-pg-advisory-lock-sha256`. What changed and why names both entries with row 7's texts, and the remaining ADR is still named and linked.
+      - `## Inputs used` marks both unresolved entries `not available`.
+      - Neither counts toward D3: `adr_resolved_count` is 1, not 3. (No diff is measured on `0033`, so `triggers` is null.)
+      - No risk factor changes: F1 is unchanged, and no F2 or F5 row cites either unresolved entry as evidence (AC-42). F2 and F5 are judged, so they are not compared across runs (NFR-1).
+      - Restore `.adr-list` with `git checkout` (R2).
     - T10.2's temporary one-bullet marked section, when `{n}` ≠ 1: the disagreement line `release_notes.md records 1 items; this summary identifies {n}`.
   - Implementation should:
     - What changed and why: glossed type names; the row 6 and row 7 texts; and placement of the Explainer's output for this section (ADR 0077 IA 3, first part).
     - Breaking changes: rows 5, 5a and 14 lines; the none line; and the disagreement line only when `m` is non-null and differs from `{n}`.
-  - Traces to: FR-6 (narrative), FR-7, FR-16 rows 5, 5a, 6, 7 and 14, C-9, AC-12, AC-13, AC-14, AC-37, AC-40, AC-42, AC-51, AC-56; ADR 0072 KC5; ADR 0077 IA 3.
+  - Traces to: FR-6 (narrative), FR-7, FR-16 rows 5, 5a, 6, 7 and 14, C-9, AC-12, AC-13, AC-14, AC-37, AC-40, AC-42, AC-51; ADR 0072 KC5; ADR 0077 IA 3.
 
 - [ ] **TEST + IMPLEMENT: T14.2 — Did it ship what it said? renders the Classifier's statuses as one collapsed shipped-as-planned line, one entry per deviation, Part 3 and a count line, keeping the partition invariant**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
@@ -656,30 +716,35 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - Add the follow-up for `Deferred`, `Dropped` and `Withdrawn`, give Part 3 a cap of 5 entries, and write rows 8 and 9 verbatim.
   - Traces to: FR-8, FR-16 rows 8–9, AC-15, AC-16, AC-43, AC-45, AC-54, AC-55; ADR 0072 KC5; ADR 0073 KC1.
 
-- [ ] **TEST + IMPLEMENT: T14.3 — Where to look first lists three to seven spec-diff paths with reasons, taking them from the Explainer's handover when it drew a tree there, or gives row 13's line when there is no diff**
+- [ ] **TEST + IMPLEMENT: T14.3 — Where to look first lists three to seven spec-diff paths with reasons, or every path when its source holds fewer than three, taking them from the Explainer's handover when it drew a tree there, or gives row 13's line when there is no diff**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
     - (C-8) `0036`: AC-26 — 3–7 paths, all in the diff, with reasons of ≤ 25 words. AC-60 when a tree is present — `(unchanged)` marks, no path slot used, and no `No diagram:` line.
-    - K1: the paths include the spec-directory files the fixture's branch commit carries.
+    - K1 (clone): AC-26 — the list holds exactly K1's 2 `src/` paths, each with a reason of ≤ 25 words. It holds no spec-directory path, because the spec diff touches `src/` and `--name-only` is therefore not the source. The 2-path list is complete under FR-14, not a shortfall, and the section carries no tree.
     - `0033`: AC-36's exact row 13 line, with no paths and no diagram.
     - K6: when ladder row 5 was elected, AC-65 — a tree here and the placed-elsewhere line in What changed and why. Record which row was elected.
-  - Implementation should: take paths from the `src/` diff read, or from `--name-only` when there is no `src/` change; use the Explainer's handed-over paths when it drew a diagram for this section (ADR 0077 IA 3, second part); and write row 13 verbatim.
-  - Traces to: FR-14, FR-6 (e) placed-elsewhere line, FR-16 row 13, AC-26, AC-36, AC-60, AC-65; ADR 0077 KC5, IA 3; ADR 0072 KC5.
+  - Implementation should:
+    - Take paths from the `src/` diff read, or from `--name-only` when there is no `src/` change.
+    - When that source holds fewer than three paths, list every one of them, each with its reason, and draw no tree (FR-14).
+    - Use the Explainer's handed-over paths when it drew a diagram for this section (ADR 0077 IA 3, second part). The Explainer elects a tree only over three to seven changed paths.
+    - Write row 13 verbatim.
+  - Traces to: FR-14 (including the fewer-than-three rule), FR-6 (e) placed-elsewhere line, FR-16 row 13, AC-26, AC-36, AC-60, AC-65; ADR 0077 KC5, IA 3; ADR 0072 KC5.
 
 - [ ] **TEST + IMPLEMENT: T14.4 — Inputs used gives exactly FR-15's rows plus one per Explainer source file, each marked from the read log, and never a row for the ledger, the script, review or CI**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
-    - `0033`: AC-27 — the PR and release-notes rows are `not available` with reasons; the others are `used`; there is no review or CI row. AC-41 — no `PROMPT` string anywhere. AC-75 — no `.show-me-ledger.json`, no script path, and no rows for either.
+    - K2 in the clone, which resolves `spec/low-risk` so a diff is measured, has no PR (R4: `gh` fails), and has no marked section: AC-27 — the pull-request row is `not available` with a reason, `release_notes.md` is `not available`, and `tasks.md`, `requirements.md`, `.adr-list` and git history are `used`. There is no review or CI row.
+    - `0033`: the git history row reads `not available: spec branch not determinable` (ADR 0072 KC5), and the PR and release-notes rows are `not available` with reasons. AC-41 — no `PROMPT` string anywhere. AC-75 — no `.show-me-ledger.json`, no script path, and no rows for either.
     - `0002-sqs-cleanup`: `.issue-number` is `not available: not present` (AC-44).
     - K2 in the clone, where `gh` fails: the `gh unavailable` row, with F1 unchanged (AC-28).
     - T10.2's section gives the row `used` (AC-69). K7 gives `not available: read budget exhausted before release_notes.md section could be read` (AC-68).
     - (C-8) `0036`: Explainer rows are marked `used` or `used (targeted extraction)`.
   - Implementation should: produce the fixed row set, the git history row per KC5, one Explainer row per source file however it was read (ADR 0077 IA 4), and no row for `.current-spec`, the existing `show-me.md` or `PROMPT*`.
-  - Traces to: FR-15, FR-16 rows 1, 2, 5, 5a, 10 and 11, FR-17, AC-27, AC-28, AC-41, AC-44, AC-68, AC-69, AC-75; ADR 0072 KC5; ADR 0077 IA 4.
+  - Traces to: FR-15, FR-16 rows 1, 2, 5, 5a, 10, 11 and 12, FR-17, AC-27, AC-28, AC-41, AC-44, AC-68, AC-69, AC-75; ADR 0072 KC5; ADR 0077 IA 4.
 
 - [ ] **TEST + IMPLEMENT: T14.5 — The rationale has 2–5 sentences around the risk step's lines and names the factors at the maximum without comparing levels**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
-  - Verify by: K3's rationale references F2 (AC-22). (C-8) `0036`'s names F1 and F2. On a raised run, the raising sentence comes first (AC-23). The FR-13 row stays green.
+  - Verify by: K3's rationale references F2 (AC-22). (C-8) `0036`'s names F1 and F2. On a raised run, the raising sentence comes first (AC-23). A raise is a judged path, so when no run raises, this clause is recorded `unexercised on this run` in the task's commit message (Phase 17). The FR-13 row stays green.
   - Implementation should: place the risk step's lines in the order ADR 0073 KC4 gives; state factor levels only as the table shows them; and put no conditional on a level outside the markers.
   - Traces to: FR-12, FR-13, AC-22, AC-23; ADR 0073 KC4, IA 5 (rationale part).
 
@@ -688,8 +753,11 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - Verify by:
     - `0033` with an untracked `PROMPT.md` and `PROMPT-history.md` added (R2): no occurrence of either anywhere, including diagrams, and every relative link resolves to a tracked path (AC-29).
     - (C-8) `0036`: at most two fenced blocks, each ≤ 40 lines and ≤ 100 characters; block-or-line exclusivity; every path-shaped label tracked (AC-59, caps part).
-  - Implementation should: add the four checks from ADR 0077 KC6 over the assembled text, and the FR-17 test on every path, node and link.
-  - Traces to: FR-6 (d), FR-17, NFR-5, AC-29, AC-59; ADR 0077 KC6, IA 5; ADR 0072 KC5.
+    - On every `show-me.md` this task writes (`0033` and `0036`):
+      - NFR-5: `grep -F "$(git rev-parse --show-toplevel)"` and `grep -F "$HOME"` find nothing. `grep -E 'gh[pousr]_[A-Za-z0-9]{20,}|github_pat_'` finds nothing. Every path written is relative to the repository root.
+      - NFR-6: the number of lines that open or close a fence (lines starting with three backticks after trimming) is even, and pairing them in order leaves no block open at the end of the file.
+  - Implementation should: add the four checks from ADR 0077 KC6 over the assembled text, and the FR-17 test on every path, node and link. Write every path relative to the repository root.
+  - Traces to: FR-6 (d), FR-17, NFR-5, NFR-6 (closed fences), AC-29, AC-59; ADR 0077 KC6, IA 5; ADR 0072 KC5.
 
 - [ ] **TEST + IMPLEMENT: T14.7 — After the `Write`, the command word-counts the file once and reports the path, created or replaced, the copied overall level, the advisory reminder and the word count, whatever the level**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
@@ -757,8 +825,8 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 - [ ] **TEST + IMPLEMENT: T15.5 — `/spec:write_release_notes` writes or replaces exactly one marked section under the first `##`, in the fixed form, with one exact-match `Edit`**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
-    - Clone, with `specs/9015-two-breaks/` and a staged synthetic ADR recording two breaks:
-      - AC-89: one section directly under `## Master`; the marker on the next line; a summary; two bullets, each with an italic classification set and a migration. `git diff` shows one added hunk and nothing staged.
+    - Clone, with K13 (`specs/9015-two-breaks/` and its staged synthetic ADR recording two breaks):
+      - AC-89: one section directly under `## Master`; the marker on the next line; a summary; two bullets, each with an italic classification set and a migration. `diff` of a copy of `release_notes.md` saved before the run against the file afterwards shows one added hunk, and `git diff --cached --quiet -- release_notes.md` succeeds, so `release_notes.md` is not staged. (R4 stages the fixture directory and the synthetic ADR, and K7's section is an unstaged edit, so neither a whole-index check nor a plain `git diff` would isolate this run.)
       - Edit the ADR to one break and re-run for AC-90: one section, one bullet, all other bytes unchanged.
       - An ADR with no break gives `No breaking changes.`
     - AC-92 in the clone:
@@ -778,8 +846,8 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 - [ ] **TEST + IMPLEMENT: T15.6 — `/spec:design` recommends `/spec:write_release_notes` when an ADR records a break, and `/spec:review`'s design criteria flag a break with no marked section**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
-    - `git diff $PRE` on `design.md` and `review.md` shows one added step and one added check, with nothing else removed or reworded (AC-91).
-    - In the clone, `/spec:review design` on `9015-two-breaks` with its section deleted reports the finding and recommends `/spec:write_release_notes`.
+    - `git diff $POST_T15_3 -- .claude/commands/spec/design.md .claude/commands/spec/review.md` (R1) shows one added step and one added check, with nothing else removed or reworded (AC-91). `$PRE` is not used here, because T15.3 has already added two checks to `review.md`.
+    - In the clone, `/spec:review design` on K13 (`9015-two-breaks`) with its section deleted reports the finding and recommends `/spec:write_release_notes`.
   - Implementation should: add the `/spec:design` step (tell the user and recommend the command, but do not run it) and the *Design (ADR) Review Criteria* check.
   - Traces to: FR-23, AC-91; ADR 0078 KC3, KC6, IA 5.
 
@@ -803,7 +871,21 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 
 ## Phase 17 — Acceptance on the finished command
 
-*Depends on Phases 1–16. T17.2 and T17.3 are the (C-8) criteria and must finish while #4282 is OPEN (R8). Each task re-runs, on the final command, the Verify-by set-ups named in earlier tasks.*
+*Depends on Phases 1–16. T17.2 and T17.3 are the (C-8) criteria, and T17.5's AC-25 comparison and R5 stand-in reruns also need 0036 unmerged (FR-10 skips a merged candidate); all three must finish while #4282 is OPEN (R8). Each task re-runs, on the final command, the Verify-by set-ups named in earlier tasks.*
+
+**The acceptance record.** Each T17.x task hands back, when its box is ticked, a list of the ACs it checked. Each AC is marked `held`, `defect ({owning task})` or `unexercised on this run`.
+
+**Judged paths.** Some criteria apply only when the model takes a judged path. A run that does not take the path neither passes nor fails them. When the path was not taken, record the AC as `unexercised on this run`, never as `held`. Re-running to force a path is not required, and nothing is simulated. The table names the fixture that makes each path likely, where one exists.
+
+| AC | Judged path | Fixture that makes it likely |
+|---|---|---|
+| AC-57 (second half) | the Explainer raises with no trigger | none; K1 is built so that no trigger fires, and a raise there is a judgement |
+| AC-59 | two diagrams totalling about 70 fenced lines | (C-8) `0036` (D1, D2 and D3 all fire) |
+| AC-60 | a tree in `## Where to look first` | K6; (C-8) `0036` |
+| AC-63 | one diagram in each of the two sections | (C-8) `0036` |
+| AC-64 | the stand-down on D2 | K5 |
+| AC-65 | ladder row 5 elected | K6 |
+| AC-23 (raise clause) | a raise above the maximum | none |
 
 - [ ] **PROJECT: T17.1 — Pre-flight: confirm the (C-8) window and the calibration preconditions**
   - Do:
@@ -818,24 +900,24 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 - [ ] **PROJECT: T17.2 — (C-8) Run `/spec:show-me` on spec 0036 while PR #4282 is open**
   - Do:
     - Run `/spec:show-me 0036-scoped-lifetime-per-pipeline` twice, capturing `git status --porcelain` before and after each run.
-    - Check AC-1, AC-2, AC-4 (resolution); AC-11; AC-12; AC-13; AC-14; AC-17; AC-18; AC-20; AC-24; AC-26; AC-30 (the only `git status` change is `show-me.md`; the ledger's `gh_commands` holds one `gh pr list … --state open`; no command-issued `gh` or `git merge-base`); AC-31; AC-32 (the two runs' mechanical fields are identical, and each run's F2 and F5 match its own evidence); AC-33; AC-34; AC-51; AC-56; AC-59 and AC-63 (when two diagrams are drawn); AC-62; AC-73; AC-74; AC-75; AC-76; AC-77; AC-78.
+    - Check AC-1, AC-2, AC-4 (resolution); AC-11; AC-12; AC-13; AC-14; AC-17; AC-18; AC-20; AC-24; AC-26; AC-30 (the only `git status` change is `show-me.md`; the ledger's `gh_commands` holds one `gh pr list … --state open`; no command-issued `gh` or `git merge-base`); AC-31; AC-32 (the two runs' mechanical fields are identical, and each run's F2 and F5 match its own evidence); AC-33; AC-34; AC-51; AC-56; AC-59, AC-60 and AC-63 (judged paths: each is recorded `unexercised on this run` when neither run took it); AC-62; AC-73; AC-74; AC-75; AC-76; AC-77; AC-78.
     - Copy the output to the scratch directory for the user, since it may inform #4282, then apply R3.
-  - Acceptance: every listed AC holds, or its failure is recorded as a defect against the task that owns it.
+  - Acceptance: the acceptance record marks every listed AC `held`, `defect ({owning task})`, or, for a judged path not taken, `unexercised on this run`.
   - Traces to: C-8, FR-1–FR-21, NFR-1–NFR-8, and the ACs listed.
 
 - [ ] **PROJECT: T17.3 — (C-8) AC-47 in the clone: a local branch that diverges from the remote-tracking ref**
-  - Do: in R4 with K12's moved local 0036 branch, run `/spec:show-me 0036-scoped-lifetime-per-pipeline`. Check that the remote-tracking ref is measured, that the metadata and Blast radius name that full ref and its sha together with the base ref and merge base, and that the local-divergence line is present.
+  - Do: in R4 with K12's local `spec/scoped-lifetime-per-pipeline` at `386efee78`, run `/spec:show-me 0036-scoped-lifetime-per-pipeline`. Check that the remote-tracking ref (`91d549be6`) is measured, that the metadata and Blast radius name that full ref and its sha together with the base ref and merge base, and that the local-divergence line names `386efee78`. The merge base is the clone's (R4); it is not compared with the calibration value.
   - Traces to: FR-10, C-4, C-8, AC-47.
 
 - [ ] **PROJECT: T17.4 — Regression sweep over the real no-diff fixtures**
-  - Do: re-run the Verify set-ups of T9.1–T9.3, T11.1, T12.1, T13.3, T14.1–T14.4, T14.6 and T14.7 on the fixtures they name (`0002-*`, `0003`, `0005`, `0021`, `0023`, `0033`, plus `README.md` and `kafka-widget`). Check AC-1a, AC-3, AC-5, AC-6, AC-7, AC-8, AC-9, AC-10, AC-16, AC-19, AC-27, AC-29, AC-35, AC-36, AC-37, AC-41, AC-42, AC-43, AC-44, AC-61, AC-70, AC-71, AC-72 and AC-93.
+  - Do: re-run the Verify set-ups of T9.1–T9.3, T11.1–T11.3, T12.1, T13.3, T14.1–T14.4, T14.6 and T14.7 on the real fixtures they name (`0002-*`, `0003`, `0005`, `0021`, `0023`, `0033`, plus `README.md` and `kafka-widget`). Check AC-1a, AC-3, AC-5, AC-6, AC-7, AC-8, AC-9, AC-10, AC-16, AC-19, AC-29, AC-35, AC-36, AC-37, AC-41, AC-42, AC-43, AC-44, AC-61, AC-70, AC-71, AC-72 and AC-93. AC-27 is checked on K2 in T17.5.
   - Traces to: FR-1–FR-3, FR-16, FR-17, FR-21, NFR-8, and the ACs listed.
 
-- [ ] **PROJECT: T17.5 — Regression sweep over the clone fixtures K1–K12**
+- [ ] **PROJECT: T17.5 — Regression sweep over the clone fixtures K1–K14**
   - Do:
-    - Rebuild R4 from the final commit and re-run the K-fixture set-ups. Check AC-15, AC-21, AC-22, AC-28, AC-40, AC-45, AC-52, AC-54, AC-55, AC-57, AC-58, AC-60, AC-64, AC-65, AC-66, AC-67, AC-68 and AC-85.
-    - For AC-25, compare the K2 run (`Low`) with a `0036` run (`High`) in the same clone. The only difference in side effects is the text of `show-me.md`: the same shape of commands, one written path, and no marker, label or comment.
-    - Rerun the R5 stand-in cases on the real repository for AC-46 and AC-84.
+    - Rebuild R4 from the final commit and re-run the K-fixture set-ups, including K14's rule 2 and rule 3 runs. Check AC-15, AC-21, AC-22, AC-26 (K1), AC-27 (K2), AC-28, AC-40, AC-45, AC-52, AC-54, AC-55, AC-57, AC-58, AC-60, AC-64, AC-65, AC-66, AC-67, AC-68 and AC-85. AC-57's second half, AC-60, AC-64 and AC-65 follow the *Judged paths* rule.
+    - (C-8 window, R8) For AC-25, compare the K2 run (`Low`) with a `0036` run (`High`) in the same clone. The only difference in side effects is the text of `show-me.md`: the same shape of commands, one written path, and no marker, label or comment. The clone's `0036` figures are not calibration values (R4).
+    - (C-8 window, R8) Rerun the R5 stand-in cases on the real repository for AC-46, AC-84 and FR-10's PR-head-differs line (T6.2, T11.3).
   - Traces to: FR-6, FR-8, FR-10–FR-13, FR-20, NFR-3, and the ACs listed.
 
 - [ ] **PROJECT: T17.6 — End to end with a real marked section written by `/spec:write_release_notes`**
@@ -859,7 +941,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 
 ## Phase 18 — Close-out after PR #4282 merges
 
-*Depends on T17.1–T17.3 being finished and on PR #4282 having merged.*
+*Depends on T17.1–T17.3 and T17.5 being finished and on PR #4282 having merged.*
 
 - [ ] **PROJECT: T18.1 — Merge `origin/master` into `spec/show-me` so that the spec's own diff no longer carries spec 0036, then re-run the test script**
   - Do:
@@ -880,51 +962,51 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 | FR-1 | T9.1, T9.2, T17.2, T17.4 | FR-17 | T10.1, T11.1, T14.4, T14.6 |
 | FR-2 | T9.1, T9.2 | FR-18 | T1.3, T3.2, T6.2, T9.1, T17.2, T17.7 |
 | FR-3 | T3.3, T3.4, T9.2 | FR-19 | T9.2, T14.7 |
-| FR-4 | T1.2, T3.1, T7.1, T11.1 | FR-20 | T6.2, T11.1 |
+| FR-4 | T1.2, T3.1, T7.1, T11.1 | FR-20 | T6.2, T11.3 |
 | FR-5 | T11.1 | FR-21 | T2.1–T8.2, T9.2, T9.3, T14.7 |
 | FR-6 | T5.3, T5.4, T10.1, T12.1, T12.2, T14.1, T14.3, T14.6 | FR-22 | T15.1, T15.2, T15.3 (and the form of this file) |
 | FR-7 | T4.1, T10.2, T13.5, T14.1 | FR-23 | T15.4, T15.5, T15.6, T16.1, T17.6 |
-| FR-8 | T3.5, T13.5, T14.2 | NFR-1 | T3.1–T5.4, T9.3, T11.1, T17.2 |
-| FR-9 | T3.3, T5.1, T11.1 | NFR-2 | T8.1, T8.2, T14.7 |
-| FR-10 | T5.1, T6.1, T11.1, T17.3 | NFR-3 | T5.1, T10.1, T10.2, T12.2 |
+| FR-8 | T3.5, T13.5, T14.2 | NFR-1 | T3.1–T5.4, T9.3, T11.2, T11.3, T17.2 |
+| FR-9 | T3.3, T5.1, T11.2 | NFR-2 | T8.1, T8.2, T14.7 |
+| FR-10 | T5.1, T6.1, T6.2, T11.3, T17.3 | NFR-3 | T5.1, T10.1, T10.2, T12.2 |
 | FR-11 | T5.2, T13.3, T13.5 | NFR-4 | T6.2, T14.4 |
 | FR-12 | T13.4, T14.5 | NFR-5 | T11.1, T14.6 |
-| FR-13 | T13.1–T13.4, T14.5, T14.7 | NFR-6 | T3.1, T9.1, T15.1–T15.4, T16.1, T17.7 |
+| FR-13 | T13.1–T13.4, T14.5, T14.7 | NFR-6 | T3.1, T9.1, T14.6, T15.1–T15.4, T16.1, T17.7 |
 | FR-14 | T12.2, T14.3 | NFR-7 | T12.2, T13.5, T17.2 |
 | FR-15 | T14.4 | NFR-8 | T3.4, T7.1, T9.2, T9.3, T11.1 |
-| FR-16 | T3.5, T3.6, T6.1, T6.2, T10.2, T11.1, T12.1, T13.3, T14.1–T14.4 | NFR-9 | T1.1, T1.4, T2.1–T8.2, T13.1, T16.2, T17.1, T18.1 |
+| FR-16 | T1.4, T3.5, T3.6, T6.1, T6.2, T10.2, T11.1–T11.3, T12.1, T13.3, T14.1–T14.4 | NFR-9 | T1.1, T1.4, T2.1–T8.2, T13.1, T16.2, T17.1, T18.1 |
 
 All 32 declared ids have at least one task.
 
 ### Acceptance criteria → tasks
 
-(C-8) criteria are **bold**. Retired criteria (AC-38, 39, 48, 49, 50) need no task.
+(C-8) criteria are **bold**. † marks a criterion, or a clause of one, that applies only on a judged path (Phase 17's *Judged paths* table). When the path is not taken it is recorded `unexercised on this run`; the table's claim is that a task checks it whenever the path is taken. Retired criteria (AC-38, 39, 48, 49, 50) need no task.
 
 | AC | Tasks | AC | Tasks | AC | Tasks | AC | Tasks |
 |---|---|---|---|---|---|---|---|
-| **AC-1** | T9.1, T17.2 | AC-21 | T13.5, T17.5 | AC-45 | T13.5, T14.2 | AC-69 | T10.2, T14.4, T17.6 |
-| AC-1a | T9.1, T9.2 | AC-22 | T13.5, T14.5 | AC-46 | T6.2, T11.1, T17.5 | AC-70 | T3.1, T3.5, T9.3 |
-| **AC-2** | T9.2, T17.2 | AC-23 | T13.4, T14.5 | **AC-47** | T6.1, T17.3 | AC-71 | T3.4, T9.2 |
-| AC-3 | T9.1 | AC-24 | T13.4, T14.7, T17.2 | **AC-51** | T14.1, T17.2 | AC-72 | T9.2, T9.3 |
-| **AC-4** | T9.2, T17.2 | AC-25 | T14.7, T17.5 | AC-52 | T10.1, T17.5 | AC-73 | T6.2, T17.2 |
-| AC-5 | T9.1 | AC-26 | T14.3, T17.2 | AC-53 | T15.4, T16.1, T17.7 | AC-74 | T1.2, T11.1, T17.2 |
-| AC-6 | T9.2 | AC-27 | T14.4 | AC-54 | T13.5, T14.2 | AC-75 | T14.4, T17.2 |
-| AC-7 | T3.4, T9.2 | AC-28 | T6.2, T14.4 | AC-55 | T13.5, T14.2 | AC-76 | T10.1, T17.2 |
-| AC-8 | T9.2 | AC-29 | T14.6 | **AC-56** | T12.2, T14.1, T17.2 | **AC-77** | T10.1, T17.2 |
-| AC-9 | T11.1 | AC-30 | T6.2, T17.2 | AC-57 | T12.1, T12.2 | **AC-78** | T10.1, T12.2, T17.2 |
-| AC-10 | T11.1 | AC-31 | T14.7 | AC-58 | T12.2 | AC-79 | T2.1–T8.2, T17.1, T18.1 |
-| AC-11 | T11.1, T17.2 | AC-32 | T17.2 | AC-59 | T8.1, T14.6, T14.7 | AC-80 | T8.1, T8.2 |
-| **AC-12** | T14.1, T17.2 | AC-33 | T14.7 | AC-60 | T14.3 | AC-81 | T13.1 |
-| AC-13 | T14.1 | AC-34 | T17.2 | AC-61 | T12.1 | AC-82 | T1.3, T3.2, T17.7 |
-| AC-14 | T14.1 | AC-35 | T9.1, T9.2 | AC-62 | T17.2 | AC-83 | T3.1, T7.1 |
-| AC-15 | T13.5, T14.2 | AC-36 | T14.3 | AC-63 | T10.1, T12.2, T17.2 | AC-84 | T6.2, T11.1 |
-| AC-16 | T13.3, T14.2 | AC-37 | T14.1 | AC-64 | T12.2 | AC-85 | T6.1, T11.1 |
-| **AC-17** | T11.1, T17.2 | AC-40 | T14.1 | AC-65 | T14.3 | AC-86 | T15.1 |
-| **AC-18** | T5.1, T6.1, T6.2, T11.1, T17.2 | AC-41 | T14.4 | AC-66 | T5.1, T11.1 | AC-87 | T15.2 |
-| AC-19 | T6.1, T11.1 | AC-42 | T3.6, T14.1 | AC-67 | T5.3, T11.1 | AC-88 | T15.3 |
-| **AC-20** | T13.3, T13.5, T17.2 | AC-43 | T3.5, T13.3, T14.2 | AC-68 | T10.2, T14.4 | AC-89 | T15.5 |
-| AC-90 | T15.4, T15.5 | AC-91 | T15.6 | AC-92 | T4.1, T15.5, T17.6 | AC-93 | T3.2, T9.2 |
-| AC-94 | T16.2, T17.7 | AC-95 | T15.4, T15.5 | | | | |
+| **AC-1** | T9.1, T17.2 | AC-23 † | T13.4, T14.5 | **AC-51** | T14.1, T17.2 | AC-74 | T1.2, T11.1, T17.2 |
+| AC-1a | T9.1, T9.2, T17.4 | AC-24 | T13.4, T14.7, T17.2 | AC-52 | T10.1, T17.5 | AC-75 | T14.4, T17.2 |
+| **AC-2** | T9.2, T17.2 | AC-25 | T14.7, T17.5 | AC-53 | T15.4, T16.1, T17.7 | AC-76 | T10.1, T17.2 |
+| AC-3 | T9.1, T17.4 | AC-26 | T14.3, T17.2, T17.5 | AC-54 | T13.5, T14.2, T17.5 | **AC-77** | T10.1, T17.2 |
+| **AC-4** | T9.2, T17.2 | AC-27 | T14.4, T17.5 | AC-55 | T13.5, T14.2, T17.5 | **AC-78** | T10.1, T12.2, T17.2 |
+| AC-5 | T9.1, T17.4 | AC-28 | T6.2, T14.4, T17.5 | **AC-56** | T12.2, T17.2 | AC-79 | T2.1, T3.1, T3.3, T3.5, T4.1, T5.1, T5.2, T17.1, T18.1 |
+| AC-6 | T9.2, T17.4 | AC-29 | T14.6, T17.4 | AC-57 † | T12.1, T12.2, T17.5 | AC-80 | T8.1, T8.2 |
+| AC-7 | T3.4, T9.2, T17.4 | AC-30 | T6.2, T17.2 | AC-58 | T12.2, T17.5 | AC-81 | T13.1, T13.2 |
+| AC-8 | T9.2, T17.4 | AC-31 | T14.7, T17.2 | AC-59 † | T8.1, T14.6, T14.7, T17.2 | AC-82 | T1.2, T1.3, T3.2, T17.7 |
+| AC-9 | T11.1, T17.4 | AC-32 | T17.2 | AC-60 † | T14.3, T17.2, T17.5 | AC-83 | T7.1 |
+| AC-10 | T11.1, T17.4 | AC-33 | T14.7, T17.2 | AC-61 | T12.1, T17.4 | AC-84 | T6.2, T11.3, T17.5 |
+| AC-11 | T11.1, T17.2 | AC-34 | T17.2 | AC-62 | T17.2 | AC-85 | T6.1, T11.3, T17.5 |
+| **AC-12** | T14.1, T17.2 | AC-35 | T9.1, T9.2, T17.4 | AC-63 † | T12.2, T17.2 | AC-86 | T15.1 |
+| AC-13 | T14.1, T17.2 | AC-36 | T14.3, T17.4 | AC-64 † | T12.2, T17.5 | AC-87 | T15.2 |
+| AC-14 | T14.1, T17.2 | AC-37 | T14.1, T17.4 | AC-65 † | T14.3, T17.5 | AC-88 | T15.3 |
+| AC-15 | T13.5, T14.2, T17.5 | AC-40 | T14.1, T17.5 | AC-66 | T5.1, T11.3, T17.5 | AC-89 | T15.5 |
+| AC-16 | T13.3, T14.2, T17.4 | AC-41 | T14.4, T17.4 | AC-67 | T5.3, T11.3, T17.5 | AC-90 | T15.4, T15.5 |
+| **AC-17** | T11.2, T17.2 | AC-42 | T3.6, T14.1, T17.4 | AC-68 | T10.2, T14.4, T17.5 | AC-91 | T15.6 |
+| **AC-18** | T5.1, T6.1, T6.2, T11.3, T17.2 | AC-43 | T3.5, T13.3, T14.2, T17.4 | AC-69 | T10.2, T14.4, T17.6 | AC-92 | T4.1, T15.5, T17.6 |
+| AC-19 | T6.1, T11.1–T11.3, T17.4 | AC-44 | T11.1, T14.4, T17.4 | AC-70 | T3.1, T3.5, T9.3, T17.4 | AC-93 | T3.2, T9.2, T17.4 |
+| **AC-20** | T13.3, T13.5, T17.2 | AC-45 | T13.5, T14.2, T17.5 | AC-71 | T3.4, T9.2, T17.4 | AC-94 | T16.2, T17.7, T18.1 |
+| AC-21 | T13.5, T17.5 | AC-46 | T6.2, T11.3, T17.5 | AC-72 | T9.2, T9.3, T17.4 | AC-95 | T15.4, T15.5 |
+| AC-22 | T13.5, T14.5, T17.5 | **AC-47** | T6.1, T17.3 | AC-73 | T6.2, T17.2 |  |  |
 
 Every one of the 91 live ACs is covered. The 12 (C-8) criteria are AC-1, 2, 4, 12, 17, 18, 20, 47, 51, 56, 77 and 78. They are exercised in T17.2 and T17.3 inside R8's window, and they lapse when #4282 merges. AC-79 is pinned and survives the merge (T18.1).
 
@@ -934,19 +1016,19 @@ Every one of the 91 live ACs is covered. The 12 (C-8) criteria are AC-1, 2, 4, 1
 |---|---|---|
 | 0072 | IA 1 (`.gitignore`, settings) | T1.2, T1.3 |
 | 0072 | IA 2 (fixture tree) | T1.4 (plus T1.1, the staged-fixture removal) |
-| 0072 | IA 3 (harness) | T2.1 |
+| 0072 | IA 3 (harness) | T2.1, T3.1 (ledger save and restore) |
 | 0072 | IA 4 (file fields, grammar, gate) | T3.1–T3.6 |
 | 0072 | IA 5 (marked sections, `{m}`) | T4.1 |
 | 0072 | IA 6 (pinned diff fields, 10 boundary rows) | T5.1–T5.4 |
 | 0072 | IA 7 (unpinned ref fields) | T6.1, T6.2 |
-| 0072 | IA 8 (atomic write, cap, residue) | T3.1, T7.1 |
+| 0072 | IA 8 (atomic write, cap, residue) | T7.1 |
 | 0072 | IA 9 (word count) | T8.1, T8.2 |
-| 0072 | IA 10 (command file, Steps 1–8) | T9.1–T9.3, T10.1–T10.2, T11.1, T12.x, T13.x, T14.1–T14.7 |
+| 0072 | IA 10 (command file, Steps 1–8) | T9.1–T9.3, T10.1–T10.2, T11.1–T11.3, T12.x, T13.x, T14.1–T14.7 |
 | 0072 | IA 11 (README, CONTRIBUTING) | T16.1, T16.2 |
 | 0072 | KC1 script / KC2 ledger | T3.1–T6.2, T7.1, T8.1 |
 | 0072 | KC3 reads and read log | T9.3, T10.1, T10.2 |
 | 0072 | KC4 gate and four stops | T3.4, T9.1–T9.3 |
-| 0072 | KC5 output document | T11.1, T14.1–T14.4, T14.6 |
+| 0072 | KC5 output document | T11.1–T11.3, T14.1–T14.4, T14.6 |
 | 0072 | KC6 test script and fixtures | T1.4, T2.1, T3.2, T3.3, T7.1, T13.1, T16.2 |
 | 0072 | Technology Choices (C# app and JSON, payload in a file, allow entry, `allowed-tools`, no sub-agent) | T3.1, T2.1, T1.3, T3.2, T9.1 |
 | 0072 | Risks (SDK `--`, killed tmp, prefixes, argument split, calibration reachability, model counting) | T3.2, T7.1, T3.4, T9.1, T16.2/T18.1, T9.3/T17.2 |
