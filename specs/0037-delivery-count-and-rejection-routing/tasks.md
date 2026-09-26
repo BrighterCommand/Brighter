@@ -386,7 +386,7 @@
     - Brighter neither suppresses nor stamps a native redrive (R-9); a red points at the pump's budget check or at a Brighter stamp reaching the native copy.
   - Depends on: 4.3
 
-- [ ] **4.9 CHARACTERISE: SQS budget of -1 never rejects**
+- [x] **4.9 CHARACTERISE: SQS budget of -1 never rejects**
   - **USE COMMAND**: `/test-first when sqs budget is minus one should never reject and never dead letter`
   - Test location: "tests/Paramore.Brighter.AWS.Tests/MessagingGateway/Sqs/Standard/Reactor", "…/Proactor", and the V4 twins
   - Test file: `When_sqs_budget_is_minus_one_should_never_reject.cs`
