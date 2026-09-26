@@ -3,6 +3,7 @@
 // </auto-generated>
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -151,12 +152,89 @@ public static class ConformanceDeferredPump
     public static int GetDispatchCount(string key)
         => s_dispatchCount.TryGetValue(key, out var n) ? n : 0;
 
+    // ── Requeue count (R-27(c)(6)) ───────────────────────────────────────────
+    // Counts how many times Requeue/RequeueAsync has been called for each message key.
+    // Reset by ResetDispatchCount so all recording state is cleared at once.
+    private static readonly ConcurrentDictionary<string, int> s_requeueCount = new();
+
+    // ── HandledCount log (R-27(c)(6)) ────────────────────────────────────────
+    // Records the integer value of Header.HandledCount from each Receive/ReceiveAsync call,
+    // in delivery order, before the pump increments it via UpdateHandledCount.
+    // This is a value copy — the pump mutates the same MessageHeader.HandledCount field.
+    private static readonly ConcurrentDictionary<string, List<int>> s_handledCountLog = new();
+
     /// <summary>
-    /// Clears the per-message dispatch count for all messages.
-    /// Call from each generated test's constructor so counts cannot leak between tests.
+    /// Clears the per-message dispatch count, requeue count and HandledCount log for all
+    /// messages.  Call from each generated test's constructor so counts cannot leak between
+    /// tests.
     /// </summary>
     public static void ResetDispatchCount()
-        => s_dispatchCount.Clear();
+    {
+        s_dispatchCount.Clear();
+        s_requeueCount.Clear();
+        s_handledCountLog.Clear();
+    }
+
+    /// <summary>
+    /// Returns the number of times <c>Requeue</c>/<c>RequeueAsync</c> has been called for the
+    /// message with <paramref name="key"/> since the last <see cref="ResetDispatchCount"/> call.
+    /// </summary>
+    public static int GetRequeueCount(string key)
+        => s_requeueCount.TryGetValue(key, out var n) ? n : 0;
+
+    /// <summary>
+    /// Returns the <c>Header.HandledCount</c> values recorded by the recording consumer's
+    /// <c>Receive</c>/<c>ReceiveAsync</c> for the message with <paramref name="key"/>, in
+    /// delivery order.  Each value is a copy taken before the pump calls
+    /// <c>UpdateHandledCount</c>.
+    /// </summary>
+    public static IReadOnlyList<int> GetHandledCountLog(string key)
+    {
+        if (!s_handledCountLog.TryGetValue(key, out var log)) return [];
+        lock (log) return new List<int>(log);
+    }
+
+    /// <summary>Increments the requeue count for the message's identity key.</summary>
+    internal static void IncrementRequeueCount(Message message)
+        => s_requeueCount.AddOrUpdate(KeyOf(message), 1, (_, n) => n + 1);
+
+    /// <summary>
+    /// Records the <c>Header.HandledCount</c> integer from each message, as a value copy
+    /// taken at the moment <c>Receive</c>/<c>ReceiveAsync</c> returns the array.
+    /// </summary>
+    internal static void RecordHandledCounts(Message[] messages)
+    {
+        foreach (var message in messages)
+        {
+            var key = KeyOf(message);
+            var count = message.Header.HandledCount;
+            // AddOrUpdate's update delegate may run concurrently, so append under the list's lock
+            var log = s_handledCountLog.GetOrAdd(key, _ => []);
+            lock (log) log.Add(count);
+        }
+    }
+
+    /// <summary>
+    /// Wraps <paramref name="inner"/> in a <see cref="RecordingConsumerSync"/> and returns a
+    /// <see cref="Channel"/> over the decorator.  Use this factory in tests that need requeue
+    /// counts or HandledCount logs (R-27(c)(6)).
+    /// </summary>
+    public static Channel CreateRecordingChannel(
+        ChannelName channelName,
+        RoutingKey routingKey,
+        IAmAMessageConsumerSync inner)
+        => new(channelName, routingKey, new RecordingConsumerSync(inner));
+
+    /// <summary>
+    /// Wraps <paramref name="inner"/> in a <see cref="RecordingConsumerAsync"/> and returns a
+    /// <see cref="ChannelAsync"/> over the decorator.  Use this factory in tests that need
+    /// requeue counts or HandledCount logs (R-27(c)(6)).
+    /// </summary>
+    public static ChannelAsync CreateRecordingChannelAsync(
+        ChannelName channelName,
+        RoutingKey routingKey,
+        IAmAMessageConsumerAsync inner)
+        => new(channelName, routingKey, new RecordingConsumerAsync(inner));
 
     /// <summary>The message body a pump will translate into a <see cref="ConformanceDeferredCommand"/>.</summary>
     public static byte[] CommandBody() =>
@@ -244,4 +322,120 @@ public static class ConformanceDeferredPump
 
         Assert.Equal(sent.Body.Value, deadLettered.Body.Value);
     }
+}
+
+/// <summary>
+/// A test-infrastructure decorator (R-27(c)(6)) that counts <c>Requeue</c> calls and records
+/// the <c>Header.HandledCount</c> of each received message.
+/// </summary>
+/// <remarks>
+/// <para>
+/// This is <b>not</b> a mock standing in for a transport (C-10 forbids that). Every call is
+/// forwarded to the wrapped consumer; the decorator only observes, never intercepts.
+/// </para>
+/// <para>
+/// State is stored on <see cref="ConformanceDeferredPump"/> so that reset and read use the
+/// same surface as the dispatch count.  Call
+/// <see cref="ConformanceDeferredPump.ResetDispatchCount"/> (already wired in each FR-23
+/// constructor) to clear the counts before a test run.
+/// </para>
+/// </remarks>
+public sealed class RecordingConsumerSync(IAmAMessageConsumerSync inner) : IAmAMessageConsumerSync
+{
+    private readonly IAmAMessageConsumerSync _inner = inner;
+
+    /// <inheritdoc />
+    public void Acknowledge(Message message) => _inner.Acknowledge(message);
+
+    /// <inheritdoc />
+    public bool Reject(Message message, MessageRejectionReason? reason = null)
+        => _inner.Reject(message, reason);
+
+    /// <inheritdoc />
+    public void Purge() => _inner.Purge();
+
+    /// <inheritdoc />
+    /// <remarks>Records <c>Header.HandledCount</c> for each returned message as a value copy
+    /// before the pump's <c>UpdateHandledCount</c> mutates the header.</remarks>
+    public Message[] Receive(TimeSpan? timeOut = null)
+    {
+        var messages = _inner.Receive(timeOut);
+        ConformanceDeferredPump.RecordHandledCounts(messages);
+        return messages;
+    }
+
+    /// <inheritdoc />
+    public void Nack(Message message) => _inner.Nack(message);
+
+    /// <inheritdoc />
+    /// <remarks>Increments the requeue count for this message's identity key before delegating.</remarks>
+    public bool Requeue(Message message, TimeSpan? delay = null)
+    {
+        ConformanceDeferredPump.IncrementRequeueCount(message);
+        return _inner.Requeue(message, delay);
+    }
+
+    /// <inheritdoc />
+    public void Dispose() => _inner.Dispose();
+}
+
+/// <summary>
+/// A test-infrastructure decorator (R-27(c)(6)) that counts <c>RequeueAsync</c> calls and
+/// records the <c>Header.HandledCount</c> of each received message.
+/// </summary>
+/// <remarks>
+/// <para>
+/// This is <b>not</b> a mock standing in for a transport (C-10 forbids that). Every call is
+/// forwarded to the wrapped consumer; the decorator only observes, never intercepts.
+/// </para>
+/// <para>
+/// State is stored on <see cref="ConformanceDeferredPump"/> so that reset and read use the
+/// same surface as the dispatch count.  Call
+/// <see cref="ConformanceDeferredPump.ResetDispatchCount"/> (already wired in each FR-23
+/// constructor) to clear the counts before a test run.
+/// </para>
+/// </remarks>
+public sealed class RecordingConsumerAsync(IAmAMessageConsumerAsync inner) : IAmAMessageConsumerAsync
+{
+    private readonly IAmAMessageConsumerAsync _inner = inner;
+
+    /// <inheritdoc />
+    public Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default)
+        => _inner.AcknowledgeAsync(message, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null,
+        CancellationToken cancellationToken = default)
+        => _inner.RejectAsync(message, reason, cancellationToken);
+
+    /// <inheritdoc />
+    public Task PurgeAsync(CancellationToken cancellationToken = default)
+        => _inner.PurgeAsync(cancellationToken);
+
+    /// <inheritdoc />
+    /// <remarks>Records <c>Header.HandledCount</c> for each returned message as a value copy
+    /// before the pump's <c>UpdateHandledCount</c> mutates the header.</remarks>
+    public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null,
+        CancellationToken cancellationToken = default)
+    {
+        var messages = await _inner.ReceiveAsync(timeOut, cancellationToken);
+        ConformanceDeferredPump.RecordHandledCounts(messages);
+        return messages;
+    }
+
+    /// <inheritdoc />
+    public Task NackAsync(Message message, CancellationToken cancellationToken = default)
+        => _inner.NackAsync(message, cancellationToken);
+
+    /// <inheritdoc />
+    /// <remarks>Increments the requeue count for this message's identity key before delegating.</remarks>
+    public async Task<bool> RequeueAsync(Message message, TimeSpan? delay = null,
+        CancellationToken cancellationToken = default)
+    {
+        ConformanceDeferredPump.IncrementRequeueCount(message);
+        return await _inner.RequeueAsync(message, delay, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public ValueTask DisposeAsync() => _inner.DisposeAsync();
 }
