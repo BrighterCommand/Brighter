@@ -150,11 +150,27 @@ public static class SubscriptionChannelFactoryDeclaration
     // side effect of construction and can examine a subscription whose constructor would throw.
     // The reported Subject is always the candidate as discovered - an open generic definition is
     // closed only to obtain an instance to read; the closed construction is never itself reported.
+    //
+    // Caught per type: a fault reading one subject becomes that subject's reason instead of
+    // terminating the whole sweep, and a skip would silently drop the subject from the reported
+    // set - the vacuous pass this design exists to prevent. This does not contradict ADR 0064's
+    // "rules must not catch": that rule relies on the Specification<T> framework already turning a
+    // body exception into an Error finding, and a static sweep has no such surrounding framework -
+    // catching per type is how it obtains the equivalent behaviour.
     private static (Type Subject, string? Reason) ReadAndCheck(Type subject)
     {
-        var readableType = CloseIfGeneric(subject);
-        var instance = (Subscription)GetUninitializedInstance(readableType);
-        return (subject, Check(subject, instance.ChannelFactoryType));
+        try
+        {
+            var readableType = CloseIfGeneric(subject);
+            var instance = (Subscription)GetUninitializedInstance(readableType);
+            return (subject, Check(subject, instance.ChannelFactoryType));
+        }
+        catch (Exception ex)
+        {
+            return (subject,
+                $"Subscription type '{subject.FullName}' could not be read: reading 'ChannelFactoryType' " +
+                $"threw '{ex.GetType().FullName}': {ex.Message}");
+        }
     }
 
     // Closes an open generic Subscription subclass against one representative IRequest argument,
