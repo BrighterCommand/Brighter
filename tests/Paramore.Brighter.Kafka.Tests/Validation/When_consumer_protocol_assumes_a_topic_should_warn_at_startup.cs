@@ -41,6 +41,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Kafka.Tests.Validation;
 
+[Trait("Category", "Kafka")]
 public class KafkaMissingTopicWarningTests
 {
     [Theory]

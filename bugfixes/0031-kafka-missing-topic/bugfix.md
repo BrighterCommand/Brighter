@@ -83,6 +83,11 @@ The initial compilation failure for the missing rule is recorded separately.
   Release full suite, including the hosted-service log and configuration-hook assertions.
   A final .NET 10 run after removing the Kafka test containers passed all 10 again,
   confirming the warning path works without the broker running.
+- CI selection correction: the warning test class now carries `Category=Kafka`.
+  Before the tag was added, the CI filter selected none of these tests. Afterward,
+  the exact CI filter discovers all 10 on each target framework, and a run using
+  those category conditions restricted to this class passes all 10 on .NET 9 and
+  all 10 on .NET 10. No test assertions or CI exclusions were changed.
 - Full Kafka suite on .NET 10 Release: 210 passed, 2 failed, 0 skipped in
   13 minutes 28 seconds, against isolated Kafka 4.0.2 and Schema Registry 8.0.6.
   The failures were the existing Classic Reactor round-trip and PartitionKey
@@ -107,6 +112,7 @@ Commands from the repository root:
 ```sh
 dotnet test tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj -c Release -f net10.0 --filter FullyQualifiedName~KafkaMissingTopicWarningTests
 dotnet test tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj -c Release -f net9.0 --filter FullyQualifiedName~KafkaMissingTopicWarningTests
+dotnet test tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj -c Release --filter 'Category=Kafka&Category!=Confluent&Fragile!=CI&FullyQualifiedName~KafkaMissingTopicWarningTests'
 dotnet test tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj -c Release -f net10.0
 dotnet test tests/Paramore.Brighter.Test.Generator.Tests/Paramore.Brighter.Test.Generator.Tests.csproj -f net10.0
 dotnet build src/Paramore.Brighter.MessagingGateway.Kafka/Paramore.Brighter.MessagingGateway.Kafka.csproj -c Release
