@@ -323,7 +323,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - Implementation should: compute `f1_level` once, from the `src/` bucket, as a diff field that is null whenever the diff fields are null.
   - Traces to: FR-11 (F1), NFR-1, AC-79; ADR 0072 KC1 *values NFR-1 derives*, IA 6 table rows 1–2; ADR 0073 KC2.
 
-- [ ] **TEST + IMPLEMENT: T5.3 — `triggers.d1` fires only at ≥ 5 `src/` files across ≥ 2 immediate subdirectories, and a file directly under `src/` contributes no subdirectory**
+- [x] **TEST + IMPLEMENT: T5.3 — `triggers.d1` fires only at ≥ 5 `src/` files across ≥ 2 immediate subdirectories, and a file directly under `src/` contributes no subdirectory**
   - **USE COMMAND**: `/test-first when the measurement script evaluates D1 it should fire only for at least five src files across at least two immediate subdirectories`
   - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
   - Test row(s): the three D1 boundary rows (4 files across ≥ 2 subdirectories; ≥ 5 files in 1; 5 across 2), the named pair `c53875f3c..5247862cd`, and the calibration row.
