@@ -58,7 +58,7 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
             var contentType = ReadContentType(cloudEvents);
             var correlationId = ReadCorrelationId();
             var bag = ReadMessageBag();
-            var handledCount = ReadHandledCount();
+            var handledCount = ReadHandledCount(sqsMessage, bag);
             var messageType = ReadMessageType();
             var timeStamp = ReadTimestamp(cloudEvents);
             var replyTo = ReadReplyTo();
@@ -314,17 +314,24 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         return new HeaderResult<MessageType>(MessageType.MT_EVENT, true);
     }
 
-    private HeaderResult<int> ReadHandledCount()
+    private HeaderResult<int> ReadHandledCount(Amazon.SQS.Model.Message sqsMessage, Dictionary<string, object> bag)
     {
-        if (_messageAttributes.TryGetValue(HeaderNames.HandledCount, out var handledCount))
+        int headerCount = 0;
+        if (_messageAttributes.TryGetValue(HeaderNames.HandledCount, out var handledCount)
+            && int.TryParse(handledCount.GetValueInString(), out var hc))
         {
-            if (int.TryParse(handledCount.GetValueInString(), out var value))
-            {
-                return new HeaderResult<int>(value, true);
-            }
+            headerCount = hc;
         }
 
-        return new HeaderResult<int>(0, true);
+        int? brokerCount = null;
+        if (sqsMessage.Attributes is not null
+            && sqsMessage.Attributes.TryGetValue(MessageSystemAttributeName.ApproximateReceiveCount, out var raw)
+            && int.TryParse(raw, out var parsed))
+        {
+            brokerCount = parsed;
+        }
+
+        return new HeaderResult<int>(DeliveryCount.Resolve(headerCount, brokerCount, bag), true);
     }
 
     private HeaderResult<Id?> ReadCorrelationId()
