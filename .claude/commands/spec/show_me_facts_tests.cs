@@ -132,6 +132,22 @@ const string F1At50Head = "4582deb37a5931fa60d347ddec4dce10cd856da3";
 const string F1At51Base = "44b804294a51642620643053f99679b15412b012";
 const string F1At51Head = "28d370de51f223eb5188da0df455714b9a26ecb5";
 
+// T5.3: D1 boundary pairs, each measured independently 2026-09-26 with
+// `git diff --name-only {a} {b} -- src/` (file count, and subdirectory count from the second
+// path segment) and confirmed `git merge-base --is-ancestor {a} {b}`.
+const string D1TooFewFilesBase = "535c5c3ee727dd9e4c444253c90b826792cba004";
+const string D1TooFewFilesHead = "73c04389e9060073659107e132319f860e6f3d64"; // 4 files, 4 subdirs
+const string D1TooFewSubdirsBase = "8a514d06c8d16c99f7dd1076eb166f51c013b25a";
+const string D1TooFewSubdirsHead = "95457558c09dd05494b09e6148a60863d6b5557c"; // 5 files, 1 subdir
+const string D1FiresBase = "643b52b51124f7086559587d3d3cbf9657f51f65";
+const string D1FiresHead = "5cb3410c1862214884b62a0941eb145d6d478ef1"; // 5 files, 2 subdirs
+
+// Task-named pair (ADR 0072 IA 6 table row 7): src/Directory.Build.props plus 2 files in one
+// project directory — 3 files under src/, but 1 subdirectory, not 2 (Definitions, Immediate
+// subdirectory of src/). Re-verified 2026-09-26.
+const string DirectlyUnderSrcBase = "c53875f3c";
+const string DirectlyUnderSrcHead = "5247862cd";
+
 var rows = new[]
 {
     declaredRow,
@@ -198,7 +214,8 @@ var rows = new[]
             AdrResolvedCountAssertions(expectedResolvedCount: 7),
             CalibrationPinnedDiffAssertions,
             LedgerSizeAssertion("calibration pinned", maxBytes: 65_536),
-            F1LevelAssertion(expectedLevel: "High", expectedSrcFiles: 76))),
+            F1LevelAssertion(expectedLevel: "High", expectedSrcFiles: 76),
+            TriggersD1Assertion(expectedD1: true))),
     new Row(
         "F1 boundary: 10 src files (Low)",
         [DeclaredTarget, "--pinned", F1At10Base, F1At10Head],
@@ -219,6 +236,26 @@ var rows = new[]
         [DeclaredTarget, "--pinned", F1At51Base, F1At51Head],
         DeclaredTarget,
         F1LevelAssertion(expectedLevel: "High", expectedSrcFiles: 51)),
+    new Row(
+        "D1 boundary: 4 files across 4 subdirectories (too few files)",
+        [DeclaredTarget, "--pinned", D1TooFewFilesBase, D1TooFewFilesHead],
+        DeclaredTarget,
+        D1Assertion(expectedD1: false, expectedSrcFiles: 4, expectedSrcSubdirectoryCount: 4)),
+    new Row(
+        "D1 boundary: 5 files in 1 subdirectory (too few subdirectories)",
+        [DeclaredTarget, "--pinned", D1TooFewSubdirsBase, D1TooFewSubdirsHead],
+        DeclaredTarget,
+        D1Assertion(expectedD1: false, expectedSrcFiles: 5, expectedSrcSubdirectoryCount: 1)),
+    new Row(
+        "D1 boundary: 5 files across 2 subdirectories (fires)",
+        [DeclaredTarget, "--pinned", D1FiresBase, D1FiresHead],
+        DeclaredTarget,
+        D1Assertion(expectedD1: true, expectedSrcFiles: 5, expectedSrcSubdirectoryCount: 2)),
+    new Row(
+        "D1: a file directly under src/ contributes no subdirectory",
+        [DeclaredTarget, "--pinned", DirectlyUnderSrcBase, DirectlyUnderSrcHead],
+        DeclaredTarget,
+        D1Assertion(expectedD1: false, expectedSrcFiles: 3, expectedSrcSubdirectoryCount: 1)),
     new Row(
         "zero-id",
         [ZeroIdTarget],
@@ -1145,6 +1182,57 @@ static Func<RunResult, IEnumerable<string>> F1LevelAssertion(string expectedLeve
     }
 
     return failures;
+};
+
+// T5.3: triggers.d1 fires only at >= 5 src/ files across >= 2 immediate subdirectories (FR-6 (a)).
+static Func<RunResult, IEnumerable<string>> D1Assertion(
+    bool expectedD1, int expectedSrcFiles, int expectedSrcSubdirectoryCount) => result =>
+{
+    var failures = new List<string>();
+
+    if (result.Ledger is null)
+    {
+        failures.Add("expected the ledger to parse as one JSON object, but no valid ledger was found");
+        return failures;
+    }
+
+    var root = result.Ledger.RootElement;
+
+    failures.AddRange(TriggersD1Assertion(expectedD1)(result));
+
+    if (!root.TryGetProperty("buckets", out var buckets)
+        || !buckets.TryGetProperty("src", out var src)
+        || !src.TryGetProperty("files", out var filesEl)
+        || filesEl.GetInt32() != expectedSrcFiles)
+    {
+        failures.Add($"expected buckets.src.files {expectedSrcFiles}");
+    }
+
+    if (!root.TryGetProperty("src_subdirectory_count", out var subdirEl) || subdirEl.GetInt32() != expectedSrcSubdirectoryCount)
+    {
+        failures.Add($"expected src_subdirectory_count {expectedSrcSubdirectoryCount}");
+    }
+
+    return failures;
+};
+
+static Func<RunResult, IEnumerable<string>> TriggersD1Assertion(bool expectedD1) => result =>
+{
+    if (result.Ledger is null)
+    {
+        return ["expected the ledger to parse as one JSON object, but no valid ledger was found"];
+    }
+
+    var root = result.Ledger.RootElement;
+    var expectedKind = expectedD1 ? JsonValueKind.True : JsonValueKind.False;
+
+    if (!root.TryGetProperty("triggers", out var triggers) || triggers.ValueKind != JsonValueKind.Object
+        || !triggers.TryGetProperty("d1", out var d1) || d1.ValueKind != expectedKind)
+    {
+        return [$"expected triggers.d1 {expectedD1}"];
+    }
+
+    return [];
 };
 
 // T3.6: .adr-list entry resolution, each resolved entry's extract, and adr_resolved_count.

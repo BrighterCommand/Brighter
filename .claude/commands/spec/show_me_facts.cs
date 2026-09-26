@@ -131,13 +131,14 @@ if (pinned)
     }
 
     // Buckets, net lines, src_subdirectory_count, public_api_lines, commits and src_diff are
-    // measured over the pinned pair alone, independent of the target (ADR 0072 IA 6). triggers
-    // is computed from these in a later task and stays nulled here as a placeholder.
+    // measured over the pinned pair alone, independent of the target (ADR 0072 IA 6). D2 and D3
+    // are computed from these in a later task and stay nulled here as a placeholder.
     var (srcDiffCommand, srcDiffBytes) = RunScopedDiff(pinnedBase!, pinnedHead!, "src/");
     var buckets = ComputeBuckets(pinnedBase!, pinnedHead!);
+    var srcSubdirectoryCount = ComputeSrcSubdirectoryCount(pinnedBase!, pinnedHead!);
 
     ledger["buckets"] = buckets;
-    ledger["src_subdirectory_count"] = ComputeSrcSubdirectoryCount(pinnedBase!, pinnedHead!);
+    ledger["src_subdirectory_count"] = srcSubdirectoryCount;
     ledger["public_api_lines"] = CountPublicApiLines(srcDiffBytes);
     ledger["commits"] = CountCommits(pinnedBase!, pinnedHead!);
     ledger["src_diff"] = new JsonObject
@@ -147,9 +148,12 @@ if (pinned)
         ["windows"] = ComputeWindows(srcDiffBytes),
     };
     ledger["f1_level"] = ComputeF1Level((int)buckets["src"]!["files"]!);
-
-    ledger["triggers"] = null;
-    nullReasons["triggers"] = "pinned";
+    ledger["triggers"] = new JsonObject
+    {
+        ["d1"] = ComputeD1((int)buckets["src"]!["files"]!, srcSubdirectoryCount),
+        ["d2"] = null,
+        ["d3"] = null,
+    };
 }
 else if (!IsUnderSpecs(target))
 {
@@ -339,6 +343,10 @@ static string ComputeF1Level(int srcFiles) => srcFiles switch
     <= 50 => "Medium",
     _ => "High",
 };
+
+// FR-6 (a) D1: fires only when the spec diff changes >= 5 files under src/ and those files span
+// >= 2 distinct immediate subdirectories of src/ (Definitions).
+static bool ComputeD1(int srcFiles, int srcSubdirectoryCount) => srcFiles >= 5 && srcSubdirectoryCount >= 2;
 
 static string BucketFor(string path) => path.Split('/')[0] switch
 {
