@@ -745,7 +745,7 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
     - This is a **positive** case — it shows a type that cannot be constructed is nonetheless examined — not a negative exercise of the reading path; that is task 42's job
   - Depends on: 42.
 
-- [ ] **44. TEST + IMPLEMENT: A generic subscription declaring its own override is closed, read, and reported as its open definition**
+- [x] **44. TEST + IMPLEMENT: A generic subscription declaring its own override is closed, read, and reported as its open definition**
   - **USE COMMAND**: `/test-first when a generic subscription declares its own override the sweep should close it read it and report the open definition`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessagingGateway/ChannelFactoryDeclaration"
   - Test file: `When_a_generic_subscription_declares_its_own_override_should_report_the_open_definition.cs`
