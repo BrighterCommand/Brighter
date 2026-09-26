@@ -132,7 +132,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 
 *ADR 0072 IA 3. Depends on Phase 1.*
 
-- [ ] **TEST + IMPLEMENT: T2.1 — The test script runs fixture rows, reports each failed assertion by row, and exits non-zero on failure**
+- [x] **TEST + IMPLEMENT: T2.1 — The test script runs fixture rows, reports each failed assertion by row, and exits non-zero on failure**
   - **USE COMMAND**: `/test-first when the show-me test script runs a fixture row whose measurement fails it should print the failed assertion and exit non-zero`
   - Test script: `.claude/commands/spec/show_me_facts_tests.cs` (new)
   - Test row(s): the NFR-9 *declared* row, unpinned, asserting only exit `0` and a ledger that parses as one JSON object. It is red because `show_me_facts.cs` does not exist yet.
