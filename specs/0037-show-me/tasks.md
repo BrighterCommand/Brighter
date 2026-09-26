@@ -171,7 +171,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - In the test script's harness, save each target's ledger bytes before a row. Afterwards, restore them, or delete a ledger the row created.
   - Traces to: FR-21 (artefact, ledger contract, kinds of run), FR-4, NFR-1, NFR-6, NFR-9 (ledgers left as found), AC-70 (ledger half), AC-79; ADR 0072 KC1, KC2, *Why the script is a C# file-based app*, IA 3 (save and restore), IA 4.
 
-- [ ] **TEST + IMPLEMENT: T3.2 — The script accepts exactly its argument grammar, `--` keeps `dotnet run` from reading later options, and a pinned sha that is not a local commit is a tooling fault**
+- [x] **TEST + IMPLEMENT: T3.2 — The script accepts exactly its argument grammar, `--` keeps `dotnet run` from reading later options, and a pinned sha that is not a local commit is a tooling fault**
   - **USE COMMAND**: `/test-first when the measurement script is given an argument outside its grammar or an absent pinned sha it should exit with a tooling-fault status and write no ledger`
   - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
   - Test row(s):
