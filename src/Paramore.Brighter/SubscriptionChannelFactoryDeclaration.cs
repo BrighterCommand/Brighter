@@ -46,6 +46,13 @@ public static class SubscriptionChannelFactoryDeclaration
         if (subscriptionType is null)
             throw new ArgumentNullException(nameof(subscriptionType));
 
+        // Null: ChannelFactoryType returned no type at all
+        if (declaredFactoryType is null)
+        {
+            return $"Subscription type '{subscriptionType.FullName}' declares no channel factory type " +
+                   "('ChannelFactoryType' returned null).";
+        }
+
         // Not-a-channel-factory: the declared type exists but does not implement IAmAChannelFactory
         if (!typeof(IAmAChannelFactory).IsAssignableFrom(declaredFactoryType))
         {
