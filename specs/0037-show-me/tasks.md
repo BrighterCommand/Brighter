@@ -372,7 +372,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - Make `rules_tried` strings in FR-10's wording, and set the nulls and reasons per ADR 0072 KC2. Capture all children's streams.
   - Traces to: FR-10, FR-16 rows 12 and 15, FR-21 (kinds-of-run row 1), C-4, AC-18, AC-19, AC-47, AC-85; ADR 0072 KC2 (`rules_tried`, `local_divergence`, `base`), Negative (ref resolution has no automated test), IA 7.
 
-- [ ] **TEST + IMPLEMENT: T6.2 — The script makes one `gh pr list` query, keeps exact-name open PRs, takes the highest number, uses the PR head only when it is present locally, and treats any `gh` failure as no PR**
+- [x] **TEST + IMPLEMENT: T6.2 — The script makes one `gh pr list` query, keeps exact-name open PRs, takes the highest number, uses the PR head only when it is present locally, and treats any `gh` failure as no PR**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by (R6 direct runs on `specs/0036-scoped-lifetime-per-pipeline`; R5; R3):
     - (C-8) With the live `gh`:
