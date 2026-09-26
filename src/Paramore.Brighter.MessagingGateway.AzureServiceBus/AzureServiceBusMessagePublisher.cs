@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Net.Mime;
 using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.Extensions;
@@ -38,13 +39,19 @@ public class AzureServiceBusMessagePublisher
     /// Map a Brighter <see cref="Message"/> to an Azure Service Bus <see cref="ServiceBusMessage"/>.
     /// </summary>
     /// <remarks>
-    /// A non-empty subject is written to both the native subject and the CloudEvents subject application property.
+    /// Non-empty subjects and partition keys are written to the native fields and CloudEvents application properties.
+    /// SessionId takes precedence over the native partition key; the CloudEvents partition key is preserved.
     /// </remarks>
     /// <param name="message">The Azure Service Bus <see cref="ServiceBusMessage"/> to map to a  Brighter <see cref="Message"/></param>
     /// <returns></returns>
     public static ServiceBusMessage ConvertToServiceBusMessage(Message message)
+        => ConvertToServiceBusMessage(message, null);
+
+    internal static ServiceBusMessage ConvertToServiceBusMessage(Message message, TimeSpan? timeToLive)
     {
         var azureServiceBusMessage = new ServiceBusMessage(message.Body.Value);
+        if (timeToLive.HasValue)
+            azureServiceBusMessage.TimeToLive = timeToLive.Value;
         
         AddBrighterHeaders(message, azureServiceBusMessage);
         AddCloudEventHeaders(message, azureServiceBusMessage);
@@ -64,6 +71,9 @@ public class AzureServiceBusMessagePublisher
             azureServiceBusMessage.ReplyTo = message.Header.ReplyTo?.Value;
         if (!string.IsNullOrEmpty(message.Header.Subject))
             azureServiceBusMessage.Subject = message.Header.Subject;
+        // Set PartitionKey before SessionId so the SDK can apply session precedence.
+        if (!PartitionKey.IsNullOrEmpty(message.Header.PartitionKey))
+            azureServiceBusMessage.PartitionKey = message.Header.PartitionKey.Value;
         //Brighter's Outbox serializes bag keys with the configured JsonNamingPolicy, so a key written as
         //"SessionId" returns transformed (e.g. "sessionId" or "session_id") after a round-trip. Resolve the
         //SessionId using the same policy so we stay correct whatever policy is configured (see ASBConstants.IsBagKey).

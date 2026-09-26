@@ -4,7 +4,7 @@ using Azure.Messaging.ServiceBus;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 {
-    internal sealed class BrokeredMessageWrapper : IBrokeredMessageWithSubject
+    internal sealed class BrokeredMessageWrapper : IBrokeredMessageWithSubject, IBrokeredMessageWithPartitionKey
     {
         private readonly ServiceBusReceivedMessage _brokeredMessage;
 
@@ -38,5 +38,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         public string ContentType => _brokeredMessage.ContentType;
 
         public string Subject => _brokeredMessage.Subject ?? string.Empty;
+
+        public string PartitionKey => _brokeredMessage.PartitionKey ?? string.Empty;
     }
 }
