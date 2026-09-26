@@ -271,7 +271,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 
 *ADR 0072 IA 5, reading the form set by ADR 0078 KC4. Depends on Phase 3.*
 
-- [ ] **TEST + IMPLEMENT: T4.1 — Only sections marked for the target are counted, and `{m}` counts only the top-level bullets of their `#### Breaking changes` lists**
+- [x] **TEST + IMPLEMENT: T4.1 — Only sections marked for the target are counted, and `{m}` counts only the top-level bullets of their `#### Breaking changes` lists**
   - **USE COMMAND**: `/test-first when the measurement script reads a release-notes file it should count sections marked for the target and their top-level breaking-change bullets only`
   - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
   - Test row(s):
