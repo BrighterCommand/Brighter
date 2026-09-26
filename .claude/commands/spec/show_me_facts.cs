@@ -120,8 +120,7 @@ string[] diffFields =
 
 if (pinned)
 {
-    // FR-21: the pinned row takes precedence over the target's kind. Diff-field computation
-    // for a pinned run is Phase 5's job; they are nulled here as a placeholder.
+    // FR-21: the pinned row takes precedence over the target's kind.
     ledger["merge_base"] = pinnedBase;
     ledger["measured_head"] = new JsonObject { ["sha"] = pinnedHead, ["source"] = "pinned" };
 
@@ -131,7 +130,23 @@ if (pinned)
         nullReasons[field] = "pinned";
     }
 
-    foreach (var field in diffFields)
+    // Buckets, net lines, src_subdirectory_count, public_api_lines, commits and src_diff are
+    // measured over the pinned pair alone, independent of the target (ADR 0072 IA 6). f1_level
+    // and triggers are computed from these in a later task and stay nulled here as a placeholder.
+    var (srcDiffCommand, srcDiffBytes) = RunScopedDiff(pinnedBase!, pinnedHead!, "src/");
+
+    ledger["buckets"] = ComputeBuckets(pinnedBase!, pinnedHead!);
+    ledger["src_subdirectory_count"] = ComputeSrcSubdirectoryCount(pinnedBase!, pinnedHead!);
+    ledger["public_api_lines"] = CountPublicApiLines(srcDiffBytes);
+    ledger["commits"] = CountCommits(pinnedBase!, pinnedHead!);
+    ledger["src_diff"] = new JsonObject
+    {
+        ["command"] = srcDiffCommand,
+        ["bytes"] = srcDiffBytes.Length,
+        ["windows"] = ComputeWindows(srcDiffBytes),
+    };
+
+    foreach (var field in new[] { "f1_level", "triggers" })
     {
         ledger[field] = null;
         nullReasons[field] = "pinned";
@@ -241,6 +256,124 @@ static bool CommitExists(string sha)
     process.WaitForExit();
     return process.ExitCode == 0;
 }
+
+// Runs git and captures stdout as raw bytes — needed for the src-scoped diff, whose exact byte
+// count and windows are charged (NFR-3), so it must not go through a string round-trip.
+static byte[] RunGitBytes(params string[] args)
+{
+    var startInfo = new ProcessStartInfo("git")
+    {
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+        UseShellExecute = false,
+    };
+    foreach (var arg in args)
+    {
+        startInfo.ArgumentList.Add(arg);
+    }
+
+    using var process = Process.Start(startInfo)
+        ?? throw new InvalidOperationException("could not start git");
+    using var stdout = new MemoryStream();
+    process.StandardOutput.BaseStream.CopyTo(stdout);
+    process.StandardError.ReadToEnd();
+    process.WaitForExit();
+    return stdout.ToArray();
+}
+
+static string RunGitText(params string[] args) => Encoding.UTF8.GetString(RunGitBytes(args));
+
+// ADR 0072 IA 6: the src-scoped diff is the one full-content diff the script reads — over
+// exactly the pinned (or measured) pair, bounded by a pathspec (NFR-3).
+static (string Command, byte[] Bytes) RunScopedDiff(string mergeBase, string measuredHead, string pathspec)
+{
+    var bytes = RunGitBytes("diff", $"{mergeBase}..{measuredHead}", "--", pathspec);
+    var command = $"git diff {mergeBase}..{measuredHead} -- {pathspec}";
+    return (command, bytes);
+}
+
+// FR-10's six buckets (src/, tests/, docs/, specs/, .github/, other) plus their total, each
+// {files, added, removed}. Net lines come from --numstat (a summary flag, never a whole diff);
+// binary files report "-" for both columns, treated as 0 per the task's counting rule.
+static JsonObject ComputeBuckets(string mergeBase, string measuredHead)
+{
+    var numstatLines = RunGitText("diff", "--numstat", $"{mergeBase}..{measuredHead}")
+        .Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+    var bucketNames = new[] { "src", "tests", "docs", "specs", "github", "other" };
+    var files = bucketNames.ToDictionary(name => name, _ => 0);
+    var added = bucketNames.ToDictionary(name => name, _ => 0L);
+    var removed = bucketNames.ToDictionary(name => name, _ => 0L);
+
+    foreach (var line in numstatLines)
+    {
+        var parts = line.Split('\t');
+        var lineAdded = parts[0] == "-" ? 0L : long.Parse(parts[0]);
+        var lineRemoved = parts[1] == "-" ? 0L : long.Parse(parts[1]);
+        var bucket = BucketFor(parts[2]);
+
+        files[bucket]++;
+        added[bucket] += lineAdded;
+        removed[bucket] += lineRemoved;
+    }
+
+    var buckets = new JsonObject();
+    foreach (var name in bucketNames)
+    {
+        buckets[name] = new JsonObject { ["files"] = files[name], ["added"] = added[name], ["removed"] = removed[name] };
+    }
+
+    buckets["total"] = new JsonObject
+    {
+        ["files"] = files.Values.Sum(),
+        ["added"] = added.Values.Sum(),
+        ["removed"] = removed.Values.Sum(),
+    };
+
+    return buckets;
+}
+
+static string BucketFor(string path) => path.Split('/')[0] switch
+{
+    "src" => "src",
+    "tests" => "tests",
+    "docs" => "docs",
+    "specs" => "specs",
+    ".github" => "github",
+    _ => "other",
+};
+
+// Definitions, Immediate subdirectory of src/: for src/{X}/…, {X} is the contributed subdirectory;
+// a file directly under src/ (no further segment) contributes none. Counts distinct {X} values.
+static int ComputeSrcSubdirectoryCount(string mergeBase, string measuredHead)
+{
+    var paths = RunGitText("diff", "--name-only", $"{mergeBase}..{measuredHead}", "--", "src/")
+        .Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+    var subdirectories = new HashSet<string>(StringComparer.Ordinal);
+    foreach (var path in paths)
+    {
+        var segments = path.Split('/');
+        if (segments.Length > 2)
+        {
+            subdirectories.Add(segments[1]);
+        }
+    }
+
+    return subdirectories.Count;
+}
+
+// Public API declaration line — the exact rule (requirements.md § Definitions), POSIX
+// ^[+-][[:space:]]*(public|protected)[[:space:]], translated to .NET's dialect. Counted per diff
+// line over the src-scoped diff, so a modified declaration (one "-" line, one "+" line) counts 2.
+static int CountPublicApiLines(byte[] srcDiffBytes)
+{
+    var lines = Encoding.UTF8.GetString(srcDiffBytes).Split('\n');
+    return lines.Count(line => PublicApiPatterns.DeclarationLine.IsMatch(line.TrimEnd('\r')));
+}
+
+static int CountCommits(string mergeBase, string measuredHead) =>
+    int.Parse(RunGitText("rev-list", "--count", $"{mergeBase}..{measuredHead}").Trim());
 
 static JsonObject CountTasks(byte[] content)
 {
@@ -777,6 +910,12 @@ static int? CountBreakingChangeBullets(byte[] sectionContent)
     }
 
     return count;
+}
+
+static class PublicApiPatterns
+{
+    // POSIX (requirements.md, Public API declaration line): ^[+-][[:space:]]*(public|protected)[[:space:]]
+    public static readonly Regex DeclarationLine = new(@"^[+-]\s*(public|protected)\s");
 }
 
 static class RequirementsPatterns

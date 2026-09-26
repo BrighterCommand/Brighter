@@ -21,55 +21,59 @@ const string CalibrationTarget = "specs/0036-scoped-lifetime-per-pipeline";
 const string CalibrationMergeBase = "6145913a0";
 const string CalibrationMeasuredHead = "91d549be6";
 
+// The declared fixture's file fields (tasks, declared ids, .adr-list) — read from the working
+// tree, so they hold the same values on the plain, unpinned row below and on a pinned run
+// against the same target (T5.1: "its file fields equal those of its unpinned row").
+var DeclaredFileFieldAssertions = Combine(
+    TasksFieldAssertions(
+        repositoryRoot,
+        DeclaredTarget,
+        total: 2,
+        uncheckedCount: 0,
+        byTag: new Dictionary<string, int>
+        {
+            ["TEST + IMPLEMENT"] = 0,
+            ["STRUCTURAL"] = 0,
+            ["PROJECT"] = 0,
+            ["DOC"] = 0,
+            ["untagged"] = 2,
+        }),
+    DeclaredIdAssertions(
+        repositoryRoot,
+        DeclaredTarget,
+        expectedDeclaredTotal: 3,
+        expectedDeclaredIds: ["FR-1", "FR-2", "NFR-1"],
+        expectedDeclarations:
+        [
+            // Hand-computed from the fixture under KC1's paragraph rule: a declaration's
+            // paragraph runs to the line before the next declaration, or to EOF.
+            new DeclaredIdExpectation("FR-1", FirstLine: 5, LastLine: 7, Bytes: 196),
+            new DeclaredIdExpectation("FR-2", FirstLine: 8, LastLine: 9, Bytes: 101),
+            new DeclaredIdExpectation("NFR-1", FirstLine: 10, LastLine: 10, Bytes: 55),
+        ]),
+    AdrListAssertions(
+        expectedEntries:
+        [
+            new AdrListEntryExpectation(
+                "0062-pg-advisory-lock-sha256.md",
+                Path: "docs/adr/0062-pg-advisory-lock-sha256.md",
+                Reason: null,
+                Matches: null,
+                ExpectExtract: true),
+            new AdrListEntryExpectation(
+                "docs/adr/0072-show-me-command-resolution-and-output.md",
+                Path: "docs/adr/0072-show-me-command-resolution-and-output.md",
+                Reason: null,
+                Matches: null,
+                ExpectExtract: true),
+        ],
+        expectedResolvedCount: 2));
+
 var declaredRow = new Row(
     Name: "declared",
     Args: [DeclaredTarget],
     LedgerTarget: DeclaredTarget,
-    Assertions: Combine(
-        DeclaredAssertions,
-        TasksFieldAssertions(
-            repositoryRoot,
-            DeclaredTarget,
-            total: 2,
-            uncheckedCount: 0,
-            byTag: new Dictionary<string, int>
-            {
-                ["TEST + IMPLEMENT"] = 0,
-                ["STRUCTURAL"] = 0,
-                ["PROJECT"] = 0,
-                ["DOC"] = 0,
-                ["untagged"] = 2,
-            }),
-        DeclaredIdAssertions(
-            repositoryRoot,
-            DeclaredTarget,
-            expectedDeclaredTotal: 3,
-            expectedDeclaredIds: ["FR-1", "FR-2", "NFR-1"],
-            expectedDeclarations:
-            [
-                // Hand-computed from the fixture under KC1's paragraph rule: a declaration's
-                // paragraph runs to the line before the next declaration, or to EOF.
-                new DeclaredIdExpectation("FR-1", FirstLine: 5, LastLine: 7, Bytes: 196),
-                new DeclaredIdExpectation("FR-2", FirstLine: 8, LastLine: 9, Bytes: 101),
-                new DeclaredIdExpectation("NFR-1", FirstLine: 10, LastLine: 10, Bytes: 55),
-            ]),
-        AdrListAssertions(
-            expectedEntries:
-            [
-                new AdrListEntryExpectation(
-                    "0062-pg-advisory-lock-sha256.md",
-                    Path: "docs/adr/0062-pg-advisory-lock-sha256.md",
-                    Reason: null,
-                    Matches: null,
-                    ExpectExtract: true),
-                new AdrListEntryExpectation(
-                    "docs/adr/0072-show-me-command-resolution-and-output.md",
-                    Path: "docs/adr/0072-show-me-command-resolution-and-output.md",
-                    Reason: null,
-                    Matches: null,
-                    ExpectExtract: true),
-            ],
-            expectedResolvedCount: 2)));
+    Assertions: Combine(DeclaredAssertions, DeclaredFileFieldAssertions));
 
 // T4.1: the release-notes fixture has exactly one section marked for the declared fixture
 // (<!-- spec: declared -->), a ### heading at line 3 running to line 28 (the line before the
@@ -83,6 +87,35 @@ var DeclaredReleaseNotesAssertions = ReleaseNotesAssertions(
     expectedCount: 1,
     expectedM: 2,
     expectedSections: [new ReleaseNotesSectionExpectation(FirstLine: 3, LastLine: 28, Bytes: 603)]);
+
+// T5.1: the calibration pair's diff fields, independently measured 2026-09-26 —
+// `git diff --numstat 6145913a0..91d549be6` bucketed by first path segment,
+// `git diff --name-only 6145913a0..91d549be6 -- src/` for the subdirectory count,
+// `git diff 6145913a0..91d549be6 -- src/ | grep -cE '^[+-][[:space:]]*(public|protected)[[:space:]]'`
+// for the public-API count, and `git rev-list --count 6145913a0..91d549be6` for the commit
+// count. These fields depend only on the pinned pair, not the target, so the same expected
+// values apply whether the pinned target is the calibration spec or the declared fixture.
+var CalibrationPinnedDiffAssertions = PinnedDiffAssertions(
+    CalibrationMergeBase,
+    CalibrationMeasuredHead,
+    expectedBucketFiles: new Dictionary<string, int>
+    {
+        ["src"] = 76,
+        ["tests"] = 393,
+        ["docs"] = 14,
+        ["specs"] = 24,
+        ["github"] = 0,
+        ["other"] = 10,
+        ["total"] = 517,
+    },
+    expectedTotalAdded: 45_284,
+    expectedTotalRemoved: 515,
+    expectedSrcAdded: 3_641,
+    expectedSrcRemoved: 264,
+    expectedSrcSubdirectoryCount: 6,
+    expectedPublicApiLines: 131,
+    expectedCommits: 363,
+    expectedSrcDiffBytes: 303_715);
 
 var rows = new[]
 {
@@ -106,7 +139,9 @@ var rows = new[]
         DeclaredTarget,
         Combine(
             PinnedAssertions(DeclaredTarget, CalibrationMergeBase, CalibrationMeasuredHead),
-            DeclaredReleaseNotesAssertions)),
+            DeclaredReleaseNotesAssertions,
+            DeclaredFileFieldAssertions,
+            CalibrationPinnedDiffAssertions)),
     new Row(
         "declared pinned + release-notes (release-notes first)",
         [DeclaredTarget, "--release-notes", ReleaseNotesFixture, "--pinned", CalibrationMergeBase, CalibrationMeasuredHead],
@@ -145,7 +180,9 @@ var rows = new[]
             DeclaredIdAssertions(repositoryRoot, CalibrationTarget, expectedDeclaredTotal: 37),
             // 7 entries, all full filenames, all resolve — including names whose numbers are
             // duplicated elsewhere in docs/adr/ (0070-0076 also exist as other spec's ADRs).
-            AdrResolvedCountAssertions(expectedResolvedCount: 7))),
+            AdrResolvedCountAssertions(expectedResolvedCount: 7),
+            CalibrationPinnedDiffAssertions,
+            LedgerSizeAssertion("calibration pinned", maxBytes: 65_536))),
     new Row(
         "zero-id",
         [ZeroIdTarget],
@@ -902,6 +939,147 @@ static Func<RunResult, IEnumerable<string>> ReleaseNotesAssertions(
     }
 
     return failures;
+};
+
+// T5.1: pinned diff fields — buckets, net lines, src_subdirectory_count, public_api_lines,
+// commits and src_diff's command/bytes/windows. These depend only on the pinned pair, so the
+// same expected values apply whatever the target is.
+static Func<RunResult, IEnumerable<string>> PinnedDiffAssertions(
+    string mergeBase,
+    string measuredHead,
+    IReadOnlyDictionary<string, int> expectedBucketFiles,
+    long expectedTotalAdded,
+    long expectedTotalRemoved,
+    long expectedSrcAdded,
+    long expectedSrcRemoved,
+    int expectedSrcSubdirectoryCount,
+    int expectedPublicApiLines,
+    int expectedCommits,
+    long expectedSrcDiffBytes) => result =>
+{
+    var failures = new List<string>();
+
+    if (result.Ledger is null)
+    {
+        failures.Add("expected the ledger to parse as one JSON object, but no valid ledger was found");
+        return failures;
+    }
+
+    var root = result.Ledger.RootElement;
+
+    if (!root.TryGetProperty("buckets", out var buckets) || buckets.ValueKind != JsonValueKind.Object)
+    {
+        failures.Add("expected a buckets object");
+        return failures;
+    }
+
+    foreach (var (name, expectedFiles) in expectedBucketFiles)
+    {
+        if (!buckets.TryGetProperty(name, out var bucket) || bucket.ValueKind != JsonValueKind.Object)
+        {
+            failures.Add($"expected a buckets.{name} object");
+            continue;
+        }
+
+        if (!bucket.TryGetProperty("files", out var filesEl) || filesEl.GetInt32() != expectedFiles)
+        {
+            failures.Add($"expected buckets.{name}.files {expectedFiles}");
+        }
+    }
+
+    if (!buckets.TryGetProperty("total", out var total) || total.ValueKind != JsonValueKind.Object)
+    {
+        failures.Add("expected a buckets.total object");
+    }
+    else
+    {
+        if (!total.TryGetProperty("added", out var totalAdded) || totalAdded.GetInt64() != expectedTotalAdded)
+        {
+            failures.Add($"expected buckets.total.added {expectedTotalAdded}");
+        }
+
+        if (!total.TryGetProperty("removed", out var totalRemoved) || totalRemoved.GetInt64() != expectedTotalRemoved)
+        {
+            failures.Add($"expected buckets.total.removed {expectedTotalRemoved}");
+        }
+    }
+
+    if (!buckets.TryGetProperty("src", out var src) || src.ValueKind != JsonValueKind.Object)
+    {
+        failures.Add("expected a buckets.src object");
+    }
+    else
+    {
+        if (!src.TryGetProperty("added", out var srcAdded) || srcAdded.GetInt64() != expectedSrcAdded)
+        {
+            failures.Add($"expected buckets.src.added {expectedSrcAdded}");
+        }
+
+        if (!src.TryGetProperty("removed", out var srcRemoved) || srcRemoved.GetInt64() != expectedSrcRemoved)
+        {
+            failures.Add($"expected buckets.src.removed {expectedSrcRemoved}");
+        }
+    }
+
+    if (!root.TryGetProperty("src_subdirectory_count", out var subdirEl) || subdirEl.GetInt32() != expectedSrcSubdirectoryCount)
+    {
+        failures.Add($"expected src_subdirectory_count {expectedSrcSubdirectoryCount}");
+    }
+
+    if (!root.TryGetProperty("public_api_lines", out var apiEl) || apiEl.GetInt32() != expectedPublicApiLines)
+    {
+        failures.Add($"expected public_api_lines {expectedPublicApiLines}");
+    }
+
+    if (!root.TryGetProperty("commits", out var commitsEl) || commitsEl.GetInt32() != expectedCommits)
+    {
+        failures.Add($"expected commits {expectedCommits}");
+    }
+
+    if (!root.TryGetProperty("src_diff", out var srcDiff) || srcDiff.ValueKind != JsonValueKind.Object)
+    {
+        failures.Add("expected a src_diff object");
+        return failures;
+    }
+
+    var command = srcDiff.TryGetProperty("command", out var commandEl) && commandEl.ValueKind == JsonValueKind.String
+        ? commandEl.GetString()
+        : null;
+    if (command is null
+        || !command.Contains(mergeBase, StringComparison.Ordinal)
+        || !command.Contains(measuredHead, StringComparison.Ordinal)
+        || !command.Contains("src/", StringComparison.Ordinal))
+    {
+        failures.Add($"expected src_diff.command to name {mergeBase}, {measuredHead} and the src/ pathspec, got \"{command}\"");
+    }
+
+    if (!srcDiff.TryGetProperty("bytes", out var srcDiffBytesEl) || srcDiffBytesEl.GetInt64() != expectedSrcDiffBytes)
+    {
+        failures.Add($"expected src_diff.bytes {expectedSrcDiffBytes}");
+    }
+
+    if (!srcDiff.TryGetProperty("windows", out var srcDiffWindows) || srcDiffWindows.ValueKind != JsonValueKind.Array)
+    {
+        failures.Add("expected a src_diff.windows array");
+    }
+    else
+    {
+        failures.AddRange(AssertContiguousWindows(srcDiffWindows, expectedSrcDiffBytes));
+    }
+
+    return failures;
+};
+
+// T5.1: the calibration ledger's size is a first measurement of ADR 0072's under-20 KB estimate
+// and a risk check on the 65,536 B cap's headroom — printed, not just asserted.
+static Func<RunResult, IEnumerable<string>> LedgerSizeAssertion(string label, long maxBytes) => result =>
+{
+    var size = result.LedgerBytes?.Length ?? -1;
+    Console.WriteLine($"INFO {label}: ledger is {size} B (cap {maxBytes} B)");
+
+    return size >= 0 && size <= maxBytes
+        ? []
+        : [$"expected the {label} ledger to be at most {maxBytes} B, got {size}"];
 };
 
 // T3.6: .adr-list entry resolution, each resolved entry's extract, and adr_resolved_count.
