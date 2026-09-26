@@ -778,7 +778,7 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
     - **The constructed generic base belongs on this pair specifically.** No shipped assembly exercises the reduction — all twelve pairs are `XSubscription<T> : XSubscription` with a *non-generic* base. And the reduction is load-bearing only where the derived type declares no override: on the declares-its-own pair (task 46) the drop condition's first conjunct is already false, so both types are reported whether the reduction works or not and an assertion there could not fail on a broken reduction
   - Depends on: 44 (`Base<T>` must be closable before it can be read).
 
-- [ ] **46. CHARACTERISE: A derived subscription declaring its own override is reported in its own right**
+- [x] **46. CHARACTERISE: A derived subscription declaring its own override is reported in its own right**
   - **USE COMMAND**: `/test-first when a derived subscription declares its own channel factory override the sweep should report both it and its base`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessagingGateway/ChannelFactoryDeclaration"
   - Test file: `When_a_derived_subscription_declares_its_own_override_should_be_reported_in_its_own_right.cs`
