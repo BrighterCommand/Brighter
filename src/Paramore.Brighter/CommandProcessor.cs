@@ -342,7 +342,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = (IAmARequestSchedulerSync)_schedulerFactory.CreateSync(this);
-                return scheduler.Schedule(command, RequestSchedulerType.Send, at);
+                return scheduler is IAmARequestSchedulerSyncWithContext contextScheduler
+                    ? contextScheduler.Schedule(command, RequestSchedulerType.Send, at, requestContext)
+                    : scheduler.Schedule(command, RequestSchedulerType.Send, at);
             }
             finally
             {
@@ -357,7 +359,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateSync(this);
-                return scheduler.Schedule(command, RequestSchedulerType.Send, delay);
+                return scheduler is IAmARequestSchedulerSyncWithContext contextScheduler
+                    ? contextScheduler.Schedule(command, RequestSchedulerType.Send, delay, requestContext)
+                    : scheduler.Schedule(command, RequestSchedulerType.Send, delay);
             }
             finally
             {
@@ -421,7 +425,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateAsync(this);
-                return await scheduler.ScheduleAsync(command, RequestSchedulerType.Send, at, cancellationToken);
+                return scheduler is IAmARequestSchedulerAsyncWithContext contextScheduler
+                    ? await contextScheduler.ScheduleAsync(command, RequestSchedulerType.Send, at, requestContext, cancellationToken)
+                    : await scheduler.ScheduleAsync(command, RequestSchedulerType.Send, at, cancellationToken);
             }
             finally
             {
@@ -437,7 +443,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateAsync(this);
-                return await scheduler.ScheduleAsync(command, RequestSchedulerType.Send, delay, cancellationToken);
+                return scheduler is IAmARequestSchedulerAsyncWithContext contextScheduler
+                    ? await contextScheduler.ScheduleAsync(command, RequestSchedulerType.Send, delay, requestContext, cancellationToken)
+                    : await scheduler.ScheduleAsync(command, RequestSchedulerType.Send, delay, cancellationToken);
             }
             finally
             {
@@ -520,7 +528,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateSync(this);
-                return scheduler.Schedule(@event, RequestSchedulerType.Publish, at);
+                return scheduler is IAmARequestSchedulerSyncWithContext contextScheduler
+                    ? contextScheduler.Schedule(@event, RequestSchedulerType.Publish, at, requestContext)
+                    : scheduler.Schedule(@event, RequestSchedulerType.Publish, at);
             }
             finally
             {
@@ -535,7 +545,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateSync(this);
-                return scheduler.Schedule(@event, RequestSchedulerType.Publish, delay);
+                return scheduler is IAmARequestSchedulerSyncWithContext contextScheduler
+                    ? contextScheduler.Schedule(@event, RequestSchedulerType.Publish, delay, requestContext)
+                    : scheduler.Schedule(@event, RequestSchedulerType.Publish, delay);
             }
             finally
             {
@@ -632,7 +644,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateAsync(this);
-                return await scheduler.ScheduleAsync(@event, RequestSchedulerType.Publish, at, cancellationToken);
+                return scheduler is IAmARequestSchedulerAsyncWithContext contextScheduler
+                    ? await contextScheduler.ScheduleAsync(@event, RequestSchedulerType.Publish, at, requestContext, cancellationToken)
+                    : await scheduler.ScheduleAsync(@event, RequestSchedulerType.Publish, at, cancellationToken);
             }
             finally
             {
@@ -648,7 +662,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateAsync(this);
-                return await scheduler.ScheduleAsync(@event, RequestSchedulerType.Publish, delay, cancellationToken);
+                return scheduler is IAmARequestSchedulerAsyncWithContext contextScheduler
+                    ? await contextScheduler.ScheduleAsync(@event, RequestSchedulerType.Publish, delay, requestContext, cancellationToken)
+                    : await scheduler.ScheduleAsync(@event, RequestSchedulerType.Publish, delay, cancellationToken);
             }
             finally
             {
@@ -688,7 +704,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateSync(this);
-                return scheduler.Schedule(request, RequestSchedulerType.Post, at);
+                return scheduler is IAmARequestSchedulerSyncWithContext contextScheduler
+                    ? contextScheduler.Schedule(request, RequestSchedulerType.Post, at, requestContext)
+                    : scheduler.Schedule(request, RequestSchedulerType.Post, at);
             }
             finally
             {
@@ -703,7 +721,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateSync(this);
-                return scheduler.Schedule(request, RequestSchedulerType.Post, delay);
+                return scheduler is IAmARequestSchedulerSyncWithContext contextScheduler
+                    ? contextScheduler.Schedule(request, RequestSchedulerType.Post, delay, requestContext)
+                    : scheduler.Schedule(request, RequestSchedulerType.Post, delay);
             }
             finally
             {
@@ -750,7 +770,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateAsync(this);
-                return await scheduler.ScheduleAsync(request, RequestSchedulerType.Post, at, cancellationToken);
+                return scheduler is IAmARequestSchedulerAsyncWithContext contextScheduler
+                    ? await contextScheduler.ScheduleAsync(request, RequestSchedulerType.Post, at, requestContext, cancellationToken)
+                    : await scheduler.ScheduleAsync(request, RequestSchedulerType.Post, at, cancellationToken);
             }
             finally
             {
@@ -766,7 +788,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateAsync(this);
-                return await scheduler.ScheduleAsync(request, RequestSchedulerType.Post, delay, cancellationToken);
+                return scheduler is IAmARequestSchedulerAsyncWithContext contextScheduler
+                    ? await contextScheduler.ScheduleAsync(request, RequestSchedulerType.Post, delay, requestContext, cancellationToken)
+                    : await scheduler.ScheduleAsync(request, RequestSchedulerType.Post, delay, cancellationToken);
             }
             finally
             {

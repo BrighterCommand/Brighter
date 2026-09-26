@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using Hangfire;
 using Paramore.Brighter.JsonConverters;
+using Paramore.Brighter.Scheduler;
 using Paramore.Brighter.Scheduler.Events;
 
 namespace Paramore.Brighter.MessageScheduler.Hangfire;
@@ -12,7 +13,7 @@ namespace Paramore.Brighter.MessageScheduler.Hangfire;
 /// <param name="queue">The queue name.</param>
 /// <param name="timeProvider">The <see cref="System.TimeProvider"/>.</param>
 public class HangfireMessageScheduler(IBackgroundJobClientV2 client, string? queue, TimeProvider timeProvider)
-    : IAmAMessageSchedulerSync, IAmAMessageSchedulerAsync, IAmARequestSchedulerSync, IAmARequestSchedulerAsync
+    : IAmAMessageSchedulerSync, IAmAMessageSchedulerAsync, IAmARequestSchedulerSyncWithContext, IAmARequestSchedulerAsyncWithContext
 {
     /// <inheritdoc />
     public string Schedule(Message message, DateTimeOffset at)
@@ -39,17 +40,29 @@ public class HangfireMessageScheduler(IBackgroundJobClientV2 client, string? que
     /// <inheritdoc />
     public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at)
         where TRequest : class, IRequest
+        => Schedule(request, type, at, null);
+
+    /// <inheritdoc />
+    public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
+        IRequestContext? requestContext)
+        where TRequest : class, IRequest
     {
         if (at < timeProvider.GetUtcNow())
         {
             throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
-        return ScheduleRequest(request, false, type, at, null);
+        return ScheduleRequest(request, false, type, at, null, requestContext);
     }
 
     /// <inheritdoc />
     public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay)
+        where TRequest : class, IRequest
+        => Schedule(request, type, delay, null);
+
+    /// <inheritdoc />
+    public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay,
+        IRequestContext? requestContext)
         where TRequest : class, IRequest
     {
         if (delay < TimeSpan.Zero)
@@ -57,7 +70,7 @@ public class HangfireMessageScheduler(IBackgroundJobClientV2 client, string? que
             throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
-        return ScheduleRequest(request, false, type, null, delay);
+        return ScheduleRequest(request, false, type, null, delay, requestContext);
     }
 
     /// <inheritdoc cref="IAmAMessageSchedulerSync.ReScheduler(string,System.DateTimeOffset)" />
@@ -111,25 +124,37 @@ public class HangfireMessageScheduler(IBackgroundJobClientV2 client, string? que
     /// <inheritdoc />
     public Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
         CancellationToken cancellationToken = default) where TRequest : class, IRequest
+        => ScheduleAsync(request, type, at, null, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
+        IRequestContext? requestContext, CancellationToken cancellationToken)
+        where TRequest : class, IRequest
     {
         if (at < timeProvider.GetUtcNow())
         {
             throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
-        return Task.FromResult(ScheduleRequest(request, true, type, at, null));
+        return Task.FromResult(ScheduleRequest(request, true, type, at, null, requestContext));
     }
 
     /// <inheritdoc />
     public Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay,
         CancellationToken cancellationToken = default) where TRequest : class, IRequest
+        => ScheduleAsync(request, type, delay, null, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay,
+        IRequestContext? requestContext, CancellationToken cancellationToken)
+        where TRequest : class, IRequest
     {
         if (delay < TimeSpan.Zero)
         {
             throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
-        return Task.FromResult(ScheduleRequest(request, true, type, null, delay));
+        return Task.FromResult(ScheduleRequest(request, true, type, null, delay, requestContext));
     }
 
     /// <inheritdoc cref="IAmAMessageSchedulerAsync.ReSchedulerAsync(string,System.DateTimeOffset,System.Threading.CancellationToken)"/>
@@ -170,7 +195,7 @@ public class HangfireMessageScheduler(IBackgroundJobClientV2 client, string? que
     }
 
     private string ScheduleRequest<TRequest>(TRequest request, bool async, RequestSchedulerType schedulerType,
-        DateTimeOffset? at, TimeSpan? delay)
+        DateTimeOffset? at, TimeSpan? delay, IRequestContext? requestContext)
     {
         var scheduler = JsonSerializer.Serialize(
             new FireSchedulerRequest
@@ -178,7 +203,8 @@ public class HangfireMessageScheduler(IBackgroundJobClientV2 client, string? que
                 Async = async,
                 SchedulerType = schedulerType,
                 RequestType = typeof(TRequest).FullName!,
-                RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
+                RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options),
+                RequestContextData = ScheduledRequestContext.Serialize(requestContext)
             },
             JsonSerialisationOptions.Options);
         if (queue == null)

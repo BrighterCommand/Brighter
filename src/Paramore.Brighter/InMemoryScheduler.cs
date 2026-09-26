@@ -32,6 +32,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Scheduler;
 using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Tasks;
 using InvalidOperationException = System.InvalidOperationException;
@@ -52,7 +53,7 @@ public class InMemoryScheduler(
     Func<IRequest, string> getOrCreateRequestSchedulerId,
     Func<Message, string> getOrCreateMessageSchedulerId,
     OnSchedulerConflict onConflict)
-    : IAmAMessageSchedulerSync, IAmAMessageSchedulerAsync, IAmARequestSchedulerSync, IAmARequestSchedulerAsync, IDisposable, IAsyncDisposable
+    : IAmAMessageSchedulerSync, IAmAMessageSchedulerAsync, IAmARequestSchedulerSyncWithContext, IAmARequestSchedulerAsyncWithContext, IDisposable, IAsyncDisposable
 {
     private readonly ConcurrentDictionary<string, (ITimer Timer, long Generation)> _timers = new();
     private long _generation;
@@ -85,17 +86,29 @@ public class InMemoryScheduler(
     /// <inheritdoc />
     public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at)
         where TRequest : class, IRequest
+        => Schedule(request, type, at, null);
+
+    /// <inheritdoc />
+    public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
+        IRequestContext? requestContext)
+        where TRequest : class, IRequest
     {
         if (at < timeProvider.GetUtcNow())
         {
             throw new ArgumentOutOfRangeException(nameof(at), at, "invalid datetime, it should be in the future");
         }
 
-        return Schedule(request, type, at - timeProvider.GetUtcNow());
+        return Schedule(request, type, at - timeProvider.GetUtcNow(), requestContext);
     }
 
     /// <inheritdoc />
     public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay)
+        where TRequest : class, IRequest
+        => Schedule(request, type, delay, null);
+
+    /// <inheritdoc />
+    public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay,
+        IRequestContext? requestContext)
         where TRequest : class, IRequest
     {
         if (delay < TimeSpan.Zero)
@@ -111,7 +124,8 @@ public class InMemoryScheduler(
                 Async = false,
                 SchedulerType = type,
                 RequestType = typeof(TRequest).FullName!,
-                RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
+                RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options),
+                RequestContextData = ScheduledRequestContext.Serialize(requestContext)
             });
         return ScheduleTimer(id, state, delay);
     }
@@ -183,18 +197,30 @@ public class InMemoryScheduler(
     public Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
         CancellationToken cancellationToken = default)
         where TRequest : class, IRequest
+        => ScheduleAsync(request, type, at, null, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
+        IRequestContext? requestContext, CancellationToken cancellationToken)
+        where TRequest : class, IRequest
     {
         if (at < timeProvider.GetUtcNow())
         {
             throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
-        return ScheduleAsync(request, type, at - timeProvider.GetUtcNow(), cancellationToken);
+        return ScheduleAsync(request, type, at - timeProvider.GetUtcNow(), requestContext, cancellationToken);
     }
 
     /// <inheritdoc />
     public Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay,
         CancellationToken cancellationToken = default) where TRequest : class, IRequest
+        => ScheduleAsync(request, type, delay, null, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay,
+        IRequestContext? requestContext, CancellationToken cancellationToken)
+        where TRequest : class, IRequest
     {
         if (delay < TimeSpan.Zero)
         {
@@ -209,7 +235,8 @@ public class InMemoryScheduler(
                 Async = true,
                 SchedulerType = type,
                 RequestType = typeof(TRequest).FullName!,
-                RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
+                RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options),
+                RequestContextData = ScheduledRequestContext.Serialize(requestContext)
             });
         return Task.FromResult(ScheduleTimer(id, state, delay));
     }
