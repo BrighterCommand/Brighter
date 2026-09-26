@@ -102,7 +102,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - Acceptance: `git status --porcelain specs/` shows no `specs/9999-show-me-fixture/` entry; `ls specs/9999-show-me-fixture` fails; nothing is committed for it.
   - Traces to: NFR-9 (no synthetic fixture under `specs/`); ADR 0072 KC6 *Fixtures*.
 
-- [ ] **STRUCTURAL: T1.2 — Add the exact-match `.gitignore` line for the fact ledger**
+- [x] **STRUCTURAL: T1.2 — Add the exact-match `.gitignore` line for the fact ledger**
   - Do: append the single line `.show-me-ledger.json`.
   - Acceptance: `git diff $PRE -- .gitignore` shows exactly one added line and no edited line. After `touch specs/0033-pg-advisory-lock-sha256/.show-me-ledger.json`, `git check-ignore -v` on that path names the new line; then delete the file.
   - Traces to: FR-4, NFR-8, AC-74, AC-82; ADR 0072 *Where each artefact is touched*, IA 1.
