@@ -54,7 +54,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - **Source changes** are committed on the row's branch. They are comment-only edits unless the row says otherwise.
     - The script measures them from the branch, but the Explainer reads participants in the **working tree** (ADR 0077: `wc -c`, `tail`/`head` and `grep -n -F` on paths that pass `git ls-files`). So a row whose outcome depends on what the Explainer reads must carry its source content there too.
     - K5, K6 and K7 are those rows. R4 step 4 applies their source changes to the working branch's working tree as unstaged edits, so the files stay tracked paths with the row's content. Without this, K7's five files keep their normal few-KB size, fit the reserve, and AC-58's exhaustion is never produced.
-    - K5, K6 and K7 therefore use files that no other K row changes, and none shared with each other. The unstaged edits do not change any ledger value: the script's diff figures are measured between committed refs (merge base..measured head), not from the working tree, and no ledger field reads these source files.
+    - K5, K6 and K7 therefore use files that no other K row changes, and none shared with each other. Each of their files must already exist at `HEAD` (the rows edit files and add none, so `git restore --staged` leaves them tracked) and be identical on the branch base and the working branch: `git diff --quiet origin/master HEAD -- {file}` succeeds in the clone. That keeps them out of 0036's changed paths. The same clone's 0036 runs (T17.3, T17.5) may still read a K file as a participant, so they assert nothing that depends on participant content. "Apply" means `git checkout spec/{name} -- {files}` followed by `git restore --staged {files}`; on such files a copy and a patch give the same result. The unstaged edits do not change any ledger value: the script's diff figures are measured between committed refs (merge base..measured head), not from the working tree, and no ledger field reads these source files.
   - **Synthetic ADRs** are written and staged on the working branch (R4 step 4). Each has YAML front matter (`title`, `status`), a `## Status` section reading `Accepted`, and a `## Consequences` section, so the script finds all three extract parts.
 
 | K | Directory / refs | Content (beyond the default) | Used for |
@@ -179,7 +179,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - The **`--` probe row**: `-- specs/x --file .claude/test-fixtures/show-me/probe.cs`.
     - `declared/` pinned to an all-zero 40-hex sha.
     - The *declared* row pinned to `6145913a0 91d549be6` with `--release-notes`, in both option orders.
-    - The *declared* row with `--release-notes` alone, unpinned.
+    - The *declared* row with `--release-notes` alone, unpinned, naming `.claude/test-fixtures/show-me/release-notes.md` (as T4.1 does).
     - The calibration row `specs/0036-scoped-lifetime-per-pipeline/` pinned to the same pair.
   - Test should verify:
     - Usage errors and the zero sha exit with a status other than `0`, `2` or `77`, and create no ledger (AC-93, second half). The probe row's status is not 77, so the probe did not run. The row prints `dotnet --version`.
