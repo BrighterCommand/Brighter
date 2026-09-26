@@ -14,6 +14,8 @@ public class FakeServiceBusSenderWrapper : IServiceBusSenderWrapper
     public Dictionary<ServiceBusMessageBatch, List<ServiceBusMessage>> Batches { get; } = new();
 
     public List<ServiceBusMessage> SentMessages { get; } = new();
+
+    public List<ServiceBusMessage> ScheduledMessages { get; } = new();
     
     public int ClosedCount { get; private set; } = 0;
 
@@ -26,7 +28,10 @@ public class FakeServiceBusSenderWrapper : IServiceBusSenderWrapper
 
     public Task ScheduleMessageAsync(ServiceBusMessage message, DateTimeOffset scheduleEnqueueTime,
         CancellationToken cancellationToken = default)
-        => Send(message);
+    {
+        ScheduledMessages.Add(message);
+        return Send(message);
+    }
 
     public Task SendAsync(ServiceBusMessageBatch batch, CancellationToken cancellationToken = default)
     {
