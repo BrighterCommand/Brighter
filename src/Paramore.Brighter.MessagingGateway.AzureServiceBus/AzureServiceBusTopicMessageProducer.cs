@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
+using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
@@ -77,7 +78,14 @@ public partial class AzureServiceBusTopicMessageProducer : AzureServiceBusMessag
                 throw new ChannelFailureException($"Topic {channelName} does not exist and missing channel mode set to Validate.");
             }
                 
-            await _administrationClientWrapper.CreateTopicAsync(channelName);
+            try
+            {
+                await _administrationClientWrapper.CreateTopicAsync(channelName);
+            }
+            catch (ServiceBusException e) when (e.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
+            {
+                Log.MessageEntityAlreadyExists(s_logger, channelName);
+            }
             TopicCreated = true;
         }
         catch (Exception e)
@@ -91,8 +99,10 @@ public partial class AzureServiceBusTopicMessageProducer : AzureServiceBusMessag
 
     private static partial class Log
     {
+        [LoggerMessage(LogLevel.Debug, "Topic {ChannelName} was created by another caller")]
+        public static partial void MessageEntityAlreadyExists(ILogger logger, string channelName);
+
         [LoggerMessage(LogLevel.Error, "Failing to check or create topic")]
         public static partial void FailingToCheckOrCreateTopic(ILogger logger, Exception e);
     }
 }
-
