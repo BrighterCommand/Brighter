@@ -331,7 +331,7 @@
     - If it is red, the count is being advanced in `Requeue`, which is the defect AC-42 exists to catch.
   - Depends on: 4.3
 
-- [ ] **4.5 TEST + IMPLEMENT: A null-reason SQS Reject stamps `rejectionReason = "None"` so the dead-letter copy keeps its stamped count**
+- [x] **4.5 TEST + IMPLEMENT: A null-reason SQS Reject stamps `rejectionReason = "None"` so the dead-letter copy keeps its stamped count**
   - **USE COMMAND**: `/test-first when an sqs message is rejected with no reason should stamp rejection reason none on the dead letter copy`
   - Test location: "tests/Paramore.Brighter.AWS.Tests/MessagingGateway/Sqs/Standard/Reactor", "…/Proactor", and the V4 twins
   - Test file: `When_rejecting_an_sqs_message_with_no_reason_should_stamp_rejection_reason_none.cs`
