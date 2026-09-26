@@ -430,6 +430,44 @@ redelivered for ever would pass every other DLQ behaviour in this suite.
   reachable by a local broker run: all 15 are either blocked on a product defect (10) or reachable only
   through CI against real cloud infrastructure (5).
 
+### Run record — 2026-09-26 (tasks 3.1–3.4 regenerated tree, AC-26, R-22, R-23)
+
+Regenerated tree audit: `dotnet test tests/Paramore.Brighter.Test.Generator.Tests -f net10.0` — **307 pass / 0 fail**. `git status --short` after `./generate-test.sh` reported no diff (tree was committed with each task as required).
+
+**FR-23 — all nine already-conformant configurations re-verified against the regenerated templates:**
+
+| Configuration | compose file | Generated suite (Reactor+Proactor) | FR-23 Reactor | FR-23 Proactor |
+|---|---|---|---|---|
+| Redis / RedisMessagingGateway | `docker-compose-redis.yaml` | 71 pass / 0 fail / 4 skip | Pass | Pass |
+| Kafka / Classic | `docker-compose-kafka.yaml` | *(see Kafka row below)* | Pass | Pass |
+| Kafka / Consumer | `docker-compose-kafka.yaml` | *(see Kafka row below)* | Pass | Pass |
+| Kafka / PartitionKey | `docker-compose-kafka.yaml` | *(see Kafka row below)* | Pass | Pass |
+| Kafka (all three, combined) | `docker-compose-kafka.yaml` | 118 pass / 0 fail / 0 skip | — | — |
+| MSSQL / MSSQLMessagingGateway | `docker-compose-mssql.yaml` | 141 pass / 0 fail / 4 skip | Pass | Pass |
+| PostgresSQL / PostgresMessagingGateway | `docker-compose-postgres.yaml` | 55 pass / 0 fail / 0 skip | Pass | Pass |
+| RMQ.Async / Classic | `docker-compose-rmq.yaml` | *(see RMQ.Async row below)* | Pass | Pass |
+| RMQ.Async / Quorum | `docker-compose-rmq.yaml` | *(see RMQ.Async row below)* | Pass | Pass |
+| RMQ.Async (Classic+Quorum, combined) | `docker-compose-rmq.yaml` | 80 pass / 0 fail / 4 skip | — | — |
+| RMQ.Sync / RmqSyncMessagingGateway | `docker-compose-rmq.yaml` | 62 pass / 0 fail / 3 skip | Pass | Pass |
+
+FR-23 passes on all nine; no Pass/Fixed cell regressed. The RMQ republish path's `x-original-message-id` fallback (from 3.2) is exercised in the RMQ.Async and RMQ.Sync runs and stays green.
+
+Kafka notes: `schema-registry` could not start (port 8081 held by the pre-existing `rmqproxy` container). The two hand-written `KafkaMessageProducerHeaderBytesSendTests` arms fail on `Connection refused (localhost:8081)` — documented infra, not conformance. One further hand-written `KafkaMessageConsumerUpdateOffsetAsync` arm also failed; this is not in the generated suite and not a ledger regression. All 118 generated-suite tests pass.
+
+**AWS (Floci) and RocketMQ — FR-2/15/16/22 re-run to verify the 3.1 relaxation keeps Pass cells green:**
+
+| Project | Transport | FR-2 (with_delay) | FR-15 (zero_delay) | FR-16 (nacking) | FR-22 (requeuing_redelivered) | Notes |
+|---|---|---|---|---|---|---|
+| AWS.Tests | all four configs × Reactor+Proactor | 44 pass (total) | — | — | — | Filter matched FR-2/15/16/22 together: 44 pass / 0 fail / 0 skip |
+| AWS.V4.Tests | all four configs × Reactor+Proactor | 44 pass (total) | — | — | — | Same result |
+| RocketMQ.Tests | RocketMQMessagingGateway | Skip (Deferred) | Skip (Deferred) | 6 fail | 6 fail | See noise note below |
+
+AWS (total filter: `with_delay OR zero_delay OR nacking OR requeuing_a_failed_message_should_be_redelivered`): **44 pass / 0 fail / 0 skip** for `AWS.Tests`; **44 pass / 0 fail / 0 skip** for `AWS.V4.Tests`. All Pass/Fixed cells remain green. Tested against `generator-transport-tests-floci-1` (port 4566) with `AWS_SERVICE_URL=http://localhost:4566`.
+
+**RocketMQ — not verified; the local broker cannot serve any generated test.** FR-16 (`Fixed #4240`) and FR-22 (`Fixed #4240`) fail on this commit, all six at the first receive (`Assert.NotEqual(MessageType.MT_NONE, …)`, 6–208 ms). They fail identically on `82f28ff01`, the commit before 3.1, checked in a separate worktree, so 3.1 did not cause them. The broker, not FR-16/22, is at fault: after `docker restart rmqproxy` the six still fail, and so does the basic `When_posting_a_message_via_the_messaging_gateway_should_be_received` (both variants, wrong message received). `When_rejecting_message_with_delivery_error_should_send_to_dlq` fails with `No topic route info in name server for the topic: gen_r_rej_de` / `gen_p_rej_de`. A clean `docker-compose -f docker-compose-rocketmq.yaml down -v && up -d` was not done unattended, because the RocketMQ containers predate this run and may be shared with another worktree. **The 3.1 relaxation is therefore unproven on RocketMQ's `Fixed` FR-16/FR-22 cells until a clean-broker re-run.** No ledger cell changes.
+
+FR-2 and FR-15 are `Deferred` for RocketMQ and emitted as Skip — as expected.
+
 ### `MQTT` was attempted and stays `Deferred` — the Proactor pump deadlocks on the first requeue
 
 Measured 2026-09-12 against `docker-compose-mqtt.yaml`, and tracked as
