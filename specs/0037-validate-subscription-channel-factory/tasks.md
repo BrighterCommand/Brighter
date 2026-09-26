@@ -729,7 +729,7 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
     - Let a `ReflectionTypeLoadException` from `GetTypes()` **propagate**: broken project references are not a declaration defect
   - Depends on: 41, 1 (the phase-1 doubles must be expression-bodied or this sweep reports them under the null branch and the subject-scoped assertions are written against a moving target).
 
-- [ ] **43. CHARACTERISE: A subscription whose constructor cannot succeed is still examined (AC-29)**
+- [x] **43. CHARACTERISE: A subscription whose constructor cannot succeed is still examined (AC-29)**
   - **USE COMMAND**: `/test-first when a subscription's constructor cannot succeed the sweep should still report its declaration as sound`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessagingGateway/ChannelFactoryDeclaration"
   - Test file: `When_a_subscription_constructor_cannot_succeed_should_still_report_its_declaration.cs`
