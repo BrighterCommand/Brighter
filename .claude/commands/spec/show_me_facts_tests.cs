@@ -148,6 +148,14 @@ const string D1FiresHead = "5cb3410c1862214884b62a0941eb145d6d478ef1"; // 5 file
 const string DirectlyUnderSrcBase = "c53875f3c";
 const string DirectlyUnderSrcHead = "5247862cd";
 
+// T5.4: D2 boundary pairs, each measured independently 2026-09-26 with
+// `git diff {a} {b} -- src/ | grep -cE '^[+-][[:space:]]*(public|protected)[[:space:]]'` and
+// confirmed `git merge-base --is-ancestor {a} {b}`.
+const string D2At9Base = "f799bcfc4ab385c42a6f52e31a2eb8c8ba3f316f";
+const string D2At9Head = "ff8183fe43a24ab7697833f9635ec34001066785";
+const string D2At10Base = "bba945add2b016c3c1d382e1f1ddd0b06d8611e1";
+const string D2At10Head = "8842689e1193345c19a0c6dc34703c89f3dd19db";
+
 var rows = new[]
 {
     declaredRow,
@@ -172,7 +180,11 @@ var rows = new[]
             PinnedAssertions(DeclaredTarget, CalibrationMergeBase, CalibrationMeasuredHead),
             DeclaredReleaseNotesAssertions,
             DeclaredFileFieldAssertions,
-            CalibrationPinnedDiffAssertions)),
+            CalibrationPinnedDiffAssertions,
+            // T5.4: D3 reads adr_resolved_count, not the target's kind — the declared fixture's
+            // 2 resolved .adr-list entries fire it even when the diff being measured is the
+            // calibration pair's.
+            TriggersD3Assertion(expectedD3: true))),
     new Row(
         "declared pinned + release-notes (release-notes first)",
         [DeclaredTarget, "--release-notes", ReleaseNotesFixture, "--pinned", CalibrationMergeBase, CalibrationMeasuredHead],
@@ -215,7 +227,9 @@ var rows = new[]
             CalibrationPinnedDiffAssertions,
             LedgerSizeAssertion("calibration pinned", maxBytes: 65_536),
             F1LevelAssertion(expectedLevel: "High", expectedSrcFiles: 76),
-            TriggersD1Assertion(expectedD1: true))),
+            TriggersD1Assertion(expectedD1: true),
+            D2Assertion(expectedD2: true, expectedPublicApiLines: 131),
+            TriggersD3Assertion(expectedD3: true))),
     new Row(
         "F1 boundary: 10 src files (Low)",
         [DeclaredTarget, "--pinned", F1At10Base, F1At10Head],
@@ -256,6 +270,16 @@ var rows = new[]
         [DeclaredTarget, "--pinned", DirectlyUnderSrcBase, DirectlyUnderSrcHead],
         DeclaredTarget,
         D1Assertion(expectedD1: false, expectedSrcFiles: 3, expectedSrcSubdirectoryCount: 1)),
+    new Row(
+        "D2 boundary: 9 public API lines (does not fire)",
+        [DeclaredTarget, "--pinned", D2At9Base, D2At9Head],
+        DeclaredTarget,
+        D2Assertion(expectedD2: false, expectedPublicApiLines: 9)),
+    new Row(
+        "D2 boundary: 10 public API lines (fires)",
+        [DeclaredTarget, "--pinned", D2At10Base, D2At10Head],
+        DeclaredTarget,
+        D2Assertion(expectedD2: true, expectedPublicApiLines: 10)),
     new Row(
         "zero-id",
         [ZeroIdTarget],
@@ -1230,6 +1254,54 @@ static Func<RunResult, IEnumerable<string>> TriggersD1Assertion(bool expectedD1)
         || !triggers.TryGetProperty("d1", out var d1) || d1.ValueKind != expectedKind)
     {
         return [$"expected triggers.d1 {expectedD1}"];
+    }
+
+    return [];
+};
+
+// T5.4: triggers.d2 fires at >= 10 public-API declaration lines (FR-6 (a)).
+static Func<RunResult, IEnumerable<string>> D2Assertion(bool expectedD2, int expectedPublicApiLines) => result =>
+{
+    var failures = new List<string>();
+
+    if (result.Ledger is null)
+    {
+        failures.Add("expected the ledger to parse as one JSON object, but no valid ledger was found");
+        return failures;
+    }
+
+    var root = result.Ledger.RootElement;
+    var expectedKind = expectedD2 ? JsonValueKind.True : JsonValueKind.False;
+
+    if (!root.TryGetProperty("triggers", out var triggers) || triggers.ValueKind != JsonValueKind.Object
+        || !triggers.TryGetProperty("d2", out var d2) || d2.ValueKind != expectedKind)
+    {
+        failures.Add($"expected triggers.d2 {expectedD2}");
+    }
+
+    if (!root.TryGetProperty("public_api_lines", out var apiEl) || apiEl.GetInt32() != expectedPublicApiLines)
+    {
+        failures.Add($"expected public_api_lines {expectedPublicApiLines}");
+    }
+
+    return failures;
+};
+
+// T5.4: triggers.d3 fires at >= 2 resolved .adr-list entries (FR-6 (a)).
+static Func<RunResult, IEnumerable<string>> TriggersD3Assertion(bool expectedD3) => result =>
+{
+    if (result.Ledger is null)
+    {
+        return ["expected the ledger to parse as one JSON object, but no valid ledger was found"];
+    }
+
+    var root = result.Ledger.RootElement;
+    var expectedKind = expectedD3 ? JsonValueKind.True : JsonValueKind.False;
+
+    if (!root.TryGetProperty("triggers", out var triggers) || triggers.ValueKind != JsonValueKind.Object
+        || !triggers.TryGetProperty("d3", out var d3) || d3.ValueKind != expectedKind)
+    {
+        return [$"expected triggers.d3 {expectedD3}"];
     }
 
     return [];

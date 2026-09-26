@@ -131,15 +131,16 @@ if (pinned)
     }
 
     // Buckets, net lines, src_subdirectory_count, public_api_lines, commits and src_diff are
-    // measured over the pinned pair alone, independent of the target (ADR 0072 IA 6). D2 and D3
-    // are computed from these in a later task and stay nulled here as a placeholder.
+    // measured over the pinned pair alone, independent of the target (ADR 0072 IA 6). D3 reads
+    // adr_resolved_count, which is computed later, and is filled in below once that is known.
     var (srcDiffCommand, srcDiffBytes) = RunScopedDiff(pinnedBase!, pinnedHead!, "src/");
     var buckets = ComputeBuckets(pinnedBase!, pinnedHead!);
     var srcSubdirectoryCount = ComputeSrcSubdirectoryCount(pinnedBase!, pinnedHead!);
+    var publicApiLines = CountPublicApiLines(srcDiffBytes);
 
     ledger["buckets"] = buckets;
     ledger["src_subdirectory_count"] = srcSubdirectoryCount;
-    ledger["public_api_lines"] = CountPublicApiLines(srcDiffBytes);
+    ledger["public_api_lines"] = publicApiLines;
     ledger["commits"] = CountCommits(pinnedBase!, pinnedHead!);
     ledger["src_diff"] = new JsonObject
     {
@@ -151,7 +152,7 @@ if (pinned)
     ledger["triggers"] = new JsonObject
     {
         ["d1"] = ComputeD1((int)buckets["src"]!["files"]!, srcSubdirectoryCount),
-        ["d2"] = null,
+        ["d2"] = ComputeD2(publicApiLines),
         ["d3"] = null,
     };
 }
@@ -208,6 +209,12 @@ else
 var (adrList, adrResolvedCount) = ReadAdrList(target);
 ledger["adr_list"] = adrList;
 ledger["adr_resolved_count"] = adrResolvedCount;
+
+// D3 reads adr_resolved_count (FR-6 (a)), known only now that .adr-list has been resolved.
+if (pinned)
+{
+    ledger["triggers"]!["d3"] = ComputeD3(adrResolvedCount);
+}
 
 // Marked release-notes sections (FR-7, FR-21's {m} rule) are file-derived too, read from the
 // working tree on every kind of run — the release-notes path is a test-only input (ADR 0072
@@ -347,6 +354,12 @@ static string ComputeF1Level(int srcFiles) => srcFiles switch
 // FR-6 (a) D1: fires only when the spec diff changes >= 5 files under src/ and those files span
 // >= 2 distinct immediate subdirectories of src/ (Definitions).
 static bool ComputeD1(int srcFiles, int srcSubdirectoryCount) => srcFiles >= 5 && srcSubdirectoryCount >= 2;
+
+// FR-6 (a) D2: fires at >= 10 changed public API declaration lines.
+static bool ComputeD2(int publicApiLines) => publicApiLines >= 10;
+
+// FR-6 (a) D3: fires at >= 2 resolved .adr-list entries.
+static bool ComputeD3(int adrResolvedCount) => adrResolvedCount >= 2;
 
 static string BucketFor(string path) => path.Split('/')[0] switch
 {
