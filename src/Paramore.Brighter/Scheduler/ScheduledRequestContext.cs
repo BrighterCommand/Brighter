@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
 
@@ -35,16 +36,21 @@ namespace Paramore.Brighter.Scheduler;
 /// </summary>
 /// <remarks>
 /// Unrelated context bag entries and runtime services are deliberately excluded. Header and CloudEvents
-/// extension values must be JSON-serializable, just as they must be for a message sent over a transport.
+/// extension values retain their types. Supported values are null, strings, characters, booleans,
+/// integral types, finite floating-point numbers, decimals, Guid, DateTime, DateTimeOffset, TimeSpan,
+/// Uri and byte arrays. Dictionaries must use ordinal or ordinal-ignore-case key comparison.
+/// Unsupported metadata fails when scheduling; it is never silently discarded.
 /// </remarks>
 public class ScheduledRequestContext
 {
     /// <summary>The dynamic message headers.</summary>
-    /// <value>The header names and JSON-serializable values, or null when absent.</value>
+    /// <value>The header names and supported values, or null when absent.</value>
+    [JsonConverter(typeof(ScheduledRequestContextBagConverter))]
     public Dictionary<string, object>? Headers { get; set; }
 
     /// <summary>The additional CloudEvents properties.</summary>
-    /// <value>The extension names and JSON-serializable values, or null when absent.</value>
+    /// <value>The extension names and supported values, or null when absent.</value>
+    [JsonConverter(typeof(ScheduledRequestContextBagConverter))]
     public Dictionary<string, object>? CloudEventsAdditionalProperties { get; set; }
 
     /// <summary>The message partition key.</summary>
@@ -80,6 +86,7 @@ public class ScheduledRequestContext
     /// </summary>
     /// <param name="context">The request context to capture.</param>
     /// <returns>The serialized snapshot, or null when no context was supplied.</returns>
+    /// <exception cref="JsonException">The metadata contains an unsupported value or key comparer.</exception>
     public static string? Serialize(IRequestContext? context)
     {
         if (context == null)

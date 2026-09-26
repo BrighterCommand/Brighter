@@ -137,6 +137,218 @@ public class ScheduledRequestContextTests
         Assert.Equal(PartitionKey.Empty, context.GetPartitionKey());
     }
 
+    public static TheoryData<string, bool, bool> MetadataValueCases
+    {
+        get
+        {
+            var cases = new TheoryData<string, bool, bool>();
+            foreach (var name in new[] { "null", "string", "guid-string", "date-string", "char", "bool", "byte", "sbyte",
+                         "short", "ushort", "int", "uint", "small-long", "large-long", "ulong", "float", "double",
+                         "large-double", "decimal", "guid", "datetime", "offset", "bytes", "timespan", "uri" })
+                foreach (var isAsync in new[] { false, true })
+                    foreach (var cloudEvents in new[] { false, true })
+                        cases.Add(name, isAsync, cloudEvents);
+            return cases;
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(MetadataValueCases))]
+    public async Task When_scheduling_a_request_should_preserve_metadata_value_types(string name, bool isAsync, bool cloudEvents)
+    {
+        //Arrange
+        var timeProvider = new FakeTimeProvider();
+        await using var provider = BuildProvider(timeProvider);
+        var processor = provider.GetRequiredService<IAmACommandProcessor>();
+        var value = MetadataValue(name);
+        var expected = value is byte[] bytes ? bytes.Clone() : value;
+        var key = cloudEvents ? RequestContextBagNames.CloudEventsAdditionalProperties : RequestContextBagNames.Headers;
+        var context = new RequestContext();
+        context.Bag[key] = new Dictionary<string, object> { ["ValueKey"] = value! };
+        var delay = TimeSpan.FromSeconds(1);
+
+        //Act
+        if (isAsync)
+            await processor.SendAsync(delay, new ScheduledContextEventAsync(), context);
+        else
+            processor.Send(delay, new ScheduledContextEvent(), context);
+        if (value is byte[] mutableBytes)
+            mutableBytes[0] = 99;
+        timeProvider.Advance(delay);
+
+        //Assert
+        var restored = Assert.Single(Received(provider, isAsync));
+        var metadata = cloudEvents ? restored.GetCloudEventAdditionalProperties() : restored.GetHeaders();
+        var actual = Assert.Single(metadata!).Value;
+        Assert.True(metadata!.ContainsKey("ValueKey"));
+        if (expected == null)
+        {
+            Assert.Null(actual);
+            return;
+        }
+        Assert.IsType(expected.GetType(), actual);
+        Assert.Equal(expected, actual);
+        if (expected is DateTimeOffset offset)
+            Assert.Equal(offset.Offset, ((DateTimeOffset)actual).Offset);
+        if (expected is DateTime dateTime)
+            Assert.Equal(dateTime.Kind, ((DateTime)actual).Kind);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task When_scheduling_case_insensitive_metadata_should_preserve_key_lookup(bool cloudEvents)
+    {
+        //Arrange
+        var timeProvider = new FakeTimeProvider();
+        await using var provider = BuildProvider(timeProvider);
+        var processor = provider.GetRequiredService<IAmACommandProcessor>();
+        var context = new RequestContext();
+        var key = cloudEvents ? RequestContextBagNames.CloudEventsAdditionalProperties : RequestContextBagNames.Headers;
+        context.Bag[key] = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase) { ["Tenant"] = "tenant-1" };
+
+        //Act
+        processor.Send(TimeSpan.FromSeconds(1), new ScheduledContextEvent(), context);
+        timeProvider.Advance(TimeSpan.FromSeconds(1));
+
+        //Assert
+        var restored = Assert.Single(Received(provider, false));
+        var metadata = cloudEvents ? restored.GetCloudEventAdditionalProperties() : restored.GetHeaders();
+        Assert.True(metadata!.TryGetValue("TENANT", out var value));
+        Assert.Equal("tenant-1", value);
+        Assert.Equal("Tenant", Assert.Single(metadata).Key);
+    }
+
+    public static TheoryData<string, bool, bool> UnsupportedMetadataCases
+    {
+        get
+        {
+            var cases = new TheoryData<string, bool, bool>();
+            foreach (var name in new[] { "delegate", "type", "enum", "object", "array", "cycle", "nan", "infinity" })
+                foreach (var isAsync in new[] { false, true })
+                    foreach (var cloudEvents in new[] { false, true })
+                        cases.Add(name, isAsync, cloudEvents);
+            return cases;
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(UnsupportedMetadataCases))]
+    public async Task When_scheduling_unsupported_metadata_should_fail_before_scheduling(string name, bool isAsync, bool cloudEvents)
+    {
+        //Arrange
+        var timeProvider = new FakeTimeProvider();
+        await using var provider = BuildProvider(timeProvider);
+        var processor = provider.GetRequiredService<IAmACommandProcessor>();
+        var cyclic = new Dictionary<string, object>();
+        cyclic["self"] = cyclic;
+        object value = name switch
+        {
+            "delegate" => (Action)(() => { }),
+            "type" => typeof(string),
+            "enum" => DayOfWeek.Monday,
+            "object" => new { Text = "value" },
+            "array" => new[] { 1, 2 },
+            "cycle" => cyclic,
+            "nan" => double.NaN,
+            "infinity" => float.PositiveInfinity,
+            _ => throw new ArgumentOutOfRangeException(nameof(name))
+        };
+        var key = cloudEvents ? RequestContextBagNames.CloudEventsAdditionalProperties : RequestContextBagNames.Headers;
+        var context = new RequestContext();
+        context.Bag[key] = new Dictionary<string, object> { ["unsupported"] = value };
+
+        //Act
+        var exception = isAsync
+            ? await Record.ExceptionAsync(() => processor.SendAsync(TimeSpan.FromSeconds(1), new ScheduledContextEventAsync(), context))
+            : Record.Exception(() => processor.Send(TimeSpan.FromSeconds(1), new ScheduledContextEvent(), context));
+        timeProvider.Advance(TimeSpan.FromSeconds(1));
+
+        //Assert
+        Assert.IsType<JsonException>(exception);
+        Assert.Contains("unsupported", exception.Message);
+        Assert.Empty(Received(provider, isAsync));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task When_scheduling_metadata_with_a_culture_comparer_should_fail_before_scheduling(bool cloudEvents)
+    {
+        //Arrange
+        var timeProvider = new FakeTimeProvider();
+        await using var provider = BuildProvider(timeProvider);
+        var processor = provider.GetRequiredService<IAmACommandProcessor>();
+        var context = new RequestContext();
+        var key = cloudEvents ? RequestContextBagNames.CloudEventsAdditionalProperties : RequestContextBagNames.Headers;
+        context.Bag[key] = new Dictionary<string, object>(StringComparer.InvariantCulture) { ["tenant"] = "tenant-1" };
+
+        //Act
+        var exception = Record.Exception(() => processor.Send(TimeSpan.FromSeconds(1), new ScheduledContextEvent(), context));
+        timeProvider.Advance(TimeSpan.FromSeconds(1));
+
+        //Assert
+        Assert.IsType<JsonException>(exception);
+        Assert.Contains("comparer", exception.Message);
+        Assert.Empty(Received(provider, false));
+    }
+
+    [Theory]
+    [InlineData("{")]
+    [InlineData("""{"headers":{"caseInsensitive":false,"values":{"tenant":{"type":"unknown","value":"tenant-1"}}}}""")]
+    [InlineData("""{"headers":{"caseInsensitive":false,"values":{"tenant":{"type":"int64","value":"not-a-number"}}}}""")]
+    [InlineData("""{"headers":{"caseInsensitive":true,"values":{"Tenant":null,"TENANT":null}}}""")]
+    public async Task When_firing_invalid_context_data_should_fail_without_dispatching_the_request(string contextData)
+    {
+        //Arrange
+        await using var provider = BuildProvider(new FakeTimeProvider());
+        var processor = provider.GetRequiredService<IAmACommandProcessor>();
+        var command = new FireSchedulerRequest
+        {
+            SchedulerType = RequestSchedulerType.Send,
+            RequestType = typeof(ScheduledContextEvent).FullName!,
+            RequestData = JsonSerializer.Serialize(new ScheduledContextEvent(), JsonSerialisationOptions.Options),
+            RequestContextData = contextData
+        };
+
+        //Act
+        var exception = await Record.ExceptionAsync(() => processor.SendAsync(command));
+
+        //Assert
+        Assert.IsType<JsonException>(exception);
+        Assert.Empty(Received(provider, false));
+    }
+
+    private static object? MetadataValue(string name) => name switch
+    {
+        "null" => null,
+        "string" => "tenant-1",
+        "guid-string" => "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+        "date-string" => "2026-09-26",
+        "char" => 'A',
+        "bool" => true,
+        "byte" => byte.MaxValue,
+        "sbyte" => sbyte.MinValue,
+        "short" => short.MinValue,
+        "ushort" => ushort.MaxValue,
+        "int" => int.MinValue,
+        "uint" => uint.MaxValue,
+        "small-long" => 42L,
+        "large-long" => long.MaxValue,
+        "ulong" => ulong.MaxValue,
+        "float" => 1.5f,
+        "double" => 1.5d,
+        "large-double" => 1e30d,
+        "decimal" => decimal.MaxValue,
+        "guid" => Guid.Parse("3f2504e0-4f89-11d3-9a0c-0305e82c3301"),
+        "datetime" => new DateTime(2026, 9, 26, 12, 0, 0, DateTimeKind.Utc),
+        "offset" => new DateTimeOffset(2026, 9, 26, 12, 0, 0, TimeSpan.FromHours(5.5)),
+        "bytes" => new byte[] { 1, 2, 3 },
+        "timespan" => TimeSpan.FromSeconds(1.5),
+        "uri" => new Uri("https://example.org/resource"),
+        _ => throw new ArgumentOutOfRangeException(nameof(name))
+    };
+
     private static ServiceProvider BuildProvider(FakeTimeProvider timeProvider)
     {
         var services = new ServiceCollection();

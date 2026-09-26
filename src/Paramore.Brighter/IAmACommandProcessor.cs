@@ -42,7 +42,8 @@ namespace Paramore.Brighter
     /// <remarks>
     /// Built-in schedulers capture dynamic headers, CloudEvents properties, partition keys, job/workflow/causation
     /// identifiers, and the supplied span's trace identifiers and baggage when scheduling Send, Publish, or Post.
-    /// Header and CloudEvents values must be JSON-serializable. Unrelated context bag entries and runtime
+    /// Header and CloudEvents values must use the types supported by <see cref="Scheduler.ScheduledRequestContext"/>;
+    /// unsupported values fail when scheduling. Unrelated context bag entries and runtime
     /// properties (such as policies and the destination) are not captured. A configured tracer resumes the trace
     /// with a new span when the request executes; the original span object is never serialized.
     /// Custom schedulers opt into context propagation through <see cref="IAmARequestSchedulerSyncWithContext"/>

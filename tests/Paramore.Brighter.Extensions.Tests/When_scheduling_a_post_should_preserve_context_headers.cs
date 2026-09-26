@@ -49,13 +49,13 @@ public class ScheduledPostContextTests
         {
             var cases = new TheoryData<bool, bool, string, bool, bool>();
             foreach (var isAsync in new[] { false, true })
-            foreach (var useDateTime in new[] { false, true })
-            foreach (var partitionKey in new[] { "partition-1", "35ac2856-7b11-479c-a2bd-c470365767ec", "2026-09-26T10:00:00Z" })
-            foreach (var typedPartitionKey in new[] { false, true })
-                cases.Add(isAsync, useDateTime, partitionKey, typedPartitionKey, false);
+                foreach (var useDateTime in new[] { false, true })
+                    foreach (var partitionKey in new[] { "partition-1", "35ac2856-7b11-479c-a2bd-c470365767ec", "2026-09-26T10:00:00Z" })
+                        foreach (var typedPartitionKey in new[] { false, true })
+                            cases.Add(isAsync, useDateTime, partitionKey, typedPartitionKey, false);
             foreach (var isAsync in new[] { false, true })
-            foreach (var useDateTime in new[] { false, true })
-                cases.Add(isAsync, useDateTime, "partition-1", true, true);
+                foreach (var useDateTime in new[] { false, true })
+                    cases.Add(isAsync, useDateTime, "partition-1", true, true);
             return cases;
         }
     }
@@ -87,7 +87,18 @@ public class ScheduledPostContextTests
         var context = new RequestContext();
         var cloudEventProperties = new Dictionary<string, object> { ["tenant"] = "tenant-1" };
         context.Bag[RequestContextBagNames.CloudEventsAdditionalProperties] = cloudEventProperties;
-        context.Bag[RequestContextBagNames.Headers] = new Dictionary<string, object> { ["x-attempt"] = 3 };
+        var headers = new Dictionary<string, object>
+        {
+            ["x-attempt"] = 3,
+            ["correlation-id"] = "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+            ["date"] = "2026-09-26",
+            ["sequence"] = 42L,
+            ["score"] = 1.5d,
+            ["large-score"] = 1e30d,
+            ["binary"] = new byte[] { 1, 2, 3 },
+            ["timestamp"] = new DateTimeOffset(2026, 9, 26, 12, 0, 0, TimeSpan.FromHours(5.5))
+        };
+        context.Bag[RequestContextBagNames.Headers] = headers;
         context.Bag[RequestContextBagNames.PartitionKey] = typedPartitionKey ? new PartitionKey(partitionKey) : partitionKey;
         var circular = new Dictionary<string, object>();
         circular["self"] = circular;
@@ -128,6 +139,13 @@ public class ScheduledPostContextTests
         Assert.Equal(3, immediateMessage.Header.Bag["x-attempt"]);
         Assert.True(scheduledMessage.Header.Bag.ContainsKey("x-attempt"));
         Assert.Equal(3, scheduledMessage.Header.Bag["x-attempt"]);
+        foreach (var key in headers.Keys.Where(key => key != "x-attempt"))
+        {
+            var expected = immediateMessage.Header.Bag[key];
+            var actual = scheduledMessage.Header.Bag[key];
+            Assert.IsType(expected.GetType(), actual);
+            Assert.Equal(expected, actual);
+        }
         Assert.Equal(partitionKey, immediateMessage.Header.PartitionKey.Value);
         Assert.Equal(partitionKey, scheduledMessage.Header.PartitionKey.Value);
         if (cloudEvents)
