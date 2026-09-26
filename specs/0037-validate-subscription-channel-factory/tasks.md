@@ -762,7 +762,7 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
     - **Why closing precedes subsumption in task order** (though it is step 3 of `Sweep` and subsumption is step 2): task 45's subsumption pair carries a generic base, `Base<T>`, which cannot be read until closing exists. Scheduling closing first gives both tasks an observable RED
   - Depends on: 43.
 
-- [ ] **45. TEST + IMPLEMENT: A derived subscription declaring no override is subsumed by its base — over a constructed generic base**
+- [x] **45. TEST + IMPLEMENT: A derived subscription declaring no override is subsumed by its base — over a constructed generic base**
   - **USE COMMAND**: `/test-first when a derived subscription declares no channel factory override the sweep should subsume it under its base`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessagingGateway/ChannelFactoryDeclaration"
   - Test file: `When_a_derived_subscription_declares_no_override_should_be_subsumed_by_its_base.cs`
