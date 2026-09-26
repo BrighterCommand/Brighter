@@ -275,7 +275,7 @@
 
 ## Phase 4 — AWS SQS (#4341; AWSSQS and AWSSQS.V4 in lockstep, NFR-6)
 
-- [ ] **4.1 TEST + IMPLEMENT: `SqsSubscription` reports its redrive policy's `maxReceiveCount` as the native limit, and never reports the budget unenforceable**
+- [x] **4.1 TEST + IMPLEMENT: `SqsSubscription` reports its redrive policy's `maxReceiveCount` as the native limit, and never reports the budget unenforceable**
   - **USE COMMAND**: `/test-first when an sqs subscription has a redrive policy should expose max receive count as its native redrive limit`
   - Test location: "tests/Paramore.Brighter.AWS.Tests/MessagingGateway/Sqs" and "tests/Paramore.Brighter.AWS.V4.Tests/MessagingGateway/Sqs"
   - Test file: `When_an_sqs_subscription_has_a_redrive_policy_should_expose_native_redrive_limit.cs`
