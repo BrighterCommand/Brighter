@@ -335,7 +335,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - Implementation should: evaluate D1 once from the two diff fields, exactly as FR-6 (a) states it.
   - Traces to: FR-6 (a) D1, Definitions (*Immediate subdirectory of `src/`*), NFR-1, AC-67 (script half); ADR 0072 IA 6 table rows 3–5 and 7; ADR 0077 KC4.
 
-- [ ] **TEST + IMPLEMENT: T5.4 — `triggers.d2` fires at ≥ 10 public-API declaration lines and `triggers.d3` at ≥ 2 resolved ADRs**
+- [x] **TEST + IMPLEMENT: T5.4 — `triggers.d2` fires at ≥ 10 public-API declaration lines and `triggers.d3` at ≥ 2 resolved ADRs**
   - **USE COMMAND**: `/test-first when the measurement script evaluates D2 and D3 it should fire D2 at ten public API lines and D3 at two resolved adr-list entries`
   - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
   - Test row(s): the two D2 boundary rows, the pinned *declared* row (D3), and the calibration row.
