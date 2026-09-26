@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Net.Mime;
 using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.Extensions;
@@ -43,8 +44,13 @@ public class AzureServiceBusMessagePublisher
     /// <param name="message">The Azure Service Bus <see cref="ServiceBusMessage"/> to map to a  Brighter <see cref="Message"/></param>
     /// <returns></returns>
     public static ServiceBusMessage ConvertToServiceBusMessage(Message message)
+        => ConvertToServiceBusMessage(message, null);
+
+    internal static ServiceBusMessage ConvertToServiceBusMessage(Message message, TimeSpan? timeToLive)
     {
         var azureServiceBusMessage = new ServiceBusMessage(message.Body.Value);
+        if (timeToLive.HasValue)
+            azureServiceBusMessage.TimeToLive = timeToLive.Value;
         
         AddBrighterHeaders(message, azureServiceBusMessage);
         AddCloudEventHeaders(message, azureServiceBusMessage);
