@@ -28,6 +28,7 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDis
 
     public WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue()
     {
+        ConformanceDeferredPump.ResetDispatchCount();
         _messageGatewayProvider = new Paramore.Brighter.Gcp.Tests.MessagingGateway.GcpPullOrderingMessageGatewayProvider();
         _messageBuilder = new FifoMessageBuilder();
     }

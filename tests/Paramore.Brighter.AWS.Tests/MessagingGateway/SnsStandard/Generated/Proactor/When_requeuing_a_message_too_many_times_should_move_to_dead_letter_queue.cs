@@ -27,6 +27,7 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync :
 
     public WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync()
     {
+        ConformanceDeferredPump.ResetDispatchCount();
         _messageGatewayProvider = new Paramore.Brighter.AWS.Tests.MessagingGateway.SnsStandardMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
     }

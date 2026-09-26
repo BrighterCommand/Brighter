@@ -27,6 +27,7 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync :
 
     public WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueueAsync()
     {
+        ConformanceDeferredPump.ResetDispatchCount();
         _messageGatewayProvider = new Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.AzureServiceBusMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
     }

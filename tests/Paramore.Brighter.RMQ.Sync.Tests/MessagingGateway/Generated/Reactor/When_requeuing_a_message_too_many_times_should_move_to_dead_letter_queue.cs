@@ -28,6 +28,7 @@ public class WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue : IDis
 
     public WhenRequeuingAMessageTooManyTimesShouldMoveToDeadLetterQueue()
     {
+        ConformanceDeferredPump.ResetDispatchCount();
         _messageGatewayProvider = new Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.RmqSyncMessageGatewayProvider();
         _messageBuilder = new DefaultMessageBuilder();
     }
