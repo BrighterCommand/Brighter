@@ -22,6 +22,9 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using System.Runtime.ExceptionServices;
+using Paramore.Brighter.Actions;
 using Paramore.Brighter.Policies.Attributes;
 using Polly;
 using Polly.Registry;
@@ -38,6 +41,11 @@ namespace Paramore.Brighter.Policies.Handlers;
 /// The ExceptionPolicyHandler is instantiated by the pipeline when the <see cref="UsePolicyAttribute"/> is added to the <see cref="IHandleRequests{T}.Handle"/> method
 /// of the target handler implemented by the client.
 /// </summary>
+/// <remarks>
+/// Explicit reject, defer, don't-ack and invalid-message actions are propagated after the resilience
+/// pipeline completes, so exception-based retry and circuit-breaker strategies do not treat them as failures.
+/// Result-based predicates still evaluate the returned request according to their configuration.
+/// </remarks>
 /// <typeparam name="TRequest">The type of the t request.</typeparam>
 public class ResilienceExceptionPolicyHandler<TRequest> : RequestHandler<TRequest>, IAmAResilienceHandler where TRequest : class, IRequest
 {
@@ -85,15 +93,35 @@ public class ResilienceExceptionPolicyHandler<TRequest> : RequestHandler<TReques
     /// <returns>TRequest.</returns>
     public override TRequest Handle(TRequest request)
     {
-        if(_pipeline != ResiliencePipeline.Empty)
+        ExceptionDispatchInfo? pumpAction = null;
+        TRequest result;
+        if (_pipeline != ResiliencePipeline.Empty)
         {
-            return Context?.ResilienceContext != null 
-                ? _pipeline.Execute(_ => base.Handle(request), Context.ResilienceContext)
-                : _pipeline.Execute(() => base.Handle(request));
+            result = Context?.ResilienceContext != null
+                ? _pipeline.Execute(_ => HandleRequest(), Context.ResilienceContext)
+                : _pipeline.Execute(HandleRequest);
+        }
+        else
+        {
+            result = Context?.ResilienceContext != null
+                ? _typePipeline.Execute(_ => HandleRequest(), Context.ResilienceContext)
+                : _typePipeline.Execute(HandleRequest);
         }
 
-        return Context?.ResilienceContext != null 
-            ? _typePipeline.Execute(_ => base.Handle(request), Context.ResilienceContext)
-            : _typePipeline.Execute(() => base.Handle(request));
+        pumpAction?.Throw();
+        return result;
+
+        TRequest HandleRequest()
+        {
+            try
+            {
+                return base.Handle(request);
+            }
+            catch (Exception ex) when (ex is RejectMessageAction or DeferMessageAction or DontAckAction or InvalidMessageAction)
+            {
+                pumpAction = ExceptionDispatchInfo.Capture(ex);
+                return request;
+            }
+        }
     }
 }
