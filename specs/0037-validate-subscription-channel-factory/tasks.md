@@ -903,7 +903,7 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
   - **Why no test of its own**: configuration data. It is validated by task 53's generated tests and by task 54's audit.
   - Depends on: 51.
 
-- [ ] **53. GENERATE: The sweep finds no invalid channel factory declaration in any of the twelve gateway assemblies (AC-27)**
+- [x] **53. GENERATE: The sweep finds no invalid channel factory declaration in any of the twelve gateway assemblies (AC-27)**
   - **GENERATED TEST — do NOT use `/test-first` and do NOT hand-write the file.** The twelve test files are rendered by `./generate-test.sh` from task 50's template and must **never** be edited directly (`.agent_instructions/generated_tests.md`; ADR 0073 *Technology Choices*). A change to what they assert is a template edit followed by a regeneration. The behaviour they exercise — `Check` and `Sweep` — was driven test-first in tasks 38-48; this task makes it fire over the twelve **real** assemblies.
   - Test location: `tests/<each of the twelve>/MessagingGateway/Generated/Conformance/`
   - Generated test file (×12): `When_sweeping_the_gateway_assembly_should_find_no_invalid_channel_factory_declaration.cs`
