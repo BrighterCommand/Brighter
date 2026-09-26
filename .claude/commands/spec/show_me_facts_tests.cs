@@ -13,6 +13,7 @@ var repositoryRoot = Directory.GetCurrentDirectory();
 const string DeclaredTarget = ".claude/test-fixtures/show-me/declared";
 const string ZeroIdTarget = ".claude/test-fixtures/show-me/zero-id";
 const string NoTasksTarget = ".claude/test-fixtures/show-me/no-tasks";
+const string AdrUnresolvedTarget = ".claude/test-fixtures/show-me/adr-unresolved";
 const string UnfinishedTarget = ".claude/test-fixtures/show-me/unfinished";
 const string ReleaseNotesFixture = ".claude/test-fixtures/show-me/release-notes.md";
 const string CalibrationTarget = "specs/0036-scoped-lifetime-per-pipeline";
@@ -50,7 +51,24 @@ var declaredRow = new Row(
                 new DeclaredIdExpectation("FR-1", FirstLine: 5, LastLine: 7, Bytes: 196),
                 new DeclaredIdExpectation("FR-2", FirstLine: 8, LastLine: 9, Bytes: 101),
                 new DeclaredIdExpectation("NFR-1", FirstLine: 10, LastLine: 10, Bytes: 55),
-            ])));
+            ]),
+        AdrListAssertions(
+            expectedEntries:
+            [
+                new AdrListEntryExpectation(
+                    "0062-pg-advisory-lock-sha256.md",
+                    Path: "docs/adr/0062-pg-advisory-lock-sha256.md",
+                    Reason: null,
+                    Matches: null,
+                    ExpectExtract: true),
+                new AdrListEntryExpectation(
+                    "docs/adr/0072-show-me-command-resolution-and-output.md",
+                    Path: "docs/adr/0072-show-me-command-resolution-and-output.md",
+                    Reason: null,
+                    Matches: null,
+                    ExpectExtract: true),
+            ],
+            expectedResolvedCount: 2)));
 
 var rows = new[]
 {
@@ -106,7 +124,10 @@ var rows = new[]
             // Escaped-pipe regression (NFR-9): the declared-id count must be non-zero for every
             // fixture that declares ids. This count was once 0 where the answer was 28 — an
             // escaped `\|` from a table cell, verified live (0037 requirements.md).
-            DeclaredIdAssertions(repositoryRoot, CalibrationTarget, expectedDeclaredTotal: 37))),
+            DeclaredIdAssertions(repositoryRoot, CalibrationTarget, expectedDeclaredTotal: 37),
+            // 7 entries, all full filenames, all resolve — including names whose numbers are
+            // duplicated elsewhere in docs/adr/ (0070-0076 also exist as other spec's ADRs).
+            AdrResolvedCountAssertions(expectedResolvedCount: 7))),
     new Row(
         "zero-id",
         [ZeroIdTarget],
@@ -127,7 +148,46 @@ var rows = new[]
                 }),
             // FR-16 row 9: a requirements.md with no anchored declaration reports zero, not a
             // failure, and the empty set is reported as an empty list rather than null.
-            DeclaredIdAssertions(repositoryRoot, ZeroIdTarget, expectedDeclaredTotal: 0, expectedDeclaredIds: []))),
+            DeclaredIdAssertions(repositoryRoot, ZeroIdTarget, expectedDeclaredTotal: 0, expectedDeclaredIds: []),
+            // FR-16 row 6: no .adr-list — a measured, empty zero, not a missing value.
+            AdrListAssertions(expectedEntries: [], expectedResolvedCount: 0))),
+    new Row(
+        "adr-unresolved",
+        [AdrUnresolvedTarget],
+        AdrUnresolvedTarget,
+        AdrListAssertions(
+            expectedEntries:
+            [
+                new AdrListEntryExpectation(
+                    "0000-no-such-adr.md", Path: null, Reason: "ADR file not found", Matches: null, ExpectExtract: false),
+                new AdrListEntryExpectation(
+                    "0037",
+                    Path: null,
+                    Reason: "ambiguous ADR number",
+                    Matches:
+                    [
+                        "0037-add-messaging-gateway-generated-test.md",
+                        "0037-aws-test-resource-cleanup.md",
+                        "0037-provide-roslyn-analyzers-for-brighter.md",
+                        "0037-reject-message-on-error-handler.md",
+                        "0037-universal-scheduler-delay.md",
+                    ],
+                    ExpectExtract: false),
+                // A bare number matching exactly one file still does not resolve (FR-16 row 7):
+                // only a full filename or a docs/adr/{filename} path resolves.
+                new AdrListEntryExpectation(
+                    "0062", Path: null, Reason: "ADR file not found", Matches: null, ExpectExtract: false),
+                // A path prefix other than docs/adr/ does not resolve either.
+                new AdrListEntryExpectation(
+                    "adr/0062-pg-advisory-lock-sha256.md", Path: null, Reason: "ADR file not found", Matches: null, ExpectExtract: false),
+                new AdrListEntryExpectation(
+                    "0062-pg-advisory-lock-sha256.md",
+                    Path: "docs/adr/0062-pg-advisory-lock-sha256.md",
+                    Reason: null,
+                    Matches: null,
+                    ExpectExtract: true),
+            ],
+            expectedResolvedCount: 1)),
     new Row(
         "no-tasks",
         [NoTasksTarget],
@@ -711,6 +771,152 @@ static IEnumerable<string> AssertFrThenNfrOrder(JsonElement declaredIds)
     }
 }
 
+// T3.6: .adr-list entry resolution, each resolved entry's extract, and adr_resolved_count.
+static Func<RunResult, IEnumerable<string>> AdrListAssertions(
+    IReadOnlyList<AdrListEntryExpectation> expectedEntries,
+    int expectedResolvedCount) => result =>
+{
+    var failures = new List<string>();
+
+    if (result.Ledger is null)
+    {
+        failures.Add("expected the ledger to parse as one JSON object, but no valid ledger was found");
+        return failures;
+    }
+
+    var root = result.Ledger.RootElement;
+
+    if (!root.TryGetProperty("adr_resolved_count", out var resolvedCountEl) || resolvedCountEl.GetInt32() != expectedResolvedCount)
+    {
+        failures.Add($"expected adr_resolved_count {expectedResolvedCount}");
+    }
+
+    if (!root.TryGetProperty("adr_list", out var adrList) || adrList.ValueKind != JsonValueKind.Array)
+    {
+        failures.Add("expected an adr_list array");
+        return failures;
+    }
+
+    if (adrList.GetArrayLength() != expectedEntries.Count)
+    {
+        failures.Add($"expected adr_list to have {expectedEntries.Count} entries, got {adrList.GetArrayLength()}");
+    }
+
+    var actualEntries = adrList.EnumerateArray().ToArray();
+    for (var i = 0; i < expectedEntries.Count && i < actualEntries.Length; i++)
+    {
+        var expected = expectedEntries[i];
+        var actual = actualEntries[i];
+
+        var actualEntry = actual.TryGetProperty("entry", out var entryEl) && entryEl.ValueKind == JsonValueKind.String
+            ? entryEl.GetString()
+            : null;
+        if (actualEntry != expected.Entry)
+        {
+            failures.Add($"expected adr_list[{i}].entry \"{expected.Entry}\", got \"{actualEntry}\"");
+        }
+
+        var actualPath = actual.TryGetProperty("path", out var pathEl) && pathEl.ValueKind == JsonValueKind.String
+            ? pathEl.GetString()
+            : null;
+        if (actualPath != expected.Path)
+        {
+            failures.Add($"expected adr_list[{expected.Entry}].path {expected.Path ?? "null"}, got {actualPath ?? "null"}");
+        }
+
+        var actualReason = actual.TryGetProperty("reason", out var reasonEl) && reasonEl.ValueKind == JsonValueKind.String
+            ? reasonEl.GetString()
+            : null;
+        if (actualReason != expected.Reason)
+        {
+            failures.Add($"expected adr_list[{expected.Entry}].reason {expected.Reason ?? "null"}, got {actualReason ?? "null"}");
+        }
+
+        if (expected.Matches is null)
+        {
+            if (actual.TryGetProperty("matches", out var matchesEl) && matchesEl.ValueKind != JsonValueKind.Null)
+            {
+                failures.Add($"expected adr_list[{expected.Entry}].matches to be null");
+            }
+        }
+        else if (!actual.TryGetProperty("matches", out var matchesEl) || matchesEl.ValueKind != JsonValueKind.Array)
+        {
+            failures.Add($"expected adr_list[{expected.Entry}].matches to be an array");
+        }
+        else
+        {
+            var actualMatches = matchesEl.EnumerateArray().Select(e => e.GetString()).ToArray();
+            if (!actualMatches.SequenceEqual(expected.Matches))
+            {
+                failures.Add(
+                    $"expected adr_list[{expected.Entry}].matches [{string.Join(", ", expected.Matches)}], "
+                    + $"got [{string.Join(", ", actualMatches)}]");
+            }
+        }
+
+        if (!expected.ExpectExtract)
+        {
+            if (!actual.TryGetProperty("extract", out var noExtractEl) || noExtractEl.ValueKind != JsonValueKind.Null)
+            {
+                failures.Add($"expected adr_list[{expected.Entry}].extract to be null (entry did not resolve)");
+            }
+
+            continue;
+        }
+
+        if (!actual.TryGetProperty("extract", out var extractEl) || extractEl.ValueKind != JsonValueKind.Array
+            || extractEl.GetArrayLength() != 3)
+        {
+            failures.Add($"expected adr_list[{expected.Entry}].extract to hold 3 parts (front matter, Status, Consequences)");
+            continue;
+        }
+
+        foreach (var part in extractEl.EnumerateArray())
+        {
+            if (!part.TryGetProperty("bytes", out var bytesEl) || bytesEl.GetInt64() <= 0)
+            {
+                failures.Add($"expected every adr_list[{expected.Entry}].extract part to have bytes > 0");
+            }
+
+            if (!part.TryGetProperty("windows", out var windowsEl) || windowsEl.ValueKind != JsonValueKind.Array
+                || windowsEl.GetArrayLength() == 0)
+            {
+                failures.Add($"expected every adr_list[{expected.Entry}].extract part to have a non-empty windows array");
+            }
+        }
+    }
+
+    return failures;
+};
+
+// Used where only the resolved count (not each entry's detail) is asserted, e.g. the calibration
+// row's 7-entry .adr-list.
+static Func<RunResult, IEnumerable<string>> AdrResolvedCountAssertions(int expectedResolvedCount) => result =>
+{
+    var failures = new List<string>();
+
+    if (result.Ledger is null)
+    {
+        failures.Add("expected the ledger to parse as one JSON object, but no valid ledger was found");
+        return failures;
+    }
+
+    var root = result.Ledger.RootElement;
+
+    if (!root.TryGetProperty("adr_resolved_count", out var resolvedCountEl) || resolvedCountEl.GetInt32() != expectedResolvedCount)
+    {
+        failures.Add($"expected adr_resolved_count {expectedResolvedCount}");
+    }
+
+    if (!root.TryGetProperty("adr_list", out var adrList) || adrList.ValueKind != JsonValueKind.Array
+        || adrList.GetArrayLength() != expectedResolvedCount)
+    {
+        failures.Add($"expected adr_list to have {expectedResolvedCount} entries, all resolved");
+    }
+
+    return failures;
+};
+
 static Func<RunResult, IEnumerable<string>> TasksFieldAssertions(
     string repositoryRoot,
     string target,
@@ -929,3 +1135,5 @@ sealed record RunResult(int ExitCode, byte[]? LedgerBytes, JsonDocument? Ledger,
 sealed record Row(string Name, string[] Args, string? LedgerTarget, Func<RunResult, IEnumerable<string>> Assertions);
 
 sealed record DeclaredIdExpectation(string Id, int FirstLine, int LastLine, int Bytes);
+
+sealed record AdrListEntryExpectation(string Entry, string? Path, string? Reason, string[]? Matches, bool ExpectExtract);

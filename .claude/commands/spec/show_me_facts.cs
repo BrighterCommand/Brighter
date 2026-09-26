@@ -186,6 +186,11 @@ else
     nullReasons["declarations"] = "not present";
 }
 
+// .adr-list entry resolution (FR-16 row 7) is file-derived too, computed on every kind of run.
+var (adrList, adrResolvedCount) = ReadAdrList(target);
+ledger["adr_list"] = adrList;
+ledger["adr_resolved_count"] = adrResolvedCount;
+
 ledger["null_reasons"] = nullReasons;
 ledger["gh_commands"] = new JsonArray();
 
@@ -372,6 +377,17 @@ static List<int> ComputeLineByteLengths(byte[] content)
     return lines;
 }
 
+// The byte offset each line starts at, given its byte lengths (offsets[i]..offsets[i+1] is line i).
+static long[] ComputeLineOffsets(List<int> lineLengths)
+{
+    var offsets = new long[lineLengths.Count + 1];
+    for (var i = 0; i < lineLengths.Count; i++)
+    {
+        offsets[i + 1] = offsets[i] + lineLengths[i];
+    }
+    return offsets;
+}
+
 // FR-8's declared-id set and each declaration's paragraph (ADR 0072 IA 4). A paragraph runs
 // from its declaration line to the line before the next declaration or the next heading of
 // level three or higher (###, ##, or #), whichever comes first, or to the end of the file.
@@ -379,12 +395,7 @@ static (List<string> DeclaredIds, JsonArray Declarations) ExtractDeclaredIds(byt
 {
     var lineLengths = ComputeLineByteLengths(content);
     var rawLines = Encoding.UTF8.GetString(content).Split('\n');
-
-    var offsets = new long[lineLengths.Count + 1];
-    for (var i = 0; i < lineLengths.Count; i++)
-    {
-        offsets[i + 1] = offsets[i] + lineLengths[i];
-    }
+    var offsets = ComputeLineOffsets(lineLengths);
 
     var declarationLineIndexes = new List<int>();
     var idsInFileOrder = new List<string>();
@@ -437,6 +448,163 @@ static (List<string> DeclaredIds, JsonArray Declarations) ExtractDeclaredIds(byt
     return (declaredIds, declarations);
 }
 
+// FR-16 row 7: .adr-list entry resolution. A full filename, or docs/adr/{filename}, resolves to
+// that file; anything else does not. A bare number that matches more than one docs/adr/ file is
+// ambiguous; one that matches exactly one file (or none) still does not resolve.
+static (JsonArray AdrList, int ResolvedCount) ReadAdrList(string target)
+{
+    var adrListPath = Path.Combine(target, ".adr-list");
+    var entries = File.Exists(adrListPath)
+        ? File.ReadAllLines(adrListPath).Select(line => line.Trim()).Where(line => line.Length > 0).ToList()
+        : [];
+
+    var adrList = new JsonArray();
+    var resolvedCount = 0;
+
+    foreach (var entry in entries)
+    {
+        var (path, reason, matches) = ResolveAdrEntry(entry);
+
+        adrList.Add(new JsonObject
+        {
+            ["entry"] = entry,
+            ["path"] = path,
+            ["reason"] = reason,
+            ["matches"] = matches is null ? null : new JsonArray(matches.Select(m => (JsonNode)m).ToArray()),
+            ["extract"] = path is null ? null : BuildAdrExtract(path),
+        });
+
+        if (path is not null)
+        {
+            resolvedCount++;
+        }
+    }
+
+    return (adrList, resolvedCount);
+}
+
+static (string? Path, string? Reason, List<string>? Matches) ResolveAdrEntry(string entry)
+{
+    const string AdrDirectory = "docs/adr";
+
+    string? candidateFilename = entry.StartsWith("docs/adr/", StringComparison.Ordinal)
+        ? entry["docs/adr/".Length..]
+        : !entry.Contains('/') ? entry : null;
+
+    if (candidateFilename is not null)
+    {
+        var candidatePath = $"{AdrDirectory}/{candidateFilename}";
+        if (File.Exists(candidatePath))
+        {
+            return (candidatePath, null, null);
+        }
+    }
+
+    if (AdrPatterns.BareNumber.IsMatch(entry))
+    {
+        var matches = Directory.GetFiles(AdrDirectory, $"{entry}-*.md")
+            .Select(path => Path.GetFileName(path))
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToList();
+
+        if (matches.Count > 1)
+        {
+            return (null, "ambiguous ADR number", matches);
+        }
+    }
+
+    return (null, "ADR file not found", null);
+}
+
+// Each resolved ADR's extract (ADR 0072 IA 4): front matter, ## Status and ## Consequences, each
+// a {part, bytes, windows}. A heading is recognised only outside a fenced code block, so a `#`
+// inside a diagram fence never bounds a section, and a section's own ### subheadings (Positive,
+// Negative, Risks and Mitigations) stay inside it.
+static JsonArray BuildAdrExtract(string adrPath)
+{
+    var content = File.ReadAllBytes(adrPath);
+    var lineLengths = ComputeLineByteLengths(content);
+    var lineCount = lineLengths.Count;
+    var rawLines = Encoding.UTF8.GetString(content).Split('\n');
+    var offsets = ComputeLineOffsets(lineLengths);
+
+    var (frontMatterStart, frontMatterEnd) = FindFrontMatterLineRange(rawLines, lineCount);
+    var (statusStart, statusEnd) = FindHeadingSectionLineRange(rawLines, lineCount, "## Status");
+    var (consequencesStart, consequencesEnd) = FindHeadingSectionLineRange(rawLines, lineCount, "## Consequences");
+
+    return new JsonArray(
+        BuildExtractPart("front_matter", offsets, content, frontMatterStart, frontMatterEnd),
+        BuildExtractPart("status", offsets, content, statusStart, statusEnd),
+        BuildExtractPart("consequences", offsets, content, consequencesStart, consequencesEnd));
+}
+
+static (int Start, int End) FindFrontMatterLineRange(string[] rawLines, int lineCount)
+{
+    if (lineCount > 0 && rawLines[0].TrimEnd('\r') == "---")
+    {
+        for (var i = 1; i < lineCount; i++)
+        {
+            if (rawLines[i].TrimEnd('\r') == "---")
+            {
+                return (0, i);
+            }
+        }
+    }
+
+    return (0, -1);
+}
+
+static (int Start, int End) FindHeadingSectionLineRange(string[] rawLines, int lineCount, string headingText)
+{
+    var inFence = false;
+    var startIndex = -1;
+
+    for (var i = 0; i < lineCount; i++)
+    {
+        var line = rawLines[i].TrimEnd('\r');
+        if (line.StartsWith("```", StringComparison.Ordinal))
+        {
+            inFence = !inFence;
+            continue;
+        }
+
+        if (startIndex < 0)
+        {
+            if (!inFence && line == headingText)
+            {
+                startIndex = i;
+            }
+            continue;
+        }
+
+        if (!inFence && AdrPatterns.SectionBoundaryHeading.IsMatch(line))
+        {
+            return (startIndex, i - 1);
+        }
+    }
+
+    return startIndex < 0 ? (0, -1) : (startIndex, lineCount - 1);
+}
+
+static JsonObject BuildExtractPart(string part, long[] offsets, byte[] content, int startIndex, int endIndex)
+{
+    if (endIndex < startIndex)
+    {
+        return new JsonObject { ["part"] = part, ["bytes"] = 0, ["windows"] = new JsonArray() };
+    }
+
+    var startByte = offsets[startIndex];
+    var endByte = offsets[endIndex + 1];
+    var partBytes = content[(int)startByte..(int)endByte];
+
+    return new JsonObject
+    {
+        ["part"] = part,
+        ["bytes"] = partBytes.Length,
+        ["windows"] = ComputeWindows(partBytes, startLine: startIndex + 1),
+    };
+}
+
 static class RequirementsPatterns
 {
     // POSIX (requirements.md, Declared-id pattern): ^[[:space:]]*(-[[:space:]]+)?\*\*(FR|NFR)-[0-9]+
@@ -444,6 +612,16 @@ static class RequirementsPatterns
 
     // A markdown heading of level three or higher (###, ##, or #) — stops a declaration's paragraph.
     public static readonly Regex Heading = new(@"^#{1,3}\s");
+}
+
+static class AdrPatterns
+{
+    // FR-16 row 7: a bare-number entry is checked for ambiguity against docs/adr/{number}-*.md.
+    public static readonly Regex BareNumber = new(@"^[0-9]+$");
+
+    // A markdown heading of level one or two — bounds an ADR's ## Status / ## Consequences
+    // section boundary (unlike the declared-id paragraph rule, level three does not stop it).
+    public static readonly Regex SectionBoundaryHeading = new(@"^#{1,2}\s");
 }
 
 static class TaskPatterns
