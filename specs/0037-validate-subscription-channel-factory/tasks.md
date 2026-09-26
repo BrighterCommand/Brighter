@@ -865,7 +865,7 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
     - **Every declaration judgement stays in `SubscriptionChannelFactoryDeclaration`**, driven test-first in tasks 38-48. The template owns only rendering — the literal conversion and the union — which is what this test pins. An earlier draft put the subsumption rule in the template, which would have expressed one rule in two places and made a regeneration something to review rather than to trust
   - Depends on: 49.
 
-- [ ] **51. SETUP: `GatewayConformanceGenerator` and its wiring into generation, planning and the audit**
+- [x] **51. SETUP: `GatewayConformanceGenerator` and its wiring into generation, planning and the audit**
   - Files: `tools/Paramore.Brighter.Test.Generator/Generators/GatewayConformanceGenerator.cs` (new); `tools/Paramore.Brighter.Test.Generator/Program.cs`; `tests/Paramore.Brighter.Test.Generator.Tests/GeneratedFileAudit/GeneratedTreeAudit.cs`
   - Mirror `MessagingGatewayGenerator`'s `Suites` / `SuitesFor` / `Plan` shape. Per `.agent_instructions/generated_tests.md` the suite **must** be described in `SuitesFor(...)`, so the generate path and the plan path walk one description — a suite only the generate path knows about is written and then reported as an **orphan** by the audit.
   - `Program.cs` invokes the new generator alongside the existing ones.
