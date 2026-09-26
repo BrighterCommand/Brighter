@@ -110,7 +110,7 @@ public class SqsFifoMessageGatewayProvider
                 queueAttributes: new SqsAttributes(
                     type: SqsType.Fifo,
                     contentBasedDeduplication: false,
-                    redrivePolicy: new RedrivePolicy(deadLetterChannelName, 3)
+                    redrivePolicy: new RedrivePolicy(deadLetterChannelName, 5)
                 ),
                 deadLetterRoutingKey: deadLetterRoutingKey,
                 invalidMessageRoutingKey: invalidMessageRoutingKey,

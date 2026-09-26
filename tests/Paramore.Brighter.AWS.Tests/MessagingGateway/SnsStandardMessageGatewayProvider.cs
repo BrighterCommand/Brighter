@@ -112,7 +112,7 @@ public class SnsStandardMessageGatewayProvider
                 messagePumpType: MessagePumpType.Proactor,
                 makeChannels: makeChannel,
                 queueAttributes: new SqsAttributes(
-                    redrivePolicy: new RedrivePolicy(deadLetterChannelName, 3)
+                    redrivePolicy: new RedrivePolicy(deadLetterChannelName, 5)
                 ),
                 deadLetterRoutingKey: deadLetterRoutingKey,
                 invalidMessageRoutingKey: invalidMessageRoutingKey,
