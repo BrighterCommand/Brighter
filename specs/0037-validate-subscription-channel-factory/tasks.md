@@ -808,7 +808,7 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
     - **A reason, never a silent skip** — a skipped type vanishes from the reported subject set, which is the vacuous pass this design exists to prevent
   - Depends on: 46.
 
-- [ ] **48. CHARACTERISE: A generic subscription the representative argument cannot satisfy yields a reason, not a skip**
+- [x] **48. CHARACTERISE: A generic subscription the representative argument cannot satisfy yields a reason, not a skip**
   - **USE COMMAND**: `/test-first when a generic subscription's constraints cannot be satisfied the sweep should report a reason rather than skip it`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessagingGateway/ChannelFactoryDeclaration"
   - Test file: `When_a_generic_subscription_cannot_be_closed_should_report_a_reason_rather_than_skip.cs`
