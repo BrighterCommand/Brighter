@@ -181,7 +181,7 @@
     - Call sites are wired per transport in 4.1, 6.2 and 7.4
   - Depends on: 2.4
 
-- [ ] **2.7 CHARACTERISE: Budget-only findings never block startup under `throwOnError: true`**
+- [x] **2.7 CHARACTERISE: Budget-only findings never block startup under `throwOnError: true`**
   - **USE COMMAND**: `/test-first when throw on error is true and the only findings are budget warnings should start the host`
   - Test locations (split as in 2.3):
     - (i) Specification: "tests/Paramore.Brighter.Core.Tests/Validation", file `When_only_budget_rules_fire_should_report_only_warning_findings.cs`. Run the three `ConsumerValidationRules` budget specifications through a `PipelineValidator`, following `When_validator_finds_errors_across_paths_should_aggregate_all.cs`.
