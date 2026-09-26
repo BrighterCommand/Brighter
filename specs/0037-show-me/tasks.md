@@ -297,7 +297,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 - Record in a comment beside the row the two full shas, the measured value, the command used and the date. `master`'s history is never rewritten, so the pair stays reachable.
 - Every boundary row targets `.claude/test-fixtures/show-me/declared/`. Only its diff fields are asserted.
 
-- [ ] **TEST + IMPLEMENT: T5.1 — Pinned runs measure buckets, net lines, `src/` subdirectories, public-API lines, commits and the `src/`-scoped diff's windows over exactly the pinned pair**
+- [x] **TEST + IMPLEMENT: T5.1 — Pinned runs measure buckets, net lines, `src/` subdirectories, public-API lines, commits and the `src/`-scoped diff's windows over exactly the pinned pair**
   - **USE COMMAND**: `/test-first when the measurement script is pinned to the calibration pair it should report 517 files bucketed 76/393/14/24/0/10, 131 public API lines, 6 src subdirectories and 363 commits`
   - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
   - Test row(s): the calibration row, and the pinned *declared* row.
