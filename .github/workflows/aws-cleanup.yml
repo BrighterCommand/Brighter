@@ -23,10 +23,12 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: eu-west-1
       AWS_DEFAULT_OUTPUT: json
-      # The name sweep matches most of what the AWS suites create, so it could delete topics and
-      # queues out from under a job that is still running. The guard applies on every trigger, not
-      # just the schedule: CI runs on every push and every pull request and declares no concurrency
-      # group, so the run that just finished is never the only one in the account.
+      # S3 cleanup also needs s3:ListAllMyBuckets, and s3:ListBucket,
+      # s3:DeleteObject and s3:DeleteBucket on brightertestbucket-* resources.
+      # The name sweep matches most of what the AWS suites create, so it could delete topics,
+      # queues or S3 buckets out from under a job that is still running. The guard applies on every
+      # trigger, not just the schedule: CI runs on every push and every pull request and declares
+      # no concurrency group, so the run that just finished is never the only one in the account.
       #
       # What this defers is a leak from a run that died, by up to an hour: the sweep fires again on
       # the next CI completion, and the six-hourly schedule is the floor. Providers reap their own

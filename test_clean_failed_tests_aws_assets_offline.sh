@@ -29,7 +29,7 @@ trap 'rm -rf -- "$TEST_ROOT"' EXIT
 mkdir "$TEST_ROOT/bin"
 
 # A closed PATH plus an empty environment prevents falling back to a real AWS executable.
-for utility in bash sh cat date tr wc grep xargs mktemp rm mkdir awk; do
+for utility in bash sh cat date tr wc grep xargs mktemp rm mkdir awk python3; do
     ln -s "$(command -v "$utility")" "$TEST_ROOT/bin/$utility" || exit 1
 done
 ln -s "$SCRIPT_DIR/tests/fixtures/aws-cleanup/InMemoryAwsCli.sh" "$TEST_ROOT/bin/aws" || exit 1
@@ -38,6 +38,8 @@ FAIL=0
 TOPIC='arn:aws:sns:eu-west-1:000000000000:Producer-Send-Tests-topic'
 QUEUE='https://sqs.eu-west-1.amazonaws.com/000000000000/Producer-Send-Tests-queue'
 GROUP='arn:aws:scheduler:eu-west-1:000000000000:schedule-group/cleanup-group'
+BUCKET='brightertestbucket-11111111-1111-1111-1111-111111111111'
+OTHER_BUCKET='brightertestbucket-22222222-2222-2222-2222-222222222222'
 
 arrange() {
     CASE_NAME="$1"
@@ -60,7 +62,7 @@ aws_error() {
 
 run_cleanup() {
     local environment=("PATH=$TEST_ROOT/bin" "TMPDIR=$CASE_TEMP" "AWS_CLEANUP_FIXTURES=$CASE_DIR"
-        "CLEANUP_MIN_AGE_SECONDS=$AGE" "CLEANUP_PARALLELISM=${PARALLELISM:-4}")
+        "CLEANUP_MIN_AGE_SECONDS=$AGE" "CLEANUP_PARALLELISM=${PARALLELISM:-4}" "AWS_REGION=eu-west-1")
     if [[ "$LIMIT" != unset ]]; then
         environment+=("CLEANUP_MAX_DELETE_FAILURES=$LIMIT")
     fi
@@ -95,7 +97,7 @@ assert_contains() {
 
 assert_no_mutations() {
     local mutations
-    mutations=$(grep -Ec ' (delete-|unsubscribe|tag-resource)' "$CASE_DIR/calls" || true)
+    mutations=$(grep -Ec ' (delete-|unsubscribe|tag-resource)|^s3 (rm|rb) ' "$CASE_DIR/calls" || true)
     assert_equal 0 "$mutations" 'no AWS mutations'
 }
 
@@ -331,6 +333,94 @@ for result in "$CASE_DIR"/brighter-aws-cleanup.*; do
     [[ -e "$result" ]] && remaining_results=$((remaining_results + 1))
 done
 assert_equal 0 "$remaining_results" 'temporary results are removed'
+
+arrange 'old nonempty test bucket is emptied before deletion'
+AGE=3600
+response s3api.list-buckets "$(printf '%s\t%s\n' "$BUCKET" '2001-09-09T01:46:40Z')"
+: > "$CASE_DIR/$BUCKET.objects"
+run_cleanup
+assert_equal 0 "$STATUS" 'successful S3 cleanup'
+assert_equal 1 "$(grep -c "s3api delete-bucket .*${BUCKET}" "$CASE_DIR/calls" || true)" 'bucket deletion attempted'
+assert_equal true "$([[ -f "$CASE_DIR/$BUCKET.deleted" ]] && echo true || echo false)" 'bucket actually deleted after emptying'
+
+arrange 'all old buckets in the aggregated listing are cleaned'
+AGE=3600
+response s3api.list-buckets "$(printf '%s\t%s\n' "$BUCKET" '2001-09-09T01:46:40Z' "$OTHER_BUCKET" '2001-09-09T01:46:40+00:00')"
+run_cleanup
+assert_equal 0 "$STATUS" 'multiple buckets handled'
+assert_equal true "$([[ -f "$CASE_DIR/$BUCKET.deleted" && -f "$CASE_DIR/$OTHER_BUCKET.deleted" ]] && echo true || echo false)" 'both buckets deleted'
+
+for created in "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" '2999-01-01T00:00:00Z' 'not-a-date' None; do
+    arrange "bucket with protected or unreadable age: $created"
+    AGE=3600
+    response s3api.list-buckets "$(printf '%s\t%s\n' "$BUCKET" "$created")"
+    run_cleanup
+    assert_no_mutations
+done
+
+arrange 'unrelated bucket names are never swept'
+AGE=3600
+response s3api.list-buckets "$(printf '%s\t%s\n' 'production-data' '2001-09-09T01:46:40Z' 'not-brightertestbucket-11111111-1111-1111-1111-111111111111' '2001-09-09T01:46:40Z')"
+run_cleanup
+assert_equal 0 "$STATUS" 'unrelated buckets ignored'
+assert_no_mutations
+
+arrange 'S3 dry-run lists candidates but never empties or deletes'
+AGE=3600
+response s3api.list-buckets "$(printf '%s\t%s\n' "$BUCKET" '2001-09-09T01:46:40Z')"
+: > "$CASE_DIR/$BUCKET.objects"
+run_cleanup --dry-run
+assert_equal 0 "$STATUS" 'S3 dry-run status'
+assert_contains "$BUCKET"
+assert_no_mutations
+assert_equal true "$([[ -f "$CASE_DIR/$BUCKET.objects" ]] && echo true || echo false)" 'objects untouched'
+
+arrange 'failed S3 discovery cannot silently succeed'
+LIMIT=999
+aws_error s3api.list-buckets AccessDenied ListBuckets
+run_cleanup
+assert_equal 1 "$STATUS" 'discovery errors bypass deletion tolerance'
+assert_contains AccessDenied
+assert_no_mutations
+
+arrange 'failed object removal is reported and leaves the bucket'
+response s3api.list-buckets "$(printf '%s\t%s\n' "$BUCKET" '2001-09-09T01:46:40Z')"
+: > "$CASE_DIR/$BUCKET.objects"
+response s3.rm '' 'AccessDenied: cannot delete object' 1
+run_cleanup
+assert_equal 1 "$STATUS" 'object removal failure is fatal by default'
+assert_contains AccessDenied
+assert_equal false "$([[ -f "$CASE_DIR/$BUCKET.deleted" ]] && echo true || echo false)" 'nonempty bucket not deleted'
+
+arrange 'bucket deletion failure does not prevent later cleanup'
+response s3api.list-buckets "$(printf '%s\t%s\n' "$BUCKET" '2001-09-09T01:46:40Z' "$OTHER_BUCKET" '2001-09-09T01:46:40Z')"
+aws_error "s3api.delete-bucket.$BUCKET" AccessDenied DeleteBucket
+run_cleanup
+assert_equal 1 "$STATUS" 'bucket deletion failure propagated'
+assert_contains AccessDenied
+assert_equal true "$([[ -f "$CASE_DIR/$OTHER_BUCKET.deleted" ]] && echo true || echo false)" 'later bucket still cleaned'
+
+arrange 'bucket removed concurrently is benign'
+response s3api.list-buckets "$(printf '%s\t%s\n' "$BUCKET" '2001-09-09T01:46:40Z')"
+aws_error s3api.delete-bucket NoSuchBucket DeleteBucket
+run_cleanup
+assert_equal 0 "$STATUS" 'already-absent bucket does not fail cleanup'
+assert_contains 'Already absent'
+
+arrange 'versioned or otherwise nonempty bucket remains a visible failure'
+response s3api.list-buckets "$(printf '%s\t%s\n' "$BUCKET" '2001-09-09T01:46:40Z')"
+aws_error s3api.delete-bucket BucketNotEmpty DeleteBucket
+run_cleanup
+assert_equal 1 "$STATUS" 'remaining versions cannot be reported as deleted'
+assert_contains BucketNotEmpty
+
+arrange 'S3 deletion failures honour the configured threshold'
+LIMIT=1
+response s3api.list-buckets "$(printf '%s\t%s\n' "$BUCKET" '2001-09-09T01:46:40Z')"
+aws_error s3api.delete-bucket AccessDenied DeleteBucket
+run_cleanup
+assert_equal 0 "$STATUS" 'one tolerated deletion failure'
+assert_contains 'failed=1 (failure limit=1)'
 
 echo "Offline cleanup tests: $PASS passed, $FAIL failed."
 [[ "$FAIL" -eq 0 ]]

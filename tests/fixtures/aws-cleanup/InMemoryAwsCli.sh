@@ -28,10 +28,13 @@ key="$1.$2"
 shift 2
 resource=""
 group=""
+bucket_region=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --topic-arn|--subscription-arn|--queue-url|--queue-name|--name|--resource-arn)
+        --topic-arn|--subscription-arn|--queue-url|--queue-name|--name|--resource-arn|--bucket)
             resource="$2"; shift ;;
+        --bucket-region) bucket_region="$2"; shift ;;
+        s3://*) resource="${1#s3://}"; resource="${resource%/}" ;;
         --group-name) group="$2"; shift ;;
         Key=Source,Values=Brighter) resource="brighter" ;;
     esac
@@ -40,6 +43,11 @@ done
 resource="${resource:-$group}"
 resource="${resource##*/}"
 resource="${resource##*:}"
+if [[ "$key" == s3api.list-buckets && "$bucket_region" != "${AWS_REGION:-}" ]]; then
+    echo 'S3 discovery must be restricted to the configured region' >&2
+    printf '%s\n' "$key:wrong-region" >> "$AWS_CLEANUP_FIXTURES/unexpected"
+    exit 99
+fi
 response="$AWS_CLEANUP_FIXTURES/$key"
 if [[ -f "$response.$resource.status" ]]; then
     response="$response.$resource"
@@ -54,8 +62,28 @@ if [[ -f "$response.status" ]]; then
 fi
 
 case "$key" in
-    resourcegroupstaggingapi.get-resources|sns.list-topics|sqs.list-queues|sns.list-subscriptions-by-topic|scheduler.list-schedules)
+    resourcegroupstaggingapi.get-resources|sns.list-topics|sqs.list-queues|sns.list-subscriptions-by-topic|scheduler.list-schedules|s3api.list-buckets)
         echo None ;;
+    s3.rm)
+        if [[ -z "$resource" || "$resource" == *[^a-z0-9.-]* ]]; then
+            echo 'Invalid bucket name in offline fixture' >&2
+            exit 99
+        fi
+        if [[ -f "$AWS_CLEANUP_FIXTURES/$resource.objects" ]]; then
+            rm -- "$AWS_CLEANUP_FIXTURES/$resource.objects"
+        fi
+        ;;
+    s3api.delete-bucket)
+        if [[ -z "$resource" || "$resource" == *[^a-z0-9.-]* ]]; then
+            echo 'Invalid bucket name in offline fixture' >&2
+            exit 99
+        fi
+        if [[ -f "$AWS_CLEANUP_FIXTURES/$resource.objects" ]]; then
+            echo 'An error occurred (BucketNotEmpty) when calling the DeleteBucket operation: objects remain' >&2
+            exit 254
+        fi
+        : > "$AWS_CLEANUP_FIXTURES/$resource.deleted"
+        ;;
     sqs.get-queue-url)
         echo "https://sqs.eu-west-1.amazonaws.com/000000000000/$resource" ;;
     sqs.get-queue-attributes|sns.list-tags-for-resource)

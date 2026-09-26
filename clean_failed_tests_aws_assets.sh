@@ -23,6 +23,9 @@
 # IAM: as well as the delete and list calls, the age guard needs sqs:GetQueueAttributes and --
 # because SNS reports no creation time -- sns:ListTagsForResource and sns:TagResource, which it
 # uses to stamp a topic on first sight and read that stamp back on a later sweep.
+# S3 needs s3:ListAllMyBuckets, plus s3:ListBucket, s3:DeleteObject and s3:DeleteBucket
+# scoped to brightertestbucket-* buckets and their objects. Use AWS CLI v2 with
+# paginated, region-filtered s3api list-buckets support.
 
 # Continue after individual failures so one error does not prevent the rest of the cleanup.
 set -uo pipefail
@@ -65,6 +68,7 @@ aws_resource_is_absent() {
                 sns:delete-topic:NotFound:DeleteTopic|\
                 sns:unsubscribe:NotFound:Unsubscribe|\
                 sns:list-subscriptions-by-topic:NotFound:ListSubscriptionsByTopic|\
+                s3api:delete-bucket:NoSuchBucket:DeleteBucket|\
                 scheduler:delete-schedule:ResourceNotFoundException:DeleteSchedule|\
                 scheduler:delete-schedule-group:ResourceNotFoundException:DeleteScheduleGroup|\
                 scheduler:list-schedules:ResourceNotFoundException:ListSchedules)
@@ -654,6 +658,64 @@ if [[ ${#MATCHED_QUEUES[@]} -gt 0 ]]; then
     fi
 fi
 echo "  Matched $MATCHED_QUEUE_COUNT untagged test queue(s), acted on ${#MATCHED_QUEUES[@]}"
+
+# S3 ListBuckets is account-wide unless explicitly restricted to the ambient region.
+cleanup_s3_test_buckets() {
+    local region buckets bucket created extra epoch output status
+    local matched=0 acted=0
+    local pattern='^brightertestbucket-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+    region="${AWS_REGION:-${AWS_DEFAULT_REGION:-}}"
+    if [[ -z "$region" ]]; then
+        region=$(aws configure get region 2>/dev/null) || region=""
+    fi
+    if [[ -z "$region" ]]; then
+        echo "ERROR: Cannot determine the AWS region; refusing account-wide S3 cleanup." >&2
+        REPORTING_FAILED=true
+        return
+    fi
+
+    # The CLI follows all pages; the query preserves the creation time with each name.
+    if ! buckets=$(read_cleanup_resources s3api list-buckets --region "$region" \
+        --bucket-region "$region" --prefix brightertestbucket- --page-size 1000 \
+        --query 'Buckets[].[Name,CreationDate]' --output text); then
+        REPORTING_FAILED=true
+        return
+    fi
+
+    while IFS=$'\t' read -r bucket created extra; do
+        [[ "$bucket" =~ $pattern ]] || continue
+        matched=$((matched + 1))
+        epoch=$(iso_to_epoch "$created")
+        if [[ -n "$extra" || ! "$epoch" =~ ^[0-9]+$ ]]; then
+            echo "  Skipped S3 bucket (unreadable age): $bucket"
+            continue
+        fi
+        if [[ $(( NOW - epoch )) -lt "$MIN_AGE_SECONDS" ]]; then
+            echo "  Skipped S3 bucket (too young): $bucket"
+            continue
+        fi
+        if $DRY_RUN; then
+            echo "  [DRY RUN] Would empty and delete S3 test bucket: $bucket"
+            continue
+        fi
+
+        acted=$((acted + 1))
+        # Do not attempt bucket deletion if emptying failed. Versioned objects are not purged.
+        if output=$(aws s3 rm "s3://$bucket" --recursive --only-show-errors --region "$region" 2>&1); then
+            record_cleanup_result s || REPORTING_FAILED=true
+        else
+            status=$?
+            record_cleanup_result f || REPORTING_FAILED=true
+            printf 'WARNING: failed to empty S3 bucket %s (AWS CLI exit %s):\n%s\n' "$bucket" "$status" "$output" >&2
+            continue
+        fi
+        delete_resource "S3 test bucket $bucket" s3api delete-bucket \
+            --bucket "$bucket" --region "$region" || REPORTING_FAILED=true
+    done <<< "$buckets"
+    echo "  Matched $matched S3 test bucket(s), acted on $acted"
+}
+
+cleanup_s3_test_buckets
 
 echo ""
 echo "Cleanup sweep finished."

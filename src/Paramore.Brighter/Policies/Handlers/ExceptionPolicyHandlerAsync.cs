@@ -22,9 +22,12 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.Actions;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Policies.Attributes;
 using Polly;
@@ -42,12 +45,16 @@ namespace Paramore.Brighter.Policies.Handlers
     /// The ExceptionPolicyHandler is instantiated by the pipeline when the <see cref="UsePolicyAttribute" /> is added to the <see cref="IHandleRequests{T}.Handle" /> method
     /// of the target handler implemented by the client.
     /// </summary>
+    /// <remarks>
+    /// Explicit reject, defer, don't-ack and invalid-message actions are propagated after the policy
+    /// completes, so retry and circuit-breaker policies do not treat them as failures.
+    /// </remarks>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public class ExceptionPolicyHandlerAsync<TRequest> : RequestHandlerAsync<TRequest> where TRequest : class, IRequest
     {
         private bool _initialized = false;
         private readonly List<AsyncPolicy> _policies = new();
-        
+
         /// <summary>
         /// Initializes from attribute parameters. This will get the <see cref="PolicyRegistry" /> from the <see cref="IRequestContext" /> and query it for the
         /// policy identified in <see cref="UsePolicyAttribute" />
@@ -56,7 +63,8 @@ namespace Paramore.Brighter.Policies.Handlers
         /// <exception cref="System.ArgumentException">Could not find the policy for this attribute, did you register it with the command processor's container;initializerList</exception>
         public override void InitializeFromAttributeParams(params object?[] initializerList)
         {
-            if (_initialized) return;
+            if (_initialized)
+                return;
 
             var policies = (List<string>?)initializerList[0] ?? [];
 #pragma warning disable CS0618 // Type or member is obsolete
@@ -73,22 +81,26 @@ namespace Paramore.Brighter.Policies.Handlers
         /// <returns>AA Task<TRequest> that wraps the asynchronous call to the policy, which itself wraps the handler chain</TRequest></returns>
         public override async Task<TRequest> HandleAsync(TRequest command, CancellationToken cancellationToken = default)
         {
-            if (_policies.Count == 1)
+            var policy = _policies[0];
+            for (var i = 1; i < _policies.Count; i++)
+                policy = policy.WrapAsync(_policies[i]);
+
+            ExceptionDispatchInfo? pumpAction = null;
+            var result = await policy.ExecuteAsync(HandleRequestAsync).ConfigureAwait(ContinueOnCapturedContext);
+            pumpAction?.Throw();
+            return result;
+
+            async Task<TRequest> HandleRequestAsync()
             {
-                return await _policies[0].ExecuteAsync(() => base.HandleAsync(command, cancellationToken))
-                    .ConfigureAwait(ContinueOnCapturedContext);
-            }
-            else
-            {
-                var policyWrap = _policies[0].WrapAsync(_policies[1]);
-                if (_policies.Count <= 2) return await policyWrap.ExecuteAsync(() => base.HandleAsync(command, cancellationToken));
-                
-                //we have more than two policies, so we need to wrap them
-                for (int i = 2; i < _policies.Count; i++)
+                try
                 {
-                    policyWrap = policyWrap.WrapAsync(_policies[i]);
+                    return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 }
-                return await policyWrap.ExecuteAsync(() => base.HandleAsync(command,cancellationToken));
+                catch (Exception ex) when (ex is RejectMessageAction or DeferMessageAction or DontAckAction or InvalidMessageAction)
+                {
+                    pumpAction = ExceptionDispatchInfo.Capture(ex);
+                    return command;
+                }
             }
         }
     }
