@@ -399,7 +399,7 @@
     - This test guards R-6 against the newly advancing count; a red points at `MessagePump.DiscardRequeuedMessagesEnabled()` (`MessagePump.cs:171`).
   - Depends on: 4.3
 
-- [ ] **4.10 CHARACTERISE: SQS budget of 1, 0 or below -1 rejects on the first deferral without requeuing**
+- [x] **4.10 CHARACTERISE: SQS budget of 1, 0 or below -1 rejects on the first deferral without requeuing**
   - **USE COMMAND**: `/test-first when sqs budget is one zero or below minus one should reject on first deferral without requeue`
   - Test location: "tests/Paramore.Brighter.AWS.Tests/MessagingGateway/Sqs/Standard/Reactor", "…/Proactor", and the V4 twins
   - Test file: `When_sqs_budget_is_one_zero_or_below_minus_one_should_reject_on_first_deferral.cs`
