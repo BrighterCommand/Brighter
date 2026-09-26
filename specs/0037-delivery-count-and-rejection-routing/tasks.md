@@ -199,7 +199,7 @@
 
 ## Phase 3 — Conformance oracle (templates)
 
-- [ ] **3.1 TEST + IMPLEMENT: Redelivery arms of FR-2/15/16/22 accept a redelivered count at least the sent count**
+- [x] **3.1 TEST + IMPLEMENT: Redelivery arms of FR-2/15/16/22 accept a redelivered count at least the sent count**
   - **USE COMMAND**: `/test-first when generating redelivery arms should assert redelivered handled count is at least the sent count in both variants`
   - Test location: "tests/Paramore.Brighter.Test.Generator.Tests/CanonicalTemplates"
   - Test file: `When_generating_redelivery_arms_should_assert_handled_count_at_least_sent_both_variants.cs`
