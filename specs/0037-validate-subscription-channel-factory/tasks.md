@@ -709,7 +709,7 @@ New public static class `SubscriptionChannelFactoryDeclaration` in namespace `Pa
 
 Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembly — `Sweep` takes an `Assembly` and nothing narrower, and **no type-scoped overload is introduced so a test can avoid a `Single(...)`**. Each assertion is therefore **subject-scoped**: `result.Single(e => e.Subject == typeof(X))`, except the subsumption cases, whose assertion is that a subsumed type has **no** entry and which therefore read the filtered sequence. This is mandatory because that assembly holds `Subscription` subclasses these cases do not own and which are **not sound**: `MockSubscription` (`MessagingGateway/When_constructing_a_channel_with_combined_factory.cs:85`, an auto-property, reported under the null branch) and the four doubles task 1 adds, of which `NullDeclaringSubscription` is reported under the null branch by design.
 
-- [ ] **42. TEST + IMPLEMENT: Sweeping an assembly reports each subject with the reason its declaration is unsound (the reading path's only negative assertion)**
+- [x] **42. TEST + IMPLEMENT: Sweeping an assembly reports each subject with the reason its declaration is unsound (the reading path's only negative assertion)**
   - **USE COMMAND**: `/test-first when sweeping an assembly containing unsound declarations the sweep should report each subject with the expected reason`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessagingGateway/ChannelFactoryDeclaration"
   - Test file: `When_sweeping_an_assembly_containing_unsound_declarations_should_report_their_reasons.cs`
