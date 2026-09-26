@@ -31,7 +31,25 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
 
 public class AzureServiceBusPublication : Publication
 {
-    //TODO: Placeholder for producer specific properties if required
+    private TimeSpan? _timeToLive;
+
+    /// <summary>
+    /// Gets or sets the time to live applied to every message sent by this publication.
+    /// </summary>
+    /// <value>A positive duration, or <see langword="null"/> to use the queue or topic default.</value>
+    /// <remarks>Azure Service Bus caps the message time to live at the entity's default time to live.</remarks>
+    /// <exception cref="ArgumentOutOfRangeException">The duration is zero or negative.</exception>
+    public TimeSpan? TimeToLive
+    {
+        get => _timeToLive;
+        set
+        {
+            if (value <= TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Time to live must be positive.");
+
+            _timeToLive = value;
+        }
+    }
         
     /// <summary>
     /// Use a Service Bus Queue instead of a Topic
