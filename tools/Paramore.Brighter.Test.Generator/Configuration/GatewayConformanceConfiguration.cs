@@ -23,7 +23,9 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Paramore.Brighter.Test.Generator.Configuration;
 
@@ -59,6 +61,33 @@ public class GatewayConformanceConfiguration
     /// configuration's namespace.
     /// </summary>
     public string? Namespace { get; set; }
+
+    /// <summary>
+    /// Gets the <c>typeof(...)</c> literal for <see cref="SubscriptionType"/> and every entry in
+    /// <see cref="AdditionalExpectedSubjects"/>, rendering a generic entry's arity backtick as open
+    /// generic angle brackets (<c>Ns.Foo`1</c> becomes <c>typeof(Ns.Foo&lt;&gt;)</c>).
+    /// </summary>
+    /// <remarks>
+    /// The conversion is done here, once, rather than in the Liquid template, so the template owns
+    /// only rendering the values this property already computes.
+    /// </remarks>
+    public IReadOnlyList<string> ExpectedSubjectTypeofLiterals =>
+        new[] { SubscriptionType }.Concat(AdditionalExpectedSubjects)
+            .Select(ToTypeofLiteral)
+            .ToList();
+
+    private static string ToTypeofLiteral(string typeName)
+    {
+        var backtickIndex = typeName.IndexOf('`');
+        if (backtickIndex < 0)
+        {
+            return $"typeof({typeName})";
+        }
+
+        var arity = int.Parse(typeName.AsSpan(backtickIndex + 1));
+        var baseName = typeName[..backtickIndex];
+        return $"typeof({baseName}<{new string(',', arity - 1)}>)";
+    }
 
     /// <summary>
     /// Returns a copy of this configuration with values it does not set taken from the root
