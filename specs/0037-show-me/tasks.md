@@ -193,7 +193,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - Risk mitigation: the probe row is the tripwire for a later SDK that re-parses options after `--`.
   - Traces to: FR-21 (pinned invocation, inputs not hooks), FR-18, AC-82 (why `--` matters), AC-93; ADR 0072 KC1, KC6 *Arguments are checked*, *Why the one allow-list entry names the script*, Risks (SDK change), IA 4.
 
-- [ ] **TEST + IMPLEMENT: T3.3 — Task checkboxes, per-tag counts and `tasks.md` windows are counted by the stated patterns, and copied text survives the encoder**
+- [x] **TEST + IMPLEMENT: T3.3 — Task checkboxes, per-tag counts and `tasks.md` windows are counted by the stated patterns, and copied text survives the encoder**
   - **USE COMMAND**: `/test-first when the measurement script counts task checkboxes it should report total, unchecked and per-tag counts that sum to the total, with tasks.md windows`
   - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
   - Test row(s): *declared*, *zero-id*, and the calibration row (pinned).
