@@ -23,6 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 
 namespace Paramore.Brighter;
 
@@ -70,4 +73,55 @@ public static class SubscriptionChannelFactoryDeclaration
 
         return null;
     }
+
+    /// <summary>
+    /// Sweeps <paramref name="gatewayAssembly"/> for <see cref="Subscription"/> candidates and reports
+    /// each subject with the reason its declared <see cref="Subscription.ChannelFactoryType"/> is
+    /// unsound, or <c>null</c> when it is sound. A candidate is a non-abstract class that is
+    /// <see cref="Subscription"/> itself or whose base chain reaches it. One entry per subject,
+    /// ordered by <see cref="Type.FullName"/>, ordinal, so repeated runs are byte-identical.
+    /// </summary>
+    /// <param name="gatewayAssembly">The assembly to sweep for <see cref="Subscription"/> candidates.</param>
+    /// <returns>One entry per subject; <c>Reason</c> is <c>null</c> when the declaration is sound.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="gatewayAssembly"/> is <c>null</c>.</exception>
+    public static IReadOnlyList<(Type Subject, string? Reason)> Sweep(Assembly gatewayAssembly)
+    {
+        if (gatewayAssembly is null)
+            throw new ArgumentNullException(nameof(gatewayAssembly));
+
+        return gatewayAssembly.GetTypes()
+            .Where(type => type.IsClass && !type.IsAbstract && IsSubscriptionOrDerivedFrom(type))
+            .OrderBy(type => type.FullName, StringComparer.Ordinal)
+            .Select(ReadAndCheck)
+            .ToList();
+    }
+
+    // Walked explicitly rather than tested with IsAssignableFrom, which behaves surprisingly for open
+    // generic type definitions. A type is assignable to itself, so Subscription itself is a candidate.
+    private static bool IsSubscriptionOrDerivedFrom(Type type)
+    {
+        for (var current = type; current is not null; current = current.BaseType)
+        {
+            if (current == typeof(Subscription))
+                return true;
+        }
+
+        return false;
+    }
+
+    // GetUninitializedObject produces an instance with no constructor run, so Check never sees a
+    // side effect of construction and can examine a subscription whose constructor would throw.
+    private static (Type Subject, string? Reason) ReadAndCheck(Type subject)
+    {
+        var instance = (Subscription)GetUninitializedInstance(subject);
+        return (subject, Check(subject, instance.ChannelFactoryType));
+    }
+
+#if NETSTANDARD2_0
+    private static object GetUninitializedInstance(Type type) =>
+        System.Runtime.Serialization.FormatterServices.GetUninitializedObject(type);
+#else
+    private static object GetUninitializedInstance(Type type) =>
+        System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(type);
+#endif
 }
