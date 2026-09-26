@@ -167,7 +167,7 @@
     - Bump `Assert.Equal(6, specs.Count)` (after 2.4) at `tests/Paramore.Brighter.Extensions.Tests/When_validate_pipelines_with_consumers_should_receive_subscriptions.cs:81` to `7`
   - Depends on: 2.4
 
-- [ ] **2.6 TEST + IMPLEMENT: Creating a channel for an unenforceable budget logs exactly one Warning; an enforceable one logs none**
+- [x] **2.6 TEST + IMPLEMENT: Creating a channel for an unenforceable budget logs exactly one Warning; an enforceable one logs none**
   - **USE COMMAND**: `/test-first when a channel is created for a subscription whose budget cannot be enforced should log one warning and none otherwise`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessagingGateway"
   - Test file: `When_channel_created_for_unenforceable_budget_should_log_warning_once.cs`
