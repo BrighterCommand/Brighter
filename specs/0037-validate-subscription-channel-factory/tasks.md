@@ -831,7 +831,7 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
 
 *ADR 0073 step 3.*
 
-- [ ] **49. SETUP: the `GatewayConformance` configuration section**
+- [x] **49. SETUP: the `GatewayConformance` configuration section**
   - Files: `tools/Paramore.Brighter.Test.Generator/Configuration/GatewayConformanceConfiguration.cs` (new), `tools/Paramore.Brighter.Test.Generator/Configuration/TestConfiguration.cs` (add the section, alongside the existing `MessagingGateway` and `Outbox` sections)
   - Properties:
     - `SubscriptionType` — `string`, **required**. The fully-qualified name of the subscription type expected to be reported. Rendered **both** as `typeof(X).Assembly`, to locate the sweep, **and** as an expected subject. **It MUST name a type that survives subsumption** — one declaring its own `ChannelFactoryType`, or a root candidate. Naming the generic derived type (`MqttSubscription<T>`) was a valid locator before and is now a red test.
