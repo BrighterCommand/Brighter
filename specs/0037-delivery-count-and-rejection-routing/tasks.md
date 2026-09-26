@@ -228,7 +228,7 @@
     - Regenerate per generated_tests.md; never hand-edit
   - Depends on: none (can run parallel to 3.1)
 
-- [ ] **3.3 TEST + IMPLEMENT: A recording consumer, composed around the real consumer, counts Requeue calls and records the presented HandledCount per receive**
+- [x] **3.3 TEST + IMPLEMENT: A recording consumer, composed around the real consumer, counts Requeue calls and records the presented HandledCount per receive**
   - **USE COMMAND**: `/test-first when generating the deferred pump should emit a recording consumer that counts requeues and records handled count per receive`
   - Test location: "tests/Paramore.Brighter.Test.Generator.Tests/CanonicalTemplates"
   - Test file: `When_generating_deferred_pump_should_emit_recording_consumer_counting_requeues_and_handled_counts.cs`
