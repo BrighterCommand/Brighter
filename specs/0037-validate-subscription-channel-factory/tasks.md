@@ -683,7 +683,7 @@ New public static class `SubscriptionChannelFactoryDeclaration` in namespace `Pa
     - **This branch is ADR 0073's own addition — FR-12 states only two conditions — and it is scheduled explicitly here because if it is not, it will not be built.** It is load-bearing three times over: `MockSubscription` and `NullDeclaringSubscription` are both reported under it, and an out-of-repo override may return null (C-13). A `Check` whose null branch returned "sound" must not pass
   - Depends on: 39.
 
-- [ ] **41. CHARACTERISE: `Check` accepts a sound declaration and rejects a missing subject (ADR 0073 `Check` contract)**
+- [x] **41. CHARACTERISE: `Check` accepts a sound declaration and rejects a missing subject (ADR 0073 `Check` contract)**
   - **USE COMMAND**: `/test-first when a subscription declares a real channel factory the declaration check should report no reason`
   - Test location: "tests/Paramore.Brighter.Core.Tests/MessagingGateway/ChannelFactoryDeclaration"
   - Test files:
