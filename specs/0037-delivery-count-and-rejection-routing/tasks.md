@@ -450,7 +450,7 @@
     - Append `RoutingKey? deadLetterRoutingKey = null, RoutingKey? invalidMessageRoutingKey = null` at the **end** of both ctors (`GcpPubSubSubscription.cs:113`, `:164`)
     - Implement both interfaces with `{ get; set; }`, as `SqsSubscription` does (`:47`, `:52`) (ADR 0078 step 2)
 
-- [ ] **5.2 TEST + IMPLEMENT: The IAM status-code filter tolerates only Unimplemented, PermissionDenied and Unauthenticated, and client construction tolerates only `InvalidOperationException`**
+- [x] **5.2 TEST + IMPLEMENT: The IAM status-code filter tolerates only Unimplemented, PermissionDenied and Unauthenticated, and client construction tolerates only `InvalidOperationException`**
   - **USE COMMAND**: `/test-first when an iam call fails should tolerate only unimplemented permission denied and unauthenticated and rethrow everything else`
   - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway"
   - Test file: `When_an_iam_call_fails_should_tolerate_only_the_permitted_status_codes.cs`
