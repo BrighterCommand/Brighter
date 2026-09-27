@@ -408,6 +408,11 @@ foreach (var row in rows)
 failedAssertions += CheckLedgerLeftAsFound(declaredRow, repositoryRoot);
 failedAssertions += CheckPlantedLedgerUntouchedOnGateFailure(repositoryRoot, UnfinishedTarget);
 
+// T7.1 residue guard (AC-83). Run last, over every target any row above used.
+failedAssertions += CheckNoWriteResidue(
+    repositoryRoot,
+    [DeclaredTarget, ZeroIdTarget, NoTasksTarget, AdrUnresolvedTarget, UnfinishedTarget, CalibrationTarget, "specs/x"]);
+
 Console.WriteLine(failedAssertions == 0
     ? $"{rows.Length} row(s) passed."
     : $"{failedAssertions} failed assertion(s) across {rows.Length} row(s).");
@@ -1662,6 +1667,52 @@ static int CheckLedgerLeftAsFound(Row row, string repositoryRoot)
         failures++;
     }
     File.Delete(ledgerFullPath);
+
+    return failures;
+}
+
+// T7.1 residue guard (AC-83): after every other row has run, no .show-me-ledger.json.tmp and no
+// other untracked or modified file remains in any target this script touches. It cannot be
+// observed red — T3.1's plain write never created a temporary file — so it is a regression guard
+// against a future change to the write path, not a red/green test (NFR-9, *What it does not test*).
+static int CheckNoWriteResidue(string repositoryRoot, string[] targets)
+{
+    var failures = 0;
+
+    foreach (var target in targets)
+    {
+        var tmpPath = Path.Combine(repositoryRoot, target, ".show-me-ledger.json.tmp");
+        if (File.Exists(tmpPath))
+        {
+            Console.WriteLine($"FAIL write residue ({target}): a .show-me-ledger.json.tmp was left behind");
+            failures++;
+        }
+    }
+
+    var startInfo = new ProcessStartInfo("git")
+    {
+        WorkingDirectory = repositoryRoot,
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+        UseShellExecute = false,
+    };
+    startInfo.ArgumentList.Add("status");
+    startInfo.ArgumentList.Add("--porcelain");
+    startInfo.ArgumentList.Add("--");
+    foreach (var target in targets)
+    {
+        startInfo.ArgumentList.Add(target);
+    }
+
+    using var process = Process.Start(startInfo)!;
+    var output = process.StandardOutput.ReadToEnd();
+    process.WaitForExit();
+
+    foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+    {
+        Console.WriteLine($"FAIL write residue: untracked or modified path left behind: {line}");
+        failures++;
+    }
 
     return failures;
 }

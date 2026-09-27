@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 const int UsageErrorExitCode = 1;
 const int ToolingFaultExitCode = 1;
 const int GateNotPassedExitCode = 2;
+const int LedgerCapBytes = 65_536;
 
 // ADR 0072 KC1's argument grammar: {target}; {target} --pinned {base} {head};
 // {target} --release-notes {path}; {target} with both, in either order. Anything else — an
@@ -319,7 +320,29 @@ var options = new JsonSerializerOptions
     Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
 };
 
-File.WriteAllText(Path.Combine(target, ".show-me-ledger.json"), ledger.ToJsonString(options));
+// FR-21's cap and atomicity rule (AC-83): serialise in memory first, refuse before creating any
+// file when the size is over budget, and otherwise make the ledger visible only by a single
+// File.Move — never by writing, appending to or truncating the real path in place.
+var ledgerBytes = Encoding.UTF8.GetBytes(ledger.ToJsonString(options));
+if (ledgerBytes.Length > LedgerCapBytes)
+{
+    return ToolingFaultExitCode;
+}
+
+var ledgerPath = Path.Combine(target, ".show-me-ledger.json");
+var tmpLedgerPath = ledgerPath + ".tmp";
+try
+{
+    File.WriteAllBytes(tmpLedgerPath, ledgerBytes);
+    File.Move(tmpLedgerPath, ledgerPath, overwrite: true);
+}
+finally
+{
+    if (File.Exists(tmpLedgerPath))
+    {
+        File.Delete(tmpLedgerPath);
+    }
+}
 
 return 0;
 
