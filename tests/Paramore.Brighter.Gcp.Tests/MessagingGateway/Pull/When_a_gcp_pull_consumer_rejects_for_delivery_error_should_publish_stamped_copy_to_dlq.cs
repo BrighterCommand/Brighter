@@ -26,6 +26,8 @@ THE SOFTWARE. */
 using System;
 using System.Diagnostics;
 using System.Threading;
+using Serilog.Events;
+using Serilog.Sinks.TestCorrelator;
 using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
@@ -234,10 +236,7 @@ public class GcpPullConsumerRejectDlqRoutingTests
 
     /// <summary>
     /// Missing receipt handle (ADR 0078): the router still publishes a stamped copy to the DLQ,
-    /// and Reject returns true even though the original cannot be settled.
-    /// Note: the Error log ("original cannot be settled") cannot be asserted because
-    /// GcpPullMessageConsumer uses a static readonly logger initialised before this test can swap
-    /// ApplicationLogging.LoggerFactory — see LOG_CAPTURE note in task 5.5a.
+    /// and Reject returns true even though the original cannot be settled, which is logged as an Error.
     /// </summary>
     [Fact]
     public void When_rejecting_with_missing_receipt_handle_on_pull_should_still_publish_to_dlq_and_return_true()
@@ -269,11 +268,18 @@ public class GcpPullConsumerRejectDlqRoutingTests
             // Explicitly ensure no ReceiptHandle in bag
             message.Header.Bag.Remove("ReceiptHandle");
 
+            using var logContext = TestCorrelator.CreateContext();
+
             // Act
             var result = channel.Reject(message, new MessageRejectionReason(RejectionReason.DeliveryError, "missing handle test"));
 
             // Assert — Reject returns true
             Assert.True(result);
+
+            // Assert — an Error naming the message says the original cannot be settled
+            var settleError = Assert.Single(TestCorrelator.GetLogEventsFromCurrentContext(),
+                e => e.Level == LogEventLevel.Error && e.RenderMessage().Contains(message.Id.Value));
+            Assert.Contains("cannot be settled", settleError.RenderMessage());
 
             // Assert — DLQ copy still published within 60s
             Message dlqMessage = new Message();
@@ -493,11 +499,18 @@ public class GcpPullConsumerRejectDlqRoutingTests
                 new MessageBody("missing-handle-body-ordering"));
             message.Header.Bag.Remove("ReceiptHandle");
 
+            using var logContext = TestCorrelator.CreateContext();
+
             // Act
             var result = channel.Reject(message, new MessageRejectionReason(RejectionReason.DeliveryError, "ordering missing handle test"));
 
             // Assert
             Assert.True(result);
+
+            // Assert — an Error naming the message says the original cannot be settled
+            var settleError = Assert.Single(TestCorrelator.GetLogEventsFromCurrentContext(),
+                e => e.Level == LogEventLevel.Error && e.RenderMessage().Contains(message.Id.Value));
+            Assert.Contains("cannot be settled", settleError.RenderMessage());
 
             Message dlqMessage = new Message();
             var stopwatch = Stopwatch.StartNew();

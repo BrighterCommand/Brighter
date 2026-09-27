@@ -27,6 +27,8 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Serilog.Events;
+using Serilog.Sinks.TestCorrelator;
 using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
@@ -209,8 +211,8 @@ public class GcpPullConsumerRejectDlqRoutingAsyncTests
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// Missing receipt handle: the DLQ copy is still published and RejectAsync returns true.
-    /// Note: the Error log cannot be asserted — static logger; see LOG_CAPTURE in task 5.5a.
+    /// Missing receipt handle: the DLQ copy is still published, an Error says the original cannot be
+    /// settled, and RejectAsync returns true.
     /// </summary>
     [Fact]
     public async Task When_rejecting_async_with_missing_receipt_handle_on_pull_should_still_publish_to_dlq_and_return_true()
@@ -240,11 +242,18 @@ public class GcpPullConsumerRejectDlqRoutingAsyncTests
                 new MessageBody("async-missing-handle-body"));
             message.Header.Bag.Remove("ReceiptHandle");
 
+            using var logContext = TestCorrelator.CreateContext();
+
             // Act
             var result = await channel.RejectAsync(message, new MessageRejectionReason(RejectionReason.DeliveryError, "async missing handle test"));
 
             // Assert
             Assert.True(result);
+
+            // Assert — an Error naming the message says the original cannot be settled
+            var settleError = Assert.Single(TestCorrelator.GetLogEventsFromCurrentContext(),
+                e => e.Level == LogEventLevel.Error && e.RenderMessage().Contains(message.Id.Value));
+            Assert.Contains("cannot be settled", settleError.RenderMessage());
 
             Message dlqMessage = new Message();
             var stopwatch = Stopwatch.StartNew();
@@ -446,11 +455,18 @@ public class GcpPullConsumerRejectDlqRoutingAsyncTests
                 new MessageBody("async-ordering-missing-handle-body"));
             message.Header.Bag.Remove("ReceiptHandle");
 
+            using var logContext = TestCorrelator.CreateContext();
+
             // Act
             var result = await channel.RejectAsync(message, new MessageRejectionReason(RejectionReason.DeliveryError, "async ordering missing handle test"));
 
             // Assert
             Assert.True(result);
+
+            // Assert — an Error naming the message says the original cannot be settled
+            var settleError = Assert.Single(TestCorrelator.GetLogEventsFromCurrentContext(),
+                e => e.Level == LogEventLevel.Error && e.RenderMessage().Contains(message.Id.Value));
+            Assert.Contains("cannot be settled", settleError.RenderMessage());
 
             Message dlqMessage = new Message();
             var stopwatch = Stopwatch.StartNew();
