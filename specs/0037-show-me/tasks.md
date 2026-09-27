@@ -798,7 +798,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - Implementation should: add the four template lines from ADR 0078 KC2 and the drifted form to the *DO NOT* block.
   - Traces to: FR-22, C-2, NFR-6, AC-87; ADR 0078 KC2, IA 2.
 
-- [ ] **TEST + IMPLEMENT: T15.3 — `/spec:review` treats a non-lead-in requirement declaration and a non-tag-first task checkbox as findings**
+- [x] **TEST + IMPLEMENT: T15.3 — `/spec:review` treats a non-lead-in requirement declaration and a non-tag-first task checkbox as findings**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
     - `git diff $PRE -- .claude/commands/spec/review.md` shows one added check under *Requirements Review Criteria* and one under *Tasks Review Criteria*, and no other criterion removed or reworded (AC-88).
