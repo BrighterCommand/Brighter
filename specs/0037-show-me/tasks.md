@@ -920,7 +920,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - Do: re-run the Verify set-ups of T9.1–T9.3, T11.1–T11.3, T12.1, T13.3, T14.1–T14.4, T14.6 and T14.7 on the real fixtures they name (`0002-*`, `0003`, `0005`, `0021`, `0023`, `0033`, plus `README.md` and `kafka-widget`). Check AC-1a, AC-3, AC-5, AC-6, AC-7, AC-8, AC-9, AC-10, AC-16, AC-19, AC-29, AC-35, AC-36, AC-37, AC-41, AC-42, AC-43, AC-44, AC-61, AC-70, AC-71, AC-72 and AC-93. AC-27 is checked on K2 in T17.5.
   - Traces to: FR-1–FR-3, FR-16, FR-17, FR-21, NFR-8, and the ACs listed.
 
-- [ ] **PROJECT: T17.5 — Regression sweep over the clone fixtures K1–K14**
+- [x] **PROJECT: T17.5 — Regression sweep over the clone fixtures K1–K14**
   - Do:
     - Rebuild R4 from the final commit and re-run the K-fixture set-ups, including K14's rule 2 and rule 3 runs. Check AC-15, AC-21, AC-22, AC-26 (K1), AC-27 (K2, with T14.4's `[]` stand-in), AC-28 (K2, `gh` failing), AC-40, AC-45, AC-52, AC-54, AC-55, AC-57, AC-58, AC-60, AC-64, AC-65, AC-66, AC-67, AC-68 and AC-85. Both halves of AC-57, AC-60, AC-64 and AC-65 follow the *Judged paths* rule.
     - (C-8 window, R8) For AC-25, compare the K2 run with `gh` failing (`Low`) with a `0036` run (`High`) in the same clone, also with `gh` failing, so both runs share one `gh` condition. The only difference in side effects is the text of `show-me.md`: the same shape of commands, one written path, and no marker, label or comment. The clone's `0036` figures are not calibration values (R4).
