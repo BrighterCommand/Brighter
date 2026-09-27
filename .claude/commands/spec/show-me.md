@@ -282,21 +282,90 @@ draws, naming the node and exactly one licensing source:
 
 A node with no row cannot be drawn.
 
-**This task implements only row 1 and row 2's non-raise half; row 2's raise, and rows 3–6, land with
-a later task — do not improvise them:**
+**Walking the ladder:**
 
 - When `triggers` is `null` (row 1, FR-16 row 12): hold **the no-diff line** as the Explainer's
   output, and stop. `triggers.d1`, `.d2` and `.d3` are not evaluated at all.
 - Otherwise, read `triggers.d1`, `triggers.d2` and `triggers.d3` — already computed in the ledger,
-  never re-evaluated. When all three are `false` and the model does not exercise FR-6 (b)'s raise:
-  hold **the no-trigger line** as the Explainer's output, with `{a}` = `buckets.src.files`, `{b}` =
-  `src_subdirectory_count` (`directory` when `{b}` is `1`, otherwise `directories`), `{c}` =
-  `public_api_lines`, `{d}` = `adr_resolved_count` — every value copied verbatim from the ledger.
-- Any other case — at least one of `d1`/`d2`/`d3` is `true`, or the model exercises the raise — is
-  row 2's raise or rows 3–6. Hold nothing yet; a later task decides those outcomes.
+  never re-evaluated.
+  - When all three are `false` and the model does not exercise FR-6 (b)'s raise (row 2, non-raise
+    half): hold **the no-trigger line** as the Explainer's output, with `{a}` = `buckets.src.files`,
+    `{b}` = `src_subdirectory_count` (`directory` when `{b}` is `1`, otherwise `directories`), `{c}` =
+    `public_api_lines`, `{d}` = `adr_resolved_count` — every value copied verbatim from the ledger.
+    Stop; no reads are issued.
+  - Otherwise — a test fired (at least one of `d1`/`d2`/`d3` is `true`), or all three are `false` but
+    the model exercises FR-6 (b)'s raise, naming one explicit one-sentence reason for the relationship
+    the prose cannot carry — elect one relationship to draw and continue to *Participants and
+    reading* below.
 
-Whatever the Explainer holds is for a later task's placement into `## What changed and why`; nothing
-is written under that heading yet.
+**Participants and reading** (ADR 0077 KC2). A participant is a file the elected relationship needs: a
+changed file in the spec diff, a file an ADR extract names, or a file a participant already read
+names. Every participant passes `git ls-files --error-unmatch` before it is read — an untracked path
+can never become a node. Spend in this order:
+
+1. **Probe the known set first.** Before any read, run `wc -c` on every participant already named,
+   and plan which to read whole and which to extract. Probing is free and never by itself abandons the
+   relationship.
+2. **Probe each newly found file before reading it.** A participant discovered while reading — a
+   caller named in a file already read — is probed the same way before it is opened.
+3. **Read whole, extract, or abandon.** The bytes remaining are whatever the general allowance has
+   left, plus the 100,000 B reserve — only these reads may spend the reserve, and when a run draws two
+   diagrams they share the same one reserve (AC-63). A file that fits is read whole. A file that does
+   not fit is read instead by a sized `grep -n -F` for the literal member names the relationship needs
+   (never a pattern) — itself an unplanned window, priced and charged before the lines it finds are
+   read as windows — recorded as `used (targeted extraction)`. If not even the extract fits, the
+   relationship cannot be completed (row 4, below).
+
+Every read here is an unplanned window (sized with `wc -c`, at most 25,000 B, halved until it fits),
+charged to the same read log Step 4 uses.
+
+**Deciding among rows 3–6, before reading or once it is under way:**
+
+- **Row 3, stand-down.** A test fired, but the evidence does not cohere into one drawable
+  relationship — seen before any read (e.g. the fired values describe unrelated, incidental changes
+  with no shared call path, flow, hierarchy or component relationship — D2 firing on ten added
+  properties across ten otherwise-unconnected DTOs is FR-6 (b)'s own example), or found while reading.
+  Hold **the stand-down line**, naming which test(s) fired and one explicit sentence for why the
+  evidence does not cohere. Reads already made stay charged; nothing already read is discarded from
+  the log, and nothing is rendered — never an invented relationship.
+- **Row 4, abandon.** The elected relationship — from a fired test, or from the raise — cannot be
+  completed: a file it needs cannot be afforded even as an extract, or, for a raise, reading shows no
+  relationship after all. Abandon: reads already made stay charged. Hold **the budget line** when the
+  relationship was elected from a fired test, or **the no-trigger line** when it was elected as a
+  raise — a raise that does not complete counts as not exercised, which is exactly the no-trigger
+  line's condition (no test fired, no raise exercised).
+- **Row 5, the path tree.** A test fired, and the only relationship worth drawing is the
+  reviewer's-starting-files path tree among three to seven changed files (FR-14). Read, render the
+  tree — an ASCII tree in a plain fenced block — and target it at `## Where to look first` instead of
+  `## What changed and why`; hand over the tree's three to seven changed paths for FR-14's list, each
+  marked `(unchanged)` in the tree when it is not itself in the spec diff. Hold **the placed-elsewhere
+  line** for `## What changed and why`.
+- **Row 6, draw the block.** Any other elected relationship that can be afforded, including every
+  raise that finds one. Read, render the block, and target it at `## What changed and why`:
+  - a **sequence, call flow, or state/lifecycle** → a Mermaid fenced block;
+  - a **file, type or namespace hierarchy** → an ASCII tree in a plain fenced block;
+  - a **component or box-and-arrow sketch** → either, at the model's discretion (judgement, NFR-1).
+
+  When row 6 applies, the Explainer may also elect a second diagram for `## Where to look first` — a
+  tree or sketch of how three to seven changed paths relate, by containment or by which file calls
+  which — spending from the same remainder as the first (one reserve for the whole run, AC-63) and
+  handing over those paths for FR-14's list; not drawing it needs no line. After any other row,
+  `## Where to look first` carries no second diagram. After a raise that draws (row 6), hold the
+  raise's one-sentence reason alongside the diagram.
+
+**Rendering.** Every fenced block follows `.agent_instructions/documentation.md`'s Mermaid trap list:
+no `;` inside a `sequenceDiagram`, no `<` or `>` in a label, no HTML entities, and quoted labels where
+a label carries a comma, colon or parenthesis. At most 40 lines including the opening and closing
+fences, at most 100 characters per line (FR-6 (d)) — a relationship that will not fit is drawn at too
+fine a grain: cut detail, or draw the narrower relationship, rather than stretching past the cap.
+
+Before rendering, hold the node list — one row per drawn node, per *The node-list row shape* above. A
+node with no row is not rendered.
+
+**What this task holds, for a later task to place:** for `## What changed and why`, at most one
+rendered block or exactly one named line, never both; for `## Where to look first`, at most one
+rendered block (row 5's tree, or row 6's optional second diagram) together with its three to seven
+changed paths. Nothing is written under either heading yet.
 
 **`## How it was built`** (FR-9) states the task shape and the commit shape, and nothing else — no
 review history, no CI state. Both figures are copied verbatim from the ledger's `tasks` and `commits`
