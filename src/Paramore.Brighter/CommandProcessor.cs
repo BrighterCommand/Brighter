@@ -463,6 +463,11 @@ namespace Paramore.Brighter
         /// <typeparam name="T"></typeparam>
         /// <param name="event">The event.</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
+        /// <remarks>
+        /// Observers do not inherit the caller's <see cref="RequestContext.ResilienceContext"/>,
+        /// regardless of observer count. Configured resilience strategies still apply, and the
+        /// caller's execution context is left unchanged.
+        /// </remarks>
         public void Publish<T>(T @event, RequestContext? requestContext = null) where T : class, IRequest
         {
             if (_handlerFactorySync == null)
@@ -479,7 +484,7 @@ namespace Paramore.Brighter
                 
                 using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);
                 Log.BuildingSendPipelineForEvent(s_logger, @event.GetType(), @event.Id.Value);
-                var handlerChain = builder.Build(@event, context);
+                var handlerChain = builder.Build(@event, context, excludeResilienceContext: true);
 
                 var handlerCount = handlerChain.Count();
 
@@ -568,6 +573,12 @@ namespace Paramore.Brighter
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
+        /// <remarks>
+        /// Observers do not inherit the caller's <see cref="RequestContext.ResilienceContext"/>,
+        /// regardless of observer count. Configured resilience strategies receive
+        /// <paramref name="cancellationToken"/> instead of the caller's resilience-context token.
+        /// The caller's execution context is left unchanged.
+        /// </remarks>
         public async Task PublishAsync<T>(
             T @event,
             RequestContext? requestContext = null,
@@ -590,7 +601,7 @@ namespace Paramore.Brighter
             {
                 Log.BuildingSendAsyncPipelineForEvent(s_logger, @event.GetType(), @event.Id.Value);
 
-                var handlerChain = builder.BuildAsync(@event, context, continueOnCapturedContext);
+                var handlerChain = builder.BuildAsync(@event, context, continueOnCapturedContext, excludeResilienceContext: true);
                 var handlerCount = handlerChain.Count();
 
                 Log.FoundAsyncHandlerCount(s_logger, handlerCount, @event.GetType(), @event.Id.Value);

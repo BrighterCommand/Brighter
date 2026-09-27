@@ -128,6 +128,11 @@ namespace Paramore.Brighter
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="event">The event.</param>
         /// <exception cref="AggregateException">Throws an aggregate exception on failure of a pipeline but executes remaining.</exception>
+        /// <remarks>
+        /// Publish observers do not inherit <see cref="RequestContext.ResilienceContext"/>, even when
+        /// only one observer is registered. Configured resilience strategies still apply, and the
+        /// caller's execution context is left unchanged.
+        /// </remarks>
         void Publish<TRequest>(TRequest @event, RequestContext? requestContext = null) where TRequest : class, IRequest;
         
         /// <summary>
@@ -162,6 +167,12 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
         /// <exception cref="AggregateException">Throws an aggregate exception on failure of a pipeline but executes remaining.</exception>
+        /// <remarks>
+        /// Publish observers do not inherit <see cref="RequestContext.ResilienceContext"/>, even when
+        /// only one observer is registered. Configured resilience strategies still apply and receive
+        /// <paramref name="cancellationToken"/>, rather than the caller's resilience-context token.
+        /// The caller's execution context is left unchanged.
+        /// </remarks>
         Task PublishAsync<TRequest>(TRequest @event, 
             RequestContext? requestContext = null,
             bool continueOnCapturedContext = true, 

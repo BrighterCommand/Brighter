@@ -170,9 +170,14 @@ namespace Paramore.Brighter
         public InstrumentationOptions InstrumentationOptions { get; set; } = InstrumentationOptions.All;
 
         /// <summary>
-        /// Create a new instance of the Request Context
+        /// Creates a new request context with a shallow copy of the bag and shared configuration.
         /// </summary>
-        /// <returns>New Instance of the message</returns>
+        /// <remarks>
+        /// The copy omits <see cref="ResilienceContext"/> because Polly execution state belongs to
+        /// one execution and must not be shared by independent observers or outbox confirmation callbacks.
+        /// The resilience pipeline registry is retained, so configured strategies still apply.
+        /// </remarks>
+        /// <returns>A new request context without the caller's Polly execution state.</returns>
         public IRequestContext CreateCopy()
             => new RequestContext(Bag)
             {
