@@ -652,10 +652,29 @@ Nothing else in this section: no bucket table, no bullets below, no zero figures
 9. When `local_divergence` is not `null`: `- Local branch {local_divergence.name} is at
    {local_divergence.sha} and differs from the measured ref.`
 
-Before the assembled text names any repository path — none does yet, at this task; a diagram or a
-`## Where to look first` entry will, once a later task adds them — run
-`git ls-files --error-unmatch {path}` on it and drop it rather than write it if the check fails
-(FR-17, NFR-5).
+**`## Where to look first`** (FR-14) states the files a reviewer should open first, or, when no diff
+was measured, row 13's fallback line in their place.
+
+- **When `spec_branch` is `null`** (row 13, FR-16 row 12): write exactly `No diff measured — spec
+  branch not determinable, so no files can be ranked. Start from specs/{dir}/tasks.md and the ADRs
+  listed in specs/{dir}/.adr-list.` No paths, no diagram; FR-14's path-count rule does not apply.
+- **Otherwise, the path source**: the `src/`-scoped diff's paths, when `buckets.src.files` is not
+  `0`; otherwise the paths `git diff --name-only` over `{merge_base}..{measured_head}` found (Step
+  4's own read, issued for exactly this case).
+- **The Explainer's handover.** When the Explainer drew a diagram targeting this section (row 5 of
+  its ladder, or row 6's optional second diagram), place that diagram here and use its three to seven
+  handed-over paths as the path list below — never re-derive a separate set; each node the diagram
+  carries that is not itself in the spec diff stays marked `(unchanged)`, per the Explainer's own
+  rule. After any other row, this section carries no diagram.
+- **The path list.** Three to seven paths from the path source, most-important first (judgement,
+  NFR-1, when the source holds more than seven), each with a reason of at most 25 words; every listed
+  path exists in the path source. When the path source holds fewer than three paths, list every one
+  of them, each with its reason — a list shorter than three is then complete, not a shortfall
+  (FR-14). A diagram drawn here consumes no path slot.
+
+Before the assembled text names any repository path — a link, a `## Where to look first` entry, or a
+diagram node — run `git ls-files --error-unmatch {path}` on it and drop it rather than write it if
+the check fails (FR-17, NFR-5).
 
 ### Step 6 — Write the file once
 
