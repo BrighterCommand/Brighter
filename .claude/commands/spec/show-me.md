@@ -719,9 +719,18 @@ not inputs to it); `specs/.current-spec` (it only chooses the target); the exist
 `PROMPT-*.md` companion (row 11, FR-16 — neither is read at all); review comments; CI checks (FR-9,
 FR-15 — neither is an input to this command).
 
-Before the assembled text names any repository path — a link, a `## Where to look first` entry, or a
-diagram node — run `git ls-files --error-unmatch {path}` on it and drop it rather than write it if
-the check fails (FR-17, NFR-5).
+**Before the `Write`** (ADR 0077 KC6), check the fully assembled text, and drop or redraw whatever
+fails rather than write it:
+
+- **Every path is tracked.** Run `git ls-files --error-unmatch {path}` on every repository path the
+  text names — an ADR link, a `## Where to look first` entry, a diagram node, or any other reference
+  — and drop the reference when the check fails (FR-17, NFR-5).
+- **At most two fenced blocks**, and each one is a diagram — never a code sample, a table rendered as
+  a block, or anything else.
+- **Each block's caps.** At most 40 lines, counting its own fences; no line over 100 characters
+  (FR-6 (d)).
+- **`## What changed and why`'s exclusivity.** Exactly one of a rendered block or one of the five
+  named lines — never both, never neither.
 
 ### Step 6 — Write the file once
 
