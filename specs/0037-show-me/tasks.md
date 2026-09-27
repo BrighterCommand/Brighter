@@ -663,7 +663,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - Implementation should: compute the maximum over Low < Medium < High; allow a raise only with a first rationale sentence naming what the factors miss; write FR-13's sentence as a literal; and hand the list of factors at the maximum to the Synthesiser.
   - Traces to: FR-12, FR-13, AC-23, AC-24 (sentence); ADR 0073 KC4, IA 4.
 
-- [ ] **TEST + IMPLEMENT: T13.5 — The Classifier judges each breaking-change item, requirement status and uncovered piece of work once, with evidence, and tallies only its own judgements**
+- [x] **TEST + IMPLEMENT: T13.5 — The Classifier judges each breaking-change item, requirement status and uncovered piece of work once, with evidence, and tallies only its own judgements**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by (clone, then (C-8)):
     - K2: `No deviations`; F1, F2 and F5 all `Low` (AC-21, AC-55).
