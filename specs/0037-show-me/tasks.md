@@ -430,7 +430,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - Emit a single-line JSON record with the fixed field names `total` and `excluded_fence_lines`, which T14.7 reads. T8.2 adds `in_range`.
   - Traces to: NFR-2, FR-21 (*Modes*), NFR-9 (regression 2), AC-80, AC-59 (mechanism); ADR 0072 KC1 stderr records, IA 9.
 
-- [ ] **TEST + IMPLEMENT: T8.2 — Word-count mode reports whether the total is inside 400–2,000, with inclusive bounds**
+- [x] **TEST + IMPLEMENT: T8.2 — Word-count mode reports whether the total is inside 400–2,000, with inclusive bounds**
   - **USE COMMAND**: `/test-first when the measurement script word-counts a file it should report in_range true for the conforming fixture and false for the eight-token fixture`
   - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
   - Test row(s): `-- .claude/test-fixtures/show-me/wordcount-conforming.md --word-count`, and T8.1's eight-token row extended with an `in_range` assertion.
