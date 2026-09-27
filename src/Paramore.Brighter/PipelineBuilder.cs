@@ -172,6 +172,9 @@ namespace Paramore.Brighter
         /// <exception cref="NullReferenceException">Thrown if the synchronous handler factory is null.</exception>
         /// <exception cref="ConfigurationException">Thrown if there is an error building the pipeline.</exception>
         public Pipelines<TRequest> Build(TRequest request, IRequestContext requestContext)
+            => Build(request, requestContext, excludeResilienceContext: false);
+
+        internal Pipelines<TRequest> Build(TRequest request, IRequestContext requestContext, bool excludeResilienceContext)
         {
             if(_syncHandlerFactory is null)
                 throw new NullReferenceException("HandlerFactorySync is null");
@@ -187,6 +190,8 @@ namespace Paramore.Brighter
                 observerTypes.Each(observer =>
                 {
                     var context = observerTypes.Length == 1 ? requestContext : requestContext.CreateCopy();
+                    if (excludeResilienceContext && context.ResilienceContext is not null)
+                        context = new PublishRequestContext(context);
                     var instanceScope = GetSyncInstanceScope();
                     var handler = (RequestHandler<TRequest>?)_syncHandlerFactory.Create(observer, instanceScope);
                     if (handler is null)
@@ -217,6 +222,10 @@ namespace Paramore.Brighter
         /// <exception cref="NullReferenceException">Thrown if the async handler factory is null.</exception>
         /// <exception cref="ConfigurationException">Thrown if there is an error building the pipeline.</exception>
         public AsyncPipelines<TRequest> BuildAsync(TRequest request, IRequestContext requestContext, bool continueOnCapturedContext)
+            => BuildAsync(request, requestContext, continueOnCapturedContext, excludeResilienceContext: false);
+
+        internal AsyncPipelines<TRequest> BuildAsync(TRequest request, IRequestContext requestContext,
+            bool continueOnCapturedContext, bool excludeResilienceContext)
         {
             if(_asyncHandlerFactory is null)
                 throw new NullReferenceException("AsyncHandlerFactory is null");
@@ -232,6 +241,8 @@ namespace Paramore.Brighter
                 observerTypes.Each(observer =>
                 {
                     var context = observerTypes.Length == 1 ? requestContext : requestContext.CreateCopy();
+                    if (excludeResilienceContext && context.ResilienceContext is not null)
+                        context = new PublishRequestContext(context);
                     var instanceScope = GetAsyncInstanceScope();
                     var handler = (RequestHandlerAsync<TRequest>?)_asyncHandlerFactory.Create(observer, instanceScope);
                     if (handler is null)

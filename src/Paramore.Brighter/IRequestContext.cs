@@ -119,6 +119,10 @@ namespace Paramore.Brighter
         /// <summary>
         /// Create a new copy of the Request Context
         /// </summary>
+        /// <remarks>
+        /// Copies must not share <see cref="ResilienceContext"/> across independent executions.
+        /// Retain the resilience pipeline registry, but omit the execution context.
+        /// </remarks>
         /// <returns>a new copy of the request context</returns>
         IRequestContext CreateCopy();
     }

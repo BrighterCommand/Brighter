@@ -1,6 +1,6 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
-Copyright © 2026 Irakli Gabisonia
+Copyright © 2026 Avtandil Ushikishvili <a.ushikishvili@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,19 +24,17 @@ THE SOFTWARE. */
 
 #nullable enable
 
-using System.Runtime.CompilerServices;
+using System;
+using System.Threading;
 
-namespace Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles;
+namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 
-internal sealed class ResilienceActionHandler : RequestHandler<ResilienceActionCommand>
+internal sealed class ResilienceContextProbe(
+    Action<Type, int, IRequestContext, CancellationToken> observe) : IRequest
 {
-    // Keep the throwing frame available for stack-trace assertions.
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    public override ResilienceActionCommand Handle(ResilienceActionCommand command)
-    {
-        command.Attempts++;
-        if (command.Exception != null)
-            throw command.Exception;
-        return base.Handle(command);
-    }
+    public Id Id { get; set; } = Id.Random();
+    public Id? CorrelationId { get; set; }
+
+    public void Observe(Type handlerType, int attempt, IRequestContext context, CancellationToken cancellationToken)
+        => observe(handlerType, attempt, context, cancellationToken);
 }

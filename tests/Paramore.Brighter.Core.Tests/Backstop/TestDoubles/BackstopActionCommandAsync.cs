@@ -24,19 +24,14 @@ THE SOFTWARE. */
 
 #nullable enable
 
-using System.Runtime.CompilerServices;
+using System;
+using System.Threading;
 
-namespace Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles;
+namespace Paramore.Brighter.Core.Tests.Backstop.TestDoubles;
 
-internal sealed class ResilienceActionHandler : RequestHandler<ResilienceActionCommand>
+internal sealed class BackstopActionCommandAsync(Exception? exception = null) : Command(Id.Random())
 {
-    // Keep the throwing frame available for stack-trace assertions.
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    public override ResilienceActionCommand Handle(ResilienceActionCommand command)
-    {
-        command.Attempts++;
-        if (command.Exception != null)
-            throw command.Exception;
-        return base.Handle(command);
-    }
+    public Exception? Exception { get; } = exception;
+    public int Attempts { get; set; }
+    public CancellationToken CancellationToken { get; set; }
 }
