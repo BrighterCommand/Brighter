@@ -102,7 +102,7 @@ cell remains `Unknown`.
   `channelName` at the rejection routing key (matching how the main `CreateSubscription` aligns
   `ChannelName` with the topic) makes all five behaviours `Pass`; the reject-to-DLQ routing itself was
   already conformant (Brighter-managed DLQ, ADR `0041`).
-- `RMQ.Async / Classic` is `Pass` on **ten** behaviours and `Deferred -> #4240` on **FR-5 only**
+- `RMQ.Async / Classic` is `Pass` on **ten** behaviours and `Fixed (#4387)` on **FR-5**
   (a separate invalid channel). **⚠️ Reference-environment fix first:** `docker-compose-rmq.yaml` pointed
   at `rabbitmq:management` (now RabbitMQ 4.3), which **hard-rejects the transient non-exclusive queues the
   gateway declares** (`INTERNAL_ERROR - Feature 'transient_nonexcl_queues' is deprecated`) — every test
@@ -167,14 +167,13 @@ cell remains `Unknown`.
   FR-8, or if one of the four starts stamping metadata and this note goes stale. **Measured: 24 providers,
   8 with all-empty keys; the other four (GCP ×4) leave FR-8 `Deferred`, so they claim nothing.** So
   FR-4/6/8/17 `Pass` for RMQ (routing) while metadata-stamping transports (SQS/Redis/Postgres/MSSQL, ADRs
-  `0038`/`0039`/`0040`/`0041`) still assert the full metadata. **⛔ FR-5 (a *separate* invalid channel)
-  stays `Deferred -> #4240`:** neither `RmqMessageConsumer` nor `RmqSubscription` models an invalid
-  destination — an unacceptable rejection dead-letters to the *DLQ*, not a distinct invalid channel (the
-  real invalid read hook observes `MT_NONE`). This is not relaxed by FR-8 (it is a routing gap, not a
-  metadata gap); conforming requires Brighter-managed invalid routing in `src/…RMQ.Async` (three deferral
-  preconditions met: evidence recorded, the invalid read hook was implemented, the residual is a
-  substantial src change).
-- `RMQ.Async / Quorum` mirrors `RMQ.Async / Classic` exactly: **10 `Pass` + FR-5 `Deferred -> #4240`**.
+  `0038`/`0039`/`0040`/`0041`) still assert the full metadata. **FR-5 is `Fixed (#4387)`**: the subscription exposes an
+  invalid routing key, and unacceptable messages are forwarded with publisher confirmations before
+  the original is acknowledged. Other rejection reasons and the fallback when no invalid destination
+  is configured retain the native DLX behavior. The generated FR-5 test always asserts invalid-channel
+  arrival and DLQ absence; dedicated gateway tests additionally assert all five metadata fields on the
+  Brighter-managed invalid route. The empty provider keys still describe the native DLQ route.
+- `RMQ.Async / Quorum` mirrors `RMQ.Async / Classic` exactly: **10 `Pass` + FR-5 `Fixed (#4387)`**.
   Quorum queues use the same RabbitMQ AMQP gateway (`src/Paramore.Brighter.MessagingGateway.RMQ.Async`),
   so every conformance argument that applies to Classic applies to Quorum. **Delay (FR-2/FR-9) `Pass` via
   the same wired `RmqHarnessMessageScheduler`** — the Quorum provider presents a plain (non-delay) durable
@@ -183,11 +182,8 @@ cell remains `Unknown`.
   via the native DLX under the FR-8 relaxation** — Quorum queues support `x-dead-letter-exchange` /
   `x-dead-letter-routing-key` identically to Classic queues; `RejectionMetadataKeys` is empty → routing
   only asserted (same as Classic). **FR-16 `Pass`** — `RmqMessageConsumer.NackAsync` → `BasicNackAsync(requeue:
-  true)` → broker redelivers, same mechanism as Classic. **FR-7/15/22 `Pass`** natively. **⛔ FR-5 (a
-  *separate* invalid channel) stays `Deferred -> #4240`** — same architectural src gap as Classic: an
-  unacceptable rejection dead-letters to the DLX, not a distinct invalid channel; the real invalid read
-  hook observes `MT_NONE` (evidence from the Quorum test run on a live 4.2 broker, both variants); the
-  residual is a substantial src change to `src/…RMQ.Async` (three deferral preconditions met).
+  true)` → broker redelivers, same mechanism as Classic. **FR-7/15/22 `Pass`** natively. **FR-5 is `Fixed (#4387)`** via the same confirmed
+  invalid-message forwarding as Classic.
 - `RocketMQ / RocketMQMessagingGateway` — **9 `Fixed (#4240)` + FR-2 / FR-15 `Deferred -> #4240`**, both
   variants, on a live RocketMQ 5.5.0 broker (Reactor + Proactor each **21 pass / 2 skip / 0 fail**).
   Every passing cell is `Fixed` (not `Pass`) because of a required `src` fix: `RocketMqMessageProducer`
@@ -255,7 +251,7 @@ cell remains `Unknown`.
     after nack on a 30 s ceiling — same root cause as Redis (destructive BLPOP) and MSSQL (row deleted on
     read). Three deferral preconditions met: evidence recorded (live Mosquitto broker, both variants),
     fix is not localized (requires a redelivery buffer or QoS-level redesign in `src`), maintainer sign-off.
-- `RMQ.Sync / RmqSyncMessagingGateway` — **10 `Fixed (#4240)` + FR-5 `Deferred -> #4240`**, both
+- `RMQ.Sync / RmqSyncMessagingGateway` — **10 `Fixed (#4240)` + FR-5 `Fixed (#4387)`**, both
   variants, on a live RabbitMQ 4.2 broker with management + delay plugin image (Reactor + Proactor each
   **19 pass / 1 skip / 0 fail** in the canonical generated suite). Every passing cell is `Fixed` (not
   `Pass`) because of a required `src` fix: `RmqMessageProducer.DisposeAsync()` created a
@@ -269,11 +265,9 @@ cell remains `Unknown`.
   dead-letters to the configured DLX; `RejectionMetadataKeys` is empty → routing only asserted (same
   mechanism as RMQ.Async). **FR-15 (explicit zero-delay requeue) `Fixed`** — `RequeueMessage`
   republishes with a new AMQP message ID (original stored in `OriginalMessageIdHeaderName`); asserted
-  correctly by `RmqMessageAssertion`. **FR-16/22 `Fixed`** natively. **⛔ FR-5 (a *separate* invalid
-  channel) `Deferred -> #4240`** — same architectural src gap as RMQ.Async: an unacceptable rejection
-  calls `BasicReject` which dead-letters to the DLX, not a distinct invalid channel; the real invalid
-  read hook observes `MT_NONE` (evidence from live 4.2 broker, both variants); the residual is a
-  substantial src change to `src/…RMQ.Sync` (three deferral preconditions met).
+  correctly by `RmqMessageAssertion`. **FR-16/22 `Fixed`** natively. **FR-5 is `Fixed (#4387)`** via
+  confirmed invalid-message forwarding. A mandatory return or failed confirmation leaves the original
+  unacknowledged. The native DLX path remains in use for other rejection reasons and fallback.
   - **Test-isolation fix (harness, required):** the generated suite originally declared its own xUnit
     collection (`RmqSyncMessagingGateway`) while the hand-written broker tests use `RMQ`. **xUnit runs
     distinct collections in PARALLEL**, so the two suites hit the same broker concurrently and two tests
@@ -834,9 +828,9 @@ CI is unaffected — GitHub Actions `services:` mount no volume.
 | MSSQL / MSSQLMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass |
 | PostgresSQL / PostgresMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | Redis / RedisMessagingGateway | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass |
-| RMQ.Async / Classic | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
-| RMQ.Async / Quorum | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
+| RMQ.Async / Classic | Pass | Pass | Fixed (#4387) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
+| RMQ.Async / Quorum | Pass | Pass | Fixed (#4387) | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | RocketMQ / RocketMQMessagingGateway | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4353 (sign-off: @iancooper) |
 | AzureServiceBus / AzureServiceBusMessagingGateway | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) |
 | MQTT / MqttMessagingGateway | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Deferred -> #4351 (sign-off: @iancooper) |
-| RMQ.Sync / RmqSyncMessagingGateway | Fixed (#4240) | Fixed (#4240) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Pass |
+| RMQ.Sync / RmqSyncMessagingGateway | Fixed (#4240) | Fixed (#4240) | Fixed (#4387) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Fixed (#4240) | Pass |
