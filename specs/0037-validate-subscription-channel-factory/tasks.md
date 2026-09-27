@@ -954,7 +954,7 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
 
 *ADR 0073 steps 6-7.* **Must follow phase 5.**
 
-- [ ] **55. SETUP: the `build` job runs the twelve sweeps**
+- [x] **55. SETUP: the `build` job runs the twelve sweeps**
   - File: `.github/workflows/ci.yml`, the `build` job (declared at `:36`, which already runs `dotnet build --configuration Release` at `:60`)
   - Add one step running the twelve gateway test projects with
     `--configuration Release --filter "FullyQualifiedName~GatewayChannelFactoryDeclarationTests" --no-build`.
