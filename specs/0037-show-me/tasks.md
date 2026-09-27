@@ -861,7 +861,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 
 *ADR 0072 IA 11 and ADR 0078 IA 6. Depends on Phases 14–15.*
 
-- [ ] **DOC: T16.1 — Catalogue `/spec:show-me`, `/spec:write_release_notes` and both scripts in `.claude/commands/spec/README.md`**
+- [x] **DOC: T16.1 — Catalogue `/spec:show-me`, `/spec:write_release_notes` and both scripts in `.claude/commands/spec/README.md`**
   - Do:
     - Add command sections for both commands.
     - Add rows to the *Sub-agents & model policy* table (no sub-agent).
