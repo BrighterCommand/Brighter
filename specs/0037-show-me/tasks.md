@@ -782,7 +782,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 
 *ADR 0078 IA 1–5. Depends only on Phase 1, but it follows Phase 14 so that T15.5 can use a working `/spec:show-me`. The AC checks run each stated pattern by copying it from `requirements.md` § Definitions at verification time. No pattern is ever typed into a task or a command file.*
 
-- [ ] **TEST + IMPLEMENT: T15.1 — `/spec:requirements` requires the bold lead-in declaration form, shown by concrete examples that match the declared-id pattern**
+- [x] **TEST + IMPLEMENT: T15.1 — `/spec:requirements` requires the bold lead-in declaration form, shown by concrete examples that match the declared-id pattern**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
     - `grep -nE '{declared-id pattern}' .claude/commands/spec/requirements.md` matches every concrete-number example (`**FR-3 — …**`, `- **NFR-1 — …**`, `**FR-27.3 — …**`). The placeholder `**FR-{n} — {title}.**` is exempt.
