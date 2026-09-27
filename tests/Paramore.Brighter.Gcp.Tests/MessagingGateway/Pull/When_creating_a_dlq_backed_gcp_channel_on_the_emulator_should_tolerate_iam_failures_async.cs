@@ -24,14 +24,16 @@ THE SOFTWARE. */
 #nullable enable
 
 using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Google.Api.Gax;
-using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Gcp.Tests.TestDoubles;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.GcpPubSub;
+using Serilog.Events;
+using Serilog.Formatting.Display;
+using Serilog.Sinks.TestCorrelator;
 using Xunit;
 
 namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
@@ -43,11 +45,9 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 /// UpdateIAmRoleForSubscriptionAsync, logging exactly two Warnings (one per helper), each carrying
 /// the five diagnostic elements from the Warning template.
 ///
-/// Log capture: ApplicationLogging.LoggerFactory is replaced with a CapturingLoggerFactory before
-/// the GcpPubSubChannelFactory is constructed. The GcpIamCallTolerance field (initialised in the
-/// gateway constructor from ApplicationLogging) therefore picks up the capturing logger. The test is
-/// in [Collection("GcpIamLoggerCapture")] with DisableParallelization = true so that no other GCP
-/// collection runs in parallel while this test holds the global LoggerFactory.
+/// Log capture: the test assembly's module initializer routes ApplicationLogging to a Serilog
+/// TestCorrelator sink, and each test reads only the Warnings logged within its own
+/// TestCorrelator context, so the tests are safe to run in parallel with other collections.
 ///
 /// Environment: Pub/Sub emulator at localhost:8085, project brighter-test. In the members-unset
 /// case an outbound call to the real Resource Manager API is attempted; with the mock access token
@@ -55,30 +55,8 @@ namespace Paramore.Brighter.Gcp.Tests.MessagingGateway.Pull;
 /// refused with Unauthenticated, which is tolerated. See the sync variant for the full environment note.
 /// </summary>
 [Trait("Category", "GcpPubSubPull")]
-[Collection("GcpIamLoggerCapture")]
-public class DlqBackedGcpChannelIamToleranceAsyncTests : IAsyncLifetime
+public class DlqBackedGcpChannelIamToleranceAsyncTests
 {
-    private readonly ILoggerFactory _originalFactory;
-    private readonly CapturingLoggerFactory _capturingFactory;
-
-    public DlqBackedGcpChannelIamToleranceAsyncTests()
-    {
-        _originalFactory = ApplicationLogging.LoggerFactory;
-        _capturingFactory = new CapturingLoggerFactory();
-        // Set BEFORE creating any GcpPubSubChannelFactory: the gateway's field initialiser
-        // calls ApplicationLogging.CreateLogger<GcpIamCallTolerance>(), which reads from
-        // the factory, so the factory must be the capturing one at construction time.
-        ApplicationLogging.LoggerFactory = _capturingFactory;
-    }
-
-    public Task InitializeAsync() => Task.CompletedTask;
-
-    public Task DisposeAsync()
-    {
-        ApplicationLogging.LoggerFactory = _originalFactory;
-        return Task.CompletedTask;
-    }
-
     /// <summary>
     /// Members unset: the Resource Manager client is built (or IAM construction is tolerated) and
     /// GetProjectAsync on the real GCP API fails with Unauthenticated (tolerated). GetIamPolicyAsync
@@ -94,8 +72,6 @@ public class DlqBackedGcpChannelIamToleranceAsyncTests : IAsyncLifetime
         var dlqChannelName = new ChannelName(dlqTopicName.Value);
 
         var connection = CreateConnection();
-        // GcpPubSubChannelFactory extends GcpPubSubMessageGateway, whose constructor creates
-        // GcpIamCallTolerance. At this point the factory is already the capturing one.
         var channelFactory = new GcpPubSubChannelFactory(connection);
 
         var subscription = new GcpPubSubSubscription<MyCommand>(
@@ -118,6 +94,8 @@ public class DlqBackedGcpChannelIamToleranceAsyncTests : IAsyncLifetime
         IAmAChannelAsync? channel = null;
         try
         {
+            using var logContext = TestCorrelator.CreateContext();
+
             // Act
             channel = await channelFactory.CreateAsyncChannelAsync(subscription);
 
@@ -125,8 +103,9 @@ public class DlqBackedGcpChannelIamToleranceAsyncTests : IAsyncLifetime
             Assert.NotNull(channel);
 
             var projectId = GatewayFactory.GetProjectId();
-            var warnings = _capturingFactory.Entries
-                .Where(e => e.Level == LogLevel.Warning)
+            var warnings = TestCorrelator.GetLogEventsFromCurrentContext()
+                .Where(e => e.Level == LogEventLevel.Warning)
+                .Select(RenderLiteral)
                 .ToList();
 
             // AC-20: exactly two Warnings, one per IAM helper
@@ -134,10 +113,10 @@ public class DlqBackedGcpChannelIamToleranceAsyncTests : IAsyncLifetime
 
             // Consequence clause (fifth element) present in all Warnings
             foreach (var w in warnings)
-                Assert.Contains("native dead-lettering may be inactive", w.Message);
+                Assert.Contains("native dead-lettering may be inactive", w);
 
             // Parse each Warning against the five-element template and assert
-            var parsed = warnings.Select(w => ParseIamWarning(w.Message)).ToList();
+            var parsed = warnings.Select(ParseIamWarning).ToList();
 
             // Exactly one Warning per helper (Single throws if 0 or >1 match)
             var dlqParsed = parsed.Single(p => p.Helper == "UpdateIAmRoleForDeadLetterAsync");
@@ -208,6 +187,8 @@ public class DlqBackedGcpChannelIamToleranceAsyncTests : IAsyncLifetime
         IAmAChannelAsync? channel = null;
         try
         {
+            using var logContext = TestCorrelator.CreateContext();
+
             // Act
             channel = await channelFactory.CreateAsyncChannelAsync(subscription);
 
@@ -218,8 +199,9 @@ public class DlqBackedGcpChannelIamToleranceAsyncTests : IAsyncLifetime
             var expectedDlqResource = $"projects/{projectId}/topics/{dlqTopicName.Value}";
             var expectedSubResource = $"projects/{projectId}/subscriptions/{channelName.Value}";
 
-            var warnings = _capturingFactory.Entries
-                .Where(e => e.Level == LogLevel.Warning)
+            var warnings = TestCorrelator.GetLogEventsFromCurrentContext()
+                .Where(e => e.Level == LogEventLevel.Warning)
+                .Select(RenderLiteral)
                 .ToList();
 
             // AC-20: exactly two Warnings, one per IAM helper
@@ -227,10 +209,10 @@ public class DlqBackedGcpChannelIamToleranceAsyncTests : IAsyncLifetime
 
             // Consequence clause (fifth element) present in all Warnings
             foreach (var w in warnings)
-                Assert.Contains("native dead-lettering may be inactive", w.Message);
+                Assert.Contains("native dead-lettering may be inactive", w);
 
             // Parse each Warning against the five-element template and assert
-            var parsed = warnings.Select(w => ParseIamWarning(w.Message)).ToList();
+            var parsed = warnings.Select(ParseIamWarning).ToList();
 
             // Exactly one Warning per helper (Single throws if 0 or >1 match)
             var dlqParsed = parsed.Single(p => p.Helper == "UpdateIAmRoleForDeadLetterAsync");
@@ -278,6 +260,17 @@ public class DlqBackedGcpChannelIamToleranceAsyncTests : IAsyncLifetime
                 cfg.EmulatorDetection = EmulatorDetection.EmulatorOrProduction;
             },
         };
+
+    /// <summary>
+    /// Renders a captured event's message with literal (unquoted) property values, so it can be
+    /// parsed against the Warning template.
+    /// </summary>
+    private static string RenderLiteral(LogEvent logEvent)
+    {
+        var writer = new StringWriter();
+        new MessageTemplateTextFormatter("{Message:l}").Format(logEvent, writer);
+        return writer.ToString();
+    }
 
     /// <summary>
     /// Parses one Warning message against the five-element template:
