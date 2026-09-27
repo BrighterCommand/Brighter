@@ -429,6 +429,8 @@ redelivered for ever would pass every other DLQ behaviour in this suite.
   cloud projects, are the only evidence that can move those five. So **no** FR-23 cell is still
   reachable by a local broker run: all 15 are either blocked on a product defect (10) or reachable only
   through CI against real cloud infrastructure (5).
+  *Superseded for the eight `AWS` / `AWS.V4` cells by the 2026-09-27 evidence note, "The eight AWS
+  cells are `Fixed (#4341)`", below: #4341 is fixed and those cells now pass.*
 
 ### Run record — 2026-09-26 (tasks 3.1–3.4 regenerated tree, AC-26, R-22, R-23)
 
@@ -768,46 +770,35 @@ above without adding it there leaves that row unguarded.** Editing that list dow
 tree silences the audit by construction — the list and this table are meant to be changed together,
 and in review.
 
-### Why the eight AWS cells stay `Deferred`: the budget is inert on SQS (#4341)
+### The eight AWS cells are `Fixed (#4341)`: the budget now reads SQS's own receive count
 
-`AWS` and `AWS.V4` were run against LocalStack and are **not** promoted. The test does not fail on a
-timing wobble or a harness gap — it fails because **Brighter's delivery budget cannot be exhausted on
-SQS**, and the message reaches the dead-letter queue by a different mechanism entirely.
+**Evidence, run 2026-09-27** (spec 0037 task 4.11). Both variants (Reactor and Proactor) of every
+`AWS` and `AWS.V4` configuration, against the **Floci** emulator (`floci/floci:1.5.19`,
+`docker-compose-aws.yaml`, port 4566; LocalStack is no longer used locally), net10.0,
+`--filter "LiveAWS!=true"`, the two projects run one after the other:
 
-The measurement. The dead-lettered message arrives carrying `handled-count=0`, the original message
-id, and **no rejection metadata at all**. Rejection metadata is stamped by `RefreshMetadata` inside
-`SqsMessageConsumer.RejectAsync`, so its absence says plainly that Brighter never rejected this
-message: SQS's own redrive policy moved its stored copy.
+| Project | Passed | Failed | Skipped | FR-23 (Reactor + Proactor × 4 configurations) |
+|---|---|---|---|---|
+| `AWS.Tests` | 286 | 0 | 2 | 8 / 8 pass |
+| `AWS.V4.Tests` | 286 | 0 | 2 | 8 / 8 pass |
 
-The cause is structural. `SqsMessageConsumer.RequeueAsync` requeues by calling
-`ChangeMessageVisibilityAsync` — it makes the stored message visible again and never rewrites it.
-`handled-count` is written only on *send* (`SqsMessageSender`, `SnsMessagePublisher`). So the count
-does not survive a requeue: every redelivery arrives reading 0, the pump increments it to 1 in
-memory, `HandledCountReached(3)` is false, and it requeues again. The budget never runs down, however
-many times the message is delivered. What eventually dead-letters it is the queue's `maxReceiveCount`.
+The only skips are `SqsFifo` FR-9 (Reactor and Proactor) in each project, which is still `Deferred -> #4240`.
+Every previously `Pass`/`Fixed` cell stayed green. The eight FR-23 tests per project are the
+difference from the previous baseline (278 passed / 10 skipped).
 
-This is consistent with how the AWS suite already treats the question:
-`When_throwing_defer_action_respect_redrive` sets `requeueCount: -1` and relies on `maxReceiveCount`,
-which is the supported route to a DLQ on SQS and has its own coverage.
+**What was wrong, for the record.** Before #4341, `SqsMessageConsumer.RequeueAsync` requeued by
+`ChangeMessageVisibilityAsync`, which never rewrites the stored message, and `handled-count` was
+written only on send. Every redelivery therefore read `0`, `HandledCountReached(3)` never fired, and
+the message reached the DLQ only via the queue's `maxReceiveCount` redrive. It arrived with
+`handled-count=0` and **no** rejection metadata, so `requeueCount` was silently inert on SQS.
 
-Raising the harness's `maxReceiveCount` above `requeueCount` was tried, to stop the broker answering
-for the pump. It does not help, and could not: with the count resetting on every delivery there is no
-budget to exhaust, so the only effect is that redrive takes longer to fire. That change was reverted
-rather than left in place looking like a fix.
-
-This is not a quarrel with SQS's DLQ strategy. [ADR 0038](../../docs/adr/0038-aws-sqs-dlq-direct-send.md)
-already settled that: when `DeadLetterRoutingKey` is configured, `Reject` sends directly to the
-Brighter DLQ and deletes the original, and the ADR explicitly considered and rejected leaning on
-redrive instead. That path is healthy — FR-4, an explicit `Reject`, is `Pass` on all eight AWS
-configurations. What is unreachable is getting there by spending the budget.
-
-⚠️ **The consequence is that `requeueCount` is silently inert on SQS** — configured, accepted, and
-without effect. A user who sets it gets unbounded redelivery bounded only by `maxReceiveCount`, and
-messages arriving by redrive carry none of ADR 0036's rejection metadata. Raised as
-[#4341](https://github.com/BrighterCommand/Brighter/issues/4341), which also notes the cooperative
-fix: `ApproximateReceiveCount` is already requested on every receive
-(`MessageSystemAttributeNames = ["All"]`) and read nowhere in `src`. These eight cells stay
-`Deferred` until that is answered.
+**What fixed it** ([ADR 0077](../../docs/adr/0077-delivery-count-contract.md)): both SQS message
+creators read the broker's `ApproximateReceiveCount` on receive, minus 1, through the core
+`DeliveryCount.Resolve`. The harness keeps the budget below the native limit (`requeueCount: 3`,
+`RedrivePolicy` `maxReceiveCount: 5`, assumption A-5), so the pump rejects first. The message then
+reaches the Brighter DLQ through `Reject` ([ADR 0038](../../docs/adr/0038-aws-sqs-dlq-direct-send.md)'s
+direct send), carrying its stamped count and ADR 0036's rejection metadata. The count is
+**approximate** (SQS's counter is), so FR-23 asserts it only as bounded, never as exact.
 
 ## The delay plugin is retired — all three RMQ configurations run on stock images
 
@@ -859,14 +850,14 @@ CI is unaffected — GitHub Actions `services:` mount no volume.
 
 | Configuration | FR-2 | FR-4 | FR-5 | FR-6 | FR-7 | FR-8 | FR-9 | FR-15 | FR-16 | FR-17 | FR-22 | FR-23 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| AWS / SnsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
-| AWS / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
-| AWS / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
-| AWS / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
-| AWS.V4 / SnsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
-| AWS.V4 / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
-| AWS.V4 / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
-| AWS.V4 / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Deferred -> #4341 (sign-off: @iancooper) |
+| AWS / SnsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Fixed (#4341) |
+| AWS / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Fixed (#4341) |
+| AWS / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4341) |
+| AWS / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Fixed (#4341) |
+| AWS.V4 / SnsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Fixed (#4341) |
+| AWS.V4 / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Fixed (#4341) |
+| AWS.V4 / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4341) |
+| AWS.V4 / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Fixed (#4341) |
 | GCP / Pull | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
 | GCP / PullOrdering | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
 | GCP / Stream | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
