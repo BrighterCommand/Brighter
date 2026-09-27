@@ -422,7 +422,7 @@
   - **Output:** the eight cells read `Fixed (#4341)`, with evidence beside them.
   - Depends on: 3.5, 4.1–4.10
 
-- [ ] **4.12 GATE: v3 and v4 outcomes are indistinguishable on the FR-23 run (AC-13, NFR-6)**
+- [x] **4.12 GATE: v3 and v4 outcomes are indistinguishable on the FR-23 run (AC-13, NFR-6)**
   - For each configuration pair, compare:
     - rejection reason
     - destination kind
