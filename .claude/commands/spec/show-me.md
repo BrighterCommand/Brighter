@@ -552,6 +552,45 @@ the count line last:
   `release_notes.m`.
 - `Total breaking-change items: {n}` — always last, copied verbatim from the Classifier's tally.
 
+**`## Did it ship what it said?`** (FR-8) checks FR-16 rows 8 and 9 first, in this order, and writes
+one of their two lines verbatim in place of everything below when either applies; otherwise it
+places the Classifier's judgements as Parts 1–4, in order:
+
+- Row 8 (`requirements.present` is `false`): write exactly `No requirements.md found for this spec —
+  scope reconciliation is not possible.`
+- Otherwise, row 9 (`declared_total` is `0`): write exactly `requirements.md declares no numbered
+  requirements in the bold lead-in form (**FR-n — …**) — nothing to reconcile.` No shipped-as-planned
+  line, no deviation list, no count line follows.
+- Otherwise, Parts 1–4:
+
+  **Part 1 — the shipped-as-planned line.** `Shipped as planned: {k} of {total} numbered
+  requirements — {id list}.` `{id list}` names every id the Classifier judged `Shipped`, `FR-…` then
+  `NFR-…`, comma-separated, collapsed by FR-8's two rules: two ids are consecutive only when
+  integer-adjacent (`{prefix}-i`, `{prefix}-j`, `j = i + 1` exactly — an undeclared id's absence
+  never bridges a gap), and a maximal consecutive run collapses to `{first}–{last}` only when it
+  spans three or more ids; a run of exactly two is written out, comma-separated, never collapsed.
+  `{k}` is `0` → `{id list}` is the single word `none`.
+
+  **Part 2 — the deviations.** One bullet per id the Classifier judged not `Shipped`, in the same id
+  order Part 1 uses: the id; a one-line paraphrase of what it asked for; the status word in bold; a
+  one-sentence reason; the evidence the Classifier cited; and, for `Deferred`, `Dropped` or
+  `Withdrawn`, the follow-up the Classifier cited — a follow-up issue number, the id of a superseding
+  requirement, or the literal `no follow-up recorded`. No such ids → exactly `No deviations: every
+  numbered requirement shipped as stated.`
+
+  **The partition invariant.** Every declared id appears exactly once, across Part 1's list and Part
+  2's entries together — never both, never neither. This step renders the Classifier's own
+  partition; it does not recompute it.
+
+  **Part 3 — `Shipped beyond the requirements`.** The Classifier's list of task ids for work no
+  declared id's evidence covers, at most 5 entries, in task-id order; when more than 5 qualify, list
+  the first 5 and close with one further line, `… and {r} more task(s) not shown.`, `{r}` the
+  remaining count. None → exactly `Nothing shipped outside the numbered requirements.`
+
+  **Part 4 — the count line, always last.** `Shipped: {a} · Shipped with deviation: {b} · Deferred:
+  {c} · Dropped: {d} · Withdrawn: {w} · Unverifiable: {e} (of {total})`, every term copied verbatim
+  from the Classifier's tally.
+
 **`## How it was built`** (FR-9) states the task shape and the commit shape, and nothing else — no
 review history, no CI state. Both figures are copied verbatim from the ledger's `tasks` and `commits`
 fields — nothing here is judged:
