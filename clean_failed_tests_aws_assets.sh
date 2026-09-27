@@ -14,11 +14,14 @@
 #   ./clean_failed_tests_aws_assets.sh --dry-run   # list without deleting
 #
 # Environment:
-#   CLEANUP_PARALLELISM      concurrent deletions in the name sweep (default 16)
+#   CLEANUP_PARALLELISM      concurrent age-check/delete workers in the name sweep (default 16)
 #   CLEANUP_MIN_AGE_SECONDS  resources younger than this are left alone (default 3600; 0 disables).
 #                            Must be a whole number of seconds; anything else is refused.
 #   CLEANUP_MAX_DELETE_FAILURES  tolerated failed deletion attempts (default 0; 0-999999999).
 #                            Confirmed already-absent responses do not count as failures.
+#   CLEANUP_TIMEOUT_SECONDS  whole-sweep deadline (default 0 disables; 0-999999999).
+#                            Requires GNU timeout when enabled; includes discovery and AWS calls.
+#                            Exits nonzero on interruption; in-flight outcomes may be unknown.
 #
 # IAM: as well as the delete and list calls, the age guard needs sqs:GetQueueAttributes and --
 # because SNS reports no creation time -- sns:ListTagsForResource and sns:TagResource, which it
@@ -29,6 +32,32 @@
 
 # Continue after individual failures so one error does not prevent the rest of the cleanup.
 set -uo pipefail
+
+TIMEOUT_SECONDS="${CLEANUP_TIMEOUT_SECONDS-0}"
+if [[ ! "$TIMEOUT_SECONDS" =~ ^[0-9]{1,9}$ ]]; then
+    echo "ERROR: CLEANUP_TIMEOUT_SECONDS must be an integer from 0 to 999999999." >&2
+    exit 1
+fi
+TIMEOUT_SECONDS=$((10#$TIMEOUT_SECONDS))
+if [[ "$TIMEOUT_SECONDS" -gt 0 ]]; then
+    if ! command -v timeout >/dev/null 2>&1; then
+        echo "ERROR: CLEANUP_TIMEOUT_SECONDS requires GNU timeout; nothing was deleted." >&2
+        exit 1
+    fi
+    # A separate process group lets timeout signal AWS calls and parallel workers too.
+    CLEANUP_TIMEOUT_SECONDS=0 timeout --signal=TERM --kill-after=5s "${TIMEOUT_SECONDS}s" bash "$0" "$@"
+    CLEANUP_STATUS=$?
+    case "$CLEANUP_STATUS" in
+        124)
+            echo "ERROR: Cleanup deadline exceeded after ${TIMEOUT_SECONDS}s; sweep incomplete." >&2
+            echo "  Remaining resources will be rediscovered next run; in-flight deletion outcomes may be unknown." >&2 ;;
+        137)
+            echo "ERROR: Cleanup was forcibly terminated; sweep incomplete. In-flight deletion outcomes may be unknown." >&2 ;;
+        125|126|127)
+            echo "ERROR: Cleanup supervisor could not complete (exit $CLEANUP_STATUS); sweep incomplete." >&2 ;;
+    esac
+    exit "$CLEANUP_STATUS"
+fi
 
 DRY_RUN=false
 if [[ "${1:-}" == "--dry-run" ]]; then
@@ -148,6 +177,8 @@ finish_cleanup() {
     exit "$status"
 }
 trap finish_cleanup EXIT
+trap 'exit 143' TERM
+trap 'exit 130' INT
 export CLEANUP_RESULTS
 export -f record_cleanup_result aws_resource_is_absent delete_resource
 
@@ -525,27 +556,43 @@ TEST_NAME_PATTERN="^($TEST_PREFIXES|$GENERATED_TEST_PATTERN)"
 echo ""
 echo "Scanning for untagged test resources by naming convention ..."
 
-# Deletions run in parallel. A backlog of leaked resources runs to tens of thousands, and one
-# AWS API call at a time does not get through that inside the cleanup workflow's timeout.
+# Parallel workers let large backlogs make progress within the workflow's timeout.
 PARALLELISM="${CLEANUP_PARALLELISM:-16}"
 
 # MIN_AGE_SECONDS, NOW and the two age predicates are defined near the top of the file so the tag
 # sweep can share them.
 
-# Splits the names read from stdin into OLD_ENOUGH and TOO_YOUNG using the named predicate. Each
-# check costs an AWS call, so they run at the same parallelism as the deletions.
-partition_by_age() {
-    local predicate="$1" status name
-    OLD_ENOUGH=()
-    TOO_YOUNG=()
-    while read -r status name; do
-        case "$status" in
-            young) TOO_YOUNG+=("$name") ;;
-            old)   OLD_ENOUGH+=("$name") ;;
-        esac
-    done < <(xargs -P "$PARALLELISM" -I {} bash -c \
-        'if "$2" "$1"; then echo "young $1"; else echo "old $1"; fi' _ {} "$predicate")
+# Each worker makes progress without waiting for the rest of the backlog's age checks.
+cleanup_named_topic() {
+    local topic_arn="$1"
+    if topic_is_too_young "$topic_arn"; then
+        if $DRY_RUN; then
+            echo "  [DRY RUN] Would skip (too young): ${topic_arn##*:}"
+        else
+            echo "  Deferred topic (too young or age unknown): ${topic_arn##*:}"
+        fi
+    elif $DRY_RUN; then
+        echo "  [DRY RUN] Would delete untagged test topic: ${topic_arn##*:}"
+    else
+        delete_resource "untagged test topic ${topic_arn##*:}" sns delete-topic --topic-arn "$topic_arn"
+    fi
 }
+
+cleanup_named_queue() {
+    local queue_url="$1"
+    if queue_is_too_young "$queue_url"; then
+        if $DRY_RUN; then
+            echo "  [DRY RUN] Would skip (too young): ${queue_url##*/}"
+        else
+            echo "  Deferred queue (too young or age unknown): ${queue_url##*/}"
+        fi
+    elif $DRY_RUN; then
+        echo "  [DRY RUN] Would delete untagged test queue: ${queue_url##*/}"
+    else
+        delete_resource "untagged test queue ${queue_url##*/}" sqs delete-queue --queue-url "$queue_url"
+    fi
+}
+export -f cleanup_named_topic cleanup_named_queue
 
 # Clean untagged SNS topics.
 # SNS list-topics returns a NextToken, so the CLI's default auto-pagination sees every topic.
@@ -566,43 +613,14 @@ for topic_arn in $ALL_TOPICS; do
     fi
 done
 
-# Drop the ones that are not yet known to be old enough. Unlike a queue, a topic has no
-# creation time to read, so the first sweep to see one stamps it and defers; see
-# topic_is_too_young.
-MATCHED_TOPIC_COUNT=${#MATCHED_TOPICS[@]}
-if [[ ${#MATCHED_TOPICS[@]} -gt 0 && "$MIN_AGE_SECONDS" -gt 0 ]]; then
-    partition_by_age topic_is_too_young < <(printf '%s\n' "${MATCHED_TOPICS[@]}")
-
-    if [[ ${#TOO_YOUNG[@]} -gt 0 ]]; then
-        if $DRY_RUN; then
-            for topic_arn in "${TOO_YOUNG[@]}"; do
-                echo "  [DRY RUN] Would skip (too young): ${topic_arn##*:}"
-            done
-        else
-            echo "  Deferred ${#TOO_YOUNG[@]} topic(s) not yet known to be older than $(( MIN_AGE_SECONDS / 60 )) minute(s); a test run may still be using them"
-        fi
-    fi
-
-    MATCHED_TOPICS=(${OLD_ENOUGH[@]+"${OLD_ENOUGH[@]}"})
-fi
-
+echo "  Matched ${#MATCHED_TOPICS[@]} untagged test topic(s)"
 if [[ ${#MATCHED_TOPICS[@]} -gt 0 ]]; then
-    if $DRY_RUN; then
-        for topic_arn in "${MATCHED_TOPICS[@]}"; do
-            echo "  [DRY RUN] Would delete untagged test topic: ${topic_arn##*:}"
-        done
-    else
-        # Deleting a topic deletes its subscriptions with it, so there is no need to unsubscribe
-        # first -- and skipping that saves an API call per topic.
-        if ! printf '%s\n' "${MATCHED_TOPICS[@]}" \
-            | xargs -P "$PARALLELISM" -I {} bash -c \
-                'delete_resource "untagged test topic ${1##*:}" sns delete-topic --topic-arn "$1"' _ {}; then
-            echo "ERROR: Topic deletion workers did not complete successfully." >&2
-            REPORTING_FAILED=true
-        fi
+    if ! printf '%s\n' "${MATCHED_TOPICS[@]}" \
+        | xargs -P "$PARALLELISM" -I {} bash -c 'cleanup_named_topic "$1"' _ {}; then
+        echo "ERROR: Topic deletion workers did not complete successfully." >&2
+        REPORTING_FAILED=true
     fi
 fi
-echo "  Matched $MATCHED_TOPIC_COUNT untagged test topic(s), acted on ${#MATCHED_TOPICS[@]}"
 
 # Clean untagged SQS queues.
 # --page-size is required: without it SQS returns at most 1000 queues and no NextToken, so the
@@ -623,41 +641,14 @@ for queue_url in $ALL_QUEUES; do
     fi
 done
 
-# Drop the ones that are too young to be certain about. The filter runs in both modes: a dry run
-# that quietly omitted them would show a developer who had just run the tests an empty list,
-# which is the opposite of what the flag is for.
-MATCHED_QUEUE_COUNT=${#MATCHED_QUEUES[@]}
-if [[ ${#MATCHED_QUEUES[@]} -gt 0 && "$MIN_AGE_SECONDS" -gt 0 ]]; then
-    partition_by_age queue_is_too_young < <(printf '%s\n' "${MATCHED_QUEUES[@]}")
-
-    if [[ ${#TOO_YOUNG[@]} -gt 0 ]]; then
-        if $DRY_RUN; then
-            for queue_url in "${TOO_YOUNG[@]}"; do
-                echo "  [DRY RUN] Would skip (too young): ${queue_url##*/}"
-            done
-        else
-            echo "  Skipped ${#TOO_YOUNG[@]} queue(s) created in the last $(( MIN_AGE_SECONDS / 60 )) minute(s); a test run may still be using them"
-        fi
-    fi
-
-    MATCHED_QUEUES=(${OLD_ENOUGH[@]+"${OLD_ENOUGH[@]}"})
-fi
-
+echo "  Matched ${#MATCHED_QUEUES[@]} untagged test queue(s)"
 if [[ ${#MATCHED_QUEUES[@]} -gt 0 ]]; then
-    if $DRY_RUN; then
-        for queue_url in "${MATCHED_QUEUES[@]}"; do
-            echo "  [DRY RUN] Would delete untagged test queue: ${queue_url##*/}"
-        done
-    else
-        if ! printf '%s\n' "${MATCHED_QUEUES[@]}" \
-            | xargs -P "$PARALLELISM" -I {} bash -c \
-                'delete_resource "untagged test queue ${1##*/}" sqs delete-queue --queue-url "$1"' _ {}; then
-            echo "ERROR: Queue deletion workers did not complete successfully." >&2
-            REPORTING_FAILED=true
-        fi
+    if ! printf '%s\n' "${MATCHED_QUEUES[@]}" \
+        | xargs -P "$PARALLELISM" -I {} bash -c 'cleanup_named_queue "$1"' _ {}; then
+        echo "ERROR: Queue deletion workers did not complete successfully." >&2
+        REPORTING_FAILED=true
     fi
 fi
-echo "  Matched $MATCHED_QUEUE_COUNT untagged test queue(s), acted on ${#MATCHED_QUEUES[@]}"
 
 # S3 ListBuckets is account-wide unless explicitly restricted to the ambient region.
 cleanup_s3_test_buckets() {
