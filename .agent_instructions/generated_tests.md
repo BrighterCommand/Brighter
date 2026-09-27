@@ -292,7 +292,7 @@ Feature flags control which test templates are generated. When a flag is `false`
 | `HasSupportToPublishConfirmation` | `false` | `confirming_posting` | Transport doesn't support publisher confirms |
 | `HasSupportToValidateBrokerExistence` | `false` | `no_broker_created` | Transport can't validate broker existence |
 | `HasSupportToValidateInfrastructure` | **`true`** | `assume_channel`, `validate_channel` | Transport can't validate infrastructure existence |
-| `HasSupportToDetectMissingInfrastructureOnAssume` | **`true`** | `assume_channel` | Transport honours an explicit `Validate` but completes silently against infrastructure that is absent when `OnMissingChannel.Assume` told it not to look (Kafka's KIP-848 consumer — gateway defect, tracked by #4299; drop the flag when fixed) |
+| `HasSupportToDetectMissingInfrastructureOnAssume` | **`true`** | `assume_channel` | Transport honours an explicit `Validate` but completes silently against infrastructure that is absent under `OnMissingChannel.Assume`. Kafka's KIP-848 Consumer configuration keeps this `false`: a configuration-only startup warning documents the limitation without adding a broker check. |
 
 ### Messaging Gateway Provider Pattern
 
