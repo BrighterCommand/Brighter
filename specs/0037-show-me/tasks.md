@@ -894,7 +894,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 | AC-65 | ladder row 5 elected | K6 |
 | AC-23 (raise clause) | a raise above the maximum | none |
 
-- [ ] **PROJECT: T17.1 — Pre-flight: confirm the (C-8) window and the calibration preconditions**
+- [x] **PROJECT: T17.1 — Pre-flight: confirm the (C-8) window and the calibration preconditions**
   - Do:
     - Confirm `gh pr view 4282 --json state` returns `OPEN`.
     - Confirm `git diff --quiet 91d549be6 HEAD -- specs/0036-scoped-lifetime-per-pipeline/requirements.md specs/0036-scoped-lifetime-per-pipeline/tasks.md` succeeds, and that `git cat-file -e` succeeds for `6145913a0` and `91d549be6`.
