@@ -927,7 +927,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - (C-8 window, R8) Rerun the R5 stand-in cases on the real repository for AC-46, AC-84 and FR-10's PR-head-differs line (T6.2, T11.3).
   - Traces to: FR-6, FR-8, FR-10–FR-13, FR-20, NFR-3, and the ACs listed.
 
-- [ ] **PROJECT: T17.6 — End to end with a real marked section written by `/spec:write_release_notes`**
+- [x] **PROJECT: T17.6 — End to end with a real marked section written by `/spec:write_release_notes`**
   - Do:
     - Run `/spec:write_release_notes 0033-pg-advisory-lock-sha256`, then `/spec:show-me 0033-pg-advisory-lock-sha256`.
     - Check AC-69: the section is read, the `release_notes.md` row is `used`, and neither row 5's nor row 5a's line appears. When `{m}` ≠ `{n}`, the disagreement line is present.
