@@ -5,6 +5,7 @@ using Amazon.Scheduler;
 using Amazon.Scheduler.Model;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.AWSSQS.V4;
+using Paramore.Brighter.Scheduler;
 using Paramore.Brighter.Tasks;
 using ResourceNotFoundException = Amazon.Scheduler.Model.ResourceNotFoundException;
 
@@ -25,8 +26,8 @@ public class AwsScheduler(
     Func<Message, string> getOrCreateMessageSchedulerId,
     Func<IRequest, string> getOrCreateRequestSchedulerId,
     Scheduler scheduler,
-    SchedulerGroup schedulerGroup) : IAmAMessageSchedulerAsync, IAmAMessageSchedulerSync, IAmARequestSchedulerAsync,
-    IAmARequestSchedulerSync
+    SchedulerGroup schedulerGroup) : IAmAMessageSchedulerAsync, IAmAMessageSchedulerSync, IAmARequestSchedulerAsyncWithContext,
+    IAmARequestSchedulerSyncWithContext
 {
     private static readonly ConcurrentDictionary<string, bool> s_checkedGroup = new();
     private static readonly ConcurrentDictionary<string, string?> s_queueUrl = new();
@@ -57,8 +58,14 @@ public class AwsScheduler(
     }
 
     /// <inheritdoc />
-    public async Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
+    public Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
         CancellationToken cancellationToken = default) where TRequest : class, IRequest
+        => ScheduleAsync(request, type, at, null, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
+        IRequestContext? requestContext, CancellationToken cancellationToken)
+        where TRequest : class, IRequest
     {
         if (at < timeProvider.GetUtcNow())
         {
@@ -76,7 +83,8 @@ public class AwsScheduler(
                 SchedulerType = type,
                 Async = true,
                 RequestType = typeof(TRequest).FullName!,
-                RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
+                RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options),
+                RequestContextData = ScheduledRequestContext.Serialize(requestContext)
             }))
         };
 
@@ -84,15 +92,21 @@ public class AwsScheduler(
     }
 
     /// <inheritdoc />
-    public async Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay,
+    public Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay,
         CancellationToken cancellationToken = default) where TRequest : class, IRequest
+        => ScheduleAsync(request, type, delay, null, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay,
+        IRequestContext? requestContext, CancellationToken cancellationToken)
+        where TRequest : class, IRequest
     {
         if (delay < TimeSpan.Zero)
         {
             throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
-        return await ScheduleAsync(request, type, timeProvider.GetUtcNow().Add(delay), cancellationToken);
+        return await ScheduleAsync(request, type, timeProvider.GetUtcNow().Add(delay), requestContext, cancellationToken);
     }
 
     /// <inheritdoc cref="IAmAMessageSchedulerAsync.ReSchedulerAsync(string,System.DateTimeOffset,System.Threading.CancellationToken)" />
@@ -486,6 +500,12 @@ public class AwsScheduler(
     /// <inheritdoc />
     public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at)
         where TRequest : class, IRequest
+        => Schedule(request, type, at, null);
+
+    /// <inheritdoc />
+    public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
+        IRequestContext? requestContext)
+        where TRequest : class, IRequest
     {
         var id = getOrCreateRequestSchedulerId(request);
 
@@ -499,7 +519,8 @@ public class AwsScheduler(
                 SchedulerType = type,
                 Async = false,
                 RequestType = typeof(TRequest).FullName!,
-                RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
+                RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options),
+                RequestContextData = ScheduledRequestContext.Serialize(requestContext)
             }))
         };
 
@@ -509,7 +530,13 @@ public class AwsScheduler(
     /// <inheritdoc />
     public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay)
         where TRequest : class, IRequest
-        => Schedule(request, type, timeProvider.GetUtcNow().Add(delay));
+        => Schedule(request, type, delay, null);
+
+    /// <inheritdoc />
+    public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay,
+        IRequestContext? requestContext)
+        where TRequest : class, IRequest
+        => Schedule(request, type, timeProvider.GetUtcNow().Add(delay), requestContext);
 
     /// <inheritdoc cref="IAmAMessageSchedulerSync.ReScheduler(string,System.DateTimeOffset)"/>
     public bool ReScheduler(string schedulerId, DateTimeOffset at)

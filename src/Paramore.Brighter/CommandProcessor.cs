@@ -342,7 +342,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = (IAmARequestSchedulerSync)_schedulerFactory.CreateSync(this);
-                return scheduler.Schedule(command, RequestSchedulerType.Send, at);
+                return scheduler is IAmARequestSchedulerSyncWithContext contextScheduler
+                    ? contextScheduler.Schedule(command, RequestSchedulerType.Send, at, requestContext)
+                    : scheduler.Schedule(command, RequestSchedulerType.Send, at);
             }
             finally
             {
@@ -357,7 +359,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateSync(this);
-                return scheduler.Schedule(command, RequestSchedulerType.Send, delay);
+                return scheduler is IAmARequestSchedulerSyncWithContext contextScheduler
+                    ? contextScheduler.Schedule(command, RequestSchedulerType.Send, delay, requestContext)
+                    : scheduler.Schedule(command, RequestSchedulerType.Send, delay);
             }
             finally
             {
@@ -421,7 +425,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateAsync(this);
-                return await scheduler.ScheduleAsync(command, RequestSchedulerType.Send, at, cancellationToken);
+                return scheduler is IAmARequestSchedulerAsyncWithContext contextScheduler
+                    ? await contextScheduler.ScheduleAsync(command, RequestSchedulerType.Send, at, requestContext, cancellationToken)
+                    : await scheduler.ScheduleAsync(command, RequestSchedulerType.Send, at, cancellationToken);
             }
             finally
             {
@@ -437,7 +443,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateAsync(this);
-                return await scheduler.ScheduleAsync(command, RequestSchedulerType.Send, delay, cancellationToken);
+                return scheduler is IAmARequestSchedulerAsyncWithContext contextScheduler
+                    ? await contextScheduler.ScheduleAsync(command, RequestSchedulerType.Send, delay, requestContext, cancellationToken)
+                    : await scheduler.ScheduleAsync(command, RequestSchedulerType.Send, delay, cancellationToken);
             }
             finally
             {
@@ -455,6 +463,11 @@ namespace Paramore.Brighter
         /// <typeparam name="T"></typeparam>
         /// <param name="event">The event.</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
+        /// <remarks>
+        /// Observers do not inherit the caller's <see cref="RequestContext.ResilienceContext"/>,
+        /// regardless of observer count. Configured resilience strategies still apply, and the
+        /// caller's execution context is left unchanged.
+        /// </remarks>
         public void Publish<T>(T @event, RequestContext? requestContext = null) where T : class, IRequest
         {
             if (_handlerFactorySync == null)
@@ -471,7 +484,7 @@ namespace Paramore.Brighter
                 
                 using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);
                 Log.BuildingSendPipelineForEvent(s_logger, @event.GetType(), @event.Id.Value);
-                var handlerChain = builder.Build(@event, context);
+                var handlerChain = builder.Build(@event, context, excludeResilienceContext: true);
 
                 var handlerCount = handlerChain.Count();
 
@@ -520,7 +533,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateSync(this);
-                return scheduler.Schedule(@event, RequestSchedulerType.Publish, at);
+                return scheduler is IAmARequestSchedulerSyncWithContext contextScheduler
+                    ? contextScheduler.Schedule(@event, RequestSchedulerType.Publish, at, requestContext)
+                    : scheduler.Schedule(@event, RequestSchedulerType.Publish, at);
             }
             finally
             {
@@ -535,7 +550,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateSync(this);
-                return scheduler.Schedule(@event, RequestSchedulerType.Publish, delay);
+                return scheduler is IAmARequestSchedulerSyncWithContext contextScheduler
+                    ? contextScheduler.Schedule(@event, RequestSchedulerType.Publish, delay, requestContext)
+                    : scheduler.Schedule(@event, RequestSchedulerType.Publish, delay);
             }
             finally
             {
@@ -556,6 +573,12 @@ namespace Paramore.Brighter
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
+        /// <remarks>
+        /// Observers do not inherit the caller's <see cref="RequestContext.ResilienceContext"/>,
+        /// regardless of observer count. Configured resilience strategies receive
+        /// <paramref name="cancellationToken"/> instead of the caller's resilience-context token.
+        /// The caller's execution context is left unchanged.
+        /// </remarks>
         public async Task PublishAsync<T>(
             T @event,
             RequestContext? requestContext = null,
@@ -578,7 +601,7 @@ namespace Paramore.Brighter
             {
                 Log.BuildingSendAsyncPipelineForEvent(s_logger, @event.GetType(), @event.Id.Value);
 
-                var handlerChain = builder.BuildAsync(@event, context, continueOnCapturedContext);
+                var handlerChain = builder.BuildAsync(@event, context, continueOnCapturedContext, excludeResilienceContext: true);
                 var handlerCount = handlerChain.Count();
 
                 Log.FoundAsyncHandlerCount(s_logger, handlerCount, @event.GetType(), @event.Id.Value);
@@ -632,7 +655,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateAsync(this);
-                return await scheduler.ScheduleAsync(@event, RequestSchedulerType.Publish, at, cancellationToken);
+                return scheduler is IAmARequestSchedulerAsyncWithContext contextScheduler
+                    ? await contextScheduler.ScheduleAsync(@event, RequestSchedulerType.Publish, at, requestContext, cancellationToken)
+                    : await scheduler.ScheduleAsync(@event, RequestSchedulerType.Publish, at, cancellationToken);
             }
             finally
             {
@@ -648,7 +673,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateAsync(this);
-                return await scheduler.ScheduleAsync(@event, RequestSchedulerType.Publish, delay, cancellationToken);
+                return scheduler is IAmARequestSchedulerAsyncWithContext contextScheduler
+                    ? await contextScheduler.ScheduleAsync(@event, RequestSchedulerType.Publish, delay, requestContext, cancellationToken)
+                    : await scheduler.ScheduleAsync(@event, RequestSchedulerType.Publish, delay, cancellationToken);
             }
             finally
             {
@@ -688,7 +715,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateSync(this);
-                return scheduler.Schedule(request, RequestSchedulerType.Post, at);
+                return scheduler is IAmARequestSchedulerSyncWithContext contextScheduler
+                    ? contextScheduler.Schedule(request, RequestSchedulerType.Post, at, requestContext)
+                    : scheduler.Schedule(request, RequestSchedulerType.Post, at);
             }
             finally
             {
@@ -703,7 +732,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateSync(this);
-                return scheduler.Schedule(request, RequestSchedulerType.Post, delay);
+                return scheduler is IAmARequestSchedulerSyncWithContext contextScheduler
+                    ? contextScheduler.Schedule(request, RequestSchedulerType.Post, delay, requestContext)
+                    : scheduler.Schedule(request, RequestSchedulerType.Post, delay);
             }
             finally
             {
@@ -750,7 +781,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateAsync(this);
-                return await scheduler.ScheduleAsync(request, RequestSchedulerType.Post, at, cancellationToken);
+                return scheduler is IAmARequestSchedulerAsyncWithContext contextScheduler
+                    ? await contextScheduler.ScheduleAsync(request, RequestSchedulerType.Post, at, requestContext, cancellationToken)
+                    : await scheduler.ScheduleAsync(request, RequestSchedulerType.Post, at, cancellationToken);
             }
             finally
             {
@@ -766,7 +799,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateAsync(this);
-                return await scheduler.ScheduleAsync(request, RequestSchedulerType.Post, delay, cancellationToken);
+                return scheduler is IAmARequestSchedulerAsyncWithContext contextScheduler
+                    ? await contextScheduler.ScheduleAsync(request, RequestSchedulerType.Post, delay, requestContext, cancellationToken)
+                    : await scheduler.ScheduleAsync(request, RequestSchedulerType.Post, delay, cancellationToken);
             }
             finally
             {

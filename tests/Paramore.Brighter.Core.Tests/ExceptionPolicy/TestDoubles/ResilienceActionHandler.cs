@@ -24,10 +24,14 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using System.Runtime.CompilerServices;
+
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles;
 
 internal sealed class ResilienceActionHandler : RequestHandler<ResilienceActionCommand>
 {
+    // Keep the throwing frame available for stack-trace assertions.
+    [MethodImpl(MethodImplOptions.NoInlining)]
     public override ResilienceActionCommand Handle(ResilienceActionCommand command)
     {
         command.Attempts++;

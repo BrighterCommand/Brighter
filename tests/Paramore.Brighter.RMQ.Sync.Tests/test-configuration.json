@@ -12,5 +12,8 @@
     "HasSupportToValidateBrokerExistence": true,
     "HasSupportToValidateInfrastructure": true,
     "ReceiveMessageTimeoutInMilliseconds": 4000
+  },
+  "GatewayConformance": {
+    "SubscriptionType": "Paramore.Brighter.MessagingGateway.RMQ.Sync.RmqSubscription"
   }
 }

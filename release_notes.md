@@ -2,6 +2,88 @@
 
 ## Master
 
+### Validate subscription channel factory compatibility (spec 0037, #4334)
+
+Brighter now validates, at `ValidatePipelines()` time, that every subscription's declared
+`ChannelFactoryType` is compatible with the channel factory it will actually be handed at startup —
+turning "compiles, then dies deep in Dispatcher start" into a named, `ValidationSeverity.Error`
+startup finding. Landing the rule also corrected five transports whose `ChannelFactoryType` was
+wrong or missing: GCP Pub/Sub and MQTT previously declared a *consumer* factory rather than their
+own, and AWS SQS, AWS SQS V4 and Postgres declared none at all — so those three transports are, for
+the first time, routable through a `CombinedChannelFactory`. See
+[ADR 0072](docs/adr/0072-subscription-channel-factory-compatibility.md),
+[ADR 0073](docs/adr/0073-gateway-channel-factory-type-regression-guard.md) and
+[spec 0037](specs/0037-validate-subscription-channel-factory/) for full details.
+
+#### Breaking change: a subscription type with no `ChannelFactoryType` override now fails validation
+
+Any out-of-repo `Subscription` subclass that does not override `ChannelFactoryType` inherits the base
+class's default, `InMemoryChannelFactory` — previously invisible, now reported. Symptom:
+`ValidatePipelines` returns an `Error` citing `Paramore.Brighter.InMemoryChannelFactory` as the
+declared type. Remedy:
+
+```csharp
+public override Type ChannelFactoryType => typeof(MyChannelFactory);
+```
+
+Interim workaround: `ValidatePipelines(throwOnError: false)`.
+
+#### Breaking change: MQTT via a plain `Subscription<T>` now fails validation
+
+A plain `Subscription<T>` used with MQTT works today, because nothing previously checked the declared
+type against the gateway it is handed. Symptom: `ValidatePipelines` returns an `Error` citing
+`Paramore.Brighter.InMemoryChannelFactory` as the declared type against
+`Paramore.Brighter.MessagingGateway.MQTT.ChannelFactory`. Remedy: use `MqttSubscription<T>`.
+Suppressible with `ValidatePipelines(throwOnError: false)`.
+
+#### Breaking change: AWS SQS, AWS SQS V4 and Postgres subscriptions routed through an in-memory `CombinedChannelFactory` slot now fail at Dispatcher start, not just at validation
+
+Because AWS SQS, AWS SQS V4 and Postgres subscriptions previously declared no `ChannelFactoryType` at
+all, they inherited the base default, `InMemoryChannelFactory`. A `CombinedChannelFactory` that
+included an `InMemoryChannelFactory` inner factory therefore matched these subscriptions by exact
+type and silently routed them to the in-memory bus instead of failing. The subscriptions now declare
+their real factory type, so that in-memory match no longer occurs: if the `CombinedChannelFactory` has
+no inner factory of the subscription's real type, routing now fails with a `ConfigurationException`
+(`No channel factory found for subscription {name}`) when the `Dispatcher` starts. **This is caused by
+the transport corrections, not by the new validation rule, so `ValidatePipelines(throwOnError: false)`
+does NOT avoid it** — it is a routing change, not a validation verdict. Remedy: add the transport's
+real channel factory to the `CombinedChannelFactory`, or stop relying on the in-memory route.
+
+#### Breaking change: a `ChannelFactoryType` override returning `null` now fails validation
+
+An out-of-repo `ChannelFactoryType` override that returns `null` in a single-factory (non-combined)
+configuration previously went unchecked. Symptom: a startup `Error` reading `declares no
+ChannelFactoryType`. Remedy: return a real channel factory type from the override. Unlike the
+`CombinedChannelFactory` case above, this one **is** suppressible with
+`ValidatePipelines(throwOnError: false)`.
+
+### Backstop handlers preserve explicit message-pump actions
+
+`DeferMessageOnError`, `RejectMessageOnError`, `DontAckOnError`, and their async variants now preserve explicit `DeferMessageAction`, `RejectMessageAction`, `DontAckAction`, and `InvalidMessageAction` exceptions instead of replacing them with the backstop's configured action. A non-empty `AggregateException` whose direct inner exceptions are all pump actions is also preserved for the pump to handle. Mixed, empty, or nested aggregates still use the configured fallback. Application failures, including `OperationCanceledException` and `TaskCanceledException` from dependency timeouts, continue to use that fallback.
+
+If a pipeline has multiple backstops, the innermost backstop now determines the action for an application failure; outer backstops preserve it. For example, `[RejectMessageOnError(step: 0)]` wrapping `[DeferMessageOnError(step: 1)]` now defers the message instead of rejecting it. Lower step numbers are outer wrappers. Review pipelines with stacked backstops if they relied on the previous outermost-backstop behavior.
+### DynamoDB outbox: configured operation timeouts now take effect (#4434)
+
+Both `Paramore.Brighter.Outbox.DynamoDB` (AWS SDK v3) and `Paramore.Brighter.Outbox.DynamoDB.V4` now honour `DynamoDbConfiguration.Timeout` and per-call outbox timeouts. Previously, these values were ignored.
+
+**Upgrade impact: the existing default of 500 ms now takes effect.** Operations that previously completed after that deadline may now throw `OperationCanceledException`. Review your timeout settings before upgrading, especially for batches and queries: one deadline covers the entire operation, including all batch items or query pages.
+
+To allow a longer deadline, set the configuration's `timeout` constructor argument (in milliseconds), for example:
+
+```csharp
+new DynamoDbConfiguration(timeout: 5000);
+```
+
+To disable the outbox deadline, use `new DynamoDbConfiguration(timeout: 0)`; a configured value of `-1` also disables it. Caller cancellation and the AWS SDK client's own timeouts still apply.
+
+For methods accepting a per-call timeout:
+
+* `-1` (the default) uses `DynamoDbConfiguration.Timeout`; it does **not** independently disable the deadline.
+* `0` disables the outbox deadline for that call.
+* A positive value overrides the configured deadline, in milliseconds.
+
+Cancellation is cooperative. Synchronous AWS SDK table-metadata discovery remains governed by the SDK client's timeout. Adding a message to a transaction queues the write; the later commit must be cancelled through the transaction provider. Public signatures and default parameter values are unchanged, but applications that relied on the previously ignored deadlines may need configuration changes.
+
 ### AWS: configurable `MaximumMessageSize` for SNS topics and SQS queues
 
 Amazon SNS now accepts message payloads up to 1 MiB, but only if you raise the topic's `MaximumMessageSize` attribute — the default is still 256 KiB. Brighter's send path never assumed a fixed limit, but the provisioning path had no way to set the attribute, so a topic Brighter created with `OnMissingChannel.Create` was stuck at 256 KiB.

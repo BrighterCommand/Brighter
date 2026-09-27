@@ -66,7 +66,10 @@ Running unattended changes *who reviews when*. It changes nothing else. Every ta
 
 - **Proves RED first** — the test is run and observed to fail *for the right reason* before any
   production code is written. A task whose test passes on first run is `ALREADY_COMPLETE`, never a
-  licence to write the implementation anyway.
+  licence to write the implementation anyway — **except** a `CHARACTERISE` task, whose RED is
+  observed through the task's named production mutation instead, and a `GENERATE` task, whose
+  generated tests pass on first run by design (see the dispatch table). Neither is ever
+  `ALREADY_COMPLETE`; a characterisation test is never dropped and never rewritten.
 - **Runs the full regression suite** for the affected project(s), not just the new test's own
   `--filter`.
 - **Produces two commits** — a `feat:`/`test:`/`fix:`/`refactor:` commit for the change, then a
@@ -109,8 +112,8 @@ This runs **once**, before the loop starts.
    `$ARGUMENTS`, take that as the **tasks** bound and skip the prompt. Otherwise use
    `AskUserQuestion` to ask the user which bound to use and its value:
 
-   - **Tasks** — stop after **N tasks complete** this run (a task "completes" on `GREEN` or
-     `ALREADY_COMPLETE`; `FAILED` does not count). This is the `count` argument.
+   - **Tasks** — stop after **N tasks complete** this run (a task "completes" on `GREEN`,
+     `CHARACTERISED` or `ALREADY_COMPLETE`; `FAILED` does not count). This is the `count` argument.
    - **Turns** — stop after **N loop iterations** attempted, regardless of outcome (so a run
      of failures still terminates). Use when you want to cap effort, not completions.
    - **Budget** — stop when roughly **N output tokens** have been consumed by the run. Use the
@@ -172,8 +175,8 @@ Scan `tasks.md` top to bottom for the first task that is:
 
 `tasks.md` is a general task list, and the labels in use across this repository vary. Match the
 task's leading bold label **case-insensitively**, and treat the synonyms below as one shape — the
-project's `/tidy-first` vocabulary and the `STRUCTURAL` label mean the same thing, and `DOC` and
-`DOCUMENT` likewise. Do not invent a new label; match what the file says.
+project's `/tidy-first` vocabulary and the `STRUCTURAL` label mean the same thing, and `DOC`,
+`DOCS` and `DOCUMENT` likewise. Do not invent a new label; match what the file says.
 
 | Task shape | Labels seen in `specs/` | Handling |
 |------------|-------------------------|----------|
@@ -181,7 +184,9 @@ project's `/tidy-first` vocabulary and the `STRUCTURAL` label mean the same thin
 | **Test only** | `TEST`, `TEST (RED)` | Write the test and prove it fails for the right reason. If the task's own text asks only for the test, stop there and commit as `test:`. If the very next task is the matching `IMPLEMENT`, do **not** run ahead into it — it is its own task and its own commit. |
 | **Implementation only** | `IMPLEMENT` | Only run this when the test that specifies it already exists — i.e. the preceding `TEST` task is already `- [x]`, or the task names an existing failing test. Make that test pass, then the full suite. **If no such test exists, mark `- [!]`** with `RALPH-SKIPPED: IMPLEMENT task with no preceding test`. An unattended TDD loop must never write implementation that no test demanded. |
 | **Structural** | `TIDY FIRST`, `TIDY`, `TIDY-FIRST`, `STRUCTURAL` | No new test. Require the **existing** suite green before *and* after. Commit as `refactor:`. Behaviour must not change; if a test's result changes, the refactoring was wrong — revert and mark `- [!]`. |
-| **Documentation** | `DOC`, `DOCUMENT` | No test. Delegate the edit; commit as `docs:`. That is the change commit for the task — the checkbox tick still gets its own second commit. |
+| **Characterisation** | `CHARACTERISE` | A test for behaviour an earlier task may already deliver (one task per acceptance criterion makes these unavoidable). Every test file the task names must be **observed RED** — either on first run, or under the task's **named RED mutation**. For each test file that passes on first run: apply the named mutation (a temporary change to *production* code, never to the test), confirm the test fails **on the assertion the task names** (not a compile error or an unrelated exception), **revert the mutation**, confirm green. If a test file fails on first run, the behaviour is missing: continue as Behavioural for that file, using the task's implementation notes. **Never revise the test and never return `ALREADY_COMPLETE`.** If a green-on-arrival file has no named mutation, or the mutation does not produce the named failure, return `FAILED`. Returns `CHARACTERISED` when no production code was kept, `GREEN` otherwise. |
+| **Generated** | `GENERATE` | The test files are rendered by a generator and must **never** be hand-written. Run the generator exactly as the task says, build, run the generated tests and the task's named audit, and return the generated files under `TEST_FILES` with `STATUS: GREEN` (commit as `test:`). Never `ALREADY_COMPLETE` — generated files passing on first run is the expected case, and they must still be committed. If the generated tests fail, return `FAILED`. |
+| **Documentation** | `DOC`, `DOCS`, `DOCUMENT` | No test. Delegate the edit; commit as `docs:`. That is the change commit for the task — the checkbox tick still gets its own second commit. |
 | **Scaffolding** | `SETUP` | Project/config/package scaffolding. No test, but `dotnet build` of the affected project(s) MUST succeed. Commit as `chore:`. |
 | **Checkpoint** | `VERIFY`, `VALIDATION` | Run the checks the task names and report. A checkpoint asserts the state is already correct, so it should need **no** source change: if it passes, tick it with the `docs:` bookkeeping commit alone. If it fails, or would require a change to pass, mark `- [!]` with the failure — do not "fix" it here, because whatever it caught belongs to some other task. |
 | **Anything else** | free prose, unlabelled | Do **not** guess: mark `- [!]` with `RALPH-SKIPPED: unrecognised task shape, needs /spec:implement`, commit the marker, and continue. An unattended loop should skip what it does not understand, not improvise. |
@@ -203,6 +208,10 @@ Then STOP.
 
 ### Step 4: Delegate the Cycle to a Sub-Agent
 
+**First, record the baseline** for Step 5's leftover-mutation check:
+`git status --porcelain > {scratchpad}/ralph-baseline.txt`. Anything already modified or untracked
+before the task is the baseline, not a leftover.
+
 Launch an `Agent` with `subagent_type: "general-purpose"` and **`model: "sonnet"`**. The
 prompt MUST include:
 
@@ -214,10 +223,13 @@ prompt MUST include:
    - every ADR path from `.adr-list`
    - `.agent_instructions/testing.md` and `.agent_instructions/code_style.md`
    with an instruction to **read them before writing code**.
-3. The **verify command** to use. `tasks.md` tasks name a test location and test file but not a
-   filter command — derive it and state it explicitly in the prompt:
+3. The **verify command(s)** to use. If the task text states its own commands (a `GENERATE` task
+   does), pass those. Otherwise `tasks.md` tasks name a test location and test file(s) but not a
+   filter command — derive **one per test file the task names** and state them explicitly:
    `dotnet test {test project from the task's test location} --filter "FullyQualifiedName~{test method name}"`
-4. The cycle instructions, code-style rules, and hard constraints below.
+4. The cycle instructions, code-style rules, and hard constraints below — and, for a
+   `CHARACTERISE` or `GENERATE` task, the matching **shape cycle** below, which takes precedence
+   over the plain RED rules where they differ.
 5. The required return format below.
 
 The sub-agent runs unattended — it has full tool access (Read, Write, Edit, Glob, Grep,
@@ -243,6 +255,7 @@ from conversation.
   exist yet). **Do not skip this.** Running unattended does not make this test-after.
 - **If the test PASSES with no implementation change**: the behavior already exists. Either
   revise the test to verify something genuinely new, or RETURN status `ALREADY_COMPLETE`.
+  **Not for a `CHARACTERISE` or `GENERATE` task** — follow its shape cycle below instead.
 
 🟢 **GREEN — Make the Test Pass**
 - Write the MINIMUM code to pass — no speculative code. Follow the task's implementation notes.
@@ -259,19 +272,49 @@ from conversation.
   reduce complexity; remove duplication; reveal intent.
 - Re-run tests after refactoring to confirm no behavioral change.
 
+#### Characterisation cycle for the sub-agent (include for a `CHARACTERISE` task)
+
+Work **per test file** the task names:
+
+1. Write the test and run its verify command.
+2. **Fails** → the behaviour is missing. Continue as the normal RED → GREEN → REFACTOR cycle for
+   that file, using the task's implementation notes. Record `"<file>: failed on arrival: <assertion>"`.
+3. **Passes** → apply the task's **named RED mutation** (the 🔁 bullet) to production code, never to
+   the test. Run the verify command: it must fail with the failure the task names. Revert the
+   mutation exactly, run the verify command again and confirm green. Record
+   `"<file>: mutation <what> → failed on <failure>; reverted; re-run green"`.
+4. No named mutation, or the mutation does not produce the named failure → RETURN `FAILED`. Never
+   revise the test to make it fail, and never return `ALREADY_COMPLETE`.
+5. Run the **full suite** for the affected project(s).
+6. RETURN `CHARACTERISED` if no production code was kept (`IMPL_FILES` empty), `GREEN` if any file
+   needed an implementation (the mixed case), and in both cases fill `RED_EVIDENCE` for **every**
+   test file.
+
+#### Generated cycle for the sub-agent (include for a `GENERATE` task)
+
+1. Never write or edit a generated file by hand. Build the generator and run it exactly as the task
+   says.
+2. Build, then run the verify commands and any audit the task names. Passing on first run is the
+   expected case.
+3. RETURN `GREEN` with **every** file the generator wrote or changed under `TEST_FILES`, including
+   helper files the task says the generator also renders, and nothing under `IMPL_FILES`. Never
+   `ALREADY_COMPLETE`. If a generated test or the audit fails → `FAILED`.
+
 #### Hard constraints for the sub-agent (include in the prompt)
 
 - **NEVER** run `git commit`, `git add`, or `git push`.
 - **NEVER** edit `tasks.md` or `.current-gear`.
-- Only create/modify the test file(s) and implementation source file(s).
-- Do not ask the user anything — this is unattended.
+- Only create/modify the test file(s) and implementation source file(s) — plus, for a `GENERATE`
+  task, the files the generator renders. A RED mutation is reverted before you return.
+- Do not ask the user anything — this is unattended. Where `testing.md` or the task says
+  "stop and ask", RETURN `FAILED` with the question as the reason.
 - If the task cannot be done as written (it contradicts an ADR, depends on something absent, or
   needs a design decision), RETURN `FAILED` with the reason. Do not improvise a different task.
 
 #### Required return format (the sub-agent RETURNS this as text)
 
 ```
-STATUS: GREEN | FAILED | ALREADY_COMPLETE
+STATUS: GREEN | FAILED | ALREADY_COMPLETE | CHARACTERISED
 TEST_FILES:
   <one path per line, indented; empty if none>
 IMPL_FILES:
@@ -279,6 +322,7 @@ IMPL_FILES:
 DESCRIPTION: <one-line behavior description for the commit message>
 REGRESSIONS: <none | description of any regression and how it was resolved>
 FAILURE_REASON: <empty unless STATUS is FAILED — explain what went wrong>
+RED_EVIDENCE: <for each test file: "failed on arrival: <assertion>" or "mutation <what> → failed on <assertion>; reverted">
 ```
 
 Paths MUST be **one per line** (so they tokenise unambiguously regardless of spaces in a
@@ -300,6 +344,33 @@ space-separated line.
 Read the sub-agent's returned result and act on its `STATUS`. **Every outcome produces the
 two-commit shape**: the change, then the bookkeeping.
 
+**Before any outcome's commits — leftover-mutation check.** Run `git status --porcelain` and
+compare it with the Step 4 baseline. Any entry that is new since the baseline and lies outside
+`TEST_FILES` ∪ `IMPL_FILES` (and is not `tasks.md`) means a mutation or scratch edit was not
+reverted: do **not** commit; restore it with `git checkout -- <path>` only if it is a tracked
+production file the sub-agent reported mutating in `RED_EVIDENCE`, otherwise mark the task `- [!]`
+with the reason. The check cannot see a mutation left in a file that is *also* in `IMPL_FILES`;
+there, rely on `RED_EVIDENCE`'s "reverted; re-run green" and the full-suite run, and treat
+`RED_EVIDENCE` missing either as a contract violation.
+
+**CHARACTERISED:**
+1. `IMPL_FILES` must be empty and `TEST_FILES` non-empty; otherwise treat as a contract violation
+   and send it back.
+2. **Commit one — the test:**
+   ```bash
+   git add [TEST_FILES]
+   git commit -m "test: [DESCRIPTION]
+
+   - Test: When_[condition]_should_[expected_behavior]
+   - Characterisation — RED observed via: [RED_EVIDENCE]
+   - Task: [task number]/[total] ([section heading])
+
+   Co-Authored-By: Claude Opus <noreply@anthropic.com>
+   Co-Authored-By: Claude Sonnet <noreply@anthropic.com>"
+   ```
+3. **Commit two — the bookkeeping**, as for GREEN.
+4. Count this task toward the run count.
+
 **GREEN:**
 1. **Sanity-check the file lists first.** A `GREEN` result with **empty** `TEST_FILES` *and*
    `IMPL_FILES` is a contract violation — a passing task should have written source. Do NOT
@@ -312,6 +383,7 @@ two-commit shape**: the change, then the bookkeeping.
 
    - Test: When_[condition]_should_[expected_behavior]
    - Implementation: [brief description]
+   - Characterisation — RED observed via: [RED_EVIDENCE]   (only when RED_EVIDENCE names a mutation)
    - Task: [task number]/[total] ([section heading])
 
    Co-Authored-By: Claude Opus <noreply@anthropic.com>
@@ -385,7 +457,7 @@ to Step 7 and stop; otherwise continue the loop:
    stop (`DOWNSHIFTED`). Re-read the file **every** iteration; this is how the user takes back
    per-test review mid-phase without losing the work already done.
 3. **Bound reached** (the bound chosen in Step 0) → stop (`BOUND_REACHED`):
-   - **Tasks**: completed tasks this run (GREEN + ALREADY_COMPLETE) ≥ N
+   - **Tasks**: completed tasks this run (GREEN + CHARACTERISED + ALREADY_COMPLETE) ≥ N
    - **Turns**: iterations attempted this run (including FAILED) ≥ N
    - **Budget**: output tokens consumed this run have reached ~N
 4. **Scope exhausted**: the gear has a `scope:` and the next unchecked task is outside it → stop

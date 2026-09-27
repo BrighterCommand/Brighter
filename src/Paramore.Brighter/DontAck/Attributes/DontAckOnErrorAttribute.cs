@@ -35,12 +35,14 @@ namespace Paramore.Brighter.DontAck.Attributes;
 /// <remarks>
 /// <para>
 /// This attribute should be placed at the outermost position in the pipeline (lowest step number, typically 0)
-/// to catch any exceptions that escape other handlers like retry policies or circuit breakers.
+/// to catch application exceptions that escape other handlers like retry policies or circuit breakers.
+/// Explicit pump actions and non-empty aggregates whose direct inner exceptions are all pump actions
+/// propagate unchanged. Other exceptions, including cancellation, use this backstop's configured action.
 /// </para>
 /// <para>
 /// Example usage:
 /// <code>
-/// [DontAckOnError(step: 0)]                  // Outermost - catches anything
+/// [DontAckOnError(step: 0)]                  // Outermost - catches application failures
 /// [UsePolicy("RetryPolicy", step: 2)]        // Retries first
 /// public override MyMessage Handle(MyMessage message)
 /// {
