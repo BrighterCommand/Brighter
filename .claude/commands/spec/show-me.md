@@ -368,8 +368,71 @@ rendered block (row 5's tree, or row 6's optional second diagram) together with 
 changed paths. Nothing is written under either heading yet.
 
 **The Classifier** (ADR 0073, FR-7, FR-8) judges each breaking-change item, each requirement's status,
-and each piece of work no requirement covers — once each, with evidence — and tallies only its own
-judgements. Placing this stage here fixes Step 5's order; the judging itself lands with a later task.
+and each piece of work no requirement covers. Four rules bind it:
+
+- **It reads only what the read log holds.** No read of its own; its inputs are the src/-scoped diff,
+  the .adr-list extracts, the marked release-notes section (when Step 4 read one), requirements.md
+  or its declarations, and tasks.md — all already charged there.
+- **It judges each thing once.** An item list, a status set, and Part 3's list are each produced once
+  per run; every later rendering (the sections a later task places, and F2/F5 below) renders that one
+  result, never re-derives it.
+- **It follows the catalogue's boundary when there is one** — see *Breaking-change items* below.
+- **Every item and status carries its evidence** — a catalogue bullet, ADR entry or diff hunk for an
+  item; a task id, path or ADR stem for a status.
+
+**Breaking-change items** (FR-7): one bullet each, ≤ 40 words — what breaks, its classification set
+(one or more of source/binary/behavioural/compatibility — "source and binary" is normal, not
+exclusive), and the migration in one sentence.
+
+- **The tie-break.** A marked release-notes section for the target was read (Step 4) and its
+  `#### Breaking changes` list holds a bullet (`release_notes.m` > 0) → each bullet is one item,
+  following the catalogue's own grouping, never re-partitioned. Otherwise → one item per distinct
+  public-API declaration **removed or modified** in the src/-scoped diff (a purely added declaration
+  is additive, not breaking), or per ADR *Consequences* bullet describing a **consumer-affecting**
+  behavioural break.
+- **Count line.** `Total breaking-change items: {n}`. `{n}` is 0 → the list is exactly `No breaking
+  changes identified for this spec.` in its place.
+- **Disagreement.** The catalogue was read (`release_notes.m` not null) and `{n}` differs from it →
+  hold, additionally: `release_notes.md records {m} items; this summary identifies {n}` —
+  `{m}` = `release_notes.m`, copied verbatim, never recomputed.
+
+**Each declared id's status** (FR-8) — one status per id in `declared_ids` (the ledger's set; no other
+id is ever assigned one):
+
+- **Sub-clauses fold already** (`declared_ids` is already folded to top-level ids). When a folded id's
+  sub-clauses have different outcomes, its status is the *least-shipped* by this precedence: `Shipped`
+  < `Shipped with deviation` < `Unverifiable` < `Deferred` < `Withdrawn` < `Dropped`; when that status
+  is not `Shipped`, its deviation entry names which sub-clause differs and addresses each sub-clause.
+- **Status set**: `Shipped`, `Shipped with deviation`, `Deferred`, `Dropped`, `Withdrawn`,
+  `Unverifiable`. `Withdrawn` needs a recorded decision — cited — that removed or superseded the
+  requirement before or during implementation; `Dropped` is the same outcome with no such decision.
+- **Evidence and follow-up.** Every status names a task id, path or ADR stem. `Deferred`, `Dropped`
+  and `Withdrawn` also name a follow-up: an issue number, a superseding requirement's id, or the
+  literal `no follow-up recorded`.
+- **Part 1.** `Shipped as planned: {k} of {total} numbered requirements — {id list}.` `{id list}`:
+  every `Shipped` id, `FR-…` then `NFR-…`, comma-separated; a maximal run of **three or more**
+  integer-adjacent ids (`{prefix}-i`, `{prefix}-j`, `j = i + 1` exactly) collapses to `{first}–{last}`
+  — a run of two is written out, never collapsed. `{k}` = 0 → the id list is `none`.
+- **Part 2.** One deviation entry per non-`Shipped` id, same id order: the id, a one-line paraphrase
+  of what it asked for, its status word in bold, a one-sentence reason, its evidence, its follow-up.
+  None → exactly `No deviations: every numbered requirement shipped as stated.`
+- **The partition invariant.** Every id in `declared_ids` appears exactly once, in Part 1's list or as
+  one Part 2 entry — never both, never neither.
+- **Part 3.** Judged, not pattern-matched (NFR-1): from `tasks.md`'s checked tasks, which ones
+  describe work no declared id's evidence already covers — using each task's own description,
+  whatever form it cites its traces in (a `Traces to:` line, an `AC-N` reference, or none at all) —
+  held by task id. None → exactly `Nothing shipped outside the numbered requirements.`
+- **Part 4.** `Shipped: {a} · Shipped with deviation: {b} · Deferred: {c} · Dropped: {d} ·
+  Withdrawn: {w} · Unverifiable: {e} (of {total})` — `{a}` = Part 1's `{k}`; `{b}+{c}+{d}+{w}+{e}` =
+  the number of Part 2 entries; the six terms sum to `{total}`.
+
+**Tallies this stage emits** — the only numbers the Classifier produces; every other number in
+`show-me.md` comes from the ledger: `{n}` and the six Part 4 terms. F2 (below) reads `{n}`; F5 (below)
+reads the Part 2 entries.
+
+**What this task holds, for a later task to place:** the item list for `## Breaking changes`, the
+status list and Parts 1–4 for `## Did it ship what it said?`. Nothing is written under either heading
+yet.
 
 <!-- show-me:risk-step:begin -->
 **The risk step** (ADR 0073, FR-11–FR-13) computes the three factor levels and the overall level, and
@@ -401,8 +464,13 @@ applied here, the Measurer already did. Otherwise (row 12) its value is
 **F2** (breaking-change items) **and F5** (requirement fidelity): row 8 or row 9 forces F5 to
 `Medium` (F2 has no forced row — count `1`, `requirements.present`, `declared_total` from the ledger
 first, since either row's condition can hold even when a diff was measured). Outside a forced case,
-F2 and F5 need the Classifier's item tally and deviation entries to evaluate steps 2–4 against — which
-land with a later task. Hold no value and no level for either factor until then; do not guess one.
+apply steps 2–4 to the Classifier's own evidence: F2's value is `{n} items` against FR-11's F2
+thresholds (0 → `Low`, 1–3 → `Medium`, ≥ 4 → `High`); F5's value is `{count} deviation entries of
+{total} requirements: {one clause per status present}` (e.g. `1 Shipped with deviation, 1 Withdrawn
+with a superseding requirement`) against FR-11's F5 thresholds (no entries → `Low`; ≥ 1 `Shipped with
+deviation`/`Unverifiable` entry, or ≥ 1 `Deferred`/`Dropped`/`Withdrawn` entry stating a follow-up →
+`Medium`; ≥ 1 `Deferred`/`Dropped`/`Withdrawn` entry stating `no follow-up recorded` → `High`) —
+taking the highest matching column when more than one holds collectively.
 
 **The factor table**, exactly three rows, F1, F2 and F5 in that order — never a row named `F3` or
 `F4`:
