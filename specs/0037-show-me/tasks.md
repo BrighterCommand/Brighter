@@ -567,7 +567,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - Implementation should: write How it was built as the five tag counts plus the commit count, or the fallback line when the diff fields are null. Carry no review history and no CI state.
   - Traces to: FR-9, FR-16 row 12, NFR-1, AC-17, AC-19; ADR 0072 KC5, IA 10.
 
-- [ ] **TEST + IMPLEMENT: T11.3 — Blast radius copies the six buckets, the API and subdirectory lines, FR-10's provenance lines and FR-20's PR lines wholly from the ledger**
+- [x] **TEST + IMPLEMENT: T11.3 — Blast radius copies the six buckets, the API and subdirectory lines, FR-10's provenance lines and FR-20's PR lines wholly from the ledger**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
     - `0033`: Blast radius shows `Spec branch not determinable — no diff measured.` plus the rules tried (AC-19, Blast radius part).
