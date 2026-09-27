@@ -643,7 +643,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - Wrap the risk step in `<!-- show-me:risk-step:begin -->` and `<!-- show-me:risk-step:end -->`, and move any text that tests a level inside them.
   - Traces to: FR-13, *Advisory* (Definitions), AC-81; ADR 0073 KC5, IA 2; ADR 0072 stage table.
 
-- [ ] **TEST + IMPLEMENT: T13.3 — Inside the markers: F1 is copied from the ledger, the forced levels apply first, and F2 and F5 take their highest matching column over all their evidence**
+- [x] **TEST + IMPLEMENT: T13.3 — Inside the markers: F1 is copied from the ledger, the forced levels apply first, and F2 and F5 take their highest matching column over all their evidence**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
     - `0033`: the F1 row reads `no diff measured — spec branch not determinable` at `Medium`.
