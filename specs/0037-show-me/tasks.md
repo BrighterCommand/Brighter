@@ -507,7 +507,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 
 *ADR 0072 IA 10, Step 4. Depends on Phase 9.*
 
-- [ ] **TEST + IMPLEMENT: T10.1 — Every read is priced before it is issued, made as a window of at most 25,000 B, charged to one in-context read log, and kept inside 1,048,576 B, with the last 100,000 B reserved**
+- [x] **TEST + IMPLEMENT: T10.1 — Every read is priced before it is issued, made as a window of at most 25,000 B, charged to one in-context read log, and kept inside 1,048,576 B, with the last 100,000 B reserved**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
     - `0033` run, with a planted `show-me.md`:
