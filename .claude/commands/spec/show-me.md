@@ -672,6 +672,42 @@ was measured, row 13's fallback line in their place.
   of them, each with its reason — a list shorter than three is then complete, not a shortfall
   (FR-14). A diagram drawn here consumes no path slot.
 
+**`## Inputs used`** (FR-15) is a two-column table, `| Input | Status |`, in exactly this row order —
+never a row beyond this set:
+
+1. `requirements.md` — `used` when `requirements.present` is `true` (a whole read or a
+   by-declaration read both count as `used`; a declaration a status could not afford is
+   `Unverifiable` there, not here); otherwise `not available: not present`.
+2. `tasks.md` — always `used` (FR-3's gate already required it).
+3. `.adr-list` — `used` when `adr_list` holds at least one entry; otherwise `not available: .adr-list
+   missing or empty`.
+4. **One row per `adr_list` entry**, identified by its slug (a resolved entry's filename stem) or, for
+   an unresolved entry, its own `.adr-list` text (row 7, FR-16): `used` when its extract was actually
+   read; `not available: {its own `reason`}` (`ADR file not found` or `ambiguous ADR number`) when it
+   did not resolve; `not available: read budget exhausted before {entry}'s extract could be read` on
+   the unexercised case where it resolved but the general allowance ran out before its extract's turn.
+5. `.issue-number` — `used` when Step 4 issued its read; otherwise `not available: not present` (row
+   10, FR-16).
+6. `release_notes.md` section — `used` when Step 4 read it (T10.2's obligation: every marked section
+   or none); `not available: read budget exhausted before release_notes.md section could be read`
+   when row 5a applied; otherwise (no marked section exists at all, row 5) `not available: no marked
+   release_notes.md section for this spec`.
+7. `git history` — `used` when a spec diff was measured (`merge_base` and `measured_head` both not
+   `null`); otherwise `not available: spec branch not determinable` (row 12, FR-16; ADR 0072 KC5).
+8. `pull request` — `used` when `pr` is not `null` (including row 16, FR-16, where its head commit
+   is not present locally — the PR was still found); otherwise `not available: {null_reasons.pr}`
+   (rows 1 and 2, FR-16 — already the exact reason text, copied verbatim).
+9. **One row per source file the Explainer read** (ADR 0077 IA 4), identified by its path: `used`
+   for a whole read, `used (targeted extraction)` for a read by `grep -n -F` extraction — whether or
+   not a diagram was actually drawn from it (row 3's stand-down and row 4's abandon still charge
+   their reads). No row for a file that was only probed with `wc -c` and never opened.
+
+**Never a row for**: the fact ledger or the measurement script (FR-15 — both are parts of the command,
+not inputs to it); `specs/.current-spec` (it only chooses the target); the existing `show-me.md`
+(Step 4 reads it only because `Write` requires that, never as evidence); `PROMPT.md` or a
+`PROMPT-*.md` companion (row 11, FR-16 — neither is read at all); review comments; CI checks (FR-9,
+FR-15 — neither is an input to this command).
+
 Before the assembled text names any repository path — a link, a `## Where to look first` entry, or a
 diagram node — run `git ls-files --error-unmatch {path}` on it and drop it rather than write it if
 the check fails (FR-17, NFR-5).
