@@ -507,6 +507,51 @@ checks run over what this step itself computed; nothing outside these markers ev
 below, whose rules are already implemented, and every other H2 section a later task fills — copying
 every number from the ledger or from the Classifier's tallies, never computing one itself.
 
+**`## What changed and why`** (FR-6) states, in 150–600 words of prose (fenced diagram lines
+excluded, NFR-2 (d)) — never a bullet dump, never a copy-paste of an ADR's *Decision* section — what
+the spec set out to fix, what a user of Brighter can now do differently (or what now behaves
+differently), and the one or two decisions that most shaped the result. An internal type name is
+never introduced without a short gloss on first use.
+
+**Naming the ADRs.** Every entry in the ledger's `adr_list` is named at least once:
+
+- An entry whose `path` resolved: by its filename stem, its title (from the extract's
+  `front_matter`) and its current Status (from the extract's `## Status` section), linked relatively
+  from the spec directory to the file — never by a bare number (C-9), e.g. `[{title}
+  ({stem})](../../docs/adr/{stem}.md)`.
+- An entry whose `path` did not resolve (row 7, FR-16): named using its own `reason` — `{entry} —
+  ADR file not found in docs/adr/.`, or, when `matches` holds more than one filename, `{entry} —
+  ambiguous ADR number, matches: {filenames}; .adr-list should name the full filename instead.` — the
+  narrative continues with the remaining, resolved ADRs.
+- When `adr_list` is empty (row 6, FR-16): write exactly `No ADRs recorded for this spec.` in place
+  of any ADR naming, and synthesise the narrative from `requirements.md`, `tasks.md` and the commits
+  instead.
+
+**Placing the Explainer's output** (ADR 0077 IA 3, first part). Place exactly what the Explainer
+held earlier in this step: its rendered block, when row 6 of its ladder applied (with the raise's
+one-sentence reason immediately before the block, when it was a raise), or exactly one of the five
+named lines, when any other row applied — never both, never neither.
+
+**`## Breaking changes`** (FR-7) places the Classifier's bullets (or, when `{n}` is `0`, exactly
+`No breaking changes identified for this spec.` in their place), then whichever applies below, then
+the count line last:
+
+- Exactly one absence line, checked in this order — never more than one:
+  1. `spec_branch` is `null` (row 14, FR-16 — no diff was measured): `No diff measured — this list
+     is derived from the ADRs and requirements.md only; public-API declaration lines could not be
+     inspected.`
+  2. Otherwise, `release_notes.count` is `0` (row 5, FR-16 — no marked section exists): `No
+     release_notes.md section found for this spec; this list is derived from the ADRs and the
+     diff.`
+  3. Otherwise, Step 4 held that FR-16 row 5a applies (a marked section exists but the read budget
+     was exhausted before it could be read): `A release_notes.md section exists for this spec but
+     was not read: the read budget was exhausted. This list is derived from the ADRs and the diff.`
+  4. Otherwise, no absence line.
+- The disagreement line, when `release_notes.m` is not `null` and differs from `{n}`:
+  `release_notes.md records {m} items; this summary identifies {n}` — `{m}` copied verbatim from
+  `release_notes.m`.
+- `Total breaking-change items: {n}` — always last, copied verbatim from the Classifier's tally.
+
 **`## How it was built`** (FR-9) states the task shape and the commit shape, and nothing else — no
 review history, no CI state. Both figures are copied verbatim from the ledger's `tasks` and `commits`
 fields — nothing here is judged:
