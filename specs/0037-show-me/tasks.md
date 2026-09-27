@@ -542,7 +542,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 
 *ADR 0072 IA 10, the Synthesiser's ledger-copied part and Step 6. Depends on Phase 10. Tasks run in order. From here on, every Verify block inspects a written `show-me.md`. Judged sections are filled in by Phases 12–14.*
 
-- [ ] **TEST + IMPLEMENT: T11.1 — The command checks every path it names is tracked and writes `show-me.md` in one `Write`, with FR-5's header and the eight headings in order**
+- [x] **TEST + IMPLEMENT: T11.1 — The command checks every path it names is tracked and writes `show-me.md` in one `Write`, with FR-5's header and the eight headings in order**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
     - `0033` (no branch):
