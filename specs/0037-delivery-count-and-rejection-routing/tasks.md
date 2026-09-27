@@ -413,7 +413,7 @@
     - A red points at `HandledCountReached` or at `MessagePump.DiscardRequeuedMessagesEnabled()`.
   - Depends on: 3.3, 4.3
 
-- [ ] **4.11 GATE: AWS FR-23 passes on all eight configurations, both variants; move the eight ledger cells (AC-12, AC-30 row 1, R-12, R-23)**
+- [x] **4.11 GATE: AWS FR-23 passes on all eight configurations, both variants; move the eight ledger cells (AC-12, AC-30 row 1, R-12, R-23)**
   - In `conformance-status.md`:
     - Set FR-23 for `AWS / SnsStandard`, `SnsFifo`, `SqsStandard`, `SqsFifo` and the four `AWS.V4` twins to `Fixed (#4341)`
     - Regenerate, run the full scoped AWS and AWS.V4 conformance suites on LocalStack in both variants, and confirm every previously `Pass`/`Fixed` column still passes
