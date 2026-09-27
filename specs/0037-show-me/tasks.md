@@ -393,7 +393,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 
 *ADR 0072 IA 8, "behavioural, partly by inspection". Depends on Phase 6. This task takes the Verify-by shape (see *How to read this list*).*
 
-- [ ] **TEST + IMPLEMENT: T7.1 — The ledger appears only by an atomic replacement, an over-cap ledger is refused before anything is written, and no run leaves a temporary or partial artefact**
+- [x] **TEST + IMPLEMENT: T7.1 — The ledger appears only by an atomic replacement, an over-cap ledger is refused before anything is written, and no run leaves a temporary or partial artefact**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
     - **Inspection of the write path (AC-83; ADR 0072 IA 8).** Read the code in `show_me_facts.cs` that writes the ledger, and confirm each of these by line:
