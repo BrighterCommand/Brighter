@@ -243,6 +243,61 @@ place, filling in each H2 section's body; nothing below writes to disk yet.
    `## How it was built`, `## Blast radius`, `## Risk assessment (advisory)`,
    `## Where to look first`, `## Inputs used`.
 
+**The Explainer** (ADR 0077, FR-6) runs next, after the headings are written and before any H2
+section's content — it decides `## What changed and why`'s diagram-or-line output, which a later
+task places. Walk this six-row ladder, stated in ADR 0077's own order; the first row that applies
+decides the outcome:
+
+| # | Situation | The Explainer | `## What changed and why` carries |
+| --- | --- | --- | --- |
+| 1 | The ledger's trigger fields are null, because no spec diff was measured | evaluates nothing, reads nothing | the no-diff line |
+| 2 | No test fired, and the Explainer does not raise | reads nothing | the no-trigger line |
+| 3 | A test fired, but the evidence does not cohere into one relationship — seen before reading, or found on reading | stands down; reads already made stay charged | the stand-down line |
+| 4 | A relationship is elected — because a test fired, or as a raise with its one-sentence reason — and cannot be completed: a file it needs cannot be afforded, or, for a raise, reading shows no relationship after all | abandons the relationship; reads already made stay charged | after a fired test, the budget line; after a raise, the no-trigger line |
+| 5 | A test fired, and the only relationship worth drawing is the path tree among three to seven changed files a reviewer should open first | reads, renders the tree, targets `## Where to look first` | the placed-elsewhere line |
+| 6 | Any other elected relationship that could be afforded, including every raise | reads, renders the block | the diagram, plus the raise's reason when it was a raise |
+
+The five named lines. Every reference to one of these — in this file, in a commit message, anywhere —
+uses its name, never its row number or its position in this list:
+
+- **the no-trigger line**: `No diagram: {a} files changed under src/ across {b} director{y|ies}, {c}
+  changed public API declaration lines, {d} ADRs — no structural relationship to draw.`
+- **the stand-down line**: `No diagram: {which test(s)} fired, but {one-sentence reason the evidence
+  does not cohere into a relationship}.`
+- **the placed-elsewhere line**: `No diagram here: the change's shape is drawn as a path tree in ##
+  Where to look first.`
+- **the budget line**: `No diagram: the read budget was exhausted before the relationship could be
+  read accurately.`
+- **the no-diff line**: `No diagram: spec branch not determinable, so no change could be drawn.`
+
+**The node-list row shape.** Before rendering a diagram, the Explainer holds one row per node it
+draws, naming the node and exactly one licensing source:
+
+| Source | Licenses a node that names |
+| --- | --- |
+| a path in the spec diff | that file |
+| a declaration line in the `src/`-scoped diff | the type or member that line declares |
+| an ADR stem from `.adr-list` | a component or type the ADR's extract names |
+| a path in the read log, read by the Explainer | that file — marked `(unchanged)` when it is not in the spec diff — or a type or member read in it |
+
+A node with no row cannot be drawn.
+
+**This task implements only row 1 and row 2's non-raise half; row 2's raise, and rows 3–6, land with
+a later task — do not improvise them:**
+
+- When `triggers` is `null` (row 1, FR-16 row 12): hold **the no-diff line** as the Explainer's
+  output, and stop. `triggers.d1`, `.d2` and `.d3` are not evaluated at all.
+- Otherwise, read `triggers.d1`, `triggers.d2` and `triggers.d3` — already computed in the ledger,
+  never re-evaluated. When all three are `false` and the model does not exercise FR-6 (b)'s raise:
+  hold **the no-trigger line** as the Explainer's output, with `{a}` = `buckets.src.files`, `{b}` =
+  `src_subdirectory_count` (`directory` when `{b}` is `1`, otherwise `directories`), `{c}` =
+  `public_api_lines`, `{d}` = `adr_resolved_count` — every value copied verbatim from the ledger.
+- Any other case — at least one of `d1`/`d2`/`d3` is `true`, or the model exercises the raise — is
+  row 2's raise or rows 3–6. Hold nothing yet; a later task decides those outcomes.
+
+Whatever the Explainer holds is for a later task's placement into `## What changed and why`; nothing
+is written under that heading yet.
+
 **`## How it was built`** (FR-9) states the task shape and the commit shape, and nothing else — no
 review history, no CI state. Both figures are copied verbatim from the ledger's `tasks` and `commits`
 fields — nothing here is judged:
