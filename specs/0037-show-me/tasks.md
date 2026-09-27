@@ -415,7 +415,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 
 *ADR 0072 IA 9. Depends on T3.2.*
 
-- [ ] **TEST + IMPLEMENT: T8.1 — Word-count mode counts only NFR-2's counted body and excludes every fenced line**
+- [x] **TEST + IMPLEMENT: T8.1 — Word-count mode counts only NFR-2's counted body and excludes every fenced line**
   - **USE COMMAND**: `/test-first when the measurement script word-counts a file it should count only NFR-2's counted body and report 8 for the eight-token fixture`
   - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
   - Test row(s): `-- .claude/test-fixtures/show-me/wordcount-eight.md --word-count`, and a missing file with `--word-count`.
