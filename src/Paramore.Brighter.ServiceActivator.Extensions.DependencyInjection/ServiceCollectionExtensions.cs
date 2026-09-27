@@ -226,6 +226,8 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
                 return ConsumerValidationRules.UnwrapTransformResolvable(
                     () => ServiceCollectionExtensions.MessageMapperRegistry(sp), probe);
             });
+            services.AddSingleton<ISpecification<Subscription>>(sp =>
+                ConsumerValidationRules.ChannelFactoryCompatible(sp.GetService<IAmConsumerOptions>()?.DefaultChannelFactory));
         }
     }
 }

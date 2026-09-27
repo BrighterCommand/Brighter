@@ -19,19 +19,22 @@ tools/Paramore.Brighter.Test.Generator/
 │   │   ├── Sync/       ← 14 Liquid templates for sync outbox tests (13 tests + 1 interface)
 │   │   ├── Async/      ← 14 Liquid templates for async outbox tests (13 tests + 1 interface)
 │   │   └── Causation/  ← Liquid template for causation-tracking outbox tests (subclass of CausationTrackingOutboxBaseTests)
-│   └── MessagingGateway/
-│       ├── Reactor/    ← 21 Liquid templates for sync messaging gateway tests (20 tests + 1 interface)
-│       ├── Proactor/   ← 21 Liquid templates for async messaging gateway tests (20 tests + 1 interface)
-│       └── Shared/     ← 2 Liquid templates shared by both variants (ConformanceDeferredPump, RejectionMetadataKeys)
+│   ├── MessagingGateway/
+│   │   ├── Reactor/    ← 21 Liquid templates for sync messaging gateway tests (20 tests + 1 interface)
+│   │   ├── Proactor/   ← 21 Liquid templates for async messaging gateway tests (20 tests + 1 interface)
+│   │   └── Shared/     ← 3 Liquid templates shared by both variants (ConformanceDeferredPump, ConformanceHarnessMessageScheduler, RejectionMetadataKeys)
+│   └── GatewayConformance/  ← 1 Liquid template for the channel factory declaration sweep (ADR 0073)
 ├── Generators/
 │   ├── BaseGenerator.cs
 │   ├── OutboxGenerator.cs
 │   ├── MessagingGatewayGenerator.cs
+│   ├── GatewayConformanceGenerator.cs
 │   └── SharedGenerator.cs
 ├── Configuration/
 │   ├── TestConfiguration.cs
 │   ├── OutboxConfiguration.cs
-│   └── MessagingGatewayConfiguration.cs
+│   ├── MessagingGatewayConfiguration.cs
+│   └── GatewayConformanceConfiguration.cs
 └── Program.cs
 
 tests/Paramore.Brighter.*.Tests/
@@ -42,9 +45,11 @@ tests/Paramore.Brighter.*.Tests/
 │       ├── Async/*.cs
 │       └── Causation/*.cs
 └── MessagingGateway/
-    └── [Prefix]/Generated/      ← Output directory (do not hand-edit)
-        ├── Reactor/*.cs
-        └── Proactor/*.cs
+    ├── [Prefix]/Generated/      ← Output directory (do not hand-edit)
+    │   ├── Reactor/*.cs
+    │   └── Proactor/*.cs
+    └── Generated/Conformance/   ← Output directory (do not hand-edit); one per project, never per [Prefix]
+        └── *.cs
 ```
 
 ### Projects Using the Generator
@@ -338,6 +343,48 @@ Key provider responsibilities:
 - **`CreateOutbox()` / `CreateOutboxAsync()`** — create an outbox instance for the provider
 - **`CreateTransactionProvider()`** — create a transaction provider for transaction tests
 - **`GetAllMessages()` / `GetAllMessagesAsync()`** — retrieve all stored messages for assertions
+
+### Gateway Conformance Configuration
+
+Every shipped messaging gateway carries a channel factory declaration conformance sweep (ADR 0073),
+which guards against the defect class ADR 0072 corrects: a `Subscription` whose declared
+`ChannelFactoryType` doesn't actually implement `IAmAChannelFactory`, or inherits the in-memory
+default rather than declaring its own. A `GatewayConformance` section opts a project's assembly into
+this sweep:
+
+```json
+{
+  "Namespace": "Paramore.Brighter.Redis.Tests",
+  "GatewayConformance": {
+    "SubscriptionType": "Paramore.Brighter.MessagingGateway.Redis.RedisSubscription"
+  }
+}
+```
+
+- **`SubscriptionType`** (required) — the fully-qualified name of the subscription type the sweep is
+  expected to report as a subject. Rendered both as a locator (`typeof(SubscriptionType).Assembly`
+  picks out the gateway assembly the sweep examines) and as an expected subject. Must name a type
+  that survives subsumption — one that declares its own `ChannelFactoryType`, or a root candidate
+  with no ancestor that also declares one.
+- **`AdditionalExpectedSubjects`** (optional) — further fully-qualified type names the sweep is
+  expected to report, beyond `SubscriptionType`. A generic entry is written with its arity backtick
+  exactly as `System.Type.FullName` reports it (e.g. `` Ns.Foo`1 ``), not with angle brackets; the
+  generator converts it to an open-generic `typeof(Ns.Foo<>)` literal when rendering.
+- **`Category`** (optional) — unused by the sweep guard itself; present only for symmetry with the
+  other configuration sections.
+
+This generates one file into `MessagingGateway/Generated/Conformance/` —
+`When_sweeping_the_gateway_assembly_should_find_no_invalid_channel_factory_declaration.cs` — however
+many `MessagingGateway`/`MessagingGateways` variants the same project also configures: **one sweep
+per project, never per gateway variant**, since the sweep examines the whole assembly regardless of
+how many transport variants are tested against it.
+
+Three projects carry only a `GatewayConformance` section, with no `Outbox` or `MessagingGateway`
+section of their own — `Paramore.Brighter.AzureServiceBus.Tests`, `Paramore.Brighter.MQTT.Tests` and
+`Paramore.Brighter.RMQ.Sync.Tests`. Their gateways had no generated test suite before this sweep
+existed, so their `test-configuration.json` files are new, added purely so the thirteenth-gateway
+audit (which every shipped gateway must be named by exactly once) has a configuration to find each
+of them by.
 
 ## When to Create or Update Generated Tests
 
