@@ -48,7 +48,6 @@ internal sealed class GcpRejectionRouter : IDisposable, IAsyncDisposable
 
     private readonly GcpMessagingGatewayConnection _connection;
     private readonly RoutingKey? _deadLetterRoutingKey;
-    // Reserved for 5.5b: selection by reason (Unacceptable → invalid, falling back to DLQ).
     private readonly RoutingKey? _invalidMessageRoutingKey;
     private readonly OnMissingChannel _makeChannels;
     private readonly string _projectId;
@@ -68,7 +67,8 @@ internal sealed class GcpRejectionRouter : IDisposable, IAsyncDisposable
     /// The Brighter-managed dead-letter topic. <see langword="null"/> disables DLQ routing.
     /// </param>
     /// <param name="invalidMessageRoutingKey">
-    /// The Brighter-managed invalid-message topic. Reserved for 5.5b (reason-based selection).
+    /// The Brighter-managed invalid-message topic. <see langword="null"/> disables invalid-message
+    /// routing, in which case an <see cref="RejectionReason.Unacceptable"/> reason falls back to the DLQ.
     /// </param>
     /// <param name="makeChannels">
     /// Inherited from the subscription. Controls whether the destination topic is created on first use.
@@ -109,7 +109,7 @@ internal sealed class GcpRejectionRouter : IDisposable, IAsyncDisposable
     /// </returns>
     internal RoutingOutcome Route(Message message, MessageRejectionReason? reason)
     {
-        var destination = ChooseDestination();
+        var destination = ChooseDestination(reason);
         if (destination == null)
         {
             return RoutingOutcome.NoDestination;
@@ -156,7 +156,7 @@ internal sealed class GcpRejectionRouter : IDisposable, IAsyncDisposable
     /// </returns>
     internal async Task<RoutingOutcome> RouteAsync(Message message, MessageRejectionReason? reason, CancellationToken ct)
     {
-        var destination = ChooseDestination();
+        var destination = ChooseDestination(reason);
         if (destination == null)
         {
             return RoutingOutcome.NoDestination;
@@ -187,10 +187,16 @@ internal sealed class GcpRejectionRouter : IDisposable, IAsyncDisposable
     }
 
     /// <summary>
-    /// Chooses the destination routing key for the rejected message.
-    /// Phase 5.5a: all reasons route to DLQ; 5.5b adds selection by reason.
+    /// Chooses the destination routing key for the rejected message based on <paramref name="reason"/>.
+    /// <see cref="RejectionReason.Unacceptable"/> routes to the invalid-message topic, falling back
+    /// to the DLQ when no invalid-message topic is configured. Every other reason
+    /// (<see cref="RejectionReason.DeliveryError"/>, <see cref="RejectionReason.None"/>, or no reason
+    /// at all) routes to the DLQ. <see langword="null"/> when neither destination is configured.
     /// </summary>
-    private RoutingKey? ChooseDestination() => _deadLetterRoutingKey;
+    private RoutingKey? ChooseDestination(MessageRejectionReason? reason) =>
+        reason?.RejectionReason == RejectionReason.Unacceptable
+            ? _invalidMessageRoutingKey ?? _deadLetterRoutingKey
+            : _deadLetterRoutingKey;
 
     /// <summary>
     /// Stamps Brighter rejection metadata onto <paramref name="message"/> in place.
