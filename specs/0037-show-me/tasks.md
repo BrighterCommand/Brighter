@@ -446,7 +446,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 
 *ADR 0072 IA 10, Steps 1–3. Depends on Phases 1–8, committed. This phase **rewrites** `.claude/commands/spec/show-me.md`.*
 
-- [ ] **TEST + IMPLEMENT: T9.1 — `/spec:show-me` resolves its whole argument over the pre-listed spec directories, or stops with FR-1's or FR-2's exact message**
+- [x] **TEST + IMPLEMENT: T9.1 — `/spec:show-me` resolves its whole argument over the pre-listed spec directories, or stops with FR-1's or FR-2's exact message**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
     - Run:
