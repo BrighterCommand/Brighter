@@ -934,7 +934,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - Tear down with `git checkout -- release_notes.md` and R3.
   - Traces to: FR-7, FR-15, FR-23, AC-69, AC-92.
 
-- [ ] **PROJECT: T17.7 — Conventions and permission boundaries**
+- [x] **PROJECT: T17.7 — Conventions and permission boundaries**
   - Do:
     - `git clone` into the scratch directory with no build, restore or install step. From its root, run `dotnet run .claude/commands/spec/show_me_facts.cs -- specs/0033-pg-advisory-lock-sha256`, which exits `0`, and the test script, which exits `0` (AC-53).
     - `git ls-files --stage` shows `100644` for both scripts, and there is exactly one of each in `.claude/commands/spec/`.
