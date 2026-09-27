@@ -39,13 +39,15 @@ Suppressible with `ValidatePipelines(throwOnError: false)`.
 #### Breaking change: AWS SQS, AWS SQS V4 and Postgres subscriptions routed through an in-memory `CombinedChannelFactory` slot now fail at Dispatcher start, not just at validation
 
 Because AWS SQS, AWS SQS V4 and Postgres subscriptions previously declared no `ChannelFactoryType` at
-all, a `CombinedChannelFactory` with no matching inner factory would silently fall through to
-`InMemoryChannelFactory` at routing time. The subscriptions now declare their real factory type, so
-that fallback no longer exists — routing fails with a `ConfigurationException` (`No channel factory
-found for subscription {name}`) when the `Dispatcher` starts. **This is caused by the transport
-corrections, not by the new validation rule, so `ValidatePipelines(throwOnError: false)` does NOT
-avoid it** — it is a routing change, not a validation verdict. Remedy: add the transport's real
-channel factory to the `CombinedChannelFactory`, or stop relying on the in-memory route.
+all, they inherited the base default, `InMemoryChannelFactory`. A `CombinedChannelFactory` that
+included an `InMemoryChannelFactory` inner factory therefore matched these subscriptions by exact
+type and silently routed them to the in-memory bus instead of failing. The subscriptions now declare
+their real factory type, so that in-memory match no longer occurs: if the `CombinedChannelFactory` has
+no inner factory of the subscription's real type, routing now fails with a `ConfigurationException`
+(`No channel factory found for subscription {name}`) when the `Dispatcher` starts. **This is caused by
+the transport corrections, not by the new validation rule, so `ValidatePipelines(throwOnError: false)`
+does NOT avoid it** — it is a routing change, not a validation verdict. Remedy: add the transport's
+real channel factory to the `CombinedChannelFactory`, or stop relying on the in-memory route.
 
 #### Breaking change: a `ChannelFactoryType` override returning `null` now fails validation
 
