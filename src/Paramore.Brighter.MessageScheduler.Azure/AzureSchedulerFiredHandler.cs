@@ -28,7 +28,8 @@ public class AzureSchedulerFiredHandler(IAmACommandProcessor processor) : Reques
                     Async = command.Async,
                     SchedulerType = command.SchedulerType,
                     RequestType = command.RequestType!,
-                    RequestData = command.RequestData!
+                    RequestData = command.RequestData!,
+                    RequestContextData = command.RequestContextData
                 }, cancellationToken: cancellationToken);
         }
         else
