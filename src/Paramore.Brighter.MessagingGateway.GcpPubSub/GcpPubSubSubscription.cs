@@ -7,7 +7,7 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 /// Represents Google Cloud Pub/Sub specific configuration for a message subscription (a queue).
 /// This class extends the core Brighter <see cref="Subscription"/> with GCP-specific settings.
 /// </summary>
-public class GcpPubSubSubscription : Subscription
+public class GcpPubSubSubscription : Subscription, IUseBrighterDeadLetterSupport, IUseBrighterInvalidMessageSupport
 {
     /// <summary>
     /// Gets the Google Cloud Project ID where the subscription and its topic reside.
@@ -101,6 +101,22 @@ public class GcpPubSubSubscription : Subscription
     /// </summary>
     public string? SubscriberMember { get; }
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// The routing key for the Brighter-managed dead-letter destination. When set, a rejected message is
+    /// published to this topic before the original is acknowledged. Distinct from <see cref="DeadLetter"/>,
+    /// which configures Pub/Sub's native dead-letter policy (ADR 0078).
+    /// </remarks>
+    public RoutingKey? DeadLetterRoutingKey { get; set; }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The routing key for the Brighter-managed invalid-message destination. When set and a message is
+    /// rejected with <see cref="RejectionReason.Unacceptable"/>, it is published here rather than to
+    /// <see cref="DeadLetterRoutingKey"/> (ADR 0078).
+    /// </remarks>
+    public RoutingKey? InvalidMessageRoutingKey { get; set; }
+
     /// <summary>
     /// Gets the type of the channel factory used to create this channel.
     /// For GCP, this is always <see cref="GcpPubSubConsumerFactory"/>.
@@ -126,7 +142,9 @@ public class GcpPubSubSubscription : Subscription
         TimeSpan? maxRequeueDelay = null,
         TimeProvider? timeProvider = null, SubscriptionMode subscriptionMode = SubscriptionMode.Stream,
         Action<SubscriberClientBuilder>? streamingConfiguration = null,
-        string? subscriberMember = null)
+        string? subscriberMember = null,
+        RoutingKey? deadLetterRoutingKey = null,
+        RoutingKey? invalidMessageRoutingKey = null)
         : base(subscriptionName, channelName, routingKey, requestType, getRequestType, bufferSize,
             noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType,
             channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay, unacceptableMessageLimitWindow)
@@ -147,6 +165,8 @@ public class GcpPubSubSubscription : Subscription
         SubscriptionMode = subscriptionMode;
         StreamingConfiguration = streamingConfiguration;
         SubscriberMember = subscriberMember;
+        DeadLetterRoutingKey = deadLetterRoutingKey;
+        InvalidMessageRoutingKey = invalidMessageRoutingKey;
     }
 }
 
@@ -176,14 +196,17 @@ public class GcpPubSubSubscription<T> : GcpPubSubSubscription
         ExpirationPolicy? expirationPolicy = null, DeadLetterPolicy? deadLetter = null,
         TimeSpan? maxRequeueDelay = null,
         TimeProvider? timeProvider = null, SubscriptionMode subscriptionMode = SubscriptionMode.Stream,
-        string? subscriberMember = null)
+        string? subscriberMember = null,
+        RoutingKey? deadLetterRoutingKey = null,
+        RoutingKey? invalidMessageRoutingKey = null)
         : base(subscriptionName, channelName, routingKey, typeof(T), getRequestType, bufferSize,
             noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit,
             unacceptableMessageLimitWindow, messagePumpType,
             channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay, projectId, topicAttributes,
             ackDeadlineSeconds, retainAckedMessages, messageRetentionDuration, labels, enableMessageOrdering,
             enableExactlyOnceDelivery, storage, expirationPolicy, deadLetter, maxRequeueDelay, timeProvider,
-            subscriptionMode: subscriptionMode, subscriberMember: subscriberMember)
+            subscriptionMode: subscriptionMode, subscriberMember: subscriberMember,
+            deadLetterRoutingKey: deadLetterRoutingKey, invalidMessageRoutingKey: invalidMessageRoutingKey)
     {
     }
 }
