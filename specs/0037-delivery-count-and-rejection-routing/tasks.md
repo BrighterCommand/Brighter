@@ -482,7 +482,7 @@
     - Risk note: the members-unset `GetProjectAsync` path needs outbound network. Offline it fails `Unavailable`, which is correctly not tolerated. Record the environment used in the test's summary comment.
   - Depends on: 5.2
 
-- [ ] **5.4 TEST + IMPLEMENT: The four GCP conformance providers use the Brighter route, keep a native policy M = 5 on a distinct `.native` topic, set both IAM members, and declare rejection-metadata keys**
+- [x] **5.4 TEST + IMPLEMENT: The four GCP conformance providers use the Brighter route, keep a native policy M = 5 on a distinct `.native` topic, set both IAM members, and declare rejection-metadata keys**
   - **USE COMMAND**: `/test-first when reading gcp conformance providers should route rejections through brighter with budget three below a native limit of five and iam members set`
   - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway"
   - Test file: `When_reading_gcp_conformance_providers_should_hold_budget_below_native_limit_and_set_iam_members.cs`
