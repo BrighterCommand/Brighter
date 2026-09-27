@@ -155,6 +155,12 @@ You are a skeptical reviewer. Assume the requirements have problems — your job
 - Are ACs written in Given/When/Then or equivalent testable format?
 - Are there FRs without corresponding ACs? (List them specifically.)
 
+**Declaration Form:**
+- Is every numbered requirement declared with the bold lead-in form (`**FR-3 — …**`,
+  `- **NFR-1 — …**`), never as a heading (`#### FR-3: …`) or a numbered-list item
+  (`1. **FR-3** — …`)? `/spec:show-me` does not recognise either of those two forms — flag
+  any requirement declared that way.
+
 ---
 
 #### Design (ADR) Review Criteria
@@ -283,6 +289,11 @@ You are a skeptical reviewer. Assume the task list has problems — your job is 
 - Map each FR from requirements.md to tasks. Are there FRs with no corresponding task? LIST THEM.
 - Map each ADR decision to tasks. Are there design decisions with no implementation task? LIST THEM.
 - Are there tasks that don't trace back to any requirement or design decision? (Scope creep.)
+
+**Task-Type Tag Form:**
+- Does every task checkbox open its bold lead-in with the tag first (`**STRUCTURAL: T1.2 —
+  …**`), never the task id first (`**T1.2 — STRUCTURAL: …**`)? `/spec:show-me` counts a
+  tag-second lead-in as `untagged` — flag any checkbox that drifts, outside a *DO NOT* block.
 
 ---
 
