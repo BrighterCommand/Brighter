@@ -870,7 +870,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - Acceptance: the README clauses of AC-53 hold, links resolve, and the diff is additive.
   - Traces to: NFR-6, AC-53; ADR 0072 *Where each artefact is touched*, IA 11; ADR 0078 IA 6.
 
-- [ ] **DOC: T16.2 — Ask for merge commits in `CONTRIBUTING.md`, and say why**
+- [x] **DOC: T16.2 — Ask for merge commits in `CONTRIBUTING.md`, and say why**
   - Do: add one paragraph under *Submitting Changes*. It asks that pull requests are merged with a merge commit, not squashed or rebased, because tooling pins commit shas from a merged branch's history and only a merge commit keeps them reachable.
   - Acceptance: AC-94 holds, and `git diff $PRE -- CONTRIBUTING.md` adds one paragraph only.
   - Traces to: NFR-9, AC-94; ADR 0072 KC6, Risks (calibration commits unreachable), IA 11.
