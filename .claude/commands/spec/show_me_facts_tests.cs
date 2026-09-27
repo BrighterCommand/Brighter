@@ -22,6 +22,7 @@ const string CalibrationMergeBase = "6145913a0";
 const string CalibrationMeasuredHead = "91d549be6";
 const string WordCountFixturesDir = ".claude/test-fixtures/show-me";
 const string WordCountEightTarget = $"{WordCountFixturesDir}/wordcount-eight.md";
+const string WordCountConformingTarget = $"{WordCountFixturesDir}/wordcount-conforming.md";
 const string WordCountMissingTarget = $"{WordCountFixturesDir}/wordcount-does-not-exist.md";
 
 // The declared fixture's file fields (tasks, declared ids, .adr-list) — read from the working
@@ -410,7 +411,15 @@ var rows = new[]
         "word-count: eight-token fixture",
         [WordCountEightTarget, "--word-count"],
         WordCountFixturesDir,
-        WordCountAssertions(expectedTotal: 8, expectedExcludedFenceLines: 3)),
+        WordCountAssertions(expectedTotal: 8, expectedExcludedFenceLines: 3, expectedInRange: false)),
+    // T8.2: the fixture's own excluded-tail comment records its total (500 = 1 heading token +
+    // 499 body words) — independently reverified by running --word-count against it directly.
+    // 500 sits inside NFR-2's 400–2,000 range, unlike the eight-token fixture above.
+    new Row(
+        "word-count: conforming fixture (in range)",
+        [WordCountConformingTarget, "--word-count"],
+        WordCountFixturesDir,
+        WordCountAssertions(expectedTotal: 500, expectedExcludedFenceLines: 0, expectedInRange: true)),
     new Row(
         "word-count: missing file",
         [WordCountMissingTarget, "--word-count"],
@@ -640,9 +649,9 @@ static IEnumerable<string> UsageErrorAssertions(RunResult result)
 
 static IEnumerable<string> ToolingFaultAssertions(RunResult result) => UsageErrorAssertions(result);
 
-// T8.1: NFR-2's word-count mode. Exit 0, no ledger, and a show-me-wordcount: record reporting
-// the fixed field names `total` and `excluded_fence_lines` (T8.2 adds `in_range`).
-static Func<RunResult, IEnumerable<string>> WordCountAssertions(int expectedTotal, int expectedExcludedFenceLines) => result =>
+// T8.1/T8.2: NFR-2's word-count mode. Exit 0, no ledger, and a show-me-wordcount: record
+// reporting the fixed field names `total`, `excluded_fence_lines` and `in_range`.
+static Func<RunResult, IEnumerable<string>> WordCountAssertions(int expectedTotal, int expectedExcludedFenceLines, bool expectedInRange) => result =>
 {
     var failures = new List<string>();
 
@@ -666,6 +675,11 @@ static Func<RunResult, IEnumerable<string>> WordCountAssertions(int expectedTota
     if (!root.TryGetProperty("total", out var totalValue) || totalValue.GetInt32() != expectedTotal)
     {
         failures.Add($"expected total {expectedTotal}");
+    }
+
+    if (!root.TryGetProperty("in_range", out var inRangeValue) || inRangeValue.GetBoolean() != expectedInRange)
+    {
+        failures.Add($"expected in_range {expectedInRange}");
     }
 
     if (!root.TryGetProperty("excluded_fence_lines", out var excludedValue) || excludedValue.GetInt32() != expectedExcludedFenceLines)

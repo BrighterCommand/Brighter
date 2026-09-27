@@ -12,6 +12,8 @@ const int ToolingFaultExitCode = 1;
 const int GateNotPassedExitCode = 2;
 const int LedgerCapBytes = 65_536;
 const string WordCountFlag = "--word-count";
+const int WordCountLowerBound = 400;
+const int WordCountUpperBound = 2_000;
 
 // ADR 0072 KC1's argument grammar: {target}; {target} --pinned {base} {head};
 // {target} --release-notes {path}; {target} with both, in either order. Anything else — an
@@ -619,6 +621,7 @@ static int RunWordCount(string filePath)
     {
         ["total"] = total,
         ["excluded_fence_lines"] = excludedFenceLines,
+        ["in_range"] = total is >= WordCountLowerBound and <= WordCountUpperBound,
     });
 
     return 0;
