@@ -912,7 +912,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - Acceptance: the acceptance record marks every listed AC `held`, `defect ({owning task})`, or, for a judged path not taken, `unexercised on this run`.
   - Traces to: C-8, FR-1–FR-21, NFR-1–NFR-8, and the ACs listed.
 
-- [ ] **PROJECT: T17.3 — (C-8) AC-47 in the clone: a local branch that diverges from the remote-tracking ref**
+- [x] **PROJECT: T17.3 — (C-8) AC-47 in the clone: a local branch that diverges from the remote-tracking ref**
   - Do: in R4 with K12's local `spec/scoped-lifetime-per-pipeline` at `386efee78`, run `/spec:show-me 0036-scoped-lifetime-per-pipeline`. Check that the remote-tracking ref (`91d549be6`) is measured, that the metadata and Blast radius name that full ref and its sha together with the base ref and merge base, and that the local-divergence line names `386efee78`. The merge base is the clone's (R4); it is not compared with the calibration value.
   - Traces to: FR-10, C-4, C-8, AC-47.
 
