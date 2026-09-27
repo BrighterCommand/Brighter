@@ -747,7 +747,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - Implementation should: produce the fixed row set, the git history row per KC5, one Explainer row per source file however it was read (ADR 0077 IA 4), and no row for `.current-spec`, the existing `show-me.md` or `PROMPT*`.
   - Traces to: FR-15, FR-16 rows 1, 2, 5, 5a, 10, 11 and 12, FR-17, AC-27, AC-28, AC-41, AC-44, AC-68, AC-69, AC-75; ADR 0072 KC5; ADR 0077 IA 4.
 
-- [ ] **TEST + IMPLEMENT: T14.5 — The rationale has 2–5 sentences around the risk step's lines and names the factors at the maximum without comparing levels**
+- [x] **TEST + IMPLEMENT: T14.5 — The rationale has 2–5 sentences around the risk step's lines and names the factors at the maximum without comparing levels**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by: K3's rationale references F2 (AC-22). (C-8) `0036`'s names F1 and F2. On a raised run, the raising sentence comes first (AC-23). A raise is a judged path, so when no run raises, this clause is recorded `unexercised on this run` in the task's commit message (Phase 17). The FR-13 row stays green.
   - Implementation should: place the risk step's lines in the order ADR 0073 KC4 gives; state factor levels only as the table shows them; and put no conditional on a level outside the markers.
