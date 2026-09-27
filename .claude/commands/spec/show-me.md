@@ -16,11 +16,11 @@ it was built, blast radius, an advisory Low/Medium/High merge-risk read, where t
 provenance table. This is not a review — it does not re-check correctness, security, TDD compliance,
 CI status or PR review outcomes.
 
-**This command is under active construction (spec 0037).** Steps 1–6 are implemented below. All eight
-of Step 5's H2 sections are still bare headings, with nothing written under them — the tasks that
-fill each one land later and will extend Step 5 in place, section by section. Follow each step
-exactly as written; every step ends by saying what happens next, so do not improvise past what a
-step actually says.
+**This command is under active construction (spec 0037).** Steps 1–6 are implemented below.
+`## How it was built` is filled in; the other seven of Step 5's H2 sections are still bare headings,
+with nothing written under them — the tasks that fill each one land later and will extend Step 5 in
+place, section by section. Follow each step exactly as written; every step ends by saying what
+happens next, so do not improvise past what a step actually says.
 
 ### Step 1 — Resolve the target spec directory
 
@@ -236,11 +236,23 @@ place, filling in each H2 section's body; nothing below writes to disk yet.
    - `- **Merge base:** {the first 9 characters of merge_base, when merge_base is not null; otherwise
      undetermined}`
    - `- **PR:** {#pr.number (pr.url), when pr is not null; otherwise none found}`
-3. The eight H2 headings, verbatim and in this order, one blank line between each and nothing written
-   under any of them yet:
+3. The eight H2 headings, verbatim and in this order, one blank line between each. `## How it was
+   built` is filled per the rule below; the other seven are still bare, with nothing written under
+   them yet:
    `## What changed and why`, `## Breaking changes`, `## Did it ship what it said?`,
    `## How it was built`, `## Blast radius`, `## Risk assessment (advisory)`,
    `## Where to look first`, `## Inputs used`.
+
+**`## How it was built`** (FR-9) states the task shape and the commit shape, and nothing else — no
+review history, no CI state. Both figures are copied verbatim from the ledger's `tasks` and `commits`
+fields — nothing here is judged:
+
+- `- **Tasks:** {tasks.total} total — {tasks.by_tag["TEST + IMPLEMENT"]} \`TEST + IMPLEMENT\`,
+  {tasks.by_tag.STRUCTURAL} \`STRUCTURAL\`, {tasks.by_tag.PROJECT} \`PROJECT\`, {tasks.by_tag.DOC}
+  \`DOC\`, {tasks.by_tag.untagged} untagged`
+- When `commits` is not null: `- **Commits:** {commits} since the merge base`
+- When `commits` is null (FR-16 row 12, spec branch not determinable): `Commits: not determinable —
+  spec branch not resolved.` verbatim, in place of the commits bullet above.
 
 Before the assembled text names any repository path — none does yet, at this task; a diagram or a
 `## Where to look first` entry will, once a later task adds them — run
