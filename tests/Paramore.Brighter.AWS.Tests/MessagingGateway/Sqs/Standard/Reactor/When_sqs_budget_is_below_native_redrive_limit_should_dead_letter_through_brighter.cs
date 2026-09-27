@@ -46,6 +46,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Reactor;
 /// <c>true</c> → <c>SqsMessageCreator</c>; <c>false</c> → <c>SqsInlineMessageCreator</c>.
 /// </summary>
 [Trait("Category", "AWS")]
+[Collection("SqsStandard")]
 public class SqsBudgetBelowNativeLimitReactorTests : IDisposable, IAsyncDisposable
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;

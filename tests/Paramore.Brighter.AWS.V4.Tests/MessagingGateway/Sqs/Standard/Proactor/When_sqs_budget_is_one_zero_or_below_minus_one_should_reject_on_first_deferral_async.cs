@@ -44,6 +44,7 @@ namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs.Standard.Proactor;
 /// with a <c>DeliveryError</c> reason without ever being requeued.
 /// </summary>
 [Trait("Category", "AWS")]
+[Collection("SqsStandard")]
 public class SqsBudgetOneZeroOrBelowMinusOneRejectsOnFirstDeferralProactorV4Tests : IDisposable, IAsyncDisposable
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;

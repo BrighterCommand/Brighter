@@ -47,6 +47,7 @@ namespace Paramore.Brighter.AWS.V4.Tests.MessagingGateway.Sqs.Standard.Reactor;
 /// the AC-5 characterisation needs.
 /// </remarks>
 [Trait("Category", "AWS")]
+[Collection("SqsStandard")]
 public class SqsBudgetMinusOneNeverRejectsReactorTests : IDisposable, IAsyncDisposable
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
