@@ -983,7 +983,7 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
 
 *Verification and risk mitigation.*
 
-- [ ] **57. VERIFY: The whole feature's tests pass with no broker, database or network (AC-31, NFR-3)**
+- [x] **57. VERIFY: The whole feature's tests pass with no broker, database or network (AC-31, NFR-3)**
   - Run, with no container runtime and no external services available:
     - `tests/Paramore.Brighter.Core.Tests` (phases 2, 3, 7, 8)
     - `tests/Paramore.Brighter.Extensions.Tests` (phase 4)
