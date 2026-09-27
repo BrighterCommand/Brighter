@@ -600,7 +600,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - Implementation should: add the ladder as ADR 0077's *mechanism* table; the lines with the no-trigger values copied from the ledger (`src/` files, `src_subdirectory_count`, `public_api_lines`, `adr_resolved_count`); and the node-list row with one licensing source.
   - Traces to: FR-6 (a), (b), (e), FR-16 row 12, NFR-1, AC-57, AC-61; ADR 0077 *mechanism*, KC3, IA 1.
 
-- [ ] **TEST + IMPLEMENT: T12.2 — The Explainer probes, reads or extracts, or abandons; charges every read; and renders only nodes it has a licensing source for**
+- [x] **TEST + IMPLEMENT: T12.2 — The Explainer probes, reads or extracts, or abandons; charges every read; and renders only nodes it has a licensing source for**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
     - (C-8) `0036`:
