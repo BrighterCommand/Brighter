@@ -684,7 +684,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 
 *Covers the rest of ADR 0072 IA 10, ADR 0077 IA 3–5, and ADR 0073 IA 5's rationale and FR-19 part. Depends on Phase 13.*
 
-- [ ] **TEST + IMPLEMENT: T14.1 — What changed and why names every ADR by stem, title, Status and relative link, and places the Explainer's block or line; Breaking changes renders the Classifier's items with a count line and the defined absence lines**
+- [x] **TEST + IMPLEMENT: T14.1 — What changed and why names every ADR by stem, title, Status and relative link, and places the Explainer's block or line; Breaking changes renders the Classifier's items with a count line and the defined absence lines**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
     - (C-8) `0036`:
