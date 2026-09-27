@@ -16,11 +16,11 @@ it was built, blast radius, an advisory Low/Medium/High merge-risk read, where t
 provenance table. This is not a review — it does not re-check correctness, security, TDD compliance,
 CI status or PR review outcomes.
 
-**This command is under active construction (spec 0037).** Only Steps 1–3 are implemented below;
-Steps 4 onward — evidence reads, the synthesis stages and the write — land in later tasks and are not
-yet part of this command. Follow Steps 1–3 exactly as written, and when Step 3 finishes, **stop
-there**: print what it says to print and do nothing else. Do not improvise any later step, and do not
-create or modify `show-me.md`, the fact ledger, or any other file.
+**This command is under active construction (spec 0037).** Steps 1–6 are implemented below. All eight
+of Step 5's H2 sections are still bare headings, with nothing written under them — the tasks that
+fill each one land later and will extend Step 5 in place, section by section. Follow each step
+exactly as written; every step ends by saying what happens next, so do not improvise past what a
+step actually says.
 
 ### Step 1 — Resolve the target spec directory
 
@@ -214,7 +214,47 @@ the same `tail | head` rather than naming a file path, and `.issue-number`/`.adr
   declaration whose window cannot be afforded is not read; a status that needed it is `Unverifiable`,
   with that reason, for a later step to report — never zero.
 
-Hold everything read above, and the read log itself, for later steps. This is as far as Step 4 goes —
-the Explainer's own reads (source files for a diagram) land with Step 5. Follow only what is written
-above, then **stop**: do not improvise any further step, and do not create or modify `show-me.md`, the
-fact ledger, or any other file.
+Hold everything read above, and the read log itself, for later steps. The Explainer's own reads
+(source files for a diagram) land with a later task's extension of Step 5. Continue to Step 5.
+
+### Step 5 — Assemble `show-me.md`
+
+Build the file's full text in memory — never on disk — in this order. Later tasks extend this step in
+place, filling in each H2 section's body; nothing below writes to disk yet.
+
+1. The H1: `# Show me — {dir}` (the bare spec directory name, not the `specs/` prefix).
+2. The metadata block, one bullet per line, blank line after the H1 and after the block. Every value
+   is copied verbatim from the ledger (Step 3) or computed exactly as named — nothing here is judged:
+   - `- **Generated:** {date +%F}`
+   - `- **Spec:** specs/{dir}/`
+   - `- **Issue:** {the content Step 4 read from .issue-number, trimmed; or, when Step 4 issued no
+     read for it, none}`
+   - `- **Spec branch:** {spec_branch.ref, when spec_branch is not null; otherwise undetermined}`
+   - `- **Measured head:** {the first 9 characters of measured_head.sha, when measured_head is not
+     null; otherwise undetermined}`
+   - `- **Base ref:** {base.ref}`
+   - `- **Merge base:** {the first 9 characters of merge_base, when merge_base is not null; otherwise
+     undetermined}`
+   - `- **PR:** {#pr.number (pr.url), when pr is not null; otherwise none found}`
+3. The eight H2 headings, verbatim and in this order, one blank line between each and nothing written
+   under any of them yet:
+   `## What changed and why`, `## Breaking changes`, `## Did it ship what it said?`,
+   `## How it was built`, `## Blast radius`, `## Risk assessment (advisory)`,
+   `## Where to look first`, `## Inputs used`.
+
+Before the assembled text names any repository path — none does yet, at this task; a diagram or a
+`## Where to look first` entry will, once a later task adds them — run
+`git ls-files --error-unmatch {path}` on it and drop it rather than write it if the check fails
+(FR-17, NFR-5).
+
+### Step 6 — Write the file once
+
+Step 4 already ran `test -f specs/{dir}/show-me.md` and, when it existed, read it — never as evidence
+for any section, only because `Write` refuses to replace a file the session has not read. Write Step
+5's assembled text to `specs/{dir}/show-me.md` in one `Write` call, which replaces the file's entire
+contents when it already existed. Never `git add`, stage, commit, or create any other file.
+
+Print `specs/{dir}/show-me.md created.` when Step 4's `test -f` failed, or
+`specs/{dir}/show-me.md replaced.` when it succeeded, and stop there. FR-19's fuller summary — the
+overall risk level, its advisory reminder, and the word-count result — lands once the sections and the
+risk step that produce them exist, in later tasks; do not improvise them now.
