@@ -764,7 +764,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - Implementation should: add the four checks from ADR 0077 KC6 over the assembled text, and the FR-17 test on every path, node and link. Write every path relative to the repository root.
   - Traces to: FR-6 (d), FR-17, NFR-5, NFR-6 (closed fences), AC-29, AC-59; ADR 0077 KC6, IA 5; ADR 0072 KC5.
 
-- [ ] **TEST + IMPLEMENT: T14.7 — After the `Write`, the command word-counts the file once and reports the path, created or replaced, the copied overall level, the advisory reminder and the word count, whatever the level**
+- [x] **TEST + IMPLEMENT: T14.7 — After the `Write`, the command word-counts the file once and reports the path, created or replaced, the copied overall level, the advisory reminder and the word count, whatever the level**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
     - `0033`: AC-31. For AC-33, the total equals a direct `--word-count` run on the same file.
