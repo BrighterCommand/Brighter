@@ -478,6 +478,10 @@ Understanding our branching strategy will help you target the right branch for y
 - Sit back, and wait.
 - Try pinging @BrighterCommand on Twitter if you hear nothing
 
+Please ask that your pull request is merged with a merge commit, not squashed or rebased. Some of
+our tooling pins commit shas from a merged branch's history for later reference, and only a merge
+commit keeps those commits reachable from `master` afterwards.
+
 ### Contributor License Agreement
 
 To safeguard the project we ask you to sign a Contributor License Agreement. The goal is to let you keep your copyright, but to assign it to the project so that it can use it in perpetuity. It is still yours, but the project is not at risk from having multiple contributors holding the copyright, with anyone able to hold it to ransom by removing their grant of license.
