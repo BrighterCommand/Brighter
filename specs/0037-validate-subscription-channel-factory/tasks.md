@@ -1003,7 +1003,7 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
   - References: ADR 0072 *Risks and Mitigations* (drift, and the `FactoryTypes` re-enumeration trap); NFR-6.
   - Depends on: 57.
 
-- [ ] **59. VERIFY: Risk mitigation — no regression in the existing rules, the generated tree, or any target framework**
+- [x] **59. VERIFY: Risk mitigation — no regression in the existing rules, the generated tree, or any target framework**
   - Run the full `dotnet build --configuration Release` across the solution and confirm it is clean under `TreatWarningsAsErrors` (`src/Directory.Build.props`). In particular confirm the `#if NETSTANDARD2_0` branch of the uninitialised read compiles on `netstandard2.0` **and** that the `net8.0`/`net9.0`/`net10.0` builds use `RuntimeHelpers.GetUninitializedObject` — `FormatterServices.GetUninitializedObject` is obsoleted as **SYSLIB0050** there and would fail the build. Note that test projects target `net9.0;net10.0` (`tests/Directory.Build.props`), so the netstandard2.0 branch is compiled but never executed in this repository.
   - Run the existing generated-tree audit (`…should_find_no_missing_files.cs`, `…should_find_no_orphans.cs`) and confirm the twelve new conformance files are expected, not orphaned.
   - Run the existing `Validation/` suite in `Core.Tests` and confirm the four pre-existing consumer rules are untouched in severity, `Source`, `Message` and blocking behaviour (task 30 asserts this at host level; this is the unit-level sweep).
