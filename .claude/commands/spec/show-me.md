@@ -373,8 +373,9 @@ judgements. Placing this stage here fixes Step 5's order; the judging itself lan
 
 <!-- show-me:risk-step:begin -->
 **The risk step** (ADR 0073, FR-11–FR-13) computes the three factor levels and the overall level, and
-is the only step that may test a level against a threshold. The `**Overall risk: …**` line, a raise's
-first-sentence rationale and FR-13's sentence land with a later task.
+is the only step that may test a level against a threshold. Everything up to and including FR-13's
+sentence is decided and written here; only the rest of the rationale (2–5 sentences in all, naming
+the factor(s) that set the level) is the Synthesiser's job, after this step ends.
 
 **The forced levels** (FR-16 rows 8, 9 and 12), applied before any threshold:
 
@@ -411,6 +412,27 @@ land with a later task. Hold no value and no level for either factor until then;
 | F1 | {F1's value, above} | {F1's level, above} |
 | F2 | {F2's value, once available} | {F2's level, once available} |
 | F5 | {F5's value, above or once available} | {F5's level, above or once available} |
+
+**The overall level**, over `Low` < `Medium` < `High`: the maximum of the three factor rows above.
+The stated level may be **higher** than that maximum, but only paired with one explicit
+first-sentence reason naming what the three factors miss — this is the raise (FR-12). The stated
+level may **never** be lower than the maximum.
+
+Write, on its own line, in the exact form `**Overall risk: {Low|Medium|High}**` — the stated level
+substituted for the placeholder: the maximum, or the raised level.
+
+**Hold, for the Synthesiser:** the factor or factors whose level equals the maximum — a list, not a
+line; nothing here writes it out. The Synthesiser names them in the rest of the rationale without
+re-deriving the maximum itself.
+
+**FR-13's sentence**, verbatim, a literal — never composed at run time:
+`This assessment is advisory only. It is not a merge gate; the merge decision stays with a human
+reviewer.`
+
+**Before this step ends**, still inside these markers, check what has just been decided: the stated
+level is not below the maximum (AC-23); and, when the stated level is above the maximum, a raising
+sentence — naming what the factors miss — was actually produced, not merely claimed (AC-23). Both
+checks run over what this step itself computed; nothing outside these markers ever tests a level.
 <!-- show-me:risk-step:end -->
 
 **The Synthesiser** writes everything else — including `## How it was built` and `## Blast radius`
