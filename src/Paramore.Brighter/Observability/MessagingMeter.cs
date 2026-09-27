@@ -72,6 +72,16 @@ public sealed class MessagingMeter(
             description: "Duration of processing operation.",
             unit: "s");
 
+    // Not an official OpenTelemetry Semantic Conventions name (circuit breaking is Brighter-specific,
+    // unlike the messaging.* instruments above), so it uses the paramore.brighter.* prefix that every
+    // other Brighter-specific, non-standard attribute already uses.
+    private readonly Counter<int> _circuitBreakerTripsCounter = meterFactory
+        .Create(BrighterSemanticConventions.MeterName)
+        .CreateCounter<int>(
+            name: "paramore.brighter.circuit_breaker.trips",
+            description: "Number of times a topic's outbox circuit breaker tripped, re-tripped, or reset.",
+            unit: "{trip}");
+
 #if NET8_0_OR_GREATER
     private static readonly FrozenSet<string> s_clientOperationDurationHistogramAllowedTags = new[]
 #else
@@ -159,6 +169,20 @@ public sealed class MessagingMeter(
     };
 #endif
 
+#if NET8_0_OR_GREATER
+    private static readonly FrozenSet<string> s_circuitBreakerTripsCounterAllowedTags = new[]
+#else
+    private static readonly HashSet<string> s_circuitBreakerTripsCounterAllowedTags = new()
+#endif
+    {
+        BrighterSemanticConventions.Operation,
+        BrighterSemanticConventions.CircuitBreakerTopic
+#if NET8_0_OR_GREATER
+    }.ToFrozenSet();
+#else
+    };
+#endif
+
     public void RecordClientOperation(Activity activity)
     {
         _clientOperationDurationHistogram.Record(
@@ -183,9 +207,15 @@ public sealed class MessagingMeter(
             [..activity.TagObjects.Filter(s_processedMessagesHistogramAllowedTags), .._serviceAttributes]);
     }
 
+    public void AddCircuitBreakerEvent(Activity activity)
+    {
+        _circuitBreakerTripsCounter.Add(1, [..activity.TagObjects.Filter(s_circuitBreakerTripsCounterAllowedTags), .._serviceAttributes]);
+    }
+
     public bool Enabled =>
         _clientOperationDurationHistogram.Enabled ||
         _sentMessagesCounter.Enabled ||
         _consumedMessagesCounter.Enabled ||
-        _processedMessagesHistogram.Enabled;
+        _processedMessagesHistogram.Enabled ||
+        _circuitBreakerTripsCounter.Enabled;
 }

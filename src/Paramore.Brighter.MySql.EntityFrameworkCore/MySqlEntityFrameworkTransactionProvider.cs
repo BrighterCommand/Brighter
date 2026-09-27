@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
-using MySqlConnector;
 
 namespace Paramore.Brighter.MySql.EntityFrameworkCore
 {
@@ -40,14 +39,13 @@ namespace Paramore.Brighter.MySql.EntityFrameworkCore
         /// Commit the transaction
         /// </summary>
         /// <returns>An awaitable Task</returns>
-        public override Task CommitAsync(CancellationToken cancellationToken)
+        public override async Task CommitAsync(CancellationToken cancellationToken)
         {
-            if (HasOpenTransaction)
+            var currentTransaction = _context.Database.CurrentTransaction;
+            if (currentTransaction is not null)
             {
-                _context.Database.CurrentTransaction?.CommitAsync(cancellationToken);
+                await currentTransaction.CommitAsync(cancellationToken);
             }
-            
-            return Task.CompletedTask;
         }
         
         /// <summary>
@@ -91,12 +89,24 @@ namespace Paramore.Brighter.MySql.EntityFrameworkCore
         /// <summary>
         /// Rolls back a transaction
         /// </summary>
+        public override void Rollback()
+        {
+            var currentTransaction = _context.Database.CurrentTransaction;
+            if (currentTransaction is not null)
+            {
+                currentTransaction.Rollback();
+            }
+        }
+
+        /// <summary>
+        /// Rolls back a transaction
+        /// </summary>
         public override async Task RollbackAsync(CancellationToken cancellationToken = default)
         {
-            if (HasOpenTransaction)
+            var currentTransaction = _context.Database.CurrentTransaction;
+            if (currentTransaction is not null)
             {
-                try { await ((MySqlTransaction)GetTransaction()).RollbackAsync(cancellationToken); } catch (Exception) { /* Ignore*/}
-                Transaction = null;
+                await currentTransaction.RollbackAsync(cancellationToken);
             }
         }
 

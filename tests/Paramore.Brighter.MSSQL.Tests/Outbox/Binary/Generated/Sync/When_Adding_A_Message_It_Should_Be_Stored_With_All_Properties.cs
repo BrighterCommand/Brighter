@@ -35,6 +35,7 @@ using System.Linq;
 namespace Paramore.Brighter.MSSQL.Tests.Outbox.Binary.Sync;
 
 [Trait("Category", "MSSQL")]
+[Collection("MSSQLBinaryOutbox")]
 public class WhenAddingAMessageItShouldBeStoredWithAllProperties : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;

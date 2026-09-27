@@ -7,11 +7,15 @@
     "MessageGatewayProvider": "Paramore.Brighter.RocketMQ.Tests.MessagingGateway.RocketMqMessageGatewayProvider",
     "Category": "RocketMQ",
     "CollectionName": "RocketMQMessagingGateway",
+    "LedgerKey": "RocketMQ / RocketMQMessagingGateway",
     "DelayBetweenReceiveMessageInMilliseconds": 5000,
     "HasSupportToPublishConfirmation": false,
     "HasSupportToDeadLetterQueue": true,
     "HasSupportToDelayedMessages": true,
     "HasSupportToValidateBrokerExistence": false,
     "HasSupportToRequeue": true
+  },
+  "GatewayConformance": {
+    "SubscriptionType": "Paramore.Brighter.MessagingGateway.RocketMQ.RocketSubscription"
   }
 }

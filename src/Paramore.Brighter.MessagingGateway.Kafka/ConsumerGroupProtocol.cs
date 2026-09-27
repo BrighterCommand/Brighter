@@ -27,10 +27,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka;
 /// Configures Kafka's consumer group protocol for broker-driven assignment.
 /// </summary>
 /// <remarks>
-/// With the consumer protocol (KIP-848), group membership is broker-driven and completes asynchronously:
-/// subscribing to a non-existent topic does not fail synchronously at consumer creation. Infrastructure
-/// validation via <see cref="OnMissingChannel.Validate"/> therefore has weaker guarantees than with the
-/// classic protocol; prefer <see cref="OnMissingChannel.Create"/>, or provision topics out-of-band.
+/// With the consumer protocol (KIP-848), subscribing to a missing topic does not report the
+/// subscription error provided by the classic protocol. With <see cref="OnMissingChannel.Assume"/>,
+/// a missing topic can therefore appear to be an empty channel. Register
+/// <see cref="KafkaConsumerValidationRules.MissingTopicDetection"/> with startup pipeline validation
+/// to warn about this configuration without contacting Kafka. Use <see cref="OnMissingChannel.Validate"/>
+/// when explicit infrastructure validation is required and permitted. Validate and
+/// <see cref="OnMissingChannel.Create"/> retain their metadata validation and provisioning behavior.
 /// </remarks>
 public class ConsumerGroupProtocol : IGroupProtocol
 {

@@ -32,7 +32,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
     public class MqttSubscription : Subscription, IUseBrighterDeadLetterSupport, IUseBrighterInvalidMessageSupport
     {
         /// <inheritdoc />
-        public override Type ChannelFactoryType => typeof(MqttMessageConsumerFactory);
+        public override Type ChannelFactoryType => typeof(ChannelFactory);
 
         /// <summary>
         /// The routing key used for the Dead Letter Channel

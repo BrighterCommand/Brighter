@@ -2,6 +2,8 @@
   <PropertyGroup>
     <Description>Amazon DynamoDB v4 inbox provider for Paramore.Brighter Command Processor. Enables inbox pattern implementation for idempotent command and event handling using DynamoDB v4 SDK as the persistence layer.</Description>
     <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <!-- Remove these XML documentation suppressions as the existing comments are corrected. -->
+    <NoWarn>$(NoWarn);CS1573;CS1574;CS1584;CS1658</NoWarn>
     <PackageTags>DynamoDB;AWS;NoSQL;Inbox;Idempotent;Command;Event;Command Processor;Database;SDK v4;Brighter</PackageTags>
     <Nullable>enable</Nullable>
   </PropertyGroup>

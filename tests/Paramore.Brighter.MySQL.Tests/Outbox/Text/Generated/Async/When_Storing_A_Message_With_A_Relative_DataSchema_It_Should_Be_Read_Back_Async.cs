@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 namespace Paramore.Brighter.MySQL.Tests.Outbox.Text.Async;
 
 [Trait("Category", "MySQL")]
+[Collection("MySQLTextOutbox")]
 
 public class WhenStoringAMessageWithARelativeDataSchemaItShouldBeReadBackAsync : IAsyncLifetime
 {

@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 namespace Paramore.Brighter.PostgresSQL.Tests.Outbox.Binary.Async;
 
 [Trait("Category", "PostgresSql")]
+[Collection("PostgresBinaryOutbox")]
 
 public class WhenStoringAMessageWithARelativeDataSchemaItShouldBeReadBackAsync : IAsyncLifetime
 {

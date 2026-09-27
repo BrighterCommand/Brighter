@@ -114,7 +114,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
             // the id renders as the empty marker rather than crashing the log call.
             var warnings = TestCorrelator.GetLogEventsFromCurrentContext()
                 .Where(e => e.Level == LogEventLevel.Warning)
-                .Where(e => e.RenderMessage().Contains(_topic.Value))
+                .Where(e => e.MessageTemplate.Text == "Publish confirmation failed for message Id:{Id} on topic {Topic}")
                 .ToList();
             Assert.Single(warnings);
 

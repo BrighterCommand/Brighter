@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Paramore.Brighter.Validation;
 
@@ -105,22 +106,58 @@ public static class ConsumerValidationRules
                 $"No handler registered for '{s.RequestType!.Name}' — messages will be received but cannot be dispatched"));
 
     /// <summary>
+    /// Validates that a subscription's declared <see cref="Subscription.ChannelFactoryType"/> is
+    /// compatible with the channel factory it will actually be handed at startup — either its own
+    /// <see cref="Subscription.ChannelFactory"/>, or, absent that, <paramref name="defaultChannelFactory"/>.
+    /// Deliberately does not vacuously pass when <see cref="Subscription.RequestType"/> is null.
+    /// </summary>
+    /// <param name="defaultChannelFactory">The consumer options' default channel factory, or null.
+    /// Used only when the subscription carries no factory of its own.</param>
+    /// <returns>A simple specification that reports an Error when the declared and effective channel
+    /// factory types are incompatible.</returns>
+    public static ISpecification<Subscription> ChannelFactoryCompatible(IAmAChannelFactory? defaultChannelFactory)
+        => new Specification<Subscription>(
+            s =>
+            {
+                var (arm, candidates) = ResolveCandidates(s, defaultChannelFactory);
+                return IsCompatible(s.ChannelFactoryType, arm, candidates);
+            },
+            s =>
+            {
+                var (arm, candidates) = ResolveCandidates(s, defaultChannelFactory);
+                var declared = s.ChannelFactoryType;
+                var declaredClause = declared is null
+                    ? "declares no ChannelFactoryType"
+                    : $"declares ChannelFactoryType '{DisplayName(declared)}'";
+                var handedClause = candidates.Count == 0
+                    ? "no channel factory at all"
+                    : arm == Arm.Combined
+                        ? $"one of '{string.Join(", ", candidates.Select(DisplayName))}'"
+                        : $"'{string.Join(", ", candidates.Select(DisplayName))}'";
+                var remedy = RemedyClause(declared, arm, candidates);
+                return new ValidationError(
+                    ValidationSeverity.Error,
+                    $"Subscription '{s.Name}'",
+                    $"Subscription type '{DisplayName(s.GetType())}' {declaredClause} but will be handed {handedClause} {remedy}");
+            });
+
+    /// <summary>
     /// Validates that the subscription's <see cref="Subscription.RequestType"/> implements either
     /// <see cref="ICommand"/> or <see cref="IEvent"/>. A type that only implements <see cref="IRequest"/>
-    /// directly will work but is unusual and may indicate a misconfiguration.
+    /// directly cannot be routed to Send or Publish by the message pump.
     /// Vacuously passes when RequestType is null.
     /// </summary>
-    /// <returns>A simple specification that reports a Warning when RequestType implements neither ICommand nor IEvent.</returns>
+    /// <returns>A simple specification that reports an Error when RequestType implements neither ICommand nor IEvent.</returns>
     public static ISpecification<Subscription> RequestTypeSubtype()
         => new Specification<Subscription>(
             s => s.RequestType == null
                  || typeof(ICommand).IsAssignableFrom(s.RequestType)
                  || typeof(IEvent).IsAssignableFrom(s.RequestType),
             s => new ValidationError(
-                ValidationSeverity.Warning,
+                ValidationSeverity.Error,
                 $"Subscription '{s.Name}'",
                 $"RequestType '{s.RequestType!.Name}' implements neither ICommand nor IEvent " +
-                "— consider implementing one of these marker interfaces"));
+                "— implement one of these marker interfaces so the message pump can route the request"));
 
     /// <summary>
     /// Validates that every unwrap transform the subscription's resolved mapper declares can be resolved.
@@ -164,6 +201,84 @@ public static class ConsumerValidationRules
                     "Is its assembly included in AutoFromAssemblies()?")))
                 .ToList();
         }, mapperRegistry);
+    }
+
+    /// <summary>
+    /// Which routing arm <see cref="ChannelFactoryCompatible"/> is evaluating: a single factory
+    /// directly, or the inner factories of a <see cref="CombinedChannelFactory"/>.
+    /// </summary>
+    private enum Arm
+    {
+        Direct,
+        Combined
+    }
+
+    /// <summary>
+    /// Resolves the arm and the ordered candidate <see cref="Type"/> list a subscription's declared
+    /// <see cref="Subscription.ChannelFactoryType"/> is compared against.
+    /// </summary>
+    private static (Arm arm, IReadOnlyList<Type> candidates) ResolveCandidates(
+        Subscription subscription, IAmAChannelFactory? defaultChannelFactory)
+    {
+        var effective = subscription.ChannelFactory ?? defaultChannelFactory;
+        if (effective is CombinedChannelFactory combined)
+            return (Arm.Combined, combined.FactoryTypes);
+
+        return (Arm.Direct, effective is null ? [typeof(InMemoryChannelFactory)] : [effective.GetType()]);
+    }
+
+    /// <summary>
+    /// Decides whether a subscription's declared type is compatible with the resolved candidates.
+    /// </summary>
+    private static bool IsCompatible(Type? declared, Arm arm, IReadOnlyList<Type> candidates)
+        => arm switch
+        {
+            Arm.Direct => declared is not null && declared.IsAssignableFrom(candidates[0]),
+            Arm.Combined => declared is not null && candidates.Any(t => t == declared),
+            _ => false
+        };
+
+    /// <summary>
+    /// Renders the finding message's remedy clause, per FR-5's ordered template table.
+    /// </summary>
+    private static string RemedyClause(Type? declared, Arm arm, IReadOnlyList<Type> candidates)
+    {
+        if (arm == Arm.Combined && candidates.Count == 0)
+            return "— add a channel factory to the combined channel factory";
+
+        var suppressed = declared is null || declared == typeof(InMemoryChannelFactory);
+        var handed = string.Join(", ", candidates.Select(DisplayName));
+
+        if (arm == Arm.Direct && suppressed)
+            return $"— use a subscription type whose ChannelFactoryType is {DisplayName(candidates[0])}";
+
+        if (arm == Arm.Combined && suppressed)
+            return $"— use a subscription type whose ChannelFactoryType is one of: {handed}";
+
+        var subscriptionSide = arm == Arm.Combined
+            ? $"one of: {handed}"
+            : handed;
+        return $"— either configure a channel factory of type {DisplayName(declared!)}, " +
+               $"or use a subscription type whose ChannelFactoryType is {subscriptionSide}";
+    }
+
+    /// <summary>
+    /// Renders a type for a validation message: its full name, namespace-qualified rather than
+    /// assembly-qualified. A generic type renders as <c>Namespace.Type&lt;Arg1, Arg2&gt;</c>, with
+    /// each type argument itself rendered through <see cref="DisplayName"/>.
+    /// </summary>
+    private static string DisplayName(Type type)
+    {
+        if (!type.IsGenericType)
+            return type.FullName ?? type.Name;
+
+        var definitionName = type.GetGenericTypeDefinition().FullName ?? type.Name;
+        var backtickIndex = definitionName.IndexOf('`');
+        if (backtickIndex >= 0)
+            definitionName = definitionName.Substring(0, backtickIndex);
+
+        var args = string.Join(", ", type.GetGenericArguments().Select(DisplayName));
+        return $"{definitionName}<{args}>";
     }
 
     /// <summary>

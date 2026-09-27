@@ -61,7 +61,7 @@ namespace Paramore.Brighter
         /// Producers MUST ensure that source + id is unique for each distinct event.
         /// Default: "http://goparamore.io" for backward compatibility as required
         /// </summary>
-        public Uri Source { get; set; } = new Uri("http://goparamore.io");
+        public Uri Source { get; set; } = new Uri(MessageHeader.DefaultSource);
         
         /// <summary>
         /// OPTIONAL

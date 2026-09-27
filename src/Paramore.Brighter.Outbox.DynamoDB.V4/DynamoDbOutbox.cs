@@ -40,6 +40,19 @@ using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Outbox.DynamoDB.V4
 {
+    /// <summary>
+    /// Stores outgoing messages in DynamoDB.
+    /// </summary>
+    /// <remarks>
+    /// Operations use <see cref="DynamoDbConfiguration.Timeout"/> unless a per-call timeout is supplied.
+    /// A per-call value of -1 uses the configured timeout; zero disables the outbox deadline.
+    /// Timeouts cancel the operation through the AWS SDK cancellation token and surface as
+    /// <see cref="OperationCanceledException"/>. Caller cancellation and AWS client timeouts still apply.
+    /// The deadline covers the whole operation, including batch items and query pages, but cancellation
+    /// is cooperative: synchronous SDK table-metadata discovery uses the AWS client's own timeout.
+    /// Adding to a transaction queues a write; the later transaction commit has its own lifetime
+    /// and must be cancelled through the transaction provider.
+    /// </remarks>
     public class DynamoDbOutbox :
         IAmAnOutboxSync<Message, TransactWriteItemsRequest>,
         IAmAnOutboxAsync<Message, TransactWriteItemsRequest>,
@@ -127,7 +140,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
         /// </summary>       
         /// <param name="message">The message to be stored</param>
         /// <param name="requestContext">What is the context of this request; used to provide Span information to the call</param>
-        /// <param name="outBoxTimeout">Timeout in milliseconds; -1 for default timeout</param>
+        /// <param name="outBoxTimeout">Timeout in milliseconds; -1 uses the configured timeout and zero disables the outbox deadline</param>
         /// <param name="transactionProvider">Should we participate in a transaction</param>
         public void Add(
             Message message, 
@@ -144,7 +157,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
         /// </summary>       
         /// <param name="messages">The messages to be stored</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
-        /// <param name="outBoxTimeout">Timeout in milliseconds; -1 for default timeout</param>
+        /// <param name="outBoxTimeout">Timeout in milliseconds; -1 uses the configured timeout and zero disables the outbox deadline</param>
         /// <param name="transactionProvider">Should we participate in a transaction</param>
         public void Add(
             IEnumerable<Message> messages, 
@@ -153,10 +166,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
             IAmABoxTransactionProvider<TransactWriteItemsRequest>? transactionProvider = null
             )
         {
-            foreach (var message in messages)
-            {
-                Add(message, requestContext, outBoxTimeout, transactionProvider);
-            }
+            AddAsync(messages, requestContext, outBoxTimeout, transactionProvider)
+                .ConfigureAwait(ContinueOnCapturedContext).GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -164,7 +175,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
         /// </summary>
         /// <param name="message">The message to be stored</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
-        /// <param name="outBoxTimeout">Timeout in milliseconds; -1 for default timeout</param>
+        /// <param name="outBoxTimeout">Timeout in milliseconds; -1 uses the configured timeout and zero disables the outbox deadline</param>
         /// <param name="transactionProvider">Should we participate in a transaction</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         public async Task AddAsync(
@@ -174,6 +185,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
             IAmABoxTransactionProvider<TransactWriteItemsRequest>? transactionProvider = null,
             CancellationToken cancellationToken = default)
         {
+            using var timeout = CreateTimeoutSource(outBoxTimeout);
+            using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+            cancellationToken = linkedCancellation.Token;
+            cancellationToken.ThrowIfCancellationRequested();
+
             var dbAttributes = new Dictionary<string, string>()
             {
                 {"db.operation.parameter.message.id", message.Id.Value}
@@ -194,7 +210,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
 
                 if (transactionProvider != null)
                 {
-                    await AddToTransactionWrite(messageToStore, (DynamoDbUnitOfWork)transactionProvider);
+                    await AddToTransactionWrite(messageToStore, (DynamoDbUnitOfWork)transactionProvider, cancellationToken);
                 }
                 else
                 {
@@ -212,7 +228,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
         /// </summary>
         /// <param name="messages">The messages to be stored</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
-        /// <param name="outBoxTimeout">Timeout in milliseconds; -1 for default timeout</param>
+        /// <param name="outBoxTimeout">Timeout in milliseconds; -1 uses the configured timeout and zero disables the outbox deadline</param>
         /// <param name="transactionProvider"></param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         public async Task AddAsync(
@@ -222,9 +238,14 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
             IAmABoxTransactionProvider<TransactWriteItemsRequest>? transactionProvider = null,
             CancellationToken cancellationToken = default)
         {
+            using var timeout = CreateTimeoutSource(outBoxTimeout);
+            using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+            cancellationToken = linkedCancellation.Token;
+            cancellationToken.ThrowIfCancellationRequested();
+
             foreach (var message in messages)
             {
-                await AddAsync(message, requestContext, outBoxTimeout, transactionProvider, cancellationToken);
+                await AddAsync(message, requestContext, 0, transactionProvider, cancellationToken);
             }
         }
 
@@ -253,6 +274,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
+            using var timeout = CreateTimeoutSource();
+            using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+            cancellationToken = linkedCancellation.Token;
+            cancellationToken.ThrowIfCancellationRequested();
+
             var dbAttributes = new Dictionary<string, string>()
             {
                 { "db.operation.parameter.message.ids", string.Join(",", messageIds.Select(id => id.ToString())) }
@@ -313,7 +339,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="pageSize">How many messages returned at once?</param>
         /// <param name="pageNumber">Which page of the dispatched messages to return?</param>
-        /// <param name="outboxTimeout"></param>
+        /// <param name="outboxTimeout">Timeout in milliseconds; -1 uses the configured timeout and zero disables the outbox deadline</param>
         /// <param name="args">Used to pass through the topic we are searching for messages in. Use Key: "Topic"</param>
         /// <returns>A list of dispatched messages</returns>
         public IEnumerable<Message> DispatchedMessages(
@@ -335,7 +361,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="pageSize">How many messages returned at once?</param>
         /// <param name="pageNumber">Which page of the dispatched messages to return?</param>
-        /// <param name="outboxTimeout"></param>
+        /// <param name="outboxTimeout">Timeout in milliseconds; -1 uses the configured timeout and zero disables the outbox deadline</param>
         /// <param name="args">Used to pass through the topic we are searching for messages in. Use Key: "Topic"</param>
         /// <param name="cancellationToken">Cancel the running operation</param>
         /// <returns>A list of dispatched messages</returns>
@@ -349,6 +375,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
+            using var timeout = CreateTimeoutSource(outboxTimeout);
+            using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+            cancellationToken = linkedCancellation.Token;
+            cancellationToken.ThrowIfCancellationRequested();
+
             var span = Tracer?.CreateDbSpan(
                 new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.DispatchedMessages, _configuration.TableName),
                 requestContext?.Span,
@@ -407,6 +438,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
+            using var timeout = CreateTimeoutSource(outBoxTimeout);
+            using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+            cancellationToken = linkedCancellation.Token;
+            cancellationToken.ThrowIfCancellationRequested();
+
             var dbAttributes = new Dictionary<string, string>()
             {
                 {"db.operation.parameter.message.id", messageId.Value}
@@ -442,6 +478,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
+            using var timeout = CreateTimeoutSource(outBoxTimeout);
+            using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+            cancellationToken = linkedCancellation.Token;
+            cancellationToken.ThrowIfCancellationRequested();
+
             var dbAttributes = new Dictionary<string, string>()
             {
                 {"db.operation.parameter.message.ids", string.Join(",", messageIds.Select(x => x.ToString()))}
@@ -483,6 +524,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
+            using var timeout = CreateTimeoutSource();
+            using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+            cancellationToken = linkedCancellation.Token;
+            cancellationToken.ThrowIfCancellationRequested();
+
             var dbAttributes = new Dictionary<string, string>()
             {
                 {"db.operation.parameter.message.id", id.Value}
@@ -539,6 +585,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
+            using var timeout = CreateTimeoutSource();
+            using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+            cancellationToken = linkedCancellation.Token;
+            cancellationToken.ThrowIfCancellationRequested();
+
             foreach(var messageId in ids)
             {
                 await MarkDispatchedAsync(messageId, requestContext, dispatchedAt, args, cancellationToken);
@@ -579,6 +630,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
         /// <inheritdoc />
         public async Task<bool> SupportsCausationTrackingAsync(CancellationToken cancellationToken = default)
         {
+            using var timeout = CreateTimeoutSource();
+            using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+            cancellationToken = linkedCancellation.Token;
+            cancellationToken.ThrowIfCancellationRequested();
+
             if (_causationIndexExists is { } cached)
                 return cached;
 
@@ -616,6 +672,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
         public async Task<bool> ReplayCausationAsync(string causationId, RequestContext? requestContext,
             Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
         {
+            using var timeout = CreateTimeoutSource();
+            using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+            cancellationToken = linkedCancellation.Token;
+            cancellationToken.ThrowIfCancellationRequested();
+
             // Mirror the relational no-op for the "inbox migrated, outbox not yet" mixed state (AC10): a table
             // provisioned before the Replay feature has no Causation GSI, so querying that index would throw a
             // ValidationException that unwinds the handler pipeline on every duplicate. Degrade to a no-op
@@ -744,6 +805,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
+            using var timeout = CreateTimeoutSource();
+            using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+            cancellationToken = linkedCancellation.Token;
+            cancellationToken.ThrowIfCancellationRequested();
+
             var span = Tracer?.CreateDbSpan(
                 new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.OutStandingMessages, _configuration.TableName),
                 requestContext?.Span,
@@ -791,6 +857,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
+            using var timeout = CreateTimeoutSource();
+            using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+            cancellationToken = linkedCancellation.Token;
+            cancellationToken.ThrowIfCancellationRequested();
+
             var span = Tracer?.CreateDbSpan(
                 new BoxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, BoxDbOperation.OutStandingMessageCount, _configuration.TableName),
                 requestContext?.Span,
@@ -1017,11 +1088,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
             }
         }
 
-        private Task<TransactWriteItemsRequest?> AddToTransactionWrite(MessageItem messageToStore, DynamoDbUnitOfWork dynamoDbUnitOfWork)
+        private Task<TransactWriteItemsRequest?> AddToTransactionWrite(MessageItem messageToStore, DynamoDbUnitOfWork dynamoDbUnitOfWork, CancellationToken cancellationToken)
         {
             var tcs = new TaskCompletionSource<TransactWriteItemsRequest?>();
             var attributes = _context.ToDocument(messageToStore, _toDocumentConfig).ToAttributeMap();
             
+            cancellationToken.ThrowIfCancellationRequested();
             var transaction = dynamoDbUnitOfWork.GetTransaction();
             transaction.TransactItems.Add(new TransactWriteItem{Put = new Put{TableName = _configuration.TableName, Item = attributes}});
             tcs.SetResult(transaction);
@@ -1256,6 +1328,16 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
                     _saveConfig,
                     cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
+        }
+
+        private CancellationTokenSource CreateTimeoutSource(int outBoxTimeout = -1)
+        {
+            if (outBoxTimeout < -1)
+                throw new ArgumentOutOfRangeException(nameof(outBoxTimeout));
+
+            var timeout = outBoxTimeout == -1 ? _configuration.Timeout : outBoxTimeout;
+            return _timeProvider.CreateCancellationTokenSource(timeout <= 0
+                ? Timeout.InfiniteTimeSpan : TimeSpan.FromMilliseconds(timeout));
         }
 
         private int GetShardNumber(string? partitionKey)

@@ -38,14 +38,10 @@ using Paramore.Brighter.MsSql;
 using Paramore.Brighter.Outbox.MsSql;
 using SampleInfrastructure;
 using Serilog;
-using Serilog.Events;
 
-// Information, not Debug: MsSqlMessageQueue logs its connection string at Debug, and the string
-// this sample tells you to use carries a password. The gateway is overridden rather than the whole
-// application so Brighter's own Debug output is still available where it is harmless.
+// MsSqlMessageQueue's constructor logs only the server, database, and table at Debug, excluding credentials.
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
-    .MinimumLevel.Override("Paramore.Brighter.MessagingGateway.MsSql", LogEventLevel.Information)
     .Enrich.FromLogContext()
     .WriteTo.Console()
     .CreateLogger();

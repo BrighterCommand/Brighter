@@ -132,6 +132,9 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
         => await SendWithDelayAsync(message, TimeSpan.Zero, cancellationToken);
 
     /// <inheritdoc />
+    /// <exception cref="ConfigurationException">
+    /// The delay requires scheduling, but no supported message scheduler is configured.
+    /// </exception>
     public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
         => await SendWithDelayAsync(message, delay, true, cancellationToken);
     
@@ -142,19 +145,41 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
             throw new ConfigurationException("No publication specified for producer");
         
         delay ??= TimeSpan.Zero;
-        // SQS support delay until 15min, more than that we are going to use scheduler
-        if (delay > TimeSpan.FromMinutes(15) && _publication.QueueAttributes.Type == SqsType.Standard)
+        // FIFO has no per-message delay; Standard supports at most 15 minutes natively.
+        if (delay > TimeSpan.Zero &&
+            (_publication.QueueAttributes.Type == SqsType.Fifo || delay > TimeSpan.FromMinutes(15)))
         {
             if (useAsyncScheduler)
             {
-                var schedulerAsync = (IAmAMessageSchedulerAsync)Scheduler!;
-                await schedulerAsync.ScheduleAsync(message, delay.Value, cancellationToken);
-                return;
+                if (Scheduler is IAmAMessageSchedulerAsync schedulerAsync)
+                {
+                    await schedulerAsync.ScheduleAsync(message, delay.Value, cancellationToken);
+                    return;
+                }
+
+                if (Scheduler is IAmAMessageSchedulerSync schedulerSync)
+                {
+                    schedulerSync.Schedule(message, delay.Value);
+                    return;
+                }
+            }
+            else
+            {
+                if (Scheduler is IAmAMessageSchedulerSync schedulerSync)
+                {
+                    schedulerSync.Schedule(message, delay.Value);
+                    return;
+                }
+
+                if (Scheduler is IAmAMessageSchedulerAsync schedulerAsync)
+                {
+                    await schedulerAsync.ScheduleAsync(message, delay.Value, cancellationToken);
+                    return;
+                }
             }
 
-            var schedulerSync = (IAmAMessageSchedulerSync)Scheduler!;
-            schedulerSync.Schedule(message, delay.Value);
-            return;
+            throw new ConfigurationException(
+                $"SqsMessageProducer: delay of {delay} was requested but no usable scheduler is configured; configure a scheduler via MessageSchedulerFactory.");
         }
         
         Log.PublishingMessage(s_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
@@ -177,6 +202,10 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
 
     public void Send(Message message) => SendWithDelay(message, null);
 
+    /// <inheritdoc />
+    /// <exception cref="ConfigurationException">
+    /// The delay requires scheduling, but no supported message scheduler is configured.
+    /// </exception>
     public void SendWithDelay(Message message, TimeSpan? delay)
         => BrighterAsyncContext.Run(() => SendWithDelayAsync(message, delay, false));
 
@@ -190,4 +219,3 @@ public partial class SqsMessageProducer : AwsMessagingGateway, IAmAMessageProduc
         public static partial void PublishedMessage(ILogger logger, string topic, string messageId, string snsMessageId);
     }
 }
-

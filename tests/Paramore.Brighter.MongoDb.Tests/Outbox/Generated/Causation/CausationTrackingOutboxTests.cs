@@ -33,6 +33,7 @@ using Xunit;
 namespace Paramore.Brighter.MongoDB.Tests.Outbox.Causation;
 
 [Trait("Category", "MongoDB")]
+[Collection("MongoDbOutbox")]
 public class CausationTrackingOutboxTests : CausationTrackingOutboxBaseTests<global::MongoDB.Driver.IClientSessionHandle>
 {
     private readonly Paramore.Brighter.MongoDb.Tests.Outbox.MongoDbOutboxProvider _outboxProvider = new();

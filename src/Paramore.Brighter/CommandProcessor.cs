@@ -342,7 +342,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = (IAmARequestSchedulerSync)_schedulerFactory.CreateSync(this);
-                return scheduler.Schedule(command, RequestSchedulerType.Send, at);
+                return scheduler is IAmARequestSchedulerSyncWithContext contextScheduler
+                    ? contextScheduler.Schedule(command, RequestSchedulerType.Send, at, requestContext)
+                    : scheduler.Schedule(command, RequestSchedulerType.Send, at);
             }
             finally
             {
@@ -357,7 +359,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateSync(this);
-                return scheduler.Schedule(command, RequestSchedulerType.Send, delay);
+                return scheduler is IAmARequestSchedulerSyncWithContext contextScheduler
+                    ? contextScheduler.Schedule(command, RequestSchedulerType.Send, delay, requestContext)
+                    : scheduler.Schedule(command, RequestSchedulerType.Send, delay);
             }
             finally
             {
@@ -421,7 +425,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateAsync(this);
-                return await scheduler.ScheduleAsync(command, RequestSchedulerType.Send, at, cancellationToken);
+                return scheduler is IAmARequestSchedulerAsyncWithContext contextScheduler
+                    ? await contextScheduler.ScheduleAsync(command, RequestSchedulerType.Send, at, requestContext, cancellationToken)
+                    : await scheduler.ScheduleAsync(command, RequestSchedulerType.Send, at, cancellationToken);
             }
             finally
             {
@@ -437,7 +443,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateAsync(this);
-                return await scheduler.ScheduleAsync(command, RequestSchedulerType.Send, delay, cancellationToken);
+                return scheduler is IAmARequestSchedulerAsyncWithContext contextScheduler
+                    ? await contextScheduler.ScheduleAsync(command, RequestSchedulerType.Send, delay, requestContext, cancellationToken)
+                    : await scheduler.ScheduleAsync(command, RequestSchedulerType.Send, delay, cancellationToken);
             }
             finally
             {
@@ -455,6 +463,11 @@ namespace Paramore.Brighter
         /// <typeparam name="T"></typeparam>
         /// <param name="event">The event.</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
+        /// <remarks>
+        /// Observers do not inherit the caller's <see cref="RequestContext.ResilienceContext"/>,
+        /// regardless of observer count. Configured resilience strategies still apply, and the
+        /// caller's execution context is left unchanged.
+        /// </remarks>
         public void Publish<T>(T @event, RequestContext? requestContext = null) where T : class, IRequest
         {
             if (_handlerFactorySync == null)
@@ -471,7 +484,7 @@ namespace Paramore.Brighter
                 
                 using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration, isolateSubscribers: true);
                 Log.BuildingSendPipelineForEvent(s_logger, @event.GetType(), @event.Id.Value);
-                var handlerChain = builder.Build(@event, context);
+                var handlerChain = builder.Build(@event, context, excludeResilienceContext: true);
 
                 var handlerCount = handlerChain.Count();
 
@@ -523,7 +536,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateSync(this);
-                return scheduler.Schedule(@event, RequestSchedulerType.Publish, at);
+                return scheduler is IAmARequestSchedulerSyncWithContext contextScheduler
+                    ? contextScheduler.Schedule(@event, RequestSchedulerType.Publish, at, requestContext)
+                    : scheduler.Schedule(@event, RequestSchedulerType.Publish, at);
             }
             finally
             {
@@ -538,7 +553,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateSync(this);
-                return scheduler.Schedule(@event, RequestSchedulerType.Publish, delay);
+                return scheduler is IAmARequestSchedulerSyncWithContext contextScheduler
+                    ? contextScheduler.Schedule(@event, RequestSchedulerType.Publish, delay, requestContext)
+                    : scheduler.Schedule(@event, RequestSchedulerType.Publish, delay);
             }
             finally
             {
@@ -559,6 +576,12 @@ namespace Paramore.Brighter
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
+        /// <remarks>
+        /// Observers do not inherit the caller's <see cref="RequestContext.ResilienceContext"/>,
+        /// regardless of observer count. Configured resilience strategies receive
+        /// <paramref name="cancellationToken"/> instead of the caller's resilience-context token.
+        /// The caller's execution context is left unchanged.
+        /// </remarks>
         public async Task PublishAsync<T>(
             T @event,
             RequestContext? requestContext = null,
@@ -581,7 +604,7 @@ namespace Paramore.Brighter
             {
                 Log.BuildingSendAsyncPipelineForEvent(s_logger, @event.GetType(), @event.Id.Value);
 
-                var handlerChain = builder.BuildAsync(@event, context, continueOnCapturedContext);
+                var handlerChain = builder.BuildAsync(@event, context, continueOnCapturedContext, excludeResilienceContext: true);
                 var handlerCount = handlerChain.Count();
 
                 Log.FoundAsyncHandlerCount(s_logger, handlerCount, @event.GetType(), @event.Id.Value);
@@ -638,7 +661,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateAsync(this);
-                return await scheduler.ScheduleAsync(@event, RequestSchedulerType.Publish, at, cancellationToken);
+                return scheduler is IAmARequestSchedulerAsyncWithContext contextScheduler
+                    ? await contextScheduler.ScheduleAsync(@event, RequestSchedulerType.Publish, at, requestContext, cancellationToken)
+                    : await scheduler.ScheduleAsync(@event, RequestSchedulerType.Publish, at, cancellationToken);
             }
             finally
             {
@@ -654,7 +679,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateAsync(this);
-                return await scheduler.ScheduleAsync(@event, RequestSchedulerType.Publish, delay, cancellationToken);
+                return scheduler is IAmARequestSchedulerAsyncWithContext contextScheduler
+                    ? await contextScheduler.ScheduleAsync(@event, RequestSchedulerType.Publish, delay, requestContext, cancellationToken)
+                    : await scheduler.ScheduleAsync(@event, RequestSchedulerType.Publish, delay, cancellationToken);
             }
             finally
             {
@@ -666,9 +693,9 @@ namespace Paramore.Brighter
         /// Posts the specified request. The message is placed on a task queue and into a outbox for reposting in the event of failure.
         /// You will need to configure a service that reads from the task queue to process the message
         /// Paramore.Brighter.ServiceActivator provides an endpoint for use in a windows service that reads from a queue
-        /// and then Sends or Publishes the message to a <see cref="CommandProcessor"/> within that service. The decision to <see cref="Send{T}"/> or <see cref="Publish{T}"/> is based on the
-        /// mapper. Your mapper can map to a <see cref="Message"/> with either a <see cref="T:MessageType.MT_COMMAND"/> , which results in a <see cref="Send{T}"/> or a
-        /// <see cref="T:MessageType.MT_EVENT"/> which results in a <see cref="Publish{T}"/>
+        /// and then Sends or Publishes the mapped request to a <see cref="CommandProcessor"/> within that service.
+        /// A mapped <see cref="ICommand"/> is sent to a single handler; a mapped <see cref="IEvent"/> is published
+        /// to its subscribers. The transport message type header does not determine application routing.
         /// Please note that this call will not participate in any ambient Transactions, if you wish to have the outbox participate in a Transaction please Use Deposit,
         /// and then after you have committed your transaction use ClearOutstandingFromOutbox
         /// </summary>
@@ -694,7 +721,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateSync(this);
-                return scheduler.Schedule(request, RequestSchedulerType.Post, at);
+                return scheduler is IAmARequestSchedulerSyncWithContext contextScheduler
+                    ? contextScheduler.Schedule(request, RequestSchedulerType.Post, at, requestContext)
+                    : scheduler.Schedule(request, RequestSchedulerType.Post, at);
             }
             finally
             {
@@ -709,7 +738,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateSync(this);
-                return scheduler.Schedule(request, RequestSchedulerType.Post, delay);
+                return scheduler is IAmARequestSchedulerSyncWithContext contextScheduler
+                    ? contextScheduler.Schedule(request, RequestSchedulerType.Post, delay, requestContext)
+                    : scheduler.Schedule(request, RequestSchedulerType.Post, delay);
             }
             finally
             {
@@ -721,9 +752,9 @@ namespace Paramore.Brighter
         /// Posts the specified request. The message is placed on a task queue and into a outbox for reposting in the event of failure.
         /// You will need to configure a service that reads from the task queue to process the message
         /// Paramore.Brighter.ServiceActivator provides an endpoint for use in a windows service that reads from a queue
-        /// and then Sends or Publishes the message to a <see cref="CommandProcessor"/> within that service. The decision to <see cref="Send{T}"/> or <see cref="Publish{T}"/> is based on the
-        /// mapper. Your mapper can map to a <see cref="Message"/> with either a <see cref="T:MessageType.MT_COMMAND"/> , which results in a <see cref="Send{T}"/> or a
-        /// <see cref="T:MessageType.MT_EVENT"/> which results in a <see cref="Publish{T}"/>
+        /// and then Sends or Publishes the mapped request to a <see cref="CommandProcessor"/> within that service.
+        /// A mapped <see cref="ICommand"/> is sent to a single handler; a mapped <see cref="IEvent"/> is published
+        /// to its subscribers. The transport message type header does not determine application routing.
         /// Please note that this call will not participate in any ambient Transactions, if you wish to have the outbox participate in a Transaction please Use DepositAsync,
         /// and then after you have committed your transaction use ClearOutboxAsync
         /// </summary>
@@ -756,7 +787,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateAsync(this);
-                return await scheduler.ScheduleAsync(request, RequestSchedulerType.Post, at, cancellationToken);
+                return scheduler is IAmARequestSchedulerAsyncWithContext contextScheduler
+                    ? await contextScheduler.ScheduleAsync(request, RequestSchedulerType.Post, at, requestContext, cancellationToken)
+                    : await scheduler.ScheduleAsync(request, RequestSchedulerType.Post, at, cancellationToken);
             }
             finally
             {
@@ -772,7 +805,9 @@ namespace Paramore.Brighter
             try
             {
                 var scheduler = _schedulerFactory.CreateAsync(this);
-                return await scheduler.ScheduleAsync(request, RequestSchedulerType.Post, delay, cancellationToken);
+                return scheduler is IAmARequestSchedulerAsyncWithContext contextScheduler
+                    ? await contextScheduler.ScheduleAsync(request, RequestSchedulerType.Post, delay, requestContext, cancellationToken)
+                    : await scheduler.ScheduleAsync(request, RequestSchedulerType.Post, delay, cancellationToken);
             }
             finally
             {
@@ -1471,7 +1506,9 @@ namespace Paramore.Brighter
             Log.AwaitingResponseOn(s_logger, channelName);
             ExecuteWithResiliencePipeline(() => responseMessage = responseChannel.Receive(timeOut));
 
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
                 if (responseMessage is not null && responseMessage.Header.MessageType != MessageType.MT_NONE)
+#pragma warning restore CS0618
                 {
                     Log.ReplyReceivedFrom(s_logger, channelName);
                     //map to request is map to a response, but it is a request from consumer point of view. Confusing, but...
