@@ -36,7 +36,8 @@ namespace Paramore.Brighter.Reject.Handlers;
 /// <typeparam name="TRequest">The type of request being handled.</typeparam>
 /// <remarks>
 /// This handler should be positioned at the outermost layer of the pipeline (lowest step number)
-/// to act as a backstop for any exceptions that escape inner handlers.
+/// to act as a backstop for application exceptions that escape inner handlers.
+/// Explicit pump actions and cancellation propagate unchanged.
 /// </remarks>
 public partial class RejectMessageOnErrorHandler<TRequest> : RequestHandler<TRequest>, IAmABackstopHandler
     where TRequest : class, IRequest
@@ -45,12 +46,12 @@ public partial class RejectMessageOnErrorHandler<TRequest> : RequestHandler<TReq
 
     /// <summary>
     /// Handles the request by passing it to the next handler in the pipeline.
-    /// If any exception occurs in the pipeline, it is caught and converted to a <see cref="RejectMessageAction"/>.
+    /// Unhandled application exceptions are caught and converted to a <see cref="RejectMessageAction"/>.
     /// </summary>
     /// <param name="request">The request to handle.</param>
     /// <returns>The request after processing.</returns>
     /// <exception cref="RejectMessageAction">
-    /// Thrown when any exception occurs in the pipeline. The original exception is preserved as <see cref="Exception.InnerException"/>.
+    /// Thrown when an unhandled application exception occurs in the pipeline. The original exception is preserved as <see cref="Exception.InnerException"/>.
     /// </exception>
     public override TRequest Handle(TRequest request)
     {
@@ -58,7 +59,11 @@ public partial class RejectMessageOnErrorHandler<TRequest> : RequestHandler<TReq
         {
             return base.Handle(request);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not RejectMessageAction
+                                   and not DeferMessageAction
+                                   and not DontAckAction
+                                   and not InvalidMessageAction
+                                   and not OperationCanceledException)
         {
             Log.UnhandledExceptionRejectingMessage(s_logger, ex, typeof(TRequest).Name, ex.Message);
             throw new RejectMessageAction(ex.Message, ex);

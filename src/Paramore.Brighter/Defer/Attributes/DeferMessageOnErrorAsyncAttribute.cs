@@ -37,12 +37,13 @@ namespace Paramore.Brighter.Defer.Attributes;
 /// </para>
 /// <para>
 /// This attribute should be placed at the outermost position in the pipeline (lowest step number, typically 0)
-/// to catch any exceptions that escape other handlers like retry policies or circuit breakers.
+/// to catch application exceptions that escape other handlers like retry policies or circuit breakers.
+/// Explicit pump actions and cancellation propagate unchanged.
 /// </para>
 /// <para>
 /// Example usage:
 /// <code>
-/// [DeferMessageOnErrorAsync(step: 0, delayMilliseconds: 5000)]  // Outermost - catches anything, requeues with 5s delay
+/// [DeferMessageOnErrorAsync(step: 0, delayMilliseconds: 5000)]  // Outermost - catches application failures, requeues with 5s delay
 /// [UsePolicyAsync("RetryPolicy", step: 2)]                      // Retries first
 /// public override async Task&lt;MyMessage&gt; HandleAsync(MyMessage message, CancellationToken cancellationToken)
 /// {
