@@ -502,7 +502,7 @@
     - The generated tests stay skipped until 5.11, so no regeneration is needed yet
   - Depends on: 5.1, 5.3
 
-- [ ] **5.5a TEST + IMPLEMENT: A GCP pull Reject for a delivery error publishes a stamped copy to the DLQ, acknowledges the original and returns true**
+- [x] **5.5a TEST + IMPLEMENT: A GCP pull Reject for a delivery error publishes a stamped copy to the DLQ, acknowledges the original and returns true**
   - **USE COMMAND**: `/test-first when a gcp pull consumer rejects a message for a delivery error should publish a stamped copy to the dlq and acknowledge the original`
   - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Pull"
   - Test file: `When_a_gcp_pull_consumer_rejects_for_delivery_error_should_publish_stamped_copy_to_dlq.cs` (async: `…_async.cs`)
