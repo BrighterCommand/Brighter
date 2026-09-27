@@ -2,6 +2,28 @@
 
 ## Master
 
+### DynamoDB outbox: configured operation timeouts now take effect (#4434)
+
+Both `Paramore.Brighter.Outbox.DynamoDB` (AWS SDK v3) and `Paramore.Brighter.Outbox.DynamoDB.V4` now honour `DynamoDbConfiguration.Timeout` and per-call outbox timeouts. Previously, these values were ignored.
+
+**Upgrade impact: the existing default of 500 ms now takes effect.** Operations that previously completed after that deadline may now throw `OperationCanceledException`. Review your timeout settings before upgrading, especially for batches and queries: one deadline covers the entire operation, including all batch items or query pages.
+
+To allow a longer deadline, set the configuration's `timeout` constructor argument (in milliseconds), for example:
+
+```csharp
+new DynamoDbConfiguration(timeout: 5000);
+```
+
+To disable the outbox deadline, use `new DynamoDbConfiguration(timeout: 0)`; a configured value of `-1` also disables it. Caller cancellation and the AWS SDK client's own timeouts still apply.
+
+For methods accepting a per-call timeout:
+
+* `-1` (the default) uses `DynamoDbConfiguration.Timeout`; it does **not** independently disable the deadline.
+* `0` disables the outbox deadline for that call.
+* A positive value overrides the configured deadline, in milliseconds.
+
+Cancellation is cooperative. Synchronous AWS SDK table-metadata discovery remains governed by the SDK client's timeout. Adding a message to a transaction queues the write; the later commit must be cancelled through the transaction provider. Public signatures and default parameter values are unchanged, but applications that relied on the previously ignored deadlines may need configuration changes.
+
 ### AWS: configurable `MaximumMessageSize` for SNS topics and SQS queues
 
 Amazon SNS now accepts message payloads up to 1 MiB, but only if you raise the topic's `MaximumMessageSize` attribute — the default is still 256 KiB. Brighter's send path never assumed a fixed limit, but the provisioning path had no way to set the attribute, so a topic Brighter created with `OnMissingChannel.Create` was stuck at 256 KiB.
