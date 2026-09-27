@@ -1,5 +1,6 @@
 #!/bin/bash
 # Exercises the real cleanup script with local AWS CLI responses, never real AWS.
+# Requires GNU coreutils timeout for the deadline cases.
 # The MIT License (MIT)
 # Copyright (c) 2026 Avtandil Ushikishvili <a.ushikishvili@gmail.com>
 #
@@ -29,9 +30,14 @@ trap 'rm -rf -- "$TEST_ROOT"' EXIT
 mkdir "$TEST_ROOT/bin"
 
 # A closed PATH plus an empty environment prevents falling back to a real AWS executable.
-for utility in bash sh cat date tr wc grep xargs mktemp rm mkdir awk python3; do
+for utility in bash sh cat date tr wc grep xargs mktemp rm mkdir awk sleep python3; do
     ln -s "$(command -v "$utility")" "$TEST_ROOT/bin/$utility" || exit 1
 done
+TIMEOUT_COMMAND=$(command -v timeout) || {
+    echo 'The offline deadline tests require GNU timeout (coreutils).'
+    exit 1
+}
+ln -s "$TIMEOUT_COMMAND" "$TEST_ROOT/bin/timeout" || exit 1
 ln -s "$SCRIPT_DIR/tests/fixtures/aws-cleanup/InMemoryAwsCli.sh" "$TEST_ROOT/bin/aws" || exit 1
 PASS=0
 FAIL=0
@@ -47,6 +53,7 @@ arrange() {
     : > "$CASE_DIR/calls"
     LIMIT=0
     AGE=0
+    DEADLINE='unset'
     CASE_TEMP="$CASE_DIR"
 }
 
@@ -65,6 +72,9 @@ run_cleanup() {
         "CLEANUP_MIN_AGE_SECONDS=$AGE" "CLEANUP_PARALLELISM=${PARALLELISM:-4}" "AWS_REGION=eu-west-1")
     if [[ "$LIMIT" != unset ]]; then
         environment+=("CLEANUP_MAX_DELETE_FAILURES=$LIMIT")
+    fi
+    if [[ "$DEADLINE" != unset ]]; then
+        environment+=("CLEANUP_TIMEOUT_SECONDS=$DEADLINE")
     fi
     env -i "${environment[@]}" bash "$CLEANUP_SCRIPT" "$@" > "$CASE_DIR/output" 2>&1
     STATUS=$?
@@ -107,6 +117,43 @@ run_cleanup
 assert_equal 0 "$STATUS" 'exit status'
 assert_contains 'Deletion summary: attempted=0 succeeded=0 already_absent=0 failed=0'
 assert_no_mutations
+
+for service in sqs sns; do
+    # Arrange: three old resources, with one worker so call ordering is deterministic.
+    arrange "$service cleanup makes progress before checking the entire backlog"
+    AGE=3600
+    PARALLELISM=1
+    if [[ "$service" == sqs ]]; then
+        response sqs.list-queues "$QUEUE-1 $QUEUE-2 $QUEUE-3"
+        response sqs.get-queue-attributes 1000000000
+        age_operation=get-queue-attributes
+        delete_operation=delete-queue
+    else
+        response sns.list-topics "$TOPIC-1 $TOPIC-2 $TOPIC-3"
+        response sns.list-tags-for-resource 1000000000
+        age_operation=list-tags-for-resource
+        delete_operation=delete-topic
+    fi
+
+    # Act: exercise the public cleanup script through the existing offline CLI substitute.
+    run_cleanup
+
+    # Assert: progress starts before the last age lookup, without dropping any candidates.
+    assert_equal 0 "$STATUS" 'incremental cleanup exit status'
+    assert_contains 'Deletion summary: attempted=3 succeeded=3 already_absent=0 failed=0'
+    assert_equal 3 "$(awk -v service="$service" -v operation="$age_operation" \
+        '$1 == service && $2 == operation { count++ } END { print count+0 }' "$CASE_DIR/calls")" \
+        'all three candidates are age checked'
+    assert_equal 3 "$(awk -v service="$service" -v operation="$delete_operation" \
+        '$1 == service && $2 == operation { count++ } END { print count+0 }' "$CASE_DIR/calls")" \
+        'all three old candidates are deleted'
+    assert_equal yes "$(awk -v service="$service" -v age="$age_operation" -v deletion="$delete_operation" '
+        $1 == service && $2 == age { last_age = NR }
+        $1 == service && $2 == deletion && !first_delete { first_delete = NR }
+        END { print (first_delete > 0 && last_age > first_delete) ? "yes" : "no" }
+        ' "$CASE_DIR/calls")" 'deletion begins before the final age lookup'
+done
+PARALLELISM=4
 
 for PARALLELISM in 1 4 16; do
     arrange "mixed parallel outcomes at parallelism $PARALLELISM"
@@ -333,6 +380,130 @@ for result in "$CASE_DIR"/brighter-aws-cleanup.*; do
     [[ -e "$result" ]] && remaining_results=$((remaining_results + 1))
 done
 assert_equal 0 "$remaining_results" 'temporary results are removed'
+
+# Arrange / Act / Assert: deadlines cover the entire script, including blocked AWS I/O.
+for invalid in '' -1 abc 1.5 1e3 999999999999999999999999; do
+    arrange "invalid cleanup deadline '$invalid'"
+    DEADLINE="$invalid"
+    run_cleanup
+    assert_equal 1 "$STATUS" 'invalid deadline fails before discovery'
+    assert_contains 'CLEANUP_TIMEOUT_SECONDS'
+    assert_equal '' "$(cat "$CASE_DIR/calls")" 'invalid deadline makes no AWS calls'
+done
+
+for deadline in 0 020; do
+    arrange "successful cleanup with deadline $deadline"
+    DEADLINE="$deadline"
+    response sqs.list-queues "$QUEUE"
+    run_cleanup
+    assert_equal 0 "$STATUS" 'zero disables the deadline; leading zeros are decimal'
+    assert_contains 'Deletion summary: attempted=1 succeeded=1 already_absent=0 failed=0'
+done
+
+arrange 'deadline preserves ordinary deletion failures'
+DEADLINE=20
+response sqs.list-queues "$QUEUE"
+aws_error sqs.delete-queue AccessDenied DeleteQueue
+run_cleanup
+assert_equal 1 "$STATUS" 'the supervisor preserves the cleanup failure status'
+assert_contains 'AccessDenied'
+assert_contains 'Deletion summary: attempted=1 succeeded=0 already_absent=0 failed=1'
+
+arrange 'deadline preserves dry-run safety'
+DEADLINE=20
+AGE=3600
+response sns.list-topics "$TOPIC"
+response sns.list-tags-for-resource None
+response sqs.list-queues "$QUEUE"
+run_cleanup --dry-run
+assert_equal 0 "$STATUS" 'supervised dry-run succeeds'
+assert_no_mutations
+assert_contains "Would delete untagged test queue: ${QUEUE##*/}"
+
+for stalled in discovery age deletion; do
+    arrange "deadline interrupts stalled $stalled"
+    DEADLINE=1
+    AGE=3600
+    PARALLELISM=1
+    case "$stalled" in
+        discovery)
+            response resourcegroupstaggingapi.get-resources None
+            delayed_response=resourcegroupstaggingapi.get-resources ;;
+        age)
+            response sqs.list-queues "$QUEUE"
+            response sqs.get-queue-attributes 1000000000
+            delayed_response=sqs.get-queue-attributes ;;
+        deletion)
+            response sqs.list-queues "$QUEUE-1 $QUEUE-2"
+            response sqs.delete-queue.Producer-Send-Tests-queue-2 ''
+            delayed_response=sqs.delete-queue.Producer-Send-Tests-queue-2 ;;
+    esac
+    printf '4\n' > "$CASE_DIR/$delayed_response.delay"
+    run_cleanup
+    assert_equal 124 "$STATUS" 'deadline is a visible failure, not a cancelled job or success'
+    assert_contains 'Cleanup deadline exceeded'
+    assert_contains 'sweep incomplete'
+    # The supervisor may return before a descendant has finished its TERM handler.
+    for ((attempt = 0; attempt < 20; attempt++)); do
+        [[ -f "$CASE_DIR/interrupted" ]] && break
+        sleep 0.05
+    done
+    if [[ ! -f "$CASE_DIR/interrupted" ]]; then
+        echo "AWS calls before missing interruption marker ($stalled):"
+        cat "$CASE_DIR/calls"
+    fi
+    assert_equal no "$(if [[ -f "$CASE_DIR/delayed-command-finished" ]]; then echo yes; else echo no; fi)" \
+        'the stalled CLI does not finish after timeout'
+    assert_equal yes "$(if [[ -f "$CASE_DIR/interrupted" ]]; then echo yes; else echo no; fi)" \
+        'termination reaches the stalled CLI, not only its parent shell'
+    if [[ "$stalled" == deletion ]]; then
+        assert_contains 'Deleted untagged test queue Producer-Send-Tests-queue-1'
+    else
+        assert_no_mutations
+    fi
+done
+PARALLELISM=4
+
+arrange 'a terminated dry-run never mutates AWS'
+DEADLINE=1
+AGE=3600
+response sqs.list-queues "$QUEUE"
+response sqs.get-queue-attributes 1000000000
+printf '4\n' > "$CASE_DIR/sqs.get-queue-attributes.delay"
+run_cleanup --dry-run
+assert_equal 124 "$STATUS" 'dry-run observes the deadline'
+assert_contains 'sweep incomplete'
+assert_no_mutations
+
+arrange 'deadline does not turn an earlier AWS failure into success'
+DEADLINE=1
+AGE=3600
+response sns.list-topics "$TOPIC"
+aws_error sns.delete-topic AuthorizationError DeleteTopic
+response sqs.list-queues "$QUEUE"
+response sqs.get-queue-attributes 1000000000
+printf '4\n' > "$CASE_DIR/sqs.get-queue-attributes.delay"
+run_cleanup
+assert_equal 124 "$STATUS" 'deadline remains nonzero after an earlier deletion failure'
+assert_contains 'AuthorizationError'
+assert_contains 'sweep incomplete'
+
+rm "$TEST_ROOT/bin/timeout"
+for deadline in unset 0 20; do
+    arrange "deadline $deadline without timeout installed"
+    DEADLINE="$deadline"
+    response sqs.list-queues "$QUEUE"
+    run_cleanup
+    if [[ "$deadline" == 20 ]]; then
+        assert_equal 1 "$STATUS" 'configured deadline fails closed if unavailable'
+        assert_contains 'timeout'
+        assert_equal '' "$(cat "$CASE_DIR/calls")" 'no AWS calls without the requested deadline'
+    else
+        assert_equal 0 "$STATUS" 'ordinary local cleanup has no new timeout dependency'
+        assert_contains 'Deletion summary: attempted=1 succeeded=1 already_absent=0 failed=0'
+    fi
+done
+ln -s "$TIMEOUT_COMMAND" "$TEST_ROOT/bin/timeout"
 
 arrange 'old nonempty test bucket is emptied before deletion'
 AGE=3600

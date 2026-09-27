@@ -55,6 +55,12 @@ elif [[ "$key:$resource" == resourcegroupstaggingapi.get-resources:brighter ]]; 
     echo None
     exit 0
 fi
+if [[ -f "$response.delay" ]]; then
+    trap '' PIPE
+    trap 'printf "%s\n" "$key" >> "$AWS_CLEANUP_FIXTURES/interrupted"; exit 143' TERM
+    sleep "$(cat "$response.delay")"
+    printf '%s\n' "$key" >> "$AWS_CLEANUP_FIXTURES/delayed-command-finished"
+fi
 if [[ -f "$response.status" ]]; then
     cat "$response.stdout"
     cat "$response.stderr" >&2
