@@ -654,7 +654,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - Implementation should: copy `f1_level`, or use row 12's `Medium` when it is null; state the forced-level table; apply the four-step mapping procedure; and give each factor-table row a measured value and a level.
   - Traces to: FR-11, FR-16 rows 8, 9 and 12, NFR-1, AC-16, AC-20 (shape), AC-43; ADR 0073 KC2, KC3, IA 3.
 
-- [ ] **TEST + IMPLEMENT: T13.4 — Inside the markers: the overall level is the maximum, a raise needs its sentence, and the `**Overall risk: …**` line and FR-13's sentence are written, then checked**
+- [x] **TEST + IMPLEMENT: T13.4 — Inside the markers: the overall level is the maximum, a raise needs its sentence, and the `**Overall risk: …**` line and FR-13's sentence are written, then checked**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
     - `0033` produces a `**Overall risk: {level}**` line on its own line, and FR-13's sentence verbatim. Until the Classifier exists (T13.5), F2 and F5 have no judged inputs, so this task asserts only F1 = `Medium` and that the stated level is not below the maximum of the three rows as written. T13.5 checks `0033`'s level against its three rows.
