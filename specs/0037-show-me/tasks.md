@@ -721,7 +721,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - Add the follow-up for `Deferred`, `Dropped` and `Withdrawn`, give Part 3 a cap of 5 entries, and write rows 8 and 9 verbatim.
   - Traces to: FR-8, FR-16 rows 8–9, AC-15, AC-16, AC-43, AC-45, AC-54, AC-55; ADR 0072 KC5; ADR 0073 KC1.
 
-- [ ] **TEST + IMPLEMENT: T14.3 — Where to look first lists three to seven spec-diff paths with reasons, or every path when its source holds fewer than three, taking them from the Explainer's handover when it drew a tree there, or gives row 13's line when there is no diff**
+- [x] **TEST + IMPLEMENT: T14.3 — Where to look first lists three to seven spec-diff paths with reasons, or every path when its source holds fewer than three, taking them from the Explainer's handover when it drew a tree there, or gives row 13's line when there is no diff**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
     - (C-8) `0036`: AC-26 — 3–7 paths, all in the diff, with reasons of ≤ 25 words. AC-60 when a tree is present — `(unchanged)` marks, no path slot used, and no `No diagram:` line.
