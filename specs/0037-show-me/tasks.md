@@ -827,7 +827,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - Evaluate ladder rows 1–7 in order.
   - Traces to: FR-23 (stops), FR-1, FR-2, NFR-6, AC-53 (front matter), AC-90, AC-95; ADR 0078 *mechanism* ladder, KC5, IA 4.
 
-- [ ] **TEST + IMPLEMENT: T15.5 — `/spec:write_release_notes` writes or replaces exactly one marked section under the first `##`, in the fixed form, with one exact-match `Edit`**
+- [x] **TEST + IMPLEMENT: T15.5 — `/spec:write_release_notes` writes or replaces exactly one marked section under the first `##`, in the fixed form, with one exact-match `Edit`**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
     - Clone, with K13 (`specs/9015-two-breaks/` and its staged synthetic ADR recording two breaks). Before the first run, save `release_notes.md` as `$SCRATCH/release_notes.pre-T15.5.md`. That copy holds K7's unstaged section and no section for `9015`. Every "restore" below copies it back over `release_notes.md`.
