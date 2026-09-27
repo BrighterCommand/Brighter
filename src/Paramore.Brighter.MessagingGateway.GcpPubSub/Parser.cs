@@ -305,7 +305,9 @@ internal static class Parser
         headers.Add(HeaderNames.Id, message.Header.MessageId.Value);
         headers.Add(HeaderNames.Topic, message.Header.Topic.Value);
         headers.Add(HeaderNames.HandledCount, message.Header.HandledCount.ToString());
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
         headers.Add(HeaderNames.MessageType, message.Header.MessageType.ToString());
+#pragma warning restore CS0618
         headers.Add(HeaderNames.SpecVersion, message.Header.SpecVersion);
         headers.Add(HeaderNames.Source, message.Header.Source.ToString());
         headers.Add(HeaderNames.Timestamp, message.Header.TimeStamp.ToRfc3339());

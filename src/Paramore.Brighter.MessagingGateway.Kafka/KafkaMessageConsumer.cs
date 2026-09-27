@@ -488,7 +488,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         /// <remarks>
         /// We consume the next offset from the stream, and turn it into a Brighter message; we store the offset in the partition into the Brighter message
-        /// headers for use in storing and committing offsets. If the stream is EOF or we are not allocated partitions, returns an empty message. 
+        /// headers for use in storing and committing offsets. If the stream is EOF or we are not allocated partitions, returns an empty message.
+        /// With the consumer protocol and <see cref="OnMissingChannel.Assume"/>, a missing topic may return
+        /// an empty message without a subscription error. No infrastructure check is performed.
         /// </remarks>
         /// <param name="timeOut">The timeout for receiving a message. Defaults to 300ms</param>
         /// <returns>A Brighter message wrapping the payload from the Kafka stream</returns>
@@ -502,7 +504,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             
             try
             {
-                
                 LogOffSets();
 
                 Log.ConsumingMessages(s_logger, timeOut.Value.TotalMilliseconds);
@@ -555,9 +556,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// We consume the next offset from the stream, and turn it into a Brighter message; we store the offset in the partition into the Brighter message
         /// headers for use in storing and committing offsets. If the stream is EOF or we are not allocated partitions, returns an empty message.
         /// Kafka does not support an async consumer, and probably never will. See <a href="https://github.com/confluentinc/confluent-kafka-dotnet/issues/487">Confluent Kafka</a>
-        /// As a result we use TimeSpan.Zero to run the receive loop, which avoids blocking.
+        /// The poll timeout defaults to zero. Missing-topic behavior follows <see cref="Receive"/>.
         /// </remarks>
-        /// <param name="timeOut">The timeout for receiving a message. For async always treated as zero</param>
+        /// <param name="timeOut">The poll timeout for receiving a message. Defaults to zero.</param>
         /// <param name="cancellationToken">The cancellation token - not used as this is async over sync</param>
         /// <returns>A Brighter message wrapping the payload from the Kafka stream</returns>
         /// <exception cref="ChannelFailureException">We catch Kafka consumer errors and rethrow as a ChannelFailureException </exception>
@@ -1087,7 +1088,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             // Add rejection metadata
             message.Header.Bag[HeaderNames.ORIGINAL_TOPIC] = message.Header.Topic.Value;
             message.Header.Bag[HeaderNames.REJECTION_TIMESTAMP] = _timeProvider.GetUtcNow().ToString("o");
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
             message.Header.Bag[HeaderNames.ORIGINAL_TYPE] = message.Header.MessageType.ToString();
+#pragma warning restore CS0618
 
             CleanBagForResend(message);
 

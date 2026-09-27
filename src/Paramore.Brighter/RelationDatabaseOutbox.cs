@@ -1445,7 +1445,9 @@ namespace Paramore.Brighter
             [
                 body,
                 CreateSqlParameter($"@{prefix}MessageId", DbType.String, message.Id.Value),
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
                 CreateSqlParameter($"@{prefix}MessageType", DbType.String, message.Header.MessageType.ToString()),
+#pragma warning restore CS0618
                 CreateSqlParameter($"@{prefix}Topic", DbType.String, message.Header.Topic.Value),
                 CreateSqlParameter($"@{prefix}Timestamp", DbType.DateTimeOffset, message.Header.TimeStamp.ToUniversalTime()),
                 CreateSqlParameter($"@{prefix}CorrelationId", DbType.String, message.Header.CorrelationId.Value),

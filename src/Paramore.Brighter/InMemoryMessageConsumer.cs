@@ -157,7 +157,9 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
         Message message;
         do {
             message = _bus.Dequeue(_topic);
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
         } while (message.Header.MessageType != MessageType.MT_NONE);
+#pragma warning restore CS0618
     }
     
     /// <summary>
@@ -185,7 +187,9 @@ public sealed class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessa
         foreach (var message in messages)
         {
             //don't lock empty messages
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
             if (message.Header.MessageType == MessageType.MT_NONE)
+#pragma warning restore CS0618
                 continue;
             _lockedMessages.TryAdd(message.Id.Value, new LockedMessage(message, _timeProvider.GetUtcNow()));
         }

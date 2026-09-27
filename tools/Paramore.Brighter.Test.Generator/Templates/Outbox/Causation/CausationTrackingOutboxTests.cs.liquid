@@ -33,12 +33,15 @@ using Xunit;
 namespace {{ Namespace }}.Outbox{{ Prefix }}.Causation;
 {% if Category != null %}
 [Trait("Category", "{{Category}}")]{% endif %}
+{% if CollectionName != null %}[Collection("{{CollectionName}}")]{% endif %}
 public class CausationTrackingOutboxTests : CausationTrackingOutboxBaseTests<{{ Transaction }}>
 {
     private readonly {{ OutboxProvider }} _outboxProvider = new();
     private IAmAnOutboxSync<Message, {{ Transaction }}>? _outbox;
 
-    protected override IAmAnOutboxSync<Message, {{ Transaction }}> Outbox => _outbox ??= _outboxProvider.CreateOutbox();
+    protected override IAmAnOutboxSync<Message, {{ Transaction }}> Outbox => _outbox ??= _outboxProvider.CreateOutbox();{% if ReadConsistencyTimeoutInMilliseconds > 0 %}
+
+    protected override System.TimeSpan ReadConsistencyTimeout => System.TimeSpan.FromMilliseconds({{ ReadConsistencyTimeoutInMilliseconds }});{% endif %}
 
     protected override void CreateStore() => _outboxProvider.CreateStore();
 

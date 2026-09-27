@@ -71,6 +71,12 @@ public class OutboxConfiguration
     public string? CollectionName { get; set; }
 
     /// <summary>
+    /// Gets or sets the polling timeout for outstanding-message reads in causation-tracking tests.
+    /// Defaults to zero, requiring reads to reflect writes immediately.
+    /// </summary>
+    public int ReadConsistencyTimeoutInMilliseconds { get; set; }
+
+    /// <summary>
     /// Returns a copy of this configuration carrying <paramref name="prefix"/>.
     /// </summary>
     /// <param name="prefix">The prefix the copy should carry.</param>

@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.JsonConverters;
@@ -30,8 +32,21 @@ using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
-public class When_configuring_json_serialisation
+[Collection(JsonSerialisationCollection.NAME)]
+public class When_configuring_json_serialisation : IDisposable
 {
+    private readonly JsonSerializerOptions _originalOptions = JsonSerialisationOptions.Options;
+
+    public When_configuring_json_serialisation()
+    {
+        JsonSerialisationOptions.Options = new JsonSerializerOptions(_originalOptions);
+    }
+
+    public void Dispose()
+    {
+        JsonSerialisationOptions.Options = _originalOptions;
+    }
+
     [Fact]
     public void Should_preserve_existing_options()
     {

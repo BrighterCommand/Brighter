@@ -47,6 +47,12 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
     /// <summary>
     /// Maps an Azure Service Bus message to a Brighter <see cref="Message"/>.
     /// </summary>
+    /// <remarks>
+    /// The CloudEvents subject application property takes precedence over the native subject.
+    /// When it is absent, wrappers implementing <see cref="IBrokeredMessageWithSubject"/> supply the native subject.
+    /// Likewise, when the CloudEvents partition key is absent, wrappers implementing
+    /// <see cref="IBrokeredMessageWithPartitionKey"/> supply the native partition key.
+    /// </remarks>
     /// <param name="azureServiceBusMessage">The Azure Service Bus Message to map to a Brighter <see cref="Message"/></param>
     /// <returns></returns>
     public Message MapToBrighterMessage(IBrokeredMessageWrapper? azureServiceBusMessage)
@@ -184,11 +190,15 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
             )
         )
         {
+            if (azureServiceBusMessage is IBrokeredMessageWithSubject messageWithSubject
+                && !string.IsNullOrEmpty(messageWithSubject.Subject))
+                return messageWithSubject.Subject;
+
             Log.NoCloudEventsSubject(s_logger, _topic, subscription.Name);
             return string.Empty;
         }
 
-        var subject = property.ToString() ?? string.Empty;
+        var subject = property?.ToString() ?? string.Empty;
 
         return subject;
     }
@@ -229,11 +239,15 @@ public partial class AzureServiceBusMessageCreator(AzureServiceBusSubscription s
             )
         )
         {
+            if (azureServiceBusMessage is IBrokeredMessageWithPartitionKey messageWithPartitionKey
+                && !string.IsNullOrEmpty(messageWithPartitionKey.PartitionKey))
+                return new PartitionKey(messageWithPartitionKey.PartitionKey);
+
             Log.NoCloudEventsPartitionKey(s_logger, _topic, subscription.Name);
             return PartitionKey.Empty;
         }
 
-        return new PartitionKey(property.ToString() ?? string.Empty);
+        return new PartitionKey(property?.ToString() ?? string.Empty);
     }
 
     private CloudEventsType GetCloudEventsType(IBrokeredMessageWrapper azureServiceBusMessage)

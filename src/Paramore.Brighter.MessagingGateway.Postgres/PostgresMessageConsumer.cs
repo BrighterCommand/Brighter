@@ -544,7 +544,9 @@ public partial class PostgresMessageConsumer(
     {
         message.Header.Bag["originalTopic"] = message.Header.Topic.Value;
         message.Header.Bag["rejectionTimestamp"] = DateTimeOffset.UtcNow.ToString("o");
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
         message.Header.Bag["originalMessageType"] = message.Header.MessageType.ToString();
+#pragma warning restore CS0618
 
         if (reason == null) return;
 

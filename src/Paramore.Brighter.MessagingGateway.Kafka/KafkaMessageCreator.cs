@@ -369,7 +369,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             ReadHeader(headers, HeaderNames.CLOUD_EVENTS_SOURCE)
                 .Map(x => Uri.TryCreate(x, UriKind.RelativeOrAbsolute, out var dataSchema)
                     ? new HeaderResult<Uri?>(dataSchema, true)
-                    : new HeaderResult<Uri?>(new Uri("http://goparamore.io"), true));
+                    : new HeaderResult<Uri?>(new Uri(MessageHeader.DefaultSource), true));
 
         private static HeaderResult<TraceParent?> ReadTraceParent(Headers headers)
         {

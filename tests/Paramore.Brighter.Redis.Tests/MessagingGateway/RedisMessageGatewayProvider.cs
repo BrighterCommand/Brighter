@@ -40,10 +40,33 @@ public class RedisMessageGatewayProvider
 {
     private readonly RedisMessagingGatewayConfiguration _configuration;
     private RedisMessageConsumer? _dlqConsumer;
+    private RedisMessageConsumer? _invalidConsumer;
+    private ConformanceHarnessMessageScheduler? _scheduler;
 
     public RedisMessageGatewayProvider()
     {
         _configuration = RedisFixture.RedisMessagingGatewayConfiguration();
+    }
+
+    // Redis has no native delayed delivery: the gateway delegates a requested delay to the
+    // scheduler seam (producer.Scheduler for send-with-delay; the consumer factory's
+    // scheduler for requeue-with-delay). One shared harness scheduler honours the delay by
+    // wall-clock and re-publishes to the topic. Lazily created; disposed in CleanUp.
+    private ConformanceHarnessMessageScheduler Scheduler =>
+        _scheduler ??= new ConformanceHarnessMessageScheduler(RepublishToRedis);
+
+    // The only part of scheduling that is Redis's: build a producer, send, and hand it back for
+    // the scheduler to dispose.
+    private IDisposable? RepublishToRedis(Message message)
+    {
+        var publication = new RedisMessagePublication
+        {
+            Topic = message.Header.Topic,
+            MakeChannels = OnMissingChannel.Create,
+        };
+
+        var producer = new RedisMessageProducer(_configuration, publication);
+        return ConformanceHarnessMessageScheduler.SendAndHandBack(producer, () => producer.Send(message));
     }
 
     public void CleanUp(
@@ -61,6 +84,10 @@ public class RedisMessageGatewayProvider
         try { producer?.Dispose(); } catch { /* best effort */ }
         try { _dlqConsumer?.Dispose(); } catch { /* best effort */ }
         _dlqConsumer = null;
+        try { _invalidConsumer?.Dispose(); } catch { /* best effort */ }
+        _invalidConsumer = null;
+        try { _scheduler?.Dispose(); } catch { /* best effort */ }
+        _scheduler = null;
     }
 
     public async Task CleanUpAsync(
@@ -85,12 +112,21 @@ public class RedisMessageGatewayProvider
             try { await _dlqConsumer.DisposeAsync(); } catch { /* best effort */ }
             _dlqConsumer = null;
         }
+
+        if (_invalidConsumer != null)
+        {
+            try { await _invalidConsumer.DisposeAsync(); } catch { /* best effort */ }
+            _invalidConsumer = null;
+        }
+
+        try { _scheduler?.Dispose(); } catch { /* best effort */ }
+        _scheduler = null;
     }
 
     public IAmAChannelSync CreateChannel(RedisSubscription subscription)
     {
         var channel = new ChannelFactory(
-            new RedisMessageConsumerFactory(_configuration)
+            new RedisMessageConsumerFactory(_configuration, Scheduler)
         ).CreateSyncChannel(subscription);
 
         // Redis requires a receive before send to establish the subscription
@@ -109,14 +145,20 @@ public class RedisMessageGatewayProvider
             _dlqConsumer.Receive(TimeSpan.FromMilliseconds(1000));
         }
 
-        // Always wrap with requeue tracking to ensure x-original-message-id is set.
-        // When DLQ is configured, uses the subscription's requeue count for DLQ routing.
-        // Otherwise, uses int.MaxValue so DLQ routing never triggers.
-        var maxRequeue = subscription.DeadLetterRoutingKey != null && subscription.RequeueCount > 0
-            ? subscription.RequeueCount
-            : int.MaxValue;
+        // Pre-subscribe invalid-message consumer so it receives notifications when messages
+        // are rejected as unacceptable. Mirrors the DLQ hook above.
+        if (subscription.InvalidMessageRoutingKey != null)
+        {
+            var invalidQueueName = new ChannelName($"invalid-{Guid.NewGuid().ToString("N")[..8]}");
+            _invalidConsumer = new RedisMessageConsumer(
+                _configuration,
+                invalidQueueName,
+                subscription.InvalidMessageRoutingKey
+            );
+            _invalidConsumer.Receive(TimeSpan.FromMilliseconds(1000));
+        }
 
-        return new RequeueTrackingChannelSync(channel, maxRequeue);
+        return new RequeueTrackingChannelSync(channel);
     }
 
     public async Task<IAmAChannelAsync> CreateChannelAsync(
@@ -125,7 +167,7 @@ public class RedisMessageGatewayProvider
     )
     {
         var channel = await new ChannelFactory(
-            new RedisMessageConsumerFactory(_configuration)
+            new RedisMessageConsumerFactory(_configuration, Scheduler)
         ).CreateAsyncChannelAsync(subscription, cancellationToken);
 
         // Redis async ReceiveAsync does NOT enforce a 1s minimum timeout like
@@ -144,16 +186,23 @@ public class RedisMessageGatewayProvider
             _dlqConsumer.Receive(TimeSpan.FromMilliseconds(1000));
         }
 
-        var maxRequeue = subscription.DeadLetterRoutingKey != null && subscription.RequeueCount > 0
-            ? subscription.RequeueCount
-            : int.MaxValue;
+        if (subscription.InvalidMessageRoutingKey != null)
+        {
+            var invalidQueueName = new ChannelName($"invalid-{Guid.NewGuid().ToString("N")[..8]}");
+            _invalidConsumer = new RedisMessageConsumer(
+                _configuration,
+                invalidQueueName,
+                subscription.InvalidMessageRoutingKey
+            );
+            _invalidConsumer.Receive(TimeSpan.FromMilliseconds(1000));
+        }
 
-        return new RequeueTrackingChannelAsync(channel, maxRequeue);
+        return new RequeueTrackingChannelAsync(channel);
     }
 
     public IAmAMessageProducerSync CreateProducer(RedisMessagePublication publication)
     {
-        return new RedisMessageProducer(_configuration, publication);
+        return new RedisMessageProducer(_configuration, publication) { Scheduler = Scheduler };
     }
 
     public async Task<IAmAMessageProducerAsync> CreateProducerAsync(
@@ -162,7 +211,7 @@ public class RedisMessageGatewayProvider
     )
     {
         await Task.CompletedTask;
-        return new RedisMessageProducer(_configuration, publication);
+        return new RedisMessageProducer(_configuration, publication) { Scheduler = Scheduler };
     }
 
     public RedisMessagePublication CreatePublication(
@@ -181,10 +230,11 @@ public class RedisMessageGatewayProvider
         RoutingKey routingKey,
         ChannelName channelName,
         OnMissingChannel makeChannel,
-        bool setupDeadLetterQueue = false
+        RoutingKey? deadLetterRoutingKey = null,
+        RoutingKey? invalidMessageRoutingKey = null
     )
     {
-        if (setupDeadLetterQueue)
+        if (deadLetterRoutingKey != null)
         {
             return new RedisSubscription<MyCommand>(
                 subscriptionName: new SubscriptionName(Guid.NewGuid().ToString()),
@@ -192,7 +242,8 @@ public class RedisMessageGatewayProvider
                 routingKey: routingKey,
                 messagePumpType: MessagePumpType.Proactor,
                 makeChannels: makeChannel,
-                deadLetterRoutingKey: new RoutingKey($"{routingKey}.DLQ"),
+                deadLetterRoutingKey: deadLetterRoutingKey,
+                invalidMessageRoutingKey: invalidMessageRoutingKey,
                 requeueCount: 3
             );
         }
@@ -202,7 +253,8 @@ public class RedisMessageGatewayProvider
             channelName: channelName,
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
-            makeChannels: makeChannel
+            makeChannels: makeChannel,
+            invalidMessageRoutingKey: invalidMessageRoutingKey
         );
     }
 
@@ -226,30 +278,7 @@ public class RedisMessageGatewayProvider
 
         await Task.CompletedTask;
 
-        for (var i = 0; i < 10; i++)
-        {
-            var messages = _dlqConsumer.Receive(TimeSpan.FromSeconds(5));
-            if (!messages.Any())
-            {
-                Thread.Sleep(1000);
-                continue;
-            }
-
-            var message = messages.First();
-            if (message.Header.MessageType != MessageType.MT_NONE)
-            {
-                _dlqConsumer.Acknowledge(message);
-
-                // Restore original topic — Reject changes it to the DLQ routing key
-                if (message.Header.Bag.TryGetValue("originalTopic", out var originalTopic))
-                    message.Header.Topic = new RoutingKey(originalTopic.ToString()!);
-
-                return message;
-            }
-            Thread.Sleep(1000);
-        }
-
-        return new Message();
+        return ReceiveOne(_dlqConsumer);
     }
 
     public Message GetMessageFromDeadLetterQueue(RedisSubscription subscription)
@@ -257,31 +286,70 @@ public class RedisMessageGatewayProvider
         if (_dlqConsumer == null)
             throw new InvalidOperationException("DLQ consumer was not pre-created. Ensure CreateChannel was called with a DLQ-configured subscription.");
 
-        for (var i = 0; i < 10; i++)
+        return ReceiveOne(_dlqConsumer);
+    }
+
+    public Message GetMessageFromInvalidChannel(RedisSubscription subscription)
+    {
+        if (_invalidConsumer == null)
+            throw new InvalidOperationException("Invalid-message consumer was not pre-created. Ensure CreateChannel was called with an invalid-message-configured subscription.");
+
+        return ReceiveOne(_invalidConsumer);
+    }
+
+    public async Task<Message> GetMessageFromInvalidChannelAsync(
+        RedisSubscription subscription,
+        CancellationToken cancellationToken = default
+    )
+    {
+        if (_invalidConsumer == null)
+            throw new InvalidOperationException("Invalid-message consumer was not pre-created. Ensure CreateChannelAsync was called with an invalid-message-configured subscription.");
+
+        await Task.CompletedTask;
+
+        return ReceiveOne(_invalidConsumer);
+    }
+
+    /// <summary>
+    /// One bounded receive from a rejection destination, acknowledged and restored to its original
+    /// topic if anything was there.
+    /// </summary>
+    /// <remarks>
+    /// <para>The retry belongs to the caller's bounded poll loop, so this attempts exactly one receive and
+    /// reports what it found. An empty batch and a batch holding an MT_NONE sentinel both mean the
+    /// same thing - nothing has arrived yet - and both are reported as MT_NONE.</para>
+    /// <para>Redis is alone in needing the topic restored: <c>Reject</c> rewrites the header topic
+    /// to the rejection routing key on the way out, so the original is read back from the bag.</para>
+    /// </remarks>
+    private static Message ReceiveOne(RedisMessageConsumer consumer)
+    {
+        var messages = consumer.Receive(TimeSpan.FromSeconds(5));
+        if (!messages.Any())
         {
-            var messages = _dlqConsumer.Receive(TimeSpan.FromSeconds(5));
-            if (!messages.Any())
-            {
-                Thread.Sleep(1000);
-                continue;
-            }
-
-            var message = messages.First();
-            if (message.Header.MessageType != MessageType.MT_NONE)
-            {
-                _dlqConsumer.Acknowledge(message);
-
-                // Restore original topic — Reject changes it to the DLQ routing key
-                if (message.Header.Bag.TryGetValue("originalTopic", out var originalTopic))
-                    message.Header.Topic = new RoutingKey(originalTopic.ToString()!);
-
-                return message;
-            }
-            Thread.Sleep(1000);
+            return new Message();
         }
 
-        return new Message();
+        var message = messages.First();
+        if (message.Header.MessageType != MessageType.MT_NONE)
+        {
+            consumer.Acknowledge(message);
+
+            // Restore original topic — Reject changes it to the rejection routing key
+            if (message.Header.Bag.TryGetValue("originalTopic", out var originalTopic))
+                message.Header.Topic = new RoutingKey(originalTopic.ToString()!);
+        }
+
+        return message;
     }
+
+    public RejectionMetadataKeys RejectionMetadataKeys =>
+        new RejectionMetadataKeys(
+            "originalTopic",
+            "originalMessageType",
+            "rejectionReason",
+            "rejectionMessage",
+            "rejectionTimestamp"
+        );
 
     /// <summary>
     /// Channel decorator that tracks requeue count per original message ID and
@@ -290,13 +358,11 @@ public class RedisMessageGatewayProvider
     private class RequeueTrackingChannelAsync : IAmAChannelAsync
     {
         private readonly IAmAChannelAsync _inner;
-        private readonly int _maxRequeueCount;
         private readonly Dictionary<string, int> _requeueCounts = new();
 
-        public RequeueTrackingChannelAsync(IAmAChannelAsync inner, int maxRequeueCount)
+        public RequeueTrackingChannelAsync(IAmAChannelAsync inner)
         {
             _inner = inner;
-            _maxRequeueCount = maxRequeueCount;
         }
 
         public ChannelName Name => _inner.Name;
@@ -338,11 +404,13 @@ public class RedisMessageGatewayProvider
             count++;
             _requeueCounts[originalId] = count;
 
-            if (count >= _maxRequeueCount)
-            {
-                await _inner.RejectAsync(message, cancellationToken: cancellationToken);
-                return false;
-            }
+            // The delivery budget is NOT enforced here. Reactor and Proactor own it: they call
+            // UpdateHandledCount, test HandledCountReached(RequeueCount), and reject with
+            // DeliveryError when it is spent. This wrapper used to do the same thing at channel
+            // level, which meant the budget-exhaustion behaviour could pass on the harness's copy
+            // of the rule while the product's copy was untested - and would have kept passing had
+            // the two diverged. Tracking the original message id is harness bookkeeping, so it
+            // stays; deciding when a message dies is production behaviour, so it does not.
 
             return await _inner.RequeueAsync(message, timeOut, cancellationToken);
         }
@@ -362,13 +430,11 @@ public class RedisMessageGatewayProvider
     private class RequeueTrackingChannelSync : IAmAChannelSync
     {
         private readonly IAmAChannelSync _inner;
-        private readonly int _maxRequeueCount;
         private readonly Dictionary<string, int> _requeueCounts = new();
 
-        public RequeueTrackingChannelSync(IAmAChannelSync inner, int maxRequeueCount)
+        public RequeueTrackingChannelSync(IAmAChannelSync inner)
         {
             _inner = inner;
-            _maxRequeueCount = maxRequeueCount;
         }
 
         public ChannelName Name => _inner.Name;
@@ -397,11 +463,13 @@ public class RedisMessageGatewayProvider
             count++;
             _requeueCounts[originalId] = count;
 
-            if (count >= _maxRequeueCount)
-            {
-                _inner.Reject(message);
-                return false;
-            }
+            // The delivery budget is NOT enforced here. Reactor and Proactor own it: they call
+            // UpdateHandledCount, test HandledCountReached(RequeueCount), and reject with
+            // DeliveryError when it is spent. This wrapper used to do the same thing at channel
+            // level, which meant the budget-exhaustion behaviour could pass on the harness's copy
+            // of the rule while the product's copy was untested - and would have kept passing had
+            // the two diverged. Tracking the original message id is harness bookkeeping, so it
+            // stays; deciding when a message dies is production behaviour, so it does not.
 
             return _inner.Requeue(message, timeOut);
         }

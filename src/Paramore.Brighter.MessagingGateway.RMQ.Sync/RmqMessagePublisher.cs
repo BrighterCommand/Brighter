@@ -157,7 +157,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 [HeaderNames.CLOUD_EVENTS_TIME] = message.Header.TimeStamp.ToRfc3339(),
 
                 // Brighter custom headers
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
                 [HeaderNames.MESSAGE_TYPE] = message.Header.MessageType.ToString(),
+#pragma warning restore CS0618
                 [HeaderNames.TOPIC] = message.Header.Topic.Value,
                 [HeaderNames.HANDLED_COUNT] = message.Header.HandledCount,
             };

@@ -35,6 +35,7 @@ using System.Linq;
 namespace Paramore.Brighter.DynamoDB.Tests.Outbox.Sync;
 
 [Trait("Category", "DynamoDB")]
+[Collection("DynamoDBOutbox")]
 public class WhenRetrievingAMessageByIdItShouldReturnTheCorrectMessage : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;

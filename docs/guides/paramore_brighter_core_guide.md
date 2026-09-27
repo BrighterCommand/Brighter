@@ -479,14 +479,14 @@ The four collaborators that chain needs, and where each comes from:
 - Returns typed response (`TResponse?` — nullable)
 - **Requires RPC wiring**, and there is no in-memory path. `Call` guards in this order
   (`CommandProcessor`, `Call`): **the reply subscription first**, throwing
-  `InvalidOperationException("No Subscription registered fpr replies of type …")` — `fpr` is
-  verbatim [sic], so search for it as spelled — and **the response channel factory second**,
+  `InvalidOperationException("No Subscription registered for replies of type …")`, naming the
+  response type, and **the response channel factory second**,
   throwing
   `InvalidOperationException("No ResponseChannelFactory registered")`. So a processor with no RPC
   wiring at all reports the missing *subscription*; you only reach the second message once the
   subscription is registered
-- **The subscription that message is looking for is matched on `TResponse`.** Whatever type the
-  exception names, the lookup is `s.RequestType == typeof(TResponse)` — so read it as *"no reply
+- **The subscription that message is looking for is matched on `TResponse`.** The
+  lookup is `s.RequestType == typeof(TResponse)` — so read it as *"no reply
   subscription whose `RequestType` is your response type"*, and register the subscription against
   the response
 - Timeout support for external calls to prevent blocking

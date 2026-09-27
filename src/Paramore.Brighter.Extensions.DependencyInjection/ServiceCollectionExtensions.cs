@@ -712,7 +712,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var handlerFactory = new ServiceProviderHandlerFactory(provider);
             var handlerConfiguration = new HandlerConfiguration(subscriberRegistry, handlerFactory);
 
-            var handlerBuilder = CommandProcessorBuilder.StartNew();
+            var handlerBuilder = CommandProcessorBuilder.StartNew(
+                provider.GetService<IAmConsumerOptions>()?.InboxConfiguration);
 
             var featureSwitchRegistry = provider.GetService<IAmAFeatureSwitchRegistry>();
 

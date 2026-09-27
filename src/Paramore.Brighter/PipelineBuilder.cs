@@ -122,7 +122,7 @@ namespace Paramore.Brighter
                     .Where(a => a.Timing == HandlerTiming.Before)
                     .ToList();
 
-                var globalInbox = TryCreateGlobalInboxAttribute(handlerMethod, handlerType, isAsync);
+                var globalInbox = TryCreateGlobalInboxAttribute(requestType, handlerMethod, handlerType, isAsync);
                 if (globalInbox is not null)
                     beforeAttributes.Add(globalInbox);
 
@@ -172,6 +172,9 @@ namespace Paramore.Brighter
         /// <exception cref="NullReferenceException">Thrown if the synchronous handler factory is null.</exception>
         /// <exception cref="ConfigurationException">Thrown if there is an error building the pipeline.</exception>
         public Pipelines<TRequest> Build(TRequest request, IRequestContext requestContext)
+            => Build(request, requestContext, excludeResilienceContext: false);
+
+        internal Pipelines<TRequest> Build(TRequest request, IRequestContext requestContext, bool excludeResilienceContext)
         {
             if(_syncHandlerFactory is null)
                 throw new NullReferenceException("HandlerFactorySync is null");
@@ -187,6 +190,8 @@ namespace Paramore.Brighter
                 observerTypes.Each(observer =>
                 {
                     var context = observerTypes.Length == 1 ? requestContext : requestContext.CreateCopy();
+                    if (excludeResilienceContext && context.ResilienceContext is not null)
+                        context = new PublishRequestContext(context);
                     var instanceScope = GetSyncInstanceScope();
                     var handler = (RequestHandler<TRequest>?)_syncHandlerFactory.Create(observer, instanceScope);
                     if (handler is null)
@@ -217,6 +222,10 @@ namespace Paramore.Brighter
         /// <exception cref="NullReferenceException">Thrown if the async handler factory is null.</exception>
         /// <exception cref="ConfigurationException">Thrown if there is an error building the pipeline.</exception>
         public AsyncPipelines<TRequest> BuildAsync(TRequest request, IRequestContext requestContext, bool continueOnCapturedContext)
+            => BuildAsync(request, requestContext, continueOnCapturedContext, excludeResilienceContext: false);
+
+        internal AsyncPipelines<TRequest> BuildAsync(TRequest request, IRequestContext requestContext,
+            bool continueOnCapturedContext, bool excludeResilienceContext)
         {
             if(_asyncHandlerFactory is null)
                 throw new NullReferenceException("AsyncHandlerFactory is null");
@@ -232,6 +241,8 @@ namespace Paramore.Brighter
                 observerTypes.Each(observer =>
                 {
                     var context = observerTypes.Length == 1 ? requestContext : requestContext.CreateCopy();
+                    if (excludeResilienceContext && context.ResilienceContext is not null)
+                        context = new PublishRequestContext(context);
                     var instanceScope = GetAsyncInstanceScope();
                     var handler = (RequestHandlerAsync<TRequest>?)_asyncHandlerFactory.Create(observer, instanceScope);
                     if (handler is null)
@@ -359,9 +370,11 @@ namespace Paramore.Brighter
         /// Returns the global inbox attribute that <see cref="Build"/> would inject for this handler, or null
         /// when no global inbox applies. Uses the same guards as the build path so the description does not drift.
         /// </summary>
-        private RequestHandlerAttribute? TryCreateGlobalInboxAttribute(System.Reflection.MethodInfo handlerMethod, Type handlerType, bool isAsync)
+        private RequestHandlerAttribute? TryCreateGlobalInboxAttribute(Type requestType,
+            System.Reflection.MethodInfo handlerMethod, Type handlerType, bool isAsync)
         {
             if (_inboxConfiguration == null
+                || !IsInInboxScope(_inboxConfiguration.Scope, requestType)
                 || handlerMethod.HasNoInboxAttributesInPipeline()
                 || handlerMethod.HasExistingUseInboxAttributesInPipeline())
                 return null;
@@ -390,6 +403,7 @@ namespace Paramore.Brighter
         {
             if (
                 _inboxConfiguration == null
+                || !IsInInboxScope(_inboxConfiguration.Scope, typeof(TRequest))
                 || implicitHandler.FindHandlerMethod().HasNoInboxAttributesInPipeline()
                 || implicitHandler.FindHandlerMethod().HasExistingUseInboxAttributesInPipeline()
             )
@@ -410,6 +424,7 @@ namespace Paramore.Brighter
         private void AddGlobalInboxAttributesAsync(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes, RequestHandlerAsync<TRequest> implicitHandler)
         {
             if (_inboxConfiguration == null
+                || !IsInInboxScope(_inboxConfiguration.Scope, typeof(TRequest))
                 || implicitHandler.FindHandlerMethod().HasNoInboxAttributesInPipeline()
                 || implicitHandler.FindHandlerMethod().HasExistingUseInboxAttributesInPipeline()
             )
@@ -425,6 +440,17 @@ namespace Paramore.Brighter
                 onceOnlyAction: _inboxConfiguration.ActionOnExists);
 
              PushOntoAttributeList(ref preAttributes, useInboxAttribute);
+        }
+
+        private static bool IsInInboxScope(InboxScope scope, Type requestType)
+        {
+            if (typeof(ICommand).IsAssignableFrom(requestType))
+                return (scope & InboxScope.Commands) != 0;
+
+            if (typeof(IEvent).IsAssignableFrom(requestType))
+                return (scope & InboxScope.Events) != 0;
+
+            return true;
         }
 
         private void AppendToPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> implicitHandler, IRequestContext requestContext, IAmALifetime instanceScope)

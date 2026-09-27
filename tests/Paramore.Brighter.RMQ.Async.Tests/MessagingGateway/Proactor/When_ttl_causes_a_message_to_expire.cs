@@ -62,7 +62,7 @@ public class RmqMessageProducerTTLTests : IAsyncDisposable, IDisposable
             connection: rmqConnection, 
             queueName: new ChannelName(Guid.NewGuid().ToString()), 
             routingKey: _messageOne.Header.Topic, 
-            isDurable: false, 
+            isDurable: true, 
             highAvailability: false,
             ttl: TimeSpan.FromMilliseconds(10000),
             makeChannels:OnMissingChannel.Create

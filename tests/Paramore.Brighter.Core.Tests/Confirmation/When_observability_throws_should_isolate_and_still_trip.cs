@@ -93,7 +93,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
 
             var warnings = logEvents
                 .Where(e => e.Level == LogEventLevel.Warning)
-                .Where(e => e.RenderMessage().Contains(_topic.Value))
+                .Where(e => e.MessageTemplate.Text == "Publish confirmation failed for message Id:{Id} on topic {Topic}")
                 .ToList();
             Assert.Single(warnings);
 
