@@ -130,5 +130,60 @@ absence rows) once Step 8 writes that section — nothing is written yet.
 | `## Where to look first` | — | 3–7 paths, each with a reason |
 | `## Inputs used` | `.adr-list` resolution, PR presence and its reason | one row per source read directly, marked from the read log |
 
-**On success**, the ledger's fields are held. Stop there — Steps 4 onward, which use this table to
-write each section, are not yet part of this command.
+**On success**, the ledger's fields are held. Continue to Step 4.
+
+### Step 4 — Price and read the evidence, charged to one read log
+
+Every read from here connects to **the read log**: a table kept only in the model's context for this
+run, never written to disk — one row per read, holding its path, how it was read, and the bytes it
+charged. Keep a running total against the **general allowance** of 948,576 B (NFR-3's 1,048,576 B
+budget less its last 100,000 B, the **reserve**, which only a later step's source reads may spend).
+Nothing below may push the running total over the general allowance; a read that would is not issued,
+and later steps decide what that leaves unresolved. Never read `PROMPT.md` or a `PROMPT-*.md`
+companion — it is not one of the reads below, on purpose.
+
+**How every window is priced and read** (ADR 0072 KC3):
+
+1. **A planned window** — one entry in a ledger window list (`tasks.windows`, `requirements.windows`,
+   an entry's own `declarations[].windows`, `src_diff.windows`, or one of an ADR's
+   `adr_list[].extract[].windows`) — is priced at that entry's own `bytes`. No extra `wc -c` call is
+   needed for it; the ledger already measured it.
+2. **A whole-file read** — `tasks.md` or `requirements.md`, read in full rather than by a located
+   range — is priced by running `wc -c {path}` immediately before its first window. `wc -c` is a size
+   probe, not a read, and is charged nothing.
+3. **An oversize window** (a ledger window flagged `"oversize": true`) is not read at all; a value
+   that needed it is unresolved, for a later step to report.
+4. **A truncated tool output** counts as not read, but is still charged the bytes it brought into
+   context.
+
+Every window, whichever rule priced it, is read with `tail -n +{first_line} {path} | head -n {count}`,
+where `{count}` is `{last_line} - {first_line} + 1` — except the `src/`-scoped diff, which is read by
+piping the ledger's own `src_diff.command` into the same `tail | head`, never re-issued as a fresh
+`git diff`.
+
+**The reads this task adds, in this order:**
+
+- **The existing `show-me.md`.** Run `test -f specs/{dir}/show-me.md`. When it exists, price it at
+  `wc -c specs/{dir}/show-me.md` plus 8 bytes for every line `wc -l specs/{dir}/show-me.md` counts and
+  for one line more, then `Read` it — the only use of the `Read` tool, and only because `Write`
+  refuses to replace a file the session has not read. Log it at that price. Never treat its content as
+  evidence for any section.
+- **`tasks.md`.** Price it with `wc -c specs/{dir}/tasks.md`, then read every window in the ledger's
+  `tasks.windows`, in order, for as long as the general allowance covers the next one.
+- **The `src/`-scoped diff.** When `src_diff` is not null, read every window in `src_diff.windows`, in
+  order, piping `src_diff.command` into `tail | head` as above, for as long as the general allowance
+  covers the next one.
+- **Each `.adr-list` entry's extract.** For every entry in `adr_list` whose `extract` is not null, read
+  its three parts — `front_matter`, `status`, `consequences` — each by its own `windows`, against that
+  entry's own `path`, for as long as the general allowance covers the next one.
+- **`requirements.md`.** When `requirements.present` is `true`, price it with
+  `wc -c specs/{dir}/requirements.md`. If its `bytes` fits inside what the general allowance has left,
+  read it whole: every window in `requirements.windows`, in order — a read *in full*, not a
+  degradation. Otherwise read it by declaration instead: every entry in `declarations`, in the ledger's
+  order, each by its own `windows`, for as long as the general allowance covers the next one.
+
+Hold everything read above, and the read log itself, for later steps. This is as far as Step 4 goes
+for now — `.issue-number`, `.adr-list` itself, `git diff --name-only`, the marked release-notes
+section(s) and commit subjects still land in a later task, in KC3's order, and so does everything
+from Step 5 on. Follow only what is written above, then **stop**: do not improvise any further read,
+and do not create or modify `show-me.md`, the fact ledger, or any other file.
