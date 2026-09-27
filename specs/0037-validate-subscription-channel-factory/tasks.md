@@ -966,7 +966,7 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
   - **⚠️ Sequencing**: this step **must not be enabled until tasks 31-35 have merged.** The generated test asserts every `Reason` is `null`, which is false today in five of the twelve assemblies — GcpPubSub and MQTT report **not-a-channel-factory**; AWSSQS, AWSSQS.V4 and Postgres report **inherited-default**.
   - Depends on: 53, 54, and **35**.
 
-- [ ] **56. DOC: `.agent_instructions/generated_tests.md` gains the `GatewayConformance` section**
+- [x] **56. DOC: `.agent_instructions/generated_tests.md` gains the `GatewayConformance` section**
   - File: `.agent_instructions/generated_tests.md`
   - Add:
     - the new template folder `Templates/GatewayConformance/` to the **Architecture** listing (§ *Architecture*, alongside `Templates/MessagingGateway/{Reactor,Proactor}` and `Templates/Outbox/{Sync,Async,Causation}`)
