@@ -373,9 +373,44 @@ judgements. Placing this stage here fixes Step 5's order; the judging itself lan
 
 <!-- show-me:risk-step:begin -->
 **The risk step** (ADR 0073, FR-11–FR-13) computes the three factor levels and the overall level, and
-is the only step that may test a level against a threshold. Its factor table, the
-`**Overall risk: …**` line, a raise's first-sentence rationale and FR-13's sentence land with later
-tasks; this task only fences the step so FR-13's invariant can be checked mechanically.
+is the only step that may test a level against a threshold. The `**Overall risk: …**` line, a raise's
+first-sentence rationale and FR-13's sentence land with a later task.
+
+**The forced levels** (FR-16 rows 8, 9 and 12), applied before any threshold:
+
+| FR-16 row | Condition | Forced level | Measured-value cell |
+| --- | --- | --- | --- |
+| 8 | `requirements.present` is `false` | F5 = `Medium` | `no requirements.md — reconciliation not possible` |
+| 9 | `declared_total` is `0` | F5 = `Medium` | `0 declared ids in the bold lead-in form` |
+| 12 | `f1_level` is `null` (spec branch not determinable) | F1 = `Medium` | `no diff measured — spec branch not determinable` |
+
+**The mapping procedure**, one procedure for all three factors — F1 only ever reaches step 1:
+
+1. **Forced level.** A row above applies to this factor → take its level, evaluate nothing else.
+2. **High.** Otherwise, the factor's `High` condition (FR-11) holds over its whole body of evidence →
+   `High`.
+3. **Medium.** Otherwise, its `Medium` condition holds over its whole body of evidence → `Medium`.
+4. **Low.** Otherwise → `Low`.
+
+**F1** (files changed under `src/`): when `f1_level` is not `null`, its value is
+`{buckets.src.files} files under src/` and its level is `f1_level`, copied verbatim — no threshold is
+applied here, the Measurer already did. Otherwise (row 12) its value is
+`no diff measured — spec branch not determinable` and its level is `Medium`.
+
+**F2** (breaking-change items) **and F5** (requirement fidelity): row 8 or row 9 forces F5 to
+`Medium` (F2 has no forced row — count `1`, `requirements.present`, `declared_total` from the ledger
+first, since either row's condition can hold even when a diff was measured). Outside a forced case,
+F2 and F5 need the Classifier's item tally and deviation entries to evaluate steps 2–4 against — which
+land with a later task. Hold no value and no level for either factor until then; do not guess one.
+
+**The factor table**, exactly three rows, F1, F2 and F5 in that order — never a row named `F3` or
+`F4`:
+
+| Factor | Measured value | Level |
+| --- | --- | --- |
+| F1 | {F1's value, above} | {F1's level, above} |
+| F2 | {F2's value, once available} | {F2's level, once available} |
+| F5 | {F5's value, above or once available} | {F5's level, above or once available} |
 <!-- show-me:risk-step:end -->
 
 **The Synthesiser** writes everything else — including `## How it was built` and `## Blast radius`
