@@ -131,7 +131,9 @@ public static class ConsumerValidationRules
                     : $"declares ChannelFactoryType '{DisplayName(declared)}'";
                 var handedClause = candidates.Count == 0
                     ? "no channel factory at all"
-                    : $"'{string.Join(", ", candidates.Select(DisplayName))}'";
+                    : arm == Arm.Combined
+                        ? $"one of '{string.Join(", ", candidates.Select(DisplayName))}'"
+                        : $"'{string.Join(", ", candidates.Select(DisplayName))}'";
                 var remedy = RemedyClause(declared, arm, candidates);
                 return new ValidationError(
                     ValidationSeverity.Error,

@@ -56,5 +56,6 @@ public class NoInnerFactoryCanServeSubscriptionValidationTests
         Assert.True(nonMatchingIndex >= 0);
         Assert.True(declaredIndex < nonMatchingIndex);
         Assert.DoesNotContain(typeof(CombinedChannelFactory).FullName!, message);
+        Assert.Contains("will be handed one of '", message);
     }
 }
