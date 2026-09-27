@@ -33,11 +33,45 @@ using Polly.Registry;
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// Class RequestContextFactory
-    /// Any pipeline has a request context that allows you to flow information between instances of <see cref="IHandleRequests"/>
-    /// The default in-memory <see cref="RequestContext"/> created by an <see cref="InMemoryRequestContextFactory"/> is suitable for most purposes
-    /// and this interface is mainly provided for testing
+    /// Carries execution metadata and runtime services between instances of <see cref="IHandleRequests"/> in a pipeline.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Built-in request schedulers capture an independent <see cref="Scheduler.ScheduledRequestContext"/> snapshot
+    /// when scheduling Send, Publish, or Post, including their asynchronous variants. Only dynamic headers,
+    /// CloudEvents additional properties, the partition key, job/workflow/causation identifiers, and the supplied
+    /// span's trace identifiers and baggage are captured. Job, workflow, and causation identifiers must be
+    /// <see cref="Id"/> values; strings and <see cref="Guid"/> values under those bag keys are not captured.
+    /// </para>
+    /// <para>
+    /// Header and CloudEvents values retain their types. Supported values are null, strings, characters,
+    /// booleans, integral types, finite floating-point numbers, decimals, <see cref="Guid"/>, <see cref="DateTime"/>,
+    /// <see cref="DateTimeOffset"/>, <see cref="TimeSpan"/>, <see cref="Uri"/>, and byte arrays. Dictionaries must
+    /// use default string equality, <see cref="StringComparer.Ordinal"/>, or <see cref="StringComparer.OrdinalIgnoreCase"/>.
+    /// Unsupported values, such as enums, arbitrary objects, other collections, delegates, and non-finite numbers,
+    /// or unsupported key comparers cause a <see cref="System.Text.Json.JsonException"/> when scheduling.
+    /// </para>
+    /// <para>
+    /// Other <see cref="Bag"/> entries and runtime properties, including <see cref="Destination"/>,
+    /// <see cref="OriginatingMessage"/>, feature switches, and policy registries, are not captured.
+    /// The original <see cref="Span"/> object is not serialized; a configured tracer starts a new span
+    /// using the captured trace context when the request executes.
+    /// </para>
+    /// <para>
+    /// Prefer UTC <see cref="DateTime"/> values or <see cref="DateTimeOffset"/> for metadata that crosses hosts.
+    /// Local DateTime values can be converted to the executing host's time zone, changing their wall-clock fields.
+    /// Keep <see cref="JsonConverters.JsonSerialisationOptions.Options"/> compatible between scheduling and execution:
+    /// the enclosing snapshot and identifier fields use these options. Invalid stored context data fails
+    /// execution before the request is dispatched; it is not replaced with an empty context.
+    /// </para>
+    /// <para>
+    /// The serialized context adds to the scheduled payload size. Scheduler storage and transport size limits
+    /// still apply and can cause scheduling to fail even when all metadata values are supported.
+    /// Custom schedulers must implement <see cref="IAmARequestSchedulerSyncWithContext"/> or
+    /// <see cref="IAmARequestSchedulerAsyncWithContext"/> to receive context; implementations of the original
+    /// scheduler interfaces retain their existing behavior.
+    /// </para>
+    /// </remarks>
     public class RequestContext : IRequestContext
     {
         private readonly ConcurrentDictionary<int, Activity> _spans = new();

@@ -1,4 +1,5 @@
 ﻿using Paramore.Brighter.JsonConverters;
+using Paramore.Brighter.Scheduler;
 using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Tasks;
 using Quartz;
@@ -18,7 +19,7 @@ public class QuartzScheduler(
     TimeProvider timeProvider,
     Func<Message, string> getOrCreateMessageSchedulerId,
     Func<IRequest, string> getOrCreateRequestSchedulerId)
-    : IAmAMessageSchedulerSync, IAmAMessageSchedulerAsync, IAmARequestSchedulerSync, IAmARequestSchedulerAsync
+    : IAmAMessageSchedulerSync, IAmAMessageSchedulerAsync, IAmARequestSchedulerSyncWithContext, IAmARequestSchedulerAsyncWithContext
 {
     /// <inheritdoc />
     public string Schedule(Message message, DateTimeOffset at)
@@ -59,6 +60,12 @@ public class QuartzScheduler(
     /// <inheritdoc />
     public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at)
         where TRequest : class, IRequest
+        => Schedule(request, type, at, null);
+
+    /// <inheritdoc />
+    public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
+        IRequestContext? requestContext)
+        where TRequest : class, IRequest
     {
         if (at < timeProvider.GetUtcNow())
         {
@@ -75,7 +82,8 @@ public class QuartzScheduler(
                     Async = false,
                     SchedulerType = type,
                     RequestType = typeof(TRequest).FullName!,
-                    RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
+                    RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options),
+                    RequestContextData = ScheduledRequestContext.Serialize(requestContext)
                 },
                 JsonSerialisationOptions.Options))
             .Build();
@@ -92,13 +100,19 @@ public class QuartzScheduler(
     /// <inheritdoc />
     public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay)
         where TRequest : class, IRequest
+        => Schedule(request, type, delay, null);
+
+    /// <inheritdoc />
+    public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay,
+        IRequestContext? requestContext)
+        where TRequest : class, IRequest
     {
         if (delay < TimeSpan.Zero)
         {
             throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
-        return Schedule(request, type, timeProvider.GetUtcNow().Add(delay));
+        return Schedule(request, type, timeProvider.GetUtcNow().Add(delay), requestContext);
     }
 
     /// <inheritdoc cref="IAmAMessageSchedulerSync.ReScheduler(string,System.DateTimeOffset)"/>
@@ -158,8 +172,14 @@ public class QuartzScheduler(
         return await ScheduleAsync(message, timeProvider.GetUtcNow().Add(delay), cancellationToken);
     }
 
-    public async Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
+    public Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
         CancellationToken cancellationToken = default) where TRequest : class, IRequest
+        => ScheduleAsync(request, type, at, null, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
+        IRequestContext? requestContext, CancellationToken cancellationToken)
+        where TRequest : class, IRequest
     {
         if (at < timeProvider.GetUtcNow())
         {
@@ -176,7 +196,8 @@ public class QuartzScheduler(
                     Async = true,
                     SchedulerType = type,
                     RequestType = typeof(TRequest).FullName!,
-                    RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
+                    RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options),
+                    RequestContextData = ScheduledRequestContext.Serialize(requestContext)
                 },
                 JsonSerialisationOptions.Options))
             .Build();
@@ -191,15 +212,21 @@ public class QuartzScheduler(
     }
 
     /// <inheritdoc />
-    public async Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay,
+    public Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay,
         CancellationToken cancellationToken = default) where TRequest : class, IRequest
+        => ScheduleAsync(request, type, delay, null, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay,
+        IRequestContext? requestContext, CancellationToken cancellationToken)
+        where TRequest : class, IRequest
     {
         if (delay < TimeSpan.Zero)
         {
             throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
-        return await ScheduleAsync(request, type, timeProvider.GetUtcNow().Add(delay), cancellationToken);
+        return await ScheduleAsync(request, type, timeProvider.GetUtcNow().Add(delay), requestContext, cancellationToken);
     }
 
     /// <inheritdoc cref="IAmAMessageSchedulerAsync.ReSchedulerAsync(string,System.DateTimeOffset,System.Threading.CancellationToken)"/>
