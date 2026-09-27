@@ -652,6 +652,17 @@ Nothing else in this section: no bucket table, no bullets below, no zero figures
 9. When `local_divergence` is not `null`: `- Local branch {local_divergence.name} is at
    {local_divergence.sha} and differs from the measured ref.`
 
+**`## Risk assessment (advisory)`** (FR-12, FR-13) places the risk step's own output, then the
+rationale, in this order — nothing here tests a level; that already happened inside the risk step's
+markers:
+
+1. The factor table and the `**Overall risk: …**` line, copied verbatim from the risk step above.
+2. **The rationale** (FR-12): 2 to 5 sentences, composed here. A raised run's one-sentence reason
+   comes first (AC-23); then one or more sentences name the factor or factors the risk step held at
+   the maximum, stating each one's own level exactly as the factor table already shows it — never
+   comparing one factor's level against another's.
+3. FR-13's sentence, copied verbatim from the risk step above, last.
+
 **`## Where to look first`** (FR-14) states the files a reviewer should open first, or, when no diff
 was measured, row 13's fallback line in their place.
 
