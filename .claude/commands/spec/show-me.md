@@ -10,7 +10,7 @@ argument-hint: [spec-id]
 
 ## Your task
 
-Summarise the finished spec named by `$ARGUMENTS` (or the current spec, if none is given) into
+Summarise the finished spec named by `$ARGUMENTS` (or the current spec, absent an argument) into
 `specs/{spec}/show-me.md`: what changed and why, breaking changes, a requirement reconciliation, how
 it was built, blast radius, an advisory Low/Medium/High merge-risk read, where to look first, and a
 provenance table. This is not a review — it does not re-check correctness, security, TDD compliance,
@@ -366,6 +366,21 @@ node with no row is not rendered.
 rendered block or exactly one named line, never both; for `## Where to look first`, at most one
 rendered block (row 5's tree, or row 6's optional second diagram) together with its three to seven
 changed paths. Nothing is written under either heading yet.
+
+**The Classifier** (ADR 0073, FR-7, FR-8) judges each breaking-change item, each requirement's status,
+and each piece of work no requirement covers — once each, with evidence — and tallies only its own
+judgements. Placing this stage here fixes Step 5's order; the judging itself lands with a later task.
+
+<!-- show-me:risk-step:begin -->
+**The risk step** (ADR 0073, FR-11–FR-13) computes the three factor levels and the overall level, and
+is the only step that may test a level against a threshold. Its factor table, the
+`**Overall risk: …**` line, a raise's first-sentence rationale and FR-13's sentence land with later
+tasks; this task only fences the step so FR-13's invariant can be checked mechanically.
+<!-- show-me:risk-step:end -->
+
+**The Synthesiser** writes everything else — including `## How it was built` and `## Blast radius`
+below, whose rules are already implemented, and every other H2 section a later task fills — copying
+every number from the ledger or from the Classifier's tallies, never computing one itself.
 
 **`## How it was built`** (FR-9) states the task shape and the commit shape, and nothing else — no
 review history, no CI state. Both figures are copied verbatim from the ledger's `tasks` and `commits`
