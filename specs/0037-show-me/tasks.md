@@ -916,7 +916,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - Do: in R4 with K12's local `spec/scoped-lifetime-per-pipeline` at `386efee78`, run `/spec:show-me 0036-scoped-lifetime-per-pipeline`. Check that the remote-tracking ref (`91d549be6`) is measured, that the metadata and Blast radius name that full ref and its sha together with the base ref and merge base, and that the local-divergence line names `386efee78`. The merge base is the clone's (R4); it is not compared with the calibration value.
   - Traces to: FR-10, C-4, C-8, AC-47.
 
-- [ ] **PROJECT: T17.4 — Regression sweep over the real no-diff fixtures**
+- [x] **PROJECT: T17.4 — Regression sweep over the real no-diff fixtures**
   - Do: re-run the Verify set-ups of T9.1–T9.3, T11.1–T11.3, T12.1, T13.3, T14.1–T14.4, T14.6 and T14.7 on the real fixtures they name (`0002-*`, `0003`, `0005`, `0021`, `0023`, `0033`, plus `README.md` and `kafka-widget`). Check AC-1a, AC-3, AC-5, AC-6, AC-7, AC-8, AC-9, AC-10, AC-16, AC-19, AC-29, AC-35, AC-36, AC-37, AC-41, AC-42, AC-43, AC-44, AC-61, AC-70, AC-71, AC-72 and AC-93. AC-27 is checked on K2 in T17.5.
   - Traces to: FR-1–FR-3, FR-16, FR-17, FR-21, NFR-8, and the ACs listed.
 
