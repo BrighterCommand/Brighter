@@ -189,3 +189,8 @@ Post-fix checks:
   taxonomy tags. Its generated index entry is current.
 - No full-solution or external transport integration suite was run; the change
   is confined to core publishing and does not modify any transport or callback.
+- Rebased onto `9dee4fe14` after the scheduler-context change in PR #4428 merged.
+  The full core suite again passed on each target: 1,319 passed, seven existing
+  skips, zero failures. All four core library targets rebuilt with zero warnings
+  and errors. Results: `4392-rebased-core_net9.0_20260927192907.trx` and
+  `4392-rebased-core_net10.0_20260927192908.trx` in the same results directory.
