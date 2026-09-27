@@ -464,7 +464,7 @@
     - Add public `GcpIamCallTolerance(ILogger? logger = null)` with `TryCallAsync<T>(IamStep, Func<Task<T>>)`, `TryCreateProjectsClientAsync(IamStep, Func<Task<ProjectsClient>>)`, `static IsTolerated(StatusCode)`, and `record IamStep(string Helper, string Rpc, string Resource)` (ADR 0078 "IAM tolerance")
     - Use an exception filter only; never `catch (Exception)`
 
-- [ ] **5.3 TEST + IMPLEMENT: A DLQ-backed GCP channel is creatable on the emulator whether or not IAM members are configured, with exactly two Warnings**
+- [x] **5.3 TEST + IMPLEMENT: A DLQ-backed GCP channel is creatable on the emulator whether or not IAM members are configured, with exactly two Warnings**
   - **USE COMMAND**: `/test-first when creating a dlq backed gcp channel on the emulator should tolerate iam failures in both helpers and log two warnings`
   - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Pull"
   - Test file: `When_creating_a_dlq_backed_gcp_channel_on_the_emulator_should_tolerate_iam_failures.cs` (async: `…_async.cs`)
