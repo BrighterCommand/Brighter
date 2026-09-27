@@ -29,6 +29,7 @@ using Xunit;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway;
 
+[Trait("Category", "MQTT")]
 public class MqttCombinedChannelFactoryRoutingTests
 {
     [Fact]

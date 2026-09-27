@@ -28,6 +28,7 @@ using Xunit;
 
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway;
 
+[Trait("Category", "MQTT")]
 public class MqttDeclaredChannelFactoryIsRealTests
 {
     [Fact]
