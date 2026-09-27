@@ -904,7 +904,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - If either 0036 file changed, re-measure the calibration row's file figures (37; 82; 62/12/2/6/0) with independent `grep -E` and update the row. If the change came from new #4282 commits, re-pin to the new head, re-measure the diff figures, and record the date.
   - Traces to: C-8, NFR-9 (*Why the calibration row is pinned*), AC-79.
 
-- [ ] **PROJECT: T17.2 — (C-8) Run `/spec:show-me` on spec 0036 while PR #4282 is open**
+- [x] **PROJECT: T17.2 — (C-8) Run `/spec:show-me` on spec 0036 while PR #4282 is open**
   - Do:
     - Run `/spec:show-me 0036-scoped-lifetime-per-pipeline` twice, capturing `git status --porcelain` before and after each run.
     - Check AC-1, AC-2, AC-4 (resolution); AC-11; AC-12; AC-13; AC-14; AC-17; AC-18; AC-20; AC-24; AC-26; AC-30 (the only `git status` change is `show-me.md`; the ledger's `gh_commands` holds one `gh pr list … --state open`; no command-issued `gh` or `git merge-base`); AC-31; AC-32 (the two runs' mechanical fields are identical, and each run's F2 and F5 match its own evidence); AC-33; AC-34; AC-51; AC-56; AC-59, AC-60 and AC-63 (judged paths: each is recorded `unexercised on this run` when neither run took it); AC-62; AC-73; AC-74; AC-75; AC-76; AC-77; AC-78.
