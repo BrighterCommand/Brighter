@@ -558,7 +558,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - Run `git ls-files --error-unmatch` on every path before writing it. Use `test -f` to know whether the file is created or replaced, `Read` before `Write` when it exists, and one `Write`. Never stage anything.
   - Traces to: FR-4, FR-5, FR-16 rows 1, 10 and 15, FR-17, NFR-5, NFR-8, AC-9, AC-10, AC-11, AC-19, AC-44, AC-74; ADR 0072 KC5, IA 10 (Step 6).
 
-- [ ] **TEST + IMPLEMENT: T11.2 — How it was built copies the five tag counts and the commit count from the ledger, or gives FR-9's fallback line, and nothing else**
+- [x] **TEST + IMPLEMENT: T11.2 — How it was built copies the five tag counts and the commit count from the ledger, or gives FR-9's fallback line, and nothing else**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
     - `0033`: `Commits: not determinable — spec branch not resolved.` appears, and the task shape is still reported (AC-19, How it was built part).
