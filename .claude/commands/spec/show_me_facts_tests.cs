@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 // The sibling test script for show_me_facts.cs (NFR-9). No test framework: it is a plain
 // file-based app that shells out to the measurement script for each row below, checks the
@@ -440,6 +441,10 @@ failedAssertions += CheckPlantedLedgerUntouchedOnGateFailure(repositoryRoot, Unf
 failedAssertions += CheckNoWriteResidue(
     repositoryRoot,
     [DeclaredTarget, ZeroIdTarget, NoTasksTarget, AdrUnresolvedTarget, UnfinishedTarget, CalibrationTarget, "specs/x"]);
+
+// T13.1 FR-13 invariant (AC-81, NFR-9): no paragraph outside the risk-step markers may combine a
+// conditional keyword with a level name. Not a Row — it inspects the command file, not a ledger.
+failedAssertions += CheckFr13Invariant(repositoryRoot);
 
 Console.WriteLine(failedAssertions == 0
     ? $"{rows.Length} row(s) passed."
@@ -1765,6 +1770,109 @@ static int CheckLedgerLeftAsFound(Row row, string repositoryRoot)
     File.Delete(ledgerFullPath);
 
     return failures;
+}
+
+// T13.1 FR-13 invariant (ADR 0073 KC5): outside the risk-step markers, no paragraph of the command
+// file may combine a whole-word conditional keyword with a whole-word, capitalised level name — that
+// combination is what computes a level, and FR-13 confines it to the marked risk step. The marked
+// region (markers included) is removed first; what remains is split into blank-line paragraphs. Two
+// literal fixtures, held here rather than in show-me.md, prove the check neither over- nor
+// under-fires: AC-81's line (real words that merely contain "if" as a substring) must yield zero
+// matches, and a self-check paragraph that does combine them must be caught.
+static int CheckFr13Invariant(string repositoryRoot)
+{
+    const string BeginMarker = "<!-- show-me:risk-step:begin -->";
+    const string EndMarker = "<!-- show-me:risk-step:end -->";
+    const string Ac81Line = "Compare the two runs with git diff, or gh pr diff, never by level.";
+    const string SelfCheckParagraph = "If the level is High, stop.";
+    var conditional = new Regex(@"\b(if|when|unless|else|otherwise)\b", RegexOptions.IgnoreCase);
+
+    var failures = 0;
+    var commandPath = Path.Combine(repositoryRoot, ".claude/commands/spec/show-me.md");
+    var text = File.ReadAllText(commandPath);
+
+    var beginCount = Regex.Matches(text, Regex.Escape(BeginMarker)).Count;
+    var endCount = Regex.Matches(text, Regex.Escape(EndMarker)).Count;
+    var beginIndex = text.IndexOf(BeginMarker, StringComparison.Ordinal);
+    var endIndex = text.IndexOf(EndMarker, StringComparison.Ordinal);
+
+    var oneOfEachInOrder = beginCount == 1 && endCount == 1 && beginIndex < endIndex;
+    if (!oneOfEachInOrder)
+    {
+        Console.WriteLine(
+            $"FAIL FR-13 invariant: expected exactly one {BeginMarker} and one {EndMarker}, begin " +
+            $"first; found {beginCount} begin marker(s) and {endCount} end marker(s)");
+        failures++;
+    }
+
+    // With no valid marked region to remove, the whole file is "outside" the (non-existent) markers.
+    var outsideText = oneOfEachInOrder
+        ? text[..beginIndex] + text[(endIndex + EndMarker.Length)..]
+        : text;
+
+    foreach (var paragraph in Fr13OffendingParagraphs(outsideText))
+    {
+        Console.WriteLine(
+            "FAIL FR-13 invariant: a paragraph outside the risk-step markers combines a conditional " +
+            $"keyword and a level name: {paragraph.Replace('\n', ' ')}");
+        failures++;
+    }
+
+    // AC-81: the whole-word rule must not treat "if" as matched merely because it is a substring of
+    // "diff" — tested directly against the conditional pattern, not the combined paragraph check,
+    // since the combined check alone could not distinguish "correctly whole-word" from "broken but
+    // coincidentally saved by having no level name in the line".
+    if (conditional.IsMatch(Ac81Line))
+    {
+        Console.WriteLine("FAIL FR-13 invariant: the AC-81 literal line falsely matched \"if\" inside \"diff\" (whole-word rule is broken)");
+        failures++;
+    }
+
+    if (!Fr13OffendingParagraphs(SelfCheckParagraph).Any())
+    {
+        Console.WriteLine("FAIL FR-13 invariant: the self-check paragraph was not detected (the check cannot fire)");
+        failures++;
+    }
+
+    return failures;
+}
+
+static IEnumerable<string> Fr13OffendingParagraphs(string text)
+{
+    var conditional = new Regex(@"\b(if|when|unless|else|otherwise)\b", RegexOptions.IgnoreCase);
+    var level = new Regex(@"\b(Low|Medium|High)\b");
+
+    foreach (var paragraph in SplitIntoParagraphs(text))
+    {
+        if (conditional.IsMatch(paragraph) && level.IsMatch(paragraph))
+        {
+            yield return paragraph.Trim();
+        }
+    }
+}
+
+static IEnumerable<string> SplitIntoParagraphs(string text)
+{
+    var current = new List<string>();
+    foreach (var line in text.Replace("\r\n", "\n").Split('\n'))
+    {
+        if (line.Trim().Length == 0)
+        {
+            if (current.Count > 0)
+            {
+                yield return string.Join('\n', current);
+                current.Clear();
+            }
+        }
+        else
+        {
+            current.Add(line);
+        }
+    }
+    if (current.Count > 0)
+    {
+        yield return string.Join('\n', current);
+    }
 }
 
 // T7.1 residue guard (AC-83): after every other row has run, no .show-me-ledger.json.tmp and no
