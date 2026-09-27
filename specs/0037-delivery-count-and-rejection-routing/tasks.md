@@ -523,7 +523,7 @@
     - In this task, the router only needs the dead-letter destination; 5.5b adds selection by reason
   - Depends on: 1.5, 5.1, 5.4
 
-- [ ] **5.5b TEST + IMPLEMENT: A GCP pull Reject routes Unacceptable to the invalid-message channel, falling back to the DLQ, and reports no destination when neither is configured**
+- [x] **5.5b TEST + IMPLEMENT: A GCP pull Reject routes Unacceptable to the invalid-message channel, falling back to the DLQ, and reports no destination when neither is configured**
   - **USE COMMAND**: `/test-first when a gcp pull consumer rejects an unacceptable message should route to the invalid message channel falling back to the dlq`
   - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Pull"
   - Test file: `When_a_gcp_pull_consumer_rejects_unacceptable_should_route_to_invalid_channel_or_dlq.cs` (async: `…_async.cs`)
