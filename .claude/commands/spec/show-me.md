@@ -145,45 +145,76 @@ companion — it is not one of the reads below, on purpose.
 **How every window is priced and read** (ADR 0072 KC3):
 
 1. **A planned window** — one entry in a ledger window list (`tasks.windows`, `requirements.windows`,
-   an entry's own `declarations[].windows`, `src_diff.windows`, or one of an ADR's
-   `adr_list[].extract[].windows`) — is priced at that entry's own `bytes`. No extra `wc -c` call is
-   needed for it; the ledger already measured it.
-2. **A whole-file read** — `tasks.md` or `requirements.md`, read in full rather than by a located
-   range — is priced by running `wc -c {path}` immediately before its first window. `wc -c` is a size
-   probe, not a read, and is charged nothing.
-3. **An oversize window** (a ledger window flagged `"oversize": true`) is not read at all; a value
-   that needed it is unresolved, for a later step to report.
+   an entry's own `declarations[].windows`, `src_diff.windows`, one of an ADR's
+   `adr_list[].extract[].windows`, or one of `release_notes.sections[].windows`) — is priced at that
+   entry's own `bytes`. No extra `wc -c` call is needed for it; the ledger already measured it.
+2. **Anything the ledger has not planned** — a whole file read in full (`tasks.md`, `requirements.md`,
+   `.issue-number`, `.adr-list`) or a command's output (`git diff --name-only`, the commit-subject
+   `git log`) — is priced first by piping it into `wc -c` (`wc -c {path}` for a file; `{command} | wc
+   -c` for a command). `wc -c` is a size probe, not a read, and is charged nothing. It is then read in
+   windows of at most 25,000 B each, with `tail -n +{first} {path} | head -n {count}` for a file or
+   the same command piped into `tail | head`. `.issue-number` and `.adr-list` are always small enough
+   to read whole in one call, with `cat {path}`, instead.
+3. **An oversize window** (a ledger window flagged `"oversize": true`, or an unplanned read whose
+   single remaining line is still over 25,000 B) is not read at all; a value that needed it is
+   unresolved, for a later step to report.
 4. **A truncated tool output** counts as not read, but is still charged the bytes it brought into
    context.
 
 Every window, whichever rule priced it, is read with `tail -n +{first_line} {path} | head -n {count}`,
-where `{count}` is `{last_line} - {first_line} + 1` — except the `src/`-scoped diff, which is read by
-piping the ledger's own `src_diff.command` into the same `tail | head`, never re-issued as a fresh
-`git diff`.
+where `{count}` is `{last_line} - {first_line} + 1` — except the `src/`-scoped diff, `git diff
+--name-only` and the commit-subject `git log`, each of which is read by piping its own command into
+the same `tail | head` rather than naming a file path, and `.issue-number`/`.adr-list`, read whole with
+`cat`. None of the four is ever re-issued as a fresh, unscoped command.
 
-**The reads this task adds, in this order:**
+**Step 4's reads, in KC3's order:**
 
 - **The existing `show-me.md`.** Run `test -f specs/{dir}/show-me.md`. When it exists, price it at
   `wc -c specs/{dir}/show-me.md` plus 8 bytes for every line `wc -l specs/{dir}/show-me.md` counts and
   for one line more, then `Read` it — the only use of the `Read` tool, and only because `Write`
   refuses to replace a file the session has not read. Log it at that price. Never treat its content as
   evidence for any section.
+- **`.issue-number`.** Run `test -f specs/{dir}/.issue-number`. When it exists, price it with
+  `wc -c specs/{dir}/.issue-number`, then read it whole with `cat specs/{dir}/.issue-number`, and log
+  it. When it is missing, empty, or whitespace-only, issue no read.
+- **`.adr-list`.** Run `test -f specs/{dir}/.adr-list`. When it exists and its content is non-empty
+  after trimming, price it with `wc -c specs/{dir}/.adr-list`, then read it whole with
+  `cat specs/{dir}/.adr-list`, and log it. When it is missing or empty, issue no read. Either way,
+  `.adr-list`'s *resolution* — which entries resolved, to which files, and each entry's extract — comes
+  only from the ledger's `adr_list` (Step 3); this read is never used to recompute it.
 - **`tasks.md`.** Price it with `wc -c specs/{dir}/tasks.md`, then read every window in the ledger's
   `tasks.windows`, in order, for as long as the general allowance covers the next one.
 - **The `src/`-scoped diff.** When `src_diff` is not null, read every window in `src_diff.windows`, in
   order, piping `src_diff.command` into `tail | head` as above, for as long as the general allowance
   covers the next one.
+- **`git diff --name-only`, over the same pair.** Only when `buckets.src.files` is `0` while
+  `merge_base` and `measured_head` are both not null (FR-14: a diff was measured but touches nothing
+  under `src/`): price `git diff {merge_base}..{measured_head} --name-only` by piping it into `wc -c`,
+  then read it the same way, and log it. Otherwise issue no read.
 - **Each `.adr-list` entry's extract.** For every entry in `adr_list` whose `extract` is not null, read
   its three parts — `front_matter`, `status`, `consequences` — each by its own `windows`, against that
   entry's own `path`, for as long as the general allowance covers the next one.
+- **Marked release-notes section(s).** When `release_notes.count` is `0`, issue no read — there is
+  nothing to read, and FR-16 row 5 is a later step's concern. Otherwise price the file with
+  `wc -c {release_notes.path}`, then check whether the general allowance remaining covers the sum of
+  every entry's `bytes` in `release_notes.sections`. When it does, read every section, in order — each
+  entry's own `windows`, against `release_notes.path` — and log them: FR-7 makes this an obligation,
+  every marked section for the target or none. When it does not, issue no read at all and hold that
+  FR-16 row 5a applies (a present section was not read because the read budget was exhausted), for a
+  later step to report — never read some sections and skip others.
+- **Commit subjects.** Only when `adr_list` is empty while `merge_base` and `measured_head` are both
+  not null (FR-16 row 6, with a diff measured): price
+  `git log --format='%h %s' {merge_base}..{measured_head}` by piping it into `wc -c`, then read it the
+  same way, and log it. Otherwise issue no read.
 - **`requirements.md`.** When `requirements.present` is `true`, price it with
   `wc -c specs/{dir}/requirements.md`. If its `bytes` fits inside what the general allowance has left,
   read it whole: every window in `requirements.windows`, in order — a read *in full*, not a
   degradation. Otherwise read it by declaration instead: every entry in `declarations`, in the ledger's
-  order, each by its own `windows`, for as long as the general allowance covers the next one.
+  order, each by its own `windows`, for as long as the general allowance covers the next one. Any
+  declaration whose window cannot be afforded is not read; a status that needed it is `Unverifiable`,
+  with that reason, for a later step to report — never zero.
 
-Hold everything read above, and the read log itself, for later steps. This is as far as Step 4 goes
-for now — `.issue-number`, `.adr-list` itself, `git diff --name-only`, the marked release-notes
-section(s) and commit subjects still land in a later task, in KC3's order, and so does everything
-from Step 5 on. Follow only what is written above, then **stop**: do not improvise any further read,
-and do not create or modify `show-me.md`, the fact ledger, or any other file.
+Hold everything read above, and the read log itself, for later steps. This is as far as Step 4 goes —
+the Explainer's own reads (source files for a diagram) land with Step 5. Follow only what is written
+above, then **stop**: do not improvise any further step, and do not create or modify `show-me.md`, the
+fact ledger, or any other file.
