@@ -635,7 +635,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - Implementation should: add the check to the test script and nothing to the measurement script.
   - Traces to: FR-13, NFR-9 (invariant), AC-81; ADR 0073 KC5, *Where each artefact is touched*, IA 1; ADR 0072 KC6.
 
-- [ ] **TEST + IMPLEMENT: T13.2 — The risk step is fenced by its two marker lines at Step 5, between the Classifier and the Synthesiser**
+- [x] **TEST + IMPLEMENT: T13.2 — The risk step is fenced by its two marker lines at Step 5, between the Classifier and the Synthesiser**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by: `dotnet run .claude/commands/spec/show_me_facts_tests.cs` exits `0` with the FR-13 row green. `/spec:show-me 0033-pg-advisory-lock-sha256` still writes the file.
   - Implementation should:
