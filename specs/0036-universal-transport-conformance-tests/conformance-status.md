@@ -800,6 +800,50 @@ reaches the Brighter DLQ through `Reject` ([ADR 0038](../../docs/adr/0038-aws-sq
 direct send), carrying its stamped count and ADR 0036's rejection metadata. The count is
 **approximate** (SQS's counter is), so FR-23 asserts it only as bounded, never as exact.
 
+#### v3 and v4 are indistinguishable on the FR-23 run (AC-13, NFR-6; spec 0037 task 4.12)
+
+**Evidence, run 2026-09-27**, Floci, net10.0. The generated FR-23 test asserts only a bound on
+`HandledCount` and `rejectionReason`, so a throwaway, uncommitted probe re-ran the generated FR-23
+scenario unchanged for each configuration and variant. After the pump stopped, it recorded the
+dead-lettered message's header and bag, plus every Warning-or-above log entry from a capturing
+`ApplicationLogging.LoggerFactory`. It ran with collection parallelism off, so the logs are per test.
+All 16 runs passed their FR-23 assertions.
+
+| Configuration | Variant | Reason | Destination | Metadata key set | `rejectionReason` / `rejectionMessage` / `originalMessageType` | Warning+ logs | Count (v3 / v4), R = 3 | Verdict |
+|---|---|---|---|---|---|---|---|---|
+| SnsStandard | Reactor | DeliveryError | Brighter DLQ | 13 keys, equal | equal | equal | 3 / 3 | same |
+| SnsStandard | Proactor | DeliveryError | Brighter DLQ | 13 keys, equal | equal | equal | 3 / 3 | same |
+| SnsFifo | Reactor | DeliveryError | Brighter DLQ | 14 keys, equal | equal | equal | 3 / 3 | same |
+| SnsFifo | Proactor | DeliveryError | Brighter DLQ | 14 keys, equal | equal | equal | 3 / 3 | same |
+| SqsStandard | Reactor | DeliveryError | Brighter DLQ | 13 keys, equal | equal | equal | 3 / 3 | same |
+| SqsStandard | Proactor | DeliveryError | Brighter DLQ | 13 keys, equal | equal | equal | 3 / 3 | same |
+| SqsFifo | Reactor | DeliveryError | Brighter DLQ | 14 keys, equal | equal | equal | 3 / 3 | same |
+| SqsFifo | Proactor | DeliveryError | Brighter DLQ | 14 keys, equal | equal | equal | 3 / 3 | same |
+
+- **Values compared for equality**, identical in every pair: `rejectionReason` = `DeliveryError`;
+  `rejectionMessage` = `Handle count of messages reached; rejecting at limit`; `originalMessageType` =
+  `MT_COMMAND`; the legacy `RejectionReason` summary string; `handled-count`.
+- **The key set**: `handled-count`, `header1`–`header5` (the test's own), `originalMessageType`,
+  `originalTopic`, `ReceiptHandle`, `rejectionMessage`, `rejectionReason`, `RejectionReason`,
+  `rejectionTimestamp`, plus `messageDeduplicationId` on the two FIFO configurations.
+- **Compared for presence and shape only**, all matching in every pair: `originalTopic` equals the
+  source topic; the destination is `{topic}.DLQ` (`{topic}-DLQ` on the wire, `.fifo` kept on FIFO);
+  `rejectionTimestamp` has the same format. `ReceiptHandle` and `messageDeduplicationId` are per-run
+  values (a fresh GUID minted on the DLQ send, in both variants).
+- **Warning+ logs**, identical once per-run names and thread ids are removed: one pump Error
+  (`Have tried 3 times to handle this message … dropping message`) and one pump Warning
+  (`Rejecting message …`). Neither consumer logged a Warning.
+- **Delivery count**: `HandledCount` = 3 in all 16 runs, which meets `<= R`. The pump dispatched 3 times
+  in all 16 runs.
+
+**No divergence, so nothing to fix.** Three things hold in **both** variants alike. They are not
+v3/v4 divergences, but they are recorded so they are not rediscovered:
+
+- `rejectionTimestamp` is written in a culture-dependent format (`27/09/2026 19:03:31`), not ISO 8601.
+- The bag carries both the ADR 0036 `rejectionReason` key and the older `RejectionReason` summary string.
+- On the SQS configurations the pump's log line reads `from <queue> with  on thread`, with an empty topic.
+
+
 ## The delay plugin is retired — all three RMQ configurations run on stock images
 
 The RabbitMQ delayed-message-exchange plugin is being retired upstream, so the CI and compose pins moved
