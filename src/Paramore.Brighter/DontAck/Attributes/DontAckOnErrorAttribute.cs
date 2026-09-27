@@ -36,7 +36,8 @@ namespace Paramore.Brighter.DontAck.Attributes;
 /// <para>
 /// This attribute should be placed at the outermost position in the pipeline (lowest step number, typically 0)
 /// to catch application exceptions that escape other handlers like retry policies or circuit breakers.
-/// Explicit pump actions and cancellation propagate unchanged.
+/// Explicit pump actions and non-empty aggregates whose direct inner exceptions are all pump actions
+/// propagate unchanged. Other exceptions, including cancellation, use this backstop's configured action.
 /// </para>
 /// <para>
 /// Example usage:

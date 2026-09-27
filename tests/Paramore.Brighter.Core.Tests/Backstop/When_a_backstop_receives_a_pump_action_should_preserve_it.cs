@@ -52,58 +52,85 @@ public class BackstopPumpActionTests
         }
     }
 
-    public static TheoryData<bool, string, string> ActionCases
+    public static TheoryData<bool, string, string, bool> ActionCases
     {
         get
         {
-            var cases = new TheoryData<bool, string, string>();
+            var cases = new TheoryData<bool, string, string, bool>();
             foreach (var isAsync in new[] { false, true })
                 foreach (var backstop in new[] { "defer", "reject", "dont-ack" })
-                    foreach (var action in new[] { "reject", "defer", "dont-ack", "invalid", "cancel", "task-cancel" })
-                        cases.Add(isAsync, backstop, action);
+                    foreach (var action in new[] { "reject", "defer", "dont-ack", "invalid" })
+                        foreach (var aggregate in new[] { false, true })
+                            cases.Add(isAsync, backstop, action, aggregate);
             return cases;
         }
     }
 
     [Theory]
     [MemberData(nameof(ActionCases))]
-    public async Task When_a_backstop_receives_a_pump_action_should_preserve_it(bool isAsync, string backstop, string action)
+    public async Task When_a_backstop_receives_a_pump_action_should_preserve_it(bool isAsync, string backstop, string action, bool aggregate)
     {
         //Arrange
-        using var cancellation = new CancellationTokenSource();
-        cancellation.Cancel();
-        Exception original = action switch
+        Exception pumpAction = action switch
         {
             "reject" => new RejectMessageAction("permanent failure"),
             "defer" => new DeferMessageAction("try later", new InvalidOperationException("reason"), 1234),
             "dont-ack" => new DontAckAction("leave unacknowledged"),
             "invalid" => new InvalidMessageAction("invalid payload"),
-            "cancel" => new OperationCanceledException("shutdown", cancellation.Token),
-            "task-cancel" => new TaskCanceledException("shutdown", null, cancellation.Token),
             _ => throw new ArgumentOutOfRangeException(nameof(action))
         };
 
+        var original = aggregate ? new AggregateException(pumpAction) : pumpAction;
+
         //Act
-        var thrown = await Record.ExceptionAsync(() => ExecuteAsync(isAsync, backstop, original, cancellation.Token));
+        var thrown = await Record.ExceptionAsync(() => ExecuteAsync(isAsync, backstop, original));
 
         //Assert
         Assert.Same(original, thrown);
         Assert.Contains(isAsync ? nameof(BackstopActionHandlerAsync) : nameof(BackstopActionHandler), thrown!.StackTrace);
-        if (thrown is DeferMessageAction defer)
+        if (pumpAction is DeferMessageAction defer)
             Assert.Equal(TimeSpan.FromMilliseconds(1234), defer.Delay);
-        if (thrown is OperationCanceledException cancelled)
-            Assert.Equal(cancellation.Token, cancelled.CancellationToken);
+    }
+
+    public static TheoryData<bool, string, string> ApplicationErrorCases
+    {
+        get
+        {
+            var cases = new TheoryData<bool, string, string>();
+            foreach (var isAsync in new[] { false, true })
+                foreach (var backstop in new[] { "defer", "reject", "dont-ack" })
+                    foreach (var error in new[]
+                    {
+                        "application", "cancel", "task-cancel", "caller-cancel", "caller-task-cancel",
+                        "aggregate", "mixed-aggregate", "empty-aggregate", "nested-aggregate"
+                    })
+                        cases.Add(isAsync, backstop, error);
+            return cases;
+        }
     }
 
     [Theory]
-    [MemberData(nameof(BackstopCases))]
-    public async Task When_a_backstop_receives_an_application_error_should_wrap_it(bool isAsync, string backstop)
+    [MemberData(nameof(ApplicationErrorCases))]
+    public async Task When_a_backstop_receives_an_application_error_should_wrap_it(bool isAsync, string backstop, string error)
     {
         //Arrange
-        var original = new InvalidOperationException("application failure");
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        Exception original = error switch
+        {
+            "application" => new InvalidOperationException("application failure"),
+            "cancel" or "caller-cancel" => new OperationCanceledException("operation timed out", cancellation.Token),
+            "task-cancel" or "caller-task-cancel" => new TaskCanceledException("operation timed out", null, cancellation.Token),
+            "aggregate" => new AggregateException(new InvalidOperationException("application failure")),
+            "mixed-aggregate" => new AggregateException(new RejectMessageAction("reject"), new InvalidOperationException("application failure")),
+            "empty-aggregate" => new AggregateException(),
+            "nested-aggregate" => new AggregateException(new AggregateException(new RejectMessageAction("reject"))),
+            _ => throw new ArgumentOutOfRangeException(nameof(error))
+        };
+        var callerToken = error is "caller-cancel" or "caller-task-cancel" ? cancellation.Token : default;
 
         //Act
-        var thrown = await Record.ExceptionAsync(() => ExecuteAsync(isAsync, backstop, original));
+        var thrown = await Record.ExceptionAsync(() => ExecuteAsync(isAsync, backstop, original, callerToken));
 
         //Assert
         Assert.NotNull(thrown);
@@ -121,6 +148,64 @@ public class BackstopPumpActionTests
                 Assert.IsType<DontAckAction>(thrown);
                 break;
         }
+    }
+
+    [Theory]
+    [MemberData(nameof(BackstopCases))]
+    public async Task When_a_backstop_receives_multiple_pump_actions_should_preserve_the_aggregate(bool isAsync, string backstop)
+    {
+        //Arrange
+        var original = new AggregateException(
+            new RejectMessageAction("reject"),
+            new DeferMessageAction("defer", new InvalidOperationException("reason"), 1234),
+            new DontAckAction("nack"),
+            new InvalidMessageAction("invalid"));
+
+        //Act
+        var thrown = await Record.ExceptionAsync(() => ExecuteAsync(isAsync, backstop, original));
+
+        //Assert
+        Assert.Same(original, thrown);
+        Assert.Contains(isAsync ? nameof(BackstopActionHandlerAsync) : nameof(BackstopActionHandler), thrown!.StackTrace);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task When_backstops_are_stacked_should_preserve_the_innermost_action(bool isAsync)
+    {
+        //Arrange
+        var original = new InvalidOperationException("application failure");
+        Exception? thrown;
+        if (isAsync)
+        {
+            var command = new BackstopActionCommandAsync(original);
+            var inner = new DeferMessageOnErrorHandlerAsync<BackstopActionCommandAsync>();
+            inner.InitializeFromAttributeParams(1234);
+            inner.SetSuccessor(new BackstopActionHandlerAsync());
+            var outer = new RejectMessageOnErrorHandlerAsync<BackstopActionCommandAsync>();
+            outer.SetSuccessor(inner);
+
+            //Act
+            thrown = await Record.ExceptionAsync(() => outer.HandleAsync(command));
+        }
+        else
+        {
+            var command = new BackstopActionCommand(original);
+            var inner = new DeferMessageOnErrorHandler<BackstopActionCommand>();
+            inner.InitializeFromAttributeParams(1234);
+            inner.SetSuccessor(new BackstopActionHandler());
+            var outer = new RejectMessageOnErrorHandler<BackstopActionCommand>();
+            outer.SetSuccessor(inner);
+
+            //Act
+            thrown = Record.Exception(() => outer.Handle(command));
+        }
+
+        //Assert
+        var action = Assert.IsType<DeferMessageAction>(thrown);
+        Assert.Same(original, action.InnerException);
+        Assert.Equal(TimeSpan.FromMilliseconds(1234), action.Delay);
     }
 
     [Theory]

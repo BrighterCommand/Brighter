@@ -2,6 +2,12 @@
 
 ## Master
 
+### Backstop handlers preserve explicit message-pump actions
+
+`DeferMessageOnError`, `RejectMessageOnError`, `DontAckOnError`, and their async variants now preserve explicit `DeferMessageAction`, `RejectMessageAction`, `DontAckAction`, and `InvalidMessageAction` exceptions instead of replacing them with the backstop's configured action. A non-empty `AggregateException` whose direct inner exceptions are all pump actions is also preserved for the pump to handle. Mixed, empty, or nested aggregates still use the configured fallback. Application failures, including `OperationCanceledException` and `TaskCanceledException` from dependency timeouts, continue to use that fallback.
+
+If a pipeline has multiple backstops, the innermost backstop now determines the action for an application failure; outer backstops preserve it. For example, `[RejectMessageOnError(step: 0)]` wrapping `[DeferMessageOnError(step: 1)]` now defers the message instead of rejecting it. Lower step numbers are outer wrappers. Review pipelines with stacked backstops if they relied on the previous outermost-backstop behavior.
+
 ### AWS: configurable `MaximumMessageSize` for SNS topics and SQS queues
 
 Amazon SNS now accepts message payloads up to 1 MiB, but only if you raise the topic's `MaximumMessageSize` attribute — the default is still 256 KiB. Brighter's send path never assumed a fixed limit, but the provisioning path had no way to set the attribute, so a topic Brighter created with `OnMissingChannel.Create` was stuck at 256 KiB.

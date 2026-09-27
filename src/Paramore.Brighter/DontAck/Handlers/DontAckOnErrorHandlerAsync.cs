@@ -39,7 +39,8 @@ namespace Paramore.Brighter.DontAck.Handlers;
 /// This is the async version of <see cref="DontAckOnErrorHandler{TRequest}"/>.
 /// This handler should be positioned at the outermost layer of the pipeline (lowest step number)
 /// to act as a backstop for application exceptions that escape inner handlers.
-/// Explicit pump actions and cancellation propagate unchanged.
+/// Explicit pump actions and non-empty aggregates whose direct inner exceptions are all pump actions
+/// propagate unchanged. Other exceptions, including cancellation, use this backstop's configured action.
 /// </remarks>
 public class DontAckOnErrorHandlerAsync<TRequest> : RequestHandlerAsync<TRequest>, IAmABackstopHandler
     where TRequest : class, IRequest
@@ -60,11 +61,7 @@ public class DontAckOnErrorHandlerAsync<TRequest> : RequestHandlerAsync<TRequest
         {
             return await base.HandleAsync(command, cancellationToken);
         }
-        catch (Exception ex) when (ex is not RejectMessageAction
-                                   and not DeferMessageAction
-                                   and not DontAckAction
-                                   and not InvalidMessageAction
-                                   and not OperationCanceledException)
+        catch (Exception ex) when (!BackstopExceptionFilter.ShouldPropagate(ex))
         {
             throw new DontAckAction(ex.Message, ex);
         }
