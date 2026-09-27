@@ -11,16 +11,23 @@ const int UsageErrorExitCode = 1;
 const int ToolingFaultExitCode = 1;
 const int GateNotPassedExitCode = 2;
 const int LedgerCapBytes = 65_536;
+const string WordCountFlag = "--word-count";
 
 // ADR 0072 KC1's argument grammar: {target}; {target} --pinned {base} {head};
 // {target} --release-notes {path}; {target} with both, in either order. Anything else — an
 // absent target, an unrecognised option, or a malformed one — is a usage error, which exits
-// with a fixed status other than 0 or 2 and writes no ledger. {file} --word-count is a later
-// task's mode and is not recognised here yet, so it also falls through to a usage error.
+// with a fixed status other than 0 or 2 and writes no ledger. {file} --word-count (FR-21 *Modes*)
+// is a second, unrelated mode: it takes a file, not a spec/fixture target, does no ref resolution
+// and touches no ledger, so it is dispatched before any of the grammar above applies.
 
 if (args.Length == 0)
 {
     return UsageErrorExitCode;
+}
+
+if (args.Length == 2 && args[1] == WordCountFlag)
+{
+    return RunWordCount(args[0]);
 }
 
 var target = args[0];
@@ -595,14 +602,92 @@ static (bool Available, int ExitCode, string Stdout) RunGhChecked(string[] args,
     }
 }
 
-static void WriteGateRecord(JsonObject record)
+static void WriteGateRecord(JsonObject record) => WritePrefixedRecord("show-me-gate: ", record);
+
+// NFR-2/FR-21 *Modes*, T8.1: exit 0 with the record on success; a missing file exits non-zero
+// (ToolingFaultExitCode) and emits no record at all, per the "anything else — not counted" rule.
+static int RunWordCount(string filePath)
+{
+    if (!File.Exists(filePath))
+    {
+        return ToolingFaultExitCode;
+    }
+
+    var (total, excludedFenceLines) = CountWords(File.ReadAllLines(filePath));
+
+    WritePrefixedRecord("show-me-wordcount: ", new JsonObject
+    {
+        ["total"] = total,
+        ["excluded_fence_lines"] = excludedFenceLines,
+    });
+
+    return 0;
+}
+
+// NFR-2's counted-body rule: whitespace-delimited tokens with at least one alphanumeric
+// character, over every line except (a) the H1 and metadata above the first H2, (b) a
+// pipe-table row (trimmed), (c) `## Inputs used` to the end of the file, and (d) a fenced block,
+// inclusive of both delimiter lines. The H2 heading line itself, once found, counts.
+static (int Total, int ExcludedFenceLines) CountWords(string[] lines)
+{
+    var total = 0;
+    var excludedFenceLines = 0;
+    var inFence = false;
+    var inCountedBody = false;
+
+    foreach (var rawLine in lines)
+    {
+        var line = rawLine.TrimEnd('\r');
+
+        if (!inCountedBody)
+        {
+            if (!WordCountPatterns.H2Heading.IsMatch(line))
+            {
+                continue;
+            }
+
+            inCountedBody = true;
+        }
+
+        if (line == "## Inputs used")
+        {
+            break;
+        }
+
+        if (line.StartsWith("```", StringComparison.Ordinal))
+        {
+            inFence = !inFence;
+            excludedFenceLines++;
+            continue;
+        }
+
+        if (inFence)
+        {
+            excludedFenceLines++;
+            continue;
+        }
+
+        if (line.TrimStart().StartsWith("|", StringComparison.Ordinal))
+        {
+            continue;
+        }
+
+        total += line
+            .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+            .Count(token => token.Any(char.IsLetterOrDigit));
+    }
+
+    return (total, excludedFenceLines);
+}
+
+static void WritePrefixedRecord(string prefix, JsonObject record)
 {
     var options = new JsonSerializerOptions
     {
         WriteIndented = false,
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
-    Console.Error.WriteLine($"show-me-gate: {record.ToJsonString(options)}");
+    Console.Error.WriteLine($"{prefix}{record.ToJsonString(options)}");
 }
 
 static bool CommitExists(string sha)
@@ -1311,6 +1396,12 @@ static class RequirementsPatterns
 
     // A markdown heading of level three or higher (###, ##, or #) — stops a declaration's paragraph.
     public static readonly Regex Heading = new(@"^#{1,3}\s");
+}
+
+static class WordCountPatterns
+{
+    // NFR-2's counted body starts at the first H2 exactly — H1 is metadata, H3+ stays inside it.
+    public static readonly Regex H2Heading = new(@"^##\s");
 }
 
 static class AdrPatterns

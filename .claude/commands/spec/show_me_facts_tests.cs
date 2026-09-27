@@ -20,6 +20,9 @@ const string DefaultReleaseNotesPath = "release_notes.md";
 const string CalibrationTarget = "specs/0036-scoped-lifetime-per-pipeline";
 const string CalibrationMergeBase = "6145913a0";
 const string CalibrationMeasuredHead = "91d549be6";
+const string WordCountFixturesDir = ".claude/test-fixtures/show-me";
+const string WordCountEightTarget = $"{WordCountFixturesDir}/wordcount-eight.md";
+const string WordCountMissingTarget = $"{WordCountFixturesDir}/wordcount-does-not-exist.md";
 
 // The declared fixture's file fields (tasks, declared ids, .adr-list) — read from the working
 // tree, so they hold the same values on the plain, unpinned row below and on a pinned run
@@ -397,6 +400,22 @@ var rows = new[]
                 }
             }
         })),
+    // T8.1: NFR-2's counted body. Hand-computed from the fixture — the H1 and the
+    // "**Spec**: none · **Issue**: none" metadata above the first H2 are excluded (a); the H2
+    // heading "## Counted section" and the six-token prose line count (2 + 6 = 8); the 3-line
+    // fenced block (open, content, close) is excluded, inclusive (d) — the fence regression this
+    // row also guards, since counting the fence's 8 tokens would report 16, not 8; the pipe-table
+    // row is excluded (b); everything from "## Inputs used" on is excluded (c).
+    new Row(
+        "word-count: eight-token fixture",
+        [WordCountEightTarget, "--word-count"],
+        WordCountFixturesDir,
+        WordCountAssertions(expectedTotal: 8, expectedExcludedFenceLines: 3)),
+    new Row(
+        "word-count: missing file",
+        [WordCountMissingTarget, "--word-count"],
+        null,
+        WordCountMissingFileAssertions),
 };
 
 var failedAssertions = 0;
@@ -449,9 +468,10 @@ static int RunRow(Row row, string repositoryRoot)
     }
 
     var gateRecord = ParseLastGateRecord(stderr);
+    var wordCountRecord = ParseLastWordCountRecord(stderr);
 
     var failures = 0;
-    foreach (var message in row.Assertions(new RunResult(exitCode, ledgerBytes, ledger, gateRecord)))
+    foreach (var message in row.Assertions(new RunResult(exitCode, ledgerBytes, ledger, gateRecord, wordCountRecord)))
     {
         Console.WriteLine($"FAIL {row.Name}: {message}");
         failures++;
@@ -459,6 +479,7 @@ static int RunRow(Row row, string repositoryRoot)
 
     ledger?.Dispose();
     gateRecord?.Dispose();
+    wordCountRecord?.Dispose();
 
     if (ledgerFullPath is not null)
     {
@@ -503,17 +524,22 @@ static (int ExitCode, string Stderr) InvokeScript(string repositoryRoot, string[
     return (process.ExitCode, stderr);
 }
 
-static JsonDocument? ParseLastGateRecord(string stderr)
+static JsonDocument? ParseLastGateRecord(string stderr) => ParseLastPrefixedRecord(stderr, "show-me-gate: ");
+
+// T8.1: the word-count record shares the gate record's self-identifying-line contract (FR-21
+// *Modes*) — one prefix, last line carrying it wins, everything else on stderr is ignored.
+static JsonDocument? ParseLastWordCountRecord(string stderr) => ParseLastPrefixedRecord(stderr, "show-me-wordcount: ");
+
+static JsonDocument? ParseLastPrefixedRecord(string stderr, string prefix)
 {
-    const string Prefix = "show-me-gate: ";
     string? lastRecordJson = null;
 
     foreach (var rawLine in stderr.Split('\n'))
     {
         var line = rawLine.TrimEnd('\r');
-        if (line.StartsWith(Prefix, StringComparison.Ordinal))
+        if (line.StartsWith(prefix, StringComparison.Ordinal))
         {
-            lastRecordJson = line[Prefix.Length..];
+            lastRecordJson = line[prefix.Length..];
         }
     }
 
@@ -613,6 +639,62 @@ static IEnumerable<string> UsageErrorAssertions(RunResult result)
 }
 
 static IEnumerable<string> ToolingFaultAssertions(RunResult result) => UsageErrorAssertions(result);
+
+// T8.1: NFR-2's word-count mode. Exit 0, no ledger, and a show-me-wordcount: record reporting
+// the fixed field names `total` and `excluded_fence_lines` (T8.2 adds `in_range`).
+static Func<RunResult, IEnumerable<string>> WordCountAssertions(int expectedTotal, int expectedExcludedFenceLines) => result =>
+{
+    var failures = new List<string>();
+
+    if (result.ExitCode != 0)
+    {
+        failures.Add($"expected exit code 0, got {result.ExitCode}");
+    }
+
+    if (result.LedgerBytes is not null)
+    {
+        failures.Add("expected no ledger to be written");
+    }
+
+    if (result.WordCountRecord is null)
+    {
+        failures.Add("expected a show-me-wordcount: stderr record that parses as one JSON object");
+        return failures;
+    }
+
+    var root = result.WordCountRecord.RootElement;
+    if (!root.TryGetProperty("total", out var totalValue) || totalValue.GetInt32() != expectedTotal)
+    {
+        failures.Add($"expected total {expectedTotal}");
+    }
+
+    if (!root.TryGetProperty("excluded_fence_lines", out var excludedValue) || excludedValue.GetInt32() != expectedExcludedFenceLines)
+    {
+        failures.Add($"expected excluded_fence_lines {expectedExcludedFenceLines}");
+    }
+
+    return failures;
+};
+
+// T8.1: a missing file exits non-zero and emits no record at all — no ledger, no gate record,
+// no word-count record.
+static IEnumerable<string> WordCountMissingFileAssertions(RunResult result)
+{
+    if (result.ExitCode == 0)
+    {
+        yield return "expected a non-zero exit code for a missing file";
+    }
+
+    if (result.WordCountRecord is not null)
+    {
+        yield return "expected no show-me-wordcount: record for a missing file";
+    }
+
+    if (result.LedgerBytes is not null)
+    {
+        yield return "expected no ledger to be written";
+    }
+}
 
 static IEnumerable<string> ProbeAssertions(RunResult result)
 {
@@ -1717,7 +1799,7 @@ static int CheckNoWriteResidue(string repositoryRoot, string[] targets)
     return failures;
 }
 
-sealed record RunResult(int ExitCode, byte[]? LedgerBytes, JsonDocument? Ledger, JsonDocument? GateRecord);
+sealed record RunResult(int ExitCode, byte[]? LedgerBytes, JsonDocument? Ledger, JsonDocument? GateRecord, JsonDocument? WordCountRecord);
 
 sealed record Row(string Name, string[] Args, string? LedgerTarget, Func<RunResult, IEnumerable<string>> Assertions);
 
