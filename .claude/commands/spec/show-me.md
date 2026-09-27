@@ -16,11 +16,11 @@ it was built, blast radius, an advisory Low/Medium/High merge-risk read, where t
 provenance table. This is not a review — it does not re-check correctness, security, TDD compliance,
 CI status or PR review outcomes.
 
-**This command is under active construction (spec 0037).** Only Steps 1 and 2 are implemented below;
-Steps 3 onward — the ledger read, evidence reads, the synthesis stages and the write — land in later
-tasks and are not yet part of this command. Follow Steps 1 and 2 exactly as written, and when Step 2
-finishes, **stop there**: print what it says to print and do nothing else. Do not improvise any later
-step, and do not create or modify `show-me.md`, the fact ledger, or any other file.
+**This command is under active construction (spec 0037).** Only Steps 1–3 are implemented below;
+Steps 4 onward — evidence reads, the synthesis stages and the write — land in later tasks and are not
+yet part of this command. Follow Steps 1–3 exactly as written, and when Step 3 finishes, **stop
+there**: print what it says to print and do nothing else. Do not improvise any later step, and do not
+create or modify `show-me.md`, the fact ledger, or any other file.
 
 ### Step 1 — Resolve the target spec directory
 
@@ -97,3 +97,38 @@ This is a tooling fault, not a fault in spec {dir} — re-run after restoring th
 
 Every value above is copied verbatim from the script's own exit status and standard error — never
 computed inline, and never used to write a partial or guessed file.
+
+### Step 3 — Read the ledger, and hold its fields for later steps
+
+Price `specs/{dir}/.show-me-ledger.json` with `wc -c` before opening it — pricing is not a read.
+Then read it as **unplanned windows** of at most 25,000 B each, with `tail`/`head`, until the whole
+file has been read. Parse the concatenated text once, as a single JSON object.
+
+**If it does not parse as one JSON object**, stop. Do not create or modify any file — the ledger the
+script wrote stays exactly as it is. Print exactly:
+`/spec:show-me could not run its measurement script (.claude/commands/spec/show_me_facts.cs): ledger
+was not a single JSON object. No show-me.md was written. This is a tooling fault, not a fault in
+spec {dir} — re-run after restoring the script.`
+
+**Otherwise**, hold every field of the parsed object for the steps below. Never recompute any of
+them, and never parse anything from the script's own standard output — the ledger is the only
+contract. Every field holding `null` has a matching entry in the ledger's `null_reasons` object; hold
+that reason alongside the field too. It becomes one `## Inputs used` row (FR-15, one of FR-16's
+absence rows) once Step 8 writes that section — nothing is written yet.
+
+**Which section each field feeds** (the one table this command uses; no other step restates it):
+
+| Section | From the ledger (copied, never recomputed) | From the command's reads (judged) |
+| --- | --- | --- |
+| Metadata block | branch ref, measured head, base ref, merge base, PR number and URL | the generation date (`date +%F`) and the issue (`.issue-number`) — nothing judged |
+| `## What changed and why` | `.adr-list` resolution | the narrative; each ADR's title and Status; the diagram or fallback line |
+| `## Breaking changes` | marked-section count and `{m}` | the item list, classifications, migrations, the count `{n}`, and the disagreement line |
+| `## Did it ship what it said?` | the declared-id set and `{total}` | each id's status, the tallies `{k}`, and Parts 3–4's content |
+| `## How it was built` | task total, per-tag counts, commit count, or the fallback line when the diff fields are null | nothing |
+| `## Blast radius` | everything, including the provenance lines | nothing |
+| `## Risk assessment (advisory)` | F1's `src/` count and level | the rest |
+| `## Where to look first` | — | 3–7 paths, each with a reason |
+| `## Inputs used` | `.adr-list` resolution, PR presence and its reason | one row per source read directly, marked from the read log |
+
+**On success**, the ledger's fields are held. Stop there — Steps 4 onward, which use this table to
+write each section, are not yet part of this command.
