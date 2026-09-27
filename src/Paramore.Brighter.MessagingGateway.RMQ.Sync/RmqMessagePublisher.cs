@@ -74,7 +74,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="delay">The delay in ms. 0 is no delay. Defaults to 0</param>
-        public void PublishMessage(Message message, TimeSpan? delay = null)
+        /// <param name="mandatory">Return the message if no queue matches its routing key.</param>
+        public void PublishMessage(Message message, TimeSpan? delay = null, bool mandatory = false)
         {
             if (_connection.Exchange is null)
                 throw new InvalidOperationException("RmqMessagePublisher.PublishMessage: Connections Exchange is null");
@@ -93,7 +94,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             _channel.BasicPublish(
                 _connection.Exchange.Name,
                 message.Header.Topic,
-                false,
+                mandatory,
                 CreateBasicProperties(
                     message.Id.Value,
                     message.Header.TimeStamp,

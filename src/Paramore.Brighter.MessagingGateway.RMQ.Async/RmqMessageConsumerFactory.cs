@@ -80,7 +80,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
                 rmqSubscription.MaxQueueLength,
                 subscription.MakeChannels,
                 rmqSubscription.QueueType,
-                scheduler: _scheduler);
+                scheduler: _scheduler)
+            {
+                InvalidMessageRoutingKey = rmqSubscription.InvalidMessageRoutingKey
+            };
         }
 
         public IAmAMessageConsumerAsync CreateAsync(Subscription subscription)
@@ -102,7 +105,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
                 rmqSubscription.MaxQueueLength,
                 subscription.MakeChannels,
                 rmqSubscription.QueueType,
-                scheduler: _scheduler);
+                scheduler: _scheduler)
+            {
+                InvalidMessageRoutingKey = rmqSubscription.InvalidMessageRoutingKey
+            };
         }
     }
 }
