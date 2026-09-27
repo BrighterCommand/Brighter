@@ -739,7 +739,38 @@ for any section, only because `Write` refuses to replace a file the session has 
 5's assembled text to `specs/{dir}/show-me.md` in one `Write` call, which replaces the file's entire
 contents when it already existed. Never `git add`, stage, commit, or create any other file.
 
-Print `specs/{dir}/show-me.md created.` when Step 4's `test -f` failed, or
-`specs/{dir}/show-me.md replaced.` when it succeeded, and stop there. FR-19's fuller summary — the
-overall risk level, its advisory reminder, and the word-count result — lands once the sections and the
-risk step that produce them exist, in later tasks; do not improvise them now.
+Hold, for Step 8: whether Step 4's `test -f` failed (created) or succeeded (replaced).
+
+### Step 7 — Word-count the written file
+
+Invoke `dotnet run .claude/commands/spec/show_me_facts.cs -- specs/{dir}/show-me.md --word-count`
+exactly once, from the repository root — the second and last invocation of the script this run
+(FR-21 *Modes*). This never revises `specs/{dir}/show-me.md` and never touches the ledger.
+
+Read only the last line of its standard error beginning `show-me-wordcount: `, and parse the
+single-line JSON object that follows the prefix.
+
+- **Exit `0` and a parseable record**: hold `{total}` (the record's `total`) and whether `in_range` is
+  `true`.
+- **Any other exit, or exit `0` with no parseable `show-me-wordcount: ` line**: hold
+  `word count unavailable: measurement script exited {code}` (the exit status substituted for
+  `{code}`), or `word count unavailable: word-count record not parseable` when the exit was `0`.
+
+Never invoke the script a third time, and never revise the written file in response to this result
+(FR-21 *Modes*) — the run has already completed either way.
+
+### Step 8 — The FR-19 report
+
+Print, in the session, in this order:
+
+1. `specs/{dir}/show-me.md created.` or `specs/{dir}/show-me.md replaced.`, per Step 6.
+2. The overall risk level, copied from the assembled text's `**Overall risk: {Low|Medium|High}**`
+   line without testing it (ADR 0073 *Advisory by construction* — the level has exactly two sinks,
+   that line and this one).
+3. The one-line reminder that the level is advisory: `This assessment is advisory only.`
+4. Step 7's word-count result: `{total} words (inside 400–2,000)` or `{total} words (outside
+   400–2,000)`, or the `word count unavailable: …` line held there.
+
+Print nothing further here — no error message, no refusal, no marker file, no label, no comment
+(FR-13). This report is what a run at one level and a run at another level differ in; every other
+side effect of the run is identical between them (AC-25).
