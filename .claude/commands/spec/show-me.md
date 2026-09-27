@@ -17,10 +17,10 @@ provenance table. This is not a review — it does not re-check correctness, sec
 CI status or PR review outcomes.
 
 **This command is under active construction (spec 0037).** Steps 1–6 are implemented below.
-`## How it was built` is filled in; the other seven of Step 5's H2 sections are still bare headings,
-with nothing written under them — the tasks that fill each one land later and will extend Step 5 in
-place, section by section. Follow each step exactly as written; every step ends by saying what
-happens next, so do not improvise past what a step actually says.
+`## How it was built` and `## Blast radius` are filled in; the other six of Step 5's H2 sections are
+still bare headings, with nothing written under them — the tasks that fill each one land later and
+will extend Step 5 in place, section by section. Follow each step exactly as written; every step ends
+by saying what happens next, so do not improvise past what a step actually says.
 
 ### Step 1 — Resolve the target spec directory
 
@@ -237,8 +237,8 @@ place, filling in each H2 section's body; nothing below writes to disk yet.
      undetermined}`
    - `- **PR:** {#pr.number (pr.url), when pr is not null; otherwise none found}`
 3. The eight H2 headings, verbatim and in this order, one blank line between each. `## How it was
-   built` is filled per the rule below; the other seven are still bare, with nothing written under
-   them yet:
+   built` and `## Blast radius` are filled per the rules below; the other six are still bare, with
+   nothing written under them yet:
    `## What changed and why`, `## Breaking changes`, `## Did it ship what it said?`,
    `## How it was built`, `## Blast radius`, `## Risk assessment (advisory)`,
    `## Where to look first`, `## Inputs used`.
@@ -253,6 +253,56 @@ fields — nothing here is judged:
 - When `commits` is not null: `- **Commits:** {commits} since the merge base`
 - When `commits` is null (FR-16 row 12, spec branch not determinable): `Commits: not determinable —
   spec branch not resolved.` verbatim, in place of the commits bullet above.
+
+**`## Blast radius`** (FR-10, FR-20) states every measured number and the exact refs measured
+against, copied verbatim from the ledger — nothing here is judged. Every sha in this section is the
+ledger's **full** sha, never truncated to the metadata block's 9-character form: this section exists
+so two runs that disagree can be diagnosed (FR-10), which needs the exact value.
+
+**When `spec_branch` is `null`** (FR-16 row 12 — the branch is not determinable), write exactly:
+
+- `Spec branch not determinable — no diff measured.`
+- a blank line, then `Rules tried:` followed by one bullet per entry of `rules_tried`, verbatim and
+  in order.
+
+Nothing else in this section: no bucket table, no bullets below, no zero figures.
+
+**Otherwise** (a diff was measured), in this order:
+
+1. A pipe table, one row per bucket plus a totals row, in `buckets`' own key order (`src`, `tests`,
+   `docs`, `specs`, `github` — labelled `.github/` — `other`), then `total`. Excluded from NFR-2's
+   word budget, per FR-10:
+
+   | Bucket | Files changed | Net lines |
+   | --- | --- | --- |
+   | `src/` | {buckets.src.files} | +{buckets.src.added}/−{buckets.src.removed} |
+   | `tests/` | {buckets.tests.files} | +{buckets.tests.added}/−{buckets.tests.removed} |
+   | `docs/` | {buckets.docs.files} | +{buckets.docs.added}/−{buckets.docs.removed} |
+   | `specs/` | {buckets.specs.files} | +{buckets.specs.added}/−{buckets.specs.removed} |
+   | `.github/` | {buckets.github.files} | +{buckets.github.added}/−{buckets.github.removed} |
+   | `other` | {buckets.other.files} | +{buckets.other.added}/−{buckets.other.removed} |
+   | **Total** | {buckets.total.files} | +{buckets.total.added}/−{buckets.total.removed} |
+
+2. `- **Public API declaration lines changed:** {public_api_lines}`
+3. `- **Distinct \`src/\` subdirectories touched:** {src_subdirectory_count}`
+4. When `pr_count` is not `null` and greater than `1` (FR-20): `- {pr_count} pull requests found for
+   branch {branch}; using #{pr.number} (highest number).` — `{branch}` is `spec_branch.ref` with any
+   leading `refs/remotes/origin/` or `refs/heads/` prefix removed (FR-20's own stripping rule; used
+   as-is when the resolved ref is the literal `HEAD`).
+5. When `measured_head.source` is `"pr_head"`: `- Measured from git diff
+   {merge_base}..{measured_head.sha} (PR #{pr.number} head)`. Otherwise (`measured_head.source` is
+   `"branch_tip"`): `- Measured from git diff {merge_base}..{measured_head.sha} (spec branch tip)`.
+6. When `measured_head.source` is `"pr_head"` and `pr.head_sha` is not equal to `spec_branch.sha`:
+   `- Spec branch tip {spec_branch.sha} differs from PR #{pr.number} head {pr.head_sha}; measured the
+   PR head.`
+7. When `pr` is not `null` and `pr.head_present` is `false` (FR-16 row 16): `- PR #{pr.number} head
+   {pr.head_sha} is not present locally; measured the spec branch tip {measured_head.sha} instead.
+   Fetch the branch and re-run to measure the PR head.` (Mutually exclusive with line 6 —
+   `head_present` is `true` there, `false` here.)
+8. `- Ref used: {spec_branch.ref} at {spec_branch.sha}; base ref {base.ref} at {base.sha}; merge base
+   {merge_base}.`
+9. When `local_divergence` is not `null`: `- Local branch {local_divergence.name} is at
+   {local_divergence.sha} and differs from the measured ref.`
 
 Before the assembled text names any repository path — none does yet, at this task; a diagram or a
 `## Where to look first` entry will, once a later task adds them — run
