@@ -469,7 +469,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - Print FR-1's and FR-2's messages verbatim. Run in the main agent, with no sub-agent.
   - Traces to: FR-1, FR-2, FR-18 (front matter), NFR-6, C-1, AC-1, AC-1a, AC-3, AC-5, AC-35; ADR 0072 KC4, *Why there is no sub-agent*, *allowed-tools* paragraph, Risks (argument split), IA 10.
 
-- [ ] **TEST + IMPLEMENT: T9.2 — Step 2 probes the script, invokes it with the target only, and turns each exit status into exactly one outcome: continue, FR-3's stop, or FR-21's tooling fault**
+- [x] **TEST + IMPLEMENT: T9.2 — Step 2 probes the script, invokes it with the target only, and turns each exit status into exactly one outcome: continue, FR-3's stop, or FR-21's tooling fault**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by (R2, R3; `git status` compared per R1 for every stop):
     - Successful resolution:
