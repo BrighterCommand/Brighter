@@ -16,11 +16,11 @@ it was built, blast radius, an advisory Low/Medium/High merge-risk read, where t
 provenance table. This is not a review — it does not re-check correctness, security, TDD compliance,
 CI status or PR review outcomes.
 
-**This command is under active construction (spec 0037).** Only Step 1 is implemented below; Steps 2
-onward — the precondition gate, the ledger read, evidence reads, the synthesis stages and the write —
-land in later tasks and are not yet part of this command. Follow Step 1 exactly as written, and when
-it resolves successfully, **stop there**: print the resolution and do nothing else. Do not improvise
-any later step, and do not create or modify `show-me.md`, the fact ledger, or any other file.
+**This command is under active construction (spec 0037).** Only Steps 1 and 2 are implemented below;
+Steps 3 onward — the ledger read, evidence reads, the synthesis stages and the write — land in later
+tasks and are not yet part of this command. Follow Steps 1 and 2 exactly as written, and when Step 2
+finishes, **stop there**: print what it says to print and do nothing else. Do not improvise any later
+step, and do not create or modify `show-me.md`, the fact ledger, or any other file.
 
 ### Step 1 — Resolve the target spec directory
 
@@ -59,5 +59,41 @@ rule set, stopping at the first rule that yields exactly one match:
   otherwise.
 - Otherwise the target is the directory it names. Continue below.
 
-**On success**, print `Resolved target: specs/{dir}/.` and stop — per the note above, do not go
-further.
+**On success**, the target is resolved. Continue to Step 2.
+
+### Step 2 — Probe and invoke the measurement script, and map its exit status
+
+The script is `.claude/commands/spec/show_me_facts.cs`. Every stop in this step (all but the
+`unchecked`/`zero checkboxes`/`tasks.md absent` messages below) prints exactly:
+`/spec:show-me could not run its measurement script ({path}): {state}. No show-me.md was written.
+This is a tooling fault, not a fault in spec {dir} — re-run after restoring the script.` — with
+`{path}` the script's path and `{state}` as named at each bullet — and creates or modifies no file.
+
+- Run `test -f {path}`. If it fails, stop with `{state}` = `absent`.
+- Run `test -r {path}`. If it fails, stop with `{state}` = `unreadable`.
+- Otherwise invoke `dotnet run .claude/commands/spec/show_me_facts.cs -- specs/{dir}` — quoting
+  `{dir}` after `specs/` whenever it contains a space, the only form the allow-list entry permits
+  without a permission prompt. Never pass `--pinned` or `--release-notes`; those are the test
+  script's inputs only, never the command's.
+- The exit status, and nothing else — standard output is never parsed — decides what happens next:
+  - **`0`** — measured successfully; the ledger was written. Print `Measured target: specs/{dir}/.`
+    and stop there (Step 3, which reads the ledger, lands in a later task — do not improvise it, and
+    do not create or modify `show-me.md` or any other file).
+  - **`2`** — FR-3's precondition did not pass. Read the script's standard error and find the last
+    line beginning `show-me-gate: `.
+    - No such line, or it does not parse as one JSON object: stop with `{state}` = `gate facts were
+      not parseable`.
+    - Otherwise its `case` field selects exactly one message below, reading `unchecked`, `total` and
+      `first_unchecked` from the same record for the third case. Print the selected message (not the
+      tooling-fault template above) and stop. Do not create or modify any file.
+      - `"tasks.md absent"` → `Spec {dir} has no tasks.md — /spec:show-me runs only against a
+        finished spec. Current phase: run /spec:status.`
+      - `"zero checkboxes"` → `Spec {dir}'s tasks.md contains no task checkboxes — nothing to
+        summarise.`
+      - `"unchecked"` → `Spec {dir} is not finished: {unchecked} of {total} tasks are still
+        unchecked. First unfinished: {first_unchecked, one per line}. /spec:show-me runs only
+        against a finished spec.`
+  - **Any other status** — stop with `{state}` = `exited {code}`.
+
+Every value above is copied verbatim from the script's own exit status and standard error — never
+computed inline, and never used to write a partial or guessed file.
