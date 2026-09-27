@@ -849,7 +849,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - Replace (row 8) or insert after the first `##` line (row 9) with one exact-match `Edit`. Never stage anything.
   - Traces to: FR-23 (form, replacement), FR-7 (the reader), AC-89, AC-90, AC-92, AC-95; ADR 0078 KC4, KC5, IA 4.
 
-- [ ] **TEST + IMPLEMENT: T15.6 — `/spec:design` recommends `/spec:write_release_notes` when an ADR records a break, and `/spec:review`'s design criteria flag a break with no marked section**
+- [x] **TEST + IMPLEMENT: T15.6 — `/spec:design` recommends `/spec:write_release_notes` when an ADR records a break, and `/spec:review`'s design criteria flag a break with no marked section**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
     - `git diff $POST_T15_3 -- .claude/commands/spec/design.md .claude/commands/spec/review.md` (R1) shows one added step and one added check, with nothing else removed or reworded (AC-91). `$PRE` is not used here, because T15.3 has already added two checks to `review.md`.
