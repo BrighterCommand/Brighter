@@ -753,7 +753,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - Implementation should: place the risk step's lines in the order ADR 0073 KC4 gives; state factor levels only as the table shows them; and put no conditional on a level outside the markers.
   - Traces to: FR-12, FR-13, AC-22, AC-23; ADR 0073 KC4, IA 5 (rationale part).
 
-- [ ] **TEST + IMPLEMENT: T14.6 — Before the `Write`, the command checks its own diagrams and every path it names, so no over-cap block and no untracked path is ever written**
+- [x] **TEST + IMPLEMENT: T14.6 — Before the `Write`, the command checks its own diagrams and every path it names, so no over-cap block and no untracked path is ever written**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
     - `0033` with an untracked `PROMPT.md` and `PROMPT-history.md` added (R2): no occurrence of either anywhere, including diagrams, and every relative link resolves to a tracked path (AC-29).
