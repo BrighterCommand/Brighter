@@ -150,7 +150,8 @@ public class GcpPullOrderingMessageGatewayProvider
     {
         if (deadLetterRoutingKey != null)
         {
-            var dlqChannelName = new ChannelName(deadLetterRoutingKey.Value);
+            var nativeTopicName = new RoutingKey($"{deadLetterRoutingKey.Value}.native");
+            var nativeChannelName = new ChannelName($"{deadLetterRoutingKey.Value}.native");
 
             return new GcpPubSubSubscription<MyCommand>(
                 subscriptionName: new SubscriptionName(channelName),
@@ -158,15 +159,19 @@ public class GcpPullOrderingMessageGatewayProvider
                 routingKey: routingKey,
                 messagePumpType: MessagePumpType.Proactor,
                 ackDeadlineSeconds: 60,
-                requeueCount: 5,
-                deadLetter: new DeadLetterPolicy(deadLetterRoutingKey, dlqChannelName)
+                requeueCount: 3,
+                deadLetter: new DeadLetterPolicy(nativeTopicName, nativeChannelName)
                 {
                     AckDeadlineSeconds = 60,
                     MaxDeliveryAttempts = 5,
+                    PublisherMember = "serviceAccount:brighter-pubsub@brighter-test.iam.gserviceaccount.com",
                 },
                 makeChannels: makeChannel,
                 subscriptionMode: SubscriptionMode.Pull,
-                enableMessageOrdering: true
+                enableMessageOrdering: true,
+                subscriberMember: "serviceAccount:brighter-pubsub@brighter-test.iam.gserviceaccount.com",
+                deadLetterRoutingKey: deadLetterRoutingKey,
+                invalidMessageRoutingKey: invalidMessageRoutingKey
             );
         }
 
@@ -180,7 +185,8 @@ public class GcpPullOrderingMessageGatewayProvider
             ackDeadlineSeconds: 10,
             makeChannels: makeChannel,
             subscriptionMode: SubscriptionMode.Pull,
-            enableMessageOrdering: true
+            enableMessageOrdering: true,
+            invalidMessageRoutingKey: invalidMessageRoutingKey
         );
     }
 
@@ -241,6 +247,41 @@ public class GcpPullOrderingMessageGatewayProvider
     public IAmAChannelSync CreateChannel(GcpPubSubSubscription subscription)
     {
         _lastSubscription = subscription;
+
+        // Pre-provision the Brighter DLQ topic and reading subscription when channel creation is
+        // requested, so the destination exists before Reject routes there (ADR 0078 step 5).
+        if (subscription.DeadLetterRoutingKey != null && subscription.MakeChannels == OnMissingChannel.Create)
+        {
+            var dlqTopicName = subscription.DeadLetterRoutingKey;
+            var dlqChannelName = new ChannelName(dlqTopicName.Value);
+            var provisioningSubscription = new GcpPubSubSubscription<MyCommand>(
+                subscriptionName: new SubscriptionName(dlqChannelName),
+                channelName: dlqChannelName,
+                routingKey: dlqTopicName,
+                messagePumpType: MessagePumpType.Reactor,
+                makeChannels: OnMissingChannel.Create,
+                subscriptionMode: SubscriptionMode.Pull
+            );
+            _channelFactory.CreateSyncChannel(provisioningSubscription).Dispose();
+        }
+
+        // Pre-provision the invalid-message topic and reading subscription when channel creation is
+        // requested, so the destination exists before Reject routes there (ADR 0078 step 5).
+        if (subscription.InvalidMessageRoutingKey != null && subscription.MakeChannels == OnMissingChannel.Create)
+        {
+            var invalidTopicName = subscription.InvalidMessageRoutingKey;
+            var invalidChannelName = new ChannelName(invalidTopicName.Value);
+            var provisioningSubscription = new GcpPubSubSubscription<MyCommand>(
+                subscriptionName: new SubscriptionName(invalidChannelName),
+                channelName: invalidChannelName,
+                routingKey: invalidTopicName,
+                messagePumpType: MessagePumpType.Reactor,
+                makeChannels: OnMissingChannel.Create,
+                subscriptionMode: SubscriptionMode.Pull
+            );
+            _channelFactory.CreateSyncChannel(provisioningSubscription).Dispose();
+        }
+
         return _channelFactory.CreateSyncChannel(subscription);
     }
 
@@ -250,6 +291,43 @@ public class GcpPullOrderingMessageGatewayProvider
     )
     {
         _lastSubscription = subscription;
+
+        // Pre-provision the Brighter DLQ topic and reading subscription when channel creation is
+        // requested, so the destination exists before Reject routes there (ADR 0078 step 5).
+        if (subscription.DeadLetterRoutingKey != null && subscription.MakeChannels == OnMissingChannel.Create)
+        {
+            var dlqTopicName = subscription.DeadLetterRoutingKey;
+            var dlqChannelName = new ChannelName(dlqTopicName.Value);
+            var provisioningSubscription = new GcpPubSubSubscription<MyCommand>(
+                subscriptionName: new SubscriptionName(dlqChannelName),
+                channelName: dlqChannelName,
+                routingKey: dlqTopicName,
+                messagePumpType: MessagePumpType.Proactor,
+                makeChannels: OnMissingChannel.Create,
+                subscriptionMode: SubscriptionMode.Pull
+            );
+            var provisioningChannel = await _channelFactory.CreateAsyncChannelAsync(provisioningSubscription, cancellationToken);
+            provisioningChannel.Dispose();
+        }
+
+        // Pre-provision the invalid-message topic and reading subscription when channel creation is
+        // requested, so the destination exists before Reject routes there (ADR 0078 step 5).
+        if (subscription.InvalidMessageRoutingKey != null && subscription.MakeChannels == OnMissingChannel.Create)
+        {
+            var invalidTopicName = subscription.InvalidMessageRoutingKey;
+            var invalidChannelName = new ChannelName(invalidTopicName.Value);
+            var provisioningSubscription = new GcpPubSubSubscription<MyCommand>(
+                subscriptionName: new SubscriptionName(invalidChannelName),
+                channelName: invalidChannelName,
+                routingKey: invalidTopicName,
+                messagePumpType: MessagePumpType.Proactor,
+                makeChannels: OnMissingChannel.Create,
+                subscriptionMode: SubscriptionMode.Pull
+            );
+            var provisioningChannel = await _channelFactory.CreateAsyncChannelAsync(provisioningSubscription, cancellationToken);
+            provisioningChannel.Dispose();
+        }
+
         return await _channelFactory.CreateAsyncChannelAsync(subscription, cancellationToken);
     }
 
@@ -297,10 +375,15 @@ public class GcpPullOrderingMessageGatewayProvider
         CancellationToken cancellationToken = default
     )
     {
+        // Read from the Brighter dead-letter route ({deadLetterRoutingKey}) with a reading
+        // subscription of the same name, provisioned alongside the DLQ topic (ADR 0078 step 5).
+        var dlqTopicName = subscription.DeadLetterRoutingKey!;
+        var dlqChannelName = new ChannelName(dlqTopicName.Value);
+
         var dlqSubscription = new GcpPubSubSubscription<MyCommand>(
-            subscriptionName: new SubscriptionName(subscription.DeadLetter!.Subscription!.Value),
-            channelName: subscription.DeadLetter.Subscription,
-            routingKey: subscription.DeadLetter.TopicName,
+            subscriptionName: new SubscriptionName(dlqChannelName),
+            channelName: dlqChannelName,
+            routingKey: dlqTopicName,
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Assume,
             subscriptionMode: SubscriptionMode.Pull
@@ -331,10 +414,15 @@ public class GcpPullOrderingMessageGatewayProvider
 
     public Message GetMessageFromDeadLetterQueue(GcpPubSubSubscription subscription)
     {
+        // Read from the Brighter dead-letter route ({deadLetterRoutingKey}) with a reading
+        // subscription of the same name, provisioned alongside the DLQ topic (ADR 0078 step 5).
+        var dlqTopicName = subscription.DeadLetterRoutingKey!;
+        var dlqChannelName = new ChannelName(dlqTopicName.Value);
+
         var dlqSubscription = new GcpPubSubSubscription<MyCommand>(
-            subscriptionName: new SubscriptionName(subscription.DeadLetter!.Subscription!.Value),
-            channelName: subscription.DeadLetter.Subscription,
-            routingKey: subscription.DeadLetter.TopicName,
+            subscriptionName: new SubscriptionName(dlqChannelName),
+            channelName: dlqChannelName,
+            routingKey: dlqTopicName,
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Assume,
             subscriptionMode: SubscriptionMode.Pull
@@ -359,23 +447,85 @@ public class GcpPullOrderingMessageGatewayProvider
 
     public Message GetMessageFromInvalidChannel(GcpPubSubSubscription subscription)
     {
-        return Message.Empty;
+        // Read from the invalid-message route ({invalidMessageRoutingKey}) with a reading
+        // subscription of the same name, provisioned alongside the invalid-message topic (ADR 0078 step 5).
+        var invalidTopicName = subscription.InvalidMessageRoutingKey!;
+        var invalidChannelName = new ChannelName(invalidTopicName.Value);
+
+        var invalidSubscription = new GcpPubSubSubscription<MyCommand>(
+            subscriptionName: new SubscriptionName(invalidChannelName),
+            channelName: invalidChannelName,
+            routingKey: invalidTopicName,
+            messagePumpType: MessagePumpType.Reactor,
+            makeChannels: OnMissingChannel.Assume,
+            subscriptionMode: SubscriptionMode.Pull
+        );
+
+        var invalidChannel = _channelFactory.CreateSyncChannel(invalidSubscription);
+        try
+        {
+            var message = invalidChannel.Receive(TimeSpan.FromSeconds(5));
+            if (message.Header.MessageType != MessageType.MT_NONE)
+            {
+                invalidChannel.Acknowledge(message);
+            }
+
+            return message;
+        }
+        finally
+        {
+            invalidChannel.Dispose();
+        }
     }
 
-    public Task<Message> GetMessageFromInvalidChannelAsync(
+    public async Task<Message> GetMessageFromInvalidChannelAsync(
         GcpPubSubSubscription subscription,
         CancellationToken cancellationToken = default
     )
     {
-        return Task.FromResult(Message.Empty);
+        // Read from the invalid-message route ({invalidMessageRoutingKey}) with a reading
+        // subscription of the same name, provisioned alongside the invalid-message topic (ADR 0078 step 5).
+        var invalidTopicName = subscription.InvalidMessageRoutingKey!;
+        var invalidChannelName = new ChannelName(invalidTopicName.Value);
+
+        var invalidSubscription = new GcpPubSubSubscription<MyCommand>(
+            subscriptionName: new SubscriptionName(invalidChannelName),
+            channelName: invalidChannelName,
+            routingKey: invalidTopicName,
+            messagePumpType: MessagePumpType.Proactor,
+            makeChannels: OnMissingChannel.Assume,
+            subscriptionMode: SubscriptionMode.Pull
+        );
+
+        var invalidChannel = await _channelFactory.CreateAsyncChannelAsync(
+            invalidSubscription,
+            cancellationToken
+        );
+        try
+        {
+            var message = await invalidChannel.ReceiveAsync(
+                TimeSpan.FromSeconds(5),
+                cancellationToken
+            );
+            if (message.Header.MessageType != MessageType.MT_NONE)
+            {
+                await invalidChannel.AcknowledgeAsync(message, cancellationToken);
+            }
+
+            return message;
+        }
+        finally
+        {
+            invalidChannel.Dispose();
+        }
     }
 
     public RejectionMetadataKeys RejectionMetadataKeys =>
         new RejectionMetadataKeys(
-            string.Empty,
-            string.Empty,
-            string.Empty,
-            string.Empty,
-            string.Empty
+            RejectionMetadataKeyNames.OriginalTopic,
+            RejectionMetadataKeyNames.OriginalMessageType,
+            RejectionMetadataKeyNames.RejectionReason,
+            RejectionMetadataKeyNames.RejectionMessage,
+            RejectionMetadataKeyNames.RejectionTimestamp
         );
 }
