@@ -79,9 +79,16 @@ public class GcpPubSubConsumerFactory(GcpMessagingGatewayConnection connection)
         // Check if the consumer should use dedicated Pull mode
         if (pubSubSubscription.SubscriptionMode == SubscriptionMode.Pull)
         {
-            // Create a new, non-shared consumer that uses the Pull API for each request
-            return new GcpPullMessageConsumer(_connection, subscriptionName,
-                pubSubSubscription.BufferSize, pubSubSubscription.TimeProvider);
+            // Create a new, non-shared consumer that uses the Pull API for each request,
+            // wiring the Brighter rejection routing keys so Reject routes rather than discards.
+            return new GcpPullMessageConsumer(
+                _connection,
+                subscriptionName,
+                pubSubSubscription.BufferSize,
+                pubSubSubscription.TimeProvider,
+                deadLetterRoutingKey: pubSubSubscription.DeadLetterRoutingKey,
+                invalidMessageRoutingKey: pubSubSubscription.InvalidMessageRoutingKey,
+                makeChannels: pubSubSubscription.MakeChannels);
         }
 
         // If not Pull, use Stream mode. Stream mode consumers are shared per subscription to manage

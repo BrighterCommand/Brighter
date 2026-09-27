@@ -17,10 +17,21 @@ public partial class GcpPullMessageConsumer(
     GcpMessagingGatewayConnection connection,
     Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
     int batchSize,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    RoutingKey? deadLetterRoutingKey = null,
+    RoutingKey? invalidMessageRoutingKey = null,
+    OnMissingChannel makeChannels = OnMissingChannel.Assume)
     : IAmAMessageConsumerAsync, IAmAMessageConsumerSync
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<GcpPullMessageConsumer>();
+
+    private readonly GcpRejectionRouter _router = new GcpRejectionRouter(
+        connection,
+        deadLetterRoutingKey,
+        invalidMessageRoutingKey,
+        makeChannels,
+        subscriptionName.ProjectId,
+        timeProvider);
     
     /// <summary>
     /// Synchronously acknowledges a message.
@@ -266,16 +277,25 @@ public partial class GcpPullMessageConsumer(
     }
     
        /// <summary>
-    /// Synchronously rejects a message.
+    /// Synchronously rejects a message, routing a stamped copy to the configured dead-letter
+    /// destination before acknowledging the original.
     /// </summary>
     /// <param name="message">The message to reject.</param>
     /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
-    /// <returns>True if the message was successfully rejected/acknowledged, otherwise false.</returns>
+    /// <returns>Always <see langword="true"/>: the message is settled by this call.</returns>
     public bool Reject(Message message, MessageRejectionReason? reason = null)
     {
-        if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var handler) || handler is not string ackId)
+        // Copy the handle before the router strips it from the bag.
+        message.Header.Bag.TryGetValue("ReceiptHandle", out var handler);
+        var ackId = handler as string;
+
+        _router.Route(message, reason);
+
+        if (ackId == null)
         {
-            return false;
+            // Missing handle: routing still ran, but we cannot settle the original.
+            Log.RejectMissingHandle(s_logger, message.Id.Value);
+            return true;
         }
 
         Log.RejectMessage(s_logger, message.Id.Value, ackId, subscriptionName.ToString());
@@ -293,17 +313,26 @@ public partial class GcpPullMessageConsumer(
     }
 
     /// <summary>
-    /// Asynchronously rejects a message.
+    /// Asynchronously rejects a message, routing a stamped copy to the configured dead-letter
+    /// destination before acknowledging the original.
     /// </summary>
     /// <param name="message">The message to reject.</param>
     /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A task that returns true if the message was successfully rejected/acknowledged, otherwise false.</returns>
+    /// <returns>A task that always returns <see langword="true"/>: the message is settled by this call.</returns>
     public async Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default)
     {
-        if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var handler) || handler is not string ackId)
+        // Copy the handle before the router strips it from the bag.
+        message.Header.Bag.TryGetValue("ReceiptHandle", out var handler);
+        var ackId = handler as string;
+
+        await _router.RouteAsync(message, reason, cancellationToken);
+
+        if (ackId == null)
         {
-            return false;
+            // Missing handle: routing still ran, but we cannot settle the original.
+            Log.RejectMissingHandle(s_logger, message.Id.Value);
+            return true;
         }
 
         Log.RejectMessage(s_logger, message.Id.Value, ackId, subscriptionName.ToString());
@@ -382,13 +411,14 @@ public partial class GcpPullMessageConsumer(
         }
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        return new ValueTask();
+        await _router.DisposeAsync();
     }
 
     public void Dispose()
     {
+        _router.Dispose();
     }
 
     /// <summary>
@@ -455,6 +485,10 @@ public partial class GcpPullMessageConsumer(
             "PullPubSubConsumer: Error during rejecting the message {Id} with the receipt handle {ReceiptHandle} on the subscription {SubscriptionName}")]
         public static partial void RejectError(ILogger logger, Exception ex, string id, string receiptHandle,
             string subscriptionName);
+
+        [LoggerMessage(LogLevel.Error,
+            "PullPubSubConsumer: Message {Id} has no receipt handle; routed copy published but the original cannot be settled")]
+        public static partial void RejectMissingHandle(ILogger logger, string id);
 
         [LoggerMessage(LogLevel.Information, "PullPubSubConsumer: Purging the subscription {SubscriptionName}")]
         public static partial void PurgeStart(ILogger logger, string subscriptionName);
