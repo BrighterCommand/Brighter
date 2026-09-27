@@ -735,7 +735,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - Write row 13 verbatim.
   - Traces to: FR-14 (including the fewer-than-three rule), FR-6 (e) placed-elsewhere line, FR-16 row 13, AC-26, AC-36, AC-60, AC-65; ADR 0077 KC5, IA 3; ADR 0072 KC5.
 
-- [ ] **TEST + IMPLEMENT: T14.4 — Inputs used gives exactly FR-15's rows plus one per Explainer source file, each marked from the read log, and never a row for the ledger, the script, review or CI**
+- [x] **TEST + IMPLEMENT: T14.4 — Inputs used gives exactly FR-15's rows plus one per Explainer source file, each marked from the read log, and never a row for the ledger, the script, review or CI**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
     - K2 in the clone, which resolves `spec/low-risk` so a diff is measured, and has no marked section, run with an R5 stand-in that answers `pr list …` with `[]` and exits 0, so there is no PR (FR-16 row 1): AC-27 — the pull-request row reads `not available: no PR found for branch spec/low-risk`, the metadata block's PR reference reads `none found`, `release_notes.md` is `not available`, and `tasks.md`, `requirements.md`, `.adr-list` and git history are `used`. There is no review or CI row.
