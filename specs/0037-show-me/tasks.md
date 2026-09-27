@@ -707,7 +707,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - Breaking changes: rows 5, 5a and 14 lines; the none line; and the disagreement line only when `m` is non-null and differs from `{n}`.
   - Traces to: FR-6 (narrative), FR-7, FR-16 rows 5, 5a, 6, 7 and 14, C-9, AC-12, AC-13, AC-14, AC-37, AC-40, AC-42, AC-51; ADR 0072 KC5; ADR 0077 IA 3.
 
-- [ ] **TEST + IMPLEMENT: T14.2 — Did it ship what it said? renders the Classifier's statuses as one collapsed shipped-as-planned line, one entry per deviation, Part 3 and a count line, keeping the partition invariant**
+- [x] **TEST + IMPLEMENT: T14.2 — Did it ship what it said? renders the Classifier's statuses as one collapsed shipped-as-planned line, one entry per deviation, Part 3 and a count line, keeping the partition invariant**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
     - K9: AC-15 — total 17; every id appears exactly once across Parts 1 and 2; the count terms sum to 17.
