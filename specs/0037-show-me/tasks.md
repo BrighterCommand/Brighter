@@ -622,7 +622,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 
 *ADR 0073 IA 1–5, inside ADR 0072 IA 10's Step 5. Depends on Phase 12.*
 
-- [ ] **TEST + IMPLEMENT: T13.1 — The FR-13 invariant check finds no paragraph outside the risk-step markers that joins a conditional keyword to a level name, and requires exactly one marker pair**
+- [x] **TEST + IMPLEMENT: T13.1 — The FR-13 invariant check finds no paragraph outside the risk-step markers that joins a conditional keyword to a level name, and requires exactly one marker pair**
   - **USE COMMAND**: `/test-first when the show-me test script checks the command file it should report no paragraph outside the risk-step markers containing both a whole-word conditional and a capitalised level name`
   - Test script: `.claude/commands/spec/show_me_facts_tests.cs`
   - Test row(s): the FR-13 row over `.claude/commands/spec/show-me.md`; the AC-81 literal line held in the test script; one positive self-check paragraph held in the test script.
