@@ -22,21 +22,22 @@ THE SOFTWARE. */
 
 #endregion
 
-#nullable enable
+using System;
+using System.Linq;
+using Paramore.Brighter.Actions;
 
-using System.Runtime.CompilerServices;
+namespace Paramore.Brighter;
 
-namespace Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles;
-
-internal sealed class ResilienceActionHandler : RequestHandler<ResilienceActionCommand>
+internal static class BackstopExceptionFilter
 {
-    // Keep the throwing frame available for stack-trace assertions.
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    public override ResilienceActionCommand Handle(ResilienceActionCommand command)
+    public static bool ShouldPropagate(Exception exception)
     {
-        command.Attempts++;
-        if (command.Exception != null)
-            throw command.Exception;
-        return base.Handle(command);
+        // The pump inspects direct inner exceptions, so nested aggregates must use the fallback.
+        return IsPumpAction(exception)
+            || exception is AggregateException { InnerExceptions.Count: > 0 } aggregate
+            && aggregate.InnerExceptions.All(IsPumpAction);
     }
+
+    private static bool IsPumpAction(Exception exception) =>
+        exception is RejectMessageAction or DeferMessageAction or DontAckAction or InvalidMessageAction;
 }
