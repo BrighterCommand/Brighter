@@ -256,6 +256,11 @@ refactoring. Grade against `.agent_instructions/documentation.md` § *ADR struct
   *(this one)*. A map that is right for the newest ADR and stale for the rest is worse than no map.
 - **Is the unifying sentence stated identically across the siblings that apply it**, or has it been
   paraphrased into three not-quite-equivalent versions?
+- **Release Notes Coverage.** Does the ADR set (or any ADR in it) record, in its `## Consequences`,
+  a change that breaks an existing behaviour or interface? If so, does `release_notes.md` carry a
+  section marked for this spec (a `### … (spec {NNNN})` heading immediately followed by
+  `<!-- spec: {this spec's directory name} -->`)? A breaking change with no such marked section is
+  a finding — recommend running `/spec:write_release_notes`.
 
 ---
 
