@@ -925,7 +925,7 @@ Every case in this phase sweeps the whole `Paramore.Brighter.Core.Tests` assembl
 
 *ADR 0073 step 5 — the thirteenth-gateway audit.*
 
-- [ ] **54. TEST + IMPLEMENT: Every shipped gateway project is named by exactly one conformance configuration**
+- [x] **54. TEST + IMPLEMENT: Every shipped gateway project is named by exactly one conformance configuration**
   - **USE COMMAND**: `/test-first when auditing gateway conformance configuration every messaging gateway project should be named by exactly one SubscriptionType`
   - Test location: "tests/Paramore.Brighter.Test.Generator.Tests/GeneratedFileAudit"
   - Test files, written in this order:
