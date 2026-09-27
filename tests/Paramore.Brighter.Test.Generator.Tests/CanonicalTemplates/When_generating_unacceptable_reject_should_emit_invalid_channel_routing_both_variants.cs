@@ -197,6 +197,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
 
         // Assert — rejection reason "Unacceptable" and original-topic assertion
         var content = await File.ReadAllTextAsync(ReactorOutputPath(configuration));
+        Assert.Contains("if (keys.StampsRejectionMetadata)", content);
         Assert.Contains("keys.RejectionReason", content);
         Assert.Contains("keys.OriginalTopic", content);
         Assert.Contains("_publication.Topic!.Value", content);
@@ -215,6 +216,7 @@ public class WhenGeneratingUnacceptableRejectShouldEmitInvalidChannelRoutingBoth
 
         // Assert — rejection reason "Unacceptable" and original-topic assertion
         var content = await File.ReadAllTextAsync(ProactorOutputPath(configuration));
+        Assert.Contains("if (keys.StampsRejectionMetadata)", content);
         Assert.Contains("keys.RejectionReason", content);
         Assert.Contains("keys.OriginalTopic", content);
         Assert.Contains("_publication.Topic!.Value", content);

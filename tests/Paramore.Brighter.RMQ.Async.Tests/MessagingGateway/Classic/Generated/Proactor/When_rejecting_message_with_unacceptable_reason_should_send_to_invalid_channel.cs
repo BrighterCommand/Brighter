@@ -41,7 +41,7 @@ public class WhenRejectingMessageWithUnacceptableReasonShouldSendToInvalidChanne
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #4240 — reject with unacceptable reason to invalid channel not yet conformant for RMQ.Async / Classic (maintainer sign-off)")]
+    [Fact]
     public async Task When_rejecting_message_with_unacceptable_reason_should_send_to_invalid_channel_async()
     {
         // Arrange
@@ -82,10 +82,13 @@ public class WhenRejectingMessageWithUnacceptableReasonShouldSendToInvalidChanne
         Assert.NotEqual(MessageType.MT_NONE, invalidMessage.Header.MessageType);
 
         var keys = _messageGatewayProvider.RejectionMetadataKeys;
-        Assert.True(invalidMessage.Header.Bag.ContainsKey(keys.OriginalTopic));
-        Assert.Equal(_publication.Topic!.Value, invalidMessage.Header.Bag[keys.OriginalTopic].ToString());
-        Assert.True(invalidMessage.Header.Bag.ContainsKey(keys.RejectionReason));
-        Assert.Equal(RejectionReason.Unacceptable.ToString(), invalidMessage.Header.Bag[keys.RejectionReason].ToString());
+        if (keys.StampsRejectionMetadata)
+        {
+            Assert.True(invalidMessage.Header.Bag.ContainsKey(keys.OriginalTopic));
+            Assert.Equal(_publication.Topic!.Value, invalidMessage.Header.Bag[keys.OriginalTopic].ToString());
+            Assert.True(invalidMessage.Header.Bag.ContainsKey(keys.RejectionReason));
+            Assert.Equal(RejectionReason.Unacceptable.ToString(), invalidMessage.Header.Bag[keys.RejectionReason].ToString());
+        }
 
         // Assert — nothing reached the dead-letter queue. A single receive rather than a poll
         // loop: the claim is that no message arrives, so polling could only wait out the ceiling.

@@ -69,6 +69,8 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     private readonly int? _maxQueueLength;
     private readonly QueueType _queueType;
 
+    internal RoutingKey? InvalidMessageRoutingKey { get; set; }
+
     /// <summary>
     /// Initializes a new instance of the <see cref="RmqMessageGateway" /> class.
     /// </summary>
@@ -335,6 +337,11 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     /// <summary>
     /// Rejects the specified message.
     /// </summary>
+    /// <remarks>
+    /// Unacceptable messages use the configured invalid-message routing key; other rejections use the native dead-letter route.
+    /// The original is acknowledged only after a confirmed forward. A failed forward leaves it unacknowledged;
+    /// if acknowledgement fails after forwarding, redelivery can produce a duplicate.
+    /// </remarks>
     /// <param name="message">The message.</param>
     /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
     public bool Reject(Message message, MessageRejectionReason? reason = null) => BrighterAsyncContext.Run(async () => await RejectAsync(message, reason));
@@ -342,6 +349,11 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     /// <summary>
     /// Rejects the specified message.
     /// </summary>
+    /// <remarks>
+    /// Unacceptable messages use the configured invalid-message routing key; other rejections use the native dead-letter route.
+    /// The original is acknowledged only after a confirmed forward. A failed forward leaves it unacknowledged;
+    /// if acknowledgement fails after forwarding, redelivery can produce a duplicate.
+    /// </remarks>
     /// <param name="message">The message.</param>
     /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
     /// <param name="cancellationToken">Allows the asynchronous operation to be canceled</param>
@@ -358,6 +370,13 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
             
             Log.NoAckMessage(s_logger, message.Id.Value, message.DeliveryTag, reasonString, description);
             
+            if (reason?.RejectionReason == RejectionReason.Unacceptable && !RoutingKey.IsNullOrEmpty(InvalidMessageRoutingKey))
+            {
+                await ForwardToInvalidChannelAsync(message, reason, cancellationToken);
+                await AcknowledgeAsync(message, cancellationToken);
+                return true;
+            }
+
             //if we have a DLQ, this will force over to the DLQ
             await Channel.BasicRejectAsync(message.DeliveryTag, false, cancellationToken);
             return true;
@@ -531,6 +550,28 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
             Connection.AmpqUri.GetSanitizedUri());
     }
 
+    private async Task ForwardToInvalidChannelAsync(Message message, MessageRejectionReason reason, CancellationToken cancellationToken)
+    {
+        var originalTopic = message.Header.Topic;
+        try
+        {
+            message.Header.Bag[HeaderNames.ORIGINAL_TOPIC] = originalTopic.Value;
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
+            message.Header.Bag[HeaderNames.ORIGINAL_TYPE] = message.Header.MessageType.ToString();
+#pragma warning restore CS0618
+            message.Header.Bag[HeaderNames.REJECTION_REASON] = reason.RejectionReason.ToString();
+            message.Header.Bag[HeaderNames.REJECTION_MESSAGE] = reason.Description ?? string.Empty;
+            message.Header.Bag[HeaderNames.REJECTION_TIMESTAMP] = DateTimeOffset.UtcNow.ToString("o");
+            message.Header.Topic = InvalidMessageRoutingKey!;
+            var publisher = new RmqMessagePublisher(Channel!, Connection);
+            await publisher.PublishMessageAsync(message, cancellationToken: cancellationToken, mandatory: true);
+        }
+        finally
+        {
+            message.Header.Topic = originalTopic;
+        }
+    }
+
     private async Task CreateQueueAsync(CancellationToken cancellationToken)
     {
         if (Channel is null) throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
@@ -541,6 +582,12 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         await Channel.QueueDeclareAsync(_queueName.Value, _isDurable, false, false, SetQueueArguments(),
             cancellationToken: cancellationToken);
         
+        if (!RoutingKey.IsNullOrEmpty(InvalidMessageRoutingKey))
+        {
+            await Channel.QueueDeclareAsync(InvalidMessageRoutingKey.Value, _isDurable, false, false,
+                cancellationToken: cancellationToken);
+        }
+
         if (_hasDlq)
         {
             await Channel.QueueDeclareAsync(_deadLetterQueueName!.Value, _isDurable, false, false,
@@ -558,6 +605,12 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         {
             await Channel.QueueBindAsync(_queueName.Value, Connection.Exchange.Name, key.Value,
                 cancellationToken: cancellationToken);
+        }
+
+        if (!RoutingKey.IsNullOrEmpty(InvalidMessageRoutingKey))
+        {
+            await Channel.QueueBindAsync(InvalidMessageRoutingKey.Value, Connection.Exchange.Name,
+                InvalidMessageRoutingKey.Value, cancellationToken: cancellationToken);
         }
 
         if (_hasDlq)
@@ -592,6 +645,8 @@ public partial class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
         try
         {
             await Channel.QueueDeclarePassiveAsync(_queueName.Value, cancellationToken);
+            if (!RoutingKey.IsNullOrEmpty(InvalidMessageRoutingKey))
+                await Channel.QueueDeclarePassiveAsync(InvalidMessageRoutingKey.Value, cancellationToken);
         }
         catch (Exception e)
         {

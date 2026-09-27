@@ -48,6 +48,31 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         public const string TOPIC = "Topic";
 
         /// <summary>
+        /// The original topic before rejection.
+        /// </summary>
+        public const string ORIGINAL_TOPIC = "OriginalTopic";
+
+        /// <summary>
+        /// The original message type before rejection.
+        /// </summary>
+        public const string ORIGINAL_TYPE = "OriginalType";
+
+        /// <summary>
+        /// The reason for rejection.
+        /// </summary>
+        public const string REJECTION_REASON = "RejectionReason";
+
+        /// <summary>
+        /// The description of the rejection.
+        /// </summary>
+        public const string REJECTION_MESSAGE = "RejectionMessage";
+
+        /// <summary>
+        /// The UTC time the message was rejected.
+        /// </summary>
+        public const string REJECTION_TIMESTAMP = "RejectionTimestamp";
+
+        /// <summary>
         /// The handled count
         /// </summary>
         public const string HANDLED_COUNT = "HandledCount";
