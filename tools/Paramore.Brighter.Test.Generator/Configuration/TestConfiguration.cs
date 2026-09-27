@@ -78,6 +78,12 @@ public class TestConfiguration
     public Dictionary<string, MessagingGatewayConfiguration>? MessagingGateways { get; set; }
 
     /// <summary>
+    /// Gets or sets the gateway conformance configuration for generating the channel factory
+    /// declaration sweep test.
+    /// </summary>
+    public GatewayConformanceConfiguration? GatewayConformance { get; set; }
+
+    /// <summary>
     /// The name of the message builder rendered when a configuration does not name one.
     /// </summary>
     public const string DEFAULT_MESSAGE_BUILDER = "DefaultMessageBuilder";

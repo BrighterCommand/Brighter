@@ -48,5 +48,8 @@
       "HasSupportToValidateBrokerExistence": true,
       "ReceiveMessageTimeoutInMilliseconds": 4000
     }
+  },
+  "GatewayConformance": {
+    "SubscriptionType": "Paramore.Brighter.MessagingGateway.AWSSQS.SqsSubscription"
   }
 }

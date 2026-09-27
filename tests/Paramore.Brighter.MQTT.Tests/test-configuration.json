@@ -11,5 +11,8 @@
     "HasSupportToValidateBrokerExistence": false,
     "HasSupportToValidateInfrastructure": false,
     "ReceiveMessageTimeoutInMilliseconds": 5000
+  },
+  "GatewayConformance": {
+    "SubscriptionType": "Paramore.Brighter.MessagingGateway.MQTT.MqttSubscription"
   }
 }
