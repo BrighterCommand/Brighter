@@ -523,7 +523,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - Keep the read log with path, method and bytes. Reserve 100,000 B for the Explainer. Never read `PROMPT*.md`.
   - Traces to: NFR-3, FR-6 (f) (reserve size), FR-17, AC-52, AC-76, AC-77, AC-78; ADR 0072 KC3 *How a read is made*, *The read log*, *The full diff is never read*, IA 10.
 
-- [ ] **TEST + IMPLEMENT: T10.2 — Step 4 reads its inputs in KC3's order, always reads a marked release-notes section when every such section fits, and records a present-but-unread section as row 5a**
+- [x] **TEST + IMPLEMENT: T10.2 — Step 4 reads its inputs in KC3's order, always reads a marked release-notes section when every such section fits, and records a present-but-unread section as row 5a**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
     - AC-69, with a temporary hand-marked section (R2):
