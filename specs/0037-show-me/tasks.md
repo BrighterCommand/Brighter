@@ -806,7 +806,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - Implementation should: add the two checks, worded by example.
   - Traces to: FR-22, AC-88; ADR 0078 KC3, IA 3.
 
-- [ ] **TEST + IMPLEMENT: T15.4 — `/spec:write_release_notes` resolves its target as `/spec:show-me` does and stops without writing on every ladder row from 1 to 7**
+- [x] **TEST + IMPLEMENT: T15.4 — `/spec:write_release_notes` resolves its target as `/spec:show-me` does and stops without writing on every ladder row from 1 to 7**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by (`shasum release_notes.md` and `git status` taken before and after each case; R2):
     - Real repository:
