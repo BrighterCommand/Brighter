@@ -495,7 +495,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
     - Never compute a value inline and never write a partial file.
   - Traces to: FR-3, FR-19 (stop prints only the message), FR-21 (failure mode), NFR-8, AC-1a, AC-2, AC-4, AC-6, AC-7, AC-8, AC-35, AC-71, AC-72, AC-93; ADR 0072 KC4, allow-list paragraph (spaced names), IA 10.
 
-- [ ] **TEST + IMPLEMENT: T9.3 — Step 3 reads the ledger in sized windows, stops on anything but one JSON object, and afterwards copies every counted value by field name**
+- [x] **TEST + IMPLEMENT: T9.3 — Step 3 reads the ledger in sized windows, stops on anything but one JSON object, and afterwards copies every counted value by field name**
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by:
     - AC-72, fifth state: temporarily edit the script to write `{} {}` and exit `0`. Running `/spec:show-me 0033-pg-advisory-lock-sha256` prints `ledger was not a single JSON object`. No `show-me.md` is written, the replaced ledger stays in place, and `git status` is identical. Delete the ledger and `git checkout` the script afterwards.
