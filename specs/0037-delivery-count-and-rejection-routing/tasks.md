@@ -438,7 +438,7 @@
 
 ## Phase 5 — GCP rejection routing and IAM tolerance (#4386, #4354; ADR 0078)
 
-- [ ] **5.1 TEST + IMPLEMENT: `GcpPubSubSubscription` offers dead-letter and invalid-message routing keys through the Brighter support interfaces**
+- [x] **5.1 TEST + IMPLEMENT: `GcpPubSubSubscription` offers dead-letter and invalid-message routing keys through the Brighter support interfaces**
   - **USE COMMAND**: `/test-first when a gcp subscription is constructed with dead letter and invalid message routing keys should expose them through the brighter support interfaces`
   - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway"
   - Test file: `When_creating_gcp_subscription_with_dlq_routing_keys_should_expose_properties.cs`
