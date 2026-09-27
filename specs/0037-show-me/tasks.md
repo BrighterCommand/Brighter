@@ -792,7 +792,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
   - Implementation should: add the form and its examples to the template and the quality bar, without removing or renumbering anything.
   - Traces to: FR-22, NFR-6, AC-86; ADR 0078 KC1, IA 1.
 
-- [ ] **TEST + IMPLEMENT: T15.2 — `/spec:tasks` gives one template line per tag, requires the tag first with any id after the colon, and lists the drifted form only under *DO NOT***
+- [x] **TEST + IMPLEMENT: T15.2 — `/spec:tasks` gives one template line per tag, requires the tag first with any id after the colon, and lists the drifted form only under *DO NOT***
   - **⛔ APPROVAL GATE — STOP HERE and WAIT FOR USER APPROVAL in IDE before implementing** *(fires in the `review-before` gear, which is the default)*
   - Verify by: running the task-type tag pattern over `.claude/commands/spec/tasks.md` matches every example checkbox line outside the *DO NOT Format Tasks Like This* block; the four tag lines are present; the drifted `T1.1 — STRUCTURAL` form appears only inside that block; no pattern text is present; `git diff $PRE` is additive (AC-87).
   - Implementation should: add the four template lines from ADR 0078 KC2 and the drifted form to the *DO NOT* block.
