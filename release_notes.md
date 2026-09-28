@@ -2,6 +2,15 @@
 
 ## Master
 
+### Relational outbox configuration registration (#4279)
+
+`AddProducers(Action<ProducersConfiguration>, ...)` now registers a relational outbox's database configuration when `IAmARelationalDatabaseConfiguration` is missing.
+The fallback reuses the outbox's configuration instance. Existing explicit registrations and provider lifetimes remain unchanged.
+A later ordinary registration overrides the fallback for single-service resolution; a later `TryAdd` does not.
+
+The deferred `AddProducers(Func<IServiceProvider, ProducersConfiguration>, ...)` overload still requires explicit configuration registration when a provider needs it.
+Non-relational outboxes do not register database configuration.
+
 ### Scoped lifetime per pipeline (spec 0036, #4256)
 
 `HandlerLifetime`, `MapperLifetime` and `TransformerLifetime` now govern a **pipeline-scoped** DI scope: a `Scoped` handler, mapper or transform resolves from one DI scope shared by every `Scoped` participant on that pipeline, and disposed when the pipeline ends. An ASP.NET Core host can additionally opt a pipeline in to **adopting** an ambient request scope instead of creating its own, through a new `Paramore.Brighter.Extensions.AspNetCore` package (`AddBrighterRequestScope(...)`), and `ValidatePipelines()` gained seven new startup checks for common lifetime and scope-registration mistakes. See [docs/guides/lifetimes-and-scoping.md](docs/guides/lifetimes-and-scoping.md) for the full model, decision guide and troubleshooting, and [ADR 0070](docs/adr/0070-per-pipeline-di-scope-for-mapper-and-transform-factories.md) through [ADR 0076](docs/adr/0076-scope-affinity-option-and-write-through.md) for the design.
