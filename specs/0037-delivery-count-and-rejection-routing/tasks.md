@@ -618,7 +618,7 @@
     - Ensure the router never caches a failed or null producer (unlike SQS's `Lazy<T>`, `SqsMessageConsumer.cs:104`), and that a fresh `PublisherClient` clears an ordering-key pause
   - Depends on: 5.8
 
-- [ ] **5.10 TEST + IMPLEMENT: A failed ack or release RPC during GCP Reject is logged at Error and Reject still returns true (fault-interceptor evidence, R-16/R-17/R-19)**
+- [x] **5.10 TEST + IMPLEMENT: A failed ack or release RPC during GCP Reject is logged at Error and Reject still returns true (fault-interceptor evidence, R-16/R-17/R-19)**
   - **USE COMMAND**: `/test-first when a gcp pull settle call fails during reject should log an error return true and leave the message redeliverable`
   - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Pull"
   - Test file: `When_a_gcp_pull_settle_call_fails_should_return_true_and_leave_message_redeliverable.cs` (async: `…_async.cs`), on `GCP / Pull` and `GCP / PullOrdering`, `AckDeadlineSeconds: 10`. These are test-only fault-injection tests for the failures a broker cannot produce on demand (ADR 0078 step 8; R-16/R-17 failed ack, R-19 failed release). Write them and observe them RED **before** adding the settle-failure handling.
