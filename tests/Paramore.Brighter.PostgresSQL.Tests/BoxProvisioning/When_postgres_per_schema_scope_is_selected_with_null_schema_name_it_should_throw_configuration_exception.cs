@@ -91,15 +91,15 @@ WHERE TABLE_SCHEMA = @SchemaName AND TABLE_NAME = @TableName)";
 
     private async Task<long> GetHistoryRowCountAsync(string tableName)
     {
+        // PostgreSQL cannot plan a query that references a missing table.
+        if (!await TableExistsInSchemaAsync("__BrighterMigrationHistory", "public"))
+            return 0;
+
         await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
-        // The shared history table may not exist on a clean database; treat "absent" as zero rows.
         command.CommandText = @"
-SELECT CASE WHEN EXISTS(SELECT 1 FROM information_schema.tables
-                        WHERE table_schema = 'public' AND table_name = '__BrighterMigrationHistory')
-            THEN (SELECT COUNT(1) FROM ""public"".""__BrighterMigrationHistory"" WHERE ""BoxTableName"" = @BoxTableName)
-            ELSE 0 END";
+SELECT COUNT(1) FROM ""public"".""__BrighterMigrationHistory"" WHERE ""BoxTableName"" = @BoxTableName";
         command.Parameters.AddWithValue("@BoxTableName", tableName);
         return (long)(await command.ExecuteScalarAsync())!;
     }
