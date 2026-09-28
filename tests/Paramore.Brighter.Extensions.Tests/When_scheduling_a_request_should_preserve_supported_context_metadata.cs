@@ -40,6 +40,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
+[Collection(JsonSerialisationCollection.NAME)]
 public class ScheduledRequestContextTests
 {
     [Theory]

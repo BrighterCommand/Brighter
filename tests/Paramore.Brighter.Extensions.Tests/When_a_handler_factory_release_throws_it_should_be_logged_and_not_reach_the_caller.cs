@@ -38,6 +38,7 @@ namespace Paramore.Brighter.Extensions.Tests;
 // first-class extension point client code implements directly, per IAmAHandlerFactorySync's own doc
 // comment — not about container-Scoped resolution, which ServiceProviderHandlerFactory.Release no longer
 // participates in after T2.3 (it is a no-op; disposal is driven by the pipeline scope handle).
+[Collection(LoggerCaptureCollection.NAME)]
 public class HandlerFactoryReleaseFailureTests
 {
     [Fact]

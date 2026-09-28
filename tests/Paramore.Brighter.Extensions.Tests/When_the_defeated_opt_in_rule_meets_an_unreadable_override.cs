@@ -48,6 +48,7 @@ namespace Paramore.Brighter.Extensions.Tests;
 // of failing validation. The unreadable-override Warning and the defeated-opt-in Error are not duplicates
 // of each other - they report two different problems (the override's value can't be read; the opt-in
 // never took effect) that happen to co-occur here.
+[Collection(LoggerCaptureCollection.NAME)]
 public class DefeatedOptInMeetsUnreadableOverrideTests
 {
     [Fact]

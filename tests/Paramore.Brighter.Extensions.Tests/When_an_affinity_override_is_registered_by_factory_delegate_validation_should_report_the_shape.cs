@@ -39,6 +39,7 @@ namespace Paramore.Brighter.Extensions.Tests;
 // value off, so a conflicting repeat carrying it would go unreported. This rule reports the registration
 // shape itself - readable - rather than the value, which isn't, and it is a Warning because nothing about
 // such a host is broken: what's lost is a diagnostic, not the opt-in.
+[Collection(LoggerCaptureCollection.NAME)]
 public class UnreadableOverrideValidationTests
 {
     [Fact]

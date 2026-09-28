@@ -38,6 +38,7 @@ namespace Paramore.Brighter.Extensions.Tests;
 // per-pipeline scoping this spec builds exists to prevent. Brighter must recognise its own root and
 // refuse to borrow from it, falling back to creating and owning a scope per request exactly as it does
 // for any other unusable ambient, and say so once rather than silently defeating its own guarantee.
+[Collection(LoggerCaptureCollection.NAME)]
 public class RootProviderAmbientDiagnosticTests
 {
     [Fact]
