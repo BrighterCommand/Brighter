@@ -296,6 +296,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="configure">A callback that allows you to configure <see cref="ProducersConfiguration"/> options</param>
         /// <param name="serviceLifetime">The DI container registration lifetime for the transaction provider (default: Transient)</param>
         /// <returns>The Brighter builder to allow chaining of requests</returns>
+        /// <remarks>
+        /// A <see cref="RelationDatabaseOutbox"/> supplies its configuration as a singleton
+        /// <see cref="IAmARelationalDatabaseConfiguration"/> when that service is not already registered.
+        /// Existing explicit registrations retain their lifetimes. A later ordinary service registration
+        /// overrides this fallback for single-service resolution; a later <c>TryAdd</c> does not.
+        /// </remarks>
         public static IBrighterBuilder AddProducers(
             this IBrighterBuilder brighterBuilder,
             Action<ProducersConfiguration> configure,
@@ -364,6 +370,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     $"Unable to register outbox of type {outbox.GetType().Name} - no transaction provider has been registered that matches the outbox's transaction type");
             }
 
+            if (outbox is RelationDatabaseOutbox relationalOutbox)
+                brighterBuilder.Services.TryAddSingleton<IAmARelationalDatabaseConfiguration>(relationalOutbox.DatabaseConfiguration);
+
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox), _ => outbox, ServiceLifetime.Singleton));
 
             if (hasSyncOutbox)
@@ -431,6 +440,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <remarks>
         /// Note: This overload enables access to the service provider during configuration,
         /// allowing resolution of other registered services when configuring producers.
+        /// Register <see cref="IAmARelationalDatabaseConfiguration"/> explicitly when a provider requires it.
+        /// This deferred overload does not infer database configuration from the outbox.
         /// </remarks>
         public static IBrighterBuilder AddProducers(
             this IBrighterBuilder brighterBuilder,
