@@ -94,7 +94,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
             // to the race) and the topic ends tripped (order-independent end state).
             var warnings = TestCorrelator.GetLogEventsFromCurrentContext()
                 .Where(e => e.Level == LogEventLevel.Warning)
-                .Where(e => e.RenderMessage().Contains(_topic.Value))
+                .Where(e => e.MessageTemplate.Text == "Publish confirmation failed for message Id:{Id} on topic {Topic}")
                 .ToList();
             Assert.Equal(ConcurrentFailures, warnings.Count);
 

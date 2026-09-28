@@ -45,7 +45,11 @@ public static class HeaderNames
     public const string DeduplicationId = "messageDeduplicationId";
     public const string Type = "type";
     public const string SpecVersion = "specversion";
-    public const string Source = "souce";
+    /// <summary>
+    /// The canonical CloudEvents source attribute name.
+    /// </summary>
+    public const string Source = "source";
+    internal const string LEGACY_SOURCE = "souce";
     public const string Time = "time";
     public const string DataContentType = "datacontenttype";
     public const string DataSchema = "dataschema";
@@ -71,7 +75,7 @@ public static class HeaderNames
     private static readonly HashSet<string> s_knownNames = new(System.StringComparer.Ordinal)
     {
         Id, Topic, ContentType, CorrelationId, HandledCount, MessageType, Timestamp,
-        ReplyTo, Subject, Bag, DeduplicationId, Type, SpecVersion, Source, Time,
+        ReplyTo, Subject, Bag, DeduplicationId, Type, SpecVersion, Source, LEGACY_SOURCE, Time,
         DataContentType, DataSchema, DataRef, TraceState, TraceParent, Baggage,
         CloudEventHeaders
     };

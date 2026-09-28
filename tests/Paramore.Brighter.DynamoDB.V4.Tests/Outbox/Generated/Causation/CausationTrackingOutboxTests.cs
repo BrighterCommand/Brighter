@@ -33,12 +33,15 @@ using Xunit;
 namespace Paramore.Brighter.DynamoDB.V4.Tests.Outbox.Causation;
 
 [Trait("Category", "DynamoDB")]
+[Collection("DynamoDBOutbox")]
 public class CausationTrackingOutboxTests : CausationTrackingOutboxBaseTests<Amazon.DynamoDBv2.Model.TransactWriteItemsRequest>
 {
     private readonly Paramore.Brighter.DynamoDB.V4.Tests.Outbox.DynamoDBOutboxProvider _outboxProvider = new();
     private IAmAnOutboxSync<Message, Amazon.DynamoDBv2.Model.TransactWriteItemsRequest>? _outbox;
 
     protected override IAmAnOutboxSync<Message, Amazon.DynamoDBv2.Model.TransactWriteItemsRequest> Outbox => _outbox ??= _outboxProvider.CreateOutbox();
+
+    protected override System.TimeSpan ReadConsistencyTimeout => System.TimeSpan.FromMilliseconds(30000);
 
     protected override void CreateStore() => _outboxProvider.CreateStore();
 

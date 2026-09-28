@@ -39,6 +39,7 @@ namespace Paramore.Brighter.Extensions.Tests;
 // left on the default affinity (never opting in to joining an ambient scope) must record no warning at
 // all for that same provider type. Without that second host, an implementation that warns on every ask a
 // provider fails to answer - opted in or not - would pass this test for the wrong reason.
+[Collection(LoggerCaptureCollection.NAME)]
 public class NullAmbientQueryDiagnosticTests
 {
     [Fact]

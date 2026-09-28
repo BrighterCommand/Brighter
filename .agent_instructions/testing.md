@@ -43,6 +43,35 @@ implementation.
     recorded, scoped gear shift the user makes with `/spec:gear` — never by assumption, never by a
     prose instruction in a scratch file, and never because the tasks look repetitive
 
+### When a new test passes on first run — characterisation
+
+Sometimes the test you write for a behaviour passes before you have written any code, because
+earlier work already delivers it. This is common when a spec takes one task per acceptance
+criterion. A green test has not yet shown that it can fail, so it has not yet shown that it guards
+anything. **Do not weaken, rewrite or delete it to get a failure, and do not treat the task as
+"already complete".**
+
+Instead, observe RED through a **named mutation** ([ADR 0071](../docs/adr/0071-tdd-review-gear.md),
+*Characterisation amendment*):
+
+1. Apply a temporary change to **production code, never to the test**. It should be the realistic
+   defect the test exists to catch, for example exact equality where the code uses assignability.
+2. Run the test. It must fail **on the assertion it is about**. A compile error, or an unrelated
+   exception thrown before the assertion is reached, does not count; pick a better mutation.
+3. **Revert the mutation** and confirm green. `git status` must show no production file still
+   modified.
+4. Run the **full test suite** for the affected project(s), as for any other test.
+5. Commit the test alone, as `test:`, noting the mutation in the message. The mutation is never
+   committed.
+
+In a spec, such tasks are labelled `CHARACTERISE` in `tasks.md` and name their mutation. If you meet
+an unexpected green with no named mutation, stop and ask. Choosing the mutation is part of
+reviewing the test, so do not improvise it.
+
+The same move applies to a guard test that is RED on arrival only because the code under test does
+not exist yet (a compile error). Once it is GREEN, apply the mutation that reintroduces the defect
+the test guards against, and confirm it fails for that reason.
+
 ### The review gear
 
 Whether the approval pause fires is a **gear** ([ADR 0071](../docs/adr/0071-tdd-review-gear.md)),
@@ -65,7 +94,8 @@ value on a run of near-identical tasks whose shape has already been reviewed rep
 **What `review-after` does NOT remove.** Only the human pause. All of these hold in both gears:
 
 - **RED first** — the test is written and observed to fail *for the right reason* before any
-  production code exists. Ungated is not test-after.
+  production code exists, or, for a characterisation test, under its named mutation (see above).
+  Ungated is not test-after.
 - **The full regression suite**, not just the new test's own `--filter`.
 - **The two-commit shape** — a `feat:`/`test:` commit for the behaviour, then a separate `docs:`
   commit ticking the task off in `tasks.md`.
@@ -106,6 +136,28 @@ A run in `review-after` that drops any of these is defective — it is not "a di
   - By following the rules for only testing behaviors, you only need to write tests for the behaviors exposed from the module not its details.
   - Private or Internal classes used in the implementation do not need tests - they are covered by the behavior that led to their creation.
 
+### Narrow and deep — and when widening the surface is legitimate
+
+- The goal these rules serve is a module that is **narrow and deep**, not wide and shallow: a small
+  surface hiding substantial behaviour. The rules above, and *No InternalsVisibleTo* below, all
+  forbid the same one thing — **coupling a test to the module's implementation details**.
+- Read that way, "do not export to test" is **conditional, not absolute**. What it forbids is
+  widening the surface to reach *inside*. Before widening, ask:
+  **is there a path through the module's existing exports to the behaviour under test?**
+  - If there is, widening is unjustified — test through that path.
+  - If there is not, exporting may be the only way to test the behaviour at all. Then widen
+    **honestly**: make it public, and record what was widened and why (in the ADR, or the PR).
+- **Having to widen is a design signal, not just a cost.** If no existing export reaches the
+  behaviour, the module's contract may be missing a name for something it already depends on
+  internally. Ask what the new export *says about the module* before assuming it is a testing
+  concession:
+  - A widening that other callers would genuinely want is a real term of the contract, and the fact
+    that a test wanted it first is incidental.
+  - A widening that only a test could ever want is a smell. The design is probably wrong somewhere
+    else, and the export is hiding that rather than fixing it.
+- The honest check, after the fact: does anything other than a test ever call it? If nothing ever
+  does, it was a testing concession after all, and should be revisited.
+
 ## Tests Exercise the Production Path
 
 - **A test that drives a path production never takes has no value.** It does not protect behaviour; it pins an implementation, and it keeps that implementation alive by making its removal look like a regression.
@@ -122,6 +174,12 @@ A run in `review-after` that drops any of these is defective — it is not "a di
   2. As complexity grows, extract internal helper classes through refactoring
   3. Tests always go through the public interface - internal classes are covered by those tests
 - If you need to inject a dependency for testing (e.g., randomness, I/O), make the interface **public** so it can be injected through the public API.
+- **`InternalsVisibleTo` is rejected because it makes `internal` a lie.** The comfort of `internal`
+  is that a member may be refactored freely, since every dependency on it lives inside the module.
+  Once tests in another assembly bind to it, that is false — refactoring breaks them. The member has
+  been made public in effect, just to a narrower audience, while the keyword still claims otherwise.
+  Prefer honesty: make it public and record the widening (see *Narrow and deep* above), which at
+  least forces the question of why it belongs on the module.
 - The goal is that tests are coupled to behavior, not implementation. Refactoring internals should never break tests.
 
 ## Exploratory Tests for Implementation Details
@@ -163,3 +221,23 @@ A run in `review-after` that drops any of these is defective — it is not "a di
   - Get approval for the test
   - Implement the code to make it pass
   - This ensures you're building the right behavior from the start
+
+### RabbitMQ: run each suite against the broker version it targets
+
+The two RabbitMQ suites do not target the same broker, and pointing one at the other's version
+produces a wall of red that is not a regression.
+
+- **`RMQ.Async` runs on 4.2 and 4.3+.** `RmqSubscription.isDurable` defaults to `true` there (#4355),
+  so a default subscription declares a queue 4.3 accepts.
+- **`RMQ.Sync` runs on 4.2 only.** It targets the RabbitMQ 3.x line through `RabbitMQ.Client` 6.x, so
+  its `isDurable` default is deliberately still `false`. RabbitMQ **4.3 removed transient
+  non-exclusive queues**, so on a 4.3+ broker every queue declaration is rejected with
+  `INTERNAL_ERROR - Feature 'transient_nonexcl_queues' is deprecated`. Measured against 4.3.5:
+  **46 failed / 35 passed / 3 skipped**. This applies to the package, not just its tests — a default
+  subscription from `Paramore.Brighter.MessagingGateway.RMQ.Sync` is rejected by 4.3+ too.
+
+`docker-compose-rmq.yaml` is pinned to 4.2 for this reason and CI uses it, so `rabbitmq-sync-ci` is
+green. **Check the broker version before reading a local RabbitMQ failure** — `docker ps` will show
+an unrelated 4.3 container holding 5672 on a developer machine. Do not "fix" the `isDurable: false`
+sites in `Paramore.Brighter.RMQ.Sync.Tests` to make a 4.3 run pass; they match the product default
+the package deliberately keeps.

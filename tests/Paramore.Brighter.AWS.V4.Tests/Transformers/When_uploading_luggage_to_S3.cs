@@ -17,7 +17,7 @@ using Policy = Polly.Policy;
 namespace Paramore.Brighter.AWS.V4.Tests.Transformers;
 
 [Trait("Category", "AWS")]
-public class S3LuggageUploadTests
+public class S3LuggageUploadTests : IAsyncLifetime
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly string _bucketName;
@@ -70,6 +70,10 @@ public class S3LuggageUploadTests
 
     }
     
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    public Task DisposeAsync() => S3TestBucketCleanup.DeleteAsync(_bucketName);
+
     public static AsyncRetryPolicy GetSimpleHandlerRetryPolicy()
     {
         var delay = Backoff.ConstantBackoff(TimeSpan.FromMilliseconds(50), retryCount: 3, fastFirst:true);

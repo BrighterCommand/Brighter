@@ -37,6 +37,7 @@ namespace Paramore.Brighter.Extensions.Tests;
 // (D17), which is why this discharges FR-13 and not FR-24. IPoisonedDependency is resolved through a
 // real container-Scoped registration, so disposing the handler pipeline's owned scope disposes the
 // container's IServiceScope, which throws from IPoisonedDependency's own Dispose().
+[Collection(LoggerCaptureCollection.NAME)]
 public class SuccessfulSendPipelineScopeDisposalLoggingTests
 {
     [Fact]

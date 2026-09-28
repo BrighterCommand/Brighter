@@ -36,6 +36,6 @@ namespace Greetings.Ports.Commands
             Greeting = greeting;
         }
 
-        public string? Greeting { get; }
+        public string? Greeting { get; set; }
     }
 }

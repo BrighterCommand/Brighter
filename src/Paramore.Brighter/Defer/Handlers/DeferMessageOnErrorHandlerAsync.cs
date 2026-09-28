@@ -39,7 +39,9 @@ namespace Paramore.Brighter.Defer.Handlers;
 /// <remarks>
 /// This is the async version of <see cref="DeferMessageOnErrorHandler{TRequest}"/>.
 /// This handler should be positioned at the outermost layer of the pipeline (lowest step number)
-/// to act as a backstop for any exceptions that escape inner handlers.
+/// to act as a backstop for application exceptions that escape inner handlers.
+/// Explicit pump actions and non-empty aggregates whose direct inner exceptions are all pump actions
+/// propagate unchanged. Other exceptions, including cancellation, use this backstop's configured action.
 /// </remarks>
 public partial class DeferMessageOnErrorHandlerAsync<TRequest> : RequestHandlerAsync<TRequest>, IAmABackstopHandler
     where TRequest : class, IRequest
@@ -58,13 +60,13 @@ public partial class DeferMessageOnErrorHandlerAsync<TRequest> : RequestHandlerA
 
     /// <summary>
     /// Handles the request asynchronously by passing it to the next handler in the pipeline.
-    /// If any exception occurs in the pipeline, it is caught and converted to a <see cref="DeferMessageAction"/>.
+    /// Unhandled application exceptions are caught and converted to a <see cref="DeferMessageAction"/>.
     /// </summary>
     /// <param name="command">The request to handle.</param>
     /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
     /// <returns>The request after processing.</returns>
     /// <exception cref="DeferMessageAction">
-    /// Thrown when any exception occurs in the pipeline. The original exception is preserved as <see cref="Exception.InnerException"/>.
+    /// Thrown when an unhandled application exception occurs in the pipeline. The original exception is preserved as <see cref="Exception.InnerException"/>.
     /// </exception>
     public override async Task<TRequest> HandleAsync(TRequest command, CancellationToken cancellationToken = default)
     {
@@ -72,7 +74,7 @@ public partial class DeferMessageOnErrorHandlerAsync<TRequest> : RequestHandlerA
         {
             return await base.HandleAsync(command, cancellationToken);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (!BackstopExceptionFilter.ShouldPropagate(ex))
         {
             Log.UnhandledExceptionDeferringMessage(s_logger, ex, typeof(TRequest).Name, ex.Message);
             throw new DeferMessageAction(ex.Message, ex, _delayMilliseconds);

@@ -34,6 +34,7 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.Logging;
 using Polly.CircuitBreaker;
+using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Exceptions;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
@@ -69,6 +70,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         private readonly bool _hasDlq;
         private readonly TimeSpan? _ttl;
         private readonly int? _maxQueueLength;
+
+        internal RoutingKey? InvalidMessageRoutingKey { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageGateway" /> class.
@@ -286,6 +289,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// <summary>
         /// Rejects the specified message.
         /// </summary>
+        /// <remarks>
+        /// Unacceptable messages use the configured invalid-message routing key; other rejections use the native dead-letter route.
+        /// The original is acknowledged only after a confirmed forward. A failed forward leaves it unacknowledged;
+        /// if acknowledgement fails after forwarding, redelivery can produce a duplicate.
+        /// </remarks>
         /// <param name="message">The message.</param>
         /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
         public bool Reject(Message message, MessageRejectionReason? reason = null)
@@ -298,6 +306,13 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             
                 Log.NoAckMessage(s_logger, message.Id.Value, message.DeliveryTag, reasonString, description);
                 
+                if (reason?.RejectionReason == RejectionReason.Unacceptable && !RoutingKey.IsNullOrEmpty(InvalidMessageRoutingKey))
+                {
+                    ForwardToInvalidChannel(message, reason);
+                    Acknowledge(message);
+                    return true;
+                }
+
                 //if we have a DLQ, this will force over to the DLQ
                 Channel!.BasicReject(message.DeliveryTag, false);
                 return true;
@@ -448,6 +463,37 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             Log.CreatedConsumer(s_logger, _queueName.Value, string.Join(";", _routingKeys.Select(rk => rk.Value)), Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
         }
 
+        private void ForwardToInvalidChannel(Message message, MessageRejectionReason reason)
+        {
+            var channel = Channel!;
+            var originalTopic = message.Header.Topic;
+            BasicReturnEventArgs? returned = null;
+            EventHandler<BasicReturnEventArgs> onReturn = (_, args) => Interlocked.Exchange(ref returned, args);
+            channel.BasicReturn += onReturn;
+            try
+            {
+                message.Header.Bag[HeaderNames.ORIGINAL_TOPIC] = originalTopic.Value;
+#pragma warning disable CS0618 // Preserve the legacy message type for transport compatibility.
+                message.Header.Bag[HeaderNames.ORIGINAL_TYPE] = message.Header.MessageType.ToString();
+#pragma warning restore CS0618
+                message.Header.Bag[HeaderNames.REJECTION_REASON] = reason.RejectionReason.ToString();
+                message.Header.Bag[HeaderNames.REJECTION_MESSAGE] = reason.Description ?? string.Empty;
+                message.Header.Bag[HeaderNames.REJECTION_TIMESTAMP] = DateTimeOffset.UtcNow.ToString("o");
+                message.Header.Topic = InvalidMessageRoutingKey!;
+                channel.ConfirmSelect();
+                var publisher = new RmqMessagePublisher(channel, Connection);
+                publisher.PublishMessage(message, mandatory: true);
+                channel.WaitForConfirmsOrDie(TimeSpan.FromSeconds(Connection.ContinuationTimeout));
+                if (Volatile.Read(ref returned) != null)
+                    throw new ChannelFailureException($"Unable to route message to invalid channel {InvalidMessageRoutingKey}");
+            }
+            finally
+            {
+                channel.BasicReturn -= onReturn;
+                message.Header.Topic = originalTopic;
+            }
+        }
+
         private void CreateQueue()
         {
             if (Channel == null)
@@ -458,6 +504,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             
             Log.CreatingQueue(s_logger, _queueName.Value, Connection.AmpqUri.GetSanitizedUri());
             Channel.QueueDeclare(_queueName.Value, _isDurable, false, false, SetQueueArguments());
+            if (!RoutingKey.IsNullOrEmpty(InvalidMessageRoutingKey))
+                Channel.QueueDeclare(InvalidMessageRoutingKey.Value, _isDurable, false, false, new Dictionary<string, object>());
             //NOTE: hasDlq cannot be true if _deadLetterQueuename is null
             if (_hasDlq) Channel.QueueDeclare(_deadLetterQueueName!.Value, _isDurable, false, false, new Dictionary<string, object>());
         }
@@ -474,6 +522,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             {
                 Channel.QueueBind(_queueName.Value, Connection.Exchange.Name, key, new Dictionary<string, object>());
             }
+
+            if (!RoutingKey.IsNullOrEmpty(InvalidMessageRoutingKey))
+                Channel.QueueBind(InvalidMessageRoutingKey.Value, Connection.Exchange.Name, InvalidMessageRoutingKey.Value, new Dictionary<string, object>());
 
             if (_hasDlq)
                 //NOTE: hasDlq cannot be true if _deadLetterQueuename -r _deadLetterRoutingKey is null
@@ -497,6 +548,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             try
             {
                 Channel.QueueDeclarePassive(_queueName.Value);
+                if (!RoutingKey.IsNullOrEmpty(InvalidMessageRoutingKey))
+                    Channel.QueueDeclarePassive(InvalidMessageRoutingKey.Value);
             }
             catch (Exception e)
             {

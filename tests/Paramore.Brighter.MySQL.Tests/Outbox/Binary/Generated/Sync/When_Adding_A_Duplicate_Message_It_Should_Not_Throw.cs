@@ -35,6 +35,7 @@ using System.Linq;
 namespace Paramore.Brighter.MySQL.Tests.Outbox.Binary.Sync;
 
 [Trait("Category", "MySQL")]
+[Collection("MySQLBinaryOutbox")]
 public class WhenAddingADuplicateMessageItShouldNotThrow : IDisposable
 {
     private readonly IAmAnOutboxProviderSync _outboxProvider;

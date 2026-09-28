@@ -37,6 +37,7 @@ namespace Paramore.Brighter.Extensions.Tests;
 // unhandled disposal error: it should notice the source is unusable, fall back to creating and owning
 // its own scope exactly as if nothing had been offered, and say so once - not on every Send that hits
 // the same stale source, and not confused with either of the other two diagnostics this seam can raise.
+[Collection(LoggerCaptureCollection.NAME)]
 public class StaleAmbientDiagnosticTests
 {
     [Fact]

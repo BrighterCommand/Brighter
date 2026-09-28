@@ -57,9 +57,13 @@ namespace Paramore.Brighter
         public IAmAnInbox Inbox { get;}
         
         /// <summary>
-        /// The scope of the requests to store in the inbox - the default is everything
+        /// The command and event types eligible for the global inbox. Defaults to <see cref="InboxScope.All"/>.
         /// </summary>
-         public InboxScope Scope { get; }
+        /// <remarks>
+        /// Filters requests implementing <see cref="ICommand"/> or <see cref="IEvent"/>.
+        /// Requests implementing neither interface remain eligible. Explicit inbox attributes are not filtered.
+        /// </remarks>
+        public InboxScope Scope { get; }
         
         /// <summary>
         /// If null, the context to pass to the Inbox will be auto-generated from the handler class name. Otherwise

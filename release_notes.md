@@ -31,6 +31,117 @@ This is a substantial change with fourteen breaking-change items, catalogued her
 - `IAmAHandlerFactory` — gains `IAmAScope? CreatePipelineScope()`, creating a DI scope for one handler pipeline to resolve from. Migration: implement it, returning `null` for a factory with nothing to scope.
 - `IAmALifetime` — gains `IAmAScope? PipelineScope { get; }`, carrying the handler pipeline's own scope handle (distinct from this interface's existing job of tracking handler instances so they can be released). Migration: implement the property, returning `null` if the implementation has no pipeline scope of its own. **Also gains `IAsyncDisposable`**, so `CommandProcessor`'s async send/publish paths can `await using` the pipeline scope instead of blocking on a synchronous `Dispose()`. Migration: `public ValueTask DisposeAsync() => PipelineScope?.DisposeAsync() ?? default;`.
 
+### Validate subscription channel factory compatibility (spec 0037, #4334)
+
+Brighter now validates, at `ValidatePipelines()` time, that every subscription's declared
+`ChannelFactoryType` is compatible with the channel factory it will actually be handed at startup —
+turning "compiles, then dies deep in Dispatcher start" into a named, `ValidationSeverity.Error`
+startup finding. Landing the rule also corrected five transports whose `ChannelFactoryType` was
+wrong or missing: GCP Pub/Sub and MQTT previously declared a *consumer* factory rather than their
+own, and AWS SQS, AWS SQS V4 and Postgres declared none at all — so those three transports are, for
+the first time, routable through a `CombinedChannelFactory`. See
+[ADR 0072](docs/adr/0072-subscription-channel-factory-compatibility.md),
+[ADR 0073](docs/adr/0073-gateway-channel-factory-type-regression-guard.md) and
+[spec 0037](specs/0037-validate-subscription-channel-factory/) for full details.
+
+#### Breaking change: a subscription type with no `ChannelFactoryType` override now fails validation
+
+Any out-of-repo `Subscription` subclass that does not override `ChannelFactoryType` inherits the base
+class's default, `InMemoryChannelFactory` — previously invisible, now reported. Symptom:
+`ValidatePipelines` returns an `Error` citing `Paramore.Brighter.InMemoryChannelFactory` as the
+declared type. Remedy:
+
+```csharp
+public override Type ChannelFactoryType => typeof(MyChannelFactory);
+```
+
+Interim workaround: `ValidatePipelines(throwOnError: false)`.
+
+#### Breaking change: MQTT via a plain `Subscription<T>` now fails validation
+
+A plain `Subscription<T>` used with MQTT works today, because nothing previously checked the declared
+type against the gateway it is handed. Symptom: `ValidatePipelines` returns an `Error` citing
+`Paramore.Brighter.InMemoryChannelFactory` as the declared type against
+`Paramore.Brighter.MessagingGateway.MQTT.ChannelFactory`. Remedy: use `MqttSubscription<T>`.
+Suppressible with `ValidatePipelines(throwOnError: false)`.
+
+#### Breaking change: AWS SQS, AWS SQS V4 and Postgres subscriptions routed through an in-memory `CombinedChannelFactory` slot now fail at Dispatcher start, not just at validation
+
+Because AWS SQS, AWS SQS V4 and Postgres subscriptions previously declared no `ChannelFactoryType` at
+all, they inherited the base default, `InMemoryChannelFactory`. A `CombinedChannelFactory` that
+included an `InMemoryChannelFactory` inner factory therefore matched these subscriptions by exact
+type and silently routed them to the in-memory bus instead of failing. The subscriptions now declare
+their real factory type, so that in-memory match no longer occurs: if the `CombinedChannelFactory` has
+no inner factory of the subscription's real type, routing now fails with a `ConfigurationException`
+(`No channel factory found for subscription {name}`) when the `Dispatcher` starts. **This is caused by
+the transport corrections, not by the new validation rule, so `ValidatePipelines(throwOnError: false)`
+does NOT avoid it** — it is a routing change, not a validation verdict. Remedy: add the transport's
+real channel factory to the `CombinedChannelFactory`, or stop relying on the in-memory route.
+
+#### Breaking change: a `ChannelFactoryType` override returning `null` now fails validation
+
+An out-of-repo `ChannelFactoryType` override that returns `null` in a single-factory (non-combined)
+configuration previously went unchecked. Symptom: a startup `Error` reading `declares no
+ChannelFactoryType`. Remedy: return a real channel factory type from the override. Unlike the
+`CombinedChannelFactory` case above, this one **is** suppressible with
+`ValidatePipelines(throwOnError: false)`.
+
+### Backstop handlers preserve explicit message-pump actions
+
+`DeferMessageOnError`, `RejectMessageOnError`, `DontAckOnError`, and their async variants now preserve explicit `DeferMessageAction`, `RejectMessageAction`, `DontAckAction`, and `InvalidMessageAction` exceptions instead of replacing them with the backstop's configured action. A non-empty `AggregateException` whose direct inner exceptions are all pump actions is also preserved for the pump to handle. Mixed, empty, or nested aggregates still use the configured fallback. Application failures, including `OperationCanceledException` and `TaskCanceledException` from dependency timeouts, continue to use that fallback.
+
+If a pipeline has multiple backstops, the innermost backstop now determines the action for an application failure; outer backstops preserve it. For example, `[RejectMessageOnError(step: 0)]` wrapping `[DeferMessageOnError(step: 1)]` now defers the message instead of rejecting it. Lower step numbers are outer wrappers. Review pipelines with stacked backstops if they relied on the previous outermost-backstop behavior.
+### DynamoDB outbox: configured operation timeouts now take effect (#4434)
+
+Both `Paramore.Brighter.Outbox.DynamoDB` (AWS SDK v3) and `Paramore.Brighter.Outbox.DynamoDB.V4` now honour `DynamoDbConfiguration.Timeout` and per-call outbox timeouts. Previously, these values were ignored.
+
+**Upgrade impact: the existing default of 500 ms now takes effect.** Operations that previously completed after that deadline may now throw `OperationCanceledException`. Review your timeout settings before upgrading, especially for batches and queries: one deadline covers the entire operation, including all batch items or query pages.
+
+To allow a longer deadline, set the configuration's `timeout` constructor argument (in milliseconds), for example:
+
+```csharp
+new DynamoDbConfiguration(timeout: 5000);
+```
+
+To disable the outbox deadline, use `new DynamoDbConfiguration(timeout: 0)`; a configured value of `-1` also disables it. Caller cancellation and the AWS SDK client's own timeouts still apply.
+
+For methods accepting a per-call timeout:
+
+* `-1` (the default) uses `DynamoDbConfiguration.Timeout`; it does **not** independently disable the deadline.
+* `0` disables the outbox deadline for that call.
+* A positive value overrides the configured deadline, in milliseconds.
+
+Cancellation is cooperative. Synchronous AWS SDK table-metadata discovery remains governed by the SDK client's timeout. Adding a message to a transaction queues the write; the later commit must be cancelled through the transaction provider. Public signatures and default parameter values are unchanged, but applications that relied on the previously ignored deadlines may need configuration changes.
+
+### AWS: configurable `MaximumMessageSize` for SNS topics and SQS queues
+
+Amazon SNS now accepts message payloads up to 1 MiB, but only if you raise the topic's `MaximumMessageSize` attribute — the default is still 256 KiB. Brighter's send path never assumed a fixed limit, but the provisioning path had no way to set the attribute, so a topic Brighter created with `OnMissingChannel.Create` was stuck at 256 KiB.
+
+SQS is the other way round. A queue created today already defaults to the full 1 MiB, so `SqsAttributes.MaximumMessageSize` is there for when you want a queue to *reject* anything over a size you pick, not to unlock headroom you'd otherwise be missing.
+
+`SnsAttributes` and `SqsAttributes` (both the V3 and V4 packages) gain an optional `maximumMessageSize` constructor parameter, in bytes:
+
+```csharp
+new SnsPublication
+{
+    Topic = new RoutingKey("my-topic"),
+    MakeChannels = OnMissingChannel.Create,
+    TopicAttributes = new SnsAttributes(maximumMessageSize: 1_048_576)
+};
+```
+
+For SNS the value is applied with a `SetTopicAttributes` call after `CreateTopic`, because SNS rejects `CreateTopic` when a supplied attribute differs from the existing topic's. That means the setting also raises the limit of a topic Brighter created earlier at the default size. For SQS the attribute joins the `CreateQueue` request, which already re-applies attributes to an existing queue.
+
+#### Before you raise a topic
+
+AWS puts some sharp edges around a topic above 256 KiB, and they are worth reading before you turn this on:
+
+* It only supports Amazon SQS, AWS Lambda and Amazon Data Firehose subscriptions. HTTP/S, email, SMS and mobile push are not, so raising the limit on a topic that has those subscribers will cost you them.
+* It is capped at 100 subscriptions, rather than the usual 12.5 million.
+* SNS measures the message body and its message attributes together, so your headers count against the limit.
+* The subscribed queue does **not** need raising to match. A message delivered through an SNS subscription is bounded by the topic's limit, not by the queue's `MaximumMessageSize` — a 500 KiB message on a 1 MiB topic arrives intact on a queue still sitting at 256 KiB. A direct `SqsMessageProducer` send is bounded by the queue's limit as normal.
+* The `[Compress]` and `[ClaimCheck]` thresholds compare the uncompressed body only. A compressed body goes out base64-encoded, which inflates it by roughly a third, so leave yourself headroom under the topic's maximum.
+
 ### Replay Outbox Messages on Inbox Duplicate (spec 0027)
 
 When an inbox detects a duplicate request, Brighter can now optionally **replay** the outbox messages that were produced under that request's causation, rather than silently dropping the duplicate. The feature is opt-in (`OnceOnlyAction.Replay` on the inbox attribute) and non-breaking: it requires a causation-tracking inbox and outbox (`IAmACausationTrackingInbox` / `IAmACausationTrackingOutbox`), and the relational stores gate the causation-aware write on a memoized column probe so un-migrated schemas keep depositing unchanged. Startup pipeline validation fails fast if a `Replay` pipeline is configured without causation tracking. See [ADR 0057](docs/adr/0057-replay-outbox-on-inbox-duplicate.md) and [spec 0027](specs/0027-replay-matching-outbox-events-when-inbox-has-already-seen/) for full details.
@@ -171,6 +282,170 @@ invented value on every requeue.
 A relative `dataschema` stored in a relational Outbox is also now read back correctly:
 `RelationDatabaseOutbox` read it with `UriKind.Absolute` and silently dropped it to `null`,
 inconsistent with the `Source` reader in the same class and with every other Outbox implementation.
+
+### MQTT: `ReceiveAsync` waits for a message, and honours the caller's cancellation token (#4240)
+
+`MqttMessageConsumer` buffered arrivals in a queue and returned whatever happened to be in it at the
+moment of the call. An empty buffer returned immediately with a single `MT_NONE` message, so a caller
+who wanted to wait for a message had to sleep before every `Receive` and hope the sleep was long
+enough - the timeout argument bounded how long the *drain* was allowed to take, not how long to wait
+for a message to arrive. `ReceiveAsync` was `Task.FromResult(Receive(timeOut))`: synchronous, and it
+ignored its `cancellationToken` entirely.
+
+Both now wait up to `timeOut` (300 ms if unspecified) for at least one message to arrive, and are
+woken by the arrival itself rather than by an interval expiring. A receive that finds nothing inside
+the window still returns the single `MT_NONE` message, unchanged.
+
+#### Behaviour change: a cancelled `ReceiveAsync` now throws
+
+`ReceiveAsync` now observes the `cancellationToken` you pass it and throws `OperationCanceledException`
+when you cancel, which is the contract the interface declares and the behaviour the other async
+gateways already have. Previously the token was accepted and ignored, so a cancelled receive returned
+an empty result instead.
+
+**This does not affect the Brighter pump.** `Proactor` calls `Channel.ReceiveAsync(TimeOut)` without a
+token and stops on an `MT_QUIT` message, not by cancelling a receive in flight, so shutdown is a clean
+stop exactly as before. The change is visible only to code calling
+`IAmAMessageConsumerAsync.ReceiveAsync` directly with a token it cancels - most often a test. **If you
+have such a call and relied on it returning empty, catch `OperationCanceledException`.** A timeout
+elapsing is not cancellation and still returns `MT_NONE`.
+
+#### `BufferSize` is now honoured on MQTT
+
+A consumer built by `MqttMessageConsumerFactory` returns at most the subscription's `BufferSize`
+messages per receive, which is what that setting means. Previously a receive drained the whole buffer,
+so a burst larger than `BufferSize` overflowed the Brighter `Channel` wrapper and threw. Anything still
+buffered is left for the next call. A directly-constructed `MqttMessageConsumer` does not sit behind a
+`Channel` and keeps its uncapped behaviour unless you pass the new optional `batchSize` argument.
+
+### AWS SNS: `SendWithDelay` honours its delay, and needs a scheduler to do it (#4240)
+
+`SnsMessageProducer.SendWithDelay` (both `Paramore.Brighter.MessagingGateway.AWSSQS` and
+`…AWSSQS.V4`) discarded the delay it was given: the sync overload forwarded `TimeSpan.Zero` to the
+async implementation, so a delayed send published **immediately**. It now forwards the delay it was
+called with, and a delayed send is handed to the configured message scheduler as the other transports
+already do.
+
+#### Behaviour change: a delayed send with no scheduler configured now throws
+
+Because the delay never survived the call, the no-scheduler path could not previously be reached from
+`SendWithDelay` — the send simply went out at once. Now that the delay is honoured, a delayed send
+with no scheduler configured throws `ConfigurationException` naming the missing setting, rather than
+publishing immediately or failing with a `NullReferenceException` from inside the send.
+
+**If you call `SendWithDelay` on SNS and have no `MessageSchedulerFactory` configured**, that call
+silently behaved as an immediate publish and will now throw. Either configure a scheduler, or call
+`Send` if immediate publication was what you wanted.
+
+Delayed sends now also accept either half of the scheduler pair: a host that configures only
+`IAmAMessageSchedulerSync` or only `IAmAMessageSchedulerAsync` no longer fails on a cast. The call
+prefers the half matching the path it is on. This matches Redis, Kafka, MsSql, MQTT and the in-memory
+reference implementation.
+
+### GCP Pub/Sub: `Receive` and `ReceiveAsync` bound the Pull to the caller's timeout (#4240)
+
+`GcpPullMessageConsumer` documented its `timeOut` as "not strictly used by the underlying Google
+Pub/Sub client". It is now used: the Pull is bounded to that window, so an empty subscription returns
+after the requested time instead of long-polling until a message arrives. An elapsed window is
+reported as a normal empty receive.
+
+When `timeOut` is null or non-positive, no deadline of ours is applied and the client's own
+per-method expiration stays in force — the behaviour of the overload this replaced. In that case a
+`DeadlineExceeded` still means a Pull took longer than the library expects, not that the subscription
+is empty, and it is logged and rethrown as before rather than being reported as an empty receive.
+
+**If you relied on `Receive` blocking until a message arrived**, pass a longer `timeOut`, or omit it
+to keep the client default.
+
+### MQTT: the producer emits producer telemetry (#4240)
+
+`MqttMessageProducer` emitted no producer events. It now calls `BrighterTracer.WriteProducerEvent` on
+both the sync and async send paths, which every other transport producer already did — MQTT was the
+only gateway without it.
+
+Verbosity follows the new optional `instrumentationOptions` constructor argument, which defaults to
+`InstrumentationOptions.All` as `RmqMessageProducer` and `InMemoryMessageProducer` do. Note that
+`All` includes `InstrumentationOptions.RequestBody`, so **message bodies are recorded on producer
+spans** unless you pass a narrower option. Construct the producer with, for example,
+`InstrumentationOptions.RequestInformation` if message bodies must stay out of your traces.
+
+⚠️ **That only helps for a producer you construct yourself.** The requeue, dead-letter and
+invalid-message producers that `MqttMessageConsumer` builds internally do not take the argument, so
+they are fixed at `All` and their spans carry message bodies with no supported way to narrow them.
+Tracked as [#4365](https://github.com/BrighterCommand/Brighter/issues/4365).
+
+
+### RMQ.Async: subscriptions declare durable queues by default (#4355)
+
+`RmqSubscription` and `RmqSubscription<T>` in `Paramore.Brighter.MessagingGateway.RMQ.Async` now default
+`isDurable` to **`true`**. Previously they defaulted to `false`, which asked the broker for a transient,
+non-exclusive queue.
+
+RabbitMQ **4.3** deprecates that combination and **refuses to declare it by default**:
+
+```
+INTERNAL_ERROR - Feature `transient_nonexcl_queues` is deprecated.
+By default, this feature is not permitted anymore.
+```
+
+Because `isDurable: false` was the *default*, an out-of-the-box RMQ.Async consumer could not connect to a
+4.3 broker at all - the declare failed and Brighter surfaced a `ChannelFailureException`. The deprecation
+notice states the feature will be removed "regardless of the configuration", so permitting it through
+broker settings is only a stopgap.
+
+`Paramore.Brighter.MessagingGateway.RMQ.Sync` is **unchanged** and still defaults to `isDurable: false`. It
+targets the RabbitMQ 3.x line through the legacy `RabbitMQ.Client` 6.x API, and 3.x permits transient
+non-exclusive queues.
+
+#### Breaking: an existing transient queue will fail to redeclare
+
+**Why this default had to move at all.** This is not Brighter changing its mind about a sensible default -
+it is **RabbitMQ changing what it supports**. Transient non-exclusive queues were a supported queue shape
+for the whole life of the 3.x line; 4.3 deprecates them and refuses to create them, and the deprecation
+notice is explicit that they will be removed in a future major version "regardless of the configuration".
+A default that a current broker will not accept is not a default we can keep. The cost of moving it is the
+migration below, and there is no version of this change that avoids that cost - a broker cannot hold one
+queue under two durabilities.
+
+**What goes wrong.** RabbitMQ rejects a `QueueDeclare` whose arguments differ from the queue that already
+exists, and durability is one of those arguments. **If you are on RMQ.Async and your queues were created
+under the old default, upgrading will fail** when Brighter reopens the channel:
+
+```
+PRECONDITION_FAILED - inequivalent arg 'durable' for queue 'my.queue' in vhost '/':
+received 'true' but current is 'false'
+```
+
+Brighter surfaces that as a `ChannelFailureException`. It happens on the first receive, not at startup, so
+it can look like a runtime fault rather than an upgrade step.
+
+**Two ways out.** Either keep the old behaviour explicitly:
+
+```csharp
+new RmqSubscription<MyEvent>(
+    subscriptionName: new SubscriptionName("MySubscription"),
+    channelName: new ChannelName("my.queue"),
+    routingKey: new RoutingKey("my.topic"),
+    isDurable: false)          // opt back in to a transient queue
+```
+
+- which keeps you working on 3.x and on a 4.3 broker explicitly configured to permit the deprecated
+feature, but leaves you on a queue shape RabbitMQ intends to remove -
+
+or **drain and delete the existing queue** and let Brighter recreate it as durable. Deleting a queue
+discards any messages still in it, so drain it first if that matters. This is the option that leaves you
+on a supported queue shape.
+
+**What changes once the queue is durable.** A durable queue survives a broker restart, so messages that
+would previously have been discarded with the queue now outlive it. For most deployments that is the
+behaviour you wanted; if you were relying on a restart to clear a backlog, you no longer get that.
+
+Note the dead-letter queue is declared with the same durability as its subscription, so both move together
+and a partially-migrated pair is not possible.
+
+We hit this inside Brighter's own test suite while making the change: two tests pre-created their queue as
+transient and then opened a subscription that now defaults to durable, and failed with exactly the error
+above. If it catches the suite that introduced the change, it will catch upgrades.
 
 ### MSSQL transport provisions its queue table (#4343)
 

@@ -39,13 +39,15 @@ public class SnsAttributes
     /// <param name="type">The <see cref="SqsType"/>The <see cref="SqsType"/> which lets you set FIFO or Standard. Default is <see cref="SqsType.Standard"/></param>
     /// <param name="contentBasedDeduplication">For a FIFO queue, do we deduplicate messages based on content. Default is true</param>
     /// <param name="tags">A list of resource tags to apply to the topic at creation time. Default is null.</param>
-    public SnsAttributes(string? deliveryPolicy = null, string? policy = null, SqsType type = SqsType.Standard, bool contentBasedDeduplication = true, List<Tag>? tags = null)
+    /// <param name="maximumMessageSize">The maximum size, in bytes, of a message the topic accepts. Default is null, which leaves the SNS default of 262,144 bytes (256 KiB).</param>
+    public SnsAttributes(string? deliveryPolicy = null, string? policy = null, SqsType type = SqsType.Standard, bool contentBasedDeduplication = true, List<Tag>? tags = null, int? maximumMessageSize = null)
     {
         DeliveryPolicy = deliveryPolicy;
         Policy = policy;
         Type = type;
         ContentBasedDeduplication = contentBasedDeduplication;
         Tags = tags ?? [];
+        MaximumMessageSize = maximumMessageSize;
     }
 
     /// <summary>
@@ -53,6 +55,17 @@ public class SnsAttributes
     /// Ignored if TopicARN is set
     /// </summary>
     public string? DeliveryPolicy { get; }
+
+    /// <summary>
+    /// The maximum size, in bytes, of a message the topic accepts; SNS counts the message body and its attributes together.
+    /// Valid range is 1,024 to 1,048,576 (1 MiB). Null leaves the SNS default of 262,144 bytes (256 KiB).
+    /// Ignored if TopicARN is set
+    /// </summary>
+    /// <remarks>
+    /// Applied with a SetTopicAttributes call after the topic is created, so it also raises the limit of a topic that already exists.
+    /// A topic set above 256 KiB only supports Amazon SQS, AWS Lambda and Amazon Data Firehose subscriptions, and at most 100 subscriptions.
+    /// </remarks>
+    public int? MaximumMessageSize { get; }
 
     /// <summary>
     /// Creates a new instance of the <see cref="SnsAttributes"/> class. All attributes will be default values.

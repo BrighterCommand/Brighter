@@ -46,6 +46,7 @@ namespace Paramore.Brighter.Extensions.Tests;
 // consumption. Nothing here is a new invariant - each assertion mirrors what an earlier Phase 1/2 task
 // already established for its own flow in isolation - this fact is the regression checkpoint that all
 // five still hold together, with no ambient-scope machinery configured at all.
+[Collection(LoggerCaptureCollection.NAME)]
 public class NoScopeProviderRegisteredRegressionTests
 {
     [Fact]

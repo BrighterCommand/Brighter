@@ -31,6 +31,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
+[Collection(LoggerCaptureCollection.NAME)]
 public class FailedBuildScopeDisposalLoggingTests
 {
     [Fact]

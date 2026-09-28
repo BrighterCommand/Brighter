@@ -43,6 +43,7 @@ namespace Paramore.Brighter.Extensions.Tests;
 // default - so without a bracket suppressing adoption inside the pump's own flow, a consumer pipeline
 // would silently adopt whatever ambient happened to be live on the thread that called Receive(), which
 // has nothing to do with the message being consumed (FR-19).
+[Collection(LoggerCaptureCollection.NAME)]
 public class ConsumerPumpFlowSuppressionTests
 {
     [Fact]
