@@ -129,7 +129,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         private sealed class DisposeCountingMapperFactory : IAmAMessageMapperFactory, IDisposable
         {
             public int DisposeCount { get; private set; }
-            public Lease<IAmAMessageMapper>? Create(Type messageMapperType) => null;
+            public IAmAScope? CreatePipelineScope() => null;
+            public Lease<IAmAMessageMapper>? Create(Type messageMapperType, IAmAScope? scope = null) => null;
             public void Release(Lease<IAmAMessageMapper>? lease) { }
             public void Dispose() => DisposeCount++;
         }
@@ -137,7 +138,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         private sealed class DisposeCountingMapperFactoryAsync : IAmAMessageMapperFactoryAsync, IDisposable
         {
             public int DisposeCount { get; private set; }
-            public Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType) => null;
+            public IAmAScope? CreatePipelineScope() => null;
+            public Lease<IAmAMessageMapperAsync>? Create(Type messageMapperType, IAmAScope? scope = null) => null;
             public void Release(Lease<IAmAMessageMapperAsync>? lease) { }
             public ValueTask ReleaseAsync(Lease<IAmAMessageMapperAsync>? lease) => default;
             public void Dispose() => DisposeCount++;
@@ -146,7 +148,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         private sealed class DisposeCountingTransformerFactory : IAmAMessageTransformerFactory, IDisposable
         {
             public int DisposeCount { get; private set; }
-            public Lease<IAmAMessageTransform>? Create(Type transformerType) => null;
+            public IAmAScope? CreatePipelineScope() => null;
+            public Lease<IAmAMessageTransform>? Create(Type transformerType, IAmAScope? scope = null) => null;
             public void Release(Lease<IAmAMessageTransform>? lease) { }
             public void Dispose() => DisposeCount++;
         }
@@ -154,7 +157,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         private sealed class DisposeCountingTransformerFactoryAsync : IAmAMessageTransformerFactoryAsync, IDisposable
         {
             public int DisposeCount { get; private set; }
-            public Lease<IAmAMessageTransformAsync>? Create(Type transformerType) => null;
+            public IAmAScope? CreatePipelineScope() => null;
+            public Lease<IAmAMessageTransformAsync>? Create(Type transformerType, IAmAScope? scope = null) => null;
             public void Release(Lease<IAmAMessageTransformAsync>? lease) { }
             public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync>? lease) => default;
             public void Dispose() => DisposeCount++;

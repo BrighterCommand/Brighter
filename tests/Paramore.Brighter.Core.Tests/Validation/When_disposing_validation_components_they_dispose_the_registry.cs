@@ -78,7 +78,8 @@ namespace Paramore.Brighter.Core.Tests.Validation
         private sealed class DisposeCountingMapperFactory : IAmAMessageMapperFactory, IDisposable
         {
             public int DisposeCount { get; private set; }
-            public Lease<IAmAMessageMapper>? Create(Type messageMapperType) => null;
+            public IAmAScope? CreatePipelineScope() => null;
+            public Lease<IAmAMessageMapper>? Create(Type messageMapperType, IAmAScope? scope = null) => null;
             public void Release(Lease<IAmAMessageMapper>? lease) { }
             public void Dispose() => DisposeCount++;
         }

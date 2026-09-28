@@ -25,6 +25,8 @@ THE SOFTWARE. */
 using System;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter
 {
@@ -35,84 +37,134 @@ namespace Paramore.Brighter
     /// helper holds that ordering and error-composition in one place so the sync and async pipelines cannot
     /// drift apart; each caller supplies only the concrete scope-dispose and mapper-release actions.
     /// </summary>
-    internal static class TransformPipelineDrain
+    internal static partial class TransformPipelineDrain
     {
+        //TransformPipelineDrain is static, so it cannot be a generic argument to ApplicationLogging.CreateLogger<T>();
+        //this is the same category a generic call would have produced
+        private static readonly ILogger s_logger = ApplicationLogging.LoggerFactory.CreateLogger(typeof(TransformPipelineDrain));
+
+
         /// <summary>
         /// Runs the drain synchronously: dispose the transform scope, then release the mapper, holding any
-        /// scope failure so the mapper release still runs and neither error masks the other.
+        /// scope failure so the mapper release still runs and neither error masks the other; the pipeline's
+        /// own DI scope (if any) is released in a <c>finally</c> around both, so it is released whichever of
+        /// the two throws.
         /// </summary>
         /// <param name="disposeScope">Disposes the transform lifetime scope (a no-op when there is none).</param>
         /// <param name="releaseMapper">Releases the mapper lease back to its registry.</param>
-        internal static void Drain(Action disposeScope, Action releaseMapper)
+        /// <param name="releaseScope">Releases the pipeline's own DI scope (a no-op when there is none).</param>
+        /// <param name="requestType">The pipeline's request type name, named in a scope-release failure's log entry.</param>
+        internal static void Drain(Action disposeScope, Action releaseMapper, Action releaseScope, string requestType)
         {
-            //hold any transform-scope failure so the mapper release below still runs, but a throw from that
-            //release cannot mask it: cleanup must not swallow the real error
-            Exception? scopeError = null;
             try
             {
-                disposeScope();
-            }
-            catch (Exception ex)
-            {
-                scopeError = ex;
-            }
+                //hold any transform-scope failure so the mapper release below still runs, but a throw from that
+                //release cannot mask it: cleanup must not swallow the real error
+                Exception? scopeError = null;
+                try
+                {
+                    disposeScope();
+                }
+                catch (Exception ex)
+                {
+                    scopeError = ex;
+                }
 
-            try
-            {
-                //released unconditionally after the transform scope so a throw from that disposal above cannot
-                //orphan the mapper's own scope — the caller's release-once guard is already set, so neither the
-                //finalizer nor a later Dispose would retry it, which is the exact leak the pipeline closes
-                releaseMapper();
-            }
-            catch (Exception releaseError)
-            {
-                //both failed: surface both rather than let this cleanup exception mask the transform-scope one
-                if (scopeError is null) throw;
-                throw new AggregateException(scopeError, releaseError);
-            }
+                try
+                {
+                    //released unconditionally after the transform scope so a throw from that disposal above cannot
+                    //orphan the mapper's own scope — the caller's release-once guard is already set, so neither the
+                    //finalizer nor a later Dispose would retry it, which is the exact leak the pipeline closes
+                    releaseMapper();
+                }
+                catch (Exception releaseError)
+                {
+                    //both failed: surface both rather than let this cleanup exception mask the transform-scope one
+                    if (scopeError is null) throw;
+                    throw new AggregateException(scopeError, releaseError);
+                }
 
-            //only the transform scope failed: rethrow it preserved (type and stack, including its own drain
-            //AggregateException)
-            if (scopeError is not null) ExceptionDispatchInfo.Capture(scopeError).Throw();
+                //only the transform scope failed: rethrow it preserved (type and stack, including its own drain
+                //AggregateException)
+                if (scopeError is not null) ExceptionDispatchInfo.Capture(scopeError).Throw();
+            }
+            finally
+            {
+                //leases go back to their factories first, then the pipeline's own DI scope is released, so a
+                //factory that still needs its Release to run is not resolving against a dead scope. Caught
+                //and logged here, rather than left to the caller's own cleanup guard, so a scope-release
+                //failure after a *completed* pipeline gets its own Error record and does not join steps 1/2's
+                //AggregateException composition above
+                try { releaseScope(); }
+                catch (Exception scopeReleaseException)
+                {
+                    Log.FailedToDisposePipelineScope(s_logger, requestType, scopeReleaseException);
+                }
+            }
         }
 
         /// <summary>
         /// Runs the drain asynchronously: await the transform scope's disposal, then await the mapper's
-        /// release, with the same hold-and-compose error handling as <see cref="Drain"/>.
+        /// release, with the same hold-and-compose error handling as <see cref="Drain"/>, and the pipeline's
+        /// own DI scope released in a <c>finally</c> around both.
         /// </summary>
         /// <param name="disposeScopeAsync">Disposes the transform lifetime scope (a no-op when there is none).</param>
         /// <param name="releaseMapperAsync">Releases the mapper lease back to its registry.</param>
-        internal static async ValueTask DrainAsync(Func<ValueTask> disposeScopeAsync, Func<ValueTask> releaseMapperAsync)
+        /// <param name="releaseScopeAsync">Releases the pipeline's own DI scope (a no-op when there is none).</param>
+        /// <param name="requestType">The pipeline's request type name, named in a scope-release failure's log entry.</param>
+        internal static async ValueTask DrainAsync(
+            Func<ValueTask> disposeScopeAsync, Func<ValueTask> releaseMapperAsync, Func<ValueTask> releaseScopeAsync,
+            string requestType)
         {
-            //hold any transform-scope failure so the mapper release below still runs, but a throw from that
-            //release cannot mask it: cleanup must not swallow the real error
-            Exception? scopeError = null;
             try
             {
-                await disposeScopeAsync().ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                scopeError = ex;
-            }
+                //hold any transform-scope failure so the mapper release below still runs, but a throw from that
+                //release cannot mask it: cleanup must not swallow the real error
+                Exception? scopeError = null;
+                try
+                {
+                    await disposeScopeAsync().ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    scopeError = ex;
+                }
 
-            try
-            {
-                //released unconditionally after the transform scope so a throw from that disposal above cannot
-                //orphan the mapper's own scope — the caller's release-once guard is already set, so no later
-                //dispose or the finalizer would retry it, which is the exact leak the pipeline closes
-                await releaseMapperAsync().ConfigureAwait(false);
-            }
-            catch (Exception releaseError)
-            {
-                //both failed: surface both rather than let this cleanup exception mask the transform-scope one
-                if (scopeError is null) throw;
-                throw new AggregateException(scopeError, releaseError);
-            }
+                try
+                {
+                    //released unconditionally after the transform scope so a throw from that disposal above cannot
+                    //orphan the mapper's own scope — the caller's release-once guard is already set, so no later
+                    //dispose or the finalizer would retry it, which is the exact leak the pipeline closes
+                    await releaseMapperAsync().ConfigureAwait(false);
+                }
+                catch (Exception releaseError)
+                {
+                    //both failed: surface both rather than let this cleanup exception mask the transform-scope one
+                    if (scopeError is null) throw;
+                    throw new AggregateException(scopeError, releaseError);
+                }
 
-            //only the transform scope failed: rethrow it preserved (type and stack, including its own drain
-            //AggregateException)
-            if (scopeError is not null) ExceptionDispatchInfo.Capture(scopeError).Throw();
+                //only the transform scope failed: rethrow it preserved (type and stack, including its own drain
+                //AggregateException)
+                if (scopeError is not null) ExceptionDispatchInfo.Capture(scopeError).Throw();
+            }
+            finally
+            {
+                //leases go back to their factories first, then the pipeline's own DI scope is released, so a
+                //factory that still needs its Release to run is not resolving against a dead scope. Caught
+                //and logged here for the same reason as Drain's synchronous finally above
+                try { await releaseScopeAsync().ConfigureAwait(false); }
+                catch (Exception scopeReleaseException)
+                {
+                    Log.FailedToDisposePipelineScope(s_logger, requestType, scopeReleaseException);
+                }
+            }
+        }
+
+        private static partial class Log
+        {
+            [LoggerMessage(LogLevel.Error, "Failed to dispose the pipeline scope for {RequestType} after the transform pipeline completed; the pipeline's result is unaffected.")]
+            public static partial void FailedToDisposePipelineScope(ILogger logger, string requestType, Exception exception);
         }
     }
 }

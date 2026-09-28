@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Tests.TestDoubles;
@@ -51,10 +52,13 @@ public class HandlerMissingWithMatchedChannelFactoryTests
             .ValidatePipelines(throwOnError: true);
 
         var provider = services.BuildServiceProvider();
-        var validator = provider.GetRequiredService<IAmAPipelineValidator>();
 
-        // Act
-        var result = validator.Validate();
+        // Act — every registered validator's results are combined, matching how
+        // BrighterValidationHostedService itself resolves them (ADR 0074 registers a second
+        // IAmAPipelineValidator alongside the core one, so a single GetRequiredService call would
+        // resolve only the last-registered validator, not the union of both)
+        var validators = provider.GetServices<IAmAPipelineValidator>();
+        var result = PipelineValidationResult.Combine(validators.Select(v => v.Validate()).ToArray());
 
         // Assert — exactly one Error, from the pre-existing HandlerRegistered rule; the
         // channel-factory compatibility rule contributes no additional finding

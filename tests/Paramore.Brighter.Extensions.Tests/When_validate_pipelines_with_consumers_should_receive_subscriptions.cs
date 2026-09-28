@@ -57,8 +57,8 @@ public class ValidatePipelinesWithConsumersTests
         var provider = services.BuildServiceProvider();
 
         // Act — resolve validator and validate
-        var validator = provider.GetRequiredService<IAmAPipelineValidator>();
-        var result = validator.Validate();
+        var validators = provider.GetServices<IAmAPipelineValidator>();
+        var result = PipelineValidationResult.Combine(validators.Select(v => v.Validate()).ToArray());
 
         // Assert — should detect the subscription has no handler registered
         Assert.False(result.IsValid);

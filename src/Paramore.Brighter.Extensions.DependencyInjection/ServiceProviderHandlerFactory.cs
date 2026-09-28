@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
@@ -37,7 +36,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private readonly ServiceLifetime _handlerLifetime;
         private readonly bool _isolateTransientHandlerScope;
         private readonly ServiceProviderLifetimeScope _singletonScope;
-        private readonly ConcurrentDictionary<IAmALifetime, ServiceProviderLifetimeScope> _lifetimeScopes = new();
+        private readonly IAmAScopeProvider? _scopeProvider;
+        private readonly ScopeAffinityPolicy _scopeAffinityPolicy;
+        private readonly AmbientScopeDiagnostics? _diagnostics;
 
         /// <summary>
         /// Constructs a factory that uses the .NET IoC container as the factory
@@ -50,6 +51,39 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             _handlerLifetime = options?.HandlerLifetime ?? ServiceLifetime.Transient;
             _isolateTransientHandlerScope = options?.IsolateTransientHandlerScope ?? true;
             _singletonScope = new ServiceProviderLifetimeScope(serviceProvider, ServiceLifetime.Singleton);
+            _scopeProvider = (IAmAScopeProvider?)serviceProvider.GetService(typeof(IAmAScopeProvider));
+            _scopeAffinityPolicy = new ScopeAffinityPolicy(options);
+            _diagnostics = (AmbientScopeDiagnostics?)serviceProvider.GetService(typeof(AmbientScopeDiagnostics));
+        }
+
+        /// <summary>
+        /// Offers a new per-pipeline DI scope for a <c>Scoped</c> or <c>Transient</c> handler lifetime, so
+        /// every handler in one pipeline resolves from one scope rather than a factory-wide one. Offers
+        /// none for <c>Singleton</c>, which resolves from the container-wide singleton scope instead.
+        /// </summary>
+        /// <remarks>
+        /// Unlike the mapper/transformer factories, <c>Transient</c> also gets a handle here: a per-request
+        /// pipeline scope is how a <c>Transient</c> handler's own per-resolution isolation is delivered
+        /// (see <see cref="ServiceProviderLifetimeScope"/>'s isolated-transient-scope support), not an
+        /// optional convenience. It does not, however, ask for an ambient: only a <c>Scoped</c> handler
+        /// pipeline ever asks.
+        /// </remarks>
+        /// <exception cref="AmbientScopeSourceException">
+        /// A registered <see cref="IAmAScopeProvider"/>'s <c>GetAmbient</c> threw. The calling pipeline
+        /// builder recognises this type and rethrows the inner exception unwrapped.
+        /// </exception>
+        public IAmAScope? CreatePipelineScope()
+        {
+            if (_handlerLifetime == ServiceLifetime.Scoped)
+            {
+                var affinity = AmbientScopeSuppression.IsSuppressed ? ScopeAffinity.AlwaysNew : _scopeAffinityPolicy.ForHandlerPipeline();
+                var borrowed = AmbientScopeQuery.Ask(_scopeProvider, affinity, _serviceProvider, _diagnostics);
+                if (borrowed is not null) return borrowed;
+            }
+
+            return _handlerLifetime == ServiceLifetime.Singleton
+                ? null
+                : new ServiceProviderPipelineScope(new ServiceProviderLifetimeScope(_serviceProvider, _handlerLifetime, _isolateTransientHandlerScope));
         }
 
         /// <summary>
@@ -61,13 +95,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns>An instantiated request handler</returns>
         IHandleRequests? IAmAHandlerFactorySync.Create(Type handlerType, IAmALifetime lifetime)
         {
-            return _handlerLifetime switch
-            {
-                ServiceLifetime.Singleton => _singletonScope.GetOrCreate<IHandleRequests>(handlerType),
-                ServiceLifetime.Scoped => GetOrCreateLifetimeScope(lifetime, ServiceLifetime.Scoped).GetOrCreate<IHandleRequests>(handlerType),
-                ServiceLifetime.Transient => GetOrCreateLifetimeScope(lifetime, ServiceLifetime.Transient).GetOrCreate<IHandleRequests>(handlerType),
-                _ => throw new InvalidOperationException($"Unsupported handler lifetime: {_handlerLifetime}")
-            };
+            if (_handlerLifetime == ServiceLifetime.Singleton)
+                return _singletonScope.GetOrCreate<IHandleRequests>(handlerType);
+
+            return ResolvePipelineScope(lifetime).Create<IHandleRequests>(handlerType);
         }
 
         /// <summary>
@@ -79,61 +110,65 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns>An instantiated request handler</returns>
         IHandleRequestsAsync? IAmAHandlerFactoryAsync.Create(Type handlerType, IAmALifetime lifetime)
         {
-            return _handlerLifetime switch
-            {
-                ServiceLifetime.Singleton => _singletonScope.GetOrCreate<IHandleRequestsAsync>(handlerType),
-                ServiceLifetime.Scoped => GetOrCreateLifetimeScope(lifetime, ServiceLifetime.Scoped).GetOrCreate<IHandleRequestsAsync>(handlerType),
-                ServiceLifetime.Transient => GetOrCreateLifetimeScope(lifetime, ServiceLifetime.Transient).GetOrCreate<IHandleRequestsAsync>(handlerType),
-                _ => throw new InvalidOperationException($"Unsupported handler lifetime: {_handlerLifetime}")
-            };
+            if (_handlerLifetime == ServiceLifetime.Singleton)
+                return _singletonScope.GetOrCreate<IHandleRequestsAsync>(handlerType);
+
+            return ResolvePipelineScope(lifetime).Create<IHandleRequestsAsync>(handlerType);
         }
 
         /// <summary>
-        /// Release the request handler - actual behavior depends on lifetime, we only dispose if we are transient
+        /// Resolves the <see cref="ServiceProviderPipelineScope"/> handle a <c>Scoped</c> or
+        /// <c>Transient</c> handler must have been supplied via <see cref="CreatePipelineScope"/>. Returns
+        /// the pipeline scope itself, not its inner <see cref="ServiceProviderLifetimeScope"/>, so
+        /// resolution goes through <see cref="ServiceProviderPipelineScope.Create{T}(Type)"/> - the one
+        /// site that translates a borrowed ambient's disposal into a <see cref="ConfigurationException"/>.
+        /// </summary>
+        /// <exception cref="ConfigurationException">
+        /// Thrown when <paramref name="lifetime"/> (or its <see cref="IAmALifetime.PipelineScope"/>) carries
+        /// no handle this factory recognises — the caller did not pass this factory's own
+        /// <see cref="CreatePipelineScope"/> result through to the <see cref="IAmALifetime"/> it created.
+        /// </exception>
+        private static ServiceProviderPipelineScope ResolvePipelineScope(IAmALifetime lifetime)
+        {
+            if (lifetime?.PipelineScope is ServiceProviderPipelineScope pipelineScope)
+                return pipelineScope;
+
+            throw new ConfigurationException(
+                "No pipeline scope was supplied for a Scoped or Transient handler lifetime. Pass this " +
+                "factory's own CreatePipelineScope() result through to the IAmALifetime constructed for " +
+                "the pipeline.");
+        }
+
+        /// <summary>
+        /// Release the request handler.
         /// </summary>
         /// <remarks>
-        /// A singleton belongs to the container, so releasing it is a no-op. Otherwise the handler was
-        /// resolved from a <see cref="ServiceProviderLifetimeScope"/>, and disposing that scope is what
-        /// disposes the handler — exactly once. Disposing the handler here as well would dispose it a
-        /// second time when the scope is drained.
+        /// A no-op: whichever <see cref="ServiceProviderLifetimeScope"/> the handler was resolved from —
+        /// the container-wide singleton scope, or the per-pipeline scope offered via
+        /// <see cref="CreatePipelineScope"/> — disposes every handler it resolved when that scope itself is
+        /// disposed. <see cref="HandlerLifetimeScope"/> disposes the pipeline scope handle once, after
+        /// releasing every tracked handler, so disposing the handler here as well would dispose it twice.
         /// </remarks>
         /// <param name="handler"></param>
         /// <param name="lifetime">The brighter Handler lifetime</param>
         public void Release(IHandleRequests handler, IAmALifetime lifetime)
         {
-            if (_handlerLifetime == ServiceLifetime.Singleton) return;
-
-            ReleaseLifetimeScope(lifetime);
         }
 
         /// <summary>
-        /// Release the request handler - actual behavior depends on lifetime, we only dispose if we are transient
+        /// Release the request handler.
         /// </summary>
         /// <remarks>
-        /// A singleton belongs to the container, so releasing it is a no-op. Otherwise the handler was
-        /// resolved from a <see cref="ServiceProviderLifetimeScope"/>, and disposing that scope is what
-        /// disposes the handler — exactly once. Disposing the handler here as well would dispose it a
-        /// second time when the scope is drained.
+        /// A no-op: whichever <see cref="ServiceProviderLifetimeScope"/> the handler was resolved from —
+        /// the container-wide singleton scope, or the per-pipeline scope offered via
+        /// <see cref="CreatePipelineScope"/> — disposes every handler it resolved when that scope itself is
+        /// disposed. <see cref="HandlerLifetimeScope"/> disposes the pipeline scope handle once, after
+        /// releasing every tracked handler, so disposing the handler here as well would dispose it twice.
         /// </remarks>
         /// <param name="handler"></param>
         /// <param name="lifetime">The brighter Handler lifetime</param>
         public void Release(IHandleRequestsAsync? handler, IAmALifetime lifetime)
         {
-            if (_handlerLifetime == ServiceLifetime.Singleton) return;
-
-            ReleaseLifetimeScope(lifetime);
-        }
-
-        private ServiceProviderLifetimeScope GetOrCreateLifetimeScope(IAmALifetime lifetime, ServiceLifetime serviceLifetime)
-        {
-            return _lifetimeScopes.GetOrAdd(lifetime, _ =>
-                new ServiceProviderLifetimeScope(_serviceProvider, serviceLifetime, _isolateTransientHandlerScope));
-        }
-
-        private void ReleaseLifetimeScope(IAmALifetime lifetime)
-        {
-            if (_lifetimeScopes.TryRemove(lifetime, out var scope))
-                scope.Dispose();
         }
     }
 }

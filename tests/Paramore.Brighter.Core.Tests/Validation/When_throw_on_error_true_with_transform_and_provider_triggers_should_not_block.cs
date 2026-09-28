@@ -69,7 +69,7 @@ public class ValidatePipelinesNonBlockingWarningsTests
         var hostedService = provider.GetServices<IHostedService>().OfType<BrighterValidationHostedService>().Single();
         await hostedService.StartAsync(CancellationToken.None);
 
-        var result = provider.GetRequiredService<IAmAPipelineValidator>().Validate();
+        var result = PipelineValidationResult.Combine(provider.GetServices<IAmAPipelineValidator>().Select(v => v.Validate()).ToArray());
 
         // Assert — the host started (no throw), result is valid (warnings only), and both warnings surfaced
         Assert.True(result.IsValid);
