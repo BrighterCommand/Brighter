@@ -855,7 +855,21 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             return _offsetStorage.Count;
         }
-        
+
+        /// <summary>
+        /// Reduces a set of stored offsets to at most one entry per <see cref="TopicPartition"/>, keeping the
+        /// highest offset. We may store several offsets for the same partition between commits (one per
+        /// acknowledged message); committing more than one for the same partition in a single request is
+        /// undefined, so we always commit the highest.
+        /// </summary>
+        private static List<TopicPartitionOffset> ReduceToHighestOffsetPerPartition(IEnumerable<TopicPartitionOffset> offsets)
+        {
+            return offsets
+                .GroupBy(tpo => tpo.TopicPartition)
+                .Select(group => group.OrderByDescending(tpo => tpo.Offset.Value).First())
+                .ToList();
+        }
+
         /// <summary>
         /// We commit a batch size worth at a time; this may be called from the sweeper thread, and we don't want it to
         /// loop endlessly over the offset list as new items are added, which will trigger a commit anyway. So we limit
@@ -876,15 +890,19 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
                 }
 
+                //a partition may have been acked more than once since the last flush; only the
+                //highest offset per partition is meaningful to commit
+                var reducedOffsets = ReduceToHighestOffsetPerPartition(listOffsets);
+
                 if (s_logger.IsEnabled(LogLevel.Information))
                 {
-                    var offsets = listOffsets.Select(tpo =>
+                    var offsets = reducedOffsets.Select(tpo =>
                         $"Topic: {tpo.Topic} Partition: {tpo.Partition.Value} Offset: {tpo.Offset.Value}");
                     var offsetAsString = string.Join(Environment.NewLine, offsets);
                     Log.CommittingOffsets(s_logger, Environment.NewLine, offsetAsString);
                 }
 
-                _consumer.Commit(listOffsets);
+                _consumer.Commit(reducedOffsets);
             }
             catch(Exception ex)
             {
@@ -914,19 +932,27 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
                 try
                 {
-                    //find the provided set of partitions amongst our stored offsets
-                    var partitionOffsets = _offsetStorage.ToArray();
-                    var revokedOffsetsToCommit =
-                        partitionOffsets.Where(tpo =>
-                                revokedPartitions.Any(ptc =>
-                                    ptc.TopicPartition == tpo.TopicPartition
-                                    && ptc.Offset.Value != Offset.Unset.Value
-                                    && tpo.Offset.Value > ptc.Offset.Value
-                                )
-                            )
-                            .ToList();
+                    //find any of our stored offsets for the partitions being revoked, taking them
+                    //out of storage so they are not committed again for a partition we may no
+                    //longer own; anything for a partition we keep is put straight back
+                    var revokedTopicPartitions = new HashSet<TopicPartition>(revokedPartitions.Select(tpo => tpo.TopicPartition));
+                    var toCommit = new List<TopicPartitionOffset>();
+                    var currentOffsetsInBag = _offsetStorage.Count;
+                    for (int i = 0; i < currentOffsetsInBag; i++)
+                    {
+                        if (!_offsetStorage.TryTake(out var offset))
+                            break;
+
+                        if (revokedTopicPartitions.Contains(offset.TopicPartition))
+                            toCommit.Add(offset);
+                        else
+                            _offsetStorage.Add(offset);
+                    }
+
+                    var revokedOffsetsToCommit = ReduceToHighestOffsetPerPartition(toCommit);
+
                     //determine if we have offsets still to commit
-                    if (revokedOffsetsToCommit.Any())
+                    if (revokedOffsetsToCommit.Count != 0)
                     {
                         //commit them
                         LogOffSetCommitRevokedPartitions(revokedOffsetsToCommit);
@@ -972,15 +998,19 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
                 }
 
-                if (s_logger.IsEnabled(LogLevel.Information) && listOffsets.Count != 0)
+                //a partition may have been acked more than once since the last flush; only the
+                //highest offset per partition is meaningful to commit
+                var reducedOffsets = ReduceToHighestOffsetPerPartition(listOffsets);
+
+                if (s_logger.IsEnabled(LogLevel.Information) && reducedOffsets.Count != 0)
                 {
-                    var offsets = listOffsets.Select(tpo =>
+                    var offsets = reducedOffsets.Select(tpo =>
                         $"Topic: {tpo.Topic} Partition: {tpo.Partition.Value} Offset: {tpo.Offset.Value}");
                     var offsetAsString = string.Join(Environment.NewLine, offsets);
                     Log.SweepingOffsets(s_logger, Environment.NewLine, offsetAsString);
                 }
 
-                _consumer.Commit(listOffsets);
+                _consumer.Commit(reducedOffsets);
                 _lastFlushAt = flushTime;
             }
             finally
