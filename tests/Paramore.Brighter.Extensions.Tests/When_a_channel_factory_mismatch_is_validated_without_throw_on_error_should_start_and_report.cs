@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -68,9 +69,12 @@ public class ChannelFactoryMismatchThrowOnErrorFalseTests
         // Assert — the host started and reached Receive
         Assert.True(dispatcher.ReceiveWasCalled);
 
-        // Assert — the mismatch Error is still present in the validation results
-        var validator = provider.GetRequiredService<IAmAPipelineValidator>();
-        var result = validator.Validate();
+        // Assert — the mismatch Error is still present in the validation results, combined across
+        // every registered validator (ADR 0074 registers a second IAmAPipelineValidator alongside
+        // the core one, so a single GetRequiredService call would resolve only the last-registered
+        // validator, not the union of both — see BrighterValidationHostedService)
+        var validators = provider.GetServices<IAmAPipelineValidator>();
+        var result = PipelineValidationResult.Combine(validators.Select(v => v.Validate()).ToArray());
         Assert.Contains(
             result.Errors,
             e => e.Severity == ValidationSeverity.Error
