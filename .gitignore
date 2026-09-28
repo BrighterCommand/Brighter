@@ -362,3 +362,4 @@ specs/**/.current-gear
 
 # Local-only docker compose overrides (e.g. port remaps for host conflicts)
 docker-compose-*.local.yaml
+.show-me-ledger.json
