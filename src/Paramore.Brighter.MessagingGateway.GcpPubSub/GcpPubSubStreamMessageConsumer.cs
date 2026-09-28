@@ -98,12 +98,20 @@ public partial class GcpPubSubStreamMessageConsumer(
         message.Header.Bag.TryGetValue("ReceiptHandle", out var handler);
         var gcpStreamMessage = handler as GcpStreamMessage;
 
-        _router.Route(message, reason);
+        var outcome = _router.Route(message, reason);
 
         if (gcpStreamMessage == null)
         {
             // Missing handle: routing still ran, but we cannot settle the original.
             Log.RejectMissingHandle(s_logger, message.Id.Value);
+            return true;
+        }
+
+        if (outcome == RoutingOutcome.Failed)
+        {
+            // The routing publish failed: Nack the original for prompt redelivery instead of
+            // accepting it (R-19). GcpRejectionRouter has already logged the Error.
+            gcpStreamMessage.Reject();
             return true;
         }
 
@@ -126,12 +134,20 @@ public partial class GcpPubSubStreamMessageConsumer(
         message.Header.Bag.TryGetValue("ReceiptHandle", out var handler);
         var gcpStreamMessage = handler as GcpStreamMessage;
 
-        await _router.RouteAsync(message, reason, cancellationToken);
+        var outcome = await _router.RouteAsync(message, reason, cancellationToken);
 
         if (gcpStreamMessage == null)
         {
             // Missing handle: routing still ran, but we cannot settle the original.
             Log.RejectMissingHandle(s_logger, message.Id.Value);
+            return true;
+        }
+
+        if (outcome == RoutingOutcome.Failed)
+        {
+            // The routing publish failed: Nack the original for prompt redelivery instead of
+            // accepting it (R-19). GcpRejectionRouter has already logged the Error.
+            gcpStreamMessage.Reject();
             return true;
         }
 

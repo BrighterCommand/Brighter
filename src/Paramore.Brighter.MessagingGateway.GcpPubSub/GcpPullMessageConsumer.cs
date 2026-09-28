@@ -289,12 +289,20 @@ public partial class GcpPullMessageConsumer(
         message.Header.Bag.TryGetValue("ReceiptHandle", out var handler);
         var ackId = handler as string;
 
-        _router.Route(message, reason);
+        var outcome = _router.Route(message, reason);
 
         if (ackId == null)
         {
             // Missing handle: routing still ran, but we cannot settle the original.
             Log.RejectMissingHandle(s_logger, message.Id.Value);
+            return true;
+        }
+
+        if (outcome == RoutingOutcome.Failed)
+        {
+            // The routing publish failed: release the original for prompt redelivery instead of
+            // acknowledging it (R-19). GcpRejectionRouter has already logged the Error.
+            ReleaseByHandle(ackId);
             return true;
         }
 
@@ -326,12 +334,20 @@ public partial class GcpPullMessageConsumer(
         message.Header.Bag.TryGetValue("ReceiptHandle", out var handler);
         var ackId = handler as string;
 
-        await _router.RouteAsync(message, reason, cancellationToken);
+        var outcome = await _router.RouteAsync(message, reason, cancellationToken);
 
         if (ackId == null)
         {
             // Missing handle: routing still ran, but we cannot settle the original.
             Log.RejectMissingHandle(s_logger, message.Id.Value);
+            return true;
+        }
+
+        if (outcome == RoutingOutcome.Failed)
+        {
+            // The routing publish failed: release the original for prompt redelivery instead of
+            // acknowledging it (R-19). GcpRejectionRouter has already logged the Error.
+            await ReleaseByHandleAsync(ackId, cancellationToken);
             return true;
         }
 

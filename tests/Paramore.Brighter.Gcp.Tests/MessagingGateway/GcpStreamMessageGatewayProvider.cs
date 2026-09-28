@@ -30,6 +30,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Google.Api.Gax;
+using Google.Api.Gax.Grpc;
 using Google.Cloud.PubSub.V1;
 using Paramore.Brighter.Gcp.Tests.Helper;
 using Paramore.Brighter.Gcp.Tests.MessagingGateway.Stream;
@@ -173,6 +174,88 @@ public class GcpStreamMessageGatewayProvider
             subscriptionMode: SubscriptionMode.Stream,
             invalidMessageRoutingKey: invalidMessageRoutingKey
         );
+    }
+
+    /// <summary>
+    /// Checks whether a topic exists on the broker, mirroring the pattern
+    /// <c>GcpPubSubMessageGateway.GetGcpTopicExistAsync</c> uses internally.
+    /// </summary>
+    public bool TopicExists(RoutingKey routingKey)
+    {
+        var client = _connection.CreatePublisherServiceApiClient();
+        var topicName = TopicName.FromProjectTopic(_connection.ProjectId, routingKey.Value);
+        try
+        {
+            client.GetTopic(topicName);
+            return true;
+        }
+        catch (Grpc.Core.RpcException ex) when (ex.StatusCode == Grpc.Core.StatusCode.NotFound)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Asynchronously checks whether a topic exists on the broker, mirroring the pattern
+    /// <c>GcpPubSubMessageGateway.GetGcpTopicExistAsync</c> uses internally.
+    /// </summary>
+    public async Task<bool> TopicExistsAsync(RoutingKey routingKey, CancellationToken cancellationToken = default)
+    {
+        var client = await _connection.CreatePublisherServiceApiClientAsync();
+        var topicName = TopicName.FromProjectTopic(_connection.ProjectId, routingKey.Value);
+        try
+        {
+            await client.GetTopicAsync(topicName, CallSettings.FromCancellationToken(cancellationToken));
+            return true;
+        }
+        catch (Grpc.Core.RpcException ex) when (ex.StatusCode == Grpc.Core.StatusCode.NotFound)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Builds the two subscription configurations needed to exercise a failed routing-publish
+    /// (R-19, AC-18, ADR 0078 "The destination producer's makeChannels"): a provisioning
+    /// subscription with no dead-letter route (so the source topic/subscription can be stood up
+    /// without eagerly pre-provisioning any destination), and the under-test subscription that
+    /// carries the real, never-created destination and the requested <paramref name="underTestMakeChannels"/>.
+    /// Both share the same subscription/channel/routing key: two configurations of the same broker
+    /// subscription, used in sequence.
+    /// </summary>
+    /// <remarks>
+    /// The provisioning subscription is always <see cref="SubscriptionMode.Pull"/>, even here in the
+    /// Stream provider (ADR 0078): a Stream-mode provisioning subscription would start a second,
+    /// competing streaming-pull consumer racing the real one for the same messages. The under-test
+    /// subscription leaves <c>subscriptionMode</c> at its constructor default (Stream) so
+    /// <c>GcpPubSubConsumerFactory</c> builds a <see cref="GcpPubSubStreamMessageConsumer"/>.
+    /// </remarks>
+    public (GcpPubSubSubscription provisioning, GcpPubSubSubscription underTest) CreateFailedRoutingGiven(
+        RoutingKey routingKey,
+        ChannelName channelName,
+        RoutingKey deadLetterRoutingKey,
+        OnMissingChannel underTestMakeChannels)
+    {
+        var provisioning = new GcpPubSubSubscription<MyCommand>(
+            subscriptionName: new SubscriptionName(channelName),
+            channelName: channelName,
+            routingKey: routingKey,
+            messagePumpType: MessagePumpType.Reactor,
+            ackDeadlineSeconds: 60,
+            makeChannels: OnMissingChannel.Create,
+            subscriptionMode: SubscriptionMode.Pull);
+
+        var underTest = new GcpPubSubSubscription<MyCommand>(
+            subscriptionName: new SubscriptionName(channelName),
+            channelName: channelName,
+            routingKey: routingKey,
+            messagePumpType: MessagePumpType.Reactor,
+            ackDeadlineSeconds: 60,
+            requeueDelay: TimeSpan.Zero,
+            makeChannels: underTestMakeChannels,
+            deadLetterRoutingKey: deadLetterRoutingKey);
+
+        return (provisioning, underTest);
     }
 
     public IAmAMessageProducerSync CreateProducer(GcpPublication publication)
