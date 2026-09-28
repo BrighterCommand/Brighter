@@ -586,7 +586,7 @@
     - The test's RED comes from the Warning assertion; the ack, `MT_NONE` and `true` clauses are already green from 5.5b/5.6.
   - Depends on: 5.5b, 5.6
 
-- [ ] **5.8 TEST + IMPLEMENT: A failed GCP routing publish releases the original for prompt redelivery, logs an Error, returns true, and leaves the missing topic uncreated**
+- [x] **5.8 TEST + IMPLEMENT: A failed GCP routing publish releases the original for prompt redelivery, logs an Error, returns true, and leaves the missing topic uncreated**
   - **USE COMMAND**: `/test-first when a gcp rejection routing publish fails should release the original for redelivery log an error and return true`
   - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Pull" and "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream"
   - Test file: `When_a_gcp_rejection_routing_publish_fails_should_release_original_for_redelivery.cs` (async: `…_async.cs`)
