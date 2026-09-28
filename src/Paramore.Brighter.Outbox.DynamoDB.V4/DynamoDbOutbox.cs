@@ -780,7 +780,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
             IEnumerable<RoutingKey>? trippedTopics = null,
             Dictionary<string, object>? args = null)
         {
-            return OutstandingMessagesAsync(dispatchedSince, requestContext, pageSize, pageNumber, args: args)
+            return OutstandingMessagesAsync(dispatchedSince, requestContext, pageSize, pageNumber, trippedTopics, args)
                 .GetAwaiter()
                 .GetResult();
         }
@@ -817,10 +817,16 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
 
             try
             {
+                var excludedTopics = new HashSet<string>(
+                    trippedTopics?.Select(topic => topic.Value) ?? Enumerable.Empty<string>(), StringComparer.Ordinal);
                 IEnumerable<Message> result;
                 if (args == null || !args.TryGetValue("Topic", out var topicArg))
                 {
-                    result = await OutstandingMessagesForAllTopicsAsync(dispatchedSince, pageSize, pageNumber, cancellationToken);
+                    result = await OutstandingMessagesForAllTopicsAsync(dispatchedSince, pageSize, pageNumber, excludedTopics, cancellationToken);
+                }
+                else if (excludedTopics.Contains((string)topicArg))
+                {
+                    result = Array.Empty<Message>();
                 }
                 else
                 {
@@ -925,7 +931,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
             return segmentCount;
         }
 
-        private async Task<IEnumerable<Message>> OutstandingMessagesForAllTopicsAsync(TimeSpan dispatchedSince, int pageSize, int pageNumber, CancellationToken cancellationToken)
+        private async Task<IEnumerable<Message>> OutstandingMessagesForAllTopicsAsync(TimeSpan dispatchedSince, int pageSize, int pageNumber,
+            HashSet<string> excludedTopics, CancellationToken cancellationToken)
         {
             // Only allow one outstanding messages scan at a time to ensure consistency of pagination tokens
             await _outstandingAllTopicsScanContext.Lock(cancellationToken);
@@ -946,7 +953,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
                 var segmentPageSizes = GetSegmentPageSizes(pageSize);
                 for (var segmentNumber = 0; segmentNumber < _configuration.ScanConcurrency; segmentNumber++)
                 {
-                    tasks.Add(ScanOutstandingIndexSegmentForMessages(olderThan, segmentPageSizes[segmentNumber], pageNumber, segmentNumber, cancellationToken));
+                    tasks.Add(ScanOutstandingIndexSegmentForMessages(olderThan, segmentPageSizes[segmentNumber], pageNumber, segmentNumber, excludedTopics, cancellationToken));
                 }
 
                 await Task.WhenAll(tasks);
@@ -982,6 +989,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
             int pageSize, 
             int pageNumber, 
             int segmentNumber,
+            HashSet<string> excludedTopics,
             CancellationToken cancellationToken)
         {
             string? paginationToken = _outstandingAllTopicsScanContext.GetPagingToken(segmentNumber);
@@ -1016,7 +1024,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
                 };
                 var scan = _context.FromScanAsync<MessageItem>(scanConfig, _fromScanConfig);
 
-                segmentMessages.AddRange(await scan.GetNextSetAsync(cancellationToken));
+                segmentMessages.AddRange((await scan.GetNextSetAsync(cancellationToken))
+                    .Where(message => !excludedTopics.Contains(message.Topic ?? string.Empty)));
 
                 paginationToken = scan.IsDone ? null : scan.PaginationToken;
             } while (paginationToken != null && segmentMessages.Count < pageSize);
