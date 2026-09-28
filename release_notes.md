@@ -2,6 +2,13 @@
 
 ## Master
 
+### RabbitMQ shared connection lifetime
+
+Disposing a RabbitMQ producer or consumer now releases only its own use of the pooled connection.
+Other gateways sharing that connection can continue sending and receiving. Both RabbitMQ gateways
+close the connection when its last gateway releases it; explicit pool reset and removal still close
+it immediately. Disposing a gateway from before a reset cannot close the replacement connection.
+
 ### Scoped lifetime per pipeline (spec 0036, #4256)
 
 `HandlerLifetime`, `MapperLifetime` and `TransformerLifetime` now govern a **pipeline-scoped** DI scope: a `Scoped` handler, mapper or transform resolves from one DI scope shared by every `Scoped` participant on that pipeline, and disposed when the pipeline ends. An ASP.NET Core host can additionally opt a pipeline in to **adopting** an ambient request scope instead of creating its own, through a new `Paramore.Brighter.Extensions.AspNetCore` package (`AddBrighterRequestScope(...)`), and `ValidatePipelines()` gained seven new startup checks for common lifetime and scope-registration mistakes. See [docs/guides/lifetimes-and-scoping.md](docs/guides/lifetimes-and-scoping.md) for the full model, decision guide and troubleshooting, and [ADR 0070](docs/adr/0070-per-pipeline-di-scope-for-mapper-and-transform-factories.md) through [ADR 0076](docs/adr/0076-scope-affinity-option-and-write-through.md) for the design.

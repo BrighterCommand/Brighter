@@ -62,7 +62,13 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
     /// <param name="connectionFactory">A <see cref="ConnectionFactory"/> to create new connections</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken"/> to cancel the operation</param>
     /// <returns></returns>
-    public async Task<IConnection> GetConnectionAsync(ConnectionFactory connectionFactory, CancellationToken cancellationToken = default)
+    public Task<IConnection> GetConnectionAsync(ConnectionFactory connectionFactory, CancellationToken cancellationToken = default)
+        => GetConnectionAsync(connectionFactory, false, cancellationToken);
+
+    internal Task<IConnection> AcquireConnectionAsync(ConnectionFactory connectionFactory, CancellationToken cancellationToken)
+        => GetConnectionAsync(connectionFactory, true, cancellationToken);
+
+    private async Task<IConnection> GetConnectionAsync(ConnectionFactory connectionFactory, bool acquire, CancellationToken cancellationToken)
     {
         var connectionId = GetConnectionId(connectionFactory);
 
@@ -76,6 +82,8 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
             {
                 pooledConnection = await CreateConnectionAsync(connectionFactory, cancellationToken).ConfigureAwait(false);
             }
+
+            if (acquire) pooledConnection.ReferenceCount++;
 
             return pooledConnection.Connection;
         }
@@ -120,6 +128,27 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
         try
         {
             await TryRemoveConnectionAsync(connectionId).ConfigureAwait(false);
+        }
+        finally
+        {
+            s_lock.Release();
+        }
+    }
+
+    internal async Task ReleaseConnectionAsync(ConnectionFactory connectionFactory, IConnection connection)
+    {
+        var connectionId = GetConnectionId(connectionFactory);
+        await s_lock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (!s_connectionPool.TryGetValue(connectionId, out var pooledConnection)
+                || !ReferenceEquals(pooledConnection.Connection, connection)) return;
+
+            pooledConnection.ReferenceCount--;
+            if (pooledConnection.ReferenceCount == 0)
+            {
+                await TryRemoveConnectionAsync(connectionId).ConfigureAwait(false);
+            }
         }
         finally
         {
@@ -198,7 +227,10 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
             $"{connectionFactory.UserName}.{connectionFactory.Password}.{connectionFactory.HostName}.{connectionFactory.Port}.{connectionFactory.VirtualHost}"
                 .ToLowerInvariant();
 
-    private sealed record PooledConnection(IConnection Connection, AsyncEventHandler<ShutdownEventArgs> ShutdownHandler);
+    private sealed record PooledConnection(IConnection Connection, AsyncEventHandler<ShutdownEventArgs> ShutdownHandler)
+    {
+        public int ReferenceCount { get; set; }
+    }
 
     private static partial class Log
     {

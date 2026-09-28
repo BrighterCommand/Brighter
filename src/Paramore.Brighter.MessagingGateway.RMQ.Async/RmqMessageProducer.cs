@@ -269,7 +269,7 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
                 await channel.AbortAsync();
                 await channel.DisposeAsync();
             });
-            // The base dispose still removes the pooled connection; the producer has already disposed the channel.
+            // Leave connection release to the base class without disposing this channel twice.
             Channel = null;
         }
 
@@ -291,7 +291,7 @@ public partial class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer
         {
             await channel.AbortAsync();
             await channel.DisposeAsync();
-            // The base async dispose still removes the pooled connection; the producer has already disposed the channel.
+            // Leave connection release to the base class without disposing this channel twice.
             Channel = null;
         }
 

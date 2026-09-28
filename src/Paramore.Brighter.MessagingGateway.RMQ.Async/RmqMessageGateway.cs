@@ -58,7 +58,8 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
     private readonly AsyncPolicy _circuitBreakerPolicy;
     private readonly ConnectionFactory _connectionFactory;
     private readonly AsyncPolicy _retryPolicy;
-    private int _disposed;
+    private readonly SemaphoreSlim _connectionLock = new(1, 1);
+    private IConnection? _pooledConnection;
     protected readonly RmqMessagingGatewayConnection Connection;
     protected IChannel? Channel;
 
@@ -138,26 +139,38 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
 
     protected virtual async Task ConnectToBrokerAsync(OnMissingChannel makeExchange, CancellationToken cancellationToken = default)
     {
-        if (Channel == null || Channel.IsClosed)
+        if (Channel != null && !Channel.IsClosed) return;
+
+        await _connectionLock.WaitAsync(cancellationToken);
+        try
         {
-            var connection = await new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat)
-                .GetConnectionAsync(_connectionFactory, cancellationToken);
+            if (Channel == null || Channel.IsClosed)
+            {
+                if (_pooledConnection == null || !_pooledConnection.IsOpen)
+                {
+                    await ReleaseConnectionAsync();
+                    _pooledConnection = await new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat)
+                        .AcquireConnectionAsync(_connectionFactory, cancellationToken);
+                    _pooledConnection.ConnectionBlockedAsync += HandleBlockedAsync;
+                    _pooledConnection.ConnectionUnblockedAsync += HandleUnBlockedAsync;
+                }
 
-           if (Connection.AmpqUri is null) throw new ConfigurationException("RMQMessagingGateway: No AMPQ URI specified");
+                if (Connection.AmpqUri is null) throw new ConfigurationException("RMQMessagingGateway: No AMPQ URI specified");
+                Log.OpeningChannelToRabbitMq(s_logger, Connection.AmpqUri.GetSanitizedUri());
 
-            connection.ConnectionBlockedAsync += HandleBlockedAsync;
-            connection.ConnectionUnblockedAsync += HandleUnBlockedAsync;
+                Channel = await _pooledConnection.CreateChannelAsync(
+                    new CreateChannelOptions(
+                        publisherConfirmationsEnabled: true,
+                        publisherConfirmationTrackingEnabled: true),
+                    cancellationToken);
 
-            Log.OpeningChannelToRabbitMq(s_logger, Connection.AmpqUri.GetSanitizedUri());
-
-            Channel = await connection.CreateChannelAsync(
-                new CreateChannelOptions(
-                    publisherConfirmationsEnabled: true,
-                    publisherConfirmationTrackingEnabled: true),
-                cancellationToken);
-
-            //desired state configuration of the exchange
-            await Channel.DeclareExchangeForConnection(Connection, makeExchange, cancellationToken: cancellationToken);
+                //desired state configuration of the exchange
+                await Channel.DeclareExchangeForConnection(Connection, makeExchange, cancellationToken: cancellationToken);
+            }
+        }
+        finally
+        {
+            _connectionLock.Release();
         }
     }
 
@@ -190,32 +203,72 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
 
     public virtual async ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
-
-        if (Channel != null)
+        await _connectionLock.WaitAsync();
+        try
         {
-            await Channel.AbortAsync();
-            await Channel.DisposeAsync();
-            Channel = null;
+            try
+            {
+                if (Channel != null)
+                {
+                    await Channel.AbortAsync();
+                    await Channel.DisposeAsync();
+                }
+            }
+            finally
+            {
+                Channel = null;
+                await ReleaseConnectionAsync();
+            }
         }
-
-        await new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).RemoveConnectionAsync(_connectionFactory);
+        finally
+        {
+            _connectionLock.Release();
+            GC.SuppressFinalize(this);
+        }
     }
 
     protected virtual void Dispose(bool disposing)
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+        if (!disposing) return;
 
-        if (disposing)
+        _connectionLock.Wait();
+        try
         {
-            Channel?.AbortAsync().Wait();
-            Channel?.Dispose();
-            Channel = null;
-
-            new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).RemoveConnectionAsync(_connectionFactory)
-                .GetAwaiter()
-                .GetResult();
+            try
+            {
+                Channel?.AbortAsync().GetAwaiter().GetResult();
+                Channel?.Dispose();
+            }
+            finally
+            {
+                Channel = null;
+                BrighterAsyncContext.Run(ReleaseConnectionAsync);
+            }
         }
+        finally
+        {
+            _connectionLock.Release();
+        }
+    }
+
+    private async Task ReleaseConnectionAsync()
+    {
+        var connection = _pooledConnection;
+        if (connection == null) return;
+
+        _pooledConnection = null;
+        try
+        {
+            connection.ConnectionBlockedAsync -= HandleBlockedAsync;
+            connection.ConnectionUnblockedAsync -= HandleUnBlockedAsync;
+        }
+        catch (ObjectDisposedException)
+        {
+            // A pool reset can dispose the connection before its gateways release it.
+        }
+
+        await new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat)
+            .ReleaseConnectionAsync(_connectionFactory, connection);
     }
 
     private static partial class Log

@@ -56,7 +56,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// </summary>
         /// <param name="connectionFactory"></param>
         /// <returns></returns>
-        public IConnection? GetConnection(ConnectionFactory connectionFactory)
+        public IConnection? GetConnection(ConnectionFactory connectionFactory) => GetConnection(connectionFactory, false);
+
+        internal IConnection? AcquireConnection(ConnectionFactory connectionFactory) => GetConnection(connectionFactory, true);
+
+        private IConnection? GetConnection(ConnectionFactory connectionFactory, bool acquire)
         {
             var connectionId = GetConnectionId(connectionFactory);
 
@@ -68,6 +72,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 {
                     pooledConnection = CreateConnection(connectionFactory);
                 }
+
+                if (acquire) pooledConnection.ReferenceCount++;
 
                 return pooledConnection.Connection;
             }
@@ -86,6 +92,22 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 catch (BrokerUnreachableException exception)
                 {
                     Log.FailedToResetSubscriptionToRabbitMqEndpoint(s_logger, connectionFactory.Endpoint, exception);
+                }
+            }
+        }
+
+        internal void ReleaseConnection(ConnectionFactory connectionFactory, IConnection connection)
+        {
+            var connectionId = GetConnectionId(connectionFactory);
+            lock (s_lock)
+            {
+                if (!s_connectionPool.TryGetValue(connectionId, out var pooledConnection)
+                    || !ReferenceEquals(pooledConnection.Connection, connection)) return;
+
+                pooledConnection.ReferenceCount--;
+                if (pooledConnection.ReferenceCount == 0)
+                {
+                    TryRemoveConnection(connectionId);
                 }
             }
         }
@@ -154,6 +176,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
         sealed class PooledConnection
         {
+            public int ReferenceCount { get; set; }
             public IConnection? Connection { get; set; }
             public EventHandler<ShutdownEventArgs>? ShutdownHandler { get; set; }
         }

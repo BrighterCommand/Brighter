@@ -55,6 +55,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         private readonly Policy _circuitBreakerPolicy;
         private readonly ConnectionFactory _connectionFactory;
         private readonly Policy _retryPolicy;
+        private readonly object _connectionLock = new();
+        private IConnection? _pooledConnection;
         protected readonly RmqMessagingGatewayConnection Connection;
         protected IModel? Channel;
 
@@ -130,28 +132,35 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
         protected virtual void ConnectToBroker(OnMissingChannel makeExchange)
         {
-            if (Channel == null || Channel.IsClosed)
+            if (Channel != null && !Channel.IsClosed) return;
+
+            lock (_connectionLock)
             {
-                if (Connection.Name is null)
-                    throw new InvalidOperationException("RMQMessagingGateway: Connection must have a name");
-                
-                if (Connection.AmpqUri is null)
-                    throw new InvalidOperationException("RMQMessagingGateway: Connection must have an AMPQ URI");
-                
-                var connection = new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).GetConnection(_connectionFactory);
-                
-                if (connection is null)
-                    throw new InvalidOperationException($"RMQMessagingGateway: Connection to {Connection.AmpqUri.GetSanitizedUri()} failed" );
+                if (Channel == null || Channel.IsClosed)
+                {
+                    if (Connection.Name is null)
+                        throw new InvalidOperationException("RMQMessagingGateway: Connection must have a name");
+                    if (Connection.AmpqUri is null)
+                        throw new InvalidOperationException("RMQMessagingGateway: Connection must have an AMPQ URI");
 
-                connection.ConnectionBlocked += HandleBlocked;
-                connection.ConnectionUnblocked += HandleUnBlocked;
+                    if (_pooledConnection == null || !_pooledConnection.IsOpen)
+                    {
+                        ReleaseConnection();
+                        _pooledConnection = new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat)
+                            .AcquireConnection(_connectionFactory);
+                        if (_pooledConnection is null)
+                            throw new InvalidOperationException($"RMQMessagingGateway: Connection to {Connection.AmpqUri.GetSanitizedUri()} failed");
 
-                Log.OpeningChannelToRabbitMq(s_logger, Connection.AmpqUri.GetSanitizedUri());
+                        _pooledConnection.ConnectionBlocked += HandleBlocked;
+                        _pooledConnection.ConnectionUnblocked += HandleUnBlocked;
+                    }
 
-                Channel = connection.CreateModel();
+                    Log.OpeningChannelToRabbitMq(s_logger, Connection.AmpqUri.GetSanitizedUri());
+                    Channel = _pooledConnection.CreateModel();
 
-                //desired state configuration of the exchange
-                Channel.DeclareExchangeForConnection(Connection, makeExchange);
+                    //desired state configuration of the exchange
+                    Channel.DeclareExchangeForConnection(Connection, makeExchange);
+                }
             }
         }
 
@@ -180,16 +189,41 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
         protected virtual void Dispose(bool disposing)
         {
-            if (disposing)
+            if (!disposing) return;
+
+            lock (_connectionLock)
             {
-
-                Channel?.Abort();
-                Channel?.Dispose();
-                Channel = null;
-
-                if (Connection.Name is not null)
-                    new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).RemoveConnection(_connectionFactory);
+                try
+                {
+                    Channel?.Abort();
+                    Channel?.Dispose();
+                }
+                finally
+                {
+                    Channel = null;
+                    ReleaseConnection();
+                }
             }
+        }
+
+        private void ReleaseConnection()
+        {
+            var connection = _pooledConnection;
+            if (connection == null) return;
+
+            _pooledConnection = null;
+            try
+            {
+                connection.ConnectionBlocked -= HandleBlocked;
+                connection.ConnectionUnblocked -= HandleUnBlocked;
+            }
+            catch (ObjectDisposedException)
+            {
+                // A pool reset can dispose the connection before its gateways release it.
+            }
+
+            new RmqMessageGatewayConnectionPool(Connection.Name!, Connection.Heartbeat)
+                .ReleaseConnection(_connectionFactory, connection);
         }
 
         private static partial class Log
