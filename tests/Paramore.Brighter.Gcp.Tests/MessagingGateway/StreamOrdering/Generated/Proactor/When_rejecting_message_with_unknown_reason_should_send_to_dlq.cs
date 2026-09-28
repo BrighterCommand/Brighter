@@ -41,7 +41,7 @@ public class WhenRejectingMessageWithUnknownReasonShouldSendToDlqAsync : IAsyncL
         await _messageGatewayProvider.CleanUpAsync(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #4240 — reject with None reason to DLQ not yet conformant for GCP / StreamOrdering (maintainer sign-off)")]
+    [Fact]
     public async Task When_rejecting_message_with_unknown_reason_should_send_to_dlq_async()
     {
         // Arrange — both a dead-letter queue and an invalid-message channel are configured

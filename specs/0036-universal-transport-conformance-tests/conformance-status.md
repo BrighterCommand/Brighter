@@ -165,9 +165,13 @@ cell remains `Unknown`.
   configurations allowed to claim FR-8 on routing alone — `RMQ.Async / Classic`, `RMQ.Async / Quorum`,
   `RMQ.Sync` and `AzureServiceBus` — and fails the build if a fifth acquires empty keys while claiming
   FR-8, or if one of the four starts stamping metadata and this note goes stale. **Measured: 24 providers,
-  8 with all-empty keys; the other four (GCP ×4) leave FR-8 `Deferred`, so they claim nothing.** So
-  FR-4/6/8/17 `Pass` for RMQ (routing) while metadata-stamping transports (SQS/Redis/Postgres/MSSQL, ADRs
-  `0038`/`0039`/`0040`/`0041`) still assert the full metadata. **⛔ FR-5 (a *separate* invalid channel)
+  8 with all-empty keys.** So FR-4/6/8/17 `Pass` for RMQ (routing) while metadata-stamping transports
+  (SQS/Redis/Postgres/MSSQL/**GCP ×4**, ADRs `0038`/`0039`/`0040`/`0041`/**0078**) still assert the full
+  metadata — **GCP's four consumers joined this group 2026-09-28** (spec 0037 task 5.11): `GcpRejectionRouter`
+  stamps the real `RejectionMetadataKeyNames` keys via ADR 0078's `RejectionMetadataKeys` implementation
+  in each provider (`:588-595`), so GCP was never a routing-only candidate for the audit's declared-relaxation
+  set above — see the dated evidence note under the GCP FR-23 paragraph below for the full cell move.
+  **⛔ FR-5 (a *separate* invalid channel)
   stays `Deferred -> #4240`:** neither `RmqMessageConsumer` nor `RmqSubscription` models an invalid
   destination — an unacceptable rejection dead-letters to the *DLQ*, not a distinct invalid channel (the
   real invalid read hook observes `MT_NONE`). This is not relaxed by FR-8 (it is a routing gap, not a
@@ -518,6 +522,25 @@ lazy connect on first publish), or create the requeue producer eagerly with the 
 never built on the pump thread.
 
 ### `GCP` ×4 was attempted and stays `Deferred` — the emulator cannot create a DLQ subscription
+
+⭐ **Evidence (2026-09-28, spec 0037 task 5.11): the twenty rejection-routing cells (FR-4, FR-5, FR-6,
+FR-8, FR-17 × four configurations) moved to `Fixed (#4386)`, and this paragraph's blocker does not
+apply to them.** This section's two-API blocker (below) is specific to **FR-23**: FR-23 dead-letters
+by a message exhausting its delivery budget under the subscription's own native `DeadLetterPolicy`,
+which `EnsureSubscriptionExistsAsync` provisions via `UpdateIAmRoleForDeadLetterAsync`, and that call
+is what needs the two APIs the emulator refuses. FR-4/5/6/8/17 are a different mechanism entirely
+(ADR 0078): an explicit `Reject` routes a stamped copy to a Brighter-managed dead-letter or
+invalid-message topic addressed by `deadLetterRoutingKey`/`invalidMessageRoutingKey`, published by an
+ordinary lazy producer — no native `DeadLetterPolicy`, no `UpdateIAmRoleForDeadLetterAsync` call, and
+so no dependency on Resource Manager or the emulator's absent IAM surface. Ledger regeneration
+un-skipped 40 generated tests (20 cells × Reactor/Proactor); all 40 passed on a clean emulator
+(`docker-compose -f docker-compose-gcp.yaml down -v; up -d`), and the full scoped GCP suite
+(`Category!=Spanner&Category!=GcpPubSubStream&Category!=GcpPubSubStreamOrdering&Fragile!=CI`) showed
+120 passed / 50 failed / 32 skipped — the 50 failures are exactly the pre-existing 45 Firestore + 5 GCS
+baseline failures (real-GCP-only), zero in `MessagingGateway`, so no cell was reverted.
+`RejectionMetadataContractAudit`/`LedgerSkipCrossCheckAudit` (44 tests) re-ran green against the new
+ledger. **FR-23 itself stays `Deferred` here** — this paragraph's blocker is unaffected and still
+applies; it is Phase 6/7 territory (ADR 0077, delivery count), not this task's scope.
 
 Measured 2026-09-12 against `docker-compose-gcp.yaml` (the `cloud-sdk:emulators` Pub/Sub emulator on
 `localhost:8085`, with `PUBSUB_EMULATOR_HOST` and `GOOGLE_CLOUD_PROJECT` exported). All eight tests —
@@ -902,10 +925,10 @@ CI is unaffected — GitHub Actions `services:` mount no volume.
 | AWS.V4 / SnsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4240) | Pass | Pass | Pass | Pass | Fixed (#4341) |
 | AWS.V4 / SqsStandard | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Fixed (#4341) |
 | AWS.V4 / SqsFifo | Pass | Pass | Pass | Pass | Pass | Pass | Deferred -> #4240 (sign-off: @iancooper) | Pass | Pass | Pass | Pass | Fixed (#4341) |
-| GCP / Pull | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
-| GCP / PullOrdering | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
-| GCP / Stream | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
-| GCP / StreamOrdering | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
+| GCP / Pull | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Fixed (#4386) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
+| GCP / PullOrdering | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Fixed (#4386) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
+| GCP / Stream | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Fixed (#4386) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
+| GCP / StreamOrdering | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Fixed (#4386) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) | Fixed (#4386) | Deferred -> #4240 (sign-off: @iancooper) | Deferred -> #4240 (sign-off: @iancooper) |
 | Kafka / Classic | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | Kafka / Consumer | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |
 | Kafka / PartitionKey | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass | Pass |

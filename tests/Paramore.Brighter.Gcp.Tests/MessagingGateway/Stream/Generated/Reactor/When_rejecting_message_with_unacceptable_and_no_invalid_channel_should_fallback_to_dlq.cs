@@ -36,7 +36,7 @@ public class WhenRejectingMessageWithUnacceptableAndNoInvalidChannelShouldFallba
         _messageGatewayProvider.CleanUp(_producer, _channel, _sentMessages);
     }
 
-    [Fact(Skip = "Deferred: #4240 — fallback: unacceptable, DLQ-only not yet conformant for GCP / Stream (maintainer sign-off)")]
+    [Fact]
     public void When_rejecting_message_with_unacceptable_and_no_invalid_channel_should_fallback_to_dlq()
     {
         // Arrange — a dead-letter queue is configured, but no invalid-message channel
