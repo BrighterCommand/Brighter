@@ -19,11 +19,22 @@ public partial class GcpPubSubStreamMessageConsumer(
     GcpMessagingGatewayConnection connection,
     GcpStreamConsumer consumer,
     Google.Cloud.PubSub.V1.SubscriptionName subscriptionName,
-    TimeProvider timeProvider) : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
+    TimeProvider timeProvider,
+    RoutingKey? deadLetterRoutingKey = null,
+    RoutingKey? invalidMessageRoutingKey = null,
+    OnMissingChannel makeChannels = OnMissingChannel.Assume) : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
 {
 
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<GcpPubSubStreamMessageConsumer>();
-    
+
+    private readonly GcpRejectionRouter _router = new GcpRejectionRouter(
+        connection,
+        deadLetterRoutingKey,
+        invalidMessageRoutingKey,
+        makeChannels,
+        subscriptionName.ProjectId,
+        timeProvider);
+
     /// <summary>
     /// Synchronously acknowledges a message, signalling the Pub/Sub service that the message
     /// has been successfully processed and can be discarded.
@@ -75,16 +86,24 @@ public partial class GcpPubSubStreamMessageConsumer(
     }
 
     /// <summary>
-    /// Synchronously rejects a message. In this implementation, it calls <see cref="GcpStreamMessage.Accepted"/>
-    /// to signal processing completion and prevents redelivery, while logging the rejection.
+    /// Synchronously rejects a message, routing a stamped copy to the configured dead-letter or
+    /// invalid-message destination before accepting the original stream handle.
     /// </summary>
     /// <param name="message">The message to reject.</param>
     /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
-    /// <returns>Always returns <c>true</c> indicating the operation was processed.</returns>
+    /// <returns>Always <see langword="true"/>: the message is settled by this call.</returns>
     public bool Reject(Message message, MessageRejectionReason? reason = null)
     {
-        if (!message.Header.Bag.TryGetValue("ReceiptHandle", out var receiptHandle) || receiptHandle is not GcpStreamMessage gcpStreamMessage)
+        // Copy the handle before the router strips it from the bag.
+        message.Header.Bag.TryGetValue("ReceiptHandle", out var handler);
+        var gcpStreamMessage = handler as GcpStreamMessage;
+
+        _router.Route(message, reason);
+
+        if (gcpStreamMessage == null)
         {
+            // Missing handle: routing still ran, but we cannot settle the original.
+            Log.RejectMissingHandle(s_logger, message.Id.Value);
             return true;
         }
 
@@ -92,18 +111,33 @@ public partial class GcpPubSubStreamMessageConsumer(
         Log.RejectMessage(s_logger, message.Id.Value, "", subscriptionName.ToString());
         return true;
     }
-    
+
     /// <summary>
-    /// Asynchronously rejects a message. In this implementation, it calls <see cref="GcpStreamMessage.Accepted"/>
-    /// to signal processing completion and prevents redelivery, while logging the rejection.
+    /// Asynchronously rejects a message, routing a stamped copy to the configured dead-letter or
+    /// invalid-message destination before accepting the original stream handle.
     /// </summary>
     /// <param name="message">The message to reject.</param>
     /// <param name="reason">The <see cref="MessageRejectionReason"/> that explains why we rejected the message</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A task that returns <c>true</c>.</returns>
-    public Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default)
+    /// <returns>A task that always returns <see langword="true"/>: the message is settled by this call.</returns>
+    public async Task<bool> RejectAsync(Message message, MessageRejectionReason? reason = null, CancellationToken cancellationToken = default)
     {
-        return Task.FromResult(Reject(message, reason));
+        // Copy the handle before the router strips it from the bag.
+        message.Header.Bag.TryGetValue("ReceiptHandle", out var handler);
+        var gcpStreamMessage = handler as GcpStreamMessage;
+
+        await _router.RouteAsync(message, reason, cancellationToken);
+
+        if (gcpStreamMessage == null)
+        {
+            // Missing handle: routing still ran, but we cannot settle the original.
+            Log.RejectMissingHandle(s_logger, message.Id.Value);
+            return true;
+        }
+
+        Accept(gcpStreamMessage);
+        Log.RejectMessage(s_logger, message.Id.Value, "", subscriptionName.ToString());
+        return true;
     }
 
     /// <summary>
@@ -246,8 +280,9 @@ public partial class GcpPubSubStreamMessageConsumer(
     public void Dispose()
     {
         consumer.StopAsync().GetAwaiter().GetResult();
+        _router.Dispose();
     }
-    
+
     /// <summary>
     /// Disposes of the consumer's resources asynchronously.
     /// </summary>
@@ -255,6 +290,7 @@ public partial class GcpPubSubStreamMessageConsumer(
     public async ValueTask DisposeAsync()
     {
         await consumer.StopAsync();
+        await _router.DisposeAsync();
     }
 
     /// <summary>
@@ -282,6 +318,10 @@ public partial class GcpPubSubStreamMessageConsumer(
             "PullPubSubConsumer: Error during rejecting the message {Id} with the receipt handle {ReceiptHandle} on the subscription {SubscriptionName}")]
         public static partial void RejectError(ILogger logger, Exception ex, string id, string receiptHandle,
             string subscriptionName);
+
+        [LoggerMessage(LogLevel.Error,
+            "GcpStreamMessageConsumer: Message {Id} has no receipt handle; routed copy published but the original cannot be settled")]
+        public static partial void RejectMissingHandle(ILogger logger, string id);
 
         [LoggerMessage(LogLevel.Information, "GcpStreamMessageConsumer: Purging the subscription {SubscriptionName}")]
         public static partial void PurgeStart(ILogger logger, string subscriptionName);
