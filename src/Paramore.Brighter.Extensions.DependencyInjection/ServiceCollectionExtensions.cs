@@ -1077,14 +1077,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 .AddSingleton(provider =>
                 {
                     IAmAStorageProvider store = provider.GetRequiredService<TStoreProvider>();
-                    store.Tracer = provider.GetRequiredService<IAmABrighterTracer>();
+                    store.Tracer = provider.GetService<IAmABrighterTracer>();
                     store.EnsureStoreExists();
                     return store;
                 })
                 .AddSingleton(provider =>
                 {
                     IAmAStorageProviderAsync store = provider.GetRequiredService<TStoreProvider>();
-                    store.Tracer = provider.GetRequiredService<IAmABrighterTracer>();
+                    store.Tracer = provider.GetService<IAmABrighterTracer>();
                     store.EnsureStoreExistsAsync().GetAwaiter().GetResult();
                     return store;
                 });
