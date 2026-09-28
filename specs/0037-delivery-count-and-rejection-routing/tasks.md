@@ -605,7 +605,7 @@
     - Put the two-subscription Given in a reusable test helper; 6.30 uses it too
   - Depends on: 5.5b, 5.6
 
-- [ ] **5.9 TEST + IMPLEMENT: After a failed routing publish, a later GCP Reject rebuilds the producer and routes once the destination exists (only success is cached)**
+- [x] **5.9 TEST + IMPLEMENT: After a failed routing publish, a later GCP Reject rebuilds the producer and routes once the destination exists (only success is cached)**
   - **USE COMMAND**: `/test-first when a gcp rejection routing publish failed earlier should rebuild the producer and route once the destination exists`
   - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Pull" and "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream"
   - Test file: `When_a_gcp_rejection_routing_failed_earlier_should_rebuild_producer_and_route.cs` (async: `…_async.cs`)
