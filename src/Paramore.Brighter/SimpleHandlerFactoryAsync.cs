@@ -32,6 +32,8 @@ namespace Paramore.Brighter
     /// </summary>
     public class SimpleHandlerFactoryAsync(Func<Type, IHandleRequestsAsync> factoryMethod) : IAmAHandlerFactoryAsync
     {
+        public IAmAScope? CreatePipelineScope() => null;
+
         /// <summary>
         /// Create a handler for a given request type
         /// </summary>

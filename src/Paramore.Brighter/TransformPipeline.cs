@@ -16,18 +16,21 @@ namespace Paramore.Brighter
         protected TransformLifetimeScope? InstanceScope;
 
         private readonly IAmAMessageMapperRegistry? _mapperRegistry;
+        private readonly IAmAScope? _pipelineScope;
         private int _released;
 
         protected TransformPipeline(
             Lease<IAmAMessageMapper<TRequest>> messageMapperLease,
             IEnumerable<Lease<IAmAMessageTransform>> transformLeases,
-            IAmAMessageMapperRegistry? mapperRegistry = null)
+            IAmAMessageMapperRegistry? mapperRegistry = null,
+            IAmAScope? pipelineScope = null)
         {
             MapperLease = messageMapperLease ?? throw new ArgumentNullException(nameof(messageMapperLease));
             TransformLeases = transformLeases as IReadOnlyList<Lease<IAmAMessageTransform>> ?? transformLeases.ToArray();
             //materialise the transform instances once for execution; the leases stay for release
             Transforms = TransformLeases.Select(lease => lease.Instance).ToArray();
             _mapperRegistry = mapperRegistry;
+            _pipelineScope = pipelineScope;
         }
 
         /// <summary>
@@ -68,7 +71,9 @@ namespace Paramore.Brighter
             //because that scope only exists when a transformer factory was supplied
             TransformPipelineDrain.Drain(
                 disposeScope: () => InstanceScope?.Dispose(),
-                releaseMapper: () => _mapperRegistry?.Release(MapperLease));
+                releaseMapper: () => _mapperRegistry?.Release(MapperLease),
+                releaseScope: () => _pipelineScope?.Dispose(),
+                requestType: typeof(TRequest).Name);
         }
     }
 }
