@@ -72,6 +72,9 @@ internal sealed class InMemoryRacingAdministrationClient(int participants = 1) :
     public Task CreateQueueAsync(string queueName, TimeSpan? autoDeleteOnIdle = null,
         long? maxMessageSizeInKilobytes = default) => CreateAsync("queue:" + queueName);
 
+    public Task CreateQueueAsync(string queueName, AzureServiceBusSubscriptionConfiguration subscriptionConfiguration)
+        => CreateQueueAsync(queueName, subscriptionConfiguration.QueueIdleBeforeDelete);
+
     public Task CreateTopicAsync(string topicName, TimeSpan? autoDeleteOnIdle = null,
         long? maxMessageSizeInKilobytes = default) => CreateAsync("topic:" + topicName);
 

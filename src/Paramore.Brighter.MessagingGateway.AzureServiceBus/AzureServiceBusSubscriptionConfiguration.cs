@@ -69,5 +69,12 @@ public class AzureServiceBusSubscriptionConfiguration
     /// <summary>
     /// Use a Service Bus Queue instead of a Topic
     /// </summary>
+    /// <remarks>
+    /// When a consumer creates a queue, the delivery count, expiration, lock duration, lifetime,
+    /// idle timeout and session settings are applied. Existing queues are not reconfigured.
+    /// Producers create queues with broker defaults. Provision session-enabled queues before
+    /// producers start, or let the configured consumer create them first: Azure Service Bus
+    /// does not allow the session requirement to be changed after queue creation.
+    /// </remarks>
     public bool UseServiceBusQueue = false;
 }

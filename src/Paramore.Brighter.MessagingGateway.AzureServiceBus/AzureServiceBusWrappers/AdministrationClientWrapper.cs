@@ -66,27 +66,42 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <param name="queueName">The name of the Queue</param>
         /// <param name="autoDeleteOnIdle">Number of minutes before an ideal queue will be deleted</param>
         /// <param name="maxMessageSizeInKilobytes">Ma message size in kilobytes : Only available in premium</param>
-        public async Task CreateQueueAsync(string queueName, TimeSpan? autoDeleteOnIdle = null, long? maxMessageSizeInKilobytes = default)
+        public Task CreateQueueAsync(string queueName, TimeSpan? autoDeleteOnIdle = null, long? maxMessageSizeInKilobytes = default)
+            => CreateQueueAsync(new CreateQueueOptions(queueName)
+            {
+                AutoDeleteOnIdle = autoDeleteOnIdle ?? TimeSpan.MaxValue,
+                MaxMessageSizeInKilobytes = maxMessageSizeInKilobytes
+            });
+
+        /// <inheritdoc />
+        public Task CreateQueueAsync(string queueName, AzureServiceBusSubscriptionConfiguration subscriptionConfiguration)
+            => CreateQueueAsync(new CreateQueueOptions(queueName)
+            {
+                MaxDeliveryCount = subscriptionConfiguration.MaxDeliveryCount,
+                DeadLetteringOnMessageExpiration = subscriptionConfiguration.DeadLetteringOnMessageExpiration,
+                LockDuration = subscriptionConfiguration.LockDuration,
+                DefaultMessageTimeToLive = subscriptionConfiguration.DefaultMessageTimeToLive,
+                AutoDeleteOnIdle = subscriptionConfiguration.QueueIdleBeforeDelete,
+                RequiresSession = subscriptionConfiguration.RequireSession
+            });
+
+        private async Task CreateQueueAsync(CreateQueueOptions options)
         {
-            Log.CreatingTopic(s_logger, queueName);
+            Log.CreatingTopic(s_logger, options.Name);
 
             try
             {
-                await _administrationClient.CreateQueueAsync(new CreateQueueOptions(queueName)
-                {
-                    AutoDeleteOnIdle = autoDeleteOnIdle ?? TimeSpan.MaxValue,
-                    MaxMessageSizeInKilobytes = maxMessageSizeInKilobytes
-                });
+                await _administrationClient.CreateQueueAsync(options);
             }
             catch (Exception e)
             {
-                Log.FailedToCreateQueue(s_logger, e, queueName);
+                Log.FailedToCreateQueue(s_logger, e, options.Name);
                 throw;
             }
 
-            Log.QueueCreated(s_logger, queueName);
+            Log.QueueCreated(s_logger, options.Name);
         }
-        
+
         /// <summary>
         /// Create a Subscription.
         /// Sync over Async but alright in the context of creating a subscription
