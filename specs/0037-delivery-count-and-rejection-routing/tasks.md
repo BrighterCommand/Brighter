@@ -558,7 +558,7 @@
     - Add `"googclient_deliveryattempt"` to `Parser.s_ignoreHeaders` (`Parser.cs:12`). The router in 0078 must not reintroduce it. This lands before 5.6 so stream routing never re-publishes the attribute (ADR 0078:38); 5.6 asserts the routed copy.
   - Depends on: 5.4, 5.5c
 
-- [ ] **5.6 TEST + IMPLEMENT: A GCP stream Reject routes by reason with rejection metadata, then accepts the original**
+- [x] **5.6 TEST + IMPLEMENT: A GCP stream Reject routes by reason with rejection metadata, then accepts the original**
   - **USE COMMAND**: `/test-first when a gcp stream consumer rejects a message should route by reason with rejection metadata and accept the original`
   - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream"
   - Test file: `When_a_gcp_stream_consumer_rejects_should_route_by_reason_with_metadata.cs` (async: `…_async.cs`)
