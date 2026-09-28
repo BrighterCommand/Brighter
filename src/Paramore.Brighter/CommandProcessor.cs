@@ -395,7 +395,7 @@ namespace Paramore.Brighter
             if (_subscriberRegistry is null)
                 throw new ArgumentException("A subscriberRegistry must be configured.");
 
-            using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration);
+            await using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration);
             try
             {
                 Log.BuildingSendAsyncPipelineForCommand(s_logger, command.GetType(), command.Id.Value);
@@ -482,7 +482,7 @@ namespace Paramore.Brighter
                 if (_subscriberRegistry is null)
                     throw new ArgumentException("A subscriberRegistry must be configured.");
                 
-                using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);
+                using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration, isolateSubscribers: true);
                 Log.BuildingSendPipelineForEvent(s_logger, @event.GetType(), @event.Id.Value);
                 var handlerChain = builder.Build(@event, context, excludeResilienceContext: true);
 
@@ -499,7 +499,10 @@ namespace Paramore.Brighter
                         handlerSpans[handlerName] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event, span, options: _instrumentationOptions)!;
                         if(handleRequests.Context is not null)
                             handleRequests.Context.Span = handlerSpans[handlerName];
-                        handleRequests.Handle(@event);
+                        using (AmbientScopeSuppression.Suppress())
+                        {
+                            handleRequests.Handle(@event);
+                        }
                         if(handleRequests.Context is not null)
                             handleRequests.Context.Span = span;
                     }
@@ -595,7 +598,7 @@ namespace Paramore.Brighter
             if (_subscriberRegistry is null)
                 throw new ArgumentException("A subscriberRegistry must be configured.");
             
-            using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration);
+            await using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration, isolateSubscribers: true);
             var handlerSpans = new ConcurrentDictionary<string, Activity>();
             try
             {
@@ -616,7 +619,10 @@ namespace Paramore.Brighter
                         handlerSpans[handleRequests.Name.ToString()] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event, span, options: _instrumentationOptions)!;
                         if(handleRequests.Context is not null)
                             handleRequests.Context.Span = handlerSpans[handleRequests.Name.ToString()];
-                        tasks.Add(handleRequests.HandleAsync(@event, cancellationToken));
+                        using (AmbientScopeSuppression.Suppress())
+                        {
+                            tasks.Add(handleRequests.HandleAsync(@event, cancellationToken));
+                        }
                         if(handleRequests.Context is not null)
                             handleRequests.Context.Span = span;
                     }

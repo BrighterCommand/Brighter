@@ -47,7 +47,7 @@ public class ThrowOnErrorFalseTests
 
         return new BrighterValidationHostedService(
             Options.Create(options),
-            validator,
+            new[] { validator },
             provider,
             logger);
     }

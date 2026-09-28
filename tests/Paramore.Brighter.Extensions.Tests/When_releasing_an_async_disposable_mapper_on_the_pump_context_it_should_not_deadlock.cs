@@ -141,7 +141,8 @@ public class ReleaseAsyncDisposableMapperOnPumpContextTests
 
     private sealed class NoOpTransformerFactoryAsync : IAmAMessageTransformerFactoryAsync
     {
-        public Lease<IAmAMessageTransformAsync>? Create(Type transformerType) => null;
+        public IAmAScope? CreatePipelineScope() => null;
+        public Lease<IAmAMessageTransformAsync>? Create(Type transformerType, IAmAScope? scope = null) => null;
         public void Release(Lease<IAmAMessageTransformAsync>? lease) { }
         public ValueTask ReleaseAsync(Lease<IAmAMessageTransformAsync>? lease) => default;
     }

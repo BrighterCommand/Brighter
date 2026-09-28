@@ -10,6 +10,8 @@ namespace Paramore.Brighter.AWS.Tests.TestDoubles
         {
             _handlerAction = handlerAction;
         }
+        public IAmAScope? CreatePipelineScope() => null;
+
         public IHandleRequests Create(Type handlerType, IAmALifetime lifetime)
         {
             return _handlerAction();

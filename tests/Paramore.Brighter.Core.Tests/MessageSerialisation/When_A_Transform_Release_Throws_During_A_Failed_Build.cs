@@ -135,7 +135,9 @@ public class TransformPipelineFailedBuildReleaseThrowTests
         public List<IAmAMessageTransform> Released { get; } = new();
         private IAmAMessageTransform? _throwOnRelease;
 
-        public Lease<IAmAMessageTransform>? Create(Type transformerType)
+        public IAmAScope? CreatePipelineScope() => null;
+
+        public Lease<IAmAMessageTransform>? Create(Type transformerType, IAmAScope? scope = null)
         {
             //the failing transform cannot be built, so the build throws when it is reached
             if (transformerType == typeof(UnbuildableTransform)) return null;
@@ -268,7 +270,9 @@ public class AsyncTransformPipelineFailedBuildReleaseThrowTests
         public List<IAmAMessageTransformAsync> Released { get; } = new();
         private IAmAMessageTransformAsync? _throwOnRelease;
 
-        public Lease<IAmAMessageTransformAsync>? Create(Type transformerType)
+        public IAmAScope? CreatePipelineScope() => null;
+
+        public Lease<IAmAMessageTransformAsync>? Create(Type transformerType, IAmAScope? scope = null)
         {
             if (transformerType == typeof(UnbuildableTransformAsync)) return null;
 

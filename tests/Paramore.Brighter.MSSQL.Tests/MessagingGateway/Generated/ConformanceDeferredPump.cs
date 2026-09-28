@@ -91,12 +91,14 @@ public sealed class ConformanceDeferredCommandMessageMapperAsync : IAmAMessageMa
 
 internal sealed class ConformanceHandlerFactory(Func<IHandleRequests> handler) : IAmAHandlerFactorySync
 {
+    public IAmAScope? CreatePipelineScope() => null;
     public IHandleRequests Create(Type handlerType, IAmALifetime lifetime) => handler();
     public void Release(IHandleRequests handler, IAmALifetime lifetime) { }
 }
 
 internal sealed class ConformanceHandlerFactoryAsync(Func<IHandleRequestsAsync> handler) : IAmAHandlerFactoryAsync
 {
+    public IAmAScope? CreatePipelineScope() => null;
     public IHandleRequestsAsync Create(Type handlerType, IAmALifetime lifetime) => handler();
     public void Release(IHandleRequestsAsync handler, IAmALifetime lifetime) { }
 }
