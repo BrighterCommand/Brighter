@@ -572,7 +572,7 @@
     - Compose `Reject` (`:84`) and `RejectAsync` (`:104-106`): copy the `GcpStreamMessage` handle → route → `handle.Accepted()` on `Routed`/`NoDestination`. A missing handle still routes, logs an Error and returns `true` (asserted by the missing-handle clause above).
   - Depends on: 5.5b, 5.5d
 
-- [ ] **5.7 TEST + IMPLEMENT: A GCP Reject with no destination configured acknowledges the message and logs a Warning naming the message id and reason**
+- [x] **5.7 TEST + IMPLEMENT: A GCP Reject with no destination configured acknowledges the message and logs a Warning naming the message id and reason**
   - **USE COMMAND**: `/test-first when a gcp consumer rejects with no destination configured should acknowledge and log a warning naming the message id and reason`
   - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Pull" and "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream"
   - Test file: `When_a_gcp_consumer_rejects_with_no_destination_should_acknowledge_and_log_warning.cs` (async: `…_async.cs`)
