@@ -181,6 +181,29 @@ look like wrong counts (e.g. "Expected 0, Actual 1").
 - Before you accept a new test of this kind, run the full suite for the project more than once.
   This race does not show up in a filtered run.
 
+### GCP Stream: acknowledge (or reject) every received message before disposing the channel
+
+A hand-written test that calls `channel.Receive(...)` / `channel.ReceiveAsync(...)` on a GCP
+**Stream**-mode `IAmAChannelSync`/`IAmAChannelAsync` (`GcpStreamMessageGatewayProvider`, as opposed to
+Pull) **must** call `channel.Acknowledge(received)` (or `Reject`) on every message it receives before
+the channel is disposed.
+
+`GcpStreamConsumer.StopAsync` calls `client.StopAsync(new SubscriberClient.ShutdownOptions { Mode =
+ShutdownMode.WaitForProcessing }, ...)`, which blocks until every in-flight
+`GcpStreamMessage.WaitForCompleteAsync()` completes — and that only completes on Ack/Nack. An un-acked
+receive therefore hangs `channel.Dispose()` **forever** (confirmed: 37+ minutes, near-zero CPU, silently
+blocked, no exception), which then hangs the whole `dotnet test` run.
+
+- Always `channel.Acknowledge(received)` (or `Reject`) immediately after asserting on a received
+  message, before the `finally` block's `channel?.Dispose()` / `provider.CleanUp(...)`.
+- Run any suite that exercises GCP Stream with `Fragile!=CI` in the filter and `--blame-hang-timeout
+  10min`, foreground only, so a forgotten Ack aborts with a diagnosable "inactivity time … elapsed"
+  message instead of hanging silently. `createdump` may not have execute permission in some sandboxes,
+  so the abort message and any `Console.WriteLine` checkpoints are the only diagnostics — add them
+  liberally when debugging a suspected hang.
+- This is almost certainly the root cause of any GCP Stream test run that hangs for an extended period
+  with near-zero CPU — check this before assuming Podman/emulator infra.
+
 ### RabbitMQ: run each suite against the broker version it targets
 
 The two RabbitMQ suites do not target the same broker, and pointing one at the other's version
