@@ -642,7 +642,7 @@
     - Record the evidence: a dated "Evidence" entry in `docs/adr/0078-gcp-rejection-routing-and-dlq-channel-creation.md` naming the test files and results, and the checklist item "R-16/R-17/R-19 failure evidence produced" ticked in `specs/0037-delivery-count-and-rejection-routing/README.md`. These are evidence, not ACs.
   - Depends on: 5.8
 
-- [ ] **5.11 GATE: Move the twenty GCP rejection-routing cells (FR-4, FR-5, FR-6, FR-8, FR-17 × 4 configurations; AC-30 row 2, AC-15/16/17 across all four configurations)**
+- [x] **5.11 GATE: Move the twenty GCP rejection-routing cells (FR-4, FR-5, FR-6, FR-8, FR-17 × 4 configurations; AC-30 row 2, AC-15/16/17 across all four configurations)**
   - In `conformance-status.md`, set those 20 cells to `Fixed (#4386)`, regenerate, and run the scoped GCP suite on a clean emulator (`docker-compose -f docker-compose-gcp.yaml down -v; up -d`), both variants.
   - Revert any red cell and record why.
   - The double run for AC-22 happens in 6.31.
