@@ -796,6 +796,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
         /// <param name="args"></param>
         /// <param name="cancellationToken">Async Cancellation Token</param>
         /// <returns>A list of messages that are outstanding for dispatch</returns>
+        /// <remarks>
+        /// All-topic scans with tripped topics read at most one batch per segment and may return a partial or empty page.
+        /// Subsequent calls continue from the saved scan position, including calls requesting page 1.
+        /// </remarks>
         public async Task<IEnumerable<Message>> OutstandingMessagesAsync(
             TimeSpan dispatchedSince,
             RequestContext? requestContext,
@@ -949,19 +953,26 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
                 }
 
                 // Spin off requests to scan each segment
-                var tasks = new List<Task<List<MessageItem>>>();
+                var tasks = new List<Task<(List<MessageItem> Messages, string? PaginationToken)>>();
                 var segmentPageSizes = GetSegmentPageSizes(pageSize);
                 for (var segmentNumber = 0; segmentNumber < _configuration.ScanConcurrency; segmentNumber++)
                 {
                     tasks.Add(ScanOutstandingIndexSegmentForMessages(olderThan, segmentPageSizes[segmentNumber], pageNumber, segmentNumber, excludedTopics, cancellationToken));
                 }
 
-                await Task.WhenAll(tasks);
+                var segments = await Task.WhenAll(tasks);
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // A failed segment must not advance past messages collected by the other segments.
+                for (var segmentNumber = 0; segmentNumber < segments.Length; segmentNumber++)
+                {
+                    _outstandingAllTopicsScanContext.SetPagingToken(segmentNumber, segments[segmentNumber].PaginationToken);
+                }
 
                 // Set the next page number based on the pagination tokens for the different segments
                 _outstandingAllTopicsScanContext.SetNextPage();
 
-                var allMessages = tasks.SelectMany(t => t.Result);
+                var allMessages = segments.SelectMany(segment => segment.Messages);
                 return allMessages
                     .OrderBy(m => m.OutstandingCreatedTime)
                     .Select(m => m.ConvertToMessage());
@@ -985,7 +996,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
             return segmentPageSizes.ToArray();
         }
 
-        private async Task<List<MessageItem>> ScanOutstandingIndexSegmentForMessages(DateTimeOffset olderThan, 
+        private async Task<(List<MessageItem> Messages, string? PaginationToken)> ScanOutstandingIndexSegmentForMessages(
+            DateTimeOffset olderThan,
             int pageSize, 
             int pageNumber, 
             int segmentNumber,
@@ -996,7 +1008,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
             if (pageNumber != 1 && paginationToken == null)
             {
                 // It may be that this segment is done but other segments have more results
-                return new List<MessageItem>();
+                return (new List<MessageItem>(), null);
             }
             
             var segmentMessages = new List<MessageItem>();
@@ -1028,19 +1040,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB.V4
                     .Where(message => !excludedTopics.Contains(message.Topic ?? string.Empty)));
 
                 paginationToken = scan.IsDone ? null : scan.PaginationToken;
-            } while (paginationToken != null && segmentMessages.Count < pageSize);
+                // Return a partial page instead of scanning through an unbounded tripped-topic backlog.
+            } while (excludedTopics.Count == 0 && paginationToken != null && segmentMessages.Count < pageSize);
 
-            // If there are more results, store the context for retrieving the next page
-            if (paginationToken != null)
-            {
-                _outstandingAllTopicsScanContext.SetPagingToken(segmentNumber, paginationToken);
-            }
-            else
-            {
-                _outstandingAllTopicsScanContext.SetPagingToken(segmentNumber, null);
-            }
-
-            return segmentMessages;
+            return (segmentMessages, paginationToken);
         }
 
         private async Task<IEnumerable<Message>> OutstandingMessagesForTopicAsync(TimeSpan dispatchedSince, int pageSize, int pageNumber,
