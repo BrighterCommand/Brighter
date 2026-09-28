@@ -49,7 +49,7 @@ public class DoubleDescribePreventionTests
         var provider = services.BuildServiceProvider();
 
         var validationService = new BrighterValidationHostedService(
-            options, validator, provider, NullLogger<BrighterValidationHostedService>.Instance);
+            options, new[] { validator }, provider, NullLogger<BrighterValidationHostedService>.Instance);
         var diagnosticService = new BrighterDiagnosticHostedService(diagnosticWriter, options);
 
         // Act — both hosted services start (as they would in a real host)

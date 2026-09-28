@@ -189,6 +189,7 @@
     <PackageVersion Include="TickerQ.EntityFrameworkCore" Version="8.0.0" />
   </ItemGroup>
   <ItemGroup Condition=" '$(TargetFramework)' == 'net9.0' ">
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.15" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="9.0.15" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.15" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.15" />
@@ -204,6 +205,7 @@
     <PackageVersion Include="TickerQ.EntityFrameworkCore" Version="9.0.2" />
   </ItemGroup>
   <ItemGroup Condition=" '$(TargetFramework)' == 'net10.0' ">
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.11" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.11" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.11" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.11" />
