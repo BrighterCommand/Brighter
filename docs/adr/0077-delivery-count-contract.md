@@ -287,7 +287,34 @@ Bespoke tests (constructed subscriptions, not provider-supplied): AC-1, AC-5, AC
 | RocketMQ counter is client-local, not broker-supplied | fresh-client step in AC-23 |
 | Stale `googclient_deliveryattempt` travels on a routed GCP copy | excluded from the bag here; 0078 must not reintroduce it |
 | A replay tool puts messages back without stripping metadata, and they bounce straight back to the DLQ | documented as the tool's responsibility; the bounce is immediate and visible (a `DeliveryError` rejection on first delivery), not a silent loop |
-| Unverified library behaviours: whether `SubscriberClient` injects/overwrites `googclient_deliveryattempt`; whether `bufferSize: 2` admits the stream redelivery while the first is held | confirmed at implementation; this ADR amended if either fails |
+| Unverified library behaviours: whether `SubscriberClient` injects/overwrites `googclient_deliveryattempt`; whether `bufferSize: 2` admits the stream redelivery while the first is held | `SubscriberClient` half confirmed 2026-09-28, see amendment below; `bufferSize: 2` still open |
+
+### Amendment (2026-09-28) — task 5.5c measurement: `SubscriberClient` and `googclient_deliveryattempt`
+
+Measured on the local Pub/Sub emulator against a DLQ-backed stream subscription (`DeadLetterPolicy`
+set, per A-1), using a Skip-marked fixture committed at
+`tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream/GcpStreamDeliveryAttemptMeasurementTests.cs`
+(unskip locally to reproduce; both facts stay `[Fact(Skip = ...)]` in the committed tree).
+
+- **(i) `SubscriberClient` does inject the attribute.** A message received on first delivery carried
+  `googclient_deliveryattempt = "1"` in `Header.Bag` (Brighter's `Parser` copies every attribute not
+  in `s_ignoreHeaders` into the bag verbatim, so this is exactly what the raw `PubsubMessage.Attributes`
+  held). The value parses cleanly as `1`, consistent with `PubsubExtensions.GetDeliveryAttempt()` and
+  with assumption A-1 ("`delivery_attempt` is ... 1 on first delivery").
+- **(ii) The emulator accepts a publish carrying a stale `googclient_deliveryattempt` attribute, and
+  `SubscriberClient` overwrites it.** A message published with `googclient_deliveryattempt = "999"`
+  already set (simulating a routed copy that had not had the attribute stripped) was accepted by the
+  emulator without error. The value a receiver saw was `"1"` — the fresh delivery-attempt count — not
+  the stale `"999"`, so `SubscriberClient` overwrites rather than preserves a pre-existing value.
+
+**Consequence for 5.5d:** (ii) shows a stale value would **not** survive to a reader once the message
+passes back through `SubscriberClient` — so this is not flagged for 6.11 per the task's instruction.
+The residual concern the ignore-header entry (5.5d) still needs to cover is a **pull** consumer, which
+has no `SubscriberClient` in its path to perform this overwrite; and any reader that inspects the raw
+published attributes without going through a fresh `SubscriberClient` receive. 5.5d's Given is chosen
+under branch (a) of its Given list: since (ii) shows the emulator accepts an explicitly published
+`googclient_deliveryattempt` attribute, that publish can be used directly to test the stream and pull
+parser clauses.
 
 ## Alternatives Considered
 
