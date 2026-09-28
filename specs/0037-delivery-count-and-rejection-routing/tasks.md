@@ -546,7 +546,7 @@
   - Runs before 5.5d and 5.6: stream routing re-publishes every non-ignored bag entry (`Parser.cs:350-356`), and 5.4 keeps a `DeadLetterPolicy` on the very subscriptions `SubscriberClient` injects on, so the answer decides whether 5.6 can route at all (ADR 0078:38).
   - Depends on: 5.3, 5.4
 
-- [ ] **5.5d TEST + IMPLEMENT: The GCP parser never admits `googclient_deliveryattempt` into `Header.Bag`, so a routed copy cannot re-publish it**
+- [x] **5.5d TEST + IMPLEMENT: The GCP parser never admits `googclient_deliveryattempt` into `Header.Bag`, so a routed copy cannot re-publish it**
   - **USE COMMAND**: `/test-first when a gcp message carrying googclient deliveryattempt is received should not copy it into the header bag`
   - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream" and "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Pull"
   - Test file: `When_a_gcp_message_carries_delivery_attempt_attribute_should_not_copy_it_into_bag.cs` (async: `…_async.cs`)
