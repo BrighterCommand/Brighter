@@ -124,6 +124,7 @@ public class ScopedArtefactCacheFaultEvictionTests
         var artefactType = typeof(object);
         const int loserCount = 4;
         var startBarrier = new Barrier(loserCount + 1);
+        var losersReady = new CountdownEvent(loserCount);
         var factoryEntered = new ManualResetEventSlim(false);
         var releaseGate = new ManualResetEventSlim(false);
         var successfulInstances = new ConcurrentBag<object>();
@@ -161,16 +162,27 @@ public class ScopedArtefactCacheFaultEvictionTests
         // Act - four losers all racing the one faulted resolution, synchronised past their own
         // start so none arrives late enough to open a second, unrelated fault generation; once the
         // fault is genuinely established and mid-flight, four retrying resolvers join, so their own
-        // republish races the losers' cleanup of the stale entry
+        // republish races the losers' cleanup of the stale entry.
+        //
+        // startBarrier only proves every loser reached that statement together - it says nothing
+        // about how long the scheduler then takes to run each one's next statement, and under a
+        // contended CI runner that gap can outlast the whole fault-then-heal cycle below, letting a
+        // late loser's own GetOrAdd find the retryers' already-published healthy entry and return it
+        // without ever calling FaultingFactory (Record.Exception then sees no exception at all).
+        // losersReady closes that gap: every loser signals immediately before calling GetOrAdd, and
+        // the retryers are not started until all four signals have landed, so none of them can begin
+        // that call after healing has already happened.
         var losers = Enumerable.Range(0, loserCount)
             .Select(_ => Task.Run(() =>
             {
                 startBarrier.SignalAndWait();
+                losersReady.Signal();
                 return Record.Exception(() => cache.GetOrAdd(artefactType, FaultingFactory));
             }))
             .ToArray();
         startBarrier.SignalAndWait();
 
+        losersReady.Wait();
         factoryEntered.Wait();
         var retryingResolvers = Enumerable.Range(0, 4).Select(_ => Task.Run(ResolveRetrying)).ToArray();
         releaseGate.Set();
