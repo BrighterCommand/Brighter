@@ -26,7 +26,8 @@ internal static class Parser
         HeaderNames.DataSchema,
         HeaderNames.TraceParent,
         HeaderNames.TraceState,
-        HeaderNames.Baggage
+        HeaderNames.Baggage,
+        "googclient_deliveryattempt"
     };
 
 
