@@ -950,7 +950,7 @@ This list replaces the pre-rescope task list completely. Numbering starts fresh,
 
 *Depends on T17.1–T17.3 and T17.5 being finished and on PR #4282 having merged.*
 
-- [ ] **PROJECT: T18.1 — Merge `origin/master` into `spec/show-me` so that the spec's own diff no longer carries spec 0036, then re-run the test script**
+- [x] **PROJECT: T18.1 — Merge `origin/master` into `spec/show-me` so that the spec's own diff no longer carries spec 0036, then re-run the test script**
   - Do:
     - `git fetch origin`, then `git merge origin/master` on `spec/show-me`, and resolve any conflicts.
     - Confirm that `git merge-base --is-ancestor 91d549be6 origin/master` succeeds (it was a merge commit), and that `git diff --stat origin/master...HEAD` lists only this spec's files.
