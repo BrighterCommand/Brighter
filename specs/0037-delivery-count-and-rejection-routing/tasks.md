@@ -537,7 +537,7 @@
     - RED comes from the `Unacceptable` → `.Invalid` clause; the DLQ-fallback and no-destination clauses may already be green, because 5.5a routes every reason to the DLQ key and already returns `NoDestination` when it is absent
   - Depends on: 5.5a
 
-- [ ] **5.5c MEASURE: Does `SubscriberClient` inject or overwrite `googclient_deliveryattempt`? (ADR 0077 Risks, "unverified library behaviours")**
+- [x] **5.5c MEASURE: Does `SubscriberClient` inject or overwrite `googclient_deliveryattempt`? (ADR 0077 Risks, "unverified library behaviours")**
   - On the emulator with a DLQ-backed stream subscription:
     - (i) record whether a received `PubsubMessage` carries attribute `googclient_deliveryattempt`, and whether `GetDeliveryAttempt` matches it
     - (ii) publish a message that already carries a stale `googclient_deliveryattempt` attribute (as a routed copy would) and record first whether the emulator **accepts** that publish and, if it does, whether `SubscriberClient` overwrites the attribute or keeps the stale value
