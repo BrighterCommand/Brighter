@@ -298,18 +298,18 @@ public class CompressPayloadTransformer : IAmAMessageTransform, IAmAMessageTrans
         return _compressionMethod switch
         {
 #if NETSTANDARD2_0
-            CompressionMethod.GZip => message.Header.ContentType.ToString() == "application/gzip" &&
+            CompressionMethod.GZip => message.Header.ContentType.MediaType == "application/gzip" &&
                                       span.Length >= 2 &&
                                       (span[0] | (span[1] << 8)) == GZIP_LEAD_BYTES,
 #else
-            CompressionMethod.GZip => message.Header.ContentType.ToString() == "application/gzip" &&
+            CompressionMethod.GZip => message.Header.ContentType.MediaType == "application/gzip" &&
                                       span.Length >= 2 &&
                                       BitConverter.ToUInt16(span) == GZIP_LEAD_BYTES,
 #endif
-            CompressionMethod.Zlib => message.Header.ContentType.ToString() == "application/deflate" &&
+            CompressionMethod.Zlib => message.Header.ContentType.MediaType == "application/deflate" &&
                                       span.Length >= 1 &&
                                       span[0] == ZLIB_LEAD_BYTE,
-            CompressionMethod.Brotli => message.Header.ContentType.ToString() == "application/br",
+            CompressionMethod.Brotli => message.Header.ContentType.MediaType == "application/br",
             _ => false
         };
     }
