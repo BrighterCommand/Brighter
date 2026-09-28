@@ -55,8 +55,9 @@ namespace Paramore.Brighter
         {
             var mapper = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory((_) => new MonitorEventMessageMapper()),
-                null);
+                new SimpleMessageMapperFactoryAsync((_) => new MonitorEventMessageMapper()));
             mapper.Register<MonitorEvent, MonitorEventMessageMapper>();
+            mapper.RegisterAsync<MonitorEvent, MonitorEventMessageMapper>();
 
             var mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry: producerRegistry,
