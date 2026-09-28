@@ -215,6 +215,11 @@ These are R-19's failed release and the failed acknowledgement under R-16/R-17. 
   - in (a), the destination holds the copy.
 - **Why this is not a mock (C-10).** Every call reaches the real emulator. Only the result of two RPCs is replaced, on demand.
 - **Status.** These tests are the evidence, not an AC. The record is checked at design review; the evidence is produced at implementation and recorded under the spec's manual-gate list.
+- **Evidence (2026-09-28).** `GcpFaultInjectingInterceptor` (`tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Pull/GcpFaultInjectingInterceptor.cs`) implements the interceptor described above, wired exactly as specified through `GcpMessagingGatewayConnection.SubscriptionManagerConfiguration` (`Credential = null`, `EmulatorDetection` left at `None`, `CallInvoker = GrpcChannel.ForAddress(...).Intercept(faults)`), with a fired-counter asserted `> 0` in every scenario. `Grpc.Net.Client` 2.71.0 and `Grpc.Core.Api` 2.80.0 resolved transitively as expected; no new `PackageReference` was needed. The three scenarios run on both `GCP / Pull` and `GCP / PullOrdering`, sync and async — 12 tests in total, all observed RED against the unfixed consumer (an unhandled `RpcException` escaped `Reject`/`RejectAsync`) and GREEN after the fix:
+  - `tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Pull/When_a_gcp_pull_settle_call_fails_should_return_true_and_leave_message_redeliverable.cs` (`GcpPullSettleCallFailureTests`, sync/Reactor) — 6 tests.
+  - `tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Pull/When_a_gcp_pull_settle_call_fails_should_return_true_and_leave_message_redeliverable_async.cs` (`GcpPullSettleCallFailureAsyncTests`, async/Proactor) — 6 tests.
+
+  The fix (`GcpPullMessageConsumer.cs`, `Reject`/`RejectAsync`): the release call on the `Failed` outcome is now wrapped in `try`/`catch` alongside the already-existing `try`/`catch` around the ack call, and neither catch rethrows any more — both log `Log.RejectError` naming the message id and fall through to `return true`. `Reject`/`RejectAsync` all 12 GREEN; no other test in the GCP Pull suite regressed.
 
 ### IAM tolerance (R-20, NFR-5)
 

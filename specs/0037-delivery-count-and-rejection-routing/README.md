@@ -145,6 +145,7 @@ those two rungs; a third mechanism is out of bounds.
 - [x] **Tasks approved** 2026-09-25 (`.tasks-approved`) after 5 review rounds: 79 tasks — 36 TEST + IMPLEMENT, 17 CHARACTERISE, 4 TIDY, 17 GATE, 5 MEASURE.
 - [ ] **Implementation** — `/spec:ralph-implement` (review-after, scoped to tasks 1.1–2.7) in progress
   - [x] AC-27 samples committed (0da0169b9) — task 1.1
+  - [x] R-16/R-17/R-19 failure evidence produced, 2026-09-28 (12 GREEN, ADR 0078 Evidence) — task 5.10
 
 **TDD gear:** `review-before` (armed by default). No `.current-gear` file exists for this spec.
 

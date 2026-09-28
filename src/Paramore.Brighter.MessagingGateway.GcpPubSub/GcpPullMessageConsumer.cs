@@ -301,8 +301,18 @@ public partial class GcpPullMessageConsumer(
         if (outcome == RoutingOutcome.Failed)
         {
             // The routing publish failed: release the original for prompt redelivery instead of
-            // acknowledging it (R-19). GcpRejectionRouter has already logged the Error.
-            ReleaseByHandle(ackId);
+            // acknowledging it (R-19). GcpRejectionRouter has already logged the Error. A failed
+            // release RPC is itself caught below (R-19's accepted case 1): nothing escapes Reject,
+            // and the message is left to return at its own ack deadline.
+            try
+            {
+                ReleaseByHandle(ackId);
+            }
+            catch (Exception ex)
+            {
+                Log.RejectError(s_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
+            }
+
             return true;
         }
 
@@ -313,8 +323,9 @@ public partial class GcpPullMessageConsumer(
         }
         catch (Exception ex)
         {
+            // A failed ack RPC is accepted case 2 (R-16/R-17): the message stays leased until its
+            // ack deadline, and nothing escapes Reject.
             Log.RejectError(s_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
-            throw;
         }
 
         return true;
@@ -346,8 +357,18 @@ public partial class GcpPullMessageConsumer(
         if (outcome == RoutingOutcome.Failed)
         {
             // The routing publish failed: release the original for prompt redelivery instead of
-            // acknowledging it (R-19). GcpRejectionRouter has already logged the Error.
-            await ReleaseByHandleAsync(ackId, cancellationToken);
+            // acknowledging it (R-19). GcpRejectionRouter has already logged the Error. A failed
+            // release RPC is itself caught below (R-19's accepted case 1): nothing escapes
+            // RejectAsync, and the message is left to return at its own ack deadline.
+            try
+            {
+                await ReleaseByHandleAsync(ackId, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                Log.RejectError(s_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
+            }
+
             return true;
         }
 
@@ -358,8 +379,9 @@ public partial class GcpPullMessageConsumer(
         }
         catch (Exception ex)
         {
+            // A failed ack RPC is accepted case 2 (R-16/R-17): the message stays leased until its
+            // ack deadline, and nothing escapes RejectAsync.
             Log.RejectError(s_logger, ex, message.Id.Value, ackId, subscriptionName.ToString());
-            throw;
         }
 
         return true;
