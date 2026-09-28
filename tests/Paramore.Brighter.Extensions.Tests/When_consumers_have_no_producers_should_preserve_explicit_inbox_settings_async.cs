@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
@@ -55,7 +56,7 @@ public class ConsumerExplicitInboxAsyncTests
         builder.ValidatePipelines();
 
         using var provider = services.BuildServiceProvider();
-        var validation = provider.GetRequiredService<IAmAPipelineValidator>().Validate();
+        var validation = PipelineValidationResult.Combine(provider.GetServices<IAmAPipelineValidator>().Select(v => v.Validate()).ToArray());
         Assert.Empty(validation.Errors);
         var processor = provider.GetRequiredService<IAmACommandProcessor>();
         var command = new ConsumerExplicitInboxAsyncCommand();
