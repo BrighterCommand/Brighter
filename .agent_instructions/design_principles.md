@@ -23,6 +23,28 @@
     - If so, provide an interface for them to override.
     - It is acceptable in that case to use an interface, even if we have one implementation.
     - For internal classes, only provide an interface if there is optionality.
+- When multiple implementations of one service type are meant to run **alongside** each other
+  rather than replace one another (e.g. a core validator plus an add-on package's validator, both
+  under `IAmAPipelineValidator`), the registration and resolution sides must agree, or the failure
+  is silent:
+    - **Registration**: register the "default"/first implementation with `TryAddSingleton<TService>`
+      (so an application can still substitute its own), and register each additional implementation
+      meant to run *beside* it with plain `AddSingleton<TService>` — never `TryAdd` for the
+      additional ones, since `TryAdd` tests the service type and will refuse to add a second
+      implementation of it.
+    - **Resolution**: every caller must resolve via `IEnumerable<TService>` /
+      `provider.GetServices<TService>()` and combine the results. A caller that resolves a single
+      instance via `GetService<TService>()`/`GetRequiredService<TService>()` silently gets
+      **whichever implementation was registered last** — Microsoft.Extensions.DependencyInjection's
+      unkeyed resolution is last-registration-wins, with no error, warning, or exception. This is
+      easy to get right in new call sites and just as easy to miss in existing ones (tests
+      especially) when a second implementation is added later.
+    - This is a deliberate, ADR-sanctioned pattern (see
+      [ADR 0074](../docs/adr/0074-lifetime-validation-evaluation-site.md)), not something to avoid —
+      but treat adding a second implementation under an existing service type as a breaking change
+      that requires sweeping **every** call site (`grep` for `GetService<TService>()` and
+      `GetRequiredService<TService>()` repo-wide, including tests) to the multi-resolve pattern, not
+      just the production call sites you touched.
 - Decide visibility by what belongs on the package boundary.
     - A type is `public` if it belongs on its package's boundary — to be **used** from outside the assembly, or to be **tested** from outside it.
     - A type is `internal` only when nothing outside its own assembly has a consumer for it. That is the exception, not the default: the great majority of types in `src/` are public.

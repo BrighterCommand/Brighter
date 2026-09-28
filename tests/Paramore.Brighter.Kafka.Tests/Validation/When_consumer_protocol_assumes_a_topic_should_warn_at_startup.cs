@@ -79,8 +79,7 @@ public class KafkaMissingTopicWarningTests
         using var provider = CreateProvider(subscription);
 
         //Act
-        var result = PipelineValidationResult.Combine(
-            provider.GetServices<IAmAPipelineValidator>().Select(validator => validator.Validate()).ToArray());
+        var result = PipelineValidationResult.Combine(provider.GetServices<IAmAPipelineValidator>().Select(v => v.Validate()).ToArray());
         foreach (var service in provider.GetServices<IHostedService>())
             await service.StartAsync(CancellationToken.None);
 
@@ -117,8 +116,7 @@ public class KafkaMissingTopicWarningTests
         using var provider = CreateProvider(subscription);
 
         //Act
-        var result = PipelineValidationResult.Combine(
-            provider.GetServices<IAmAPipelineValidator>().Select(validator => validator.Validate()).ToArray());
+        var result = PipelineValidationResult.Combine(provider.GetServices<IAmAPipelineValidator>().Select(v => v.Validate()).ToArray());
 
         //Assert
         Assert.True(result.IsValid);
