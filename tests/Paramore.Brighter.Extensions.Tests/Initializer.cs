@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.Tests.TestDoubles;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Extensions.Tests;
@@ -32,7 +33,8 @@ namespace Paramore.Brighter.Extensions.Tests;
 /// <summary>
 /// Fixes <see cref="ApplicationLogging.LoggerFactory"/> to one stable instance before any test runs, and
 /// forces the static <c>ILogger</c> fields of <see cref="TransformPipelineBuilder"/>,
-/// <see cref="TransformPipelineBuilderAsync"/>, the internal <c>TransformPipelineDrain</c>, the internal
+/// <see cref="TransformPipelineBuilderAsync"/>, the optional-tracing claim-check wrap pipelines,
+/// the internal <c>TransformPipelineDrain</c>, the internal
 /// <c>ServiceProviderLifetimeScope</c> and <see cref="HandlerLifetimeScope"/> to bind to it.
 /// </summary>
 /// <remarks>
@@ -71,6 +73,8 @@ internal static class Initializer
 
         RuntimeHelpers.RunClassConstructor(typeof(TransformPipelineBuilder).TypeHandle);
         RuntimeHelpers.RunClassConstructor(typeof(TransformPipelineBuilderAsync).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(WrapPipeline<OptionalTracingClaimCheckEvent>).TypeHandle);
+        RuntimeHelpers.RunClassConstructor(typeof(WrapPipelineAsync<OptionalTracingClaimCheckEvent>).TypeHandle);
 
         var core = typeof(TransformPipelineBuilder).Assembly;
         RuntimeHelpers.RunClassConstructor(core.GetType("Paramore.Brighter.TransformPipelineDrain")!.TypeHandle);
