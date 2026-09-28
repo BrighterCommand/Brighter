@@ -42,7 +42,7 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 /// The router never throws: every broker and producer call is caught and turned into a
 /// <see cref="RoutingOutcome"/> plus a log line.
 /// </remarks>
-internal sealed class GcpRejectionRouter : IDisposable, IAsyncDisposable
+internal sealed partial class GcpRejectionRouter : IDisposable, IAsyncDisposable
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<GcpRejectionRouter>();
 
@@ -112,6 +112,8 @@ internal sealed class GcpRejectionRouter : IDisposable, IAsyncDisposable
         var destination = ChooseDestination(reason);
         if (destination == null)
         {
+            Log.NoDestination(s_logger, message.Id.Value,
+                reason?.RejectionReason.ToString() ?? RejectionReason.None.ToString());
             return RoutingOutcome.NoDestination;
         }
 
@@ -159,6 +161,8 @@ internal sealed class GcpRejectionRouter : IDisposable, IAsyncDisposable
         var destination = ChooseDestination(reason);
         if (destination == null)
         {
+            Log.NoDestination(s_logger, message.Id.Value,
+                reason?.RejectionReason.ToString() ?? RejectionReason.None.ToString());
             return RoutingOutcome.NoDestination;
         }
 
@@ -311,5 +315,12 @@ internal sealed class GcpRejectionRouter : IDisposable, IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         await DisposeProducerAsync();
+    }
+
+    private static partial class Log
+    {
+        [LoggerMessage(LogLevel.Warning,
+            "GcpRejectionRouter: no destination configured for rejected message {Id} with reason {Reason}; message acknowledged without publishing")]
+        public static partial void NoDestination(ILogger logger, string id, string reason);
     }
 }
