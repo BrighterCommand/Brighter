@@ -7,7 +7,7 @@ namespace Paramore.Brighter.MessagingGateway.GcpPubSub;
 /// Represents Google Cloud Pub/Sub specific configuration for a message subscription (a queue).
 /// This class extends the core Brighter <see cref="Subscription"/> with GCP-specific settings.
 /// </summary>
-public class GcpPubSubSubscription : Subscription, IUseBrighterDeadLetterSupport, IUseBrighterInvalidMessageSupport
+public class GcpPubSubSubscription : Subscription, IUseBrighterDeadLetterSupport, IUseBrighterInvalidMessageSupport, IAmADeliveryCountingSubscription
 {
     /// <summary>
     /// Gets the Google Cloud Project ID where the subscription and its topic reside.
@@ -73,6 +73,24 @@ public class GcpPubSubSubscription : Subscription, IUseBrighterDeadLetterSupport
     /// If set, messages that fail processing will be forwarded to a specified dead letter topic.
     /// </summary>
     public DeadLetterPolicy? DeadLetter { get; }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Returns <see cref="MessagingGateway.GcpPubSub.DeadLetterPolicy.MaxDeliveryAttempts"/> when a dead
+    /// letter policy is configured; <c>null</c> when no policy is set (ADR 0077 budget-rules table).
+    /// </remarks>
+    public int? NativeRedriveLimit => DeadLetter?.MaxDeliveryAttempts;
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Non-null when no <see cref="DeadLetterPolicy"/> is configured: Pub/Sub only populates
+    /// <c>delivery_attempt</c> for subscriptions with a dead letter policy, so without one the delivery
+    /// count cannot advance and the budget can never run down (A-1, ADR 0077).
+    /// </remarks>
+    public string? DeliveryBudgetUnenforceableReason =>
+        DeadLetter is null
+            ? "no DeadLetterPolicy is configured — Pub/Sub only populates delivery_attempt for subscriptions with a dead letter policy"
+            : null;
 
     /// <summary>
     /// Gets the maximum delay time for exponential backoff retry policy when a message is requeued.
