@@ -713,7 +713,7 @@
     - A red points at Phase 5 routing (5.5b, 5.6) or at the pump guard.
   - Depends on: 3.3, 5.6
 
-- [ ] **6.7 MEASURE: AC-39 — the emulator's delivery counter over three deliveries on a DLQ-backed subscription (R-13, A-2)**
+- [x] **6.7 MEASURE: AC-39 — the emulator's delivery counter over three deliveries on a DLQ-backed subscription (R-13, A-2)**
   - On a clean emulator, use a DLQ-backed subscription (`DeadLetterPolicy` M = 5, creatable via 5.3) and a deferring handler. Record the raw `ReceivedMessage.DeliveryAttempt` (pull) and `GetDeliveryAttempt` (stream) on each of three deliveries. Use a measurement fixture committed as `[Fact(Skip = "measurement — AC-39")]` in `tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Pull`.
   - **Output (all four exit criteria required):**
     - (a) the observed values written into the GCP paragraph of `conformance-status.md`
@@ -819,7 +819,7 @@
 
 > Do this section only if 6.7 claimed AC-40. Otherwise mark every task `[!] not taken — AC-39 selected AC-19`.
 
-- [ ] **6.20 TEST + IMPLEMENT: Every GCP subscription with a budget reports it unenforceable, logs the blocker at channel creation, and still offers Brighter rejection routing**
+- [!] **6.20 TEST + IMPLEMENT: Every GCP subscription with a budget reports it unenforceable, logs the blocker at channel creation, and still offers Brighter rejection routing** <!-- not taken — AC-39 selected AC-19 (6.7, 2026-09-29) -->
   - **USE COMMAND**: `/test-first when a gcp channel is created with a budget and no gcp mechanism advances the count should warn naming the blocker and keep rejection routing`
   - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Pull"
   - Test file: `When_a_gcp_channel_is_created_with_a_budget_should_warn_that_the_count_cannot_advance.cs` (async: `…_async.cs`)
@@ -832,7 +832,7 @@
     - Leave the parser receive path unchanged apart from 5.5d
   - Depends on: 6.1, 6.2, 6.7
 
-- [ ] **6.21 GATE: Re-point the four GCP FR-23 cells at the emulator limitation (AC-40 ledger clauses, AC-30 row 3)**
+- [!] **6.21 GATE: Re-point the four GCP FR-23 cells at the emulator limitation (AC-40 ledger clauses, AC-30 row 3)** <!-- not taken — AC-39 selected AC-19 (6.7, 2026-09-29) -->
   - Change the four `GCP / *` FR-23 cells from `Deferred -> #4240` to `Deferred` pointing at the emulator limitation, citing 6.7's measurement, which is already in the GCP paragraph.
   - **Output:** four cells re-pointed. The 20 routing cells from 5.11 are unaffected.
   - Depends on: 6.20
