@@ -36,6 +36,9 @@ public class GcpPubSubChannelFactory(GcpMessagingGatewayConnection connection)
             // Ensure the topic and subscription (and DLQ components, if configured) exist
             await EnsureSubscriptionExistsAsync(pullSubscription);
 
+            // Warn once, at channel creation, if the delivery budget cannot run down (R-11, R-26)
+            DeliveryBudgetDiagnostics.WarnIfUnenforceable(pullSubscription);
+
             // Create a synchronous channel, leveraging the consumer factory for the underlying GcpConsumer
             return new Channel(
                 new ChannelName(pullSubscription.ChannelName.Value),
@@ -72,6 +75,9 @@ public class GcpPubSubChannelFactory(GcpMessagingGatewayConnection connection)
 
         // Ensure the topic and subscription (and DLQ components, if configured) exist
         await EnsureSubscriptionExistsAsync(pullSubscription);
+
+        // Warn once, at channel creation, if the delivery budget cannot run down (R-11, R-26)
+        DeliveryBudgetDiagnostics.WarnIfUnenforceable(pullSubscription);
 
         // Create an asynchronous channel, leveraging the consumer factory for the underlying GcpConsumer
         return new ChannelAsync(
