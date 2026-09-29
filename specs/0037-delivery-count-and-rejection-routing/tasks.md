@@ -655,7 +655,7 @@
 
 ### Phase 6 common — before the measurement
 
-- [ ] **6.1 TEST + IMPLEMENT: `GcpPubSubSubscription` reports its `DeadLetterPolicy` limit as the native limit, and reports the budget unenforceable when it has no policy**
+- [x] **6.1 TEST + IMPLEMENT: `GcpPubSubSubscription` reports its `DeadLetterPolicy` limit as the native limit, and reports the budget unenforceable when it has no policy**
   - **USE COMMAND**: `/test-first when a gcp subscription has no dead letter policy should report its delivery budget unenforceable`
   - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway"
   - Test file: `When_a_gcp_subscription_has_no_dead_letter_policy_should_report_budget_unenforceable.cs`
