@@ -196,6 +196,29 @@ Provisioning refuses such a name up front with a message that explains the arith
 `Validate` builds no identifier and keeps the full 128, so a longer table that already exists can
 still be used.
 
+### RabbitMQ: `RmqSubscription` now defaults to a durable queue (#4355)
+
+RabbitMQ 4.3 denies, by default, the deprecated `transient_nonexcl_queues` feature: any queue declared
+with `durable: false, exclusive: false`. `RmqSubscription` (and `RmqSubscription<T>`) in both
+`Paramore.Brighter.MessagingGateway.RMQ.Sync` and `.RMQ.Async` defaulted `isDurable` to `false`, so a
+consumer using the defaults failed on its first `Receive` with `541 INTERNAL_ERROR - Feature
+'transient_nonexcl_queues' is deprecated`.
+
+The `isDurable` default is now `true`, for both the queue and its dead-letter queue.
+
+#### Behaviour change: an existing non-durable queue will fail to redeclare with `406 PRECONDITION_FAILED`
+
+If your subscription relied on the old default and its queue already exists on the broker as a
+**non-durable** queue, Brighter will now try to declare it as durable and RabbitMQ will refuse with
+`406 PRECONDITION_FAILED - inequivalent arg 'durable'`. To upgrade, either:
+
+* delete the existing queue (and DLQ) so Brighter recreates it as durable, or
+* keep the old behaviour explicitly with `isDurable: false` — which will keep failing on RabbitMQ 4.3+
+  unless the broker sets `deprecated_features.permit.transient_nonexcl_queues = true` (a temporary
+  opt-in that RabbitMQ intends to remove).
+
+Message persistence is unaffected; that remains the per-message `Message.Persist` flag.
+
 ## 10.7.0
 
 ### Azure Service Bus: dead-letter reason and description (#4196)
