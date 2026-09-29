@@ -2,6 +2,14 @@
 
 ## Master
 
+### Relational outbox configuration registration (#4279)
+
+`AddProducers(Action<ProducersConfiguration>, ...)` now registers a relational outbox's database configuration when `IAmARelationalDatabaseConfiguration` is missing.
+The fallback reuses the outbox's configuration instance. Existing explicit registrations and provider lifetimes remain unchanged.
+A later ordinary registration overrides the fallback for single-service resolution; a later `TryAdd` does not.
+
+The deferred `AddProducers(Func<IServiceProvider, ProducersConfiguration>, ...)` overload still requires explicit configuration registration when a provider needs it.
+Non-relational outboxes do not register database configuration.
 ### Azure configuration options: rebuild and test when upgrading (#4285)
 
 Six Azure configuration fields are now public read/write properties, so property-based tooling can discover them:
