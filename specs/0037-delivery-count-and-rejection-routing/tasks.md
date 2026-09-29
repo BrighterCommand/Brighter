@@ -687,7 +687,7 @@
 
 > **6.3 and 6.4 moved** to Phase 5 as **5.5c** and **5.5d** (tasks review round 4): 5.6's stream routing needs the `googclient_deliveryattempt` ignore entry first. The ids 6.3 and 6.4 are not reused.
 
-- [ ] **6.5 CHARACTERISE: GCP budget of -1 never rejects, on both consumers**
+- [!] **6.5 CHARACTERISE: GCP budget of -1 never rejects, on both consumers** <!-- RALPH-FAILED: unexpectedly not green on arrival — Pull sync+async green (~65 s each); Stream sync+async HANG inside the 60 s pump window (no assertion failure; blame-hang abort at 10 min). Matches the generated GCP/Stream requeue tests already Skip'd "Deferred: #4240". No production change made; the 4 test files are parked outside the repo pending the user's call (skip Stream under #4240 vs raise a new hang issue). -->
   - **USE COMMAND**: `/test-first when gcp budget is minus one should never reject and never dead letter`
   - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Pull" and "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Stream"
   - Test file: `When_gcp_budget_is_minus_one_should_never_reject.cs` (async: `…_async.cs`)
