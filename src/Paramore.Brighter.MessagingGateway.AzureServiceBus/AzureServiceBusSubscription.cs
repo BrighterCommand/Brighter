@@ -58,6 +58,7 @@ public class AzureServiceBusSubscription : Subscription
     /// <param name="subscriptionConfiguration">The configuration options for the subscriptions.</param>
     /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
     /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
+    /// <exception cref="ConfigurationException">Both Rule and a nonempty SqlFilter are configured.</exception>
     public AzureServiceBusSubscription(
         SubscriptionName subscriptionName,
         ChannelName channelName,
@@ -82,6 +83,7 @@ public class AzureServiceBusSubscription : Subscription
             channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay, unacceptableMessageLimitWindow)
     {
         Configuration = subscriptionConfiguration ?? new AzureServiceBusSubscriptionConfiguration();
+        Configuration.GetRuleOptions();
     }
 }
 
@@ -110,6 +112,7 @@ public class AzureServiceBusSubscription<T> : AzureServiceBusSubscription where 
     /// <param name="subscriptionConfiguration">The configuration options for the subscriptions.</param>
     /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
     /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
+    /// <exception cref="ConfigurationException">Both Rule and a nonempty SqlFilter are configured.</exception>
     public AzureServiceBusSubscription(
         SubscriptionName? subscriptionName = null,
         ChannelName? channelName = null,
