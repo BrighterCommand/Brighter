@@ -229,7 +229,7 @@ internal sealed partial class GcpRejectionRouter : IDisposable, IAsyncDisposable
             message.Header.Bag[RejectionMetadataKeyNames.RejectionReason] = reason.RejectionReason.ToString();
             if (!string.IsNullOrEmpty(reason.Description))
             {
-                message.Header.Bag[RejectionMetadataKeyNames.RejectionMessage] = reason.Description;
+                message.Header.Bag[RejectionMetadataKeyNames.RejectionMessage] = reason.Description!;
             }
         }
 
