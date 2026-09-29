@@ -670,7 +670,7 @@
     - Implement the interface on `GcpPubSubSubscription` (`GcpPubSubSubscription.cs:75`, `DeadLetterPolicy.cs:47`). The AC-40 branch (6.20) widens the reason.
   - Depends on: 2.5, 5.1
 
-- [ ] **6.2 TEST + IMPLEMENT: Creating a GCP channel whose budget is unenforceable logs exactly one Warning, and receiving never logs another**
+- [x] **6.2 TEST + IMPLEMENT: Creating a GCP channel whose budget is unenforceable logs exactly one Warning, and receiving never logs another**
   - **USE COMMAND**: `/test-first when a gcp channel is created for an unenforceable budget should log exactly one warning and none on the receive path`
   - Test location: "tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Pull"
   - Test file: `When_a_gcp_channel_is_created_for_an_unenforceable_budget_should_log_one_warning.cs` (async: `…_async.cs`)
