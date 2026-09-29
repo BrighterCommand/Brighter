@@ -26,7 +26,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
         {
             var commandProcessor = new SpyCommandProcessor();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyEventMessageMapper>();
             container.AddTransient<MyCommandMessageMapper>();
 
@@ -37,16 +37,16 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
             var myEventConnection = new Subscription<MyEvent>(
-                new SubscriptionName("test"), noOfPerformers: 1, timeOut: TimeSpan.FromMilliseconds(1000), channelFactory: 
-                new InMemoryChannelFactory(_bus, _timeProvider), messagePumpType: MessagePumpType.Reactor, channelName: new ChannelName("fakeEventChannel"), 
+                new SubscriptionName("test"), noOfPerformers: 1, timeOut: TimeSpan.FromMilliseconds(1000), channelFactory:
+                new InMemoryChannelFactory(_bus, _timeProvider, loggerFactory: Initializer.TestLoggerFactory), messagePumpType: MessagePumpType.Reactor, channelName: new ChannelName("fakeEventChannel"),
                 routingKey: _eventRoutingKey
             );
             var myCommandConnection = new Subscription<MyCommand>(
-                new SubscriptionName("anothertest"), noOfPerformers: 1, timeOut: TimeSpan.FromMilliseconds(1000), 
-                channelFactory: new InMemoryChannelFactory(_bus, _timeProvider), 
+                new SubscriptionName("anothertest"), noOfPerformers: 1, timeOut: TimeSpan.FromMilliseconds(1000),
+                channelFactory: new InMemoryChannelFactory(_bus, _timeProvider, loggerFactory: Initializer.TestLoggerFactory),
                 channelName: new ChannelName("fakeCommandChannel"), messagePumpType: MessagePumpType.Reactor, routingKey: _commandRoutingKey
                 );
-            _dispatcher = new Dispatcher(commandProcessor, new List<Subscription> { myEventConnection, myCommandConnection }, messageMapperRegistry);
+            _dispatcher = new Dispatcher(commandProcessor, new List<Subscription> { myEventConnection, myCommandConnection }, Initializer.TestLoggerFactory, messageMapperRegistry);
 
             var @event = new MyEvent();
             var eventMessage = new MyEventMessageMapper().MapToMessage(@event, new Publication{Topic = _eventRoutingKey});
@@ -55,7 +55,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             var command = new MyCommand();
             var commandMessage = new MyCommandMessageMapper().MapToMessage(command, new Publication{Topic = _commandRoutingKey});
             _bus.Enqueue(commandMessage);
-            
+
             Assert.Equal(DispatcherState.DS_AWAITING, _dispatcher.State);
             _dispatcher.Receive();
         }
@@ -67,9 +67,9 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
         {
             Task.Delay(1000).Wait();
             _numberOfConsumers = _dispatcher.Consumers.Count();
-            
+
             _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
-            
+
             _dispatcher.End().Wait();
 
 
@@ -80,7 +80,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             Assert.Equal(2, _numberOfConsumers);
         }
 #pragma warning restore xUnit1031
-        
+
         public void Dispose()
         {
             if (_dispatcher?.State == DispatcherState.DS_RUNNING)

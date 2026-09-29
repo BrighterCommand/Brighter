@@ -50,7 +50,7 @@ public class ProducerTransformWarningDeterminismTests
             new Publication { Topic = new RoutingKey("greeting-v2"), RequestType = typeof(MyDescribableCommand) }
         };
         var validator = new PipelineValidator(
-            new PipelineBuilder<IRequest>(new SubscriberRegistry()),
+            new PipelineBuilder<IRequest>(new SubscriberRegistry(), loggerFactory: Initializer.TestLoggerFactory),
             publications,
             transformerProbe: StubTransformerResolvabilityProbe.ResolvesNothing,
             mapperRegistryFactory: () => registry);

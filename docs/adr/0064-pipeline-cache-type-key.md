@@ -124,3 +124,7 @@ The pre-existing mis-typed logger generic in the async builder (`ApplicationLogg
   - Linked issue: #4192
   - Michael Nygard, "Documenting Architecture Decisions" (ADR format)
   - .NET API docs: `System.Type` (identity, `Equals`/`GetHashCode` semantics) and `System.Type.FullName` (documented to return `null` for certain generic types)
+
+## Logging amendment proposed for V11
+
+[ADR 0077](0077-instance-scoped-logging.md) supersedes only this record's logging dependency decision. The original decision above remains as historical context.

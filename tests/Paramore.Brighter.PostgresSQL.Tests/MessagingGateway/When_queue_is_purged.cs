@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -30,10 +32,10 @@ public class PurgeTest :  IAsyncDisposable, IDisposable
             
         _producerRegistry = new PostgresProducerRegistryFactory(
             new PostgresMessagingGatewayConnection(testHelper.Configuration),
-            [new PostgresPublication {Topic = _routingKey}]
-        ).Create();
+            [new PostgresPublication {Topic = _routingKey}],
+            loggerFactory: NullLoggerFactory.Instance).Create();
             
-        _consumer = new PostgresConsumerFactory(new PostgresMessagingGatewayConnection(testHelper.Configuration)).Create(sub);
+        _consumer = new PostgresConsumerFactory(new PostgresMessagingGatewayConnection(testHelper.Configuration), loggerFactory: NullLoggerFactory.Instance).Create(sub);
     }
 
     [Fact]

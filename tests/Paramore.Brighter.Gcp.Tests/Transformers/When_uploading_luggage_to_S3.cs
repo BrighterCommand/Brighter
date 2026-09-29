@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using Paramore.Brighter.Gcp.Tests.Helper;
@@ -24,7 +26,7 @@ public class LuggageUploadTests : IDisposable
             BucketName = _bucketName
         };
         
-        _luggageStore = new GcsLuggageStore(_luggageStoreOptions);
+        _luggageStore = new GcsLuggageStore(_luggageStoreOptions, loggerFactory: NullLoggerFactory.Instance);
 
     }
     

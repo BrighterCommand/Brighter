@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
@@ -27,7 +29,7 @@ public class AsyncInMemoryConsumerReceiveTests
         var bus = new InternalBus();
         bus.Enqueue(expectedMessage);
 
-        var consumer = new InMemoryMessageConsumer(routingKey, bus, new FakeTimeProvider(), ackTimeout: TimeSpan.FromMilliseconds(1000));
+        var consumer = new InMemoryMessageConsumer(routingKey, bus, new FakeTimeProvider(), ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: NullLoggerFactory.Instance);
         
         //act
         var receivedMessage = await consumer.ReceiveAsync();

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
 using System.Threading;
@@ -60,7 +62,7 @@ public class RmqSyncConsumerDelayTests : IDisposable
             new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_COMMAND),
             new MessageBody("test content for sync delay requeue"));
 
-        _sendProducer = new RmqMessageProducer(rmqConnection);
+        _sendProducer = new RmqMessageProducer(rmqConnection, loggerFactory: NullLoggerFactory.Instance);
 
         var subscription = new RmqSubscription(
             subscriptionName: new SubscriptionName("rmq-sync-delay-producer-test"),
@@ -69,7 +71,7 @@ public class RmqSyncConsumerDelayTests : IDisposable
             requestType: typeof(MyCommand),
             messagePumpType: MessagePumpType.Reactor);
 
-        _channel = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection))
+        _channel = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection, loggerFactory: NullLoggerFactory.Instance))
             .CreateSyncChannel(subscription);
 
         new QueueFactory(rmqConnection, queueName, new RoutingKeys(topic))
@@ -108,10 +110,10 @@ public class RmqSyncConsumerDelayTests : IDisposable
         _sendProducer.Send(_message);
         var received = _channel.Receive(TimeSpan.FromMilliseconds(10000));
         Assert.NotEqual(MessageType.MT_NONE, received.Header.MessageType);
-        
+
         //delay before requeue for test connection pool conflicts
         Thread.Sleep(TimeSpan.FromSeconds(2));
-        
+
         _channel.Requeue(received, TimeSpan.FromSeconds(5));
 
         // Act & Assert - disposing channel (and its consumer) should not throw
@@ -133,7 +135,7 @@ public class RmqSyncConsumerDelayTests : IDisposable
             rmqConnection,
             new ChannelName(Guid.NewGuid().ToString()),
             new RoutingKey(Guid.NewGuid().ToString()),
-            isDurable: false);
+            isDurable: false, loggerFactory: NullLoggerFactory.Instance);
 
         // Act & Assert - should not throw
         var exception = Record.Exception(() => consumer.Dispose());

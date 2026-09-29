@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
@@ -50,7 +52,7 @@ public class OutboxPayloadModeMismatchTests : IAsyncLifetime
             new SqliteOutboxMigrationCatalog(),
             new SqlitePayloadModeValidator(),
             config,
-            new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config));
+            new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config, loggerFactory: NullLoggerFactory.Instance), loggerFactory: NullLoggerFactory.Instance);
 
         //Act & Assert
         var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
@@ -72,7 +74,7 @@ public class OutboxPayloadModeMismatchTests : IAsyncLifetime
             new SqliteOutboxMigrationCatalog(),
             new SqlitePayloadModeValidator(),
             config,
-            new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config));
+            new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config, loggerFactory: NullLoggerFactory.Instance), loggerFactory: NullLoggerFactory.Instance);
 
         //Act & Assert
         var exception = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());

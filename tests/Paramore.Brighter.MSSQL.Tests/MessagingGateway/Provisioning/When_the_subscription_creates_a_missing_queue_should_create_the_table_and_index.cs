@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using Microsoft.Data.SqlClient;
@@ -52,7 +54,7 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
     public void When_the_subscription_creates_a_missing_queue_should_create_the_table_and_index()
     {
         //Arrange
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
         var subscription = new MsSqlSubscription<MyCommand>(
             new SubscriptionName("create.subscription"),
             new ChannelName("create.channel"),
@@ -82,13 +84,13 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
             new RoutingKey("create.topic"),
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Create);
-        using (var first = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration))
+        using (var first = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ))
                    .CreateSyncChannel(subscription)) { }
 
         //Act
         var exception = Record.Exception(() =>
         {
-            using var second = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration))
+            using var second = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ))
                 .CreateSyncChannel(subscription);
         });
 
@@ -107,7 +109,7 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
             Topic = new RoutingKey("create.topic"), MakeChannels = OnMissingChannel.Create
         };
         var producerFactory = new MsSqlMessageProducerFactory(
-            _configuration, new List<Publication> { publication });
+            _configuration, new List<Publication> { publication }, loggerFactory: NullLoggerFactory.Instance);
 
         //Act
         producerFactory.Create();
@@ -130,7 +132,7 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
         var configuration = new RelationalDatabaseConfiguration(
             MsSqlQueueProvisioningAssumeTests.UnreachableConnectionString,
             queueStoreTable: "Queue]; DROP TABLE Users--");
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
         var subscription = new MsSqlSubscription<MyCommand>(
             new SubscriptionName("create.subscription"),
             new ChannelName("create.channel"),
@@ -160,7 +162,7 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
         var hyphenated = "queue_test_" + Guid.NewGuid();
         var configuration = new RelationalDatabaseConfiguration(
             Configuration.DefaultConnectingString, queueStoreTable: hyphenated);
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
 
         try
         {
@@ -193,7 +195,7 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
         var configuration = new RelationalDatabaseConfiguration(
             MsSqlQueueProvisioningAssumeTests.UnreachableConnectionString,
             queueStoreTable: new string('Q', 129));
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
         var subscription = new MsSqlSubscription<MyCommand>(
             new SubscriptionName("create.subscription"),
             new ChannelName("create.channel"),
@@ -221,7 +223,7 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
         var configuration = new RelationalDatabaseConfiguration(
             MsSqlQueueProvisioningAssumeTests.UnreachableConnectionString,
             queueStoreTable: new string('Q', 129));
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
 
         //Act
         var exception = Record.Exception(() => channelFactory.CreateSyncChannel(
@@ -249,7 +251,7 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
         var configuration = new RelationalDatabaseConfiguration(
             MsSqlQueueProvisioningAssumeTests.UnreachableConnectionString,
             queueStoreTable: new string('Q', 120));
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
 
         //Act
         var exception = Record.Exception(() => channelFactory.CreateSyncChannel(
@@ -274,7 +276,7 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
         var longest = "Q" + new string('q', 118);
         var configuration = new RelationalDatabaseConfiguration(
             Configuration.DefaultConnectingString, queueStoreTable: longest);
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
 
         try
         {
@@ -307,7 +309,7 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
         //
         //Deterministic, and no threads: 2714 is provoked by the name collision rather than raced for.
         CreateView(_queueTable);
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
         var subscription = new MsSqlSubscription<MyCommand>(
             new SubscriptionName("create.subscription"),
             new ChannelName("create.channel"),
@@ -339,7 +341,7 @@ public class MsSqlQueueProvisioningCreateTests : IDisposable
         //channel factory given an explicitly blank name is the one route to this guard.
         var configuration = new RelationalDatabaseConfiguration(
             MsSqlQueueProvisioningAssumeTests.UnreachableConnectionString, queueStoreTable: "   ");
-        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration));
+        var channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance ));
 
         //Act
         var exception = Record.Exception(() => channelFactory.CreateSyncChannel(

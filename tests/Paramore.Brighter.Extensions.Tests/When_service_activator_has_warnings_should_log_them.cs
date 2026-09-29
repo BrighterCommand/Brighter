@@ -48,7 +48,7 @@ public class ServiceActivatorWarningLoggingTests
         var dispatcher = new SpyDispatcher(actionLog);
         var validator = SpyPipelineValidator.WithWarningsOnly(actionLog, warning1, warning2);
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddSingleton<IAmAPipelineValidator>(validator);
         var provider = services.BuildServiceProvider();
 

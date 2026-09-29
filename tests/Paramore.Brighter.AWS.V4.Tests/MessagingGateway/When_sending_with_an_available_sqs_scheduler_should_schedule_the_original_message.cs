@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -160,7 +162,7 @@ public class SqsSchedulerSelectionTests
             FindQueueBy = QueueFindBy.Url,
             MakeChannels = OnMissingChannel.Assume,
             QueueAttributes = new SqsAttributes(type: queueType)
-        })
+        }, loggerFactory: NullLoggerFactory.Instance)
         {
             Scheduler = scheduler
         };

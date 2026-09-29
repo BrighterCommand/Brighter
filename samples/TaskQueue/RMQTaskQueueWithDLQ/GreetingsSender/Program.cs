@@ -55,28 +55,30 @@ var host = Host.CreateDefaultBuilder(args)
             Exchange = new Exchange("paramore.brighter.exchange")
         };
 
-        var producerRegistry = new RmqProducerRegistryFactory(
-            rmqConnection,
-            [
-                new()
-                {
-                    WaitForConfirmsTimeOutInMilliseconds = 1000,
-                    MakeChannels = OnMissingChannel.Create,
-                    Topic = new RoutingKey("greeting.event"),
-                    RequestType = typeof(GreetingEvent)
-                }
-            ]).Create();
-
         services
             .AddBrighter()
             // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
             // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-            .UseScheduler(new InMemorySchedulerFactory())
-            .AddProducers((configure) =>
+            .UseScheduler(provider => new InMemorySchedulerFactory(provider.GetRequiredService<ILoggerFactory>()))
+            .AddProducers(provider =>
             {
+                var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+                var producerRegistry = new RmqProducerRegistryFactory(
+                    rmqConnection,
+                    [
+                        new()
+                        {
+                            WaitForConfirmsTimeOutInMilliseconds = 1000,
+                            MakeChannels = OnMissingChannel.Create,
+                            Topic = new RoutingKey("greeting.event"),
+                            RequestType = typeof(GreetingEvent)
+                        }
+                    ], loggerFactory: loggerFactory).Create();
+                var configure = new ProducersConfiguration();
                 configure.ProducerRegistry = producerRegistry;
                 configure.MaxOutStandingMessages = 5;
                 configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
+                return configure;
             })
             .AutoFromAssemblies();
 

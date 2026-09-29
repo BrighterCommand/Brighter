@@ -42,7 +42,7 @@ public class ThrowOnErrorFalseTests
         IAmAPipelineValidator validator,
         SpyLogger<BrighterValidationHostedService> logger)
     {
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         var provider = services.BuildServiceProvider();
 
         return new BrighterValidationHostedService(
@@ -56,7 +56,7 @@ public class ThrowOnErrorFalseTests
     public void When_validate_pipelines_with_throw_on_error_false_should_store_in_options()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         var mapperRegistry = new ServiceCollectionMessageMapperRegistryBuilder(services);
         var builder = new ServiceCollectionBrighterBuilder(services, subscriberRegistry, mapperRegistry);
@@ -74,7 +74,7 @@ public class ThrowOnErrorFalseTests
     public void When_validate_pipelines_with_throw_on_error_true_should_store_in_options()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         var mapperRegistry = new ServiceCollectionMessageMapperRegistryBuilder(services);
         var builder = new ServiceCollectionBrighterBuilder(services, subscriberRegistry, mapperRegistry);
@@ -92,7 +92,7 @@ public class ThrowOnErrorFalseTests
     public void When_validate_pipelines_default_should_have_throw_on_error_true()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         var mapperRegistry = new ServiceCollectionMessageMapperRegistryBuilder(services);
         var builder = new ServiceCollectionBrighterBuilder(services, subscriberRegistry, mapperRegistry);

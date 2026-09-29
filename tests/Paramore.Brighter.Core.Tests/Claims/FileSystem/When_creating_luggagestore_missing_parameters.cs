@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Transforms.Storage;
 using Xunit;

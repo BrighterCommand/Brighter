@@ -50,7 +50,8 @@ namespace GreetingsSender
                 .CreateLogger();
 
             var serviceCollection = new ServiceCollection();
-            serviceCollection.AddSingleton<ILoggerFactory>(new SerilogLoggerFactory());
+            using var loggerFactory = new SerilogLoggerFactory();
+            serviceCollection.AddSingleton<ILoggerFactory>(loggerFactory);
 
             if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
             {
@@ -79,8 +80,8 @@ namespace GreetingsSender
                                 Type = SqsType.Fifo
                             }
                         }
-                    ]
-                ).Create();
+                    ],
+                    loggerFactory: loggerFactory).Create();
 
                 serviceCollection
                     .AddBrighter()

@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -40,9 +42,9 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
                 new ChannelName(_topic), new RoutingKey(_topic));
             _producerRegistry = new MsSqlProducerRegistryFactory(
                 testHelper.QueueConfiguration,
-                [new Publication {Topic = new RoutingKey(_topic)}]
-            ).CreateAsync().Result;
-            _channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration));
+                [new Publication {Topic = new RoutingKey(_topic)}],
+                loggerFactory: NullLoggerFactory.Instance).CreateAsync().Result;
+            _channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration, loggerFactory: NullLoggerFactory.Instance), logger: NullLoggerFactory.Instance.CreateLogger<global::Paramore.Brighter.MessagingGateway.MsSql.ChannelFactory>());
         }
 
         [Fact]

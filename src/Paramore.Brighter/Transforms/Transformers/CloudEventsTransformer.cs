@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Transforms.Attributes;
 
 namespace Paramore.Brighter.Transforms.Transformers;
@@ -36,8 +35,17 @@ namespace Paramore.Brighter.Transforms.Transformers;
 /// </summary>
 public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageTransformAsync
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CloudEventsTransformer>();
+    private readonly ILogger _logger;
     private static readonly Uri s_defaultSource = new(MessageHeader.DefaultSource);
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CloudEventsTransformer"/> class.
+    /// </summary>
+    /// <param name="loggerFactory">The factory used to create the logger.</param>
+    public CloudEventsTransformer(ILoggerFactory loggerFactory)
+    {
+        _logger = loggerFactory.CreateBrighterLogger<CloudEventsTransformer>();
+    }
 
     private Uri? _source;
     private string? _type;
@@ -132,7 +140,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
     /// <inheritdoc />
     public Message Wrap(Message message, Publication publication)
     {
-        var msg =  ApplyCloudEventsPrecedence(message,  publication);
+        var msg = ApplyCloudEventsPrecedence(message, publication);
         return _format == CloudEventFormat.Binary ? msg : WriteJsonMessage(msg, publication);
     }
 
@@ -148,7 +156,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
         return ReadCloudEventJsonMessage(message);
     }
 
-    private static Message ReadCloudEventJsonMessage(Message message)
+    private Message ReadCloudEventJsonMessage(Message message)
     {
         try
         {
@@ -214,9 +222,9 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
             
             return new Message(header, body);
         }
-        catch(JsonException ex)
+        catch (JsonException ex)
         {
-            Log.ErrorDuringDeserializerOnUnwrap(s_logger, ex);
+            Log.ErrorDuringDeserializerOnUnwrap(_logger, ex);
             return message;
         }
     }
@@ -245,8 +253,10 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
     private static T? ResolveWithSentinel<T>(T? attrValue, T? headerValue, T sentinel, T? publicationValue)
         where T : class
     {
-        if (attrValue is not null) return attrValue;
-        if (!Equals(headerValue, sentinel)) return headerValue;
+        if (attrValue is not null)
+            return attrValue;
+        if (!Equals(headerValue, sentinel))
+            return headerValue;
         return publicationValue;
     }
     
@@ -256,7 +266,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
         {
             JsonElement? data = null;
             string? dataBase64 = null;
-            var contentType = message.Header.ContentType.ToString()?? string.Empty;
+            var contentType = message.Header.ContentType.ToString() ?? string.Empty;
             if (message.Body.Value.Length > 0)
             {
                 if (contentType.Contains("application/json") || contentType.Contains("text/json"))
@@ -304,7 +314,7 @@ public partial class CloudEventsTransformer : IAmAMessageTransform, IAmAMessageT
         }
         catch (JsonException e)
         {
-            Log.ErrorDuringDeserializerAJsonOnWrap(s_logger, e);
+            Log.ErrorDuringDeserializerAJsonOnWrap(_logger, e);
             return message;
         }
     }

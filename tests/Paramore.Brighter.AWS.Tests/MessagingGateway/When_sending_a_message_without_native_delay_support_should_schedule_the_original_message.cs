@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -59,7 +61,7 @@ public class SqsDelayedSendTests
             MakeChannels = OnMissingChannel.Validate,
             QueueAttributes = new SqsAttributes(type: queueType)
         };
-        using var producer = new SqsMessageProducer(GatewayFactory.CreateFactory(), publication)
+        using var producer = new SqsMessageProducer(GatewayFactory.CreateFactory(), publication, loggerFactory: NullLoggerFactory.Instance)
         {
             Scheduler = scheduler
         };

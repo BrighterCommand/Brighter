@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -59,13 +61,13 @@ public class OutboxVkToLatestUpgradeTests : IAsyncLifetime
         await SeedMarkerRow();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var runner = new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config);
+        var runner = new SqliteBoxMigrationRunner(new SqliteOutboxMigrationCatalog(), config, loggerFactory: NullLoggerFactory.Instance);
         var provisioner = new SqliteOutboxProvisioner(
             new SqliteBoxDetectionHelper(),
             new SqliteOutboxMigrationCatalog(),
             new SqlitePayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: NullLoggerFactory.Instance);
 
         //Act
         await provisioner.ProvisionAsync();

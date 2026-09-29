@@ -20,7 +20,7 @@ public class TransformScopeEndsBeforeHandlerPipelineBeginsTests
         TransformPipelineBuilderAsync.ClearPipelineCache();
 
         var log = new MarkerLog();
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         collection.AddSingleton(log);
         collection.AddScoped<IMarker, Marker>();
         collection.AddScoped<MarkerMapperAsync>();
@@ -43,19 +43,19 @@ public class TransformScopeEndsBeforeHandlerPipelineBeginsTests
             new InMemoryRequestContextFactory(),
             new PolicyRegistry(),
             new ResiliencePipelineRegistry<string>(),
-            new InMemorySchedulerFactory());
+new InMemorySchedulerFactory(loggerFactory: Initializer.Factory),loggerFactory:Initializer.Factory);
 
         var routingKey = new RoutingKey("markerTopic");
         var bus = new InternalBus();
         var timeProvider = new FakeTimeProvider();
         var channel = new ChannelAsync(new("markerChannel"), routingKey,
-            new InMemoryMessageConsumer(routingKey, bus, timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)));
+            new InMemoryMessageConsumer(routingKey, bus, timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.Factory));
 
         var mapperRegistry = new MessageMapperRegistry(null, new ServiceProviderMapperFactoryAsync(provider));
         mapperRegistry.RegisterAsync<MarkerCommand, MarkerMapperAsync>();
 
         var messagePump = new Proactor(commandProcessor, _ => typeof(MarkerCommand), mapperRegistry,
-            new ServiceProviderTransformerFactoryAsync(provider), new InMemoryRequestContextFactory(), channel)
+            new ServiceProviderTransformerFactoryAsync(provider), new InMemoryRequestContextFactory(), channel, loggerFactory: Initializer.Factory)
         {
             Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000)
         };

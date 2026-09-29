@@ -43,7 +43,7 @@ public class KafkaMessageConsumerFactoryDLQTests : IDisposable
             {
                 Name = "Kafka Consumer Factory DLQ Test",
                 BootStrapServers = new[] { "localhost:9092" }
-            });
+            }, loggerFactory: Initializer.TestLoggerFactory);
     }
 
     [Fact]

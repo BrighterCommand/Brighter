@@ -24,10 +24,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
         {
             _commandProcessor = new SpyCommandProcessor();
             _channel = new(
-                new(Channel), _routingKey, 
-                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000))
+                new(Channel), _routingKey,
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory)
             );
-            
+
             var messagerMapperRegistry = new MessageMapperRegistry(
                 null,
                 new SimpleMessageMapperFactoryAsync(type =>
@@ -39,15 +39,15 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
                     }));
             messagerMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
             messagerMapperRegistry.RegisterAsync<MyOtherEvent, MyOtherEventMessageMapperAsync>();
-            
+
             _messagePump = new ServiceActivator.Proactor(_commandProcessor, (message) =>
                     message switch
                         {
                             var m when m.Header.Type == new CloudEventsType("io.brighter.paramore.myevent") => typeof(MyEvent),
                             var m when m.Header.Type == new CloudEventsType("io.brighter.paramore.myotherevent") => typeof(MyOtherEvent),
                             _ => throw new ArgumentException($"No type mapping found for message with type {message.Header.Type}", nameof(message)),
-                       }, 
-                    messagerMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), _channel) 
+                       },
+                    messagerMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), _channel, loggerFactory: Initializer.TestLoggerFactory)
                 { Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000) };
         }
 
@@ -55,20 +55,20 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
         public void When_Reading_A_MyOtherEvent_Message_From_A_Channel_Pump_Out_To_Command_Processor()
         {
             //arrange
-            var @event = new MyEvent(); //although we send a MyEvent, we will map it dynamically to a MyOtherEvent   
+            var @event = new MyEvent(); //although we send a MyEvent, we will map it dynamically to a MyOtherEvent
 
             var message = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT, type: new CloudEventsType("io.brighter.paramore.myotherevent") ), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT, type: new CloudEventsType("io.brighter.paramore.myotherevent") ),
                 new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options))
             );
-            
+
             _channel.Enqueue(message);
             var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);
             _channel.Enqueue(quitMessage);
-            
+
             //act
             _messagePump.Run();
-            
+
             //assert
 
             Assert.Equal(CommandType.PublishAsync, _commandProcessor.Commands[0]);
@@ -76,25 +76,25 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             Assert.Equal(@event.Id, myOtherEvent.Id);
             Assert.Equal(@event.Data, myOtherEvent.Data);
         }
-        
+
         [Fact]
         public void When_Reading_A_MyEvent_Message_From_A_Channel_Pump_Out_To_Command_Processor()
         {
             //arrange
-            var @event = new MyEvent(); //we send a MyEvent, we will map it dynamically to a MyEvent   
+            var @event = new MyEvent(); //we send a MyEvent, we will map it dynamically to a MyEvent
 
             var message = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT, type: new CloudEventsType("io.brighter.paramore.myevent") ), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT, type: new CloudEventsType("io.brighter.paramore.myevent") ),
                 new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options))
             );
-            
+
             _channel.Enqueue(message);
             var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);
             _channel.Enqueue(quitMessage);
-            
+
             //act
             _messagePump.Run();
-            
+
             //assert
 
             Assert.Equal(CommandType.PublishAsync, _commandProcessor.Commands[0]);

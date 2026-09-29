@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
@@ -42,15 +44,15 @@ public class RmqMessageProducerQueueLengthTests : IDisposable
     public RmqMessageProducerQueueLengthTests()
     {
         var routingKey = new RoutingKey(Guid.NewGuid().ToString());
-            
+
         _messageOne = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, 
-                MessageType.MT_COMMAND), 
+            new MessageHeader(Guid.NewGuid().ToString(), routingKey,
+                MessageType.MT_COMMAND),
             new MessageBody("test content"));
-           
+
         _messageTwo = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, 
-                MessageType.MT_COMMAND), 
+            new MessageHeader(Guid.NewGuid().ToString(), routingKey,
+                MessageType.MT_COMMAND),
             new MessageBody("test content"));
 
         var rmqConnection = new RmqMessagingGatewayConnection
@@ -58,27 +60,27 @@ public class RmqMessageProducerQueueLengthTests : IDisposable
             AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
             Exchange = new Exchange("paramore.brighter.exchange"),
         };
-            
-        _messageProducer = new RmqMessageProducer(rmqConnection);
+
+        _messageProducer = new RmqMessageProducer(rmqConnection, loggerFactory: NullLoggerFactory.Instance);
 
         _messageConsumer = new RmqMessageConsumer(
-            connection: rmqConnection, 
-            queueName: _queueName, 
-            routingKey: routingKey, 
-            isDurable: true, 
+            connection: rmqConnection,
+            queueName: _queueName,
+            routingKey: routingKey,
+            isDurable: true,
             highAvailability: false,
             batchSize: 5,
             maxQueueLength: 1,
-            makeChannels:OnMissingChannel.Create
-        );
+            makeChannels:OnMissingChannel.Create,
+            loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]
     public void When_rejecting_a_message_due_to_queue_length()
     {
         //create the infrastructure
-        _messageConsumer.Receive(TimeSpan.Zero); 
-            
+        _messageConsumer.Receive(TimeSpan.Zero);
+
         _messageProducer.Send(_messageOne);
         _messageProducer.Send(_messageTwo);
 
@@ -86,9 +88,9 @@ public class RmqMessageProducerQueueLengthTests : IDisposable
         var messages = _messageConsumer.Receive(TimeSpan.FromMilliseconds(5000));
         var message = messages.First();
         _messageConsumer.Acknowledge(message);
-            
+
         //should be the first message
-            
+
         //try to grab the next message
         var nextMessages = _messageConsumer.Receive(TimeSpan.FromMilliseconds(5000));
         message = nextMessages.First();

@@ -27,8 +27,8 @@ public class When_error_log_level_is_null_should_log_fatal_at_error_and_non_fata
             offsetDefault: AutoOffsetReset.Earliest,
             numPartitions: 1,
             replicationFactor: 1,
-            makeChannels: OnMissingChannel.Assume
-        );
+            makeChannels: OnMissingChannel.Assume,
+            loggerFactory: Initializer.TestLoggerFactory);
     }
 
     [Fact]

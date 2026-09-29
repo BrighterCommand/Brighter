@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -67,7 +69,7 @@ public class MqttMessageGatewayProvider
             ClientID = $"brighter-sched-{Guid.NewGuid().ToString("N")[..8]}"
         };
 
-        var publisher = new MqttMessagePublisher(config);
+        var publisher = new MqttMessagePublisher(config, loggerFactory: NullLoggerFactory.Instance);
         var producer = new MqttMessageProducer(publisher, new Publication { Topic = message.Header.Topic });
         return ConformanceHarnessMessageScheduler.SendAndHandBack(producer, () => producer.Send(message));
     }
@@ -91,19 +93,19 @@ public class MqttMessageGatewayProvider
     public IAmAChannelSync CreateChannel(MqttSubscription subscription)
     {
         var consumerConfig = BuildConsumerConfig(subscription.RoutingKey.Value);
-        var factory = new MqttMessageConsumerFactory(consumerConfig, Scheduler);
+        var factory = new MqttMessageConsumerFactory(consumerConfig,NullLoggerFactory.Instance, Scheduler);
         var channel = new ChannelFactory(factory).CreateSyncChannel(subscription);
 
         if (subscription.DeadLetterRoutingKey != null)
         {
             var dlqConfig = BuildConsumerConfig(subscription.DeadLetterRoutingKey.Value);
-            _dlqConsumer = new MqttMessageConsumer(dlqConfig);
+            _dlqConsumer = new MqttMessageConsumer(dlqConfig, loggerFactory: NullLoggerFactory.Instance);
         }
 
         if (subscription.InvalidMessageRoutingKey != null)
         {
             var invalidConfig = BuildConsumerConfig(subscription.InvalidMessageRoutingKey.Value);
-            _invalidConsumer = new MqttMessageConsumer(invalidConfig);
+            _invalidConsumer = new MqttMessageConsumer(invalidConfig, loggerFactory: NullLoggerFactory.Instance);
         }
 
 return new RequeueTrackingChannelSync(channel);
@@ -114,19 +116,19 @@ return new RequeueTrackingChannelSync(channel);
         CancellationToken cancellationToken = default)
     {
         var consumerConfig = BuildConsumerConfig(subscription.RoutingKey.Value);
-        var factory = new MqttMessageConsumerFactory(consumerConfig, Scheduler);
+        var factory = new MqttMessageConsumerFactory(consumerConfig,NullLoggerFactory.Instance, Scheduler);
         var channel = await new ChannelFactory(factory).CreateAsyncChannelAsync(subscription, cancellationToken);
 
         if (subscription.DeadLetterRoutingKey != null)
         {
             var dlqConfig = BuildConsumerConfig(subscription.DeadLetterRoutingKey.Value);
-            _dlqConsumer = new MqttMessageConsumer(dlqConfig);
+            _dlqConsumer = new MqttMessageConsumer(dlqConfig, loggerFactory: NullLoggerFactory.Instance);
         }
 
         if (subscription.InvalidMessageRoutingKey != null)
         {
             var invalidConfig = BuildConsumerConfig(subscription.InvalidMessageRoutingKey.Value);
-            _invalidConsumer = new MqttMessageConsumer(invalidConfig);
+            _invalidConsumer = new MqttMessageConsumer(invalidConfig, loggerFactory: NullLoggerFactory.Instance);
         }
 
 return new RequeueTrackingChannelAsync(channel);
@@ -136,7 +138,7 @@ return new RequeueTrackingChannelAsync(channel);
     {
         var topicPrefix = publication.Topic?.Value ?? string.Empty;
         var producerConfig = BuildProducerConfig(topicPrefix);
-        var publisher = new MqttMessagePublisher(producerConfig);
+        var publisher = new MqttMessagePublisher(producerConfig, loggerFactory: NullLoggerFactory.Instance);
         return new MqttMessageProducer(publisher, publication) { Scheduler = Scheduler };
     }
 
@@ -147,7 +149,7 @@ return new RequeueTrackingChannelAsync(channel);
         await Task.CompletedTask;
         var topicPrefix = publication.Topic?.Value ?? string.Empty;
         var producerConfig = BuildProducerConfig(topicPrefix);
-        var publisher = new MqttMessagePublisher(producerConfig);
+        var publisher = new MqttMessagePublisher(producerConfig, loggerFactory: NullLoggerFactory.Instance);
         return new MqttMessageProducer(publisher, publication) { Scheduler = Scheduler };
     }
 

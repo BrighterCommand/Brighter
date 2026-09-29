@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.MySql;
@@ -13,7 +15,7 @@ public class MySqlTextInboxAsyncTest : RelationalDatabaseInboxAsyncTests
     protected override bool JsonMessagePayload => false;
 
     protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration) 
-        => new MySqlInbox(configuration);
+        => new MySqlInbox(configuration, logger: NullLoggerFactory.Instance.CreateLogger<MySqlInbox>());
 
     protected override async Task CreateInboxTableAsync(RelationalDatabaseConfiguration configuration)
     {

@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
 using System.Data.Common;
 using System.Threading.Tasks;
 using MySqlConnector;
@@ -19,12 +21,12 @@ public class MySQLTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvi
 
     public IAmAnOutboxSync<Message, DbTransaction> CreateOutbox()
     {
-        return new MySqlOutbox(_configuration);
+        return new MySqlOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<MySqlOutbox>());
     }
 
     public IAmAnOutboxAsync<Message, DbTransaction> CreateOutboxAsync()
     {
-        return new MySqlOutbox(_configuration);
+        return new MySqlOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<MySqlOutbox>());
     }
 
     public void CreateStore()
@@ -70,13 +72,13 @@ public class MySQLTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxProvi
 
     public IEnumerable<Message> GetAllMessages()
     {
-        var outbox = new MySqlOutbox(_configuration);
+        var outbox = new MySqlOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<MySqlOutbox>());
         return outbox.Get(new RequestContext());
     }
 
     public async Task<IEnumerable<Message>> GetAllMessagesAsync()
     {
-        var outbox = new MySqlOutbox(_configuration);
+        var outbox = new MySqlOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<MySqlOutbox>());
         return await outbox.GetAsync(new RequestContext());
     }
 }

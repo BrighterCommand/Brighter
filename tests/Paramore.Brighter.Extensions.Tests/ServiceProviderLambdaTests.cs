@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -41,7 +43,7 @@ public class ServiceProviderLambdaTests
     public void AddBrighter_WithServiceProviderFunc_ResolvesServicesCorrectly()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         services.AddSingleton<IAmARequestContextFactory, InMemoryRequestContextFactory>();
 
         // Act
@@ -62,7 +64,7 @@ public class ServiceProviderLambdaTests
     public void AddBrighter_SupportsPostConfigure_ForTestOverrides()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         var customFactory = new InMemoryRequestContextFactory();
 
         // Normal registration
@@ -89,7 +91,7 @@ public class ServiceProviderLambdaTests
     public void AddProducers_WithServiceProviderFunc_DefersConfiguration()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>());
         services.AddSingleton(producerRegistry);
 
@@ -112,9 +114,9 @@ public class ServiceProviderLambdaTests
     public void AddConsumers_WithServiceProviderFunc_ResolvesServicesCorrectly()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         var internalBus = new InternalBus();
-        var channelFactory = new InMemoryChannelFactory(internalBus, TimeProvider.System);
+        var channelFactory = new InMemoryChannelFactory(internalBus, TimeProvider.System, loggerFactory: NullLoggerFactory.Instance);
         services.AddSingleton<IAmAChannelFactory>(channelFactory);
 
         // Act
@@ -135,7 +137,7 @@ public class ServiceProviderLambdaTests
     public void AddBrighter_WithActionOverload_StillWorks()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
 
         // Act - existing pattern
         services.AddBrighter(options =>
@@ -154,7 +156,7 @@ public class ServiceProviderLambdaTests
     public void AddBrighter_WithNoConfiguration_UsesDefaults()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
 
         // Act
         services.AddBrighter();
@@ -170,7 +172,7 @@ public class ServiceProviderLambdaTests
     public void AddProducers_ResolvesTracerFromInterfaceRegistration()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         var tracer = new BrighterTracer();
         var outbox = new InMemoryOutbox(TimeProvider.System);
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>());

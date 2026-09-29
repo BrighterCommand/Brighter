@@ -1,4 +1,6 @@
-﻿using System;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Amazon.S3;
@@ -36,7 +38,7 @@ public class S3LuggageStoreExistsTests : IAsyncLifetime
             BucketAddressTemplate = CredentialsChain.GetBucketAddressTemplate(),
             ACLs = S3CannedACL.Private,
             Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
-        });
+        }, loggerFactory: NullLoggerFactory.Instance);
         
         await luggageStore.EnsureStoreExistsAsync();
 
@@ -50,7 +52,7 @@ public class S3LuggageStoreExistsTests : IAsyncLifetime
             HttpClientFactory = _httpClientFactory, 
             BucketAddressTemplate = CredentialsChain.GetBucketAddressTemplate(),
             Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
-        });
+        }, loggerFactory: NullLoggerFactory.Instance);
 
         Assert.NotNull(luggageStore);
     }
@@ -73,7 +75,7 @@ public class S3LuggageStoreExistsTests : IAsyncLifetime
                          BucketAddressTemplate = CredentialsChain.GetBucketAddressTemplate(),
                          ACLs = S3CannedACL.Private,
                          Tags = [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
-                     });
+                     }, loggerFactory: NullLoggerFactory.Instance);
 
                  await luggageStore.EnsureStoreExistsAsync();
              });

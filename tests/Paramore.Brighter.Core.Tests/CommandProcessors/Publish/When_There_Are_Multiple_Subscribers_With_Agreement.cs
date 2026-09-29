@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -47,18 +47,18 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
             {
                 var myEvent = request as MyEvent;
                 var handlerList = new List<Type>();
-                
+
                 if (myEvent.Data == 4)
                     handlerList.Add(typeof(MyEventHandler));
-                
+
                 if (myEvent.Data > 2)
                     handlerList.Add(typeof(MyOtherEventHandler));
-                
+
                 return handlerList;
-                    
+
             }, [typeof(MyEventHandler), typeof(MyOtherEventHandler)]);
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyEventHandler>();
             container.AddTransient<MyOtherEventHandler>();
             container.AddSingleton(_receivedMessages);
@@ -67,8 +67,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
-                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
+                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
             PipelineBuilder<MyEvent>.ClearPipelineCache();
         }
 
@@ -79,7 +79,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
             {
                 Data = 4 // This will match both handlers
             };
-            
+
             _exception = Catch.Exception(() => _commandProcessor.Publish(myEvent));
 
             //Should not throw an exception

@@ -61,7 +61,7 @@ public class KafkaMessageProducerMissingHeaderTests : IDisposable
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = "Kafka Consumer Test", BootStrapServers = new[] { "localhost:9092" }
-                })
+                }, loggerFactory: Initializer.TestLoggerFactory)
             .Create(new KafkaSubscription<MyCommand>(
                     channelName: new ChannelName(_queueName),
                     routingKey: new RoutingKey(_topic),

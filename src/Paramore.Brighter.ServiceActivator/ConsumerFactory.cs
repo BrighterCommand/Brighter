@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.ServiceActivator
@@ -40,6 +41,7 @@ namespace Paramore.Brighter.ServiceActivator
         private readonly IAmAMessageMapperRegistryAsync? _messageMapperRegistryAsync;
         private readonly IAmAMessageTransformerFactoryAsync? _messageTransformerFactoryAsync;
         private readonly Func<Message, Type> _mapRequestType;
+        private readonly ILoggerFactory _loggerFactory;
 
         public ConsumerFactory(
             IAmACommandProcessor commandProcessor,
@@ -48,6 +50,7 @@ namespace Paramore.Brighter.ServiceActivator
             IAmAMessageTransformerFactory? messageTransformerFactory,
             IAmARequestContextFactory requestContextFactory,
             IAmABrighterTracer? tracer,
+            ILoggerFactory loggerFactory,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
             _commandProcessor = commandProcessor;
@@ -58,6 +61,7 @@ namespace Paramore.Brighter.ServiceActivator
             _requestContextFactory = requestContextFactory;
             _tracer = tracer;
             _instrumentationOptions = instrumentationOptions;
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
             _consumerName = new ConsumerName($"{_subscription.Name}-{Uuid.NewAsString()}");
         }
         
@@ -68,6 +72,7 @@ namespace Paramore.Brighter.ServiceActivator
             IAmAMessageTransformerFactoryAsync? messageTransformerFactoryAsync,
             IAmARequestContextFactory requestContextFactory,
             IAmABrighterTracer? tracer,
+            ILoggerFactory loggerFactory,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
             _commandProcessor = commandProcessor;
@@ -78,6 +83,7 @@ namespace Paramore.Brighter.ServiceActivator
             _requestContextFactory = requestContextFactory;
             _tracer = tracer;
             _instrumentationOptions = instrumentationOptions;
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
             _consumerName = new ConsumerName($"{_subscription.Name}-{Uuid.NewAsString()}");
         }
 
@@ -98,8 +104,8 @@ namespace Paramore.Brighter.ServiceActivator
                 throw new ArgumentException("Subscription must have a Channel Factory in order to create a consumer.");
             
             var channel = _subscription.ChannelFactory.CreateSyncChannel(_subscription);
-            var messagePump = new Reactor(_commandProcessor,  _mapRequestType, _messageMapperRegistry, 
-                _messageTransformerFactory, _requestContextFactory, channel, _tracer, _instrumentationOptions)
+            var messagePump = new Reactor(_commandProcessor, _mapRequestType, _messageMapperRegistry,
+                _messageTransformerFactory, _requestContextFactory, channel, _loggerFactory, _tracer, _instrumentationOptions)
             {
                 Channel = channel,
                 TimeOut = _subscription.TimeOut,
@@ -123,7 +129,7 @@ namespace Paramore.Brighter.ServiceActivator
             
             var channel = _subscription.ChannelFactory.CreateAsyncChannel(_subscription);
             var messagePump = new Proactor(_commandProcessor, _mapRequestType, _messageMapperRegistryAsync, 
-                _messageTransformerFactoryAsync, _requestContextFactory, channel, _tracer, _instrumentationOptions)
+                _messageTransformerFactoryAsync, _requestContextFactory, channel, _loggerFactory, _tracer, _instrumentationOptions)
             {
                 Channel = channel,
                 TimeOut = _subscription.TimeOut,

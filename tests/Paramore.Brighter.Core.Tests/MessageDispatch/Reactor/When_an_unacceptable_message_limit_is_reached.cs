@@ -22,43 +22,43 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             SpyRequeueCommandProcessor commandProcessor = new();
 
             _bus = new InternalBus();
-            
+
             var channel = new Channel(
                 new(Channel),
-                _routingKey, 
-                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)), 
+                _routingKey,
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory),
                 3
                 );
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
                 null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
-            
-            _messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyEvent), 
-                messageMapperRegistry, null, new InMemoryRequestContextFactory(), channel, 
-                timeProvider:_timeProvider)
+
+            _messagePump = new ServiceActivator.Reactor(commandProcessor, (message) => typeof(MyEvent),
+                messageMapperRegistry, null, new InMemoryRequestContextFactory(), channel,
+                timeProvider:_timeProvider, loggerFactory: Initializer.TestLoggerFactory)
             {
-                Channel = channel, 
-                TimeOut = TimeSpan.FromMilliseconds(5000), 
-                RequeueCount = 3, 
-                UnacceptableMessageLimit = 3, 
+                Channel = channel,
+                TimeOut = TimeSpan.FromMilliseconds(5000),
+                RequeueCount = 3,
+                UnacceptableMessageLimit = 3,
                 UnacceptableMessageLimitWindow = TimeSpan.FromMinutes(1)
             };
 
             var unacceptableMessage1 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE),
                 new MessageBody("")
             );
             var unacceptableMessage2 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE),
                 new MessageBody("")
             );
             var unacceptableMessage3 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE),
                 new MessageBody("")
             );
             var unacceptableMessage4 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE),
                 new MessageBody("")
             );
 
@@ -66,7 +66,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             channel.Enqueue(unacceptableMessage2);
             channel.Enqueue(unacceptableMessage3);
             channel.Enqueue(unacceptableMessage4);
-            
+
         }
 
         [Fact]
@@ -75,7 +75,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
 
             await Task.WhenAll(task);
-            
+
             _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
 
             Assert.Empty(_bus.Stream(_routingKey));

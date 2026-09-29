@@ -36,6 +36,7 @@ public class ValidatePipelinesDisabledTests
     private static IBrighterBuilder CreateBuilder(out ServiceCollection services)
     {
         services = new ServiceCollection();
+        services.AddLogging();
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         var mapperRegistry = new ServiceCollectionMessageMapperRegistryBuilder(services);
         return new ServiceCollectionBrighterBuilder(services, subscriberRegistry, mapperRegistry);

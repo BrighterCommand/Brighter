@@ -1,3 +1,5 @@
+using Paramore.Brighter;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using Amazon.DynamoDBv2;
@@ -50,7 +52,6 @@ namespace GreetingsWeb
             app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
         }
 
-
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
@@ -80,6 +81,7 @@ namespace GreetingsWeb
 
         private void ConfigureBrighter(IServiceCollection services)
         {
+
             var transport = Configuration[MessagingGlobals.BRIGHTER_TRANSPORT];
             if (string.IsNullOrWhiteSpace(transport))
                 throw new InvalidOperationException("Transport is not set");
@@ -88,9 +90,7 @@ namespace GreetingsWeb
                 ConfigureTransport.TransportType(transport);
 
             ConfigureTransport.AddSchemaRegistryMaybe(services, messagingTransport);
-            
-            var producerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport); 
-            
+
             services.AddBrighter(options =>
              {
                  //we want to use scoped, so make sure everything understands that which needs to
@@ -98,8 +98,11 @@ namespace GreetingsWeb
                  options.MapperLifetime = ServiceLifetime.Singleton;
                  options.PolicyRegistry = new GreetingsPolicy();
              })
-             .AddProducers((configure) =>
+             .AddProducers(provider =>
              {
+                 var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+                 var producerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport, loggerFactory);
+                 var configure = new ProducersConfiguration();
                  configure.ProducerRegistry = producerRegistry;
                  configure.Outbox = new DynamoDbOutbox(_client, new DynamoDbConfiguration(), TimeProvider.System);
                  configure.ConnectionProvider = typeof(DynamoDbUnitOfWork);
@@ -107,6 +110,7 @@ namespace GreetingsWeb
                  configure.MaxOutStandingMessages = 5;
                  configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
                  configure.OutBoxBag = new Dictionary<string, object> { { "Topic", "GreetingMade" } };
+                 return configure;
              })
              .AutoFromAssemblies([typeof(AddPersonHandlerAsync).Assembly])
              .ValidatePipelines()

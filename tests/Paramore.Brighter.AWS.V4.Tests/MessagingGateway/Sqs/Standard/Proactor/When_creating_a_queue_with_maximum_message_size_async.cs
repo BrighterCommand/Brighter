@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -41,7 +43,7 @@ public class SqsMessageProducerCreateQueueWithMaximumMessageSizeAsyncTests : IAs
                 ChannelName = channelName,
                 MakeChannels = OnMissingChannel.Create,
                 QueueAttributes = new SqsAttributes(maximumMessageSize: OneMebibyte)
-            });
+            }, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

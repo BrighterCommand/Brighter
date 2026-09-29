@@ -27,7 +27,7 @@ public class LargeMessagePaylodUnwrapTests
         _inMemoryStorageProvider = new InMemoryStorageProvider();
         var messageTransformerFactory = new SimpleMessageTransformerFactory(_ => new ClaimCheckTransformer(_inMemoryStorageProvider, _inMemoryStorageProvider));
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, loggerFactory: Initializer.TestLoggerFactory);
     }
 
     [Fact]

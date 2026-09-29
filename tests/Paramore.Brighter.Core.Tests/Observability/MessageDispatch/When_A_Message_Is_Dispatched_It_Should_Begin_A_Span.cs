@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -64,64 +64,64 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
                 .ConfigureResource(r => r.AddService("in-memory-tracer"))
                 .AddInMemoryExporter(_exportedActivities)
                 .Build();
-        
-            
+
+
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<MyEvent, MyEventHandler>();
 
             var handlerFactory = new SimpleHandlerFactorySync(_ => new MyEventHandler(_receivedMessages));
-            
+
             var timeProvider  = new FakeTimeProvider();
             var tracer = new BrighterTracer(timeProvider);
             var instrumentationOptions = InstrumentationOptions.All;
-            
+
             var commandProcessor = new Brighter.CommandProcessor(
                 subscriberRegistry,
-                handlerFactory, 
-                new InMemoryRequestContextFactory(), 
+                handlerFactory,
+                new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
                 new ResiliencePipelineRegistry<string>(),
-                new InMemorySchedulerFactory(),
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
                 tracer: tracer,
-                instrumentationOptions: instrumentationOptions);
-            
+                instrumentationOptions: instrumentationOptions, loggerFactory: Initializer.TestLoggerFactory);
+
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
             var channel = new Channel(
-                new(ChannelName),_routingKey, 
-                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000))
+                new(ChannelName),_routingKey,
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory)
                 );
-            
+
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(
                     _ => new MyEventMessageMapper()),
-                null); 
+                null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
-            
-            _messagePump = new Reactor(commandProcessor, (message) => typeof(MyEvent), 
-                messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel, tracer, instrumentationOptions)
+
+            _messagePump = new Reactor(commandProcessor, (message) => typeof(MyEvent),
+                messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel, Initializer.TestLoggerFactory, tracer, instrumentationOptions)
             {
                 Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000)
             };
-            
+
             var externalActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("MessagePumpSpanTests");
             Baggage.SetBaggage( "mykey", "myvalue" );
 
             _message = new Message(
-                new MessageHeader(_myEvent.Id, _routingKey, MessageType.MT_EVENT, replyTo: new RoutingKey("io.paramorebrighter.myevent")), 
+                new MessageHeader(_myEvent.Id, _routingKey, MessageType.MT_EVENT, replyTo: new RoutingKey("io.paramorebrighter.myevent")),
                 new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options))
             );
-            
+
             var contextPropogator = new TextContextPropogator();
             contextPropogator.PropogateContext(externalActivity?.Context, _message);
-            
+
             externalActivity?.Stop();
 
-           
+
             channel.Enqueue(_message);
             var quitMessage = MessageFactory.CreateQuitMessage(new RoutingKey("MyTopic"));
             channel.Enqueue(quitMessage);
-            
+
         }
 
         [Fact]
@@ -130,7 +130,7 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
             _messagePump.Run();
 
             _traceProvider.ForceFlush();
-            
+
             Assert.Equal(7, _exportedActivities.Count);
             Assert.Contains(_exportedActivities, a => a.Source.Name == "Paramore.Brighter");
 
@@ -166,7 +166,7 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
             Assert.Contains(createActivity.Tags, t => t.Key == BrighterSemanticConventions.CeVersion && t.Value == "1.0");
             Assert.Contains(createActivity.Tags, t => t.Key == BrighterSemanticConventions.CeType && t.Value == _message.Header.Type);
             Assert.Contains(createActivity.Tags, t => t.Key == BrighterSemanticConventions.CeMessageId && t.Value == _message.Id.Value);
-            Assert.Contains(createActivity.TagObjects, t => t.Key == BrighterSemanticConventions.HandledCount && Convert.ToInt32(t.Value) == _message.Header.HandledCount); 
+            Assert.Contains(createActivity.TagObjects, t => t.Key == BrighterSemanticConventions.HandledCount && Convert.ToInt32(t.Value) == _message.Header.HandledCount);
             Assert.Contains(createActivity.Tags, t => t.Key == BrighterSemanticConventions.ReplyTo && t.Value == _message.Header.ReplyTo?.Value);
         }
     }

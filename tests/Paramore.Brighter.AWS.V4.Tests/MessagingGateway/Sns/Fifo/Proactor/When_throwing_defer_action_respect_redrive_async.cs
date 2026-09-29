@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using Amazon.SimpleNotificationService.Model;
@@ -72,11 +74,11 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
                 Topic = routingKey,
                 RequestType = typeof(MyDeferredCommand),
                 MakeChannels = OnMissingChannel.Create,
-                TopicAttributes = topicAttributes 
-            }
-        );
+                TopicAttributes = topicAttributes
+            },
+            loggerFactory: NullLoggerFactory.Instance);
 
-        _channelFactory = new ChannelFactory(_awsConnection);
+        _channelFactory = new ChannelFactory(_awsConnection, loggerFactory: NullLoggerFactory.Instance);
         _channel = _channelFactory.CreateAsyncChannel(_subscription);
 
         IHandleRequestsAsync<MyDeferredCommand> handler = new MyDeferredCommandHandlerAsync();
@@ -90,8 +92,8 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
             requestContextFactory: new InMemoryRequestContextFactory(),
             policyRegistry: new PolicyRegistry(),
             resilienceResiliencePipelineRegistry: new ResiliencePipelineRegistry<string>(),
-            requestSchedulerFactory: new InMemorySchedulerFactory()
-        );
+            requestSchedulerFactory: new InMemorySchedulerFactory(loggerFactory: NullLoggerFactory.Instance),
+            loggerFactory: NullLoggerFactory.Instance);
 
         var messageMapperRegistry = new MessageMapperRegistry(
             null,
@@ -100,10 +102,10 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
         messageMapperRegistry.RegisterAsync<MyDeferredCommand, MyDeferredCommandMessageMapperAsync>();
 
         _messagePump = new ServiceActivator.Proactor(commandProcessor, (message) => typeof(MyDeferredCommand), messageMapperRegistry,
-            new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), _channel)
+            new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), _channel, loggerFactory: NullLoggerFactory.Instance)
         {
-            Channel = _channel, 
-            TimeOut = TimeSpan.FromMilliseconds(5000), 
+            Channel = _channel,
+            TimeOut = TimeSpan.FromMilliseconds(5000),
             RequeueCount = 3
         };
     }

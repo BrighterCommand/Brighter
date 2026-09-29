@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System.Text.Json;
 using Azure.Identity;
 using Azure.Storage.Blobs;
 using Paramore.Brighter.Azure.Tests.Helpers;
@@ -29,31 +31,31 @@ public class LargeMessagePayloadAUnwrapTests : IDisposable
             ContainerUri = bucketUrl,
             Credential = new AzureCliCredential()
         });
-        
+
         TransformPipelineBuilder.ClearPipelineCache();
 
         var mapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()),
             null);
         mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();
-        
+
         var messageTransformerFactory = new SimpleMessageTransformerFactory(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, loggerFactory: NullLoggerFactory.Instance);
     }
-    
+
     [Test]
     public void When_unwrapping_a_large_message_async()
     {
         //arrange
         Thread.Sleep(3000); //allow bucket definition to propagate
-            
+
         //store our luggage and get the claim check
         var contents = DataGenerator.CreateString(6000);
         var myCommand = new MyLargeCommand(1) { Value = contents };
         var commandAsJson = JsonSerializer.Serialize(myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General));
-        
-        var stream = new MemoryStream();                                                                               
+
+        var stream = new MemoryStream();
         var writer = new StreamWriter(stream);
         writer.Write(commandAsJson);
         writer.Flush();
@@ -62,7 +64,7 @@ public class LargeMessagePayloadAUnwrapTests : IDisposable
 
         //pretend we ran through the claim check
         myCommand.Value = $"Claim Check {id}";
- 
+
         //set the headers, so that we have a claim check listed
         var message = new Message(
             new MessageHeader(myCommand.Id, new RoutingKey("transform.event"), MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow),
@@ -70,18 +72,18 @@ public class LargeMessagePayloadAUnwrapTests : IDisposable
         );
 
         message.Header.DataRef = id;
-        message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK] = id; 
-         
+        message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK] = id;
+
         //act
         var transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyLargeCommand>();
         var transformedMessage = transformPipeline.Unwrap(message, new RequestContext());
-        
+
         //assert
         //contents should be from storage
         Assert.Equals(contents, transformedMessage.Value);
         Assert.That(_luggageStore.HasClaim(id));
     }
-    
+
     public void Dispose()
     {
         _client.Delete();

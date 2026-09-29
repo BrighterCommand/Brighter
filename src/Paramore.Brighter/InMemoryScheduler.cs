@@ -31,7 +31,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Scheduler;
 using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Tasks;
@@ -47,17 +46,19 @@ namespace Paramore.Brighter;
 /// <param name="getOrCreateRequestSchedulerId">The get or create request scheduler id</param>
 /// <param name="getOrCreateMessageSchedulerId">The get or create message scheduler id</param>
 /// <param name="onConflict">Action performance on conflict</param>
+/// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
 public class InMemoryScheduler(
     IAmACommandProcessor processor,
     TimeProvider timeProvider,
     Func<IRequest, string> getOrCreateRequestSchedulerId,
     Func<Message, string> getOrCreateMessageSchedulerId,
-    OnSchedulerConflict onConflict)
+    OnSchedulerConflict onConflict,
+    ILoggerFactory loggerFactory)
     : IAmAMessageSchedulerSync, IAmAMessageSchedulerAsync, IAmARequestSchedulerSyncWithContext, IAmARequestSchedulerAsyncWithContext, IDisposable, IAsyncDisposable
 {
     private readonly ConcurrentDictionary<string, (ITimer Timer, long Generation)> _timers = new();
     private long _generation;
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<InMemoryScheduler>();
+    private readonly ILogger _logger = loggerFactory.CreateBrighterLogger<InMemoryScheduler>();
 
     /// <inheritdoc />
     public string Schedule(Message message, DateTimeOffset at)
@@ -323,7 +324,7 @@ public class InMemoryScheduler(
             return;
         }
 
-        s_logger.LogError("Invalid input during executing scheduler {Data}", state);
+        _logger.LogError("Invalid input during executing scheduler {Data}", state);
     }
 
     /// <summary>

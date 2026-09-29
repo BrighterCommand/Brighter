@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
@@ -26,7 +28,7 @@ public class InMemoryConsumerRejectWithDeadLetterTestsAsync
         bus.Enqueue(expectedMessage);
 
         var timeProvider = new FakeTimeProvider();
-        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider, deadLetterTopic, ackTimeout: TimeSpan.FromMilliseconds(1000)) as IAmAMessageConsumerAsync;
+        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider, NullLoggerFactory.Instance, deadLetterTopic, ackTimeout: TimeSpan.FromMilliseconds(1000)) as IAmAMessageConsumerAsync;
         
         //act
         var receivedMessage = (await consumer.ReceiveAsync()).Single();

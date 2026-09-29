@@ -58,7 +58,7 @@ public class ControlApiSubscriptionNameTests
         builder.Services.AddSingleton(Initializer.Factory);
         builder.Services.AddBrighter();
         builder.Services.AddSingleton<IDispatcher>(provider => new Dispatcher(
-            provider.GetRequiredService<IAmACommandProcessor>(), [subscription],
+            provider.GetRequiredService<IAmACommandProcessor>(), [subscription], Initializer.Factory,
             ServiceCollectionExtensions.MessageMapperRegistry(provider), ownsRegistry: true));
         await using var application = builder.Build();
         application.MapBrighterControlEndpoints();

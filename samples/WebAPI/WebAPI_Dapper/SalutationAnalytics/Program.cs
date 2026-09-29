@@ -74,6 +74,7 @@ static IHostBuilder CreateHostBuilder(string[] args)
 
 static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection services)
 {
+
     string? transport = hostContext.Configuration[MessagingGlobals.BRIGHTER_TRANSPORT];
     if (string.IsNullOrWhiteSpace(transport))
         throw new InvalidOperationException("Transport is not set");
@@ -101,34 +102,40 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
     services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
 
     Rdbms rdbms = DbResolver.GetDatabaseType(dbType);
-    (IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
-        OutboxFactory.MakeDapperOutbox(rdbms, outboxConfiguration);
 
-    services.AddConsumers(options =>
+    services.AddConsumers(provider =>
         {
+            var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+            var options = new ConsumersOptions();
             options.Subscriptions = subscriptions;
-            options.DefaultChannelFactory = ConfigureTransport.GetChannelFactory(messagingTransport);
+            options.DefaultChannelFactory = ConfigureTransport.GetChannelFactory(messagingTransport, loggerFactory);
             options.HandlerLifetime = ServiceLifetime.Scoped;
             options.MapperLifetime = ServiceLifetime.Singleton;
             options.PolicyRegistry = new SalutationPolicy();
             options.InboxConfiguration = new InboxConfiguration(
-                InboxFactory.MakeInbox(rdbms, relationalDatabaseConfiguration),
+                InboxFactory.MakeInbox(rdbms, relationalDatabaseConfiguration, loggerFactory),
                 InboxScope.Commands
             );
+            return options;
         })
         .ConfigureJsonSerialisation(options =>
         {
             //We don't strictly need this, but added as an example
             options.PropertyNameCaseInsensitive = true;
         })
-        .AddProducers(config =>
+        .AddProducers(provider =>
         {
-            config.ProducerRegistry = ConfigureTransport.MakeProducerRegistry<SalutationReceived>(messagingTransport);
+            var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+            (IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
+                OutboxFactory.MakeDapperOutbox(rdbms, outboxConfiguration, loggerFactory);
+            var config = new ProducersConfiguration();
+            config.ProducerRegistry = ConfigureTransport.MakeProducerRegistry<SalutationReceived>(messagingTransport, loggerFactory);
             config.Outbox = makeOutbox.outbox;
             config.ConnectionProvider = makeOutbox.connectionProvider;
             config.TransactionProvider = makeOutbox.transactionProvider;
             config.MaxOutStandingMessages = 5;
             config.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
+            return config;
         })
         .AutoFromAssemblies()
         .UseBoxProvisioning(options =>

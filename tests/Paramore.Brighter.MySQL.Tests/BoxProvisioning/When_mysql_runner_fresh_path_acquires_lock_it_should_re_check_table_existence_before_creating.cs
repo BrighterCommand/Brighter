@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using MySqlConnector;
@@ -43,7 +45,7 @@ public class MySqlRunnerFreshPathRecheckTests : IAsyncLifetime
     public MySqlRunnerFreshPathRecheckTests()
     {
         _config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        _runner = new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), _config, TimeSpan.FromSeconds(30));
+        _runner = new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), _config, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

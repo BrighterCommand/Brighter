@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -61,7 +63,7 @@ public class RmqSyncMessageGatewayProvider
     // scheduler to dispose.
     private IDisposable? RepublishToRmq(Message message)
     {
-        var producer = new RmqMessageProducer(_connection);
+        var producer = new RmqMessageProducer(_connection,loggerFactory:NullLoggerFactory.Instance);
         return ConformanceHarnessMessageScheduler.SendAndHandBack(producer, () => producer.Send(message));
     }
 
@@ -105,7 +107,7 @@ public class RmqSyncMessageGatewayProvider
     public IAmAChannelSync CreateChannel(RmqSubscription subscription)
     {
         var channel = new ChannelFactory(
-            new RmqMessageConsumerFactory(_connection, Scheduler)
+            new RmqMessageConsumerFactory(_connection,NullLoggerFactory.Instance, Scheduler)
         ).CreateSyncChannel(subscription);
 
         if (subscription.MakeChannels == OnMissingChannel.Create)
@@ -136,7 +138,7 @@ public class RmqSyncMessageGatewayProvider
             };
         }
 
-        var produces = new RmqMessageProducerFactory(connection, [publication]).Create();
+        var produces = new RmqMessageProducerFactory(connection, [publication],loggerFactory:NullLoggerFactory.Instance).Create();
 
         var producer = produces.First().Value;
         producer.Scheduler = Scheduler;
@@ -209,7 +211,7 @@ public class RmqSyncMessageGatewayProvider
             routingKey: subscription.DeadLetterRoutingKey!,
             isDurable: false,
             makeChannels: OnMissingChannel.Assume
-        );
+,loggerFactory:NullLoggerFactory.Instance        );
 
         try
         {
@@ -301,7 +303,7 @@ public class RmqSyncMessageGatewayProvider
         // We create the sync channel and adapt it to IAmAChannelAsync, completing sync
         // operations as completed tasks — honest adaptation for a sync-only transport.
         var syncChannel = new ChannelFactory(
-            new RmqMessageConsumerFactory(_connection, Scheduler)
+            new RmqMessageConsumerFactory(_connection,NullLoggerFactory.Instance, Scheduler)
         ).CreateSyncChannel(subscription);
 
         if (subscription.MakeChannels == OnMissingChannel.Create)
@@ -340,7 +342,7 @@ public class RmqSyncMessageGatewayProvider
             };
         }
 
-        var produces = new RmqMessageProducerFactory(connection, [publication]).Create();
+        var produces = new RmqMessageProducerFactory(connection, [publication],loggerFactory:NullLoggerFactory.Instance).Create();
 
         var producer = produces.First().Value;
         producer.Scheduler = Scheduler;
@@ -359,7 +361,7 @@ public class RmqSyncMessageGatewayProvider
             routingKey: subscription.DeadLetterRoutingKey!,
             isDurable: false,
             makeChannels: OnMissingChannel.Assume
-        );
+,loggerFactory:NullLoggerFactory.Instance        );
 
         try
         {
@@ -413,7 +415,7 @@ public class RmqSyncMessageGatewayProvider
             routingKey: invalidRoutingKey,
             isDurable: false,
             makeChannels: OnMissingChannel.Create
-        );
+,loggerFactory:NullLoggerFactory.Instance        );
     }
 
     // ── inner: sync-to-async channel adapter ────────────────────────────────

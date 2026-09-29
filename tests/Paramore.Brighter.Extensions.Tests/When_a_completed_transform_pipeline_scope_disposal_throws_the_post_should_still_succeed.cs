@@ -48,7 +48,7 @@ public class CompletedPipelineScopeDisposalLoggingTests
         //disposes the scope, which throws from IPoisonedDependency's own Dispose()
         TransformPipelineBuilder.ClearPipelineCache();
 
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         collection.AddScoped<IPoisonedDependency, PoisonedDependency>();
         collection.AddScoped<PoisonedScopeCompletingMapper>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions
@@ -67,7 +67,7 @@ public class CompletedPipelineScopeDisposalLoggingTests
         var internalBus = new InternalBus();
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            { routingKey, new InMemoryMessageProducer(internalBus, new Publication { Topic = routingKey, RequestType = typeof(PoisonedScopeCompletingCommand) }) }
+            { routingKey, new InMemoryMessageProducer(internalBus,Initializer.Factory, new Publication { Topic = routingKey, RequestType = typeof(PoisonedScopeCompletingCommand) }) }
         });
 
         var timeProvider = new FakeTimeProvider();
@@ -82,7 +82,7 @@ public class CompletedPipelineScopeDisposalLoggingTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            new InMemoryOutbox(timeProvider) { Tracer = tracer }
+Initializer.Factory,            new InMemoryOutbox(timeProvider) { Tracer = tracer }
         );
 
         var commandProcessor = new CommandProcessor(
@@ -90,11 +90,10 @@ public class CompletedPipelineScopeDisposalLoggingTests
             new DefaultPolicy(),
             resiliencePipelineRegistry,
             bus,
-            new InMemorySchedulerFactory()
-        );
+            new InMemorySchedulerFactory(loggerFactory: Initializer.Factory)
+        , loggerFactory: Initializer.Factory);
 
-        //added to Initializer.Factory directly — the one instance every Brighter static logger in this
-        //process is bound to — not to ApplicationLogging.LoggerFactory, which another test may reassign
+        // Capture both pipeline and scope-disposal logs through the explicitly registered factory.
         var loggerProvider = new CapturingLoggerProvider();
         Initializer.Factory.AddProvider(loggerProvider);
 

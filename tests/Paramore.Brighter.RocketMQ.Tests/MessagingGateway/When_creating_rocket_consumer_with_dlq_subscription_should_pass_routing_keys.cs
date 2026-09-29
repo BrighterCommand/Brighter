@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Reflection;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
@@ -41,7 +43,7 @@ public class RocketConsumerFactoryDlqTests : IDisposable
     public RocketConsumerFactoryDlqTests()
     {
         _connection = GatewayFactory.CreateConnection();
-        _factory = new RocketMessageConsumerFactory(_connection);
+        _factory = new RocketMessageConsumerFactory(_connection, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

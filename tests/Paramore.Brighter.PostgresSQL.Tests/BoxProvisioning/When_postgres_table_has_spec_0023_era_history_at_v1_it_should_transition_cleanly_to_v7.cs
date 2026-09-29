@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -49,13 +51,13 @@ public class PostgreSqlSpec0023EraHistoryTransitionTests : IAsyncLifetime
         var columnsBefore = await GetTableColumns();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
-        var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
+        var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance);
         var provisioner = new PostgreSqlOutboxProvisioner(
-            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlBoxDetectionHelper(logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlBoxDetectionHelper>()),
             new PostgreSqlOutboxMigrationCatalog(),
             new PostgreSqlPayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: NullLoggerFactory.Instance);
 
         //Act
         await provisioner.ProvisionAsync();

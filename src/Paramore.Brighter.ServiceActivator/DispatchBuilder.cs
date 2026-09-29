@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.ServiceActivator
@@ -35,7 +36,7 @@ namespace Paramore.Brighter.ServiceActivator
     /// progressive interfaces to manage the requirements for a complete Dispatcher via Intellisense in the IDE. The intent is to make it easier to
     /// recognize those dependencies that you need to configure
     /// </summary>
-    public class DispatchBuilder : INeedACommandProcessor, INeedAChannelFactory, INeedAMessageMapper, INeedAListOfSubcriptions, INeedObservability, IAmADispatchBuilder
+    public class DispatchBuilder : INeedACommandProcessor, INeedAChannelFactory, INeedAMessageMapper, INeedAListOfSubcriptions, INeedObservability, INeedDispatcherLogging, IAmADispatchBuilder
     {
         private IAmACommandProcessor? _commandProcessor;
         private IAmAMessageMapperRegistry? _messageMapperRegistry;
@@ -47,6 +48,7 @@ namespace Paramore.Brighter.ServiceActivator
         private IAmARequestContextFactory? _requestContextFactory;
         private IAmABrighterTracer? _tracer;
         private InstrumentationOptions _instrumentationOptions;
+        private ILoggerFactory? _loggerFactory;
 
         private DispatchBuilder() { }
 
@@ -88,7 +90,7 @@ namespace Paramore.Brighter.ServiceActivator
             IAmAMessageMapperRegistry messageMapperRegistry,
             IAmAMessageMapperRegistryAsync? messageMapperRegistryAsync,
             IAmAMessageTransformerFactory? messageTransformerFactory,
-            IAmAMessageTransformerFactoryAsync?  messageTransformFactoryAsync)
+            IAmAMessageTransformerFactoryAsync? messageTransformFactoryAsync)
         {
             _messageMapperRegistry = messageMapperRegistry;
             _messageMapperRegistryAsync = messageMapperRegistryAsync;
@@ -120,17 +122,25 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="tracer">An instance of <see cref="BrighterTracer"/> with which to instrument the Dispatcher</param>
         /// <param name="instrumentationOptions">An <see cref="InstrumentationOptions"/> defining how verbose the instrumentation should be</param>
         /// <returns>INeedAListOfSubcriptions</returns>
-        public IAmADispatchBuilder ConfigureInstrumentation(IAmABrighterTracer? tracer, InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
+        public INeedDispatcherLogging ConfigureInstrumentation(IAmABrighterTracer? tracer, InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
              _tracer = tracer;
              _instrumentationOptions = instrumentationOptions;
              return this;
         }
         
-        public IAmADispatchBuilder NoInstrumentation()
+        public INeedDispatcherLogging NoInstrumentation()
         {
             _tracer = null;
             _instrumentationOptions = InstrumentationOptions.None;
+            return this;
+        }
+
+        /// <inheritdoc />
+        /// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
+        public IAmADispatchBuilder ConfigureLogging(ILoggerFactory loggerFactory)
+        {
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
             return this;
         }
 
@@ -171,14 +181,17 @@ namespace Paramore.Brighter.ServiceActivator
         /// <returns>Dispatcher.</returns>
         public Dispatcher Build(bool ownsRegistry = false, bool ownsTransformerFactories = false, TimeSpan? shutdownTimeout = null)
         {
+            var loggerFactory = _loggerFactory ?? throw new ConfigurationException(
+                "A logger factory is required. Call ConfigureLogging before Build.");
+
             if (_commandProcessor is null || _subscriptions is null)
                 throw new ArgumentException("Command Processor Factory and Subscription are required.");
 
-            return new Dispatcher(_commandProcessor, _subscriptions, _messageMapperRegistry,
-                _messageMapperRegistryAsync, _messageTransformerFactory, _messageTransformerFactoryAsync,
-                _requestContextFactory, _tracer, _instrumentationOptions, ownsRegistry, ownsTransformerFactories,
-                shutdownTimeout
-            );
+
+            return new Dispatcher(_commandProcessor, _subscriptions, loggerFactory,
+                _messageMapperRegistry, _messageMapperRegistryAsync, _messageTransformerFactory,
+                _messageTransformerFactoryAsync, _requestContextFactory, _tracer, _instrumentationOptions,
+                ownsRegistry, ownsTransformerFactories, shutdownTimeout);
         }
 
 
@@ -220,7 +233,7 @@ namespace Paramore.Brighter.ServiceActivator
             IAmAMessageMapperRegistry messageMapperRegistry,
             IAmAMessageMapperRegistryAsync? messageMapperRegistryAsync,
             IAmAMessageTransformerFactory? messageTransformerFactory,
-            IAmAMessageTransformerFactoryAsync?  messageTransformFactoryAsync);
+            IAmAMessageTransformerFactoryAsync? messageTransformFactoryAsync);
     }
     /// <summary>
     /// Interface INeedAChannelFactory
@@ -263,20 +276,33 @@ namespace Paramore.Brighter.ServiceActivator
         /// InstrumentationOptions.All - all of the above
         /// </param>
         /// <returns>IAmADispatchBuilder</returns>
-        IAmADispatchBuilder ConfigureInstrumentation(IAmABrighterTracer? tracer, InstrumentationOptions instrumentationOptions = InstrumentationOptions.All);
+        INeedDispatcherLogging ConfigureInstrumentation(IAmABrighterTracer? tracer, InstrumentationOptions instrumentationOptions = InstrumentationOptions.All);
        
         /// <summary>
         /// We do not need any instrumentation for the Dispatcher
         /// </summary>
         /// <returns>IAmADispatchBuilder</returns>
-        IAmADispatchBuilder NoInstrumentation();
+        INeedDispatcherLogging NoInstrumentation();
     } 
 
     /// <summary>
     /// Interface IAmADispatchBuilder
     /// </summary>
+    public interface INeedDispatcherLogging
+    {
+        /// <summary>
+        /// Supplies the <see cref="ILoggerFactory"/> used to create instance-scoped loggers for the <see cref="Dispatcher"/>
+        /// and the message pumps it constructs. This required stage must be completed before building.
+        /// </summary>
+        /// <param name="loggerFactory">The logger factory.</param>
+        /// <returns>IAmADispatchBuilder.</returns>
+        IAmADispatchBuilder ConfigureLogging(ILoggerFactory loggerFactory);
+    }
+
+    /// <summary>Builds an instance after all required configuration stages.</summary>
     public interface IAmADispatchBuilder
     {
+
         /// <summary>
         /// Builds this instance.
         /// </summary>

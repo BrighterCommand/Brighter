@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using Amazon.SQS.Model;
 using Paramore.Brighter.AWS.V4.Tests.Helpers;
@@ -30,11 +32,11 @@ public class AWSValidateMissingTopicTests
         var producer = new SqsMessageProducer(
             _awsConnection,
             new SqsPublication(
-                channelName: new ChannelName(Guid.NewGuid().ToString()), 
-                queueAttributes: new SqsAttributes (type:SqsType.Fifo, tags: new Dictionary<string, string> { { "Environment", "Test" } }),
+                channelName: new ChannelName(Guid.NewGuid().ToString()),
+                queueAttributes: new SqsAttributes(type: SqsType.Fifo, tags: new Dictionary<string, string> { { "Environment", "Test" } }),
                 makeChannels: OnMissingChannel.Validate
-                )
-            );
+                ),
+                loggerFactory: NullLoggerFactory.Instance);
 
         var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
 

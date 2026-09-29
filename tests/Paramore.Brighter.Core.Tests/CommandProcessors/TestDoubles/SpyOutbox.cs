@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -7,7 +7,7 @@ using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal sealed class SpyOutbox : 
+    internal sealed class SpyOutbox :
         IAmAnOutboxSync<Message, SpyTransaction>,
         IAmAnOutboxAsync<Message, SpyTransaction>
     {
@@ -108,7 +108,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             {
                 MarkDispatched(id, requestContext, dispatchedAt, args);
             }
-            
+
             return Task.CompletedTask;
         }
 
@@ -117,7 +117,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             return Messages.Where(m => !m.Dispatched).Select(m => m.Message);
         }
 
-        public Task<IEnumerable<Message>> OutstandingMessagesAsync(TimeSpan dispatchedSince, RequestContext requestContext, 
+        public Task<IEnumerable<Message>> OutstandingMessagesAsync(TimeSpan dispatchedSince, RequestContext requestContext,
             int pageSize = 100, int pageNumber = 1, IEnumerable<RoutingKey>? trippedTopics = null, Dictionary<string, object>? args = null, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(OutstandingMessages(dispatchedSince, requestContext, pageSize, pageNumber));

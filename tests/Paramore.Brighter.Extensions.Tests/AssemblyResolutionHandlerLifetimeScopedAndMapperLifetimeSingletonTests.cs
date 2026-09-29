@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter;
@@ -20,7 +20,7 @@ namespace Tests
 
         public AssemblyResolutionHandlerLifetimeScopedAndMapperLifetimeSingletonTests()
         {
-            _services = new ServiceCollection();
+            _services = new ServiceCollection().AddLogging();
 
             _services.AddConsumers()
                 .AutoFromAssemblies();

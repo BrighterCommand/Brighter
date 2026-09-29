@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
             // span). The tracer is null so the observability block is a no-op and the only thing that can
             // throw inside the callback is the breaker trip.
             var bus = new InternalBus();
-            _producer = new InMemoryMessageProducer(bus, new Publication { Topic = _topic })
+            _producer = new InMemoryMessageProducer(bus, Initializer.TestLoggerFactory, new Publication { Topic = _topic })
             {
                 UseAsyncPublishConfirmation = true,
                 PublishFailurePredicate = _ => true
@@ -69,7 +69,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer: null,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                outboxCircuitBreaker: _circuitBreaker);
+                outboxCircuitBreaker: _circuitBreaker, loggerFactory: Initializer.TestLoggerFactory);
 
             _message = new Message(
                 new MessageHeader(new Id(Guid.NewGuid().ToString()), _topic, MessageType.MT_EVENT),

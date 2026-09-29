@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,12 +20,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         public CommandProcessorBuildDefaultInboxSendAsyncTests()
         {
              var handler = new MyCommandHandlerAsync(new Dictionary<string, string>());
-            
+
              var subscriberRegistry = new SubscriberRegistry();
              //This handler has no Inbox attribute
              subscriberRegistry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
-             
-             var container = new ServiceCollection();
+
+             var container = new ServiceCollection().AddLogging();
              container.AddSingleton(handler);
              container.AddSingleton<IAmAnInboxAsync>(_inbox);
              container.AddTransient<UseInboxHandlerAsync<MyCommand>>();
@@ -46,27 +46,27 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             );
 
            _commandProcessor = new CommandProcessor(
-                subscriberRegistry, 
-                handlerFactory, 
+                subscriberRegistry,
+                handlerFactory,
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry
                 {
-                    { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, 
+                    { CommandProcessor.RETRYPOLICYASYNC, retryPolicy },
                     { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy }
                 },
                 new ResiliencePipelineRegistry<string>(),
-                new InMemorySchedulerFactory(),
-                inboxConfiguration: inboxConfiguration
-                );
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+                inboxConfiguration: inboxConfiguration,
+                loggerFactory: Initializer.TestLoggerFactory);
         }
-        
+
         [Fact]
         public async Task WhenInsertingADefaultInboxIntoTheSendPipeline()
         {
             //act
             var command = new MyCommand {Value = "Inbox Capture"};
             await _commandProcessor.SendAsync(command);
-            
+
             //assert we are in, and auto-context added us under our name
             var boxed = await _inbox.ExistsAsync<MyCommand>(command.Id, typeof(MyCommandHandlerAsync).FullName, null, 100);
             Assert.True(boxed);

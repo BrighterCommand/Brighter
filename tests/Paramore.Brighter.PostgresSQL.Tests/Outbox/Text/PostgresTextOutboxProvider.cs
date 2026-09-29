@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
 using System.Data.Common;
 using System.Threading.Tasks;
 using Npgsql;
@@ -36,18 +38,18 @@ public class PostgresTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPr
 
     public IAmAnOutboxSync<Message, DbTransaction> CreateOutbox()
     {
-        return new PostgreSqlOutbox(_configuration);
+        return new PostgreSqlOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlOutbox>());
     }
 
     public IEnumerable<Message> GetAllMessages()
     {
-        var outbox = new PostgreSqlOutbox(_configuration);
+        var outbox = new PostgreSqlOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlOutbox>());
         return outbox.Get(new RequestContext());
     }
 
     public async Task<IEnumerable<Message>> GetAllMessagesAsync()
     {
-        var outbox = new PostgreSqlOutbox(_configuration);
+        var outbox = new PostgreSqlOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlOutbox>());
         return await outbox.GetAsync(new RequestContext());
     }
 
@@ -58,7 +60,7 @@ public class PostgresTextOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPr
 
     public IAmAnOutboxAsync<Message, DbTransaction> CreateOutboxAsync()
     {
-        return new PostgreSqlOutbox(_configuration);
+        return new PostgreSqlOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlOutbox>());
     }
     
     public async Task CreateStoreAsync()

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -70,7 +70,7 @@ public class CommandProcessorSchedulerCommandTests
 
         messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
-        var producer = new InMemoryMessageProducer(_internalBus, new Publication { Topic = routingKey, RequestType = typeof(MyCommand) });
+        var producer = new InMemoryMessageProducer(_internalBus, Initializer.TestLoggerFactory, new Publication { Topic = routingKey, RequestType = typeof(MyCommand) });
 
         var resiliencePipelineRegistry = new ResiliencePipelineRegistry<string>()
             .AddBrighterDefault();
@@ -89,7 +89,7 @@ public class CommandProcessorSchedulerCommandTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            _outbox
+            Initializer.TestLoggerFactory, _outbox
         );
 
         _commandProcessor = new CommandProcessor(registry,
@@ -98,7 +98,7 @@ public class CommandProcessorSchedulerCommandTests
             new DefaultPolicy(),
             resiliencePipelineRegistry,
             bus,
-            new InMemorySchedulerFactory { TimeProvider = _timeProvider });
+            new InMemorySchedulerFactory (loggerFactory: Initializer.TestLoggerFactory) { TimeProvider = _timeProvider }, loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<MyCommand>.ClearPipelineCache();
         PipelineBuilder<FireSchedulerRequest>.ClearPipelineCache();
     }
@@ -162,13 +162,13 @@ public class CommandProcessorSchedulerCommandTests
         Assert.True(_internalBus.Stream(new RoutingKey(Topic)).Any());
 
         var actual = _outbox.Get(_myCommand.Id, new RequestContext());
-        
+
         Assert.NotNull(actual);
         var expected = new Message(
             new MessageHeader(_myCommand.Id, new RoutingKey(Topic), MessageType.MT_COMMAND),
             new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
         );
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);
@@ -200,7 +200,7 @@ public class CommandProcessorSchedulerCommandTests
             new MessageHeader(_myCommand.Id, new RoutingKey(Topic), MessageType.MT_COMMAND),
             new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
         );
-        
+
         Assert.Equivalent(expected.Body, actual.Body);
         Assert.Equal(expected.Id, actual.Id);
         Assert.Equal(expected.Persist, actual.Persist);

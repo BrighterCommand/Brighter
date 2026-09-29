@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -37,7 +39,7 @@ public class LargeMessagePayloadAsyncUnwrapTests
 
         var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.All);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, NullLoggerFactory.Instance, InstrumentationOptions.All);
     }
 
     [Fact]

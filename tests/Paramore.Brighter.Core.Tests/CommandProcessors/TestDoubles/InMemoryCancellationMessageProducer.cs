@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -36,7 +36,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 internal sealed class InMemoryCancellationMessageProducer(IAmABus bus, Publication publication)
     : IAmAMessageProducerAsync, IAmABulkMessageProducerAsync, IDisposable
 {
-    private readonly InMemoryMessageProducer _producer = new(bus, publication);
+    private readonly InMemoryMessageProducer _producer = new(bus,Initializer.TestLoggerFactory, publication);
 
     public Publication Publication => _producer.Publication;
     public Activity? Span { get; set; }

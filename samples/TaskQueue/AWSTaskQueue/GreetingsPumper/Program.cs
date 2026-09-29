@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,27 +26,29 @@ if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var cr
             }
         });
 
-    var producerRegistry = new SnsProducerRegistryFactory(
-        awsConnection,
-        [
-            new SnsPublication
-            {
-                Topic = new RoutingKey(typeof(GreetingEvent).FullName
-                    .ToValidSNSTopicName())
-            },
-            new SnsPublication
-            {
-                Topic = new RoutingKey(
-                    typeof(FarewellEvent).FullName.ToValidSNSTopicName(true)),
-                TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
-            }
-        ]
-    ).Create();
-
     builder.Services.AddBrighter()
-        .AddProducers((configure) =>
+        .AddProducers(provider =>
         {
+            var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+            var producerRegistry = new SnsProducerRegistryFactory(
+                awsConnection,
+                [
+                    new SnsPublication
+                    {
+                        Topic = new RoutingKey(typeof(GreetingEvent).FullName
+                            .ToValidSNSTopicName())
+                    },
+                    new SnsPublication
+                    {
+                        Topic = new RoutingKey(
+                            typeof(FarewellEvent).FullName.ToValidSNSTopicName(true)),
+                        TopicAttributes = new SnsAttributes { Type = SqsType.Fifo }
+                    }
+                ],
+                loggerFactory: loggerFactory).Create();
+            var configure = new ProducersConfiguration();
             configure.ProducerRegistry = producerRegistry;
+            return configure;
         })
         .AutoFromAssemblies([typeof(GreetingEvent).Assembly]);
 

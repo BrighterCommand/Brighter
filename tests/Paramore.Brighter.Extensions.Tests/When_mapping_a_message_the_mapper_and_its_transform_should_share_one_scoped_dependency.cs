@@ -15,7 +15,7 @@ public class SharedScopedDependencyPerPipelineTests
         TransformPipelineBuilder.ClearPipelineCache();
 
         var log = new MarkerLog();
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         collection.AddSingleton(log);
         collection.AddScoped<IMarker, Marker>();
         collection.AddScoped<MarkerMapper>();
@@ -33,7 +33,7 @@ public class SharedScopedDependencyPerPipelineTests
         var mapperRegistry = new MessageMapperRegistry(mapperFactory, null);
         mapperRegistry.Register<MarkerCommand, MarkerMapper>();
 
-        var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, transformerFactory);
+        var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, transformerFactory, loggerFactory: Initializer.Factory);
 
         //act — map message N: building the pipeline constructs both the mapper and its unwrap
         //transform, each recording the IMarker it was resolved with

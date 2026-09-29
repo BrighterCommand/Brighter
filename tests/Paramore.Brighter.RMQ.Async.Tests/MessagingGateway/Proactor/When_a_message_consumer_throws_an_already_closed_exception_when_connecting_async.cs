@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
@@ -30,10 +32,10 @@ public class AsyncRmqMessageConsumerConnectionClosedTests : IDisposable, IAsyncD
             Exchange = new Exchange("paramore.brighter.exchange")
         };
 
-        _sender = new RmqMessageProducer(rmqConnection);
+        _sender = new RmqMessageProducer(rmqConnection, loggerFactory: NullLoggerFactory.Instance);
         var queueName = new ChannelName(Guid.NewGuid().ToString());
             
-        _receiver = new RmqMessageConsumer(rmqConnection, queueName, _sentMessage.Header.Topic, false, false);
+        _receiver = new RmqMessageConsumer(rmqConnection, queueName, _sentMessage.Header.Topic, false, NullLoggerFactory.Instance, false);
         _badReceiver = new AlreadyClosedRmqMessageConsumer(rmqConnection, queueName, _sentMessage.Header.Topic, false, 1, false);
     }
 

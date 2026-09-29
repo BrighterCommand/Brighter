@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Mime;
@@ -28,14 +30,14 @@ public class AzureServiceBusBulkMessageProducerTestsAsync
         _producer = new AzureServiceBusTopicMessageProducer(
             _nameSpaceManagerWrapper,
             topicClientProvider,
-            new AzureServiceBusPublication { MakeChannels = OnMissingChannel.Create }
-        );
+            new AzureServiceBusPublication { MakeChannels = OnMissingChannel.Create },
+            loggerFactory: NullLoggerFactory.Instance);
 
         _queueProducer = new AzureServiceBusQueueMessageProducer(
             _nameSpaceManagerWrapper,
             topicClientProvider,
-            new AzureServiceBusPublication { MakeChannels = OnMissingChannel.Create }
-        );
+            new AzureServiceBusPublication { MakeChannels = OnMissingChannel.Create },
+            loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

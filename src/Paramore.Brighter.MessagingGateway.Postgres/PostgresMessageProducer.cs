@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using Npgsql;
 using NpgsqlTypes;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.PostgreSql;
 
@@ -18,12 +17,14 @@ namespace Paramore.Brighter.MessagingGateway.Postgres;
 /// Implements both synchronous and asynchronous interfaces for sending messages,
 /// with optional delays.
 /// </summary>
+/// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
 public partial class PostgresMessageProducer(
     RelationalDatabaseConfiguration configuration,
     PostgresPublication publication,
+    ILoggerFactory loggerFactory,
     InstrumentationOptions instrumentations = InstrumentationOptions.All) : IAmAMessageProducerAsync, IAmAMessageProducerSync
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgresMessageProducer>();
+    private readonly ILogger _logger = loggerFactory.CreateBrighterLogger<PostgresMessageProducer>();
     private readonly PostgreSqlConnectionProvider _connectionProvider = new(configuration);
     private PostgresPublication _publication = publication;
 
@@ -56,17 +57,17 @@ public partial class PostgresMessageProducer(
         }
         
         BrighterTracer.WriteProducerEvent(Span, "postgres", message, instrumentations);
-        Log.PublishingMessage(s_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
+        Log.PublishingMessage(_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
         
         await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
 
         command.CommandText = $"INSERT INTO \"{SchemaName}\".\"{TableName}\"(\"visible_timeout\", \"queue\", \"content\") VALUES (CURRENT_TIMESTAMP, $1, $2) RETURNING \"id\"";
         command.Parameters.Add(new NpgsqlParameter { Value = QueueName });
-        command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = MessagePayloadDbType});
+        command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = MessagePayloadDbType });
         var id = await command.ExecuteScalarAsync(cancellationToken);
         
-        Log.PublishedMessage(s_logger, message.Header.Topic.Value, message.Id.Value, Convert.ToInt64(id));
+        Log.PublishedMessage(_logger, message.Header.Topic.Value, message.Id.Value, Convert.ToInt64(id));
     }
 
     /// <inheritdoc />
@@ -84,7 +85,7 @@ public partial class PostgresMessageProducer(
         }
         
         BrighterTracer.WriteProducerEvent(Span, "postgres", message, instrumentations);
-        Log.PublishingMessage(s_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
+        Log.PublishingMessage(_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
         
         await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
@@ -92,10 +93,10 @@ public partial class PostgresMessageProducer(
         command.CommandText = $"INSERT INTO \"{SchemaName}\".\"{TableName}\"(\"visible_timeout\", \"queue\", \"content\") VALUES (CURRENT_TIMESTAMP + $1, $2, $3) RETURNING \"id\"";
         command.Parameters.Add(new NpgsqlParameter { Value = delay.Value });
         command.Parameters.Add(new NpgsqlParameter { Value = QueueName });
-        command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = MessagePayloadDbType});
+        command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = MessagePayloadDbType });
         var id = await command.ExecuteScalarAsync(cancellationToken);
         
-        Log.PublishedMessage(s_logger, message.Header.Topic.Value, message.Id.Value, Convert.ToInt64(id));
+        Log.PublishedMessage(_logger, message.Header.Topic.Value, message.Id.Value, Convert.ToInt64(id));
     }
     
     /// <inheritdoc />
@@ -107,17 +108,17 @@ public partial class PostgresMessageProducer(
         }
         
         BrighterTracer.WriteProducerEvent(Span, "postgres", message, instrumentations);
-        Log.PublishingMessage(s_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
+        Log.PublishingMessage(_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
         
         using var connection = _connectionProvider.GetConnection();
         using var command = connection.CreateCommand();
 
         command.CommandText = $"INSERT INTO \"{SchemaName}\".\"{TableName}\"(\"visible_timeout\", \"queue\", \"content\") VALUES (CURRENT_TIMESTAMP, $1, $2) RETURNING \"id\"";
         command.Parameters.Add(new NpgsqlParameter { Value = QueueName });
-        command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = MessagePayloadDbType});
+        command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = MessagePayloadDbType });
         var id = command.ExecuteScalar();
         
-        Log.PublishedMessage(s_logger, message.Header.Topic.Value, message.Id.Value, Convert.ToInt64(id));
+        Log.PublishedMessage(_logger, message.Header.Topic.Value, message.Id.Value, Convert.ToInt64(id));
     }
 
     /// <inheritdoc />
@@ -135,7 +136,7 @@ public partial class PostgresMessageProducer(
         }
         
         BrighterTracer.WriteProducerEvent(Span, "postgres", message, instrumentations);
-        Log.PublishingMessage(s_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
+        Log.PublishingMessage(_logger, message.Header.Topic.Value, message.Id.Value, message.Body);
         
         using var connection = _connectionProvider.GetConnection();
         using var command = connection.CreateCommand();
@@ -143,10 +144,10 @@ public partial class PostgresMessageProducer(
         command.CommandText = $"INSERT INTO \"{SchemaName}\".\"{TableName}\"(\"visible_timeout\", \"queue\", \"content\") VALUES (CURRENT_TIMESTAMP + $1, $2, $3) RETURNING \"id\"";
         command.Parameters.Add(new NpgsqlParameter { Value = delay.Value });
         command.Parameters.Add(new NpgsqlParameter { Value = QueueName });
-        command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = MessagePayloadDbType});
+        command.Parameters.Add(new NpgsqlParameter { Value = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), NpgsqlDbType = MessagePayloadDbType });
         var id = command.ExecuteScalar();
         
-        Log.PublishedMessage(s_logger, message.Header.Topic.Value, message.Id.Value, Convert.ToInt64(id));
+        Log.PublishedMessage(_logger, message.Header.Topic.Value, message.Id.Value, Convert.ToInt64(id));
     }
 
 

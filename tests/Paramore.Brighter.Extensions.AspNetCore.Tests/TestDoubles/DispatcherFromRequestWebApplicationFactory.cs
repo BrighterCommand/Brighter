@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -80,8 +81,8 @@ public sealed class DispatcherFromRequestWebApplicationFactory : WebApplicationF
 
     public DispatcherFromRequestWebApplicationFactory()
     {
-        _channelFactory = new InMemoryChannelFactory(_bus, TimeProvider.System);
-        _producer = new InMemoryMessageProducer(_bus, new Publication { Topic = _routingKey, RequestType = typeof(DispatcherFromRequestCommand) });
+        _channelFactory = new InMemoryChannelFactory(_bus, TimeProvider.System, loggerFactory: NullLoggerFactory.Instance);
+        _producer = new InMemoryMessageProducer(_bus,Initializer.Factory, new Publication { Topic = _routingKey, RequestType = typeof(DispatcherFromRequestCommand) });
     }
 
     /// <summary>

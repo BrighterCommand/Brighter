@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -19,7 +19,7 @@ using Baggage = OpenTelemetry.Baggage;
 
 namespace Paramore.Brighter.Core.Tests.Observability.CommandProcessor.Clear;
 
-public class AsyncMessageDispatchPropogateContextTests  
+public class AsyncMessageDispatchPropogateContextTests
 {
     private readonly List<Activity> _exportedActivities = [];
     private readonly TracerProvider _traceProvider;
@@ -31,7 +31,7 @@ public class AsyncMessageDispatchPropogateContextTests
     public AsyncMessageDispatchPropogateContextTests()
     {
         _routingKey = new RoutingKey("MyEvent");
-        
+
         var builder = Sdk.CreateTracerProviderBuilder();
 
         _traceProvider = builder
@@ -39,30 +39,30 @@ public class AsyncMessageDispatchPropogateContextTests
             .ConfigureResource(r => r.AddService("in-memory-tracer"))
             .AddInMemoryExporter(_exportedActivities)
             .Build();
-        
-        
+
+
         var registry = new SubscriberRegistry();
 
-        var handlerFactory = new PostCommandTests.EmptyHandlerFactorySync(); 
-        
+        var handlerFactory = new PostCommandTests.EmptyHandlerFactorySync();
+
         var retryPolicy = Policy
             .Handle<Exception>()
             .RetryAsync();
-        
+
         var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICYASYNC, retryPolicy}};
 
         var timeProvider  = new FakeTimeProvider();
         var tracer = new BrighterTracer(timeProvider);
         InMemoryOutbox outbox = new(timeProvider){Tracer = tracer};
-        
+
         var messageMapperRegistry = new MessageMapperRegistry(
             null,
             new SimpleMessageMapperFactoryAsync((_) => new MyEventMessageMapperAsync()));
         messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
         var type = new CloudEventsType("io.goparamore.brighter.myevent");
-        InMemoryMessageProducer messageProducer = new(_internalBus, 
-            new Publication
+        InMemoryMessageProducer messageProducer = new(_internalBus,
+        Initializer.TestLoggerFactory, new Publication
             {
                 Source = new Uri("http://localhost"),
                 RequestType = typeof(MyEvent),
@@ -75,30 +75,30 @@ public class AsyncMessageDispatchPropogateContextTests
         {
             {new ProducerKey(_routingKey, type) , messageProducer}
         });
-        
+
          _mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
-            producerRegistry, 
-            new ResiliencePipelineRegistry<string>().AddBrighterDefault(), 
-            messageMapperRegistry, 
-            new EmptyMessageTransformerFactory(), 
+            producerRegistry,
+            new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
+            messageMapperRegistry,
+            new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            outbox,
+            Initializer.TestLoggerFactory, outbox,
             maxOutStandingMessages: -1
         );
-        
+
         _commandProcessor = new Brighter.CommandProcessor(
-            registry, 
-            handlerFactory, 
+            registry,
+            handlerFactory,
             new InMemoryRequestContextFactory(),
-            policyRegistry, 
+            policyRegistry,
             new ResiliencePipelineRegistry<string>(),
             _mediator,
-            new InMemorySchedulerFactory(),
-            tracer: tracer, 
-            instrumentationOptions: InstrumentationOptions.All
-        );
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+            tracer: tracer,
+            instrumentationOptions: InstrumentationOptions.All,
+            loggerFactory: Initializer.TestLoggerFactory);
 
     }
 
@@ -110,7 +110,7 @@ public class AsyncMessageDispatchPropogateContextTests
         var traceStateString = parentActivity.TraceStateString ?? "";
         traceStateString += "test=value";
         parentActivity.TraceStateString = traceStateString;
-        
+
         Baggage.SetBaggage("key", "value");
         Baggage.SetBaggage("key2", "value2");
 
@@ -120,27 +120,26 @@ public class AsyncMessageDispatchPropogateContextTests
 
         //act
         var messageId = await _commandProcessor.DepositPostAsync(@event, context);
-        
+
         //reset the parent span as deposit and clear are siblings
         context.Span = parentActivity;
-        
+
         await _commandProcessor.ClearOutboxAsync([messageId], context);
 
         await Task.Delay(3000);     //allow bulk clear to run -- can make test fragile
-        
+
         parentActivity?.Stop();
-        
+
         _traceProvider.ForceFlush();
 
-        //assert 
+        //assert
         var messages = _internalBus.Stream(_routingKey);
         var message = messages.FirstOrDefault(m => m.Id == messageId);
         Assert.NotNull(message);
         Assert.NotNull(message.Header.TraceParent);
-        //? What is tracestate 
+        //? What is tracestate
         Assert.Equal(traceStateString, message.Header.TraceState);
         Assert.Equal("key=value,key2=value2", message.Header.Baggage.ToString());
 
     }
 }
-

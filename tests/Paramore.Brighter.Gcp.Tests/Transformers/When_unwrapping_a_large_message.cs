@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -39,14 +41,14 @@ public class LargeMessagePaylodUnwrapTests : IDisposable
             BucketName = _bucketName
         };
         
-        _luggageStore = new GcsLuggageStore(_luggageStoreOptions);
+        _luggageStore = new GcsLuggageStore(_luggageStoreOptions, loggerFactory: NullLoggerFactory.Instance);
             
         _luggageStore.EnsureStoreExists();
 
         var messageTransformerFactory =
             new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore, _luggageStore));
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, InstrumentationOptions.None);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, NullLoggerFactory.Instance, InstrumentationOptions.None);
     }
 
     [Fact]

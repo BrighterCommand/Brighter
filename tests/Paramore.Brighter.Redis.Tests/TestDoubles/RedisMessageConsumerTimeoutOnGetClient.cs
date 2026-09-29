@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.Redis;
@@ -10,7 +12,8 @@ public class RedisMessageConsumerTimeoutOnGetClient(
     RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration,
     ChannelName queueName,
     RoutingKey topic)
-    : RedisMessageConsumer(redisMessagingGatewayConfiguration, queueName, topic)
+    : RedisMessageConsumer(redisMessagingGatewayConfiguration, queueName, topic,
+        NullLoggerFactory.Instance)
 {
     private const string PoolTimeoutError =
         "Redis Timeout expired. The timeout period elapsed prior to obtaining a subscription from the pool. This may have occurred because all pooled connections were in use.";

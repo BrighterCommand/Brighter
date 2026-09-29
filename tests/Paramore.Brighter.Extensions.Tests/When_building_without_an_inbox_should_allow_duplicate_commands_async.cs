@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -49,7 +49,8 @@ public class CommandProcessorBuilderWithoutInboxAsyncTests
             .NoExternalBus()
             .ConfigureInstrumentation(null, InstrumentationOptions.None)
             .RequestContextFactory(new InMemoryRequestContextFactory())
-            .RequestSchedulerFactory(new InMemorySchedulerFactory())
+            .RequestSchedulerFactory(new InMemorySchedulerFactory(loggerFactory: Initializer.Factory))
+            .ConfigureLogging(Initializer.Factory)
             .Build();
         var command = new ConsumerGlobalInboxAsyncCommand();
 

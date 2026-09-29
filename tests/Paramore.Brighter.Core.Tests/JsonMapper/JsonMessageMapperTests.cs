@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -116,12 +116,12 @@ public class JsonMessageMapperTests
     {
         var command = new MyCommand { Value = Guid.NewGuid().ToString() };
         var mapper = new JsonMessageMapper<MyCommand>();
-        
+
         var request = mapper.MapToRequest(new Message(new MessageHeader(), new MessageBody(JsonSerializer.Serialize(command))));
         Assert.NotNull(request);
         Assert.Equal(command.Value, request.Value);
     }
-    
+
     [Fact]
     public async Task When_mapping_message_to_command_async ()
     {

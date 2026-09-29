@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -95,13 +97,13 @@ public class PostgreSqlManyProvisionersHistoryRaceTests : IAsyncLifetime
             var config = new RelationalDatabaseConfiguration(
                 _connectionString, outBoxTableName: tableName);
             var runner = new PostgreSqlBoxMigrationRunner(
-                new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), tracer: tracer);
+                new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), tracer: tracer, loggerFactory: NullLoggerFactory.Instance);
             var provisioner = new PostgreSqlOutboxProvisioner(
-                new PostgreSqlBoxDetectionHelper(),
+                new PostgreSqlBoxDetectionHelper(logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlBoxDetectionHelper>()),
                 new PostgreSqlOutboxMigrationCatalog(),
                 new PostgreSqlPayloadModeValidator(),
                 config,
-                runner);
+                runner, loggerFactory: NullLoggerFactory.Instance);
             await provisioner.ProvisionAsync();
         })).ToArray();
 

@@ -31,16 +31,20 @@ using Amazon;
 using Amazon.SQS;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS.V4;
 
 internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsInlineMessageCreator>();
+    private readonly ILogger _logger;
 
     private Dictionary<string, JsonElement> _messageAttributes = new();
+
+    public SqsInlineMessageCreator(ILoggerFactory loggerFactory)
+    {
+        _logger = loggerFactory.CreateBrighterLogger<SqsInlineMessageCreator>();
+    }
 
     public Message CreateMessage(Amazon.SQS.Model.Message sqsMessage)
     {
@@ -112,12 +116,12 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         }
         catch (Exception e)
         {
-            Log.FailedToCreateMessageFromAwsSqsMessage(s_logger, e);
+            Log.FailedToCreateMessageFromAwsSqsMessage(_logger, e);
             return Message.FailureMessage(topic.Result, messageId.Result);
         }
     }
 
-    private static Dictionary<string, JsonElement> ReadMessageAttributes(JsonDocument jsonDocument)
+    private Dictionary<string, JsonElement> ReadMessageAttributes(JsonDocument jsonDocument)
     {
         var messageAttributes = new Dictionary<string, JsonElement>();
 
@@ -132,7 +136,7 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         }
         catch (Exception ex)
         {
-            Log.FailedWhileDeserializingSqsMessageBody(s_logger, ex);
+            Log.FailedWhileDeserializingSqsMessageBody(_logger, ex);
         }
 
         return messageAttributes ?? new Dictionary<string, JsonElement>();
@@ -232,7 +236,8 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
             if (!string.IsNullOrEmpty(val))
             {
                 return new HeaderResult<CloudEventsType>(new CloudEventsType(val!), true);
-            };
+            }
+            ;
         }
         
         if (headers.TryGetValue(HeaderNames.Type, out var cloudEventType) 
@@ -405,13 +410,13 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
          }
          catch (Exception ex)
          {
-             Log.FailedToParseSqsMessageBodyToValidJsonDocument(s_logger, ex);
+            Log.FailedToParseSqsMessageBodyToValidJsonDocument(_logger, ex);
          }
 
          return new HeaderResult<string?>(null, true);
     }
 
-    private static MessageBody ReadMessageBody(JsonDocument jsonDocument)
+    private MessageBody ReadMessageBody(JsonDocument jsonDocument)
     {
         try
         {
@@ -422,7 +427,7 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         }
         catch (Exception ex)
         {
-            Log.FailedToParseSqsMessageBodyToValidJsonDocument(s_logger, ex);
+            Log.FailedToParseSqsMessageBodyToValidJsonDocument(_logger, ex);
         }
 
         return new MessageBody(string.Empty);
@@ -478,7 +483,7 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         return new Dictionary<string, string>();
     }
     
-    private static HeaderResult<TraceParent> ReadCloudEventsTraceParent(Dictionary<string,string> cloudEventHeaders)
+    private static HeaderResult<TraceParent> ReadCloudEventsTraceParent(Dictionary<string, string> cloudEventHeaders)
     {
         if (cloudEventHeaders.TryGetValue(HeaderNames.TraceParent, out var value))
         {
@@ -488,7 +493,7 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         return new HeaderResult<TraceParent>(null, true);
     }
     
-    private static HeaderResult<TraceState> ReadCloudEventsTraceState(Dictionary<string,string> cloudEventHeaders)
+    private static HeaderResult<TraceState> ReadCloudEventsTraceState(Dictionary<string, string> cloudEventHeaders)
     {
         if (cloudEventHeaders.TryGetValue(HeaderNames.TraceState, out var value))
         {
@@ -497,7 +502,7 @@ internal sealed partial class SqsInlineMessageCreator : SqsMessageCreatorBase, I
         return new HeaderResult<TraceState>(null, true);
     }
     
-    private static HeaderResult<Baggage> ReadCloudEventsBaggage(Dictionary<string,string> cloudEventHeaders)
+    private static HeaderResult<Baggage> ReadCloudEventsBaggage(Dictionary<string, string> cloudEventHeaders)
     {
         var baggage = new Baggage();
         if (cloudEventHeaders.TryGetValue(HeaderNames.Baggage, out var value))

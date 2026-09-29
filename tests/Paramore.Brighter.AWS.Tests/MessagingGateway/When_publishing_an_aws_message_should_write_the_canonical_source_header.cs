@@ -25,6 +25,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -50,7 +52,7 @@ public class AwsCloudEventSourceWriterTests
         var reaper = new AwsTestResourceReaper(connection);
         var queueName = reaper.TrackQueue($"Source-Writer-{Guid.NewGuid():N}");
         var topicName = reaper.TrackTopic($"Source-Writer-{Guid.NewGuid():N}");
-        var factory = new ChannelFactory(connection);
+        var factory = new ChannelFactory(connection, loggerFactory: NullLoggerFactory.Instance);
         using var sqs = new AWSClientFactory(connection).CreateSqsClient();
         using var sns = new AWSClientFactory(connection).CreateSnsClient();
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
@@ -79,7 +81,7 @@ public class AwsCloudEventSourceWriterTests
             //Act
             var messageId = useSns
                 ? await new SnsMessagePublisher(topicArn, sns).PublishAsync(message)
-                : await new SqsMessageSender(queueUrl, sqs).SendAsync(message, TimeSpan.Zero, timeout.Token);
+                : await new SqsMessageSender(queueUrl, sqs, loggerFactory: NullLoggerFactory.Instance).SendAsync(message, TimeSpan.Zero, timeout.Token);
             var response = await sqs.ReceiveMessageAsync(new ReceiveMessageRequest
             {
                 QueueUrl = queueUrl,

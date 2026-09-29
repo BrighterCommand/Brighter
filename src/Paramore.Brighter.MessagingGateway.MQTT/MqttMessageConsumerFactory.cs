@@ -22,6 +22,9 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using Microsoft.Extensions.Logging;
+
 namespace Paramore.Brighter.MessagingGateway.MQTT
 {
     /// <summary>
@@ -30,6 +33,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
     public class MqttMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly MqttMessagingGatewayConsumerConfiguration _configuration;
+        private readonly ILoggerFactory _loggerFactory;
         private IAmAMessageScheduler? _scheduler;
 
         /// <summary>
@@ -47,12 +51,15 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// </summary>
         /// <param name="configuration">The MQTT consumer configuration containing broker connection details.</param>
         /// <param name="scheduler">The optional message scheduler for delayed requeue support</param>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers for the consumers.</param>
         public MqttMessageConsumerFactory(
             MqttMessagingGatewayConsumerConfiguration configuration,
+            ILoggerFactory loggerFactory,
             IAmAMessageScheduler? scheduler = null)
         {
             _configuration = configuration;
             _scheduler = scheduler;
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
         }
 
         /// <summary>
@@ -65,7 +72,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             var deadLetterRoutingKey = (subscription as IUseBrighterDeadLetterSupport)?.DeadLetterRoutingKey;
             var invalidMessageRoutingKey = (subscription as IUseBrighterInvalidMessageSupport)?.InvalidMessageRoutingKey;
 
-            return new MqttMessageConsumer(_configuration, _scheduler, deadLetterRoutingKey, invalidMessageRoutingKey, subscription.BufferSize);
+            return new MqttMessageConsumer(_configuration, _loggerFactory, _scheduler, deadLetterRoutingKey, invalidMessageRoutingKey, subscription.BufferSize);
         }
 
         /// <summary>
@@ -78,7 +85,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             var deadLetterRoutingKey = (subscription as IUseBrighterDeadLetterSupport)?.DeadLetterRoutingKey;
             var invalidMessageRoutingKey = (subscription as IUseBrighterInvalidMessageSupport)?.InvalidMessageRoutingKey;
 
-            return new MqttMessageConsumer(_configuration, _scheduler, deadLetterRoutingKey, invalidMessageRoutingKey, subscription.BufferSize);
+            return new MqttMessageConsumer(_configuration, _loggerFactory, _scheduler, deadLetterRoutingKey, invalidMessageRoutingKey, subscription.BufferSize);
         }
     }
 }

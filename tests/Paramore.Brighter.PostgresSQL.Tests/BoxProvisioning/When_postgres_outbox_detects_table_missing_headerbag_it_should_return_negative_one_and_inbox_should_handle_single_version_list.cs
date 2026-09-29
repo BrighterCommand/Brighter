@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -54,7 +56,7 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         await using (var connection = new NpgsqlConnection(_connectionString))
         {
             await connection.OpenAsync();
-            detected = await new PostgreSqlBoxDetectionHelper().DetectCurrentVersionAsync(
+            detected = await new PostgreSqlBoxDetectionHelper(logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlBoxDetectionHelper>()).DetectCurrentVersionAsync(
                 connection, tableName, "public", BoxType.Outbox, migrations, default);
         }
 
@@ -62,13 +64,13 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         Assert.Equal(-1, detected);
 
         //Act — provisioner end-to-end.
-        var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
+        var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance);
         var provisioner = new PostgreSqlOutboxProvisioner(
-            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlBoxDetectionHelper(logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlBoxDetectionHelper>()),
             new PostgreSqlOutboxMigrationCatalog(),
             new PostgreSqlPayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: NullLoggerFactory.Instance);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
         //Assert — message identifies this as not a Brighter outbox and names the discriminator.
@@ -93,7 +95,7 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         await using (var connection = new NpgsqlConnection(_connectionString))
         {
             await connection.OpenAsync();
-            detected = await new PostgreSqlBoxDetectionHelper().DetectCurrentVersionAsync(
+            detected = await new PostgreSqlBoxDetectionHelper(logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlBoxDetectionHelper>()).DetectCurrentVersionAsync(
                 connection, tableName, "public", BoxType.Inbox, migrations, default);
         }
 
@@ -101,13 +103,13 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         Assert.Equal(-1, detected);
 
         //Act — provisioner end-to-end.
-        var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
+        var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance);
         var provisioner = new PostgreSqlInboxProvisioner(
-            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlBoxDetectionHelper(logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlBoxDetectionHelper>()),
             new PostgreSqlInboxMigrationCatalog(),
             new PostgreSqlPayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: NullLoggerFactory.Instance);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
         //Assert — message identifies this as not a Brighter inbox and names the discriminator.
@@ -133,7 +135,7 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         await using (var connection = new NpgsqlConnection(_connectionString))
         {
             await connection.OpenAsync();
-            detected = await new PostgreSqlBoxDetectionHelper().DetectCurrentVersionAsync(
+            detected = await new PostgreSqlBoxDetectionHelper(logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlBoxDetectionHelper>()).DetectCurrentVersionAsync(
                 connection, tableName, "public", BoxType.Outbox, migrations, default);
         }
 
@@ -141,13 +143,13 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         Assert.Equal(0, detected);
 
         //Act — provisioner end-to-end.
-        var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
+        var runner = new PostgreSqlBoxMigrationRunner(new PostgreSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance);
         var provisioner = new PostgreSqlOutboxProvisioner(
-            new PostgreSqlBoxDetectionHelper(),
+            new PostgreSqlBoxDetectionHelper(logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlBoxDetectionHelper>()),
             new PostgreSqlOutboxMigrationCatalog(),
             new PostgreSqlPayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: NullLoggerFactory.Instance);
         var ex = await Assert.ThrowsAsync<ConfigurationException>(() => provisioner.ProvisionAsync());
 
         //Assert — message identifies the table as not matching any known schema version.
@@ -184,7 +186,7 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         await using (var connection = new NpgsqlConnection(_connectionString))
         {
             await connection.OpenAsync();
-            detected = await new PostgreSqlBoxDetectionHelper().DetectCurrentVersionAsync(
+            detected = await new PostgreSqlBoxDetectionHelper(logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlBoxDetectionHelper>()).DetectCurrentVersionAsync(
                 connection, tableName, "public", BoxType.Outbox, migrations, default);
         }
 
@@ -217,7 +219,7 @@ public class PostgreSqlBoxDiscriminatorDetectionTests : IAsyncLifetime
         await using (var connection = new NpgsqlConnection(_connectionString))
         {
             await connection.OpenAsync();
-            detected = await new PostgreSqlBoxDetectionHelper().DetectCurrentVersionAsync(
+            detected = await new PostgreSqlBoxDetectionHelper(logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlBoxDetectionHelper>()).DetectCurrentVersionAsync(
                 connection, tableName, "public", BoxType.Inbox, migrations, default);
         }
 

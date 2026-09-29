@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System.Text;
 using Paramore.Brighter.JsonConverters;
 using Paramore.Brighter.MessagingGateway.MQTT;
@@ -44,8 +46,8 @@ public class MqttPayloadDeserialisationTests
         var malformed = Encoding.UTF8.GetBytes("{ this is not json");
 
         // Act
-        var fromNull = MqttMessageCreator.CreateMessage(deserialisesToNull, "test/topic");
-        var fromMalformed = MqttMessageCreator.CreateMessage(malformed, "test/topic");
+        var fromNull = MqttMessageCreator.CreateMessage(deserialisesToNull, "test/topic",logger:NullLogger.Instance);
+        var fromMalformed = MqttMessageCreator.CreateMessage(malformed, "test/topic",logger:NullLogger.Instance);
 
         // Assert — both are dropped, and neither throws out of the handler
         Assert.Null(fromNull);
@@ -69,9 +71,9 @@ public class MqttPayloadDeserialisationTests
 
         // Act / Assert - each is dropped. A throw here reaches MQTTnet's dispatch loop rather
         // than any caller, so one such payload would stop the consumer for every other message.
-        Assert.Null(MqttMessageCreator.CreateMessage(illegalMediaType, "test/topic"));
-        Assert.Null(MqttMessageCreator.CreateMessage(emptyMediaType, "test/topic"));
-        Assert.Null(MqttMessageCreator.CreateMessage(nullContentType, "test/topic"));
+        Assert.Null(MqttMessageCreator.CreateMessage(illegalMediaType, "test/topic",logger:NullLogger.Instance));
+        Assert.Null(MqttMessageCreator.CreateMessage(emptyMediaType, "test/topic",logger:NullLogger.Instance));
+        Assert.Null(MqttMessageCreator.CreateMessage(nullContentType, "test/topic",logger:NullLogger.Instance));
     }
 
     [Fact]
@@ -85,7 +87,7 @@ public class MqttPayloadDeserialisationTests
             System.Text.Json.JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
 
         // Act
-        var deserialised = MqttMessageCreator.CreateMessage(payload, "test/topic");
+        var deserialised = MqttMessageCreator.CreateMessage(payload, "test/topic",logger:NullLogger.Instance);
 
         // Assert
         Assert.NotNull(deserialised);

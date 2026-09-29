@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -67,7 +69,7 @@ public class MySqlPreLockNegativeVersionClampTests
             new MySqlOutboxMigrationCatalog(),
             new NoOpPayloadValidator(),
             config,
-            migrationRunner);
+            migrationRunner, loggerFactory: NullLoggerFactory.Instance);
 
         //Act
         await provisioner.ProvisionAsync();
@@ -91,7 +93,7 @@ public class MySqlPreLockNegativeVersionClampTests
             new MySqlInboxMigrationCatalog(),
             new NoOpPayloadValidator(),
             config,
-            migrationRunner);
+            migrationRunner, loggerFactory: NullLoggerFactory.Instance);
 
         //Act
         await provisioner.ProvisionAsync();

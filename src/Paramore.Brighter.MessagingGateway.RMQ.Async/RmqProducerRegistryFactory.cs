@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ.Async
 {
@@ -8,9 +9,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
     /// Creates a message producer registry, which contains a producer for every publication
     /// keyed by the topic (routing key)
     /// </summary>
+    /// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
     public class RmqProducerRegistryFactory(
         RmqMessagingGatewayConnection connection,
-        IEnumerable<RmqPublication> publications)
+        IEnumerable<RmqPublication> publications,
+        ILoggerFactory loggerFactory)
         : IAmAProducerRegistryFactory
     {
         /// <summary>
@@ -19,7 +22,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Async
         /// <returns>A has of middleware clients by topic, for sending messages to the middleware</returns>
         public IAmAProducerRegistry Create()
         {
-            var producerFactory = new RmqMessageProducerFactory(connection, publications);
+            var producerFactory = new RmqMessageProducerFactory(connection, publications, loggerFactory);
 
             return new ProducerRegistry(producerFactory.Create());
         }

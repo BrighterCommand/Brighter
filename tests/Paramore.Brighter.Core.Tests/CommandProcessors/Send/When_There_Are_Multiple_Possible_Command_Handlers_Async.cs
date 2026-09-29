@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,7 +23,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Send
             registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
             registry.RegisterAsync<MyCommand, MyImplicitHandlerAsync>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyCommandHandlerAsync>();
             container.AddTransient<MyImplicitHandlerAsync>();
             container.AddTransient<MyLoggingHandlerAsync<MyCommand>>();
@@ -31,8 +31,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Send
             container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-            
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
             PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 

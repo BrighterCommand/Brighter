@@ -45,12 +45,13 @@ public static class Program
             .CreateLogger();
 
         var serviceCollection = new ServiceCollection();
-        serviceCollection.AddSingleton<ILoggerFactory>(new SerilogLoggerFactory());
+        using var loggerFactory = new SerilogLoggerFactory();
+            serviceCollection.AddSingleton<ILoggerFactory>(loggerFactory);
 
         var connection = new PostgresMessagingGatewayConnection(new RelationalDatabaseConfiguration("Host=localhost;Username=postgres;Password=password;Database=brightertests;"));
 
         var producerRegistry = new PostgresProducerRegistryFactory(
-            connection, 
+            connection,
             [
                 new PostgresPublication
                 {
@@ -64,8 +65,8 @@ public static class Program
                     Topic = new RoutingKey("farewell.event"),
                     RequestType = typeof(FarewellEvent)
                 }
-            ]).Create();
-            
+            ], loggerFactory: loggerFactory).Create();
+
         serviceCollection
             .AddBrighter()
             .AddProducers((configure) =>

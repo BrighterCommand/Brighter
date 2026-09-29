@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using System.Data;
 using System.Data.Common;
 using Google.Cloud.Spanner.Data;
 using Grpc.Core;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Spanner;
 
@@ -15,6 +15,9 @@ namespace Paramore.Brighter.Inbox.Spanner;
 /// to provide an inbox mechanism for message de-duplication and idempotency
 /// when consuming messages, ensuring that messages are processed exactly once.
 /// </summary>
+/// <param name="configuration">The database and inbox table configuration.</param>
+/// <param name="connectionProvider">Provides connections to the Spanner database.</param>
+/// <param name="logger">The logger for this component. Must not be null.</param>
 /// <remarks>
 /// This concrete implementation leverages Spanner's strong consistency guarantees to
 /// reliably store and manage message processing state. It utilizes the underlying
@@ -29,12 +32,13 @@ namespace Paramore.Brighter.Inbox.Spanner;
 /// </remarks>
 public class SpannerInboxAsync(
     IAmARelationalDatabaseConfiguration configuration,
-    IAmARelationalDbConnectionProvider connectionProvider)
+    IAmARelationalDbConnectionProvider connectionProvider,
+    ILogger<SpannerInboxAsync> logger)
     : RelationalDatabaseInbox(DbSystem.Spanner, configuration, connectionProvider,
-        new SpannerSqlQueries(), ApplicationLogging.CreateLogger<SpannerInboxAsync>())
+        new SpannerSqlQueries(), logger)
 {
-    public SpannerInboxAsync(IAmARelationalDatabaseConfiguration configuration)
-        : this(configuration, new SpannerConnectionProvider(configuration))
+    public SpannerInboxAsync(IAmARelationalDatabaseConfiguration configuration, ILogger<SpannerInboxAsync> logger)
+        : this(configuration, new SpannerConnectionProvider(configuration), logger)
     {
         
     }

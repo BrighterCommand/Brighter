@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Net.Mime;
@@ -53,16 +55,16 @@ public class AwsAssumeInfrastructureTests : IDisposable, IAsyncDisposable
         //We need to do this manually in a test - will create the channel from subscriber parameters
         //This doesn't look that different from our create tests - this is because we create using the channel factory in
         //our AWS transport, not the consumer (as it's a more likely to use infrastructure declared elsewhere)
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: NullLoggerFactory.Instance);
         var channel = _channelFactory.CreateSyncChannel(subscription);
 
         //Now change the subscription to assume that it exists 
         subscription.MakeChannels = OnMissingChannel.Assume;
-        
-        _messageProducer = new SnsMessageProducer(awsConnection,
-            new SnsPublication { MakeChannels = OnMissingChannel.Assume });
 
-        _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName());
+        _messageProducer = new SnsMessageProducer(awsConnection,
+            new SnsPublication { MakeChannels = OnMissingChannel.Assume }, loggerFactory: NullLoggerFactory.Instance);
+
+        _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

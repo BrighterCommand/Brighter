@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging;
 using System;
 using System.Data.Common;
 using System.Linq;
@@ -64,15 +65,6 @@ var connection = new PostgresMessagingGatewayConnection(configuration);
 // below needs to have happened already. MakeChannels.Create is what creates the queue store
 // table, so the Outbox table is provisioned by UseBoxProvisioning and the queue table by the
 // transport itself — two routes, one database.
-var producerRegistry = new PostgresProducerRegistryFactory(
-    connection,
-    [
-        new PostgresPublication<GreetingEvent>
-        {
-            Topic = new RoutingKey("greeting.event"),
-            MakeChannels = OnMissingChannel.Create
-        }
-    ]).Create();
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -84,16 +76,28 @@ builder.Services.AddSingleton<IAmARelationalDatabaseConfiguration>(configuration
 
 builder.Services
     .AddBrighter()
-    .AddProducers(configure =>
+    .AddProducers(provider =>
     {
+        var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+        var producerRegistry = new PostgresProducerRegistryFactory(
+            connection,
+            [
+                new PostgresPublication<GreetingEvent>
+                {
+                    Topic = new RoutingKey("greeting.event"),
+                    MakeChannels = OnMissingChannel.Create
+                }
+            ],loggerFactory:loggerFactory).Create();
+        var configure = new ProducersConfiguration();
         configure.ProducerRegistry = producerRegistry;
 
         // These three make the Outbox durable and, more to the point, make it share the
         // handler's transaction. The transaction provider is the important one: it is what
         // lets the handler hand Brighter a transaction the handler itself opened.
-        configure.Outbox = new PostgreSqlOutbox(configuration);
+        configure.Outbox = new PostgreSqlOutbox(configuration,logger:LoggerFactoryExtensions.CreateLogger<PostgreSqlOutbox>(loggerFactory));
         configure.ConnectionProvider = typeof(PostgreSqlConnectionProvider);
         configure.TransactionProvider = typeof(PostgreSqlTransactionProvider);
+        return configure;
     })
     .AutoFromAssemblies()
 

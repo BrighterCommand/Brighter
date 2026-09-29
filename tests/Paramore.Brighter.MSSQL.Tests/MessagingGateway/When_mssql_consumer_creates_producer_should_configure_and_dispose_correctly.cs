@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Xunit;
@@ -54,7 +56,7 @@ public class When_mssql_consumer_creates_producer_should_configure_and_dispose_c
         var consumer = new MsSqlMessageConsumer(
             _testHelper.QueueConfiguration,
             _topicName,
-            scheduler);
+            NullLoggerFactory.Instance, scheduler);
 
         var topic = new RoutingKey(_topicName);
         var message = new Message(
@@ -81,7 +83,7 @@ public class When_mssql_consumer_creates_producer_should_configure_and_dispose_c
         var consumer = new MsSqlMessageConsumer(
             _testHelper.QueueConfiguration,
             _topicName,
-            scheduler);
+            NullLoggerFactory.Instance, scheduler);
 
         var topic = new RoutingKey(_topicName);
         var message = new Message(
@@ -103,7 +105,7 @@ public class When_mssql_consumer_creates_producer_should_configure_and_dispose_c
         var consumer = new MsSqlMessageConsumer(
             _testHelper.QueueConfiguration,
             _topicName,
-            scheduler);
+            NullLoggerFactory.Instance, scheduler);
 
         // Act & Assert - dispose without producer creation should not throw
         var exception = Record.Exception(() => consumer.Dispose());

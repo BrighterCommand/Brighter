@@ -33,7 +33,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Paramore.Brighter.FeatureSwitch;
-using Paramore.Brighter.Logging;
 using System.Text.Json;
 using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.JsonConverters;
@@ -185,7 +184,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             services.TryAdd(new ServiceDescriptor(typeof(IAmACommandProcessor), BuildCommandProcessor, ServiceLifetime.Singleton));
 
-            var builder =  new ServiceCollectionBrighterBuilder(
+            var builder = new ServiceCollectionBrighterBuilder(
                 services,
                 subscriberRegistry,
                 mapperRegistry,
@@ -208,9 +207,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             // Register InMemorySchedulerFactory as the default using TryAddSingleton.
             // TryAddSingleton ensures these are only registered if no scheduler has been
             // explicitly configured via UseScheduler/UseMessageScheduler (which use AddSingleton).
-            var defaultSchedulerFactory = new InMemorySchedulerFactory();
-            services.TryAddSingleton<IAmAMessageSchedulerFactory>(defaultSchedulerFactory);
-            services.TryAddSingleton<IAmARequestSchedulerFactory>(defaultSchedulerFactory);
+            services.TryAddSingleton<InMemorySchedulerFactory>();
+            services.TryAddSingleton<IAmAMessageSchedulerFactory>(provider => provider.GetRequiredService<InMemorySchedulerFactory>());
+            services.TryAddSingleton<IAmARequestSchedulerFactory>(provider => provider.GetRequiredService<InMemorySchedulerFactory>());
             services.TryAddSingleton(provider =>
             {
                 var messageSchedulerFactory = provider.GetRequiredService<IAmAMessageSchedulerFactory>();
@@ -319,7 +318,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (busConfiguration.UseRpc && busConfiguration.ReplyQueueSubscriptions == null)
                 throw new ConfigurationException("If the you configure RPC, you must configure the ReplyQueueSubscriptions");
             
-            brighterBuilder.Services.TryAddSingleton<IAmAPublicationFinder, FindPublicationByPublicationTopicOrRequestType >();
+            brighterBuilder.Services.TryAddSingleton<IAmAPublicationFinder, FindPublicationByPublicationTopicOrRequestType>();
             brighterBuilder.Services.TryAddSingleton(busConfiguration.ProducerRegistry);
 
             //default to using System Transactions if nothing provided, so we always technically can share the outbox transaction
@@ -467,7 +466,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 return busConfiguration;
             });
 
-            brighterBuilder.Services.TryAddSingleton<IAmAPublicationFinder, FindPublicationByPublicationTopicOrRequestType >();
+            brighterBuilder.Services.TryAddSingleton<IAmAPublicationFinder, FindPublicationByPublicationTopicOrRequestType>();
 
             // Register producer registry with deferred resolution
             brighterBuilder.Services.TryAddSingleton<IAmAProducerRegistry>(sp =>
@@ -715,7 +714,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             INeedInstrumentation? instrumentationBuilder = null;
             bool useRpc = useRequestResponse != null && useRequestResponse.RPC;
 
-            if (!hasEventBus) instrumentationBuilder = messagingBuilder.NoExternalBus();
+            if (!hasEventBus)
+                instrumentationBuilder = messagingBuilder.NoExternalBus();
 
             if (hasEventBus && !useRpc)
             {
@@ -762,11 +762,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
         private static IAmACommandProcessor BuildCommandProcessor(IServiceProvider provider)
         {
-            var loggerFactory = provider.GetService<ILoggerFactory>();
-            //if not supplied, use the default logger factory, which has no providers
-            if (loggerFactory != null)
-                ApplicationLogging.LoggerFactory = loggerFactory;
-
+            //Resolve the container's logger factory and flow it through the builder as an instance,
+            //rather than copying it into a process-wide static (which would be disposed with the container).
+            var loggerFactory = provider.GetService<ILoggerFactory>() ?? throw new ConfigurationException(
+                "Brighter requires logging. Call AddLogging(...) or explicitly register NullLoggerFactory.Instance before resolving Brighter services.");
 
             var options = provider.GetRequiredService<IBrighterOptions>();
             var subscriberRegistry = provider.GetRequiredService<ServiceCollectionSubscriberRegistry>();
@@ -795,6 +794,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 .ConfigureInstrumentation(provider.GetService<IAmABrighterTracer>(), options.InstrumentationOptions)
                 .RequestContextFactory(provider.GetRequiredService<IAmARequestContextFactory>())
                 .RequestSchedulerFactory(provider.GetRequiredService<IAmARequestSchedulerFactory>())
+                .ConfigureLogging(loggerFactory)
                 .Build();
             
             var eventBusConfiguration = provider.GetService<IAmProducersConfiguration>();
@@ -830,6 +830,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 TransformFactoryAsync(serviceProvider),
                 Tracer(serviceProvider),
                 PublicationFinder(serviceProvider),
+                serviceProvider.GetRequiredService<ILoggerFactory>(),
                 outbox,
                 OutboxCircuitBreaker(serviceProvider),
                 RequestContextFactory(serviceProvider),
@@ -894,12 +895,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             ServiceLifetime serviceLifetime)
         {
             var connectionProviderInterface = GetConnectionProviderInterface(connectionProvider);
-            if(connectionProviderInterface != null)
+            if (connectionProviderInterface != null)
             {
                 brighterBuilder.Services.TryAdd(new ServiceDescriptor(connectionProviderInterface, connectionProvider, serviceLifetime));
                 
-                var transactionProviderInterface = GetTransactionInterface(transactionProvider, connectionProviderInterface );
-                if(transactionProviderInterface != null)
+                var transactionProviderInterface = GetTransactionInterface(transactionProvider, connectionProviderInterface);
+                if (transactionProviderInterface != null)
                 {
                     brighterBuilder.Services.TryAdd(new ServiceDescriptor(transactionProviderInterface, transactionProvider, serviceLifetime));
                 }

@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -20,7 +22,7 @@ public class AzureServiceBusMessageMemoryTests
             routingKey: new RoutingKey("test-topic"),
             messagePumpType: MessagePumpType.Reactor);
 
-        _creator = new AzureServiceBusMessageCreator(subscription);
+        _creator = new AzureServiceBusMessageCreator(subscription, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

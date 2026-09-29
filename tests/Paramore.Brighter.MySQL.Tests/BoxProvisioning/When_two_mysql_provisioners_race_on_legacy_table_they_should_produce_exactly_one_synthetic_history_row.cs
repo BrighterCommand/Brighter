@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -54,13 +56,13 @@ public class MySqlLegacyTableRaceTests : IAsyncLifetime
             new MySqlOutboxMigrationCatalog(),
             new MySqlPayloadModeValidator(),
             config,
-            new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
+            new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance), loggerFactory: NullLoggerFactory.Instance);
         var provisionerB = new MySqlOutboxProvisioner(
             new MySqlBoxDetectionHelper(),
             new MySqlOutboxMigrationCatalog(),
             new MySqlPayloadModeValidator(),
             config,
-            new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
+            new MySqlBoxMigrationRunner(new MySqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance), loggerFactory: NullLoggerFactory.Instance);
 
         //Act — race two provisioners against the same legacy table.
         await Task.WhenAll(provisionerA.ProvisionAsync(), provisionerB.ProvisionAsync());
@@ -99,13 +101,13 @@ public class MySqlLegacyTableRaceTests : IAsyncLifetime
             new MySqlInboxMigrationCatalog(),
             new MySqlPayloadModeValidator(),
             config,
-            new MySqlBoxMigrationRunner(new MySqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
+            new MySqlBoxMigrationRunner(new MySqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance), loggerFactory: NullLoggerFactory.Instance);
         var provisionerB = new MySqlInboxProvisioner(
             new MySqlBoxDetectionHelper(),
             new MySqlInboxMigrationCatalog(),
             new MySqlPayloadModeValidator(),
             config,
-            new MySqlBoxMigrationRunner(new MySqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30)));
+            new MySqlBoxMigrationRunner(new MySqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance), loggerFactory: NullLoggerFactory.Instance);
 
         //Act — race two provisioners against the same legacy table.
         await Task.WhenAll(provisionerA.ProvisionAsync(), provisionerB.ProvisionAsync());

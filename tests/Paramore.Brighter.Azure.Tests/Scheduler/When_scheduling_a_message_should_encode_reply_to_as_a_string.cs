@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -25,6 +25,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using Paramore.Brighter.Azure.Tests.TestDoubles;
 using Paramore.Brighter.JsonConverters;
@@ -42,7 +44,7 @@ public class AzureScheduledMessageReplyToTests
     {
         //Arrange
         var sender = new FakeServiceBusSender();
-        var scheduler = new AzureServiceBusScheduler(sender, new RoutingKey("scheduler-topic"), TimeProvider.System);
+        var scheduler = new AzureServiceBusScheduler(sender, new RoutingKey("scheduler-topic"), TimeProvider.System, loggerFactory: NullLoggerFactory.Instance);
         var message = new Message(new MessageHeader(Id.Random(), new RoutingKey("events"), MessageType.MT_EVENT,
             replyTo: new RoutingKey(replyTo)), new MessageBody("test"));
 

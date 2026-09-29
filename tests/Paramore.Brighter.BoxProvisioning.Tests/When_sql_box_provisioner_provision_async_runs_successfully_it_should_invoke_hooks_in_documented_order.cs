@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -184,7 +186,8 @@ public class SqlBoxProvisionerHookOrderTests
             IAmABoxMigrationRunner migrationRunner,
             BoxType boxType,
             List<string> log)
-            : base(detectionHelper, catalog, payloadValidator, configuration, migrationRunner, boxType)
+            : base(detectionHelper, catalog, payloadValidator, configuration, migrationRunner, boxType,
+                NullLoggerFactory.Instance)
         {
             _log = log;
         }

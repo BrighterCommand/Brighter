@@ -31,7 +31,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
                 new SubscriptionName("test"), 
                 noOfPerformers: 1, 
                 timeOut: TimeSpan.FromMilliseconds(1000), 
-                channelFactory: new InMemoryChannelFactory(_bus, _timeProvider),
+                channelFactory: new InMemoryChannelFactory(_bus, _timeProvider, loggerFactory: Initializer.TestLoggerFactory),
                 channelName: new ChannelName("myChannel"), 
                 messagePumpType: MessagePumpType.Reactor,
                 routingKey: _routingKey
@@ -40,7 +40,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             _dispatcher = new Dispatcher(
                 _commandProcessor, 
                 new List<Subscription> { subscription },
-                messageMapperRegistry,
+                Initializer.TestLoggerFactory, messageMapperRegistry,
                 requestContextFactory: new InMemoryRequestContextFactory()
             );
 

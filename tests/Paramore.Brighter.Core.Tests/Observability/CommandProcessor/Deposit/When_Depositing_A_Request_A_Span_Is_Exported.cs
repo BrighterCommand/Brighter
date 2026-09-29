@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -21,7 +21,7 @@ using MyEvent = Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles.MyEve
 namespace Paramore.Brighter.Core.Tests.Observability.CommandProcessor.Deposit;
 
 [Collection("Observability")]
-public class CommandProcessorDepositObservabilityTests 
+public class CommandProcessorDepositObservabilityTests
 {
     private readonly List<Activity> _exportedActivities;
     private readonly TracerProvider _traceProvider;
@@ -31,7 +31,7 @@ public class CommandProcessorDepositObservabilityTests
     public CommandProcessorDepositObservabilityTests()
     {
         var routingKey = new RoutingKey("MyEvent");
-        
+
         var builder = Sdk.CreateTracerProviderBuilder();
         _exportedActivities = new List<Activity>();
 
@@ -40,22 +40,22 @@ public class CommandProcessorDepositObservabilityTests
             .ConfigureResource(r => r.AddService("in-memory-tracer"))
             .AddInMemoryExporter(_exportedActivities)
             .Build();
-        
-        
+
+
         var registry = new SubscriberRegistry();
 
-        var handlerFactory = new PostCommandTests.EmptyHandlerFactorySync(); 
-        
+        var handlerFactory = new PostCommandTests.EmptyHandlerFactorySync();
+
         var retryPolicy = Policy
             .Handle<Exception>()
             .Retry();
-        
+
         var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICY, retryPolicy}};
-        
+
         var timeProvider = new FakeTimeProvider();
         var tracer = new BrighterTracer(timeProvider);
         _outbox = new InMemoryOutbox(timeProvider){Tracer = tracer};
-        
+
         var messageMapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
             null);
@@ -64,33 +64,33 @@ public class CommandProcessorDepositObservabilityTests
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
             {
-                routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication  { Topic = routingKey, RequestType = typeof(MyEvent)})
+                routingKey, new InMemoryMessageProducer(new InternalBus(), Initializer.TestLoggerFactory, new Publication  { Topic = routingKey, RequestType = typeof(MyEvent)})
             }
         });
-        
+
         IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-            producerRegistry, 
-            new ResiliencePipelineRegistry<string>().AddBrighterDefault(), 
-            messageMapperRegistry, 
-            new EmptyMessageTransformerFactory(), 
+            producerRegistry,
+            new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
+            messageMapperRegistry,
+            new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            _outbox,
+            Initializer.TestLoggerFactory, _outbox,
             maxOutStandingMessages: -1
         );
-        
+
         _commandProcessor = new Brighter.CommandProcessor(
-            registry, 
-            handlerFactory, 
+            registry,
+            handlerFactory,
             new InMemoryRequestContextFactory(),
-            policyRegistry, 
+            policyRegistry,
             new ResiliencePipelineRegistry<string>(),
             bus,
-            new InMemorySchedulerFactory(),
-            tracer: tracer, 
-            instrumentationOptions: InstrumentationOptions.All
-        );
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+            tracer: tracer,
+            instrumentationOptions: InstrumentationOptions.All,
+            loggerFactory: Initializer.TestLoggerFactory);
     }
 
     [Fact]
@@ -98,36 +98,36 @@ public class CommandProcessorDepositObservabilityTests
     {
         //arrange
         var parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("BrighterTracerSpanTests");
-        
+
         var @event = new MyEvent();
         var context = new RequestContext { Span = parentActivity };
 
         //act
         _commandProcessor.DepositPost(@event, context);
         parentActivity?.Stop();
-        
+
         _traceProvider.ForceFlush();
-        
+
         //assert
         Assert.Equal(3, _exportedActivities.Count);
         Assert.True(_exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter"));
         var depositActivity = _exportedActivities.Single(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Deposit.ToSpanName()}");
         Assert.NotNull(depositActivity);
         Assert.Equal(parentActivity?.Id, depositActivity.ParentId);
-        
+
         Assert.True(depositActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == @event.Id));
-        Assert.True(depositActivity.Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyEvent) })); 
+        Assert.True(depositActivity.Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyEvent) }));
         Assert.True(depositActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && t.Value == JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options)));
         Assert.True(depositActivity.Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "deposit" }));
 
         var events = depositActivity.Events.ToList();
         Assert.Equal(2, events.Count);
-        
+
         //mapping a message should be an event
         var mapperEvent = events.Single(e => e.Name == $"{nameof(MyEventMessageMapper)}");
         Assert.True(mapperEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MapperName && (string)a.Value == nameof(MyEventMessageMapper)));
         Assert.True(mapperEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MapperType && (string)a.Value == "sync"));
-        
+
         //depositing a message should be an event
         var message = _outbox.OutstandingMessages(TimeSpan.Zero, context).Single();
         var depositEvent = events.Single(e => e.Name == BoxDbOperation.Add.ToSpanName());

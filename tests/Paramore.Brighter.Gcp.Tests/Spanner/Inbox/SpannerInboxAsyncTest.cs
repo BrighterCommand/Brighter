@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System.Threading.Tasks;
 using Google.Cloud.Spanner.Data;
 using Paramore.Brighter.Base.Test.Inbox;
 using Paramore.Brighter.Inbox.Spanner;
@@ -15,7 +17,7 @@ public class SpannerInboxAsyncTest : RelationalDatabaseInboxAsyncTests
 
     protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration)
     {
-        return new SpannerInboxAsync(configuration);
+        return new SpannerInboxAsync(configuration, logger: NullLoggerFactory.Instance.CreateLogger<SpannerInboxAsync>());
     }
 
     protected override async Task CreateInboxTableAsync(RelationalDatabaseConfiguration configuration)

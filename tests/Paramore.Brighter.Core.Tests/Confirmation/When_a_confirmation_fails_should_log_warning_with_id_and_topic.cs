@@ -45,7 +45,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
         {
             // Arrange: an InMemory producer whose publish confirmation always fails
             var bus = new InternalBus();
-            _producer = new InMemoryMessageProducer(bus, new Publication { Topic = _topic })
+            _producer = new InMemoryMessageProducer(bus, Initializer.TestLoggerFactory, new Publication { Topic = _topic })
             {
                 UseAsyncPublishConfirmation = true,
                 PublishFailurePredicate = _ => true
@@ -66,7 +66,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer: null,
-                new FindPublicationByPublicationTopicOrRequestType());
+                new FindPublicationByPublicationTopicOrRequestType(), loggerFactory: Initializer.TestLoggerFactory);
 
             _message = new Message(
                 new MessageHeader(new Id(Guid.NewGuid().ToString()), _topic, MessageType.MT_EVENT),

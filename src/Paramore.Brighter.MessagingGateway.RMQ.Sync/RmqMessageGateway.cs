@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -26,7 +26,6 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 using Polly;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -51,13 +50,14 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
     /// </summary>
     public partial class RmqMessageGateway : IDisposable
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageGateway>();
+        private readonly ILogger _logger;
         private readonly Policy _circuitBreakerPolicy;
         private readonly ConnectionFactory _connectionFactory;
         private readonly Policy _retryPolicy;
         private readonly object _connectionLock = new();
         private bool _disposed;
         private IConnection? _pooledConnection;
+        protected readonly ILoggerFactory LoggerFactory;
         protected readonly RmqMessagingGatewayConnection Connection;
         protected IModel? Channel;
 
@@ -66,8 +66,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         ///  Use if you need to inject a test logger
         /// </summary>
         /// <param name="connection">The amqp uri and exchange to connect to</param>
-        protected RmqMessageGateway(RmqMessagingGatewayConnection connection)
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create a logger.</param>
+        protected RmqMessageGateway(RmqMessagingGatewayConnection connection, ILoggerFactory loggerFactory)
         {
+            LoggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
+            _logger = LoggerFactory.CreateBrighterLogger<RmqMessageGateway>();
             Connection = connection ?? throw new ArgumentNullException(nameof(connection));
             
             if (Connection.AmpqUri is null)
@@ -76,7 +79,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             if (Connection.Exchange is null)
                 throw new InvalidOperationException("RMQMessagingGateway: Connection must have an Exchange");
 
-            var connectionPolicyFactory = new ConnectionPolicyFactory(Connection);
+            var connectionPolicyFactory = new ConnectionPolicyFactory(Connection, LoggerFactory);
 
             _retryPolicy = connectionPolicyFactory.RetryPolicy;
             _circuitBreakerPolicy = connectionPolicyFactory.CircuitBreakerPolicy;
@@ -128,7 +131,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
         private void ConnectWithRetry(ChannelName queueName, OnMissingChannel makeExchange)
         {
-            _retryPolicy.Execute((_) => ConnectToBroker(makeExchange), new Dictionary<string, object> {{"queueName", queueName.Value}});
+            _retryPolicy.Execute((_) => ConnectToBroker(makeExchange), new Dictionary<string, object> { { "queueName", queueName.Value } });
         }
 
         protected virtual void ConnectToBroker(OnMissingChannel makeExchange)
@@ -149,7 +152,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                     if (_pooledConnection == null || !_pooledConnection.IsOpen)
                     {
                         ReleaseConnection();
-                        _pooledConnection = new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat)
+                        _pooledConnection = new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat, LoggerFactory)
                             .AcquireConnection(_connectionFactory);
                         if (_pooledConnection is null)
                             throw new InvalidOperationException($"RMQMessagingGateway: Connection to {Connection.AmpqUri.GetSanitizedUri()} failed");
@@ -158,7 +161,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                         _pooledConnection.ConnectionUnblocked += HandleUnBlocked;
                     }
 
-                    Log.OpeningChannelToRabbitMq(s_logger, Connection.AmpqUri.GetSanitizedUri());
+                    Log.OpeningChannelToRabbitMq(_logger, Connection.AmpqUri.GetSanitizedUri());
                     Channel = _pooledConnection.CreateModel();
 
                     //desired state configuration of the exchange
@@ -169,12 +172,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
         private void HandleBlocked(object? sender, ConnectionBlockedEventArgs args)
         {
-            Log.SubscriptionBlocked(s_logger, Connection.AmpqUri!.GetSanitizedUri(), args.Reason);
+            Log.SubscriptionBlocked(_logger, Connection.AmpqUri!.GetSanitizedUri(), args.Reason);
         }
 
         private void HandleUnBlocked(object? sender, EventArgs args)
         { 
-            Log.SubscriptionUnblocked(s_logger, Connection.AmpqUri!.GetSanitizedUri());
+            Log.SubscriptionUnblocked(_logger, Connection.AmpqUri!.GetSanitizedUri());
         }
 
         protected void ResetConnectionToBroker()
@@ -182,7 +185,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             if (Connection.Name is null)
                 throw new InvalidOperationException("RMQMessagingGateway: Connection must have a name");
 
-            new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).ResetConnection(_connectionFactory);
+            new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat, LoggerFactory).ResetConnection(_connectionFactory);
         }
 
         ~RmqMessageGateway()
@@ -228,7 +231,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                 // A pool reset can dispose the connection before its gateways release it.
             }
 
-            new RmqMessageGatewayConnectionPool(Connection.Name!, Connection.Heartbeat)
+            new RmqMessageGatewayConnectionPool(Connection.Name!, Connection.Heartbeat, LoggerFactory)
                 .ReleaseConnection(_connectionFactory, connection);
         }
 

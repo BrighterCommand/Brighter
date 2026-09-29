@@ -131,10 +131,10 @@ public static class ConformanceDeferredPump
             requestContextFactory: new InMemoryRequestContextFactory(),
             policyRegistry: new PolicyRegistry(),
             resilienceResiliencePipelineRegistry: new ResiliencePipelineRegistry<string>(),
-            requestSchedulerFactory: new InMemorySchedulerFactory());
+            requestSchedulerFactory: new InMemorySchedulerFactory(loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         return new global::Paramore.Brighter.ServiceActivator.Reactor(commandProcessor, _ => typeof(ConformanceDeferredCommand), mappers,
-            new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel)
+            new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
         {
             Channel = channel, TimeOut = timeOut, RequeueCount = requeueCount
         };
@@ -155,10 +155,10 @@ public static class ConformanceDeferredPump
             requestContextFactory: new InMemoryRequestContextFactory(),
             policyRegistry: new PolicyRegistry(),
             resilienceResiliencePipelineRegistry: new ResiliencePipelineRegistry<string>(),
-            requestSchedulerFactory: new InMemorySchedulerFactory());
+            requestSchedulerFactory: new InMemorySchedulerFactory(loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance), loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
 
         return new global::Paramore.Brighter.ServiceActivator.Proactor(commandProcessor, _ => typeof(ConformanceDeferredCommand), mappers,
-            new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), channel)
+            new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), channel, loggerFactory: global::Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance)
         {
             Channel = channel, TimeOut = timeOut, RequeueCount = requeueCount
         };

@@ -1,4 +1,5 @@
 using System;
+using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -18,10 +19,12 @@ namespace Paramore.Brighter
         private readonly IAmAMessageMapperRegistry? _mapperRegistry;
         private readonly IAmAScope? _pipelineScope;
         private int _released;
+        private readonly ILogger _drainLogger;
 
         protected TransformPipeline(
             Lease<IAmAMessageMapper<TRequest>> messageMapperLease,
             IEnumerable<Lease<IAmAMessageTransform>> transformLeases,
+            ILoggerFactory loggerFactory,
             IAmAMessageMapperRegistry? mapperRegistry = null,
             IAmAScope? pipelineScope = null)
         {
@@ -31,6 +34,7 @@ namespace Paramore.Brighter
             Transforms = TransformLeases.Select(lease => lease.Instance).ToArray();
             _mapperRegistry = mapperRegistry;
             _pipelineScope = pipelineScope;
+            _drainLogger = loggerFactory.CreateLogger(typeof(TransformPipelineDrain));
         }
 
         /// <summary>
@@ -73,7 +77,7 @@ namespace Paramore.Brighter
                 disposeScope: () => InstanceScope?.Dispose(),
                 releaseMapper: () => _mapperRegistry?.Release(MapperLease),
                 releaseScope: () => _pipelineScope?.Dispose(),
-                requestType: typeof(TRequest).Name);
+                requestType: typeof(TRequest).Name, logger: _drainLogger);
         }
     }
 }

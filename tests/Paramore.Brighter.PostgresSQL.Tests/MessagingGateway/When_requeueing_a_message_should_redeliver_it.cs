@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Diagnostics;
 using System.Net.Mime;
 using System.Text.Json;
@@ -44,10 +46,10 @@ public class PostgreSqlMessageConsumerRequeueTests : IDisposable
             
         _producerRegistry = new PostgresProducerRegistryFactory(
                 new PostgresMessagingGatewayConnection(testHelper.Configuration),
-            [new PostgresPublication {Topic = new RoutingKey(_topic)}]
-        ).Create();
+            [new PostgresPublication {Topic = new RoutingKey(_topic)}],
+            loggerFactory: NullLoggerFactory.Instance).Create();
         
-        _channelFactory = new PostgresChannelFactory(new PostgresMessagingGatewayConnection(testHelper.Configuration));
+        _channelFactory = new PostgresChannelFactory(new PostgresMessagingGatewayConnection(testHelper.Configuration), loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Theory]

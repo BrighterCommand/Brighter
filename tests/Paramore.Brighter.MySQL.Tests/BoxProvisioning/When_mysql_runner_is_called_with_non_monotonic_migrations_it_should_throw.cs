@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -70,7 +72,7 @@ public class MySqlRunnerNonMonotonicMigrationsTests : IAsyncLifetime
         //Arrange — do NOT create the box table (so fresh path is selected).
         var config = new RelationalDatabaseConfiguration(_connectionString, outBoxTableName: _tableName);
         var malformedCatalog = new MalformedListCatalog(malformed);
-        var runner = new MySqlBoxMigrationRunner(malformedCatalog, config, TimeSpan.FromSeconds(30));
+        var runner = new MySqlBoxMigrationRunner(malformedCatalog, config, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance);
         var freshHint = new BoxTableState(TableExists: false, HistoryExists: false, CurrentVersion: 0);
 
         //Act + Assert — runner refuses to begin migration when the version sequence is malformed.

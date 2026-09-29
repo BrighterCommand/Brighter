@@ -44,8 +44,9 @@ public class RelationalOutboxConfigurationFallbackTests
     {
         //Arrange
         var configuration = new RelationalDatabaseConfiguration("Data Source=:memory:");
-        var outbox = new SqliteOutbox(configuration);
+        var outbox = new SqliteOutbox(configuration, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteOutbox>.Instance);
         var services = new ServiceCollection();
+        services.AddSingleton(Initializer.Factory);
         services.AddBrighter().AddProducers(options =>
         {
             options.Outbox = outbox;

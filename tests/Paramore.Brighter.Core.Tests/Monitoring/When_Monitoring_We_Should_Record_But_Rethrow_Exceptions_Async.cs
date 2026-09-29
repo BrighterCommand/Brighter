@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyMonitoredHandlerThatThrowsAsync>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyMonitoredHandlerThatThrowsAsync>();
             container.AddTransient<MonitorHandlerAsync<MyCommand>>();
             container.AddSingleton<IAmAControlBusSenderAsync>(_controlBusSender);
@@ -65,8 +65,8 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
-                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
+                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
 
             _command = new MyCommand();
 

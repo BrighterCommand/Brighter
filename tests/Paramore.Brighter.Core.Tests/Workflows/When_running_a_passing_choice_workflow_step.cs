@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,7 +10,7 @@ using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Core.Tests.Workflows;
 
-public class MediatorPassingChoiceFlowTests 
+public class MediatorPassingChoiceFlowTests
 {
     private readonly ITestOutputHelper _testOutputHelper;
     private readonly Scheduler<WorkflowTestData> _scheduler;
@@ -32,61 +32,61 @@ public class MediatorPassingChoiceFlowTests
         IAmACommandProcessor? commandProcessor = null;
         var handlerFactory = new SimpleHandlerFactoryAsync((handlerType) =>
             handlerType switch
-            { 
+            {
                 _ when handlerType == typeof(MyCommandHandlerAsync) => new MyCommandHandlerAsync(commandProcessor),
                 _ when handlerType == typeof(MyOtherCommandHandlerAsync) => new (commandProcessor),
                 _ => throw new InvalidOperationException($"The handler type {handlerType} is not supported")
             });
 
-        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
-            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
+        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
+            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<MyCommand>.ClearPipelineCache();
 
         var workflowData= new WorkflowTestData();
         workflowData.Bag["MyValue"] = "Pass";
-        
+
         _job = new Job<WorkflowTestData>(workflowData) ;
-        
+
         var stepThree = new Sequential<WorkflowTestData>(
             "Test of Job SequenceStep Three",
-            new FireAndForgetAsync<MyOtherCommand, WorkflowTestData>((data) => 
+            new FireAndForgetAsync<MyOtherCommand, WorkflowTestData>((data) =>
                 new MyOtherCommand { Value = (data.Bag["MyValue"] as string)! }),
             () => { _stepCompletedThree = true; },
-            null);
-        
+            null, loggerFactory: Initializer.TestLoggerFactory);
+
         var stepTwo = new Sequential<WorkflowTestData>(
             "Test of Job SequenceStep Two",
-            new FireAndForgetAsync<MyCommand, WorkflowTestData>((data) => 
+            new FireAndForgetAsync<MyCommand, WorkflowTestData>((data) =>
                 new MyCommand { Value = (data.Bag["MyValue"] as string)! }),
             () => { _stepCompletedTwo = true; },
-            null);
+            null, loggerFactory: Initializer.TestLoggerFactory);
 
          var stepOne = new ExclusiveChoice<WorkflowTestData>(
              "Test of Job SequenceStep One",
              new Specification<WorkflowTestData>(x => x.Bag["MyValue"] as string == "Pass"),
             () => { _stepCompletedOne = true; },
-            stepTwo, 
-            stepThree);
-         
-         _job.InitSteps(stepOne); 
-        
-        InMemoryStateStoreAsync store = new();
-        _channel = new InMemoryJobChannel<WorkflowTestData>();
+            stepTwo,
+            stepThree, loggerFactory: Initializer.TestLoggerFactory);
+
+         _job.InitSteps(stepOne);
+
+        InMemoryStateStoreAsync store = new(loggerFactory: Initializer.TestLoggerFactory);
+        _channel = new InMemoryJobChannel<WorkflowTestData>(loggerFactory: Initializer.TestLoggerFactory);
 
         _scheduler = new Scheduler<WorkflowTestData>(
             _channel,
             store
         );
 
-        _runner = new Runner<WorkflowTestData>(_channel, store, commandProcessor, _scheduler);
+        _runner = new Runner<WorkflowTestData>(_channel, store, commandProcessor, _scheduler, loggerFactory: Initializer.TestLoggerFactory);
     }
-    
+
     [Fact]
     public async Task When_running_a_choice_workflow_step()
     {
         MyCommandHandlerAsync.ReceivedCommands.Clear();
         MyOtherCommandHandlerAsync.ReceivedCommands.Clear();
-        
+
         await _scheduler.ScheduleAsync(_job);
         _channel.Stop();
 

@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Threading;
@@ -70,7 +72,7 @@ public class MsSqlQueueProvisioningConcurrencyTests : IDisposable
         //a throwaway connection each has warmed the pool, so that what follows the release is the
         //DDL rather than eight staggered connection handshakes.
         var starts = Enumerable.Range(0, ConcurrentStarts)
-            .Select(_ => new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration)))
+            .Select(_ => new ChannelFactory(new MsSqlMessageConsumerFactory(_configuration, loggerFactory: NullLoggerFactory.Instance), logger: LoggerFactoryExtensions.CreateLogger<ChannelFactory>( NullLoggerFactory.Instance )))
             .ToArray();
         var outcomes = new Exception?[ConcurrentStarts];
 

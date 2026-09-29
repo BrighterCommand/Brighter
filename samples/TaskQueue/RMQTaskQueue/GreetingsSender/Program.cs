@@ -46,7 +46,8 @@ namespace GreetingsSender
                 .CreateLogger();
 
             var serviceCollection = new ServiceCollection();
-            serviceCollection.AddSingleton<ILoggerFactory>(new SerilogLoggerFactory());
+            using var loggerFactory = new SerilogLoggerFactory();
+            serviceCollection.AddSingleton<ILoggerFactory>(loggerFactory);
 
             var rmqConnection = new RmqMessagingGatewayConnection
             {
@@ -71,13 +72,13 @@ namespace GreetingsSender
                         Topic = new RoutingKey("farewell.event"),
                         RequestType = typeof(FarewellEvent)
                     }
-                ]).Create();
-            
+                ], loggerFactory: loggerFactory).Create();
+
             serviceCollection
                 .AddBrighter()
                 // InMemorySchedulerFactory is the default — shown here explicitly to demonstrate scheduler configuration.
                 // Replace with HangfireMessageSchedulerFactory or QuartzSchedulerFactory for durable scheduling.
-                .UseScheduler(new InMemorySchedulerFactory())
+                .UseScheduler(new InMemorySchedulerFactory(loggerFactory: loggerFactory))
                 .AddProducers((configure) =>
                 {
                     configure.ProducerRegistry = producerRegistry;
@@ -113,7 +114,7 @@ namespace GreetingsSender
                 // topic.Replace("{tenant}", tenantContext.Tenant)
                 return registry.LookupBy(topic).Publication;
             }
-            
+
             return base.Find<TRequest>(registry, context);
         }
     }

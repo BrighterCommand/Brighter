@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Transactions;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.CircuitBreaker;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Observability;
@@ -58,6 +59,12 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         private IAmAChannelFactory? _channelFactory;
         private IDispatcher? _dispatcher;
         private IAmAProducerRegistryFactory? _producerRegistryFactory;
+        private readonly ILoggerFactory _loggerFactory;
+
+        private ControlBusReceiverBuilder(ILoggerFactory loggerFactory)
+        {
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
+        }
 
         /// <summary>
         /// We need a dispatcher to pull messages off the control bus and dispatch them out to control bus handlers.
@@ -109,10 +116,11 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// <summary>
         /// Begins the progressive interface.
         /// </summary>
+        /// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
         /// <returns>INeedALogger.</returns>
-        public static INeedADispatcher With()
+        public static INeedADispatcher With(ILoggerFactory loggerFactory)
         {
-            return new ControlBusReceiverBuilder();
+            return new ControlBusReceiverBuilder(loggerFactory);
         }
 
         /// <summary>
@@ -182,21 +190,24 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), 
                 tracer: new BrighterTracer(),   //TODO: Do we need to pass in a tracer?
                 outbox: outbox,
-                outboxCircuitBreaker: new InMemoryOutboxCircuitBreaker(),
-                publicationFinder: _publicationFinder
+                outboxCircuitBreaker: new InMemoryOutboxCircuitBreaker(_loggerFactory.CreateBrighterLogger<InMemoryOutboxCircuitBreaker>()),
+                publicationFinder: _publicationFinder,
+                loggerFactory: _loggerFactory
             );
 
-            if (_dispatcher is null) throw new ArgumentException("Dispatcher must not be null");
+            if (_dispatcher is null)
+                throw new ArgumentException("Dispatcher must not be null");
 
             CommandProcessor? commandProcessor = null;
             
             commandProcessor = CommandProcessorBuilder.StartNew()
-                .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactorySync(_dispatcher, () => commandProcessor)))
+                .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactorySync(_dispatcher, () => commandProcessor, _loggerFactory)))
                 .Resilience(resiliencePipeline, policyRegistry)
                 .ExternalBus(ExternalBusType.FireAndForget, mediator)
                 .ConfigureInstrumentation(null, InstrumentationOptions.None)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
-                .RequestSchedulerFactory(new InMemorySchedulerFactory())
+                .RequestSchedulerFactory(new InMemorySchedulerFactory(_loggerFactory))
+                .ConfigureLogging(_loggerFactory)
                 .Build();
             
             // These are the control bus channels, we hardcode them because we want to know they exist, but we use
@@ -213,7 +224,8 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                     routingKey: new RoutingKey($"{hostName}.{HEARTBEAT}"))
             };
 
-            if (_channelFactory is null) throw new ArgumentException("Channel Factory must not be null");
+            if (_channelFactory is null)
+                throw new ArgumentException("Channel Factory must not be null");
             
             return DispatchBuilder.StartNew()
                 .CommandProcessor(commandProcessor, new InMemoryRequestContextFactory()
@@ -222,6 +234,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 .ChannelFactory(_channelFactory)                                        
                 .Subscriptions(subscriptions)
                 .NoInstrumentation()
+                .ConfigureLogging(_loggerFactory)
                 .Build();
         }
 
@@ -250,7 +263,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
 
             public Message Get(Id messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
             {
-                 return new Message(){Header = new MessageHeader("",new RoutingKey(""), MessageType.MT_NONE)};
+                return new Message() { Header = new MessageHeader("", new RoutingKey(""), MessageType.MT_NONE) };
             }
 
             public IEnumerable<Message> Get(IEnumerable<Id> messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null)

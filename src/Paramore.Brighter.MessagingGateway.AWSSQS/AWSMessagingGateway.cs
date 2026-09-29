@@ -37,19 +37,25 @@ using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.JsonConverters;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.AWSSQS.Extensions;
 using Paramore.Brighter.Tasks;
 using InvalidOperationException = System.InvalidOperationException;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 
-public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
+public class AwsMessagingGateway
 {
-    protected static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AwsMessagingGateway>();
+    protected readonly ILogger Logger;
 
-    private readonly AWSClientFactory _awsClientFactory = new(awsConnection);
-    protected readonly AWSMessagingGatewayConnection AwsConnection = awsConnection;
+    private readonly AWSClientFactory _awsClientFactory;
+    protected readonly AWSMessagingGatewayConnection AwsConnection;
+
+    public AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection, ILoggerFactory loggerFactory)
+    {
+        Logger = loggerFactory.CreateBrighterLogger<AwsMessagingGateway>();
+        _awsClientFactory = new AWSClientFactory(awsConnection);
+        AwsConnection = awsConnection;
+    }
 
     /// <summary>
     /// The Channel Address
@@ -341,7 +347,8 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
 
         CreateCommonQueueAttributes(sqsAttributes, isDLQ, attributes);
 
-        if (sqsAttributes.Type != SqsType.Fifo) return attributes;
+        if (sqsAttributes.Type != SqsType.Fifo)
+            return attributes;
 
         CreateFifoQueueAttributes(sqsAttributes, attributes);
 
@@ -357,7 +364,7 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         }
 
         if (sqsAttributes.DeduplicationScope == null || sqsAttributes.FifoThroughputLimit == null)
-            return ;
+            return;
      
         attributes.Add(QueueAttributeName.FifoThroughputLimit, Convert.ToString(sqsAttributes.FifoThroughputLimit.Value.AsString()));
         attributes.Add(QueueAttributeName.DeduplicationScope, sqsAttributes.DeduplicationScope switch
@@ -433,7 +440,8 @@ public class AwsMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         if (!string.IsNullOrEmpty(snsAttributes.Policy))
             attributes.Add("Policy", snsAttributes.Policy);
 
-        if (snsAttributes.Type != SqsType.Fifo) return attributes;
+        if (snsAttributes.Type != SqsType.Fifo)
+            return attributes;
         
         attributes.Add("FifoTopic", "true");
         if (snsAttributes.ContentBasedDeduplication)

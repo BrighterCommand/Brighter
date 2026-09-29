@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.MsSql;
@@ -51,9 +53,9 @@ public class MsSqlMessageConsumerNoChannelsConfiguredTests : IDisposable
             _topic,
             messagePumpType: MessagePumpType.Reactor);
 
-        _producer = new MsSqlMessageProducer(testHelper.QueueConfiguration);
+        _producer = new MsSqlMessageProducer(testHelper.QueueConfiguration, loggerFactory: NullLoggerFactory.Instance);
 
-        _consumer = (MsSqlMessageConsumer)new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration).Create(sub);
+        _consumer = (MsSqlMessageConsumer)new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration, loggerFactory: NullLoggerFactory.Instance).Create(sub);
     }
 
     [Fact]

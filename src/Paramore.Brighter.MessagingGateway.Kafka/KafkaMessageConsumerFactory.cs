@@ -21,6 +21,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
+using Microsoft.Extensions.Logging;
+
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     /// <inheritdoc />
@@ -31,6 +34,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     public class KafkaMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly KafkaMessagingGatewayConfiguration _configuration;
+        private readonly ILoggerFactory _loggerFactory;
         private IAmAMessageScheduler? _scheduler;
 
         /// <summary>
@@ -48,13 +52,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         /// <param name="configuration">The <see cref="KafkaMessagingGatewayConfiguration"/> used to connect to the Broker</param>
         /// <param name="scheduler">The optional message scheduler for delayed requeue support</param>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers for the consumers</param>
         public KafkaMessageConsumerFactory(
             KafkaMessagingGatewayConfiguration configuration,
+            ILoggerFactory loggerFactory,
             IAmAMessageScheduler? scheduler = null
             )
         {
             _configuration = configuration;
             _scheduler = scheduler;
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
         }
 
         /// <summary>
@@ -85,7 +92,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 #pragma warning disable CS0618
             return new KafkaMessageConsumer(
                 configuration: _configuration,
-                routingKey:kafkaSubscription.RoutingKey, //topic
+                routingKey: kafkaSubscription.RoutingKey, //topic
                 groupId: kafkaSubscription.GroupId,
                 offsetDefault: kafkaSubscription.OffsetDefault,
                 sessionTimeout: kafkaSubscription.SessionTimeout,
@@ -105,7 +112,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 invalidMessageRoutingKey: invalidMessageRoutingKey,
                 timeProvider: kafkaSubscription.TimeProvider,
                 scheduler: _scheduler,
-                groupProtocol: kafkaSubscription.GroupProtocol);
+                groupProtocol: kafkaSubscription.GroupProtocol,
+                loggerFactory: _loggerFactory);
 #pragma warning restore CS0618
         }
 

@@ -57,7 +57,7 @@ public class RmqSharedConnectionCleanupFailureTests
         var routingKey = new RoutingKey(Guid.NewGuid().ToString());
         var queueName = new ChannelName(Guid.NewGuid().ToString());
         var factory = new ConnectionFactory { Uri = connection.AmpqUri.Uri };
-        var pool = new RmqMessageGatewayConnectionPool(connection.Name, connection.Heartbeat);
+        var pool = new RmqMessageGatewayConnectionPool(connection.Name, connection.Heartbeat, loggerFactory: Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         string? failure = failingOperation;
         using var producer = new CleanupFailureRmqProducer(connection, () => failure);
         using var consumer = new CleanupFailureRmqConsumer(connection, queueName, routingKey, () => failure);

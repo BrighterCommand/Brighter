@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Text.Json;
 using System.Threading;
@@ -14,7 +14,7 @@ public class MyLargeCommandMessageMapperAsync : IAmAMessageMapperAsync<MyLargeCo
 
     [ClaimCheck(0, thresholdInKb: 5)]
     public async Task<Message> MapToMessageAsync(MyLargeCommand request, Publication publication, CancellationToken cancellationToken = default)
-    {                                                                        
+    {
         using MemoryStream stream = new();
         await JsonSerializer.SerializeAsync(stream, request, new JsonSerializerOptions(JsonSerializerDefaults.General), cancellationToken);
         return new Message(

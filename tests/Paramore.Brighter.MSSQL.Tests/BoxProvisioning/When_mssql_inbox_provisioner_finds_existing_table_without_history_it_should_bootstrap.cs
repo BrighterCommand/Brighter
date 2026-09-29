@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
@@ -26,13 +28,13 @@ public class MsSqlInboxProvisionerBootstrapTests : IAsyncLifetime
         var config = new RelationalDatabaseConfiguration(
             _connectionString,
             inboxTableName: _tableName);
-        var runner = new MsSqlBoxMigrationRunner(new MsSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
+        var runner = new MsSqlBoxMigrationRunner(new MsSqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance);
         _provisioner = new MsSqlInboxProvisioner(
             new MsSqlBoxDetectionHelper(),
             new MsSqlInboxMigrationCatalog(),
             new MsSqlPayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

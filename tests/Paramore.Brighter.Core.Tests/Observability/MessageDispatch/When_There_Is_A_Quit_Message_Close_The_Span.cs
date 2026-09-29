@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -36,46 +36,46 @@ public class MessagePumpQuitOberservabilityTests
                 .ConfigureResource(r => r.AddService("in-memory-tracer"))
                 .AddInMemoryExporter(_exportedActivities)
                 .Build();
-        
-            
+
+
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<MyEvent, MyEventHandler>();
 
             var handlerFactory = new SimpleHandlerFactorySync(_ => new MyEventHandler(_receivedMessages));
-            
+
             var timeProvider  = new FakeTimeProvider();
             var tracer = new BrighterTracer(timeProvider);
             var instrumentationOptions = InstrumentationOptions.All;
-            
+
             var commandProcessor = new Brighter.CommandProcessor(
                 subscriberRegistry,
-                handlerFactory, 
-                new InMemoryRequestContextFactory(), 
+                handlerFactory,
+                new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
                 new ResiliencePipelineRegistry<string>(),
-                new InMemorySchedulerFactory(),
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
                 tracer: tracer,
-                instrumentationOptions: instrumentationOptions);
-            
+                instrumentationOptions: instrumentationOptions, loggerFactory: Initializer.TestLoggerFactory);
+
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
             Channel channel = new(
-                new (Channel), _routingKey, 
-                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000))
+                new (Channel), _routingKey,
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory)
             );
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(
                     _ => new MyEventMessageMapper()),
-                null); 
+                null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
-            
-            _messagePump = new Reactor(commandProcessor, (message) => typeof(MyEvent), 
-                messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), 
-                channel, tracer, instrumentationOptions)
+
+            _messagePump = new Reactor(commandProcessor, (message) => typeof(MyEvent),
+                messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(),
+                channel, Initializer.TestLoggerFactory, tracer, instrumentationOptions)
             {
                 Channel = channel, TimeOut= TimeSpan.FromMilliseconds(5000), EmptyChannelDelay = TimeSpan.FromMilliseconds(1000)
             };
-            
+
             var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);
             channel.Enqueue(quitMessage);
     }
@@ -86,20 +86,20 @@ public class MessagePumpQuitOberservabilityTests
         _messagePump.Run();
 
         _traceProvider.ForceFlush();
-            
+
         Assert.Equal(2, _exportedActivities.Count);
-        Assert.True(_exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter")); 
-        
-        var emptyMessageActivity = _exportedActivities.FirstOrDefault(a => 
-            a.DisplayName == $"{_routingKey} {MessagePumpSpanOperation.Receive.ToSpanName()}" 
-            && a.TagObjects.Any(t => 
-                t is { Value: not null, Key: BrighterSemanticConventions.MessageType } 
+        Assert.True(_exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter"));
+
+        var emptyMessageActivity = _exportedActivities.FirstOrDefault(a =>
+            a.DisplayName == $"{_routingKey} {MessagePumpSpanOperation.Receive.ToSpanName()}"
+            && a.TagObjects.Any(t =>
+                t is { Value: not null, Key: BrighterSemanticConventions.MessageType }
                 && Enum.Parse<MessageType>(t.Value.ToString()) == MessageType.MT_QUIT
                 )
             );
-        
+
         Assert.NotNull(emptyMessageActivity);
         Assert.Equal(ActivityStatusCode.Ok, emptyMessageActivity!.Status);
-        
+
     }
 }

@@ -55,7 +55,7 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyMonitoredHandlerAsync>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyMonitoredHandlerAsync>();
             container.AddTransient<MonitorHandlerAsync<MyCommand>>();
             container.AddSingleton<IAmAControlBusSenderAsync>(_controlBusSender);
@@ -65,7 +65,7 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
-                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+                new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
 
             _command = new MyCommand();
 

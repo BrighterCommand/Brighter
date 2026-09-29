@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -69,7 +71,7 @@ public class RmqConfirmationCarriesIdTopicAndContextTests : IDisposable
             Exchange = new Exchange("paramore.brighter.exchange")
         };
 
-        _messageProducer = new RmqMessageProducer(rmqConnection);
+        _messageProducer = new RmqMessageProducer(rmqConnection, loggerFactory: NullLoggerFactory.Instance);
         _messageProducer.OnMessagePublished += result => _confirmation.TrySetResult(result);
 
         //we need a queue to avoid a discard

@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
@@ -38,13 +40,13 @@ public class MsSqlOutboxPayloadModeMismatchTests : IAsyncLifetime
             _connectionString,
             outBoxTableName: _tableName,
             binaryMessagePayload: true);
-        var runner = new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
+        var runner = new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance);
         var provisioner = new MsSqlOutboxProvisioner(
             new MsSqlBoxDetectionHelper(),
             new MsSqlOutboxMigrationCatalog(),
             new MsSqlPayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: NullLoggerFactory.Instance);
 
         //Act & Assert
         var exception = await Assert.ThrowsAsync<ConfigurationException>(

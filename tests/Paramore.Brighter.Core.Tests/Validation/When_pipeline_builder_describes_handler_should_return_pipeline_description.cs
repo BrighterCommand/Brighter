@@ -39,7 +39,7 @@ public class PipelineBuilderDescribeTests
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyCommand), typeof(MyPreAndPostDecoratedHandler));
 
-        var pipelineBuilder = new PipelineBuilder<MyCommand>(registry);
+        var pipelineBuilder = new PipelineBuilder<MyCommand>(registry, loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<MyCommand>.ClearPipelineCache();
 
         // Act
@@ -60,7 +60,7 @@ public class PipelineBuilderDescribeTests
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyCommand), typeof(MyPreAndPostDecoratedHandler));
 
-        var pipelineBuilder = new PipelineBuilder<MyCommand>(registry);
+        var pipelineBuilder = new PipelineBuilder<MyCommand>(registry, loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<MyCommand>.ClearPipelineCache();
 
         // Act
@@ -82,7 +82,7 @@ public class PipelineBuilderDescribeTests
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyCommand), typeof(MyPreAndPostDecoratedHandler));
 
-        var pipelineBuilder = new PipelineBuilder<MyCommand>(registry);
+        var pipelineBuilder = new PipelineBuilder<MyCommand>(registry, loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<MyCommand>.ClearPipelineCache();
 
         // Act
@@ -104,7 +104,7 @@ public class PipelineBuilderDescribeTests
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyCommand), typeof(MyPreAndPostDecoratedHandlerAsync));
 
-        var pipelineBuilder = new PipelineBuilder<MyCommand>(registry);
+        var pipelineBuilder = new PipelineBuilder<MyCommand>(registry, loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<MyCommand>.ClearPipelineCache();
 
         // Act
@@ -123,7 +123,7 @@ public class PipelineBuilderDescribeTests
         registry.Add(typeof(MyCommand), typeof(MyPreAndPostDecoratedHandler));
         registry.Add(typeof(MyCommand), typeof(MyPreAndPostDecoratedHandlerAsync));
 
-        var pipelineBuilder = new PipelineBuilder<MyCommand>(registry);
+        var pipelineBuilder = new PipelineBuilder<MyCommand>(registry, loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<MyCommand>.ClearPipelineCache();
 
         // Act
@@ -142,7 +142,7 @@ public class PipelineBuilderDescribeTests
         var registry = new SubscriberRegistry();
         registry.Add(typeof(MyCommand), typeof(MyPreAndPostDecoratedHandler));
 
-        var pipelineBuilder = new PipelineBuilder<MyCommand>(registry);
+        var pipelineBuilder = new PipelineBuilder<MyCommand>(registry, loggerFactory: Initializer.TestLoggerFactory);
         PipelineBuilder<MyCommand>.ClearPipelineCache();
 
         // Act — parameterless Describe() should find all registered request types

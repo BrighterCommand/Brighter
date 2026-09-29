@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO.Compression;
 using System.Net.Mime;
 using Paramore.Brighter.Core.Tests.TestHelpers;
@@ -39,13 +39,13 @@ public class CompressLargePayloadTests
 
         //mime types
         Assert.Equal(
-            new ContentType("application/gzip"), 
+            new ContentType("application/gzip"),
             compressedMessage.Header.ContentType);
         Assert.Equal(
-            new ContentType(MediaTypeNames.Application.Json){ CharSet = CharacterEncoding.UTF8.FromCharacterEncoding() }, 
+            new ContentType(MediaTypeNames.Application.Json){ CharSet = CharacterEncoding.UTF8.FromCharacterEncoding() },
             compressedMessage.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER]);
         Assert.Equal(
-            new ContentType("application/gzip"), 
+            new ContentType("application/gzip"),
             compressedMessage.Body.ContentType);
     }
 
@@ -59,20 +59,20 @@ public class CompressLargePayloadTests
         Assert.NotNull(compressedMessage.Body.Bytes);
         Assert.True(compressedMessage.Body.Bytes.Length >= 2);
         Assert.Equal(
-            new ContentType("application/deflate"), 
+            new ContentType("application/deflate"),
             compressedMessage.Body.ContentType);
         Assert.Equal(ZLIB_LEAD_BYTE, compressedMessage.Body.Bytes[0]);
 
         //mime types
         Assert.Equal(
-            new ContentType(CompressPayloadTransformer.DEFLATE), 
+            new ContentType(CompressPayloadTransformer.DEFLATE),
             compressedMessage.Header.ContentType
             );
         Assert.Equal(
-            new ContentType(MediaTypeNames.Application.Json){ CharSet = CharacterEncoding.UTF8.FromCharacterEncoding() }, 
+            new ContentType(MediaTypeNames.Application.Json){ CharSet = CharacterEncoding.UTF8.FromCharacterEncoding() },
             compressedMessage.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER]);
         Assert.Equal(
-            new ContentType(CompressPayloadTransformer.DEFLATE), 
+            new ContentType(CompressPayloadTransformer.DEFLATE),
             compressedMessage.Body.ContentType);
     }
 
@@ -86,18 +86,18 @@ public class CompressLargePayloadTests
         Assert.NotNull(compressedMessage.Body.Bytes);
         Assert.True(compressedMessage.Body.Bytes.Length >= 2);
         Assert.Equal(
-            new ContentType("application/br"), 
+            new ContentType("application/br"),
             compressedMessage.Body.ContentType);
 
         //mime types
         Assert.Equal(
-            new ContentType(CompressPayloadTransformer.BROTLI), 
+            new ContentType(CompressPayloadTransformer.BROTLI),
             compressedMessage.Header.ContentType);
         Assert.Equal(
-            new ContentType(MediaTypeNames.Application.Json){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()}.ToString(), 
+            new ContentType(MediaTypeNames.Application.Json){CharSet = CharacterEncoding.UTF8.FromCharacterEncoding()}.ToString(),
             compressedMessage.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER]);
         Assert.Equal(
-            new ContentType(CompressPayloadTransformer.BROTLI), 
+            new ContentType(CompressPayloadTransformer.BROTLI),
             compressedMessage.Body.ContentType);
     }
 }

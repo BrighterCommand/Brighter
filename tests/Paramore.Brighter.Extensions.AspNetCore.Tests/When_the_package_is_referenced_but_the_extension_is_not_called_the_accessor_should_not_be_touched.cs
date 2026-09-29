@@ -49,10 +49,10 @@ public class PackageReferencedButExtensionNotCalledTests
         var routingKey = new RoutingKey("package-not-called");
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            { routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = routingKey, RequestType = typeof(PackageNotCalledPostCommand) }) }
+            { routingKey, new InMemoryMessageProducer(new InternalBus(),Initializer.Factory, new Publication { Topic = routingKey, RequestType = typeof(PackageNotCalledPostCommand) }) }
         });
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddSingleton<IHttpContextAccessor>(accessor);
         services.AddBrighter(options =>
         {

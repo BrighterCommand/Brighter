@@ -28,7 +28,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.CircuitBreaker;
@@ -38,15 +37,16 @@ namespace Paramore.Brighter.CircuitBreaker;
 /// if a topic is marked as tripped, record that topic as a failure and cooldown by decrementing
 /// cool down count.
 /// </summary>
+/// <param name="logger">The logger for circuit breaker transitions.</param>
 /// <param name="options"></param>
 /// <param name="tracer">Optional tracer used to export a span for each trip/re-trip/reset transition</param>
 /// <param name="instrumentationOptions">How verbose should the exported spans be</param>
 public partial class InMemoryOutboxCircuitBreaker(
+    ILogger<InMemoryOutboxCircuitBreaker> logger,
     OutboxCircuitBreakerOptions? options = null,
     IAmABrighterTracer? tracer = null,
     InstrumentationOptions instrumentationOptions = InstrumentationOptions.All) : IAmAnOutboxCircuitBreaker
 {
-    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<InMemoryOutboxCircuitBreaker>();
 
     private readonly OutboxCircuitBreakerOptions _outboxCircuitBreakerOptions = options ?? new OutboxCircuitBreakerOptions();
 
@@ -94,7 +94,7 @@ public partial class InMemoryOutboxCircuitBreaker(
         var span = tracer?.CreateCircuitBreakerSpan(new CircuitBreakerSpanInfo(CircuitBreakerSpanOperation.Reset, topic, 0), instrumentationOptions);
         tracer?.EndSpan(span);
 
-        Log.Reset(s_logger, topic.Value);
+        Log.Reset(logger, topic.Value);
     }
 
     /// <summary>
@@ -119,9 +119,9 @@ public partial class InMemoryOutboxCircuitBreaker(
         tracer?.EndSpan(span);
 
         if (isReTrip)
-            Log.ReTripped(s_logger, topic.Value, cooldownCount);
+            Log.ReTripped(logger, topic.Value, cooldownCount);
         else
-            Log.Tripped(s_logger, topic.Value, cooldownCount);
+            Log.Tripped(logger, topic.Value, cooldownCount);
     }
 
     private static partial class Log
@@ -136,4 +136,3 @@ public partial class InMemoryOutboxCircuitBreaker(
         public static partial void Reset(ILogger logger, string topic);
     }
 }
-

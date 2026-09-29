@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -55,7 +57,7 @@ namespace Paramore.Brighter.RMQ.Sync.Tests.MessagingGateway.Reactor
                 Exchange = new Exchange("paramore.brighter.exchange")
             };
 
-            _messageProducer = new RmqMessageProducer(rmqConnection)
+            _messageProducer = new RmqMessageProducer(rmqConnection, loggerFactory: NullLoggerFactory.Instance)
             {
                 Span = _parentActivity
             };

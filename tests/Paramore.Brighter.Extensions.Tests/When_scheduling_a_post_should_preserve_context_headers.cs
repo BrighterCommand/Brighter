@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -68,12 +68,12 @@ public class ScheduledPostContextTests
         var bus = new InternalBus();
         var topic = new RoutingKey("scheduled-context.event");
         var timeProvider = new FakeTimeProvider();
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         services.AddBrighter()
-            .UseScheduler(new InMemorySchedulerFactory { TimeProvider = timeProvider })
+            .UseScheduler(new InMemorySchedulerFactory (loggerFactory:Initializer.Factory){ TimeProvider = timeProvider })
             .AddProducers(options => options.ProducerRegistry = new InMemoryProducerRegistryFactory(bus,
                 [new Publication { Topic = topic, RequestType = typeof(DefaultMapperEvent) }],
-                InstrumentationOptions.All).Create())
+Initializer.Factory,                InstrumentationOptions.All).Create())
             .MapperRegistry(registry =>
             {
                 if (cloudEvents)

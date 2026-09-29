@@ -26,7 +26,6 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.ServiceActivator
@@ -67,7 +66,7 @@ namespace Paramore.Brighter.ServiceActivator
     /// </summary>
     public abstract partial class MessagePump
     {
-        internal static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MessagePump>();
+        protected readonly ILogger Logger;
 
         protected const string NoMessageReceivedDescription = "Could not receive message. Note that should return an MT_NONE from an empty queue on timeout";
 
@@ -138,7 +137,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// Gets the window in which we monitor the unacceptable message count. The count resets at the end of the window.
         /// If null, the count never resets.
         /// </summary>
-        public TimeSpan? UnacceptableMessageLimitWindow  { get; set; }
+        public TimeSpan? UnacceptableMessageLimitWindow { get; set; }
 
         /// <summary>
         /// Constructs a message pump. The message pump is the heart of a consumer. It runs a loop that performs the following:
@@ -149,13 +148,14 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         /// <param name="commandProcessor">Provides a correctly scoped command processor </param>
         /// <param name="requestContextFactory">Provides a request synchronizationHelper</param>
-        /// <param name="tracer">What is the <see cref="BrighterTracer"/> we will use for telemetry</param>
-        /// <param name="channel"></param>
-        /// <param name="instrumentationOptions">When creating a span for <see cref="Brighter.CommandProcessor"/> operations how noisy should the attributes be</param>
-        /// <param name="timeProvider">Allows you to override the time provider, for testing purposes</param>
+        /// <param name="loggerFactory">The application-owned logger factory.</param>
+        /// <param name="tracer">The tracer for pump telemetry.</param>
+        /// <param name="instrumentationOptions">The depth of instrumentation.</param>
+        /// <param name="timeProvider">The clock used by the pump.</param>
         protected MessagePump(
             IAmACommandProcessor commandProcessor, 
             IAmARequestContextFactory requestContextFactory,
+            ILoggerFactory loggerFactory,
             IAmABrighterTracer? tracer,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
             TimeProvider? timeProvider = null)
@@ -165,6 +165,7 @@ namespace Paramore.Brighter.ServiceActivator
             Tracer = tracer;
             InstrumentationOptions = instrumentationOptions;
             PumpTimeProvider = timeProvider ?? TimeProvider.System;
+            Logger = loggerFactory.CreateBrighterLogger<MessagePump>();
         }
 
 
@@ -193,12 +194,12 @@ namespace Paramore.Brighter.ServiceActivator
         {
             if (messageType == MessageType.MT_COMMAND && request is IEvent)
             {
-                Log.MessageMismatchCommand(s_logger, request.Id.Value, MessageType.MT_COMMAND);
+                Log.MessageMismatchCommand(Logger, request.Id.Value, MessageType.MT_COMMAND);
             }
 
             if (messageType == MessageType.MT_EVENT && request is ICommand)
             {
-                Log.MessageMismatchEvent(s_logger, request.Id.Value, MessageType.MT_EVENT);
+                Log.MessageMismatchEvent(Logger, request.Id.Value, MessageType.MT_EVENT);
             }
         }
 

@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -52,7 +54,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
         private readonly BrighterTracer _tracer;
         private readonly ICollection<Activity> _exportedActivities;
         private readonly FakeTimeProvider _timeProvider = new();
-        private readonly InMemoryOutboxCircuitBreaker _circuitBreaker = new();
+        private readonly InMemoryOutboxCircuitBreaker _circuitBreaker = new(logger: LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>( Initializer.TestLoggerFactory ));
         private readonly RequestContext _requestContext = new();
         private readonly InMemoryOutbox _outbox;
         private readonly InMemoryMessageProducer _producer;
@@ -73,7 +75,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
 
             var bus = new InternalBus();
             _outbox = new InMemoryOutbox(_timeProvider);
-            _producer = new InMemoryMessageProducer(bus, new Publication { Topic = _topic })
+            _producer = new InMemoryMessageProducer(bus, Initializer.TestLoggerFactory, new Publication { Topic = _topic })
             {
                 UseAsyncPublishConfirmation = true
                 // PublishFailurePredicate not set => every confirmation succeeds (ack)
@@ -96,7 +98,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
                 new FindPublicationByPublicationTopicOrRequestType(),
                 outbox: _outbox,
                 outboxCircuitBreaker: _circuitBreaker,
-                timeProvider: _timeProvider);
+                timeProvider: _timeProvider, loggerFactory: Initializer.TestLoggerFactory);
 
             _message = new Message(
                 new MessageHeader(new Id(Guid.NewGuid().ToString()), _topic, MessageType.MT_EVENT),

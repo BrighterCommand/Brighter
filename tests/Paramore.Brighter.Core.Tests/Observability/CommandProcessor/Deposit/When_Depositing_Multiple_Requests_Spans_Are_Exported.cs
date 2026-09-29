@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -30,7 +30,7 @@ public class CommandProcessorMultipleDepositObservabilityTests
     public CommandProcessorMultipleDepositObservabilityTests()
     {
         var routingKey = new RoutingKey("MyEvent");
-        
+
         var builder = Sdk.CreateTracerProviderBuilder();
         _exportedActivities = new List<Activity>();
 
@@ -39,22 +39,22 @@ public class CommandProcessorMultipleDepositObservabilityTests
             .ConfigureResource(r => r.AddService("in-memory-tracer"))
             .AddInMemoryExporter(_exportedActivities)
             .Build();
-        
-        
+
+
         var registry = new SubscriberRegistry();
 
-        var handlerFactory = new PostCommandTests.EmptyHandlerFactorySync(); 
-        
+        var handlerFactory = new PostCommandTests.EmptyHandlerFactorySync();
+
         var retryPolicy = Policy
             .Handle<Exception>()
             .Retry();
-        
+
         var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICY, retryPolicy}};
-        
+
         var timeProvider = new FakeTimeProvider();
         var tracer = new BrighterTracer(timeProvider);
         InMemoryOutbox outbox = new(timeProvider){Tracer = tracer};
-        
+
         var messageMapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
             null);
@@ -63,33 +63,33 @@ public class CommandProcessorMultipleDepositObservabilityTests
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
             {
-               routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication  { Topic = routingKey, RequestType = typeof(MyEvent)})
+               routingKey, new InMemoryMessageProducer(new InternalBus(), Initializer.TestLoggerFactory, new Publication  { Topic = routingKey, RequestType = typeof(MyEvent)})
             }
         });
-        
+
         IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-            producerRegistry, 
-            new ResiliencePipelineRegistry<string>().AddBrighterDefault(), 
-            messageMapperRegistry, 
-            new EmptyMessageTransformerFactory(), 
+            producerRegistry,
+            new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
+            messageMapperRegistry,
+            new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            outbox,
+            Initializer.TestLoggerFactory, outbox,
             maxOutStandingMessages: -1
         );
-        
+
         _commandProcessor = new Brighter.CommandProcessor(
-            registry, 
-            handlerFactory, 
+            registry,
+            handlerFactory,
             new InMemoryRequestContextFactory(),
-            policyRegistry, 
+            policyRegistry,
             new ResiliencePipelineRegistry<string>(),
             bus,
-            new InMemorySchedulerFactory(),
-            tracer: tracer, 
-            instrumentationOptions: InstrumentationOptions.All
-        );
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+            tracer: tracer,
+            instrumentationOptions: InstrumentationOptions.All,
+            loggerFactory: Initializer.TestLoggerFactory);
     }
 
     [Fact]
@@ -97,42 +97,42 @@ public class CommandProcessorMultipleDepositObservabilityTests
     {
         //arrange
         var parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("BrighterTracerSpanTests");
-        
+
         var eventOne = new MyEvent();
         var eventTwo = new MyEvent();
         var eventThree = new MyEvent();
         var events = new[] {eventOne, eventTwo, eventThree};
-        
+
         var context = new RequestContext { Span = parentActivity };
 
         //act
         _commandProcessor.DepositPost(events, context);
         parentActivity?.Stop();
-        
+
         _traceProvider.ForceFlush();
-        
+
         //assert
         Assert.Equal(8, _exportedActivities.Count);
         Assert.True(_exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter"));
-        
+
         //first there should be a create activity for the bulk deposit
         var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Create.ToSpanName()}");
         Assert.NotNull(createActivity);
         Assert.Equal(parentActivity?.Id, createActivity.ParentId);
-        
+
         //Then we should see three activities for each of the deposits
         var depositActivities = _exportedActivities.Where(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Deposit.ToSpanName()}").ToList();
         Assert.Equal(3, depositActivities.Count);
-        
+
         for(int i = 0; i < 3; i++)
         {
             var depositActivity = depositActivities.ElementAt(i);
             Assert.Equal(createActivity.Id, depositActivity.ParentId);
-            
+
             Assert.True(depositActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == events[i].Id));
             Assert.True(depositActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && t.Value == JsonSerializer.Serialize(events[i], JsonSerialisationOptions.Options)));
         }
-        
+
         //TODO: When we deposit multiple we do a bulk write to the Outbox, so we should expect to see a bulk operation at the Db level
         // and not an individual operation
 

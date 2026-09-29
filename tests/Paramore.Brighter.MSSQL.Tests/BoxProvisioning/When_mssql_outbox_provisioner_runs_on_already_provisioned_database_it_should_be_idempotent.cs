@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
@@ -25,13 +27,13 @@ public class MsSqlOutboxProvisionerIdempotencyTests : IAsyncLifetime
         var config = new RelationalDatabaseConfiguration(
             _connectionString,
             outBoxTableName: _tableName);
-        var runner = new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
+        var runner = new MsSqlBoxMigrationRunner(new MsSqlOutboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance);
         _provisioner = new MsSqlOutboxProvisioner(
             new MsSqlBoxDetectionHelper(),
             new MsSqlOutboxMigrationCatalog(),
             new MsSqlPayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

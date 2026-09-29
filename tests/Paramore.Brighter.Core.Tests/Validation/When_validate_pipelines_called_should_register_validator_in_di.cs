@@ -35,7 +35,7 @@ public class ValidatePipelinesRegistrationTests
     public void When_validate_pipelines_called_should_register_validator_in_di()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         var mapperRegistry = new ServiceCollectionMessageMapperRegistryBuilder(services);
         var builder = new ServiceCollectionBrighterBuilder(services, subscriberRegistry, mapperRegistry);

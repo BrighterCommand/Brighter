@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -39,7 +41,7 @@ public class AsyncConfirmationBatchFanOutTests
         const string topic = "test_topic_batch_fanout";
         const int batchSize = 3;
         var bus = new InternalBus();
-        var producer = new InMemoryMessageProducer(bus, instrumentationOptions: InstrumentationOptions.All)
+        var producer = new InMemoryMessageProducer(bus, instrumentationOptions: InstrumentationOptions.All, loggerFactory: NullLoggerFactory.Instance)
         {
             UseAsyncPublishConfirmation = true
         };

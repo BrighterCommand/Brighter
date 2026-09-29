@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -46,14 +46,14 @@ namespace Paramore.Brighter.Core.Tests.Timeout
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyFailsDueToTimeoutHandler>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyFailsDueToTimeoutHandler>();
             container.AddTransient<TimeoutPolicyHandler<MyCommand>>();
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-            
-           _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
-               new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
+
+           _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
+               new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
         }
 
         //We have to catch the final exception that bubbles out after retry

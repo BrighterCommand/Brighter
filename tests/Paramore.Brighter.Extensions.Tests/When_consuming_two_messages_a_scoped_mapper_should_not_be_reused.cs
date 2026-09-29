@@ -20,7 +20,7 @@ public class ScopedMapperPerPipelineTests
         var mapperRegistry = new MessageMapperRegistry(mapperFactory, null);
         mapperRegistry.Register<MinimalCommand, TrackingMapper>();
 
-        var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, new EmptyMessageTransformerFactory());
+        var pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, new EmptyMessageTransformerFactory(), loggerFactory: Initializer.Factory);
 
         //act — consume message N: build and dispose its pipeline, which constructs the Scoped mapper
         //for this pipeline and, on Dispose, releases the pipeline's owned DI scope
@@ -39,7 +39,7 @@ public class ScopedMapperPerPipelineTests
 
     private static ScopeTracker BuildScopeTracker(ConstructionOrderRecorder recorder, out IServiceProvider trackingProvider)
     {
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         collection.AddSingleton(recorder);
         collection.AddScoped<TrackingMapper>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions

@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 using Npgsql;
 using Paramore.Brighter.Base.Test.Inbox;
@@ -14,7 +16,7 @@ public class PostgresTextInboxAsyncTest : RelationalDatabaseInboxAsyncTests
     
     protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration)
     {
-        return new PostgreSqlInbox(configuration);
+        return new PostgreSqlInbox(configuration, logger: NullLoggerFactory.Instance.CreateLogger<PostgreSqlInbox>());
     }
 
     protected override async Task CreateInboxTableAsync(RelationalDatabaseConfiguration configuration)

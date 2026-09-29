@@ -24,6 +24,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Text.Json;
 using Microsoft.Extensions.Time.Testing;
@@ -52,7 +54,7 @@ public class MessagePumpRequeueRejectionMessageIdTests
         var bus = new InternalBus();
         var channel = new Channel(new ChannelName("requeue-message-id"), routingKey,
             new InMemoryMessageConsumer(routingKey, bus, new FakeTimeProvider(),
-                deadLetterTopic: deadLetterRoutingKey));
+                deadLetterTopic: deadLetterRoutingKey, loggerFactory: Initializer.TestLoggerFactory));
 
         var subscriberRegistry = new SubscriberRegistry();
         subscriberRegistry.Register<MyCommand, MyFailingDeferHandler>();
@@ -61,19 +63,19 @@ public class MessagePumpRequeueRejectionMessageIdTests
             if (type == typeof(MyFailingDeferHandler))
                 return new MyFailingDeferHandler();
             if (type == typeof(DeferMessageOnErrorHandler<MyCommand>))
-                return new DeferMessageOnErrorHandler<MyCommand>();
+                return new DeferMessageOnErrorHandler<MyCommand>(logger: LoggerFactoryExtensions.CreateLogger<DeferMessageOnErrorHandler<MyCommand>>( Initializer.TestLoggerFactory ));
             throw new ArgumentOutOfRangeException(nameof(type), type.Name, null);
         });
         var commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory,
             new InMemoryRequestContextFactory(), new PolicyRegistry(),
-            new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory());
+            new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),loggerFactory:Initializer.TestLoggerFactory);
 
         var mapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()), null);
         mapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
         var messagePump = new ServiceActivator.Reactor(commandProcessor, _ => typeof(MyCommand),
             mapperRegistry, new EmptyMessageTransformerFactory(),
-            new InMemoryRequestContextFactory(), channel)
+            new InMemoryRequestContextFactory(), channel, loggerFactory: Initializer.TestLoggerFactory)
         {
             RequeueCount = 1
         };

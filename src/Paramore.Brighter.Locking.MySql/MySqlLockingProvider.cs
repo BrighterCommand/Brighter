@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.MySql;
 
 namespace Paramore.Brighter.Locking.MySql;
@@ -17,9 +16,10 @@ namespace Paramore.Brighter.Locking.MySql;
 /// The MySQL Locking Provider
 /// </summary>
 /// <param name="connectionProvider">The MySQL connection Provider.</param>
-public class MySqlLockingProvider(MySqlConnectionProvider connectionProvider) : IDistributedLock, IAsyncDisposable
+/// <param name="loggerFactory">The factory used to create the logger for this provider.</param>
+public class MySqlLockingProvider(MySqlConnectionProvider connectionProvider, ILoggerFactory loggerFactory) : IDistributedLock, IAsyncDisposable
 {
-    private readonly ILogger _logger = ApplicationLogging.CreateLogger<MySqlConnectionProvider>();
+    private readonly ILogger _logger = loggerFactory.CreateBrighterLogger<MySqlConnectionProvider>();
     private readonly ConcurrentDictionary<string, DbConnection> _connections = new();
 
     /// <summary>
@@ -137,7 +137,8 @@ public class MySqlLockingProvider(MySqlConnectionProvider connectionProvider) : 
             MaxNameLength,
             convertToValidName: s =>
             {
-                if (s.Length == 0) { return "__empty__"; }
+                if (s.Length == 0)
+                { return "__empty__"; }
 
                 return s.ToLowerInvariant();
             },

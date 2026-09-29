@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MongoDb.Tests.TestDoubles;
 using Paramore.Brighter.Transformers.MongoGridFS;
@@ -41,7 +43,7 @@ public class LargeMessagePayloadWrapTests : IDisposable
 
         _publication = new Publication { Topic = new RoutingKey("MyLargeCommand"), RequestType = typeof(MyLargeCommand) };
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, transformerFactoryAsync);
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, transformerFactoryAsync, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

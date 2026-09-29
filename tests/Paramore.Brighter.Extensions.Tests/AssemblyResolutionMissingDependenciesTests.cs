@@ -17,7 +17,7 @@ public class AssemblyResolutionMissingDependenciesTests
                 ValidateOnBuild = true, ValidateScopes = true
             });
 
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
 
         services.AddConsumers().AutoFromAssemblies();
         

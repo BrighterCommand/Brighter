@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -69,7 +69,7 @@ public class AsyncOutboxResilienceCancellationTests : IDisposable
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             tracer: null,
-            new FindPublicationByPublicationTopicOrRequestType(),
+            new FindPublicationByPublicationTopicOrRequestType(),Initializer.TestLoggerFactory,
             _outbox,
             maxOutStandingCheckInterval: TimeSpan.FromMinutes(1),
             timeProvider: _timeProvider);

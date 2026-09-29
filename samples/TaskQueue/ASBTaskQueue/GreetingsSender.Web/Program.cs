@@ -1,4 +1,5 @@
-﻿using System.Data.Common;
+﻿using Microsoft.Extensions.Logging;
+using System.Data.Common;
 using Greetings.Adaptors.Data;
 using Greetings.Adaptors.Services;
 using Greetings.Ports.Commands;
@@ -37,18 +38,8 @@ string asbEndpoint = "Endpoint=sb://localhost;SharedAccessKeyName=RootManageShar
 
 var asbConnection = new ServiceBusConnectionStringClientProvider(asbEndpoint);
 
-var outboxConfig = new RelationalDatabaseConfiguration(dbConnString, 
+var outboxConfig = new RelationalDatabaseConfiguration(dbConnString,
     databaseName: "BrighterTests", outBoxTableName: "BrighterOutbox");
-
-var producerRegistry = new AzureServiceBusProducerRegistryFactory(
-        asbConnection,
-        [
-            new() { Topic = new RoutingKey("greeting.event"), MakeChannels = OnMissingChannel.Assume},
-            new() { Topic = new RoutingKey("greeting.addGreetingCommand"), MakeChannels = OnMissingChannel.Assume },
-            new() { Topic = new RoutingKey("greeting.Asyncevent"), MakeChannels = OnMissingChannel.Assume }
-        ]
-    )
-    .Create();
 
 builder.Services
     .AddBrighter(opt =>
@@ -61,13 +52,24 @@ builder.Services
         r.Add(typeof(GreetingAsyncEvent), typeof(GreetingEventAsyncMessageMapper));
         r.Add(typeof(AddGreetingCommand), typeof(AddGreetingMessageMapper));
     })
-    .AddProducers((configure) =>
+    .AddProducers(provider =>
     {
+        var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+        var producerRegistry = new AzureServiceBusProducerRegistryFactory(
+                asbConnection,
+                [
+                    new() { Topic = new RoutingKey("greeting.event"), MakeChannels = OnMissingChannel.Assume},
+                    new() { Topic = new RoutingKey("greeting.addGreetingCommand"), MakeChannels = OnMissingChannel.Assume },
+                    new() { Topic = new RoutingKey("greeting.Asyncevent"), MakeChannels = OnMissingChannel.Assume }
+                ],
+                loggerFactory: loggerFactory)
+            .Create();
+        var configure = new ProducersConfiguration();
         configure.ProducerRegistry = producerRegistry;
-        configure.Outbox = new MsSqlOutbox(outboxConfig);
+        configure.Outbox = new MsSqlOutbox(outboxConfig, logger: loggerFactory.CreateLogger<MsSqlOutbox>());
         configure.TransactionProvider = typeof(MsSqlEntityFrameworkCoreTransactionProvider<GreetingsDataContext>);
+        return configure;
     });
-
 
 builder.Services.AddControllersWithViews();
 

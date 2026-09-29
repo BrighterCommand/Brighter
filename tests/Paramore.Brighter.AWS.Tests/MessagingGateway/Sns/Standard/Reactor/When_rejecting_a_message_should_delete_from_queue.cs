@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Net.Mime;
@@ -23,7 +25,7 @@ public class SqsMessageConsumerRejectTests : IDisposable
 
     public SqsMessageConsumerRejectTests()
     {
-        _myCommand = new MyCommand{Value = "Test"};
+        _myCommand = new MyCommand { Value = "Test" };
         string correlationId = Guid.NewGuid().ToString();
         string replyTo = "http:\\queueUrl";
         var contentType = new ContentType(MediaTypeNames.Text.Plain);
@@ -40,21 +42,21 @@ public class SqsMessageConsumerRejectTests : IDisposable
             makeChannels: OnMissingChannel.Create,
             queueAttributes: new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } }),
             topicAttributes: new SnsAttributes(tags: [new Tag { Key = "Environment", Value = "Test" }]));
-            
+
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
                 replyTo: new RoutingKey(replyTo), contentType: contentType),
-            new MessageBody(JsonSerializer.Serialize((object) _myCommand, JsonSerialisationOptions.Options))
+            new MessageBody(JsonSerializer.Serialize((object)_myCommand, JsonSerialisationOptions.Options))
         );
 
         //Must have credentials stored in the SDK Credentials store or shared credentials file
         var awsConnection = GatewayFactory.CreateFactory();
 
         //We need to do this manually in a test - will create the channel from subscriber parameters
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: NullLoggerFactory.Instance);
         _channel = _channelFactory.CreateSyncChannel(subscription);
 
-        _messageProducer = new SnsMessageProducer(awsConnection, new SnsPublication{MakeChannels = OnMissingChannel.Create});
+        _messageProducer = new SnsMessageProducer(awsConnection, new SnsPublication { MakeChannels = OnMissingChannel.Create }, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

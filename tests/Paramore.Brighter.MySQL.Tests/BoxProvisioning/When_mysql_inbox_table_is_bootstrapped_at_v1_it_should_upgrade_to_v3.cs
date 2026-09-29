@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -51,13 +53,13 @@ public class MySqlInboxV1ToV3UpgradeTests : IAsyncLifetime
         await SeedMarkerRow();
 
         var config = new RelationalDatabaseConfiguration(_connectionString, inboxTableName: _tableName);
-        var runner = new MySqlBoxMigrationRunner(new MySqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30));
+        var runner = new MySqlBoxMigrationRunner(new MySqlInboxMigrationCatalog(), config, TimeSpan.FromSeconds(30), loggerFactory: NullLoggerFactory.Instance);
         var provisioner = new MySqlInboxProvisioner(
             new MySqlBoxDetectionHelper(),
             new MySqlInboxMigrationCatalog(),
             new MySqlPayloadModeValidator(),
             config,
-            runner);
+            runner, loggerFactory: NullLoggerFactory.Instance);
 
         //Act
         await provisioner.ProvisionAsync();

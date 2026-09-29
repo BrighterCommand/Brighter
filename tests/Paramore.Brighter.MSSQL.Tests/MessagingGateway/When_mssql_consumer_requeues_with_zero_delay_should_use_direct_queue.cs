@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Text.Json;
 using Paramore.Brighter.JsonConverters;
@@ -59,8 +61,8 @@ public class When_mssql_consumer_requeues_with_zero_delay_should_use_direct_queu
             new MessageHeader(myCommand.Id, topic, MessageType.MT_COMMAND),
             new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options)));
 
-        _producer = new MsSqlMessageProducer(testHelper.QueueConfiguration);
-        _consumer = new MsSqlMessageConsumer(testHelper.QueueConfiguration, _topicName);
+        _producer = new MsSqlMessageProducer(testHelper.QueueConfiguration, loggerFactory: NullLoggerFactory.Instance);
+        _consumer = new MsSqlMessageConsumer(testHelper.QueueConfiguration, _topicName, loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

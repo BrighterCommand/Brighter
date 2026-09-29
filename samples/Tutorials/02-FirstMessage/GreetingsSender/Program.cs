@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging;
 using System;
 using Greetings;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,21 +41,27 @@ var rmqConnection = new RmqMessagingGatewayConnection
 // Naming GreetingEvent here is also what loads the Greetings assembly, which matters below:
 // AutoFromAssemblies scans the assemblies loaded so far, so anything it must find has to have
 // been touched before the call. Reordering this below the registration is a silent no-op.
-var producerRegistry = new RmqProducerRegistryFactory(
-    rmqConnection,
-    [
-        new RmqPublication<GreetingEvent>
-        {
-            Topic = new RoutingKey("greeting.event"),
-            MakeChannels = OnMissingChannel.Create
-        }
-    ]).Create();
 
 var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services
     .AddBrighter()
-    .AddProducers(configure => configure.ProducerRegistry = producerRegistry)
+    .AddProducers(provider =>
+    {
+        var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+        var producerRegistry = new RmqProducerRegistryFactory(
+            rmqConnection,
+            [
+                new RmqPublication<GreetingEvent>
+                {
+                    Topic = new RoutingKey("greeting.event"),
+                    MakeChannels = OnMissingChannel.Create
+                }
+            ],loggerFactory:loggerFactory).Create();
+        var configure = new ProducersConfiguration();
+        configure.ProducerRegistry = producerRegistry;
+        return configure;
+    })
     .AutoFromAssemblies();
 
 // The host is built but never run: Post is synchronous, so all we need from it is the

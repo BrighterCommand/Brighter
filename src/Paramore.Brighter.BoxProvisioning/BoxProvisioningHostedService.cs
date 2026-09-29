@@ -53,7 +53,7 @@ public class BoxProvisioningHostedService : IHostedService
         ILogger<BoxProvisioningHostedService> logger)
     {
         _provisioners = provisioners;
-        _logger = logger;
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <summary>

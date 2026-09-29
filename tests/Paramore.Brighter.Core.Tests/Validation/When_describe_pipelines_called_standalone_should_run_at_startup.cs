@@ -42,7 +42,7 @@ public class DescribePipelinesStandaloneTests
     public void When_describe_pipelines_called_should_register_diagnostic_hosted_service()
     {
         // Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         var mapperRegistry = new ServiceCollectionMessageMapperRegistryBuilder(services);
         var builder = new ServiceCollectionBrighterBuilder(services, subscriberRegistry, mapperRegistry);
@@ -60,7 +60,7 @@ public class DescribePipelinesStandaloneTests
     public async Task When_describe_pipelines_standalone_should_produce_log_output_at_startup()
     {
         // Arrange — DescribePipelines without ValidatePipelines, real diagnostic writer with captured logs
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddLogging();
         var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
         services.AddSingleton(subscriberRegistry);
         subscriberRegistry.Register<MyDescribableCommand, MyPublicSyncHandler>();

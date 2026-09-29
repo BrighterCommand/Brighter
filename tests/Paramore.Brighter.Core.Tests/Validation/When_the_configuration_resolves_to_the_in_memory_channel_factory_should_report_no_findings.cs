@@ -55,7 +55,7 @@ public class DefaultInMemoryConfigurationIsSilentValidationTests
     {
         // Arrange — a plain subscription, default channel factory explicitly an InMemoryChannelFactory
         var subscription = new Subscription<FakeChannelFactoryRequest>();
-        var defaultChannelFactory = new InMemoryChannelFactory(new InternalBus(), TimeProvider.System);
+        var defaultChannelFactory = new InMemoryChannelFactory(new InternalBus(), TimeProvider.System, loggerFactory: Initializer.TestLoggerFactory);
 
         var spec = ConsumerValidationRules.ChannelFactoryCompatible(defaultChannelFactory);
 

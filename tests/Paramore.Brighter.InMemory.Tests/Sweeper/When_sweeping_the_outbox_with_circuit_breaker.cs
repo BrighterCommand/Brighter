@@ -1,4 +1,6 @@
-﻿using System;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -61,8 +63,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             // message 1
             var myEvent = new MyEvent() { Value = "MyEvent1" };
-            InMemoryMessageProducer messageProducer = new(_internalBus, new Publication { Topic = _routingKeyOne, RequestType = typeof(MyEvent) });
-            
+            InMemoryMessageProducer messageProducer = new(_internalBus, NullLoggerFactory.Instance, new Publication { Topic = _routingKeyOne, RequestType = typeof(MyEvent) });
+
             _messageOne = new Message(
                 new MessageHeader(myEvent.Id, _routingKeyOne, MessageType.MT_EVENT),
                 new MessageBody(JsonSerializer.Serialize(myEvent, JsonSerialisationOptions.Options))
@@ -70,8 +72,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             // message 2
             var myEvent2 = new MyEvent() { Value = "MyEvent2" };
-            InMemoryMessageProducer messageProducerTwo = new(_internalBus, new Publication { Topic = _routingKeyTwo, RequestType = typeof(MyEvent) });
-            
+            InMemoryMessageProducer messageProducerTwo = new(_internalBus, NullLoggerFactory.Instance, new Publication { Topic = _routingKeyTwo, RequestType = typeof(MyEvent) });
+
             _messageTwo = new Message(
                 new MessageHeader(myEvent2.Id, _routingKeyTwo, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(myEvent2, JsonSerialisationOptions.Options))
@@ -94,7 +96,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             _outbox = new InMemoryOutbox(_timeProvider) { Tracer = tracer };
 
-            _circuitBreaker = new InMemoryOutboxCircuitBreaker(new OutboxCircuitBreakerOptions() { CooldownCount = 1 });
+            _circuitBreaker = new InMemoryOutboxCircuitBreaker(LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(NullLoggerFactory.Instance), new OutboxCircuitBreakerOptions() { CooldownCount = 1 });
 
             _mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry,
@@ -104,7 +106,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                _outbox,
+                NullLoggerFactory.Instance, _outbox,
                 outboxCircuitBreaker: _circuitBreaker
             );
 
@@ -137,7 +139,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             // Act (clear tripped)
             await _sweeper.SweepAsync();
-            await Task.Delay(1000); 
+            await Task.Delay(1000);
 
             // Assert
             var sentMessage2 = _internalBus.Dequeue(_routingKeyTwo, TimeSpan.FromSeconds(1));
@@ -159,7 +161,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             await _outbox.AddAsync(_failingMessageTwo, context);
             await _outbox.AddAsync(_messageOne, context);
             await _outbox.AddAsync(_messageTwo, context);
-            
+
            _timeProvider.Advance(_timeSinceSent); // advance to pick up messages
 
            // first sweep trips failing topics

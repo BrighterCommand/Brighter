@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -247,7 +247,7 @@ public class DefaultMessageBuilder : IAmAMessageBuilder
             workflowId: _workflowId,
             jobId: _jobId)
         {
-            SpecVersion = _specVersion, 
+            SpecVersion = _specVersion,
             Bag = _bag
         };
 

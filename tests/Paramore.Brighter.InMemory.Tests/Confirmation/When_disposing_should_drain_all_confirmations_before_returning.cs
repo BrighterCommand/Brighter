@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -43,7 +45,7 @@ public class GracefulDrainOnDisposeTests
         var gate = new SemaphoreSlim(0, messageCount);
         var confirmationCount = 0;
 
-        var producer = new InMemoryMessageProducer(bus, instrumentationOptions: InstrumentationOptions.All)
+        var producer = new InMemoryMessageProducer(bus, instrumentationOptions: InstrumentationOptions.All, loggerFactory: NullLoggerFactory.Instance)
         {
             UseAsyncPublishConfirmation = true
         };

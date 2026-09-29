@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Net.Mime;
 using System.Text.Json;
@@ -34,7 +36,7 @@ public class CustomisingAwsClientConfigTestsAsync : IDisposable, IAsyncDisposabl
             subscriptionName: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             channelType: ChannelType.PubSub,
-            routingKey: routingKey, 
+            routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
             queueAttributes: new SqsAttributes(tags: new Dictionary<string, string> { { "Environment", "Test" } }),
             topicAttributes: new SnsAttributes(tags: [new Tag { Key = "Environment", Value = "Test" }]));
@@ -51,7 +53,7 @@ public class CustomisingAwsClientConfigTestsAsync : IDisposable, IAsyncDisposabl
                 new InterceptingHttpClientFactory(new InterceptingDelegatingHandler("async_sub"));
         });
 
-        _channelFactory = new ChannelFactory(subscribeAwsConnection);
+        _channelFactory = new ChannelFactory(subscribeAwsConnection, loggerFactory: NullLoggerFactory.Instance);
         _channel = _channelFactory.CreateAsyncChannel(subscription);
 
         var publishAwsConnection = GatewayFactory.CreateFactory(config =>
@@ -62,9 +64,12 @@ public class CustomisingAwsClientConfigTestsAsync : IDisposable, IAsyncDisposabl
 
         _messageProducer = new SnsMessageProducer(
             publishAwsConnection,
-            new SnsPublication { Topic = new RoutingKey(topicName), 
-                MakeChannels = OnMissingChannel.Create }
-            );                                                                                      
+            new SnsPublication
+            {
+                Topic = new RoutingKey(topicName),
+                MakeChannels = OnMissingChannel.Create
+            },
+            loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]
@@ -84,7 +89,7 @@ public class CustomisingAwsClientConfigTestsAsync : IDisposable, IAsyncDisposabl
         //publish_and_subscribe_should_use_custom_http_client_factory
         Assert.Contains("async_pub", InterceptingDelegatingHandler.RequestCount);
         Assert.True((InterceptingDelegatingHandler.RequestCount["async_pub"]) > (0));
-        
+
         Assert.Contains("async_pub", InterceptingDelegatingHandler.RequestCount);
         Assert.True((InterceptingDelegatingHandler.RequestCount["async_pub"]) > (0));
     }

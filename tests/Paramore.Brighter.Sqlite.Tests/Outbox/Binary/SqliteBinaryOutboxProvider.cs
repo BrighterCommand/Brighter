@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
 using System.Data.Common;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
@@ -18,12 +20,12 @@ public class SqliteBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPr
 
     public IAmAnOutboxSync<Message, DbTransaction> CreateOutbox()
     {
-        return new SqliteOutbox(_configuration);
+        return new SqliteOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<SqliteOutbox>());
     }
 
     public IAmAnOutboxAsync<Message, DbTransaction> CreateOutboxAsync()
     {
-        return new SqliteOutbox(_configuration);
+        return new SqliteOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<SqliteOutbox>());
     }
 
     public void CreateStore()
@@ -79,13 +81,13 @@ public class SqliteBinaryOutboxProvider : IAmAnOutboxProviderSync, IAmAnOutboxPr
 
     public IEnumerable<Message> GetAllMessages()
     {
-        var outbox = new SqliteOutbox(_configuration);
+        var outbox = new SqliteOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<SqliteOutbox>());
         return outbox.Get(new RequestContext());
     }
 
     public async Task<IEnumerable<Message>> GetAllMessagesAsync()
     {
-        var outbox = new SqliteOutbox(_configuration);
+        var outbox = new SqliteOutbox(_configuration, logger: NullLoggerFactory.Instance.CreateLogger<SqliteOutbox>());
         return await outbox.GetAsync(new RequestContext());
     }
 }

@@ -95,7 +95,7 @@ public class OptionalClaimCheckTracingTests
         services.AddBrighter()
             .AddProducers(options => options.ProducerRegistry = new InMemoryProducerRegistryFactory(bus,
                 [new Publication { Topic = topic, RequestType = typeof(OptionalTracingClaimCheckEvent) }],
-                InstrumentationOptions.None).Create())
+Initializer.Factory,                InstrumentationOptions.None).Create())
             .UseExternalLuggageStore<InMemoryStorageProvider>();
         await using var provider = services.BuildServiceProvider();
 

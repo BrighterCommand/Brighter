@@ -1,4 +1,6 @@
-﻿using System;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -43,7 +45,7 @@ public class RmqClassicMessageGatewayProvider
     // scheduler to dispose.
     private IDisposable? RepublishToRmq(Message message)
     {
-        var producer = new RmqMessageProducer(_connection);
+        var producer = new RmqMessageProducer(_connection,loggerFactory:NullLoggerFactory.Instance);
         return ConformanceHarnessMessageScheduler.SendAndHandBack(producer, () => producer.Send(message));
     }
 
@@ -113,7 +115,7 @@ public class RmqClassicMessageGatewayProvider
     public IAmAChannelSync CreateChannel(RmqSubscription subscription)
     {
         var channel = new ChannelFactory(
-            new RmqMessageConsumerFactory(_connection, Scheduler)
+            new RmqMessageConsumerFactory(_connection, scheduler: Scheduler, loggerFactory: NullLoggerFactory.Instance)
         ).CreateSyncChannel(subscription);
 
         if (subscription.MakeChannels == OnMissingChannel.Create)
@@ -136,7 +138,7 @@ public class RmqClassicMessageGatewayProvider
     )
     {
         var channel = await new ChannelFactory(
-            new RmqMessageConsumerFactory(_connection, Scheduler)
+            new RmqMessageConsumerFactory(_connection, scheduler: Scheduler, loggerFactory: NullLoggerFactory.Instance)
         ).CreateAsyncChannelAsync(subscription, cancellationToken);
 
         if (subscription.MakeChannels == OnMissingChannel.Create)
@@ -167,7 +169,7 @@ public class RmqClassicMessageGatewayProvider
             };
         }
 
-        var produces = new RmqMessageProducerFactory(connection, [publication]).Create();
+        var produces = new RmqMessageProducerFactory(connection, [publication], loggerFactory: NullLoggerFactory.Instance).Create();
 
         var producer = produces.First().Value;
         producer.Scheduler = Scheduler;
@@ -193,8 +195,8 @@ public class RmqClassicMessageGatewayProvider
 
         var produces = await new RmqMessageProducerFactory(
             connection,
-            [publication]
-        ).CreateAsync();
+            [publication],
+            loggerFactory: NullLoggerFactory.Instance).CreateAsync();
 
         var producer = produces.First().Value;
         producer.Scheduler = Scheduler;
@@ -267,8 +269,8 @@ public class RmqClassicMessageGatewayProvider
             queueName: subscription.DeadLetterChannelName!,
             routingKey: subscription.DeadLetterRoutingKey!,
             isDurable: subscription.IsDurable,
-            makeChannels: OnMissingChannel.Assume
-        );
+            makeChannels: OnMissingChannel.Assume,
+            loggerFactory: NullLoggerFactory.Instance);
 
         try
         {
@@ -294,8 +296,8 @@ public class RmqClassicMessageGatewayProvider
             queueName: subscription.DeadLetterChannelName!,
             routingKey: subscription.DeadLetterRoutingKey!,
             isDurable: subscription.IsDurable,
-            makeChannels: OnMissingChannel.Assume
-        );
+            makeChannels: OnMissingChannel.Assume,
+            loggerFactory: NullLoggerFactory.Instance);
 
         try
         {
@@ -368,7 +370,7 @@ public class RmqClassicMessageGatewayProvider
             routingKey: invalidRoutingKey,
             isDurable: subscription.IsDurable,
             makeChannels: OnMissingChannel.Create
-        );
+,loggerFactory:NullLoggerFactory.Instance        );
     }
 
     public RejectionMetadataKeys RejectionMetadataKeys =>

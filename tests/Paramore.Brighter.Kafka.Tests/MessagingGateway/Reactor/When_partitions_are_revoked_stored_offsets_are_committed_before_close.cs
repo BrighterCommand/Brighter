@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -63,7 +65,7 @@ public class KafkaMessageConsumerCommitsRevokedOffsetsBeforeClose : IDisposable
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
                 }
-            ]).Create();
+            ], loggerFactory: NullLoggerFactory.Instance).Create();
     }
 
     /// <summary>
@@ -166,7 +168,7 @@ public class KafkaMessageConsumerCommitsRevokedOffsetsBeforeClose : IDisposable
                 {
                     Name = "Kafka Consumer Test",
                     BootStrapServers = new[] { "localhost:9092" }
-                })
+                }, loggerFactory: NullLoggerFactory.Instance)
             .Create(new KafkaSubscription<MyCommand>(
                 channelName: new ChannelName(_queueName),
                 routingKey: new RoutingKey(_topic),

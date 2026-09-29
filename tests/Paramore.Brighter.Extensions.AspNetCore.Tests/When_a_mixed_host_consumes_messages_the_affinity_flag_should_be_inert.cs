@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -99,8 +100,8 @@ public class MixedHostConsumerAffinityInertTests
 
         var routingKey = new RoutingKey("mixed-host.consumer");
         var bus = new InternalBus();
-        var channelFactory = new InMemoryChannelFactory(bus, TimeProvider.System);
-        var producer = new InMemoryMessageProducer(bus, new Publication { Topic = routingKey, RequestType = typeof(MixedHostConsumerCommand) });
+        var channelFactory = new InMemoryChannelFactory(bus, TimeProvider.System, loggerFactory: NullLoggerFactory.Instance);
+        var producer = new InMemoryMessageProducer(bus,Initializer.Factory, new Publication { Topic = routingKey, RequestType = typeof(MixedHostConsumerCommand) });
 
         var services = new ServiceCollection();
         services.AddSingleton(recorder);

@@ -17,7 +17,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
             var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyCommandHandlerAsync(new Dictionary<string, string>()));
 
-            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
+            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory, loggerFactory: Initializer.TestLoggerFactory);
             PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 

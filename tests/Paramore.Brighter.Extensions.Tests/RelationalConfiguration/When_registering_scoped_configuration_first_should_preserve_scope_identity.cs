@@ -41,6 +41,7 @@ public class ScopedRelationalConfigurationTests
         //Arrange
         var outboxConfiguration = new RelationalDatabaseConfiguration("Data Source=:memory:");
         var services = new ServiceCollection();
+        services.AddSingleton(Initializer.Factory);
         var factoryCalls = 0;
         services.AddScoped<IAmARelationalDatabaseConfiguration>(_ =>
         {
@@ -49,7 +50,7 @@ public class ScopedRelationalConfigurationTests
         });
         services.AddBrighter().AddProducers(options =>
         {
-            options.Outbox = new SqliteOutbox(outboxConfiguration);
+            options.Outbox = new SqliteOutbox(outboxConfiguration, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteOutbox>.Instance);
             options.TransactionProvider = typeof(SqliteTransactionProvider);
             options.ConnectionProvider = typeof(SqliteConnectionProvider);
         }, ServiceLifetime.Scoped);

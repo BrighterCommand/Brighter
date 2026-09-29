@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -48,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
         private readonly TracerProvider _traceProvider;
         private readonly BrighterTracer _tracer;
         private readonly ICollection<Activity> _exportedActivities;
-        private readonly InMemoryOutboxCircuitBreaker _circuitBreaker = new();
+        private readonly InMemoryOutboxCircuitBreaker _circuitBreaker = new(logger: LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>( Initializer.TestLoggerFactory ));
         private readonly RoutingKey _topic = new("Confirmation.Failure.EmptyId.Topic");
         private readonly InMemoryMessageProducer _producer;
 
@@ -65,7 +67,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
             _tracer = new BrighterTracer();
 
             var bus = new InternalBus();
-            _producer = new InMemoryMessageProducer(bus, new Publication { Topic = _topic })
+            _producer = new InMemoryMessageProducer(bus, Initializer.TestLoggerFactory, new Publication { Topic = _topic })
             {
                 UseAsyncPublishConfirmation = true,
                 PublishFailurePredicate = _ => true
@@ -85,7 +87,7 @@ namespace Paramore.Brighter.Core.Tests.Confirmation
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer: _tracer,
                 new FindPublicationByPublicationTopicOrRequestType(),
-                outboxCircuitBreaker: _circuitBreaker);
+                outboxCircuitBreaker: _circuitBreaker, loggerFactory: Initializer.TestLoggerFactory);
         }
 
         public void Dispose()

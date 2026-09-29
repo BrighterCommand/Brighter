@@ -1,4 +1,6 @@
-﻿using System;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
@@ -44,9 +46,9 @@ public class DispatchBuilderWithNamedGatewayAsync
             Exchange = new Exchange("paramore.brighter.exchange")
         };
 
-        var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(connection);
+        var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(connection, loggerFactory: NullLoggerFactory.Instance);
 
-        var container = new ServiceCollection();
+        var container = new ServiceCollection().AddLogging();
         var tracer = new BrighterTracer(TimeProvider.System);
         var instrumentationOptions = InstrumentationOptions.All;
 
@@ -56,7 +58,8 @@ public class DispatchBuilderWithNamedGatewayAsync
             .NoExternalBus()
             .ConfigureInstrumentation(tracer, instrumentationOptions)
             .RequestContextFactory(new InMemoryRequestContextFactory())
-            .RequestSchedulerFactory(new InMemorySchedulerFactory())
+            .RequestSchedulerFactory(new InMemorySchedulerFactory(loggerFactory: NullLoggerFactory.Instance))
+            .ConfigureLogging(NullLoggerFactory.Instance)
             .Build();
 
         _builder = DispatchBuilder.StartNew()
@@ -80,7 +83,8 @@ public class DispatchBuilderWithNamedGatewayAsync
                     messagePumpType: MessagePumpType.Proactor,
                     timeOut: TimeSpan.FromMilliseconds(200))
             ])
-            .ConfigureInstrumentation(tracer, instrumentationOptions);
+            .ConfigureInstrumentation(tracer, instrumentationOptions)
+            .ConfigureLogging(NullLoggerFactory.Instance);
     }
 
     [Fact]

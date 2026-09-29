@@ -1,15 +1,15 @@
 ﻿using System;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.PostgresSQL.Tests
 {
     internal sealed class PostgresSqlTestHelper
     {
         private readonly bool _binaryMessagePayload;
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgresSqlTestHelper>();
+        private static readonly ILogger s_logger = NullLogger<PostgresSqlTestHelper>.Instance;
         private readonly PostgreSqlSettings _postgreSqlSettings;
         private readonly string _tableName;
         private readonly object _syncObject = new();

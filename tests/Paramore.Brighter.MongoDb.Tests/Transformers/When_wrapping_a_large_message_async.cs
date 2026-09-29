@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MongoDb.Tests.TestDoubles;
@@ -43,7 +45,7 @@ public class LargeMessagePayloadAsyncWrapTests : IAsyncDisposable
 
         _publication = new Publication { Topic = new RoutingKey("MyLargeCommand"), RequestType = typeof(MyLargeCommand) };
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync, InstrumentationOptions.All);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync, NullLoggerFactory.Instance, InstrumentationOptions.All);
     }
 
     [Fact]

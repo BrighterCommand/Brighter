@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -24,6 +24,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.AzureServiceBus.Tests.Fakes;
@@ -125,8 +127,8 @@ public class AzureServiceBusContextPartitionKeyTests
         var administrationClient = new FakeAdministrationClient();
         var senderProvider = new FakeServiceBusSenderProvider(_sender);
         return useQueue
-            ? new AzureServiceBusQueueMessageProducer(administrationClient, senderProvider, _publication)
-            : new AzureServiceBusTopicMessageProducer(administrationClient, senderProvider, _publication);
+            ? new AzureServiceBusQueueMessageProducer(administrationClient, senderProvider, _publication, loggerFactory: NullLoggerFactory.Instance)
+            : new AzureServiceBusTopicMessageProducer(administrationClient, senderProvider, _publication, loggerFactory: NullLoggerFactory.Instance);
     }
 
     private Message CreateMessage()

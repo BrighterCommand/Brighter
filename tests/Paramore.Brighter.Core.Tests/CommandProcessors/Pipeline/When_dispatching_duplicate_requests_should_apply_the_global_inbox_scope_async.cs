@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -51,14 +53,14 @@ public class CommandProcessorGlobalInboxScopeAsyncTests
         {
             _ when type == typeof(InboxScopeAsyncCommandHandler) => new InboxScopeAsyncCommandHandler(),
             _ when type == typeof(InboxScopeAsyncEventHandler) => new InboxScopeAsyncEventHandler(),
-            _ when type == typeof(UseInboxHandlerAsync<InboxScopeAsyncCommand>) => new UseInboxHandlerAsync<InboxScopeAsyncCommand>(inbox),
-            _ when type == typeof(UseInboxHandlerAsync<InboxScopeAsyncEvent>) => new UseInboxHandlerAsync<InboxScopeAsyncEvent>(inbox),
+            _ when type == typeof(UseInboxHandlerAsync<InboxScopeAsyncCommand>) => new UseInboxHandlerAsync<InboxScopeAsyncCommand>(inbox, logger: LoggerFactoryExtensions.CreateLogger<UseInboxHandlerAsync<InboxScopeAsyncCommand>>( Initializer.TestLoggerFactory )),
+            _ when type == typeof(UseInboxHandlerAsync<InboxScopeAsyncEvent>) => new UseInboxHandlerAsync<InboxScopeAsyncEvent>(inbox, logger: LoggerFactoryExtensions.CreateLogger<UseInboxHandlerAsync<InboxScopeAsyncEvent>>( Initializer.TestLoggerFactory )),
             _ => throw new InvalidOperationException($"Unexpected handler type {type}")
         });
         var configuration = scope.HasValue ? new InboxConfiguration(inbox, scope.Value) : null;
         var processor = new CommandProcessor(registry, factory, new InMemoryRequestContextFactory(),
-            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(), new InMemorySchedulerFactory(),
-            inboxConfiguration: configuration);
+            new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+            inboxConfiguration: configuration,loggerFactory:Initializer.TestLoggerFactory);
         var command = new InboxScopeAsyncCommand();
         var duplicateCommand = new InboxScopeAsyncCommand { Id = command.Id };
         var @event = new InboxScopeAsyncEvent();

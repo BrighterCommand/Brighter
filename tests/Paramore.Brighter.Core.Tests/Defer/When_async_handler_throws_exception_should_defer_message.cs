@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Actions;
@@ -49,7 +51,7 @@ namespace Paramore.Brighter.Core.Tests.Defer
                 if (type == typeof(MyFailingDeferHandlerAsync))
                     return new MyFailingDeferHandlerAsync();
                 if (type == typeof(DeferMessageOnErrorHandlerAsync<MyCommand>))
-                    return new DeferMessageOnErrorHandlerAsync<MyCommand>();
+                    return new DeferMessageOnErrorHandlerAsync<MyCommand>(logger: LoggerFactoryExtensions.CreateLogger<DeferMessageOnErrorHandlerAsync<MyCommand>>(Initializer.TestLoggerFactory));
                 throw new ArgumentOutOfRangeException(nameof(type), type.Name, null);
             });
 
@@ -61,8 +63,8 @@ namespace Paramore.Brighter.Core.Tests.Defer
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
                 new ResiliencePipelineRegistry<string>(),
-                new InMemorySchedulerFactory()
-            );
+                new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
+                loggerFactory: Initializer.TestLoggerFactory);
         }
 
         [Fact]

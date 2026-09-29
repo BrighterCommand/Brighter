@@ -1,4 +1,6 @@
-﻿using Paramore.Brighter.CircuitBreaker;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.CircuitBreaker;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CircuitBreaker
@@ -10,9 +12,8 @@ namespace Paramore.Brighter.Core.Tests.CircuitBreaker
         {
             // Arrange
             var trippedTopic = new RoutingKey("topic");
-            var circuitBreaker = new InMemoryOutboxCircuitBreaker(
-                new OutboxCircuitBreakerOptions() { CooldownCount = 1 });
-            
+            var circuitBreaker = new InMemoryOutboxCircuitBreaker(LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory), new OutboxCircuitBreakerOptions() { CooldownCount = 1 });
+
             // Act
             circuitBreaker.TripTopic(trippedTopic);
 
@@ -25,8 +26,7 @@ namespace Paramore.Brighter.Core.Tests.CircuitBreaker
         {
             // Arrange
             var trippedTopic = new RoutingKey("topic");
-            var circuitBreaker = new InMemoryOutboxCircuitBreaker(
-                new OutboxCircuitBreakerOptions() { CooldownCount = 1 });
+            var circuitBreaker = new InMemoryOutboxCircuitBreaker(LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>(Initializer.TestLoggerFactory), new OutboxCircuitBreakerOptions() { CooldownCount = 1 });
             circuitBreaker.TripTopic(trippedTopic);
 
             // Act

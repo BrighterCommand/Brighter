@@ -23,20 +23,20 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
         {
             _commandProcessor = new SpyCommandProcessor();
             var channel = new FailingChannelAsync(
-                new ChannelName("myChannel"), _routingKey, 
-                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000)), 
+                new ChannelName("myChannel"), _routingKey,
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, ackTimeout: TimeSpan.FromMilliseconds(1000), loggerFactory: Initializer.TestLoggerFactory),
                 2)
             {
                 NumberOfRetries = 1
             };
-            
+
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,
                 new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
             messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
-            
-            _messagePump = new ServiceActivator.Proactor(_commandProcessor, (message) => typeof(MyEvent), 
-                messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), channel)
+
+            _messagePump = new ServiceActivator.Proactor(_commandProcessor, (message) => typeof(MyEvent),
+                messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), channel, loggerFactory: Initializer.TestLoggerFactory)
             {
                 Channel = channel, TimeOut = TimeSpan.FromMilliseconds(500), RequeueCount = -1
             };
@@ -45,20 +45,20 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 
             //Two events will be received when channel fixed
             var message1 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
                 new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options))
             );
             var message2 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
                 new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options))
             );
             channel.Enqueue(message1);
             channel.Enqueue(message2);
-            
+
             //Quit the message pump
             var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);
             channel.Enqueue(quitMessage);
-            
+
         }
 
         [Fact]

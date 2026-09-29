@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using Paramore.Brighter.MessagingGateway.Redis;
@@ -49,13 +51,13 @@ public class RedisMessageConsumerUnacceptableFallbackToDlqTests : IDisposable
         var dlqQueueName = new ChannelName($"fallback-test-dlq-{Guid.NewGuid()}");
 
         _messageProducer = new RedisMessageProducer(configuration,
-            new RedisMessagePublication { Topic = topic });
+            new RedisMessagePublication { Topic = topic }, loggerFactory: NullLoggerFactory.Instance);
 
         // Only DLQ configured — no invalidMessageRoutingKey
         _consumer = new RedisMessageConsumer(configuration, queueName, topic,
-            deadLetterRoutingKey: dlqTopic);
+            deadLetterRoutingKey: dlqTopic, loggerFactory: NullLoggerFactory.Instance);
 
-        _dlqConsumer = new RedisMessageConsumer(configuration, dlqQueueName, dlqTopic);
+        _dlqConsumer = new RedisMessageConsumer(configuration, dlqQueueName, dlqTopic, loggerFactory: NullLoggerFactory.Instance);
 
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_COMMAND),

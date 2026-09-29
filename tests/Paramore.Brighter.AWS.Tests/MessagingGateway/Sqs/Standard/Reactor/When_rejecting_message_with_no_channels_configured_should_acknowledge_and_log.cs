@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Net.Mime;
 using System.Text.Json;
@@ -70,12 +72,12 @@ public class SqsMessageConsumerNoChannelsRejectTests : IDisposable, IAsyncDispos
 
         var awsConnection = GatewayFactory.CreateFactory();
 
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: NullLoggerFactory.Instance);
         _channel = _channelFactory.CreateSyncChannel(subscription);
 
         _messageProducer = new SqsMessageProducer(
             awsConnection,
-            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create));
+            new SqsPublication(channelName: channelName, makeChannels: OnMissingChannel.Create), loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

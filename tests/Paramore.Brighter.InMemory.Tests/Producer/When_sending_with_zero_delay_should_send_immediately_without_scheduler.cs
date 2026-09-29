@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using Microsoft.Extensions.Time.Testing;
@@ -45,7 +47,7 @@ public class When_sending_with_zero_delay_should_send_immediately_without_schedu
     {
         // Arrange
         _bus = new InternalBus();
-        _producer = new InMemoryMessageProducer(_bus);
+        _producer = new InMemoryMessageProducer(_bus, loggerFactory: NullLoggerFactory.Instance);
         _scheduler = new SpyScheduler();
         _producer.Scheduler = _scheduler;
 

@@ -16,7 +16,7 @@ public class ScopedMapperDirectReleaseTests
         // its own DI scope, reclaimed only when the caller releases it).
         var disposals = new DisposalLog();
 
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddSingleton(disposals);
         collection.AddScoped<DisposableMapper>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions { MapperLifetime = ServiceLifetime.Scoped });

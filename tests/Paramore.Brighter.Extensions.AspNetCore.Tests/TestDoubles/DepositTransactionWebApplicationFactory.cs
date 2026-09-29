@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -144,14 +145,6 @@ public sealed class DepositTransactionWebApplicationFactory : WebApplicationFact
     {
         builder.ConfigureServices(services =>
         {
-            // SqliteOutbox resolves ApplicationLogging.LoggerFactory (a process-wide mutable static)
-            // eagerly, in its own constructor, every time one is constructed - not once, cached, like a
-            // closed generic Brighter type's own static logger field. Constructing one directly below,
-            // during ConfigureServices and therefore before this host's own CommandProcessor has had a
-            // chance to repin that static to itself, is vulnerable to whatever value a concurrently
-            // running test's already-disposed host last left there. Re-pinning it to Initializer's own,
-            // never-disposed factory immediately before that construction closes that window.
-            ApplicationLogging.LoggerFactory = Initializer.Factory;
 
             services.AddControllers().AddApplicationPart(typeof(DepositTransactionController).Assembly);
 
@@ -166,7 +159,7 @@ public sealed class DepositTransactionWebApplicationFactory : WebApplicationFact
             var routingKey = new RoutingKey("deposit-transaction-posted");
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { routingKey, new InMemoryMessageProducer(new InternalBus(), new Publication { Topic = routingKey, RequestType = typeof(DepositEntityPostedCommand) }) }
+                { routingKey, new InMemoryMessageProducer(new InternalBus(),Initializer.Factory, new Publication { Topic = routingKey, RequestType = typeof(DepositEntityPostedCommand) }) }
             });
 
             var outboxConfiguration = new RelationalDatabaseConfiguration(
@@ -185,9 +178,9 @@ public sealed class DepositTransactionWebApplicationFactory : WebApplicationFact
             .AddProducers(cfg =>
             {
                 cfg.ProducerRegistry = producerRegistry;
-                cfg.Outbox = new SqliteOutbox(outboxConfiguration, new AttachOutboxConnectionProvider(outboxConfiguration, _outboxDatabasePath));
+                cfg.Outbox = new SqliteOutbox(outboxConfiguration,new AttachOutboxConnectionProvider(outboxConfiguration, _outboxDatabasePath),logger:LoggerFactoryExtensions.CreateLogger<Paramore.Brighter.Outbox.Sqlite.SqliteOutbox>(Initializer.Factory));
                 cfg.TransactionProvider = typeof(AttachOutboxTransactionProvider);
-            }, ServiceLifetime.Scoped);
+            },ServiceLifetime.Scoped);
         });
 
         builder.Configure(app =>

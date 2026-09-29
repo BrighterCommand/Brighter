@@ -31,7 +31,6 @@ using System.Reflection;
 using System.Runtime.ExceptionServices;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
@@ -47,7 +46,8 @@ namespace Paramore.Brighter
     /// </summary>
     public partial class TransformPipelineBuilderAsync
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<TransformPipelineBuilder>();
+        private readonly ILogger _logger;
+        private readonly ILoggerFactory _loggerFactory;
         private readonly IAmAMessageMapperRegistryAsync _mapperRegistryAsync;
 
         private readonly IAmAMessageTransformerFactoryAsync _messageTransformerFactoryAsync;
@@ -71,10 +71,12 @@ namespace Paramore.Brighter
         /// <param name="mapperRegistryAsync">The async message mapper registry, cannot be null</param>
         /// <param name="messageTransformerFactoryAsync">The async transform factory, can be null</param>
         /// <param name="instrumentationOptions">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
+        /// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
         /// <exception cref="ConfigurationException">Throws a configuration exception on a null mapperRegistry</exception>
         public TransformPipelineBuilderAsync(
             IAmAMessageMapperRegistryAsync mapperRegistryAsync,
             IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync,
+            ILoggerFactory loggerFactory,
             InstrumentationOptions instrumentationOptions
         )
         {
@@ -83,6 +85,8 @@ namespace Paramore.Brighter
                                        "TransformPipelineBuilder expected a Message Mapper Registry but none supplied");
             _messageTransformerFactoryAsync = messageTransformerFactoryAsync;
             _instrumentationOptions = instrumentationOptions;
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
+            _logger = loggerFactory.CreateBrighterLogger<TransformPipelineBuilder>();
         }
 
         /// <summary>
@@ -104,14 +108,14 @@ namespace Paramore.Brighter
 
                 transformLeases = BuildTransformPipeline<TRequest>(FindWrapTransforms(messageMapperLease.Instance), scope);
 
-                pipeline = new WrapPipelineAsync<TRequest>(messageMapperLease, _messageTransformerFactoryAsync, transformLeases, _instrumentationOptions, _mapperRegistryAsync, scope);
+                pipeline = new WrapPipelineAsync<TRequest>(messageMapperLease, _messageTransformerFactoryAsync, transformLeases, _instrumentationOptions, _loggerFactory, _mapperRegistryAsync, scope);
 
-                Log.NewWrapPipelineCreated(s_logger, typeof(TRequest).Name, TraceWrapPipeline(pipeline));
+                Log.NewWrapPipelineCreated(_logger, typeof(TRequest).Name, TraceWrapPipeline(pipeline));
 
                 var unwraps = FindUnwrapTransforms(messageMapperLease.Instance);
                 if (unwraps.Any())
                 {
-                    Log.UnwrapAttributesOnMapToMessageMethodIgnored(s_logger, typeof(TRequest).Name, TraceWrapPipeline(pipeline));
+                    Log.UnwrapAttributesOnMapToMessageMethodIgnored(_logger, typeof(TRequest).Name, TraceWrapPipeline(pipeline));
                 }
 
                 return pipeline;
@@ -152,14 +156,14 @@ namespace Paramore.Brighter
 
                 transformLeases = BuildTransformPipeline<TRequest>(FindUnwrapTransforms(messageMapperLease.Instance), scope);
 
-                pipeline = new UnwrapPipelineAsync<TRequest>(transformLeases, _messageTransformerFactoryAsync, messageMapperLease, _mapperRegistryAsync, scope);
+                pipeline = new UnwrapPipelineAsync<TRequest>(transformLeases, _messageTransformerFactoryAsync, messageMapperLease, _loggerFactory, _mapperRegistryAsync, scope);
 
-                Log.NewUnwrapPipelineCreated(s_logger, typeof(TRequest).Name, TraceUnwrapPipeline(pipeline));
+                Log.NewUnwrapPipelineCreated(_logger, typeof(TRequest).Name, TraceUnwrapPipeline(pipeline));
 
                 var wraps = FindWrapTransforms(messageMapperLease.Instance);
                 if (wraps.Any())
                 {
-                    Log.WrapAttributesOnMapToRequestMethodIgnored(s_logger, typeof(TRequest).Name, TraceUnwrapPipeline(pipeline));
+                    Log.WrapAttributesOnMapToRequestMethodIgnored(_logger, typeof(TRequest).Name, TraceUnwrapPipeline(pipeline));
                 }
 
                 return pipeline;
@@ -196,7 +200,7 @@ namespace Paramore.Brighter
             {
                 int i = transformAttributes.Count();
                 if (i > 0)
-                    Log.NoMessageTransformerFactoryConfigured(s_logger, i);
+                    Log.NoMessageTransformerFactoryConfigured(_logger, i);
 
                 return transforms;
             }
@@ -205,7 +209,7 @@ namespace Paramore.Brighter
             {
                 transformAttributes.Each((attribute) =>
                 {
-                    var transformerLease = new TransformerFactoryAsync<TRequest>(attribute, _messageTransformerFactoryAsync).CreateMessageTransformer(scope);
+                    var transformerLease = new TransformerFactoryAsync<TRequest>(attribute, _messageTransformerFactoryAsync, _loggerFactory.CreateBrighterLogger<TransformerFactoryAsync<TRequest>>()).CreateMessageTransformer(scope);
                     transforms.Add(transformerLease);
                 });
             }
@@ -225,7 +229,8 @@ namespace Paramore.Brighter
         //when no transformer factory was supplied (v9 compatibility), because none were created.
         private void ReleaseTransforms(IEnumerable<Lease<IAmAMessageTransformAsync>> transformLeases)
         {
-            if (_messageTransformerFactoryAsync is null) return;
+            if (_messageTransformerFactoryAsync is null)
+                return;
 
             //release every transform even when one Release throws: on the failed-build path no pipeline
             //owns these transforms and no finalizer retries, so skipping the rest would leak their DI
@@ -233,8 +238,9 @@ namespace Paramore.Brighter
             //build error the caller rethrows.
             foreach (var transformLease in transformLeases)
             {
-                try { _messageTransformerFactoryAsync.Release(transformLease); }
-                catch (Exception releaseException) { Log.FailedToReleaseTransform(s_logger, releaseException); }
+                try
+                { _messageTransformerFactoryAsync.Release(transformLease); }
+                catch (Exception releaseException) { Log.FailedToReleaseTransform(_logger, releaseException); }
             }
         }
 
@@ -271,7 +277,7 @@ namespace Paramore.Brighter
                 try { scope?.Dispose(); }
                 catch (Exception disposalException)
                 {
-                    Log.FailedToDisposePipelineScopeAfterFailedBuild(s_logger, typeof(TRequest).Name, disposalException);
+                    Log.FailedToDisposePipelineScopeAfterFailedBuild(_logger, typeof(TRequest).Name, disposalException);
                 }
             }
         }
@@ -286,7 +292,7 @@ namespace Paramore.Brighter
             where TRequest : class, IRequest
         {
             try { CleanUpAfterFailedBuild(pipeline, transformLeases, messageMapperLease, scope); }
-            catch (Exception cleanupException) { Log.FailedToCleanUpAfterFailedBuild(s_logger, cleanupException); }
+            catch (Exception cleanupException) { Log.FailedToCleanUpAfterFailedBuild(_logger, cleanupException); }
         }
 
         public static void ClearPipelineCache()

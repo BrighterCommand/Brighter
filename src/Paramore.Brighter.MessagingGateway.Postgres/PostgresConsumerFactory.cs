@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace Paramore.Brighter.MessagingGateway.Postgres;
 
 /// <summary>
@@ -5,7 +7,8 @@ namespace Paramore.Brighter.MessagingGateway.Postgres;
 /// This factory is responsible for instantiating <see cref="PostgresMessageConsumer"/> instances based on the
 /// provided <see cref="Subscription"/> configuration.
 /// </summary>
-public class PostgresConsumerFactory(PostgresMessagingGatewayConnection connection) : IAmAMessageConsumerFactory
+/// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
+public class PostgresConsumerFactory(PostgresMessagingGatewayConnection connection, ILoggerFactory loggerFactory) : IAmAMessageConsumerFactory
 {
     /// <inheritdoc />
     public IAmAMessageConsumerSync Create(Subscription subscription)
@@ -28,6 +31,7 @@ public class PostgresConsumerFactory(PostgresMessagingGatewayConnection connecti
         return new PostgresMessageConsumer(
             connection.Configuration,
             postgresSubscription,
+            loggerFactory,
             deadLetterRoutingKey,
             invalidMessageRoutingKey);
     }

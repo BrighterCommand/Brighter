@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Net.Mime;
@@ -62,7 +64,7 @@ public class RocketMqNoChannelsConfiguredTests : IDisposable
             consumerGroup: Guid.NewGuid().ToString(),
             messagePumpType: MessagePumpType.Reactor);
 
-        var consumerFactory = new RocketMessageConsumerFactory(connection);
+        var consumerFactory = new RocketMessageConsumerFactory(connection, loggerFactory: NullLoggerFactory.Instance);
         _consumer = consumerFactory.Create(sourceSub);
 
         _message = new Message(

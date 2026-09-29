@@ -22,7 +22,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Send
             registry.Register<MyCommand, MyCommandHandler>();
             registry.Register<MyCommand, MyImplicitHandler>();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyCommandHandler>(_ => new MyCommandHandler(_receivedMessages));
             container.AddTransient<MyImplicitHandler>();
             container.AddTransient<MyLoggingHandler<MyCommand>>();
@@ -30,7 +30,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Send
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new ResiliencePipelineRegistry<string>(),new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory), loggerFactory: Initializer.TestLoggerFactory);
             PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 

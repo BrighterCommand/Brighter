@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
@@ -61,10 +61,10 @@ public class SchedulerHandlerRegistrationTests
         bool addConsumers, bool explicitScheduler, bool explicitAssembly, int scanCount)
     {
         //Arrange
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(Initializer.Factory);
         var builder = addConsumers ? services.AddConsumers() : services.AddBrighter();
         if (explicitScheduler)
-            builder.UseScheduler(new InMemorySchedulerFactory());
+            builder.UseScheduler(new InMemorySchedulerFactory(loggerFactory: Initializer.Factory));
 
         //Act
         for (var scan = 0; scan < scanCount; scan++)

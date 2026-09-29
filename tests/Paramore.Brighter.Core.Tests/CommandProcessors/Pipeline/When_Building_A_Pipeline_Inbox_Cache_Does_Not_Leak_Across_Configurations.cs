@@ -20,7 +20,7 @@ public class When_Building_A_Pipeline_Inbox_Cache_Does_Not_Leak_Across_Configura
         var inboxRegistry = new SubscriberRegistry();
         inboxRegistry.Register<MyCommand, MyCommandHandler>();
 
-        var inboxContainer = new ServiceCollection();
+        var inboxContainer = new ServiceCollection().AddLogging();
         inboxContainer.AddTransient<MyCommandHandler>(_ => new MyCommandHandler(new Dictionary<string, string>()));
         inboxContainer.AddSingleton<IAmAnInboxSync>(new InMemoryInbox(new FakeTimeProvider()));
         inboxContainer.AddTransient<UseInboxHandler<MyCommand>>();
@@ -28,7 +28,7 @@ public class When_Building_A_Pipeline_Inbox_Cache_Does_Not_Leak_Across_Configura
 
         var inboxHandlerFactory = new ServiceProviderHandlerFactory(inboxContainer.BuildServiceProvider());
         var inboxBuilder = new PipelineBuilder<MyCommand>(
-            inboxRegistry, (IAmAHandlerFactorySync)inboxHandlerFactory, new InboxConfiguration());
+            inboxRegistry, (IAmAHandlerFactorySync)inboxHandlerFactory, Initializer.TestLoggerFactory, new InboxConfiguration());
 
         var withInbox = inboxBuilder.Build(new MyCommand(), new RequestContext());
         var withInboxTrace = TracePipeline(withInbox.First());
@@ -38,13 +38,13 @@ public class When_Building_A_Pipeline_Inbox_Cache_Does_Not_Leak_Across_Configura
         var noInboxRegistry = new SubscriberRegistry();
         noInboxRegistry.Register<MyCommand, MyCommandHandler>();
 
-        var noInboxContainer = new ServiceCollection();
+        var noInboxContainer = new ServiceCollection().AddLogging();
         noInboxContainer.AddTransient<MyCommandHandler>(_ => new MyCommandHandler(new Dictionary<string, string>()));
         noInboxContainer.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
 
         var noInboxHandlerFactory = new ServiceProviderHandlerFactory(noInboxContainer.BuildServiceProvider());
         var noInboxBuilder = new PipelineBuilder<MyCommand>(
-            noInboxRegistry, (IAmAHandlerFactorySync)noInboxHandlerFactory);
+            noInboxRegistry, (IAmAHandlerFactorySync)noInboxHandlerFactory, loggerFactory: Initializer.TestLoggerFactory);
 
         var withoutInbox = noInboxBuilder.Build(new MyCommand(), new RequestContext());
         var withoutInboxTrace = TracePipeline(withoutInbox.First());
@@ -60,13 +60,13 @@ public class When_Building_A_Pipeline_Inbox_Cache_Does_Not_Leak_Across_Configura
         var noInboxRegistry = new SubscriberRegistry();
         noInboxRegistry.Register<MyCommand, MyCommandHandler>();
 
-        var noInboxContainer = new ServiceCollection();
+        var noInboxContainer = new ServiceCollection().AddLogging();
         noInboxContainer.AddTransient<MyCommandHandler>(_ => new MyCommandHandler(new Dictionary<string, string>()));
         noInboxContainer.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
 
         var noInboxHandlerFactory = new ServiceProviderHandlerFactory(noInboxContainer.BuildServiceProvider());
         var noInboxBuilder = new PipelineBuilder<MyCommand>(
-            noInboxRegistry, (IAmAHandlerFactorySync)noInboxHandlerFactory);
+            noInboxRegistry, (IAmAHandlerFactorySync)noInboxHandlerFactory, loggerFactory: Initializer.TestLoggerFactory);
 
         var withoutInbox = noInboxBuilder.Build(new MyCommand(), new RequestContext());
         var withoutInboxTrace = TracePipeline(withoutInbox.First());
@@ -76,7 +76,7 @@ public class When_Building_A_Pipeline_Inbox_Cache_Does_Not_Leak_Across_Configura
         var inboxRegistry = new SubscriberRegistry();
         inboxRegistry.Register<MyCommand, MyCommandHandler>();
 
-        var inboxContainer = new ServiceCollection();
+        var inboxContainer = new ServiceCollection().AddLogging();
         inboxContainer.AddTransient<MyCommandHandler>(_ => new MyCommandHandler(new Dictionary<string, string>()));
         inboxContainer.AddSingleton<IAmAnInboxSync>(new InMemoryInbox(new FakeTimeProvider()));
         inboxContainer.AddTransient<UseInboxHandler<MyCommand>>();
@@ -84,7 +84,7 @@ public class When_Building_A_Pipeline_Inbox_Cache_Does_Not_Leak_Across_Configura
 
         var inboxHandlerFactory = new ServiceProviderHandlerFactory(inboxContainer.BuildServiceProvider());
         var inboxBuilder = new PipelineBuilder<MyCommand>(
-            inboxRegistry, (IAmAHandlerFactorySync)inboxHandlerFactory, new InboxConfiguration());
+            inboxRegistry, (IAmAHandlerFactorySync)inboxHandlerFactory, Initializer.TestLoggerFactory, new InboxConfiguration());
 
         var withInbox = inboxBuilder.Build(new MyCommand(), new RequestContext());
         var withInboxTrace = TracePipeline(withInbox.First());
@@ -100,7 +100,7 @@ public class When_Building_A_Pipeline_Inbox_Cache_Does_Not_Leak_Across_Configura
         var inboxRegistry = new SubscriberRegistry();
         inboxRegistry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
 
-        var inboxContainer = new ServiceCollection();
+        var inboxContainer = new ServiceCollection().AddLogging();
         inboxContainer.AddSingleton(new MyCommandHandlerAsync(new Dictionary<string, string>()));
         inboxContainer.AddSingleton<IAmAnInboxAsync>(new InMemoryInbox(new FakeTimeProvider()));
         inboxContainer.AddTransient<UseInboxHandlerAsync<MyCommand>>();
@@ -108,7 +108,7 @@ public class When_Building_A_Pipeline_Inbox_Cache_Does_Not_Leak_Across_Configura
 
         var inboxHandlerFactory = new ServiceProviderHandlerFactory(inboxContainer.BuildServiceProvider());
         var inboxBuilder = new PipelineBuilder<MyCommand>(
-            inboxRegistry, (IAmAHandlerFactoryAsync)inboxHandlerFactory, new InboxConfiguration());
+            inboxRegistry, (IAmAHandlerFactoryAsync)inboxHandlerFactory, Initializer.TestLoggerFactory, new InboxConfiguration());
 
         var withInbox = inboxBuilder.BuildAsync(new MyCommand(), new RequestContext(), false);
         var withInboxTrace = TraceAsyncPipeline(withInbox.First());
@@ -118,13 +118,13 @@ public class When_Building_A_Pipeline_Inbox_Cache_Does_Not_Leak_Across_Configura
         var noInboxRegistry = new SubscriberRegistry();
         noInboxRegistry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
 
-        var noInboxContainer = new ServiceCollection();
+        var noInboxContainer = new ServiceCollection().AddLogging();
         noInboxContainer.AddSingleton(new MyCommandHandlerAsync(new Dictionary<string, string>()));
         noInboxContainer.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
 
         var noInboxHandlerFactory = new ServiceProviderHandlerFactory(noInboxContainer.BuildServiceProvider());
         var noInboxBuilder = new PipelineBuilder<MyCommand>(
-            noInboxRegistry, (IAmAHandlerFactoryAsync)noInboxHandlerFactory);
+            noInboxRegistry, (IAmAHandlerFactoryAsync)noInboxHandlerFactory, loggerFactory: Initializer.TestLoggerFactory);
 
         var withoutInbox = noInboxBuilder.BuildAsync(new MyCommand(), new RequestContext(), false);
         var withoutInboxTrace = TraceAsyncPipeline(withoutInbox.First());
@@ -140,13 +140,13 @@ public class When_Building_A_Pipeline_Inbox_Cache_Does_Not_Leak_Across_Configura
         var noInboxRegistry = new SubscriberRegistry();
         noInboxRegistry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
 
-        var noInboxContainer = new ServiceCollection();
+        var noInboxContainer = new ServiceCollection().AddLogging();
         noInboxContainer.AddSingleton(new MyCommandHandlerAsync(new Dictionary<string, string>()));
         noInboxContainer.AddSingleton<IBrighterOptions>(new BrighterOptions { HandlerLifetime = ServiceLifetime.Transient });
 
         var noInboxHandlerFactory = new ServiceProviderHandlerFactory(noInboxContainer.BuildServiceProvider());
         var noInboxBuilder = new PipelineBuilder<MyCommand>(
-            noInboxRegistry, (IAmAHandlerFactoryAsync)noInboxHandlerFactory);
+            noInboxRegistry, (IAmAHandlerFactoryAsync)noInboxHandlerFactory, loggerFactory: Initializer.TestLoggerFactory);
 
         var withoutInbox = noInboxBuilder.BuildAsync(new MyCommand(), new RequestContext(), false);
         var withoutInboxTrace = TraceAsyncPipeline(withoutInbox.First());
@@ -156,7 +156,7 @@ public class When_Building_A_Pipeline_Inbox_Cache_Does_Not_Leak_Across_Configura
         var inboxRegistry = new SubscriberRegistry();
         inboxRegistry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
 
-        var inboxContainer = new ServiceCollection();
+        var inboxContainer = new ServiceCollection().AddLogging();
         inboxContainer.AddSingleton(new MyCommandHandlerAsync(new Dictionary<string, string>()));
         inboxContainer.AddSingleton<IAmAnInboxAsync>(new InMemoryInbox(new FakeTimeProvider()));
         inboxContainer.AddTransient<UseInboxHandlerAsync<MyCommand>>();
@@ -164,7 +164,7 @@ public class When_Building_A_Pipeline_Inbox_Cache_Does_Not_Leak_Across_Configura
 
         var inboxHandlerFactory = new ServiceProviderHandlerFactory(inboxContainer.BuildServiceProvider());
         var inboxBuilder = new PipelineBuilder<MyCommand>(
-            inboxRegistry, (IAmAHandlerFactoryAsync)inboxHandlerFactory, new InboxConfiguration());
+            inboxRegistry, (IAmAHandlerFactoryAsync)inboxHandlerFactory, Initializer.TestLoggerFactory, new InboxConfiguration());
 
         var withInbox = inboxBuilder.BuildAsync(new MyCommand(), new RequestContext(), false);
         var withInboxTrace = TraceAsyncPipeline(withInbox.First());

@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -64,7 +66,7 @@ public class RunnerMidChainFailureRollbackTests : IAsyncLifetime
             realMigrations, BrokenVersion, BrokenUpScript);
         var brokenCatalog = new BrokenChainCatalog(brokenMigrations, realCatalog.FreshInstallDdl(config));
 
-        var brokenRunner = new SqliteBoxMigrationRunner(brokenCatalog, config);
+        var brokenRunner = new SqliteBoxMigrationRunner(brokenCatalog, config, loggerFactory: NullLoggerFactory.Instance);
         var staleHint = new BoxTableState(TableExists: true, HistoryExists: false, CurrentVersion: SeedVersion);
 
         //Act + Assert (1) — broken V6 in chain: runner throws and rolls back everything.
@@ -88,13 +90,13 @@ public class RunnerMidChainFailureRollbackTests : IAsyncLifetime
         Assert.Equal(1, await GetMarkerRowCount());
 
         //Act + Assert (2) — retry with the real migration list: bootstrap path completes V4..V7.
-        var realRunner = new SqliteBoxMigrationRunner(realCatalog, config);
+        var realRunner = new SqliteBoxMigrationRunner(realCatalog, config, loggerFactory: NullLoggerFactory.Instance);
         var provisioner = new SqliteOutboxProvisioner(
             new SqliteBoxDetectionHelper(),
             new SqliteOutboxMigrationCatalog(),
             new SqlitePayloadModeValidator(),
             config,
-            realRunner);
+            realRunner, loggerFactory: NullLoggerFactory.Instance);
         await provisioner.ProvisionAsync();
 
         //Assert — exactly one synthetic V3 + one applied per V4..V7 (no duplicates).

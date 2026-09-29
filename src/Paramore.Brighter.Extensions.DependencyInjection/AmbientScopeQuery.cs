@@ -23,6 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
 {
@@ -104,7 +106,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 return null;
             }
 
-            return new ServiceProviderPipelineScope(ServiceProviderLifetimeScope.CreateBorrowed(src.Services, scopeProvider.GetType()));
+            return new ServiceProviderPipelineScope(ServiceProviderLifetimeScope.CreateBorrowed(
+                src.Services, scopeProvider.GetType(), rootProvider.GetRequiredService<ILoggerFactory>()));
         }
     }
 }

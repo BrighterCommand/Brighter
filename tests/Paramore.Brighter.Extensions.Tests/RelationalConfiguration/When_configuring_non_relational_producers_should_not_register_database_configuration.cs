@@ -41,6 +41,7 @@ public class NonRelationalConfigurationRegistrationTests
     {
         //Arrange
         var services = new ServiceCollection();
+        services.AddSingleton(Initializer.Factory);
         var outbox = explicitOutbox ? new InMemoryOutbox(TimeProvider.System) : null;
 
         //Act

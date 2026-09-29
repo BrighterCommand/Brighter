@@ -11,7 +11,7 @@ public class MapperFactoryDisposedCreateTests
     public void When_creating_a_mapper_after_the_factory_is_disposed_should_throw()
     {
         //arrange
-        var collection = new ServiceCollection();
+        var collection = new ServiceCollection().AddLogging();
         collection.AddTransient<NonDisposableMapper>();
         collection.AddSingleton<IBrighterOptions>(new BrighterOptions { MapperLifetime = ServiceLifetime.Transient });
         var provider = collection.BuildServiceProvider();

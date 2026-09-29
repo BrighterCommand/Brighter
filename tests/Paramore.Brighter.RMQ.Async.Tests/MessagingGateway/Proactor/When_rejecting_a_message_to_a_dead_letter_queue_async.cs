@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Net.Mime;
@@ -62,7 +64,7 @@ public class RmqMessageProducerDLQTestsAsync : IDisposable, IAsyncDisposable
             DeadLetterExchange = new Exchange("paramore.brighter.exchange.dlq")
         };
             
-        _messageProducer = new RmqMessageProducer(rmqConnection);
+        _messageProducer = new RmqMessageProducer(rmqConnection, loggerFactory: NullLoggerFactory.Instance);
 
         _messageConsumer = new RmqMessageConsumer(
             connection: rmqConnection, 
@@ -72,16 +74,16 @@ public class RmqMessageProducerDLQTestsAsync : IDisposable, IAsyncDisposable
             highAvailability: false,
             deadLetterQueueName: deadLetterQueueName,
             deadLetterRoutingKey: deadLetterRoutingKey,
-            makeChannels:OnMissingChannel.Create
-        );
+            makeChannels:OnMissingChannel.Create,
+            loggerFactory: NullLoggerFactory.Instance);
 
         _deadLetterConsumer = new RmqMessageConsumer(
             connection: rmqConnection,
             queueName: deadLetterQueueName,
             routingKey: deadLetterRoutingKey,
             isDurable: true,
-            makeChannels:OnMissingChannel.Assume
-        );
+            makeChannels:OnMissingChannel.Assume,
+            loggerFactory: NullLoggerFactory.Instance);
     }
 
     [Fact]

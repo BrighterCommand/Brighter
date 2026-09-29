@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using Confluent.Kafka;
 using Paramore.Brighter.MessagingGateway.Kafka;
@@ -34,7 +36,7 @@ public class KafkaTimeStampRoundTripTests
     {
         //act - first hop: the original send
         Headers firstHopHeaders = _builder.Build(_message);
-        Message firstHop = new KafkaMessageCreator().CreateMessage(ConsumeResultFor(firstHopHeaders));
+        Message firstHop = new KafkaMessageCreator(logger: LoggerFactoryExtensions.CreateLogger<KafkaMessageCreator>( NullLoggerFactory.Instance )).CreateMessage(ConsumeResultFor(firstHopHeaders));
 
         //assert - the instant, and its UTC wall-clock, survive the hop
         Assert.Equal(s_timeStamp, firstHop.Header.TimeStamp);

@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -38,7 +40,8 @@ namespace Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 internal sealed class BrokerUnreachableRmqMessageConsumer : RmqMessageConsumer
 {
     public BrokerUnreachableRmqMessageConsumer(RmqMessagingGatewayConnection connection, ChannelName queueName, RoutingKey routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) 
-        : base(connection, queueName, routingKey, isDurable, isHighAvailability) { }
+        : base(connection, queueName, routingKey, isDurable,
+            NullLoggerFactory.Instance, isHighAvailability) { }
 
     protected override Task EnsureChannelAsync(CancellationToken ct = default)
     {
@@ -49,7 +52,8 @@ internal sealed class BrokerUnreachableRmqMessageConsumer : RmqMessageConsumer
 internal sealed class AlreadyClosedRmqMessageConsumer : RmqMessageConsumer
 {
     public AlreadyClosedRmqMessageConsumer(RmqMessagingGatewayConnection connection, ChannelName queueName, RoutingKey routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) 
-        : base(connection, queueName, routingKey, isDurable, isHighAvailability) { }
+        : base(connection, queueName, routingKey, isDurable,
+            NullLoggerFactory.Instance, isHighAvailability) { }
 
     protected override Task EnsureChannelAsync(CancellationToken ct = default)
     {
@@ -60,7 +64,8 @@ internal sealed class AlreadyClosedRmqMessageConsumer : RmqMessageConsumer
 internal sealed class OperationInterruptedRmqMessageConsumer : RmqMessageConsumer
 {
     public OperationInterruptedRmqMessageConsumer(RmqMessagingGatewayConnection connection, ChannelName queueName, RoutingKey routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) 
-        : base(connection, queueName, routingKey, isDurable,isHighAvailability) { }
+        : base(connection, queueName, routingKey, isDurable,
+            NullLoggerFactory.Instance, isHighAvailability) { }
 
     protected override Task EnsureChannelAsync(CancellationToken ct = default)
     {
@@ -71,7 +76,8 @@ internal sealed class OperationInterruptedRmqMessageConsumer : RmqMessageConsume
 internal sealed class NotSupportedRmqMessageConsumer : RmqMessageConsumer
 {
     public NotSupportedRmqMessageConsumer(RmqMessagingGatewayConnection connection, ChannelName queueName, RoutingKey routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) 
-        : base(connection, queueName, routingKey, isDurable, isHighAvailability) { }
+        : base(connection, queueName, routingKey, isDurable,
+            NullLoggerFactory.Instance, isHighAvailability) { }
 
     protected override Task EnsureChannelAsync(CancellationToken ct = default)
     {

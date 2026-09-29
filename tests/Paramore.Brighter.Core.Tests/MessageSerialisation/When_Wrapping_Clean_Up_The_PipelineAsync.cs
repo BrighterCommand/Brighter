@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Paramore.Brighter.Observability;
@@ -25,12 +25,12 @@ public class AsyncMessageWrapCleanupTests
         mapperRegistry.RegisterAsync<MyTransformableCommand, MyTransformableCommandMessageMapperAsync>();
 
         _myCommand = new MyTransformableCommand();
-        
+
         _publication = new Publication{Topic = new RoutingKey("MyTransformableCommand"), RequestType= typeof(MyTransformableCommand)};
-        
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, new MyReleaseTrackingTransformFactoryAsync(), InstrumentationOptions.All);
+
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, new MyReleaseTrackingTransformFactoryAsync(), Initializer.TestLoggerFactory, InstrumentationOptions.All);
     }
-    
+
     [Fact]
     public async Task When_Wrapping_Clean_Up_The_Pipeline()
     {
@@ -38,12 +38,12 @@ public class AsyncMessageWrapCleanupTests
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
         var message = await _transformPipeline.WrapAsync(_myCommand, new RequestContext(), _publication);
         _transformPipeline.Dispose();
-        
+
         //assert
         Assert.Equal("|MySimpleTransformAsync", s_released);
 
     }
-    
+
     private sealed class MyReleaseTrackingTransformFactoryAsync : IAmAMessageTransformerFactoryAsync
     {
         public IAmAScope? CreatePipelineScope() => null;

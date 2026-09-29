@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Threading;
@@ -103,7 +105,8 @@ file sealed class TimeoutCapturingSqliteBoxMigrationRunner : SqliteBoxMigrationR
 
     // Uses the detection-helper ctor with `lockTimeout` OMITTED — the path under regression-pin.
     public TimeoutCapturingSqliteBoxMigrationRunner(IAmARelationalDatabaseConfiguration configuration)
-        : base(new SqliteBoxDetectionHelper(), new SqliteOutboxMigrationCatalog(), configuration)
+        : base(new SqliteBoxDetectionHelper(), new SqliteOutboxMigrationCatalog(), configuration,
+            NullLoggerFactory.Instance)
     {
     }
 

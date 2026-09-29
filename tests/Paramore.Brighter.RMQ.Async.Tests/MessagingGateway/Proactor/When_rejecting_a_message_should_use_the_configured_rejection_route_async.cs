@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2026 Irakli Gabisonia
 
@@ -24,6 +24,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -95,8 +97,8 @@ public class RmqInvalidMessageRoutingTests
         await using var administration = await brokerConnection.CreateChannelAsync();
         try
         {
-            await using var producer = new RmqMessageProducer(connection);
-            var factory = new RmqMessageConsumerFactory(connection);
+            await using var producer = new RmqMessageProducer(connection,loggerFactory:NullLoggerFactory.Instance);
+            var factory = new RmqMessageConsumerFactory(connection,loggerFactory:NullLoggerFactory.Instance);
             await using var consumer = useAsync
                 ? (RmqMessageConsumer)factory.CreateAsync(subscription)
                 : (RmqMessageConsumer)factory.Create(subscription);
@@ -105,13 +107,13 @@ public class RmqInvalidMessageRoutingTests
                 queueName: new ChannelName(invalidRoutingKey.Value),
                 routingKey: invalidRoutingKey,
                 isDurable: true,
-                makeChannels: OnMissingChannel.Assume);
+                makeChannels: OnMissingChannel.Assume,loggerFactory:NullLoggerFactory.Instance);
             await using var deadLetterConsumer = new RmqMessageConsumer(
                 connection: connection,
                 queueName: new ChannelName(deadLetterRoutingKey.Value),
                 routingKey: deadLetterRoutingKey,
                 isDurable: true,
-                makeChannels: OnMissingChannel.Assume);
+                makeChannels: OnMissingChannel.Assume,loggerFactory:NullLoggerFactory.Instance);
             var message = new Message(
                 new MessageHeader(Id.Random(), routingKey, MessageType.MT_COMMAND),
                 new MessageBody("unacceptable message"));

@@ -51,10 +51,11 @@ public partial class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
     /// Initializes a new instance of the <see cref="ChannelFactory"/> class.
     /// </summary>
     /// <param name="awsConnection">The details of the subscription to AWS.</param>
-    public ChannelFactory(AWSMessagingGatewayConnection awsConnection)
-        : base(awsConnection)
+    /// <param name="loggerFactory">The application-owned logger factory. Must not be null.</param>
+    public ChannelFactory(AWSMessagingGatewayConnection awsConnection, ILoggerFactory loggerFactory)
+        : base(awsConnection, loggerFactory)
     {
-        _messageConsumerFactory = new SqsMessageConsumerFactory(awsConnection);
+        _messageConsumerFactory = new SqsMessageConsumerFactory(awsConnection, loggerFactory);
         _retryPolicy = Policy
             .Handle<InvalidOperationException>()
             .WaitAndRetryAsync([TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10)]);
@@ -169,7 +170,7 @@ public partial class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
             }
             catch (Exception)
             {
-                Log.CouldNotDeleteQueue(s_logger, queueExists.queueUrl);
+                Log.CouldNotDeleteQueue(Logger, queueExists.queueUrl);
             }
         }
     }
@@ -196,7 +197,7 @@ public partial class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
             }
             catch (Exception)
             {
-                Log.CouldNotDeleteTopic(s_logger, ChannelTopicArn);
+                Log.CouldNotDeleteTopic(Logger, ChannelTopicArn);
             }
         }
     }
@@ -311,7 +312,7 @@ public partial class ChannelFactory : AwsMessagingGateway, IAmAChannelFactory
                     await snsClient.UnsubscribeAsync(new UnsubscribeRequest { SubscriptionArn = sub.SubscriptionArn });
                 if (unsubscribe.HttpStatusCode != HttpStatusCode.OK)
                 {
-                    Log.ErrorUnsubscribingFromTopic(s_logger, ChannelAddress, sub.SubscriptionArn);
+                    Log.ErrorUnsubscribingFromTopic(Logger, ChannelAddress, sub.SubscriptionArn);
                 }
             }
         } while (response.NextToken != null);

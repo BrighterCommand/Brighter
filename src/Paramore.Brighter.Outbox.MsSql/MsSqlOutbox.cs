@@ -28,7 +28,7 @@ using System.Data;
 using System.Data.Common;
 using System.Linq;
 using Microsoft.Data.SqlClient;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.MsSql;
 using Paramore.Brighter.Observability;
 
@@ -47,10 +47,12 @@ public class MsSqlOutbox : RelationDatabaseOutbox
     /// </summary>
     /// <param name="configuration">The configuration.</param>
     /// <param name="connectionProvider">The connection factory.</param>
+    /// <param name="logger">The logger to use.</param>
     public MsSqlOutbox(IAmARelationalDatabaseConfiguration configuration,
-        IAmARelationalDbConnectionProvider connectionProvider) 
+        IAmARelationalDbConnectionProvider connectionProvider,
+        ILogger<MsSqlOutbox> logger)
         : base(DbSystem.MsSql, configuration, connectionProvider,
-            new MsSqlQueries(), ApplicationLogging.CreateLogger<MsSqlOutbox>())
+            new MsSqlQueries(), logger)
     {
     }
 
@@ -58,8 +60,9 @@ public class MsSqlOutbox : RelationDatabaseOutbox
     ///     Initializes a new instance of the <see cref="MsSqlOutbox" /> class.
     /// </summary>
     /// <param name="configuration">The configuration.</param>
-    public MsSqlOutbox(IAmARelationalDatabaseConfiguration configuration) : this(configuration,
-        new MsSqlConnectionProvider(configuration))
+    /// <param name="logger">The logger to use.</param>
+    public MsSqlOutbox(IAmARelationalDatabaseConfiguration configuration, ILogger<MsSqlOutbox> logger) : this(configuration,
+        new MsSqlConnectionProvider(configuration), logger)
     {
     }
 

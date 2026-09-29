@@ -1,4 +1,6 @@
-﻿using System.Net.Mime;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System.Net.Mime;
 using System.Text.Json;
 using Amazon.Scheduler;
 using Paramore.Brighter.AWSScheduler.Tests.Helpers;
@@ -26,7 +28,7 @@ public class SqsSchedulingRequestAsyncTest : IAsyncDisposable
     {
         var awsConnection = GatewayFactory.CreateFactory();
 
-        _channelFactory = new ChannelFactory(awsConnection);
+        _channelFactory = new ChannelFactory(awsConnection, loggerFactory: NullLoggerFactory.Instance);
         var subscriptionName = $"Buffered-Scheduler-Async-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         _queueName = $"Buffered-Scheduler-Async-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
 
@@ -39,7 +41,7 @@ public class SqsSchedulingRequestAsyncTest : IAsyncDisposable
             delaySeconds: TimeSpan.Zero,
             tags: new Dictionary<string, string> { { "Environment", "Test" } }
         );
-        
+
         var channel = _channelFactory.CreateAsyncChannelAsync(new SqsSubscription<MyCommand>(
             subscriptionName: new SubscriptionName(subscriptionName),
             channelName: new ChannelName(_queueName),
@@ -48,17 +50,19 @@ public class SqsSchedulingRequestAsyncTest : IAsyncDisposable
 
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
         //just for the tests, so create a new consumer from the properties
-        _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), BufferSize);
-        
+        _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), NullLoggerFactory.Instance, BufferSize);
+
         //in principle, for point-to-point, we don't need both sides to create the queue;  whoever does not own the API can just validate
         _messageProducer = new SqsMessageProducer(
             awsConnection,
-            new SqsPublication{ QueueAttributes = sqsAttributes,  MakeChannels = OnMissingChannel.Create });
-        
+            new SqsPublication { QueueAttributes = sqsAttributes, MakeChannels = OnMissingChannel.Create }, loggerFactory: NullLoggerFactory.Instance);
+
         _scheduler = new AWSClientFactory(awsConnection).CreateSchedulerClient();
         _factory = new AwsSchedulerFactory(awsConnection, "brighter-scheduler")
         {
-            UseMessageTopicAsTarget = false, MakeRole = OnMissingRole.Create, SchedulerTopicOrQueue = routingKey
+            UseMessageTopicAsTarget = false,
+            MakeRole = OnMissingRole.Create,
+            SchedulerTopicOrQueue = routingKey
         };
     }
 

@@ -26,7 +26,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
         {
             var commandProcessor = new SpyCommandProcessor();
 
-            var container = new ServiceCollection();
+            var container = new ServiceCollection().AddLogging();
             container.AddTransient<MyEventMessageMapperAsync>();
             container.AddTransient<MyCommandMessageMapperAsync>();
 
@@ -38,39 +38,39 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
 
             var myEventConnection = new Subscription<MyEvent>(
-                new SubscriptionName("test"), 
-                noOfPerformers: 1, 
-                timeOut: TimeSpan.FromMilliseconds(1000), 
-                channelFactory: new InMemoryChannelFactory(_bus, _timeProvider), 
+                new SubscriptionName("test"),
+                noOfPerformers: 1,
+                timeOut: TimeSpan.FromMilliseconds(1000),
+                channelFactory: new InMemoryChannelFactory(_bus, _timeProvider, loggerFactory: Initializer.TestLoggerFactory),
                 messagePumpType: MessagePumpType.Proactor,
-                channelName: new ChannelName("fakeEventChannel"), 
+                channelName: new ChannelName("fakeEventChannel"),
                 routingKey: _eventRoutingKey
             );
             var myCommandConnection = new Subscription<MyCommand>(
-                new SubscriptionName("anothertest"), 
-                noOfPerformers: 1, 
-                timeOut: TimeSpan.FromMilliseconds(1000), 
-                channelFactory: new InMemoryChannelFactory(_bus, _timeProvider), 
-                channelName: new ChannelName("fakeCommandChannel"), 
-                messagePumpType: MessagePumpType.Proactor, 
+                new SubscriptionName("anothertest"),
+                noOfPerformers: 1,
+                timeOut: TimeSpan.FromMilliseconds(1000),
+                channelFactory: new InMemoryChannelFactory(_bus, _timeProvider, loggerFactory: Initializer.TestLoggerFactory),
+                channelName: new ChannelName("fakeCommandChannel"),
+                messagePumpType: MessagePumpType.Proactor,
                 routingKey: _commandRoutingKey
                 );
-            _dispatcher = new Dispatcher(commandProcessor, new List<Subscription> { myEventConnection, myCommandConnection }, messageMapperRegistryAsync: messageMapperRegistry);
+            _dispatcher = new Dispatcher(commandProcessor, new List<Subscription> { myEventConnection, myCommandConnection }, messageMapperRegistryAsync: messageMapperRegistry, loggerFactory: Initializer.TestLoggerFactory);
 
             var @event = new MyEvent();
             var eventMessage = new MyEventMessageMapperAsync().MapToMessageAsync(@event, new Publication{Topic = _eventRoutingKey})
                 .GetAwaiter()
                 .GetResult();
-            
+
             _bus.Enqueue(eventMessage);
 
             var command = new MyCommand();
             var commandMessage = new MyCommandMessageMapperAsync().MapToMessageAsync(command, new Publication{Topic = _commandRoutingKey})
                 .GetAwaiter()
                 .GetResult();
-            
+
             _bus.Enqueue(commandMessage);
-            
+
             Assert.Equal(DispatcherState.DS_AWAITING, _dispatcher.State);
             _dispatcher.Receive();
         }
@@ -80,11 +80,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
         public async Task When_A_Message_Dispatcher_Starts_Different_Types_Of_Performers()
         {
             await Task.Delay(1000);
-            
+
             _numberOfConsumers = _dispatcher.Consumers.Count();
-            
+
             _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
-            
+
             await _dispatcher.End();
 
             Assert.Empty(_bus.Stream(_eventRoutingKey));
@@ -93,7 +93,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
             Assert.Empty(_dispatcher.Consumers);
             Assert.Equal(2, _numberOfConsumers);
         }
-        
+
         public void Dispose()
         {
             if (_dispatcher?.State == DispatcherState.DS_RUNNING)

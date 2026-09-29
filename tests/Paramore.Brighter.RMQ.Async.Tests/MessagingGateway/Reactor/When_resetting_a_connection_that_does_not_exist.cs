@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
@@ -34,7 +36,7 @@ namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Reactor;
 [Collection("RMQ")]
 public class RmqMessageGatewayConnectionPoolResetConnectionDoesNotExist
 {
-    private readonly RmqMessageGatewayConnectionPool _connectionPool = new("MyConnectionName", 7);
+    private readonly RmqMessageGatewayConnectionPool _connectionPool = new("MyConnectionName", 7, loggerFactory: NullLoggerFactory.Instance);
 
     [Fact]
     public async Task When_resetting_a_connection_that_does_not_exist()

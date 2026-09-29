@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
@@ -62,7 +64,7 @@ public class RmqMessageProducerDisposeConfirmationTests : IDisposable, IAsyncLif
             {
                 MakeChannels = OnMissingChannel.Create,
                 WaitForConfirmsTimeOutInMilliseconds = 2000
-            });
+            }, loggerFactory: NullLoggerFactory.Instance);
 
         _messageProducer.OnMessagePublished += result =>
         {

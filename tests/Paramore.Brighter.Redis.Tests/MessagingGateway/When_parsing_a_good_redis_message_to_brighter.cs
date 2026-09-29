@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using Xunit;
 using Paramore.Brighter.MessagingGateway.Redis;
@@ -16,7 +18,7 @@ public class RedisGoodMessageParsingTests
     [Fact]
     public void When_parsing_a_good_redis_message_to_brighter()
     {
-        Message message = RedisMessageCreator.CreateMessage(GoodMessage);
+        Message message = new RedisMessageCreator(logger: NullLoggerFactory.Instance.CreateLogger<RedisMessageCreator>()).CreateMessage(GoodMessage);
 
         // Assert existing properties
         Assert.Equal(DateTime.Parse("2018-02-07T09:38:36Z"), message.Header.TimeStamp);

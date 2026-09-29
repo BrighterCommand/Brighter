@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #nullable enable
 
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -104,7 +106,8 @@ public class SqlBoxProvisionerNegativeVersionClampTests
             IAmARelationalDatabaseConfiguration configuration,
             IAmABoxMigrationRunner migrationRunner,
             BoxType boxType)
-            : base(detectionHelper, catalog, payloadValidator, configuration, migrationRunner, boxType)
+            : base(detectionHelper, catalog, payloadValidator, configuration, migrationRunner, boxType,
+                NullLoggerFactory.Instance)
         {
         }
 

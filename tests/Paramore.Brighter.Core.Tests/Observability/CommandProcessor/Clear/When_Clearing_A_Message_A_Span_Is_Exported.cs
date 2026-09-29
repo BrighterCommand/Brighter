@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -70,7 +70,7 @@ public class CommandProcessorClearObservabilityTests
 
         _traceProvider.ForceFlush();
 
-        //assert 
+        //assert
         //+1 confirmation (settle) span emitted per confirmed message (FR-2)
         Assert.Equal(9, _exportedActivities.Count);
         Assert.Contains(_exportedActivities, a => a.Source.Name == "Paramore.Brighter");
@@ -231,10 +231,10 @@ public class CommandProcessorClearObservabilityTests
     private Brighter.CommandProcessor CreateCommandProcessor(InstrumentationOptions instrumentationOptions)
     {
         _publicationType = new CloudEventsType("io.goparamore.brighter.myevent");
-        
+
         var messageProducer = new InMemoryMessageProducer(
             _internalBus,
-            new Publication
+            Initializer.TestLoggerFactory, new Publication
             {
                 Source = publicationSource, RequestType = typeof(MyEvent), Topic = _routingKey, Type = _publicationType,
             },
@@ -263,14 +263,14 @@ public class CommandProcessorClearObservabilityTests
         var producerRegistry = new ProducerRegistry(new Dictionary<ProducerKey, IAmAMessageProducer> { { new ProducerKey(_routingKey, _publicationType), messageProducer } });
 
         IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-            producerRegistry, 
-            new ResiliencePipelineRegistry<string>().AddBrighterDefault(), 
-            messageMapperRegistry, 
-            new EmptyMessageTransformerFactory(), 
+            producerRegistry,
+            new ResiliencePipelineRegistry<string>().AddBrighterDefault(),
+            messageMapperRegistry,
+            new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             new FindPublicationByPublicationTopicOrRequestType(),
-            outbox,
+            Initializer.TestLoggerFactory, outbox,
             maxOutStandingMessages: -1,
             instrumentationOptions: instrumentationOptions
         );
@@ -279,12 +279,12 @@ public class CommandProcessorClearObservabilityTests
             registry,
             handlerFactory,
             new InMemoryRequestContextFactory(),
-            policyRegistry, 
+            policyRegistry,
             new ResiliencePipelineRegistry<string>(),
             bus,
-            new InMemorySchedulerFactory(),
+            new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory),
             tracer: tracer,
-            instrumentationOptions: instrumentationOptions
-        );
+            instrumentationOptions: instrumentationOptions,
+            loggerFactory: Initializer.TestLoggerFactory);
     }
 }

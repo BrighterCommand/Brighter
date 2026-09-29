@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.Base.Test.Inbox;
@@ -14,7 +16,7 @@ public class SqliteTextInboxAsyncTest : RelationalDatabaseInboxAsyncTests
 
     protected override RelationalDatabaseInbox CreateInbox(RelationalDatabaseConfiguration configuration)
     {
-        return new SqliteInbox(configuration);
+        return new SqliteInbox(configuration, logger: NullLoggerFactory.Instance.CreateLogger<SqliteInbox>());
     }
 
     protected override async Task CreateInboxTableAsync(RelationalDatabaseConfiguration configuration)

@@ -1,4 +1,6 @@
-﻿using System;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -30,7 +32,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             var timeProvider = new FakeTimeProvider();
             var tracer = new BrighterTracer(timeProvider);
             _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
-            InMemoryMessageProducer messageProducer = new(_internalBus, new Publication { Topic = _routingKey, RequestType = typeof(MyCommand) });
+            InMemoryMessageProducer messageProducer = new(_internalBus, Initializer.TestLoggerFactory, new Publication { Topic = _routingKey, RequestType = typeof(MyCommand) });
 
             _message = new Message(
                 new MessageHeader(_myCommand.Id, _routingKey, MessageType.MT_COMMAND),
@@ -54,17 +56,18 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(),
                 tracer: tracer,
                 publicationFinder: new FindPublicationByPublicationTopicOrRequestType(),
-                outboxCircuitBreaker: new InMemoryOutboxCircuitBreaker(),
-                outbox: _outbox
-            );  
-            
+                outboxCircuitBreaker: new InMemoryOutboxCircuitBreaker(logger: LoggerFactoryExtensions.CreateLogger<InMemoryOutboxCircuitBreaker>( Initializer.TestLoggerFactory )),
+                outbox: _outbox,
+                loggerFactory: Initializer.TestLoggerFactory);
+
             _commandProcessor = CommandProcessorBuilder.StartNew()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactorySync()))
                 .DefaultResilience()
                 .ExternalBus(ExternalBusType.FireAndForget, externalBus)
                 .ConfigureInstrumentation(new BrighterTracer(TimeProvider.System), InstrumentationOptions.All)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
-                .RequestSchedulerFactory(new InMemorySchedulerFactory())
+                .RequestSchedulerFactory(new InMemorySchedulerFactory(loggerFactory: Initializer.TestLoggerFactory))
+                .ConfigureLogging(Initializer.TestLoggerFactory)
                 .Build();
         }
 
@@ -74,7 +77,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             _commandProcessor.Post(_myCommand);
 
             Assert.True(_internalBus.Stream(new RoutingKey(_routingKey)).Any());
-            
+
             var message = _outbox.Get(_myCommand.Id, new RequestContext());
             Assert.NotNull(message);
             Assert.Equal(_message, message);
