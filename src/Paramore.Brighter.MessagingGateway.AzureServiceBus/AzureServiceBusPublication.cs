@@ -52,9 +52,10 @@ public class AzureServiceBusPublication : Publication
     }
         
     /// <summary>
-    /// Use a Service Bus Queue instead of a Topic
+    /// Gets or sets whether to use a Service Bus queue instead of a topic.
     /// </summary>
-    public bool UseServiceBusQueue = false;
+    /// <value><see langword="true"/> to use a queue; otherwise, <see langword="false"/>. Defaults to <see langword="false"/>.</value>
+    public bool UseServiceBusQueue { get; set; } = false;
 }
 
 /// <summary>

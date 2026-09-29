@@ -96,9 +96,12 @@ Describe the solution you'd like from a user perspective (not implementation det
 ## Requirements
 
 ### Functional Requirements
+- **FR-{n} — {title}.** (see *Declaration form* below — every FR opens this way)
+- A sub-numbered clause folds into its parent: **FR-{n}.{m} — {title}.**
 - List the key functional requirements
 
 ### Non-functional Requirements
+- **NFR-{n} — {title}.** (see *Declaration form* below — every NFR opens this way)
 - Performance requirements
 - Scalability requirements
 - Security requirements
@@ -123,6 +126,30 @@ How we'll know this is working correctly:
 Add any other context or screenshots about the feature request here.
 ```
 
+#### Declaration form (required)
+
+Every numbered functional or non-functional requirement **must** be declared by a bold lead-in
+that opens the line, optionally as a `- ` list item, with a sub-numbered clause written
+`**FR-{n}.{m} — …**`:
+
+```markdown
+**FR-3 — The command resolves its target deterministically.**
+- **NFR-1 — Mechanical fields are deterministic.**
+**FR-27.3 — A sub-numbered clause folds into FR-27.**
+```
+
+The placeholder form the template above uses is `**FR-{n} — {title}.**` / `**NFR-{n} — {title}.**`.
+
+A heading declaration or a numbered-list declaration is **not** recognised by `/spec:show-me`,
+shown here only with placeholders since a concrete-number example must be a correct one:
+
+```markdown
+#### FR-{n}: {title}
+1. **FR-{n}** — {title}
+```
+
+Do not use either of those two forms for a real requirement.
+
 #### Quality bar (include in the sub-agent prompt)
 
 Draft requirements that would survive a skeptical reviewer:
@@ -136,6 +163,9 @@ Draft requirements that would survive a skeptical reviewer:
   reasonably implement a requirement differently.
 - **Boundedness**: scope is clearly bounded; each FR has clear start/end conditions; no
   contradictions between sections.
+- **Declaration form**: every numbered FR and NFR opens with the bold lead-in shown in
+  *Declaration form* above — never a heading or a numbered-list declaration, which
+  `/spec:show-me` does not recognise.
 - **Acceptance criteria**: every FR maps to at least one AC, written in Given/When/Then or
   an equivalent testable format.
 

@@ -198,7 +198,16 @@ public class AzureServiceBusMessageGatewayProvider
 
         var consumerFactory = new AzureServiceBusConsumerFactory(ASBCreds.ASBClientProvider);
         var channelFactory = new AzureServiceBusChannelFactory(consumerFactory);
-        return channelFactory.CreateSyncChannel(subscription);
+        var channel = channelFactory.CreateSyncChannel(subscription);
+
+        // Bug #4318: a channel's first-ever receive pays for an unbounded management-plane
+        // subscription check plus AMQP connection/link setup, on top of whatever timeout is
+        // requested. A test that sends a short-delay message and then does a short bounded
+        // receive to assert absence can see that cold-start cost eat into the delay window,
+        // making a correctly-scheduled message look like it arrived early. Warming the
+        // receiver here, once, up front, keeps that cost out of every test's timing budget.
+        channel.Receive(TimeSpan.FromMilliseconds(1000));
+        return channel;
     }
 
     public void CleanUp(
@@ -335,7 +344,11 @@ public class AzureServiceBusMessageGatewayProvider
 
         var consumerFactory = new AzureServiceBusConsumerFactory(ASBCreds.ASBClientProvider);
         var channelFactory = new AzureServiceBusChannelFactory(consumerFactory);
-        return await channelFactory.CreateAsyncChannelAsync(subscription, cancellationToken);
+        var channel = await channelFactory.CreateAsyncChannelAsync(subscription, cancellationToken);
+
+        // Bug #4318: see the sync CreateChannel overload for why this warm-up receive exists.
+        await channel.ReceiveAsync(TimeSpan.FromMilliseconds(1000), cancellationToken);
+        return channel;
     }
 
     public async Task CleanUpAsync(
