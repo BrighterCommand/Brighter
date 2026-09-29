@@ -542,6 +542,23 @@ baseline failures (real-GCP-only), zero in `MessagingGateway`, so no cell was re
 ledger. **FR-23 itself stays `Deferred` here** — this paragraph's blocker is unaffected and still
 applies; it is Phase 6/7 territory (ADR 0077, delivery count), not this task's scope.
 
+⭐ **Measurement (2026-09-29, spec 0037 task 6.7, AC-39): the emulator's broker delivery counter is
+populated and advances on a DLQ-backed subscription.** This was run on a clean emulator. The
+subscription carried a native `DeadLetterPolicy` (`MaxDeliveryAttempts = 5`), which Brighter's channel
+factory can now create on the emulator because 5.3 tolerates the IAM failures described below. One
+message was deferred on its first two deliveries and acknowledged on the third, and the raw counter
+was read on each delivery:
+- **Pull:** `ReceivedMessage.DeliveryAttempt` = **1, 2, 3**, with the deferral as `ModifyAckDeadline(…, 0)`,
+  the same call `GcpPullMessageConsumer.Requeue` makes.
+- **Stream:** `GetDeliveryAttempt()` = **1, 2, 3**, with the deferral as `SubscriberClient.Reply.Nack`.
+
+Both sequences repeated on a second run. Fixture:
+`tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Pull/GcpDeliveryAttemptMeasurementTests.cs`
+(committed Skip-marked). ADR 0077's *Measurement outcome* under "R-13 (GCP): the branch rule" records
+that A-2 held and claims **AC-19**. The broker counter advances where the header-carried `HandledCount`
+cannot (see the second blocker below), and that is the mechanism 6.10/6.11 wire in. **The four FR-23
+cells stay `Deferred` until 6.16 moves them.**
+
 Measured 2026-09-12 against `docker-compose-gcp.yaml` (the `cloud-sdk:emulators` Pub/Sub emulator on
 `localhost:8085`, with `PUBSUB_EMULATOR_HOST` and `GOOGLE_CLOUD_PROJECT` exported). All eight tests —
 four configurations × both variants — fail in ~4 s during **arrange**, before any pump runs. The

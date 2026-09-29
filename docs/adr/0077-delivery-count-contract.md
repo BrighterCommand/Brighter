@@ -178,6 +178,45 @@ Mechanism: the broker counter above. Input: AC-39's measurement (the selector is
 | Data encoded in `AckId` | opaque, undocumented — not a contract |
 | **Conclusion** | none fits; a refuted A-2 selects AC-40 |
 
+##### Measurement outcome (2026-09-29) — task 6.7, AC-39
+
+Measured on a **clean** local Pub/Sub emulator (`docker-compose -f docker-compose-gcp.yaml down -v; up -d`)
+with the Skip-marked fixture
+`tests/Paramore.Brighter.Gcp.Tests/MessagingGateway/Pull/GcpDeliveryAttemptMeasurementTests.cs` (unskip
+locally to reproduce; both facts stay `[Fact(Skip = "measurement — AC-39")]` in the committed tree). Each
+fact provisions its subscription through Brighter's own channel factory with a native `DeadLetterPolicy`
+(`MaxDeliveryAttempts = 5`, creatable on the emulator since 0078/R-20, task 5.3), confirms the policy
+with a raw `GetSubscription` before publishing, publishes one message, and defers it on the first two
+deliveries, acknowledging the third. The counter is read with raw Google clients, because Brighter's
+`Parser` does not surface it until 6.10/6.11:
+
+| Consumer | Counter read | Deferral | Observed on deliveries 1, 2, 3 |
+|---|---|---|---|
+| Pull | `ReceivedMessage.DeliveryAttempt` from `SubscriberServiceApiClient.Pull` | `ModifyAckDeadline(…, 0)` — the call `GcpPullMessageConsumer.Requeue` makes | **1, 2, 3** |
+| Stream | `PubsubExtensions.GetDeliveryAttempt()` in a `SubscriberClient` callback | `SubscriberClient.Reply.Nack` | **1, 2, 3** |
+
+Both were run twice (the first on the freshly reset emulator), with identical sequences each time.
+
+- **(b) A-2 held.** The counter is populated, strictly increasing and starts at `1` on both consumers.
+  No `delivery_attempt`-independent mechanism is needed; the pre-recorded search above stands as run,
+  but is not selected.
+- **(c) The broker-counter mechanism satisfies R-1 to R-5 within NFR-1 to NFR-3.** `Normalise` maps the
+  observed `1, 2, 3` to `0, 1, 2`, so R-2 (first delivery `0`) and R-1 (strictly greater on each
+  redelivery) hold. R-3 then holds under the approximate classification above. R-4/R-5 follow from R-1
+  through the pump's existing `HandledCountReached` check and Phase 5's routing. The value is a field
+  already on the receive response (pull) or an attribute already on the message (stream), so no extra
+  round trip per delivery (NFR-1) and none per requeue (NFR-3). NFR-2 is left to AC-37's allocation
+  measurement, as on every transport.
+- **(d) AC-19 claimed; AC-40 not applicable**, on the strength of (c) and this measurement. Tasks
+  6.10–6.16 are taken, and 6.20–6.21 are marked `[!] not taken — AC-39 selected AC-19`.
+
+**Caveat, not a refutation:** the stream deferral here is `SubscriberClient`'s own `Nack`, not Brighter's
+stream `Requeue` through a pump. A Brighter pump that requeues on a GCP Stream channel currently hangs
+([#4479](https://github.com/BrighterCommand/Brighter/issues/4479); related
+[#4449](https://github.com/BrighterCommand/Brighter/issues/4449)). That is a defect in the consumer's
+settle path, not in the counter this branch rule measures. It may still block the AC-19 stream tasks
+(6.11, 6.14, and 6.16's `GCP / Stream*` rows) until it is fixed.
+
 #### GCP stream consumer lease-lapse procedure for AC-42 (first branch only)
 
 Both `GCP / Stream` and `GCP / StreamOrdering`, emulator, both variants (NFR-8), through `GcpPubSubStreamMessageConsumer`.
