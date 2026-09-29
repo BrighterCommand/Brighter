@@ -62,12 +62,14 @@ public class AzureServiceBusSubscriptionConfiguration
     public bool RequireSession { get; set; } = false;
 
     /// <summary>
-    /// A Sql Filter to apply to the subscription
+    /// Gets or sets the SQL filter to apply to the subscription.
     /// </summary>
-    public string SqlFilter = string.Empty;
+    /// <value>The SQL filter expression, or an empty string to use the default rule.</value>
+    public string SqlFilter { get; set; } = string.Empty;
 
     /// <summary>
-    /// Use a Service Bus Queue instead of a Topic
+    /// Gets or sets whether to use a Service Bus queue instead of a topic.
     /// </summary>
-    public bool UseServiceBusQueue = false;
+    /// <value><see langword="true"/> to use a queue; otherwise, <see langword="false"/>. Defaults to <see langword="false"/>.</value>
+    public bool UseServiceBusQueue { get; set; } = false;
 }

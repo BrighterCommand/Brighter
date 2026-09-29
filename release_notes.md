@@ -8,6 +8,31 @@ Disposing a RabbitMQ producer or consumer now releases only its own use of the p
 Other gateways sharing that connection can continue sending and receiving. Both RabbitMQ gateways
 close the connection when its last gateway releases it; explicit pool reset and removal still close
 it immediately. Disposing a gateway from before a reset cannot close the replacement connection.
+### Relational outbox configuration registration (#4279)
+
+`AddProducers(Action<ProducersConfiguration>, ...)` now registers a relational outbox's database configuration when `IAmARelationalDatabaseConfiguration` is missing.
+The fallback reuses the outbox's configuration instance. Existing explicit registrations and provider lifetimes remain unchanged.
+A later ordinary registration overrides the fallback for single-service resolution; a later `TryAdd` does not.
+
+The deferred `AddProducers(Func<IServiceProvider, ProducersConfiguration>, ...)` overload still requires explicit configuration registration when a provider needs it.
+Non-relational outboxes do not register database configuration.
+### Azure configuration options: rebuild and test when upgrading (#4285)
+
+Six Azure configuration fields are now public read/write properties, so property-based tooling can discover them:
+
+| Type | Members |
+| --- | --- |
+| `AzureServiceBusSubscriptionConfiguration` | `SqlFilter`, `UseServiceBusQueue` |
+| `AzureServiceBusPublication` | `UseServiceBusQueue` (also inherited by `AzureServiceBusPublication<T>`) |
+| `AzureBlobLockingProviderOptions` | `StorageLocationFunc` |
+| `AzureBlobArchiveProviderOptions` | `StorageLocationFunc`, `TagsFunc` |
+
+Names, types, defaults, and post-construction assignment are unchanged. Property-based configuration binding now applies the Service Bus scalar options.
+Delegate-valued Blob options remain configured in code; this change does not make delegates bindable from text configuration.
+
+**Rebuild and test applications and dependent libraries when upgrading.** Ordinary reads, assignments, and object initializers remain source-compatible after recompilation.
+Already compiled code that accesses these fields is not binary-compatible with the new properties; replacing Brighter assemblies without rebuilding is not sufficient.
+Code using field reflection or passing these members by reference needs source changes. Property-based serializers may now encounter delegate values they previously ignored.
 
 ### Scoped lifetime per pipeline (spec 0036, #4256)
 
