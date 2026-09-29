@@ -99,7 +99,7 @@ public class RmqMessageProducerRequeuingMessageTests : IDisposable
         _channel = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection))
             .CreateSyncChannel(subscription);
 
-        new QueueFactory(rmqConnection, queueName, new RoutingKeys(_message.Header.Topic))
+        new QueueFactory(rmqConnection, queueName, new RoutingKeys(_message.Header.Topic), isDurable: true)
             .Create(TimeSpan.FromSeconds(1));
     }
 
