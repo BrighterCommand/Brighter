@@ -132,10 +132,32 @@ All three tests are red today and fail the same way on every run (8/8 runs). Eac
 
 ## Fix
 
-`src/Paramore.Brighter/InMemoryBox.cs`: `RunRemoveExpiredMessages` and `RunCompact` now take `_cleanupRunningLockObject` with a blocking `lock`, replacing `Monitor.TryEnter`. A cleanup task that finds the lock held now waits for the running cleanup to finish, instead of silently dropping its work. Before this change, the scan interval and the compaction cooldown meant the dropped work was never retried.
+**First attempt (`85d3325ad`, superseded):** replaced `Monitor.TryEnter` with a blocking `lock`. This stopped work being lost, but under load it holds a pool thread for every waiting request. With a short `ExpirationScanInterval` and scans slower than that interval, those blocked threads pile up and make the pool starvation worse. A compaction that had to wait also used a stale entry count.
 
-- This one change covers both the outbox and the inbox, because both inherit from `InMemoryBox<T>`.
-- It covers both compaction and expiry, because both go through the same two methods.
-- Nothing else changed: no default values, and no change to the cooldown or scan-interval logic.
+**Final fix: `src/Paramore.Brighter/InMemoryBox.cs`.** Expiry and compaction requests are merged onto a single background worker.
 
-**Result:** the 3 regression tests and the original `When_compacting_only_dispatched_messages_in_outbox` pass in 5 out of 5 runs.
+- `ClearExpiredMessages` and `EnforceCapacityLimit` keep their existing interval and cooldown checks. When cleanup is due, they record a request and call `EnsureCleanupWorker()`.
+- At most one worker runs, started with `Task.Factory.StartNew(..., TaskScheduler.Default)`. So it always runs on the thread pool, never on a Reactor/Proactor pump's `SynchronizationContext`. It contains no `await` and no blocking wait.
+- The worker loops, taking pending requests until none are left. It decides to stop under the same lock that requests are recorded under, so no request can be missed. If a pass throws, the running flag is reset so the next request starts a new worker.
+- Compaction is re-checked when it runs. It is skipped if the box is now under `EntryLimit`, and it never removes enough to take the box below its target size.
+- Both boxes are covered because `InMemoryOutbox` and `InMemoryInbox` share this base class. Nothing else changed: no defaults, cooldown logic or interval logic.
+
+**Additional tests for the rework:**
+
+- `Outbox/When_expiry_is_requested_repeatedly_during_a_cleanup_should_coalesce_into_one_scan.cs`. Before the rework this ran 6 scans; it now runs 2.
+- `Outbox/When_expiry_brings_the_outbox_under_its_limit_before_a_waiting_compaction_should_not_compact.cs`. Before the rework it over-trimmed and left 1 entry; it now leaves 3.
+
+**Second contributing cause, thread-pool starvation from other tests (test-only fix, `e72f0fa91`):**
+
+- `ConcurrentStartGuardTests` puts 20 `Task.Run` items on a `Barrier`, and the scheduler same-id concurrency test puts 100.
+- In CI they starved the pool for 19–27s, which delayed the background cleanup past the tests' waits. This was seen on PR #4482.
+- `ConcurrentStartGuardTests` was added in `af0501b35` (June), after #4116.
+- Both test classes now run in the non-parallel `ThreadPoolSaturating` collection.
+
+**Results:**
+
+| Suite | Result |
+|---|---|
+| InMemory | 158/158 on net9.0 and net10.0 |
+| Core (net9.0) | 1484 passed, 7 skipped |
+| 17 cleanup tests, 10 runs with `DOTNET_PROCESSOR_COUNT=2` | green every run |

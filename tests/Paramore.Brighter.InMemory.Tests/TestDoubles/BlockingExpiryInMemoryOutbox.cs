@@ -10,14 +10,19 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
     internal sealed class BlockingExpiryInMemoryOutbox(TimeProvider timeProvider) : InMemoryOutbox(timeProvider)
     {
         private volatile bool _armed;
+        private int _expiryScans;
 
         public ManualResetEventSlim ExpiryEntered { get; } = new(false);
         public ManualResetEventSlim ReleaseExpiry { get; } = new(false);
+
+        public int ExpiryScans => Volatile.Read(ref _expiryScans);
 
         public void ArmExpiryBlock() => _armed = true;
 
         protected override void RemoveExpiredMessages(DateTimeOffset now)
         {
+            Interlocked.Increment(ref _expiryScans);
+
             if (_armed)
             {
                 ExpiryEntered.Set();

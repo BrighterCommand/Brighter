@@ -51,7 +51,10 @@ namespace Paramore.Brighter
         protected readonly ConcurrentDictionary<string, T> Requests = new ConcurrentDictionary<string, T>();
         private DateTimeOffset _lastScanAt = timeProvider.GetUtcNow();
         private DateTimeOffset _lastCompactionAttemptAt = DateTimeOffset.MinValue;
-        private readonly object _cleanupRunningLockObject = new object();
+        private readonly object _cleanupStateLock = new object();
+        private DateTimeOffset? _expiryRequestedAt;
+        private int? _compactionRequested;
+        private bool _cleanupWorkerRunning;
         private int _entryLimit = 2048;
 
         /// <summary>
@@ -109,22 +112,13 @@ namespace Paramore.Brighter
 
             _lastScanAt = now;
 
-            //This is expensive, so use a background thread
-            Task.Factory.StartNew(
-                action: state => RunRemoveExpiredMessages((DateTimeOffset)state!),
-                state: now,
-                cancellationToken: CancellationToken.None,
-                creationOptions: TaskCreationOptions.DenyChildAttach,
-                scheduler: TaskScheduler.Default);
-        }
-
-        private void RunRemoveExpiredMessages(DateTimeOffset now)
-        {
-            //Wait for any running cleanup rather than skip; the scan interval means a skipped scan would not be retried
-            lock (_cleanupRunningLockObject)
+            //This is expensive, so hand it to the background cleanup worker
+            lock (_cleanupStateLock)
             {
-                RemoveExpiredMessages(now);
+                _expiryRequestedAt = now;
             }
+
+            EnsureCleanupWorker();
         }
 
         protected abstract void RemoveExpiredMessages(DateTimeOffset now);
@@ -149,24 +143,92 @@ namespace Paramore.Brighter
 
                     _lastCompactionAttemptAt = now;
 
-                    Task.Factory.StartNew(
-                        action: state => RunCompact((int)state!),
-                        state: entriesToRemove,
-                        CancellationToken.None,
-                        TaskCreationOptions.DenyChildAttach,
-                        TaskScheduler.Default);
+                    lock (_cleanupStateLock)
+                    {
+                        _compactionRequested = entriesToRemove;
+                    }
+
+                    EnsureCleanupWorker();
                 }
-        }
-        
-        private void RunCompact(int entriesToRemove)
-        {
-            //Wait for any running cleanup rather than skip; the compaction cooldown means a skipped compaction would not be retried
-            lock (_cleanupRunningLockObject)
-            {
-                Compact(entriesToRemove);
-            }
         }
 
         protected abstract void Compact(int entriesToRemove);
+
+        // Cleanup requests are coalesced onto a single background worker: a request made while the worker
+        // is running is picked up by its next pass, so no request is lost (the scan interval and compaction
+        // cooldown would stop it being retried) and no more than one pool thread is ever used for cleanup.
+        // The worker runs on the default scheduler, so never on a caller's SynchronizationContext.
+        private void EnsureCleanupWorker()
+        {
+            lock (_cleanupStateLock)
+            {
+                if (_cleanupWorkerRunning)
+                    return;
+
+                _cleanupWorkerRunning = true;
+            }
+
+            Task.Factory.StartNew(
+                action: RunCleanupWorker,
+                cancellationToken: CancellationToken.None,
+                creationOptions: TaskCreationOptions.DenyChildAttach,
+                scheduler: TaskScheduler.Default);
+        }
+
+        private void RunCleanupWorker()
+        {
+            try
+            {
+                while (TryTakeCleanupRequests(out var expiryRequestedAt, out var compactionRequested))
+                {
+                    if (expiryRequestedAt.HasValue)
+                        RemoveExpiredMessages(expiryRequestedAt.Value);
+
+                    if (compactionRequested.HasValue)
+                        CompactIfStillOverLimit(compactionRequested.Value);
+                }
+            }
+            catch
+            {
+                //let the next request start a new worker
+                lock (_cleanupStateLock)
+                {
+                    _cleanupWorkerRunning = false;
+                }
+
+                throw;
+            }
+        }
+
+        private bool TryTakeCleanupRequests(out DateTimeOffset? expiryRequestedAt, out int? compactionRequested)
+        {
+            lock (_cleanupStateLock)
+            {
+                expiryRequestedAt = _expiryRequestedAt;
+                compactionRequested = _compactionRequested;
+                _expiryRequestedAt = null;
+                _compactionRequested = null;
+
+                //deciding to stop under the same lock as a request is made means no request can be missed
+                if (!expiryRequestedAt.HasValue && !compactionRequested.HasValue)
+                    _cleanupWorkerRunning = false;
+
+                return _cleanupWorkerRunning;
+            }
+        }
+
+        // The request was sized when it was made; by the time it runs an expiry pass may already have
+        // brought the box back under its limit, so re-check, and never compact below the target size
+        private void CompactIfStillOverLimit(int entriesRequested)
+        {
+            var count = EntryCount;
+            var upperSize = EntryLimit;
+
+            if (upperSize == -1 || count < upperSize)
+                return;
+
+            int newSize = (int)(upperSize * CompactionPercentage);
+            Compact(Math.Min(entriesRequested, count - newSize));
+        }
     }
 }
