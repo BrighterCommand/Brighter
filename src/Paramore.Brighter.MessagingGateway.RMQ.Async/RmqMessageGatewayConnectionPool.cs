@@ -53,6 +53,8 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
     /// </summary>
     /// <param name="connectionFactory"></param>
     /// <returns></returns>
+    /// <remarks>The returned connection is borrowed and does not acquire a gateway reference.
+    /// Pool reset, removal or gateway disposal can close it.</remarks>
     public IConnection GetConnection(ConnectionFactory connectionFactory) => BrighterAsyncContext.Run(() => GetConnectionAsync(connectionFactory));
 
     /// <summary>
@@ -62,6 +64,8 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
     /// <param name="connectionFactory">A <see cref="ConnectionFactory"/> to create new connections</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken"/> to cancel the operation</param>
     /// <returns></returns>
+    /// <remarks>The returned connection is borrowed and does not acquire a gateway reference.
+    /// Pool reset, removal or gateway disposal can close it.</remarks>
     public Task<IConnection> GetConnectionAsync(ConnectionFactory connectionFactory, CancellationToken cancellationToken = default)
         => GetConnectionAsync(connectionFactory, false, cancellationToken);
 
@@ -141,10 +145,9 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
         await s_lock.WaitAsync().ConfigureAwait(false);
         try
         {
-            if (!s_connectionPool.TryGetValue(connectionId, out var pooledConnection)
-                || !ReferenceEquals(pooledConnection.Connection, connection)) return;
+            if (!s_connectionPool.TryGetValue(connectionId, out var pooledConnection)) return;
 
-            pooledConnection.ReferenceCount--;
+            if (ReferenceEquals(pooledConnection.Connection, connection)) pooledConnection.ReferenceCount--;
             if (pooledConnection.ReferenceCount == 0)
             {
                 await TryRemoveConnectionAsync(connectionId).ConfigureAwait(false);
@@ -216,9 +219,9 @@ public partial class RmqMessageGatewayConnectionPool(string connectionName, usho
     {
         if (s_connectionPool.TryGetValue(connectionId, out PooledConnection? pooledConnection))
         {
+            s_connectionPool.Remove(connectionId);
             pooledConnection.Connection.ConnectionShutdownAsync -= pooledConnection.ShutdownHandler;
             await pooledConnection.Connection.DisposeAsync().ConfigureAwait(false);
-            s_connectionPool.Remove(connectionId);
         }
     }
 

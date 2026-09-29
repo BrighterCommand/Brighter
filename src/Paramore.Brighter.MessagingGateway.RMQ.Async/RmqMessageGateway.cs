@@ -59,6 +59,7 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
     private readonly ConnectionFactory _connectionFactory;
     private readonly AsyncPolicy _retryPolicy;
     private readonly SemaphoreSlim _connectionLock = new(1, 1);
+    private bool _disposed;
     private IConnection? _pooledConnection;
     protected readonly RmqMessagingGatewayConnection Connection;
     protected IChannel? Channel;
@@ -144,6 +145,8 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
         await _connectionLock.WaitAsync(cancellationToken);
         try
         {
+            if (_disposed) throw new ObjectDisposedException(nameof(RmqMessageGateway));
+
             if (Channel == null || Channel.IsClosed)
             {
                 if (_pooledConnection == null || !_pooledConnection.IsOpen)
@@ -206,6 +209,9 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
         await _connectionLock.WaitAsync();
         try
         {
+            if (_disposed) return;
+            _disposed = true;
+
             try
             {
                 if (Channel != null)
@@ -234,6 +240,9 @@ public partial class RmqMessageGateway : IDisposable, IAsyncDisposable
         _connectionLock.Wait();
         try
         {
+            if (_disposed) return;
+            _disposed = true;
+
             try
             {
                 Channel?.AbortAsync().GetAwaiter().GetResult();

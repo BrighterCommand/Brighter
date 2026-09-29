@@ -56,6 +56,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         private readonly ConnectionFactory _connectionFactory;
         private readonly Policy _retryPolicy;
         private readonly object _connectionLock = new();
+        private bool _disposed;
         private IConnection? _pooledConnection;
         protected readonly RmqMessagingGatewayConnection Connection;
         protected IModel? Channel;
@@ -136,6 +137,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
             lock (_connectionLock)
             {
+                if (_disposed) throw new ObjectDisposedException(nameof(RmqMessageGateway));
+
                 if (Channel == null || Channel.IsClosed)
                 {
                     if (Connection.Name is null)
@@ -193,6 +196,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
             lock (_connectionLock)
             {
+                if (_disposed) return;
+                _disposed = true;
+
                 try
                 {
                     Channel?.Abort();

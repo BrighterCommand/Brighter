@@ -6,8 +6,14 @@
 
 Disposing a RabbitMQ producer or consumer now releases only its own use of the pooled connection.
 Other gateways sharing that connection can continue sending and receiving. Both RabbitMQ gateways
-close the connection when its last gateway releases it; explicit pool reset and removal still close
-it immediately. Disposing a gateway from before a reset cannot close the replacement connection.
+close the connection when its last gateway releases it, including when channel cleanup throws.
+After a reset, disposing an old gateway preserves a replacement held by another gateway and closes
+an unused replacement. Explicit pool reset and removal still close connections immediately.
+
+Dispose every producer and consumer to release its connection reference. An undisposed gateway can
+keep the connection open for the lifetime of the process. Consumer operations after disposal now
+throw `ObjectDisposedException`.
+
 ### Relational outbox configuration registration (#4279)
 
 `AddProducers(Action<ProducersConfiguration>, ...)` now registers a relational outbox's database configuration when `IAmARelationalDatabaseConfiguration` is missing.
