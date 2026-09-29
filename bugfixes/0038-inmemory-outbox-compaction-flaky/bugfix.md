@@ -142,10 +142,27 @@ All three tests are red today and fail the same way on every run (8/8 runs). Eac
 - Compaction is re-checked when it runs. It is skipped if the box is now under `EntryLimit`, and it never removes enough to take the box below its target size.
 - Both boxes are covered because `InMemoryOutbox` and `InMemoryInbox` share this base class. Nothing else changed: no defaults, cooldown logic or interval logic.
 
-**Additional tests for the rework:**
+**Failure path (from the `@claude` review on #4482):** each operation in a pass now runs inside its own `try`/`catch`.
 
-- `Outbox/When_expiry_is_requested_repeatedly_during_a_cleanup_should_coalesce_into_one_scan.cs`. Before the rework this ran 6 scans; it now runs 2.
-- `Outbox/When_expiry_brings_the_outbox_under_its_limit_before_a_waiting_compaction_should_not_compact.cs`. Before the rework it over-trimmed and left 1 entry; it now leaves 3.
+- A failed expiry no longer skips a compaction taken in the same pass.
+- The worker only ever stops in `TryTakeCleanupRequests`, under the lock. This removes the window in which a request made after a throw could be stranded for up to one interval.
+- The first failure is rethrown once the worker has stopped, so it still surfaces as an unobserved task exception, the same as before.
+- Covered by `Outbox/When_expiry_throws_in_the_same_cleanup_pass_as_a_compaction_should_still_compact.cs`, using `TestDoubles/FailingSecondExpiryInMemoryOutbox.cs`.
+
+**New tests measured against each version of `InMemoryBox.cs`** (net9.0; the numbers are `EntryCount`, or the number of scans for the coalescing test):
+
+| Test | master `4b25517` | blocking lock `85d3325` | single worker `10c28b1` | final |
+|---|---|---|---|---|
+| `Outbox/When_compaction_contends_with_expiry_…_should_still_compact` | ❌ 6 | ✅ | ✅ | ✅ 3 |
+| `Inbox/When_inbox_compaction_contends_with_expiry_…_should_still_compact` | ❌ 6 | ✅ | ✅ | ✅ 3 |
+| `Outbox/When_expiry_contends_with_compaction_…_should_still_expire` | ❌ 3 | ✅ | ✅ | ✅ 1 |
+| `Outbox/When_expiry_is_requested_repeatedly_during_a_cleanup_should_coalesce_into_one_scan` | ❌ 6 † | ❌ 6 | ✅ | ✅ 2 |
+| `Outbox/When_expiry_brings_the_outbox_under_its_limit_before_a_waiting_compaction_should_not_compact` | ✅ ‡ | ❌ 1 | ✅ | ✅ 3 |
+| `Outbox/When_expiry_throws_in_the_same_cleanup_pass_as_a_compaction_should_still_compact` | ❌ 6 | ✅ | ❌ 6 | ✅ 3 |
+
+† On master this value depends on timing. Scans that reach the lock while it is held are dropped, but this test releases the lock straight after its reads, so they usually find it free and run. The blocking lock gives 6 every time.
+
+‡ This test does not fail against master, because master drops the waiting compaction altogether. It pins a fault that the blocking lock introduced (over-trimming from an out-of-date count), not the original bug.
 
 **Second contributing cause, thread-pool starvation from other tests (test-only fix, `e72f0fa91`):**
 
@@ -158,6 +175,6 @@ All three tests are red today and fail the same way on every run (8/8 runs). Eac
 
 | Suite | Result |
 |---|---|
-| InMemory | 158/158 on net9.0 and net10.0 |
-| Core (net9.0) | 1484 passed, 7 skipped |
-| 17 cleanup tests, 10 runs with `DOTNET_PROCESSOR_COUNT=2` | green every run |
+| InMemory | 159/159 on net9.0 and net10.0 |
+| Core (net9.0, after merging master) | 1498 passed, 7 skipped |
+| 18 cleanup tests, 10 runs with `DOTNET_PROCESSOR_COUNT=2` | green every run |
